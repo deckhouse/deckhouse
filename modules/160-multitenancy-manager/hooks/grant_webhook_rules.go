@@ -17,10 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 // filterRegistrations is the snapshot filter for ClusterGrantableResource objects.

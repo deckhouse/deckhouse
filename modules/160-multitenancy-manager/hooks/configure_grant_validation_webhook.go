@@ -21,13 +21,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 const validatingWebhookConfigurationName = "cluster-objects-grants-validator"

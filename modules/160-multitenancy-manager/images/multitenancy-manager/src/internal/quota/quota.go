@@ -23,16 +23,16 @@ import (
 	"context"
 	"fmt"
 
-	"controller/api/v1alpha1"
-	"controller/internal/engine"
-	"controller/internal/jsonpath"
-	"controller/internal/naming"
-
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"controller/api/v1alpha1"
+	"controller/internal/engine"
+	"controller/internal/jsonpath"
+	"controller/internal/naming"
 )
 
 // Pool returns the project's object-quota pool GrantQuota (control namespace == project name), or

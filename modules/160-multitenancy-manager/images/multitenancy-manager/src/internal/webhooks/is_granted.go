@@ -22,13 +22,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"controller/api/v1alpha1"
-	"controller/internal/engine"
-	"controller/internal/jsonpath"
-	"controller/internal/namespaces"
-	"controller/internal/quota"
-	"controller/internal/resolve"
-
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"controller/api/v1alpha1"
+	"controller/internal/engine"
+	"controller/internal/jsonpath"
+	"controller/internal/namespaces"
+	"controller/internal/quota"
+	"controller/internal/resolve"
 )
 
 var _ http.Handler = &IsGrantedValidator{}

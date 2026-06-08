@@ -25,12 +25,12 @@ import (
 	"slices"
 	"strconv"
 
-	"controller/api/v1alpha1"
-	"controller/internal/jsonpath"
-
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+
+	"controller/api/v1alpha1"
+	"controller/internal/jsonpath"
 )
 
 // listMatches reports whether want is in list, treating "*" as a wildcard.

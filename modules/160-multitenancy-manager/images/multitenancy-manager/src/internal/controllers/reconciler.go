@@ -25,14 +25,6 @@ import (
 	"sort"
 	"time"
 
-	"controller/api/v1alpha1"
-	"controller/internal/engine"
-	"controller/internal/jsonpath"
-	"controller/internal/namespaces"
-	"controller/internal/naming"
-	"controller/internal/quota"
-	"controller/internal/resolve"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,6 +39,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"controller/api/v1alpha1"
+	"controller/internal/engine"
+	"controller/internal/jsonpath"
+	"controller/internal/namespaces"
+	"controller/internal/naming"
+	"controller/internal/quota"
+	"controller/internal/resolve"
 )
 
 // ResyncInterval is the period at which a project namespace is re-reconciled so that quota usage

@@ -26,10 +26,6 @@ import (
 	"slices"
 	"sort"
 
-	"controller/api/v1alpha1"
-	"controller/internal/engine"
-	"controller/internal/naming"
-
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +33,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"controller/api/v1alpha1"
+	"controller/internal/engine"
+	"controller/internal/naming"
 )
 
 // ProjectName returns the project a namespace belongs to: the projects.deckhouse.io/project label

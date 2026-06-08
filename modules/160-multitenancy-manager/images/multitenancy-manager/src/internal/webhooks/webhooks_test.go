@@ -23,9 +23,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"controller/api/v1alpha1"
-	"controller/internal/jsonpath"
-
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +32,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"controller/api/v1alpha1"
+	"controller/internal/jsonpath"
 )
 
 func newClient(t *testing.T, objs ...client.Object) client.Client {

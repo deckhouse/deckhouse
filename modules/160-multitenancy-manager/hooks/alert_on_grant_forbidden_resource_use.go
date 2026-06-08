@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -33,6 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/restmapper"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 const (
@@ -363,7 +364,7 @@ func grantedResourceGVR(kube k8s.Client, apiVersion, kind string) (schema.GroupV
 
 // usageGVRs resolves the concrete GVRs a usage rule targets (skipping wildcard groups). Concrete
 // versions are used directly; a "*" version is resolved via discovery.
-func usageGVRs(kube k8s.Client, rule usageRule) ([]schema.GroupVersionResource, error) {
+func usageGVRs(kube k8s.Client, rule usageRule) []schema.GroupVersionResource {
 	seen := map[schema.GroupVersionResource]struct{}{}
 	var out []schema.GroupVersionResource
 	add := func(gvr schema.GroupVersionResource) {
@@ -418,7 +419,7 @@ func usageGVRs(kube k8s.Client, rule usageRule) ([]schema.GroupVersionResource, 
 			}
 		}
 	}
-	return out, nil
+	return out
 }
 
 func versionMatches(versions []string, v string) bool {
@@ -472,11 +473,7 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 		}
 
 		for _, ref := range reg.Spec.UsageReferences {
-			gvrs, err := usageGVRs(kube, ref.Rule)
-			if err != nil {
-				return nil, err
-			}
-			for _, gvr := range gvrs {
+			for _, gvr := range usageGVRs(kube, ref.Rule) {
 				path := selectFieldPath(ref, gvr.Group, gvr.Version)
 				jsonPath, err := jsonpath.Parse(path)
 				if err != nil {

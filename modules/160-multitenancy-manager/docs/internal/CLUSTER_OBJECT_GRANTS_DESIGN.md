@@ -363,6 +363,7 @@ set; in particular the webhook **must enforce even when no grant matches the pro
 Field meanings are in [Resource model](#resource-model); this section is the runtime behaviour only.
 
 ### Reconcile → materialize catalog + render GrantQuota
+
 Triggered by changes to any grant, grantable resource, `Project` (labels), the pool `GrantQuota.spec`,
 `ProjectNamespace` (slices), a granted object, or a usage object. For each matched Project (by
 `projectSelector`) → expand to its namespaces and:
@@ -416,10 +417,12 @@ counted) — e.g. a `RoleBinding` to a namespaced `Role`, or a `VirtualDisk` sou
 tightening a grant never breaks an object that merely gets updated.
 
 ### Mutating admission `/defaults` (usage object CREATE only)
+
 If the referenced field is empty, inject the default: the grant's `default` if set, else the object
 annotated by `defaultFrom.annotationKey`. Never on UPDATE.
 
 ### Reconcile / alert (drift & tightening)
+
 A periodic pass recomputes the true `used`, corrects `GrantQuota.status`, and **alerts** on quota breach
 (race drift), objects using a now-revoked name, or objects over a tightened quota.
 **Tightening only alerts — nothing is ever deleted.**

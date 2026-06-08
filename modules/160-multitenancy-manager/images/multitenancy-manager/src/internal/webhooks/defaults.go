@@ -23,11 +23,6 @@ import (
 	"net/http"
 	"strings"
 
-	"controller/internal/engine"
-	"controller/internal/jsonpath"
-	"controller/internal/namespaces"
-	"controller/internal/resolve"
-
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +30,11 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"controller/internal/engine"
+	"controller/internal/jsonpath"
+	"controller/internal/namespaces"
+	"controller/internal/resolve"
 )
 
 var _ http.Handler = &DefaultsMutator{}

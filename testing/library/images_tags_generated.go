@@ -339,7 +339,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"monitoringPing": "imageHash-monitoringPing-monitoringPing",
 	},
 	"multitenancyManager": map[string]interface{}{
-		"clusterObjectsController": "imageHash-multitenancyManager-clusterObjectsController",
 		"multitenancyManager":      "imageHash-multitenancyManager-multitenancyManager",
 	},
 	"networkGateway": map[string]interface{}{
