@@ -16,9 +16,7 @@
 set -euo pipefail
 
 tmp_file="$(mktemp)"
-target_file="/var/lib/bashible/deckhouse-release-info.json"
-
-echo "$(date): updating Deckhouse release info"
+target_file="/var/lib/bashible/d8.version"
 
 deckhouse_version="$(
   bb-curl-kube "/apis/deckhouse.io/v1alpha1/deckhousereleases" |
@@ -43,6 +41,4 @@ jq -n \
 
 mv "$tmp_file" "$target_file"
 
-echo "$(date): release info updated successfully"
-
-) >> /var/log/deckhouse-release-info.log 2>&1 || true
+) || true
