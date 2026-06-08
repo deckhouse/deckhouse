@@ -5,7 +5,6 @@ description: "Configure security features in Deckhouse Kubernetes Platform inclu
 ---
 
 The "Security" section covers security features in Deckhouse Kubernetes Platform.
-For a structured overview of these capabilities, see the [Security Tools in Deckhouse Kubernetes Platform](https://deckhouse.io/courses/security-tools-in-dkp/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 It contains recommendations, instructions, and configuration examples for built-in protection mechanisms,
 as well as integration with external systems.
 

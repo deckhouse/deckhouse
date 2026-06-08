@@ -6,7 +6,6 @@ module-kebab-name: global
 ---
 
 Global configuration settings allow you to customize parameters that are used by default by all modules and components of the Deckhouse Kubernetes Platform. Some modules may override some of these parameters (this can be found in the settings section of the respective module's documentation).
-For hands-on guidance on platform administration, see the [Deckhouse Kubernetes Platform Administration](https://deckhouse.io/courses/basics-administration-deckhouse-kubernetes-platform/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 
 The global configuration settings are stored in the ModuleConfig `global`.
 

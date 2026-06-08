@@ -8,7 +8,6 @@ extractedLinksMax: 0
 ---
 
 This subsection describes the architecture of the IAM subsystem (Identity and Access Management) of Deckhouse Kubernetes Platform (DKP).
-The [Security Tools in Deckhouse Kubernetes Platform](https://deckhouse.io/courses/security-tools-in-dkp/) course in [Deckhouse Academy](https://deckhouse.io/academy/) covers IAM-related security practices in detail.
 
 The IAM subsystem provides the following features in DKP:
 

@@ -3,7 +3,6 @@ title: "Managing DRBD‑based replicated storage"
 permalink: en/admin/configuration/storage/sds/lvm-replicated-faq.html
 ---
 
-For structured answers to common administration scenarios, see the [Deckhouse Kubernetes Platform Administration](https://deckhouse.io/courses/basics-administration-deckhouse-kubernetes-platform/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 
 {% alert level="warning" %}
 Functionality is guaranteed only if the [system requirements](#system-requirements) are met. Using it under other conditions is possible, but stable operation is not guaranteed.

@@ -3,7 +3,6 @@ title: "FAQ"
 permalink: en/admin/configuration/storage/sds/node-configurator/faq.html
 ---
 
-For structured answers to common administration scenarios, see the [Deckhouse Kubernetes Platform Administration](https://deckhouse.io/courses/basics-administration-deckhouse-kubernetes-platform/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 
 {% alert level="info" %}
 Functionality is guaranteed only when using stock kernels supplied with [supported distributions](../../../../../supported_versions.html#linux). When using non-standard kernels or distributions, behavior may be unpredictable.

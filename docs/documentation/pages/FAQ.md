@@ -10,7 +10,6 @@ lang: en
 ---
 
 The page contains frequently asked questions about configuring and using the Deckhouse Kubernetes Platform.
-For structured answers to common administration scenarios, see the [Deckhouse Kubernetes Platform Administration](https://deckhouse.io/courses/basics-administration-deckhouse-kubernetes-platform/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 
 <button class="show__containers--expand">Expand all</button>
 <button class="show__containers--collapse">Collapse all</button>

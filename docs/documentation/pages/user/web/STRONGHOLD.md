@@ -5,7 +5,6 @@ permalink: en/user/web/stronghold.html
 ---
 
 The web interface for managing secrets (Stronghold web interface) is designed for managing secret mechanisms, authentication, and access control in a cluster. Operation is provided by the [stronghold](/modules/stronghold/) module.
-For security tooling including Stronghold, see the [Security Tools in Deckhouse Kubernetes Platform](https://deckhouse.io/courses/security-tools-in-dkp/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 
 It allows you to:
 
@@ -27,7 +26,6 @@ defined in the global `modules.publicDomainTemplate` parameter.
 ## Managing secrets engines
 
 Configuration guides for common engine types are available in the [Deckhouse Stronghold documentation](/stronghold/documentation/): [KV secrets engine](/stronghold/documentation/user/secrets-engines/kv/overview.html) and [PKI secrets engine](/stronghold/documentation/user/secrets-engines/pki.html).
-The [Security Tools in Deckhouse Kubernetes Platform](https://deckhouse.io/courses/security-tools-in-dkp/) course in [Deckhouse Academy](https://deckhouse.io/academy/) also covers working with these engines.
 
 ### Viewing a secrets engine
 

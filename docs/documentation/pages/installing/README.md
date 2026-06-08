@@ -23,7 +23,6 @@ Step-by-step installation instructions are available in the {% if site.mode == '
 {% endalert %}
 
 This page provides an overview of installing Deckhouse Kubernetes Platform (DKP).
-While working through [Getting started](/products/kubernetes-platform/gs/), you can also take the [Deckhouse Kubernetes Platform Administration](https://deckhouse.io/courses/basics-administration-deckhouse-kubernetes-platform/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 
 ## Installation methods
 

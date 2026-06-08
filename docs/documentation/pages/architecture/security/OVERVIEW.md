@@ -8,7 +8,6 @@ extractedLinksMax: 0
 ---
 
 This subsection describes the architecture of the Security subsystem of Deckhouse Kubernetes Platform (DKP).
-The [Security Tools in Deckhouse Kubernetes Platform](https://deckhouse.io/courses/security-tools-in-dkp/) course in [Deckhouse Academy](https://deckhouse.io/academy/) complements this documentation with hands-on material on these modules.
 
 The Security subsystem includes the following modules:
 

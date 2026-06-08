@@ -6,7 +6,6 @@ permalink: en/user/security/scanning.html
 
 Deckhouse Kubernetes Platform (DKP) follows the [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes) recommendations,
 ensuring security both at the component level and across the platform as a whole.
-For a broader overview of security tools in DKP, see the [Security Tools in Deckhouse Kubernetes Platform](https://deckhouse.io/courses/security-tools-in-dkp/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 
 To continuously monitor CIS compliance, DKP automatically runs checks in every cluster.
 The results of these checks are presented in reports

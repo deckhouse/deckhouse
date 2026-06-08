@@ -7,7 +7,6 @@ permalink: en/user/network/app_istio_activation.html
 Enabling Istio for applications is possible if the [istio](/modules/istio/) module
 is enabled and configured in the cluster.
 This is handled by the cluster administrator.
-For a broader overview of security and service mesh practices in DKP, see the [Security Tools in Deckhouse Kubernetes Platform](https://deckhouse.io/courses/security-tools-in-dkp/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
 
 The essence of enabling Istio is adding a sidecar container to the application Pods, after which Istio can manage the traffic.
 
