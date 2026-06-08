@@ -531,7 +531,7 @@ internalNetworkCIDRs:
 
 var validateOpts = []ValidateOption{ValidateOptionCommanderMode(true)}
 
-func TestValidationError_Append_SetsReasonAndLegacyKind(t *testing.T) {
+func TestValidationError_Append_SetsReasonAndTopLevelKind(t *testing.T) {
 	ve := &ValidationError{}
 	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"bad apiVersion"}})
 
@@ -540,12 +540,22 @@ func TestValidationError_Append_SetsReasonAndLegacyKind(t *testing.T) {
 	require.Equal(t, ErrKindValidationFailed, ve.Errors[0].Reason)
 }
 
-func TestValidationError_Append_NewReasonDoesNotBumpTopLevelKind(t *testing.T) {
+// Domain-specific reasons (CNI*) bucket to ValidationFailed at the top level.
+// Per-Error Reason retains the precise kind for fine-grained rendering.
+func TestValidationError_Append_DomainReasonBucketsToValidationFailed(t *testing.T) {
 	ve := &ValidationError{}
 	ve.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni mismatch"}})
 
-	require.Equal(t, ErrorKind(0), ve.Kind)
-	require.Equal(t, ErrKindCNIMismatch, ve.Errors[0].Reason)
+	require.Equal(t, ErrKindValidationFailed, ve.Kind, "top-level must bucket CNI* into ValidationFailed")
+	require.Equal(t, ErrKindCNIMismatch, ve.Errors[0].Reason, "per-Error Reason must keep the precise kind")
+}
+
+func TestValidationError_Append_CNISettingsBucketsToValidationFailed(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNISettingsMismatch, Error{Messages: []string{"settings mismatch"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind)
+	require.Equal(t, ErrKindCNISettingsMismatch, ve.Errors[0].Reason)
 }
 
 func TestValidationError_Append_MixedReasons(t *testing.T) {
@@ -554,18 +564,35 @@ func TestValidationError_Append_MixedReasons(t *testing.T) {
 	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"bad"}})
 	ve.Append(ErrKindCNISettingsMismatch, Error{Messages: []string{"cni s"}})
 
-	require.Equal(t, ErrKindValidationFailed, ve.Kind, "top-level Kind must reflect only legacy-range reasons")
+	require.Equal(t, ErrKindValidationFailed, ve.Kind, "all reasons bucket to ValidationFailed → top-level is ValidationFailed")
 	require.Equal(t, ErrKindCNIMismatch, ve.Errors[0].Reason)
 	require.Equal(t, ErrKindValidationFailed, ve.Errors[1].Reason)
 	require.Equal(t, ErrKindCNISettingsMismatch, ve.Errors[2].Reason)
 }
 
-func TestValidationError_Append_LegacyKindMonotonicity(t *testing.T) {
+// InvalidYAML (legacy, value 3) wins over CNI (bucket to ValidationFailed,
+// value 2) on top-level via plain max. Preserves stop-semantics for clients
+// that key on InvalidYAML.
+func TestValidationError_Append_InvalidYAMLWinsOverCNI(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni"}})
+	ve.Append(ErrKindInvalidYAML, Error{Messages: []string{"bad yaml"}})
+
+	require.Equal(t, ErrKindInvalidYAML, ve.Kind)
+
+	// Order-invariance.
+	ve2 := &ValidationError{}
+	ve2.Append(ErrKindInvalidYAML, Error{Messages: []string{"bad yaml"}})
+	ve2.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni"}})
+	require.Equal(t, ErrKindInvalidYAML, ve2.Kind)
+}
+
+func TestValidationError_Append_KindMonotonicity(t *testing.T) {
 	ve := &ValidationError{}
 	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"a"}})
 	ve.Append(ErrKindChangesValidationFailed, Error{Messages: []string{"b"}})
 
-	require.Equal(t, ErrKindValidationFailed, ve.Kind, "lower legacy reason must not lower top-level Kind")
+	require.Equal(t, ErrKindValidationFailed, ve.Kind, "lower reason must not lower top-level Kind")
 }
 
 func TestValidationError_Merge(t *testing.T) {

@@ -677,19 +677,18 @@ type ValidationError struct {
 
 func (v *ValidationError) Append(reason ErrorKind, e Error) {
 	e.Reason = reason
-	if isLegacyKind(reason) && v.Kind < reason {
-		v.Kind = reason
+	// Top-level Kind stays in the pre-existing set {Changes, ValidationFailed,
+	// InvalidYAML}. Domain-specific reasons (CNI* and any future ones) are
+	// semantically a kind of validation failure and bucket to ValidationFailed
+	// at the top level. Per-Error Reason retains the precise kind.
+	top := reason
+	if top > ErrKindInvalidYAML {
+		top = ErrKindValidationFailed
+	}
+	if v.Kind < top {
+		v.Kind = top
 	}
 	v.Errors = append(v.Errors, e)
-}
-
-func isLegacyKind(k ErrorKind) bool {
-	switch k {
-	case ErrKindChangesValidationFailed, ErrKindValidationFailed, ErrKindInvalidYAML:
-		return true
-	default:
-		return false
-	}
 }
 
 func (v *ValidationError) Merge(other *ValidationError) {
