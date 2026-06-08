@@ -37,7 +37,7 @@ func checkEncryptionAlgorithmMigration(_ context.Context, input *go_hook.HookInp
 	ccAlgo := input.Values.Get("global.clusterConfiguration.encryptionAlgorithm").String()
 	mcAlgo := input.Values.Get("controlPlaneManager.encryptionAlgorithm").String()
 
-	if ccAlgo != "" && ccAlgo != defaultEncryptionAlgorithm && mcAlgo == defaultEncryptionAlgorithm {
+	if ccAlgo != "" && ccAlgo != defaultEncryptionAlgorithm && (mcAlgo == "" || mcAlgo == defaultEncryptionAlgorithm) {
 		input.MetricsCollector.Set(
 			"d8_encryption_algorithm_deprecated_in_cluster_configuration", 1,
 			map[string]string{},
