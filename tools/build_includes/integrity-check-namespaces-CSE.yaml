@@ -16,7 +16,6 @@ namespaces_for_integrity:
     - d8-csi-yadro-tatlin-unified
     - d8-descheduler
     - d8-gpu
-    - d8-ingress-nginx
     - d8-istio
     - d8-local-path-provisioner
     - d8-log-shipper
