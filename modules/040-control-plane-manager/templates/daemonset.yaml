@@ -135,9 +135,7 @@ memory: 10Mi
 {{- if hasKey .Values.controlPlaneManager.internal "allowedFeatureGates" }}
 {{- $_ := set $tpl_context "allowedFeatureGates" .Values.controlPlaneManager.internal.allowedFeatureGates }}
 {{- end }}
-{{- if hasKey .Values.controlPlaneManager "encryptionAlgorithm" }}
-  {{- $_ := set $tpl_context "encryptionAlgorithm" .Values.controlPlaneManager.encryptionAlgorithm }}
-{{- end }}
+{{- $_ := set $tpl_context "encryptionAlgorithm" .Values.controlPlaneManager.encryptionAlgorithm }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
 {{- /*
@@ -153,10 +151,13 @@ in modules/040-control-plane-manager/images/control-plane-manager/src/internal/c
   {{- if hasKey $tpl_context.apiserver "certSANs" }}
 cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
   {{- end }}
-  {{- $encryptionAlgorithm := coalesce $tpl_context.encryptionAlgorithm $tpl_context.clusterConfiguration.encryptionAlgorithm }}
-  {{- if $encryptionAlgorithm }}
-encryption-algorithm: {{ $encryptionAlgorithm | b64enc }}
+  {{- $ccAlgo := $tpl_context.clusterConfiguration.encryptionAlgorithm }}
+  {{- $mcAlgo := $tpl_context.encryptionAlgorithm }}
+  {{- $effectiveAlgo := $mcAlgo }}
+  {{- if and (ne $ccAlgo "RSA-2048") (eq $mcAlgo "RSA-2048") }}
+    {{- $effectiveAlgo = $ccAlgo }}
   {{- end }}
+encryption-algorithm: {{ $effectiveAlgo | b64enc }}
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
