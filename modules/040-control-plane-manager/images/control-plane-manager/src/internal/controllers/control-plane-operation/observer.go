@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -79,4 +80,16 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 		state.CertificatesExpirationTime = certExpiry
 	}
 	return state, true, errors.Join(readErrs...)
+}
+
+func observeSignatureExpiration(component controlplanev1alpha1.OperationComponent, pkiDir string, logger *log.Logger) (metav1.Time, bool) {
+	if !signatureEnabled() || component != controlplanev1alpha1.OperationComponentKubeAPIServer {
+		return metav1.Time{}, false
+	}
+	exp, err := signature.ActiveKeyExpiration(pkiDir)
+	if err != nil {
+		logger.Info("no active signature key to observe", "error", err)
+		return metav1.Time{}, false
+	}
+	return metav1.NewTime(exp), true
 }

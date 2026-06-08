@@ -26,8 +26,12 @@ import (
 
 var SignatureEnabled = "true"
 
+func signatureEnabled() bool {
+	return strings.ToLower(SignatureEnabled) == "true"
+}
+
 func getEtcdKeySignatureRenewer() signature.Renewer {
-	if strings.ToLower(SignatureEnabled) == "true" {
+	if signatureEnabled() {
 		return signature.NewRegularSignatureRenewer(constants.KubernetesPkiPath).
 			WithLeftDaysToRenew(60)
 	}

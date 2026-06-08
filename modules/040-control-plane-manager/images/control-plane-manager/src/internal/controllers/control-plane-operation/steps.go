@@ -22,7 +22,10 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
@@ -39,6 +42,7 @@ var (
 	_ Step = (*joinEtcdClusterStep)(nil)
 	_ Step = (*waitPodReadyStep)(nil)
 	_ Step = (*certObserveStep)(nil)
+	_ Step = (*renewSignatureStep)(nil)
 )
 
 // StepOutcome is the terminal state when Step.Execute finishes.
@@ -74,6 +78,7 @@ func defaultSteps() map[controlplanev1alpha1.StepName]Step {
 		controlplanev1alpha1.StepJoinEtcdCluster:  &joinEtcdClusterStep{},
 		controlplanev1alpha1.StepWaitPodReady:     &waitPodReadyStep{},
 		controlplanev1alpha1.StepCertObserve:      &certObserveStep{},
+		controlplanev1alpha1.StepRenewSignature:   &renewSignatureStep{},
 	}
 }
 
@@ -283,10 +288,19 @@ type certObserveStep struct{}
 func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	kubeconfigDir := env.Node.KubeconfigDir
 	component := env.State.Raw().Spec.Component
+
 	observedState, ok, err := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
 	if !ok {
 		logger.Warn("CertObserve skipped: not a static pod component")
 		return StepResult{Outcome: OutcomeCompleted}, nil
+	}
+
+	signatureExpiry, ok := observeSignatureExpiration(component, constants.KubernetesPkiPath, logger)
+	if ok {
+		if observedState.CertificatesExpirationTime == nil {
+			observedState.CertificatesExpirationTime = map[string]metav1.Time{}
+		}
+		observedState.CertificatesExpirationTime[constants.SignatureExpirationKey] = signatureExpiry
 	}
 
 	// Persist whatever was read successfully before surfacing the error
@@ -306,4 +320,35 @@ func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.L
 
 	logger.Info("observed certificate expiration", slog.Int("certificates", len(observedState.CertificatesExpirationTime)))
 	return StepResult{Outcome: OutcomeCompleted}, nil
+}
+
+type renewSignatureStep struct {
+	kubeClient kubernetes.Interface
+}
+
+func (c *renewSignatureStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+	if env.State.Raw().Spec.Component != controlplanev1alpha1.OperationComponentKubeAPIServer {
+		return StepResult{Outcome: OutcomeCompleted}, nil
+	}
+	if c.kubeClient == nil {
+		return StepResult{}, fmt.Errorf("renewSignatureStep: kubeClient not injected")
+	}
+
+	before, _ := signature.SignatureFilesChecksum(constants.KubernetesPkiPath)
+
+	if err := getEtcdKeySignatureRenewer().Renew(c.kubeClient); err != nil {
+		logger.Error("failed to renew signature keys", log.Err(err))
+		return StepResult{}, fmt.Errorf("renew signature keys: %w", err)
+	}
+
+	after, err := signature.SignatureFilesChecksum(constants.KubernetesPkiPath)
+	if err != nil {
+		logger.Error("failed to get signature files checksum", log.Err(err))
+		return StepResult{Outcome: OutcomeCompleted, Message: controlplanev1alpha1.CPOStepResultNotRenewed}, nil
+	}
+	if before != after {
+		logger.Info("signature keys rotated on disk")
+		return StepResult{Outcome: OutcomeCompleted, Message: controlplanev1alpha1.CPOStepResultRenewed}, nil
+	}
+	return StepResult{Outcome: OutcomeCompleted, Message: controlplanev1alpha1.CPOStepResultNotRenewed}, nil
 }

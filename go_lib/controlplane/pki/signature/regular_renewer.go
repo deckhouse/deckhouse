@@ -36,6 +36,7 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
@@ -78,6 +79,14 @@ func (s *RegularRenewer) WithLeftDaysToRenew(days int) *RegularRenewer {
 }
 
 func (s *RegularRenewer) Renew(k8sInterface kubernetes.Interface) error {
+	// On a 409 (another node updated d8-pki first), RetryOnConflict re-runs renewOnce, which re-reads secret and re-evaluates active key expiry.
+	// Winner writes the active key, so renewOnce becomes a sync-only no-op.
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return s.renewOnce(k8sInterface)
+	})
+}
+
+func (s *RegularRenewer) renewOnce(k8sInterface kubernetes.Interface) error {
 	pkiDir := s.kubernetesPkiPath
 	logger.Info("renew signature certs", slog.String("pki_dir", pkiDir))
 	jwkPath := filepath.Join(pkiDir, SignaturePrivateJWK)

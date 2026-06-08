@@ -510,5 +510,7 @@ func TestRegularAPIServerChecksumPaths(t *testing.T) {
 }
 
 func renewSignatureCerts(tmpDir string, k8sInterface kubernetes.Interface) error {
-	return NewRegularSignatureRenewer(tmpDir).Renew(k8sInterface)
+	r := NewRegularSignatureRenewer(tmpDir).WithLeftDaysToRenew(60)
+
+	return r.Renew(k8sInterface)
 }
