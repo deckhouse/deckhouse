@@ -74,6 +74,8 @@ func moduleConfigValidationHandler(
 			allowExperimentalModules = setting.Get().AllowExperimentalModules
 		)
 
+		warnings := make([]string, 0, 1)
+
 		switch review.Operation {
 		case kwhmodel.OperationDelete:
 			{
@@ -87,12 +89,7 @@ func moduleConfigValidationHandler(
 						// we can delete unknown module without any further check
 						if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 							if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
-								if !strings.HasSuffix(reason, ".") {
-									reason += "."
-								}
-								reason += disableReasonSuffix
-
-								return rejectResult(reason)
+								warnings = append(warnings, confirmationDisableWarning(reason))
 							}
 						}
 					}
@@ -107,8 +104,7 @@ func moduleConfigValidationHandler(
 				}
 
 				metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, 0, map[string]string{metrics.LabelModule: cfg.GetName()})
-				// if module is already disabled - we don't need to warn user about disabling module
-				return allowResult(nil)
+				return allowResult(warnings)
 			}
 
 		case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
@@ -207,12 +203,7 @@ func moduleConfigValidationHandler(
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
-						if !strings.HasSuffix(reason, ".") {
-							reason += "."
-						}
-						reason += disableReasonSuffix
-
-						return rejectResult(reason)
+						warnings = append(warnings, confirmationDisableWarning(reason))
 					}
 				}
 			}
@@ -228,8 +219,6 @@ func moduleConfigValidationHandler(
 		if cfg.Spec.Source == v1alpha1.ModuleSourceEmbedded {
 			return rejectResult("'Embedded' is a forbidden source")
 		}
-
-		warnings := make([]string, 0, 1)
 
 		// skip checking source for the global module
 		if cfg.Name != "global" {
@@ -308,6 +297,15 @@ func moduleConfigValidationHandler(
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
+}
+
+// confirmationDisableWarning builds a warning message shown when a module that
+// requires disable confirmation is being disabled without the allow-disabling annotation.
+func confirmationDisableWarning(reason string) string {
+	if !strings.HasSuffix(reason, ".") {
+		reason += "."
+	}
+	return reason + disableReasonSuffix
 }
 
 func allowResult(warnMsgs []string) (*kwhvalidating.ValidatorResult, error) {
