@@ -114,7 +114,7 @@ After configuring PKI and enabling Kubernetes [authorization](/modules/user-auth
   d8 k create serviceaccount issuer
   ```
 
-- Create a `Secret` with a token for this service account. In recent Kubernetes versions, the secret for a `ServiceAccount` is not created automatically:
+- Create a `Secret` with a token for this service account. Starting with Kubernetes 1.24, the secret for a `ServiceAccount` is not created automatically:
 
   ```shell
   d8 k apply -f - <<EOF
@@ -301,7 +301,7 @@ For example, you can create your own `ClusterIssuer` for a [route53](https://aws
   EOF
   ```
 
-## Does the legacy tls-acme annotation work?
+## Does the tls-acme annotation work?
 
 Yes, it works! The dedicated component (`cert-manager-ingress-shim`) automatically creates `Certificate` resources based on these annotations (in the same namespaces as those of Ingress resources with annotations).
 
