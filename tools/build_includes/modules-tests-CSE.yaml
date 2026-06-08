@@ -307,17 +307,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/402-ingress-nginx
-  to: /deckhouse/modules/402-ingress-nginx
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/460-log-shipper
   to: /deckhouse/modules/460-log-shipper
   excludePaths:

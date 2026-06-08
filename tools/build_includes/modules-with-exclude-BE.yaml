@@ -699,28 +699,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/402-ingress-nginx
-  to: /deckhouse/modules/402-ingress-nginx
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/460-log-shipper
   to: /deckhouse/modules/460-log-shipper
   excludePaths:

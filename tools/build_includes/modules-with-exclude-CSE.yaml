@@ -528,6 +528,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+<<<<<<< HEAD
   stageDependencies:
     setup:
         - '**/*'
@@ -550,6 +551,8 @@
   stageDependencies:
     setup:
         - '**/*'
+=======
+>>>>>>> d0b4a23cc5 ([ingress-nginx] Moved to external module)
 - add: /modules/460-log-shipper
   to: /deckhouse/modules/460-log-shipper
   excludePaths:
