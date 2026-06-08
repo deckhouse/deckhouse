@@ -158,8 +158,8 @@ cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
   {{- end }}
   {{- $ccAlgo := $tpl_context.clusterConfiguration.encryptionAlgorithm }}
   {{- $mcAlgo := $tpl_context.encryptionAlgorithm }}
-  {{- $effectiveAlgo := $mcAlgo }}
-  {{- if and (ne $ccAlgo "RSA-2048") (eq $mcAlgo "RSA-2048") }}
+  {{- $effectiveAlgo := coalesce $mcAlgo $ccAlgo "RSA-2048" }}
+  {{- if and (ne $ccAlgo "RSA-2048") (or (eq $mcAlgo "") (eq $mcAlgo "RSA-2048")) }}
     {{- $effectiveAlgo = $ccAlgo }}
   {{- end }}
 encryption-algorithm: {{ $effectiveAlgo | b64enc }}
