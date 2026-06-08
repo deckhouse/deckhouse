@@ -232,6 +232,9 @@ func handleServiceAccounts(templatesDir string, modulePath string, name string, 
 
 		saName = strings.Replace(saName, "{{ .Chart.Name }}", name, 1)
 		saName = strings.Replace(saName, "{{ $.Chart.Name }}", name, 1)
+		if strings.Contains(saName, "{{") || strings.Contains(saName, "}}") {
+			continue
+		}
 		if len(saName) == 0 && len(name) == 0 {
 			return fmt.Errorf("empty final SA name, seems chartName didnt resolve for module: %s", modulePath)
 		}

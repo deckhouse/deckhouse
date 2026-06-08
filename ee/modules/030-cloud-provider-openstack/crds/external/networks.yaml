@@ -1,0 +1,529 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.1
+  name: networks.openstack.k-orc.cloud
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-openstack
+spec:
+  group: openstack.k-orc.cloud
+  names:
+    categories:
+      - openstack
+    kind: Network
+    listKind: NetworkList
+    plural: networks
+    singular: network
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: Resource ID
+          jsonPath: .status.id
+          name: ID
+          type: string
+        - description: Availability status of resource
+          jsonPath: .status.conditions[?(@.type=='Available')].status
+          name: Available
+          type: string
+        - description: Message describing current progress status
+          jsonPath: .status.conditions[?(@.type=='Progressing')].message
+          name: Message
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Network is the Schema for an ORC resource.
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: spec specifies the desired state of the resource.
+              properties:
+                cloudCredentialsRef:
+                  description: cloudCredentialsRef points to a secret containing OpenStack
+                    credentials
+                  properties:
+                    cloudName:
+                      description: cloudName specifies the name of the entry in the
+                        clouds.yaml file to use.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                    secretName:
+                      description: |-
+                        secretName is the name of a secret in the same namespace as the resource being provisioned.
+                        The secret must contain a key named `clouds.yaml` which contains an OpenStack clouds.yaml file.
+                        The secret may optionally contain a key named `cacert` containing a PEM-encoded CA certificate.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                    - cloudName
+                    - secretName
+                  type: object
+                import:
+                  description: |-
+                    import refers to an existing OpenStack resource which will be imported instead of
+                    creating a new one.
+                  maxProperties: 1
+                  minProperties: 1
+                  properties:
+                    filter:
+                      description: |-
+                        filter contains a resource query which is expected to return a single
+                        result. The controller will continue to retry if filter returns no
+                        results. If filter returns multiple results the controller will set an
+                        error state and will not continue to retry.
+                      minProperties: 1
+                      properties:
+                        description:
+                          description: description of the existing resource
+                          maxLength: 255
+                          minLength: 1
+                          type: string
+                        external:
+                          description: |-
+                            external indicates whether the network has an external routing
+                            facility that’s not managed by the networking service.
+                          type: boolean
+                        name:
+                          description: name of the existing resource
+                          maxLength: 255
+                          minLength: 1
+                          pattern: ^[^,]+$
+                          type: string
+                        notTags:
+                          description: |-
+                            notTags is a list of tags to filter by. If specified, resources which
+                            contain all of the given tags will be excluded from the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          maxItems: 32
+                          type: array
+                          x-kubernetes-list-type: set
+                        notTagsAny:
+                          description: |-
+                            notTagsAny is a list of tags to filter by. If specified, resources
+                            which contain any of the given tags will be excluded from the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          maxItems: 32
+                          type: array
+                          x-kubernetes-list-type: set
+                        tags:
+                          description: |-
+                            tags is a list of tags to filter by. If specified, the resource must
+                            have all of the tags specified to be included in the result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          maxItems: 32
+                          type: array
+                          x-kubernetes-list-type: set
+                        tagsAny:
+                          description: |-
+                            tagsAny is a list of tags to filter by. If specified, the resource
+                            must have at least one of the tags specified to be included in the
+                            result.
+                          items:
+                            description: |-
+                              NeutronTag represents a tag on a Neutron resource.
+                              It may not be empty and may not contain commas.
+                            maxLength: 255
+                            minLength: 1
+                            type: string
+                          maxItems: 32
+                          type: array
+                          x-kubernetes-list-type: set
+                      type: object
+                    id:
+                      description: |-
+                        id contains the unique identifier of an existing OpenStack resource. Note
+                        that when specifying an import by ID, the resource MUST already exist.
+                        The ORC object will enter an error state if the resource does not exist.
+                      format: uuid
+                      type: string
+                  type: object
+                managedOptions:
+                  description: managedOptions specifies options which may be applied
+                    to managed objects.
+                  properties:
+                    onDelete:
+                      default: delete
+                      description: |-
+                        onDelete specifies the behaviour of the controller when the ORC
+                        object is deleted. Options are `delete` - delete the OpenStack resource;
+                        `detach` - do not delete the OpenStack resource. If not specified, the
+                        default is `delete`.
+                      enum:
+                        - delete
+                        - detach
+                      type: string
+                  type: object
+                managementPolicy:
+                  default: managed
+                  description: |-
+                    managementPolicy defines how ORC will treat the object. Valid values are
+                    `managed`: ORC will create, update, and delete the resource; `unmanaged`:
+                    ORC will import an existing resource, and will not apply updates to it or
+                    delete it.
+                  enum:
+                    - managed
+                    - unmanaged
+                  type: string
+                  x-kubernetes-validations:
+                    - message: managementPolicy is immutable
+                      rule: self == oldSelf
+                resource:
+                  description: |-
+                    resource specifies the desired state of the resource.
+
+                    resource may not be specified if the management policy is `unmanaged`.
+
+                    resource must be specified if the management policy is `managed`.
+                  properties:
+                    adminStateUp:
+                      description: adminStateUp is the administrative state of the network,
+                        which is up (true) or down (false)
+                      type: boolean
+                    availabilityZoneHints:
+                      description: availabilityZoneHints is the availability zone candidate
+                        for the network.
+                      items:
+                        maxLength: 255
+                        minLength: 1
+                        type: string
+                      maxItems: 32
+                      type: array
+                      x-kubernetes-list-type: set
+                    description:
+                      description: description is a human-readable description for the
+                        resource.
+                      maxLength: 255
+                      minLength: 1
+                      type: string
+                    dnsDomain:
+                      description: dnsDomain is the DNS domain of the network
+                      maxLength: 255
+                      minLength: 1
+                      pattern: ^[A-Za-z0-9]{1,63}(.[A-Za-z0-9-]{1,63})*(.[A-Za-z]{2,63})*.?$
+                      type: string
+                    external:
+                      description: |-
+                        external indicates whether the network has an external routing
+                        facility that’s not managed by the networking service.
+                      type: boolean
+                    mtu:
+                      description: |-
+                        mtu is the the maximum transmission unit value to address
+                        fragmentation. Minimum value is 68 for IPv4, and 1280 for IPv6.
+                        Defaults to 1500.
+                      format: int32
+                      maximum: 9216
+                      minimum: 68
+                      type: integer
+                    name:
+                      description: |-
+                        name will be the name of the created resource. If not specified, the
+                        name of the ORC object will be used.
+                      maxLength: 255
+                      minLength: 1
+                      pattern: ^[^,]+$
+                      type: string
+                    portSecurityEnabled:
+                      description: |-
+                        portSecurityEnabled is the port security status of the network.
+                        Valid values are enabled (true) and disabled (false). This value is
+                        used as the default value of port_security_enabled field of a newly
+                        created port.
+                      type: boolean
+                    shared:
+                      description: |-
+                        shared indicates whether this resource is shared across all
+                        projects. By default, only administrative users can change this
+                        value.
+                      type: boolean
+                    tags:
+                      description: tags is a list of tags which will be applied to the
+                        network.
+                      items:
+                        description: |-
+                          NeutronTag represents a tag on a Neutron resource.
+                          It may not be empty and may not contain commas.
+                        maxLength: 255
+                        minLength: 1
+                        type: string
+                      maxItems: 64
+                      type: array
+                      x-kubernetes-list-type: set
+                  type: object
+                  x-kubernetes-validations:
+                    - message: NetworkResourceSpec is immutable
+                      rule: self == oldSelf
+              required:
+                - cloudCredentialsRef
+              type: object
+              x-kubernetes-validations:
+                - message: resource must be specified when policy is managed
+                  rule: 'self.managementPolicy == ''managed'' ? has(self.resource) : true'
+                - message: import may not be specified when policy is managed
+                  rule: 'self.managementPolicy == ''managed'' ? !has(self.__import__)
+                : true'
+                - message: resource may not be specified when policy is unmanaged
+                  rule: 'self.managementPolicy == ''unmanaged'' ? !has(self.resource)
+                : true'
+                - message: import must be specified when policy is unmanaged
+                  rule: 'self.managementPolicy == ''unmanaged'' ? has(self.__import__)
+                : true'
+                - message: managedOptions may only be provided when policy is managed
+                  rule: 'has(self.managedOptions) ? self.managementPolicy == ''managed''
+                : true'
+            status:
+              description: status defines the observed state of the resource.
+              properties:
+                conditions:
+                  description: |-
+                    conditions represents the observed status of the object.
+                    Known .status.conditions.type are: "Available", "Progressing"
+
+                    Available represents the availability of the OpenStack resource. If it is
+                    true then the resource is ready for use.
+
+                    Progressing indicates whether the controller is still attempting to
+                    reconcile the current state of the OpenStack resource to the desired
+                    state. Progressing will be False either because the desired state has
+                    been achieved, or because some terminal error prevents it from ever being
+                    achieved and the controller is no longer attempting to reconcile. If
+                    Progressing is True, an observer waiting on the resource should continue
+                    to wait.
+                  items:
+                    description: Condition contains details for one aspect of the current
+                      state of this API Resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 32
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                id:
+                  description: id is the unique identifier of the OpenStack resource.
+                  type: string
+                resource:
+                  description: resource contains the observed state of the OpenStack
+                    resource.
+                  properties:
+                    adminStateUp:
+                      description: |-
+                        adminStateUp is the administrative state of the network,
+                        which is up (true) or down (false).
+                      type: boolean
+                    availabilityZoneHints:
+                      description: |-
+                        availabilityZoneHints is the availability zone candidate for the
+                        network.
+                      items:
+                        maxLength: 1024
+                        type: string
+                      maxItems: 32
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    createdAt:
+                      description: createdAt shows the date and time when the resource
+                        was created. The date and time stamp format is ISO 8601
+                      format: date-time
+                      type: string
+                    description:
+                      description: description is a human-readable description for the
+                        resource.
+                      maxLength: 1024
+                      type: string
+                    dnsDomain:
+                      description: dnsDomain is the DNS domain of the network
+                      maxLength: 1024
+                      type: string
+                    external:
+                      description: |-
+                        external defines whether the network may be used for creation of
+                        floating IPs. Only networks with this flag may be an external
+                        gateway for routers. The network must have an external routing
+                        facility that is not managed by the networking service. If the
+                        network is updated from external to internal the unused floating IPs
+                        of this network are automatically deleted when extension
+                        floatingip-autodelete-internal is present.
+                      type: boolean
+                    mtu:
+                      description: |-
+                        mtu is the the maximum transmission unit value to address
+                        fragmentation. Minimum value is 68 for IPv4, and 1280 for IPv6.
+                      format: int32
+                      type: integer
+                    name:
+                      description: name is a Human-readable name for the network. Might
+                        not be unique.
+                      maxLength: 1024
+                      type: string
+                    portSecurityEnabled:
+                      description: |-
+                        portSecurityEnabled is the port security status of the network.
+                        Valid values are enabled (true) and disabled (false). This value is
+                        used as the default value of port_security_enabled field of a newly
+                        created port.
+                      type: boolean
+                    projectID:
+                      description: projectID is the project owner of the network.
+                      maxLength: 1024
+                      type: string
+                    provider:
+                      description: provider contains provider-network properties.
+                      properties:
+                        networkType:
+                          description: |-
+                            networkType is the type of physical network that this
+                            network should be mapped to. Supported values are flat, vlan, vxlan, and gre.
+                            Valid values depend on the networking back-end.
+                          maxLength: 1024
+                          type: string
+                        physicalNetwork:
+                          description: |-
+                            physicalNetwork is the physical network where this network
+                            should be implemented. The Networking API v2.0 does not provide a
+                            way to list available physical networks. For example, the Open
+                            vSwitch plug-in configuration file defines a symbolic name that maps
+                            to specific bridges on each compute host.
+                          maxLength: 1024
+                          type: string
+                        segmentationID:
+                          description: |-
+                            segmentationID is the ID of the isolated segment on the
+                            physical network. The network_type attribute defines the
+                            segmentation model. For example, if the network_type value is vlan,
+                            this ID is a vlan identifier. If the network_type value is gre, this
+                            ID is a gre key.
+                          format: int32
+                          type: integer
+                      type: object
+                    revisionNumber:
+                      description: revisionNumber optionally set via extensions/standard-attr-revisions
+                      format: int64
+                      type: integer
+                    shared:
+                      description: |-
+                        shared specifies whether the network resource can be accessed by any
+                        tenant.
+                      type: boolean
+                    status:
+                      description: |-
+                        status indicates whether network is currently operational. Possible values
+                        include `ACTIVE', `DOWN', `BUILD', or `ERROR'. Plug-ins might define
+                        additional values.
+                      maxLength: 1024
+                      type: string
+                    subnets:
+                      description: subnets associated with this network.
+                      items:
+                        maxLength: 1024
+                        type: string
+                      maxItems: 32
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    tags:
+                      description: tags is the list of tags on the resource.
+                      items:
+                        maxLength: 1024
+                        type: string
+                      maxItems: 32
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    updatedAt:
+                      description: updatedAt shows the date and time when the resource
+                        was updated. The date and time stamp format is ISO 8601
+                      format: date-time
+                      type: string
+                  type: object
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

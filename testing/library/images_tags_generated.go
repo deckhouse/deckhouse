@@ -97,6 +97,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManager":       "imageHash-cloudProviderHuaweicloud-terraformManager",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
+		"capoControllerManager":     "imageHash-cloudProviderOpenstack-capoControllerManager",
 		"cinderCsiPlugin131":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin131",
 		"cinderCsiPlugin132":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin132",
 		"cinderCsiPlugin133":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin133",
@@ -110,6 +111,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager135": "imageHash-cloudProviderOpenstack-cloudControllerManager135",
 		"cloudControllerManager136": "imageHash-cloudProviderOpenstack-cloudControllerManager136",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderOpenstack-cloudDataDiscoverer",
+		"resourceController":        "imageHash-cloudProviderOpenstack-resourceController",
 		"terraformManager":          "imageHash-cloudProviderOpenstack-terraformManager",
 	},
 	"cloudProviderVcd": map[string]interface{}{
