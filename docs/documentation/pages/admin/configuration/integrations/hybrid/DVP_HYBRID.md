@@ -236,7 +236,7 @@ Before you begin, make sure that the following requirements are met:
 - The virtual machine name in DVP matches the hostname inside the operating system.
 - SSH access is available on the virtual machine for copying and running the bootstrap script.
 - The SSH user can run commands using `sudo` without entering a password.
-- The required base packages for the supported OS are installed on the virtual machine. For RED OS, install `which` and the package manager in advance if they are missing.
+- One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine. In RED OS, `yum` and `which` may be absent by default, so they must be installed in advance.
 
 1. Create a NodeGroup with the `CloudStatic` node type. In this example and the following steps, the `cloud-static` name is used:
 

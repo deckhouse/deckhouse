@@ -355,7 +355,7 @@ Before you begin, make sure that the following conditions are met:
 - The virtual machine is connected to the Yandex Cloud network and subnet used for hybrid integration with the cluster.
 - The virtual machine has a network interface in the Yandex Cloud VPC network and subnet used for hybrid integration with the cluster. The IP address of this interface must belong to the CIDR specified in `nodeNetworkCIDR` and be reachable from the static cluster nodes.
 - The virtual machine name in Yandex Cloud matches the hostname inside the operating system.
-- The virtual machine has the required base packages installed for the supported OS. For RED OS, install `which` and the package manager in advance if they are missing.
+- One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine. In RED OS, `yum` and `which` may be absent by default, so they must be installed in advance.
 
 1. Check the virtual machine metadata in Yandex Cloud.
 
@@ -421,34 +421,15 @@ Before you begin, make sure that the following conditions are met:
      -o jsonpath='{.data.bootstrap\.sh}' > ${NODE_GROUP}-bootstrap.b64
    ```
 
-1. On the master node, verify that the file contains valid Base64 data of the bootstrap script:
-
-   ```shell
-   base64 -d ${NODE_GROUP}-bootstrap.b64 > /dev/null
-   ```
-
-   Check the beginning of the decoded content:
-
-   ```shell
-   base64 -d ${NODE_GROUP}-bootstrap.b64 | head -n 5
-   ```
-
-   The decoded content must start with a bash script:
-
-   ```console
-   #!/bin/bash
-   ...
-   ```
-
-   {% alert level="info" %}
-   To copy and run the bootstrap script, use the user specified in the VM metadata.
-   {% endalert %}
-
 1. Copy the bootstrap script to the VM being connected. If SSH access to the VM is available from the master node, run the following on the master node:
 
    ```shell
    scp ${NODE_GROUP}-bootstrap.b64 <USER>@<NODE_PUBLIC_OR_INTERNAL_IP>:/tmp/bootstrap.b64
    ```
+
+   {% alert level="info" %}
+   To copy and run the bootstrap script, use the user specified in the VM metadata.
+   {% endalert %}
 
    If SSH access to the VM is available only from the administrator's workstation, first copy the file from the master node to the workstation, and then from the workstation to the VM:
 

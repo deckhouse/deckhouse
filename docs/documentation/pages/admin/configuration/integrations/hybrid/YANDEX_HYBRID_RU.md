@@ -266,7 +266,7 @@ description: Подготовка к гибридной интеграции с 
 1. Создайте файл с манифестами [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup). Например, `yandex-instanceclass-nodegroup.yaml`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
+   apiVersion: deckhouse.io/v1alpha1
    kind: YandexInstanceClass
    metadata:
      name: yc-worker
@@ -356,7 +356,7 @@ description: Подготовка к гибридной интеграции с 
 - Виртуальная машина подключена к сети и подсети Yandex Cloud, используемым для гибридной интеграции с кластером.
 - У виртуальной машины есть сетевой интерфейс в VPC-сети и подсети Yandex Cloud, используемых для гибридной интеграции с кластером. IP-адрес этого интерфейса должен входить в CIDR, указанный в `nodeNetworkCIDR`, и быть доступен со стороны статических узлов кластера.
 - Имя виртуальной машины в Yandex Cloud совпадает с именем хоста (hostname) внутри операционной системы.
-- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
+- На виртуальной машине установлен один из пакетных менеджеров (`apt`/`apt-get`, `yum` или `rpm`) для поддерживаемой ОС.  В РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому их необходимо заранее установить.
 
 1. Проверьте метаданные виртуальной машины в Yandex Cloud.
 
@@ -393,7 +393,6 @@ description: Подготовка к гибридной интеграции с 
      name: yc-manual
    spec:
      nodeType: CloudStatic
-   EOF
    ```
 
 1. Убедитесь, что NodeGroup создана и синхронизирована:
@@ -422,34 +421,15 @@ description: Подготовка к гибридной интеграции с 
      -o jsonpath='{.data.bootstrap\.sh}' > ${NODE_GROUP}-bootstrap.b64
    ```
 
-1. На master-узле проверьте, что файл содержит корректные Base64-данные bootstrap-скрипта:
-
-   ```shell
-   base64 -d ${NODE_GROUP}-bootstrap.b64 > /dev/null
-   ```
-
-   Проверьте начало декодированного содержимого:
-
-   ```shell
-   base64 -d ${NODE_GROUP}-bootstrap.b64 | head -n 5
-   ```
-
-   В начале декодированного содержимого должен быть bash-скрипт:
-
-   ```console
-   #!/bin/bash
-   ...
-   ```
-
-   {% alert level="info" %}
-   Для копирования и запуска bootstrap-скрипта используйте пользователя, указанного в метаданных ВМ.
-   {% endalert %}
-
 1. Скопируйте bootstrap-скрипт на подключаемую ВМ. Если SSH-доступ к ВМ есть с master-узла, выполните на master-узле:
 
    ```shell
    scp ${NODE_GROUP}-bootstrap.b64 <USER>@<NODE_PUBLIC_OR_INTERNAL_IP>:/tmp/bootstrap.b64
    ```
+
+   {% alert level="info" %}
+   Для копирования и запуска bootstrap-скрипта используйте пользователя, указанного в метаданных ВМ.
+   {% endalert %}
 
    Если SSH-доступ к ВМ есть только с рабочей машины администратора, сначала скопируйте файл с master-узла на рабочую машину, а затем с рабочей машины на ВМ:
 
