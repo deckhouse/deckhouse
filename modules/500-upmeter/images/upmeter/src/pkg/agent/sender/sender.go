@@ -34,16 +34,26 @@ type Sender struct {
 	storage  *ListStorage
 	interval time.Duration
 
+	// batchSlots limits how many earliest time slots are drained from the WAL and sent in a single
+	// request. It lets the agent quickly catch up after a server downtime instead of sending one
+	// 30s slot per tick. In steady state there is at most one slot pending, so a single slot is sent.
+	batchSlots int
+
 	stop chan struct{}
 	done chan struct{}
 }
 
-func New(client *Client, recv chan []check.Episode, storage *ListStorage, interval time.Duration) *Sender {
+func New(client *Client, recv chan []check.Episode, storage *ListStorage, interval time.Duration, batchSlots int) *Sender {
+	if batchSlots < 1 {
+		batchSlots = 1
+	}
+
 	s := &Sender{
-		client:   client,
-		recv:     recv,
-		storage:  storage,
-		interval: interval,
+		client:     client,
+		recv:       recv,
+		storage:    storage,
+		interval:   interval,
+		batchSlots: batchSlots,
 
 		stop: make(chan struct{}),
 		done: make(chan struct{}),
@@ -113,7 +123,7 @@ func (s *Sender) cleanupLoop() {
 }
 
 func (s *Sender) export() error {
-	episodes, err := s.storage.List()
+	episodes, err := s.storage.List(s.batchSlots)
 	if err != nil {
 		return err
 	}
@@ -127,12 +137,23 @@ func (s *Sender) export() error {
 		return err
 	}
 
-	slot := episodes[0].TimeSlot
+	// The batch may span several slots, so clean up to the latest one sent.
+	slot := latestSlot(episodes)
 	err = s.storage.Clean(slot)
 	if err != nil {
 		return fmt.Errorf("cleaning send storage, slot=%v: %v", slot, err)
 	}
 	return nil
+}
+
+func latestSlot(episodes []check.Episode) time.Time {
+	latest := episodes[0].TimeSlot
+	for _, ep := range episodes[1:] {
+		if ep.TimeSlot.After(latest) {
+			latest = ep.TimeSlot
+		}
+	}
+	return latest
 }
 
 func (s *Sender) send(episodes []check.Episode) error {

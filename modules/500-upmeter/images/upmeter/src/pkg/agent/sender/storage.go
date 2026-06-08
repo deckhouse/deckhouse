@@ -27,7 +27,7 @@ import (
 
 type ListTxStorage interface {
 	Save(*dbcontext.DbContext, []check.Episode) error
-	List(*dbcontext.DbContext) ([]check.Episode, error)
+	List(*dbcontext.DbContext, int) ([]check.Episode, error)
 	Clean(*dbcontext.DbContext, time.Time) error
 }
 
@@ -50,12 +50,13 @@ func (s *ListStorage) Save(episodes []check.Episode) error {
 	})
 }
 
-func (s *ListStorage) List() ([]check.Episode, error) {
+// List returns episodes of up to maxSlots earliest time slots in a single batch.
+func (s *ListStorage) List(maxSlots int) ([]check.Episode, error) {
 	trans, err := db.NewTx(s.ctx)
 	if err != nil {
 		return nil, err
 	}
-	episodes, err := s.inner.List(trans.Ctx())
+	episodes, err := s.inner.List(trans.Ctx(), maxSlots)
 	return episodes, trans.Act(err)
 }
 
@@ -83,12 +84,8 @@ func (w *wal) Clean(tx *dbcontext.DbContext, slot time.Time) error {
 	return db.DeleteUpTo(slot)
 }
 
-func (w *wal) List(tx *dbcontext.DbContext) ([]check.Episode, error) {
+func (w *wal) List(tx *dbcontext.DbContext, maxSlots int) ([]check.Episode, error) {
 	// The EpisodeDao30s object contains hardcoded table name
 	db := dao.NewEpisodeDao30s(tx)
-	slot, err := db.GetEarliestTimeSlot()
-	if err != nil {
-		return nil, err
-	}
-	return db.ListEpisodesBySlot(slot)
+	return db.ListEpisodesUpToNSlots(maxSlots)
 }

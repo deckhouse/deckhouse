@@ -47,10 +47,11 @@ type Agent struct {
 }
 
 type Config struct {
-	Interval     time.Duration
-	ClientConfig *sender.ClientConfig
-	DatabasePath string
-	UserAgent    string
+	Interval         time.Duration
+	ExportBatchSlots int
+	ClientConfig     *sender.ClientConfig
+	DatabasePath     string
+	UserAgent        string
 
 	DisabledProbes []string
 	DynamicProbes  *DynamicProbesConfig
@@ -134,7 +135,7 @@ func (a *Agent) Start(ctx context.Context) error {
 	client := sender.NewClient(a.config.ClientConfig, kubeAccess)
 	storage := sender.NewStorage(dbctx)
 
-	a.sender = sender.New(client, ch, storage, a.config.Interval)
+	a.sender = sender.New(client, ch, storage, a.config.Interval, a.config.ExportBatchSlots)
 	a.scheduler = scheduler.New(registry, ch)
 
 	a.sender.Start()

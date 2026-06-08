@@ -172,6 +172,40 @@ func (d *EpisodeDao30s) ListEpisodesBySlot(slot time.Time) ([]check.Episode, err
 	return parseEpisodesFromEntities(rows)
 }
 
+// ListEpisodesUpToNSlots returns all episodes that belong to the N earliest distinct time slots,
+// sorted by time slot ascending. It is used to drain the WAL in batches: a single request carries
+// several consecutive slots instead of one, so that a backlog accumulated during a server downtime
+// is sent quickly. If the table is empty, it returns an empty slice without error.
+func (d *EpisodeDao30s) ListEpisodesUpToNSlots(n int) ([]check.Episode, error) {
+	if n < 1 {
+		n = 1
+	}
+
+	// The subquery picks the N earliest distinct slots and takes the latest of them as the upper
+	// bound. Selecting `timeslot <= bound` then yields exactly the episodes of those N slots,
+	// because there are no other slots below the bound.
+	const query = selectEntityStmt + `
+	FROM    episodes_30s
+	WHERE   timeslot <= (
+		SELECT MAX(ts) FROM (
+			SELECT DISTINCT timeslot AS ts
+			FROM episodes_30s
+			ORDER BY ts ASC
+			LIMIT ?
+		)
+	)
+	ORDER BY timeslot ASC
+	`
+
+	rows, err := d.DbCtx.StmtRunner().Query(query, n)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query SELECT: %v", err)
+	}
+	defer rows.Close()
+
+	return parseEpisodesFromEntities(rows)
+}
+
 func (d *EpisodeDao30s) DeleteUpTo(slot time.Time) error {
 	const query = `
 	DELETE FROM episodes_30s
