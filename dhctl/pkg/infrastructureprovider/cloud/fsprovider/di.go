@@ -29,6 +29,10 @@ type DIParams struct {
 	BinariesDir       string
 	CloudProviderDir  string
 	PluginsDir        string
+	// DownloadDir is the root for OCI-unpacked provider trees (e.g. external
+	// cloud providers like DVP) — used as a fallback when modules/specs are not
+	// present under CloudProviderDir (bundled candi). May be empty.
+	DownloadDir string
 }
 
 func isDir(dir, errPrefix string) error {
@@ -97,6 +101,6 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile, loadOrGetStore),
 		InfraUtilProvider:   newInfrastructureUtilProvider(logger, params.BinariesDir),
 		InfraPluginProvider: newPluginsProvider(logger, params.PluginsDir),
-		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir),
+		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir, params.DownloadDir),
 	}, nil
 }

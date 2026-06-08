@@ -629,16 +629,13 @@ CRl8TSg922cXTLVt8Q==
 				// docker.io/library/nginx:stable-alpine
 				image: "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
 				prepareFunc: func() error {
-					if err = os.Remove(filepath.Join(testDir, "images_hashs.json")); err != nil {
+					cacheDir := filepath.Join(testDir, "cache")
+					if err = os.MkdirAll(cacheDir, 0o755); err != nil {
 						return err
 					}
-					f, err := os.Create(filepath.Join(testDir, "images_hashs.json"))
-					if err != nil {
-						return err
-					}
-					_, err = f.WriteString("Wrong JSON")
-					return err
-
+					hashPath := filepath.Join(cacheDir, "images_hashs.json")
+					_ = os.Remove(hashPath)
+					return os.WriteFile(hashPath, []byte("Wrong JSON"), 0o644)
 				},
 				wantErr: true,
 				err:     "saving checksum to file: unmarshalling json: invalid character",
@@ -769,16 +766,13 @@ func TestPullImage(t *testing.T) {
 					if err = os.RemoveAll(filepath.Join(testDir, "v1.75.4")); err != nil {
 						return err
 					}
-					if err = os.RemoveAll(filepath.Join(testDir, "images_hashs.json")); err != nil {
+					cacheDir := filepath.Join(testDir, "cache")
+					if err = os.MkdirAll(cacheDir, 0o755); err != nil {
 						return err
 					}
-					f, err := os.Create(filepath.Join(testDir, "images_hashs.json"))
-					if err != nil {
-						return err
-					}
-					_, err = f.WriteString("Wrong JSON")
-					return err
-
+					hashPath := filepath.Join(cacheDir, "images_hashs.json")
+					_ = os.Remove(hashPath)
+					return os.WriteFile(hashPath, []byte("Wrong JSON"), 0o644)
 				},
 				wantErr: true,
 				err:     "saving checksum to file: unmarshalling json: invalid character",

@@ -43,13 +43,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
-		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
-		// but in exporter and autoconverger we do not need it
-		// and we reset it here
-		// unfortianally global params parsed in place when we do no have command
-		// that user ran
-		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
 		logger := log.GetDefaultLogger()
 		params, err := app.DefaultProviderParams(&opts.Global)
@@ -133,13 +127,14 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
+		preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
+		preparatorParams.WithOperationConverge()
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,
 			kubeCl,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(logger),
-			),
+			infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 			&opts.Global,
+			infrastructureprovider.DhctlOperationConverge,
 		)
 		if err != nil {
 			return err
