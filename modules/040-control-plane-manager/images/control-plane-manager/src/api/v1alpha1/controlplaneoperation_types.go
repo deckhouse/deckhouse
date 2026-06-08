@@ -44,6 +44,7 @@ const (
 	StepJoinEtcdCluster  StepName = "JoinEtcdCluster"
 	StepWaitPodReady     StepName = "WaitPodReady"
 	StepCertObserve      StepName = "CertObserve"
+	StepRenewSignature   StepName = "RenewSignature"
 )
 
 // OperationComponent identifies the control plane component the operation targets.
