@@ -109,7 +109,7 @@ func TestInitStateLoader(t *testing.T) {
 				kubeProvider: createKubeProvider(),
 				before: func(t *testing.T, tst *testInitStateLoader) {
 					testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
-					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider())
+					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider(), "")
 					ctx := context.TODO()
 					_, err := loader.PopulateMetaConfig(ctx, nil)
 					require.NoError(t, err, "populate metaconfig before test")

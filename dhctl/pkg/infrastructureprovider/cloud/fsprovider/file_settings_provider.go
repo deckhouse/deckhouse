@@ -196,5 +196,40 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 		res[cloudName] = set
 	}
 
+	planRule, err := loadPlanRules(filename)
+	if err != nil {
+		return nil, err
+	}
+	if planRule != nil {
+		if len(res) != 1 {
+			return nil, fmt.Errorf("plan_rules.yml next to %s requires a single-provider bundle, got %d providers", filename, len(res))
+		}
+		for _, set := range res {
+			simple, ok := set.(*settings.Simple)
+			if !ok {
+				continue
+			}
+			simple.VMResourceVal = planRule
+			if err := simple.Validate(false); err != nil {
+				return nil, fmt.Errorf("validate provider %s after plan_rules merge: %w", simple.CloudName(), err)
+			}
+		}
+	}
+
+	// DVP is guarded only in single-provider bundles (external module layout).
+	// The in-tree main candi lists DVP alongside other providers for werf
+	// build-time linking; its real plan_rules.yml ships in the DVP bundle.
+	if len(res) == 1 {
+		for cloudName, set := range res {
+			simple, ok := set.(*settings.Simple)
+			if !ok {
+				continue
+			}
+			if cloudName == "dvp" && simple.VMResourceVal == nil {
+				return nil, fmt.Errorf("provider DVP requires plan_rules.yml with vmResource next to %s", filename)
+			}
+		}
+	}
+
 	return res, nil
 }

@@ -800,7 +800,7 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		testCreateClusterConfigSecret(t, kubeCl, cloudClusterGenericConfigYAML)
 		testCreateProviderClusterConfigSecret(t, kubeCl, providerConfigYAML)
 		testCreateClusterUUIDCM(t, kubeCl, clusterUUID)
-		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil)
+		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil, "")
 		require.NoError(t, err)
 	}
 
