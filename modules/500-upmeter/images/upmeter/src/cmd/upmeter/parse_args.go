@@ -105,6 +105,11 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 		Default("1s").
 		DurationVar(&config.Interval)
 
+	cmd.Flag("export-batch-slots", "Maximum number of earliest time slots drained from WAL and sent in a single request. Helps catch up after a server downtime.").
+		Envar("UPMETER_EXPORT_BATCH_SLOTS").
+		Default("12").
+		IntVar(&config.ExportBatchSlots)
+
 	cmd.Flag("export-timeout", "Exporting response timeout before retry.").
 		Envar("UPMETER_EXPORT_TIMEOUT").
 		Default("5s").
