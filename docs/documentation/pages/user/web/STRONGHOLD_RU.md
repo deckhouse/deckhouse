@@ -6,7 +6,7 @@ lang: ru
 ---
 
 Веб-интерфейс управления секретами (веб-интерфейс Stronghold) предназначен для управления механизмами секретов, аутентификацией и контролем доступа в кластере. Работа обеспечивается модулем [stronghold](/modules/stronghold/).
-Обзор инструментов безопасности, включая Stronghold, подробно разобран в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Подробнее инструменты безопасности, включая Stronghold, рассматриваются в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 
 С его помощью можно:
 - Просматривать и настраивать механизмы секретов, добавлять и редактировать секреты.

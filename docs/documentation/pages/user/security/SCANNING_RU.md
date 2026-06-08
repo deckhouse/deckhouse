@@ -6,7 +6,7 @@ lang: ru
 ---
 
 Deckhouse Kubernetes Platform (DKP) соответствует рекомендациям [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes), обеспечивая безопасность как на уровне отдельных компонентов, так и всей платформы в целом.
-Обзор инструментов безопасности платформы подробно разобран в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Подробнее инструменты безопасности платформы рассматриваются в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 
 Для постоянного мониторинга соответствия требованиям CIS в каждом кластере DKP автоматически выполняются проверки.
 Результаты этих проверок представлены в виде отчётов и доступны в Grafana на дашборде `Security / CIS Kubernetes Benchmark`.
