@@ -83,12 +83,13 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	// Inject Reconciler-level deps into steps that need them.
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
 
-	kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
-	if err != nil {
-		return fmt.Errorf("cannot create kube client for etcd key signature renewer: %w", err)
+	if constants.SignatureEnabled() {
+		kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
+		if err != nil {
+			return fmt.Errorf("cannot create kube client for signature renewer: %w", err)
+		}
+		r.steps[controlplanev1alpha1.StepRenewSignature].(*renewSignatureStep).kubeClient = kubeClient
 	}
-
-	r.steps[controlplanev1alpha1.StepRenewSignature].(*renewSignatureStep).kubeClient = kubeClient
 
 	// harden admin kubeconfig perms and align root kubeconfig symlink during controller startup.
 	r.enforceNodePolicy(r.log)
