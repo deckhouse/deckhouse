@@ -174,7 +174,7 @@ metadata:
 			b.RunHook()
 		})
 
-		It("should fill values from PCC and create migration artifacts", func() {
+		It("should fill values from PCC without creating migration artifacts (artifacts created by OnAfterHelm hook)", func() {
 			Expect(b).To(ExecuteSuccessfully())
 
 			// Root values should be set from PCC.
@@ -192,96 +192,12 @@ metadata:
 
 			Expect(b.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
 
-			// Migration resources secret should be created.
+			// Migration resources secret and configmap are created by the OnAfterHelm hook (dvp_migration_resources.go),
+			// NOT by this OnBeforeHelm hook. The namespace doesn't exist yet at OnBeforeHelm time.
 			migrationSecret := b.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
-			Expect(migrationSecret.Exists()).To(BeTrue())
-			resourcesManifest, err := base64.StdEncoding.DecodeString(migrationSecret.Field(`data.resources\.yaml`).String())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(resourcesManifest)).To(MatchYAML(`
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cloud-provider-dvp
-spec:
-  enabled: true
-  version: 2
-  settings:
-    provider:
-      parameters:
-        namespace: cloud-provider01
-    storage:
-      enabled: true
-      parameters: {}
-    nodes:
-      enabled: true
-      parameters:
-        layout: Standard
-        sshPublicKey: ssh-rsa AAAAB3N
-        region: ru-msk-1
-        zones:
-        - default
-        ipAddresses:
-          master:
-          - Auto
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-credentials
-  namespace: d8-cloud-provider-dvp
-type: cloud-provider.deckhouse.io/credentials
-stringData:
-  authScheme: kubeconfig
-  secret: YXBpVmV=
----
-apiVersion: deckhouse.io/v1alpha1
-kind: DVPInstanceClass
-metadata:
-  name: master-dvp
-spec:
-  etcdDisk:
-    size: 15Gi
-    storageClass: ceph-pool-r2-csi-rbd-immediate
-  rootDisk:
-    image:
-      kind: ClusterVirtualImage
-      name: ubuntu-2204
-    size: 50Gi
-    storageClass: ceph-pool-r2-csi-rbd-immediate
-  virtualMachine:
-    virtualMachineClassName: superbe-class
-    bootloader: EFI
-    cpu:
-      coreFraction: 100%
-      cores: 4
-    liveMigrationPolicy: PreferForced
-    runPolicy: AlwaysOnUnlessStoppedManually
-    memory:
-      size: 8Gi
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: master
-spec:
-  nodeType: CloudPermanent
-  cloudInstances:
-    zones:
-    - default
-    minPerZone: 3
-    maxPerZone: 3
-    classReference:
-      kind: DVPInstanceClass
-      name: master-dvp
-  nodeTemplate:
-    labels:
-      node-role.kubernetes.io/control-plane: ""
-      node-role.kubernetes.io/master: ""
-`))
-
-			// Migration configmap should be created.
+			Expect(migrationSecret.Exists()).To(BeFalse())
 			migrationCM := b.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
-			Expect(migrationCM.Exists()).To(BeTrue())
+			Expect(migrationCM.Exists()).To(BeFalse())
 
 			// Resources should NOT be created directly by the hook.
 			moduleConfig := b.KubernetesGlobalResource("ModuleConfig", "cloud-provider-dvp")
@@ -319,7 +235,7 @@ cloudProviderDvp:
 		It("should NOT overwrite real d8-credentials with PCC-synthetic value", func() {
 			Expect(bReal).To(ExecuteSuccessfully())
 
-			// Real credential must be preserved — PCC-synthetic must NOT overwrite it.
+			// Real credential must be preserved - PCC-synthetic must NOT overwrite it.
 			Expect(bReal.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.authScheme").String()).To(Equal("kubeconfig"))
 			Expect(bReal.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.secret").String()).To(Equal("cmVhbC1rdWJlY29uZmlnLWRhdGE="))
 		})
@@ -412,6 +328,224 @@ metadata:
 			// Discovery data should be populated from PCC secret.
 			Expect(c.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.apiVersion").String()).To(Equal("deckhouse.io/v1"))
 			Expect(c.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["default"]`))
+		})
+	})
+
+	// ---- State C triggered by NodeGroup/IC event (ExecuteHookOnEvents=true path) ----
+	// Validates that the hook correctly cleans up migration artifacts when triggered
+	// by a NodeGroup Added event (simulated via KubeStateSet) rather than OnBeforeHelm.
+	// In production this fires as a standalone ModuleHookRun via OnKubernetesEvent binding.
+	Context("State C: migration complete detected via NodeGroup/DVPInstanceClass Added event", func() {
+		cEvent := HookExecutionConfigInit(emptyValues, `{}`)
+		cEvent.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		cEvent.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		cEvent.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			// All migration resources applied. Migration artifacts still exist (not yet cleaned).
+			stateCEventResources := fmt.Sprintf(`
+%s
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        namespace: cloud-provider01
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: ssh-rsa AAAAB3N
+    storage:
+      parameters: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+data:
+  authScheme: %s
+  secret: %s
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: master-dvp
+spec: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-migration-resources
+  namespace: d8-cloud-provider-dvp
+type: Opaque
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-module-is-migrating
+  namespace: d8-cloud-provider-dvp
+`, notEmptyPCCState, base64.StdEncoding.EncodeToString([]byte("kubeconfig")), base64.StdEncoding.EncodeToString([]byte("apiVe")))
+			// KubeStateSet populates snapshots (simulates the NodeGroup Added event path).
+			// GenerateBeforeHelmContext exercises the same handler function with all snapshots loaded.
+			cEvent.KubeStateSet(stateCEventResources)
+			cEvent.BindingContexts.Set(cEvent.GenerateBeforeHelmContext())
+			cEvent.RunHook()
+		})
+
+		It("should delete migration artifacts when all target resources are present", func() {
+			Expect(cEvent).To(ExecuteSuccessfully())
+
+			migrationSecret := cEvent.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeFalse())
+
+			migrationCM := cEvent.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
+			Expect(migrationCM.Exists()).To(BeFalse())
+		})
+	})
+
+	// ---- Partial migration: some resources applied, migration NOT complete ----
+	// Validates that the hook stays in State B when only part of the target resources exist.
+	// Specifically: NodeGroup "master" exists but DVPInstanceClass "master-dvp" is missing.
+	// The hook must NOT delete migration artifacts in this case.
+	Context("State B partial: NodeGroup applied but DVPInstanceClass missing (migration incomplete)", func() {
+		bPartial := HookExecutionConfigInit(emptyValues, `{}`)
+		bPartial.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		bPartial.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		bPartial.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			// NodeGroup master exists but master-dvp DVPInstanceClass is absent.
+			// ModuleConfig v2 and d8-credentials also absent (migration resources not fully applied).
+			bPartialResources := fmt.Sprintf(`
+%s
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-migration-resources
+  namespace: d8-cloud-provider-dvp
+type: Opaque
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-module-is-migrating
+  namespace: d8-cloud-provider-dvp
+`, notEmptyPCCState)
+			bPartial.KubeStateSet(bPartialResources)
+			bPartial.BindingContexts.Set(bPartial.GenerateBeforeHelmContext())
+			bPartial.RunHook()
+		})
+
+		It("should NOT delete migration artifacts and should remain in State B", func() {
+			Expect(bPartial).To(ExecuteSuccessfully())
+
+			// Migration artifacts must still exist - migration is not complete.
+			migrationSecret := bPartial.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeTrue())
+
+			migrationCM := bPartial.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
+			Expect(migrationCM.Exists()).To(BeTrue())
+
+			// Values should still be populated from PCC (State B behaviour).
+			Expect(bPartial.ValuesGet("cloudProviderDvp.provider.parameters.namespace").String()).To(Equal("cloud-provider01"))
+		})
+	})
+
+	// ---- Partial migration: ModuleConfig v2 applied but d8-credentials missing ----
+	Context("State B partial: ModuleConfig v2 applied but d8-credentials Secret missing", func() {
+		bPartialCred := HookExecutionConfigInit(emptyValues, `{}`)
+		bPartialCred.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		bPartialCred.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		bPartialCred.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			// ModuleConfig v2 and NodeGroup/IC present, but d8-credentials Secret absent.
+			bPartialCredResources := fmt.Sprintf(`
+%s
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        namespace: cloud-provider01
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: ssh-rsa AAAAB3N
+    storage:
+      parameters: {}
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: master-dvp
+spec: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-migration-resources
+  namespace: d8-cloud-provider-dvp
+type: Opaque
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-module-is-migrating
+  namespace: d8-cloud-provider-dvp
+`, notEmptyPCCState)
+			bPartialCred.KubeStateSet(bPartialCredResources)
+			bPartialCred.BindingContexts.Set(bPartialCred.GenerateBeforeHelmContext())
+			bPartialCred.RunHook()
+		})
+
+		It("should NOT delete migration artifacts when d8-credentials is missing", func() {
+			Expect(bPartialCred).To(ExecuteSuccessfully())
+
+			migrationSecret := bPartialCred.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeTrue())
+
+			migrationCM := bPartialCred.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
+			Expect(migrationCM.Exists()).To(BeTrue())
 		})
 	})
 })
