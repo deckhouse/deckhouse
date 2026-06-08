@@ -170,7 +170,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 	phaseActionProvider := phases.NewDefaultPhaseActionProviderFromPipeline(pipeline)
 
-	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(params.KubeProvider)
+	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(params.KubeProvider, params.SSHProvider)
 
 	terraStateLoader, kubeProvider, err := initStateLoader(ctx, params.getStateLoaderParams(), kubeProvider)
 	if err != nil {

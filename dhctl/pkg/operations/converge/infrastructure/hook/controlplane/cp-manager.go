@@ -166,7 +166,7 @@ func getControlPlaneNodeConditions(ctx context.Context, kubeClient client.KubeCl
 		Group:    "control-plane.deckhouse.io",
 		Version:  "v1alpha1",
 		Resource: "controlplanenodes",
-	}).Get(ctx, nodeName, metav1.GetOptions{})
+	}).Namespace("kube-system").Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get ControlPlaneNode %s: %w", nodeName, err)
 	}

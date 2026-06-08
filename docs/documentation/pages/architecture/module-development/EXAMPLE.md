@@ -175,6 +175,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
 
 1. Check the list of available modules
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    $ d8 k get module
    NAME       STAGE    SOURCE   PHASE       ENABLED   READY
@@ -182,6 +183,8 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    helloworld                   Available   False     False     
    ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Create a [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource that defines the module update policy.
 
@@ -228,11 +231,14 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
 
    An example of output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    $ d8 k get mr
    NAME                                PHASE        UPDATE POLICY        TRANSITIONTIME   MESSAGE
    helloworld-v0.0.1                   Deployed     helloworld-policy    22m            
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. If the release has been successfully installed, wait for the Deckhouse Kubernetes Platform pod to restart.
 

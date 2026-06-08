@@ -60,7 +60,7 @@ func (p *CloudProviderGetterParams) getProvidersCache(ctx context.Context) (Clou
 	return providersCache, nil
 }
 
-func (p *CloudProviderGetterParams) gtFSDIParams(ctx context.Context) (*fsprovider.DIParams, error) {
+func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context) (*fsprovider.DIParams, error) {
 	if p.FSDIParams != nil {
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using custom FSDIParams: %+v", p.FSDIParams))
 		return p.FSDIParams, nil

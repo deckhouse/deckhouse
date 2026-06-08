@@ -17,7 +17,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry-bundle v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
-	github.com/deckhouse/lib-connection v0.7.0
+	github.com/deckhouse/lib-connection v0.10.0
 	github.com/deckhouse/lib-dhctl v0.18.2
 	github.com/deckhouse/lib-gossh v0.3.0
 	github.com/deckhouse/module-sdk v0.10.4
@@ -62,7 +62,7 @@ require (
 	golang.org/x/sync v0.20.0
 	golang.org/x/term v0.42.0
 	google.golang.org/grpc v1.80.0
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1

@@ -40,6 +40,8 @@
 {{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "caphcControllerManager")) }}
 {{- $_ := set $capiConfig "capiProviderName" "infrastructure-huaweicloud" }}
 {{- $_ := set $capiConfig "additionalEnv" (include "caphc_envs" . | fromYamlArray) }}
+{{- $_ := set $capiConfig "additionalArgs" (list "--metrics-bind-address=:8080" "--metrics-secure=false") }}
+{{- $_ := set $capiConfig "additionalPorts" (list (dict "containerPort" 8080 "name" "metrics" "protocol" "TCP")) }}
 {{- $_ := set $capiConfig "vpaEnabled" true }}
 
 {{- include "helm_lib_capi_controller_manager_manifests" (list . $capiConfig) }}

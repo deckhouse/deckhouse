@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -682,7 +682,7 @@ func CreateDeckhouseManifests(
 		// per task) but the loop reacts to the CRD appearing in ~1s instead of
 		// dead-waiting 5s.
 		runTask := func(task actions.ManifestTask) error {
-			return retry.NewSilentLoop(task.Name, 60, 1*time.Second).RunContext(
+			return retry.NewSilentLoop(task.Name, 600, 1*time.Second).RunContext(
 				ctx,
 				func() error {
 					return task.CreateOrUpdate(ctx)

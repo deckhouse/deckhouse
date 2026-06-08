@@ -692,7 +692,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 
 - The severity level of alerts indicating security policy violations has been raised from 7 to 3.
 
-- The configuration for `Yandex Cloud`, `Zvirt`, and `Dynamix` providers now uses `OpenTofu` instead of `Terraform`. This enables easier provider updates, such as applying fixes for known vulnerabilities (CVEs).
+- The configuration for `Yandex Cloud`, `Zvirt`, and `Basis Dynamix` providers now uses `OpenTofu` instead of `Terraform`. This enables easier provider updates, such as applying fixes for known vulnerabilities (CVEs).
 
 - CVE vulnerabilities have been fixed in the following modules: `chrony`, `descheduler`, `dhctl`, `node-manager`, `registry-packages-proxy`, `falco`, `cni-cilium`, and `vertical-pod-autoscaler`.
 

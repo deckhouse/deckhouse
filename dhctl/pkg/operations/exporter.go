@@ -98,8 +98,7 @@ type ExporterParams struct {
 	Address       string
 	Path          string
 	Interval      time.Duration
-	TmpDir        string
-	GlogalOptions *options.GlobalOptions
+	GlobalOptions *options.GlobalOptions
 	IsDebug       bool
 
 	// KubeCl is the in-cluster API client. The caller builds it via
@@ -120,7 +119,7 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		OneGaugeMetrics:       make(map[string]prometheus.Gauge),
 		GaugeMetrics:          make(map[string]*prometheus.GaugeVec),
 		CounterMetrics:        make(map[string]*prometheus.CounterVec),
-		tmpDir:                params.TmpDir,
+		tmpDir:                params.GlobalOptions.TmpDir,
 		globalOptions:         params.GlogalOptions,
 		isDebug:               params.IsDebug,
 	}
@@ -270,7 +269,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(),
 		),
-		nil,
+		c.globalOptions,
 	)
 	if err != nil {
 		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))

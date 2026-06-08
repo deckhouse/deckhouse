@@ -26,12 +26,14 @@ import (
 )
 
 type kubeClientProvider struct {
+	sshProvider  libcon.SSHProvider
 	kubeProvider libcon.KubeProvider
 }
 
-func newKubeClientProvider(kubeProvider libcon.KubeProvider) *kubeClientProvider {
+func newKubeClientProvider(kubeProvider libcon.KubeProvider, sshProvider libcon.SSHProvider) *kubeClientProvider {
 	return &kubeClientProvider{
 		kubeProvider: kubeProvider,
+		sshProvider:  sshProvider,
 	}
 }
 
@@ -50,6 +52,13 @@ func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
 	err := p.kubeProvider.Cleanup(ctx)
 	if err != nil {
 		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to cleanup kube provider: %v", err), "\n"))
+	}
+
+	if stopSSH {
+		err := p.sshProvider.Cleanup(ctx)
+		if err != nil {
+			log.WarnF("failed to cleanup ssh provider: %v", err)
+		}
 	}
 }
 

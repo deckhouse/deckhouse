@@ -862,10 +862,11 @@ module JSONSchemaRenderer
 
                  if  input["spec"]["versions"].length > 1 then
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
-                     result.push('<div class="tabs">')
+                     result.push('<div class="tabs-block">')
+                     result.push('<ul class="tabs__container tabs__container--title">')
                      activeStatus=" active"
                      input["spec"]["versions"].sort{ |a, b| compareAPIVersion(a['name'],b['name']) }.reverse.each do |item|
-                         result.push("<a href='javascript:void(0)' class='tabs__btn tabs__btn__%s%s' onclick=\"openTab(event, 'tabs__btn__%s', 'tabs__content__%s', '%s_%s')\">%s</a>" %
+                         result.push("<li href='javascript:void(0)' class='tabs__item tabs__item--title tabs__title__%s%s' onclick=\"openTab(event, 'tabs__title__%s', 'tabs__descr__%s', '%s_%s')\">%s</li>" %
                            [ input["spec"]["names"]["kind"].downcase, activeStatus,
                              input["spec"]["names"]["kind"].downcase,
                              input["spec"]["names"]["kind"].downcase,
@@ -873,7 +874,7 @@ module JSONSchemaRenderer
                              item['name'].downcase ])
                          activeStatus = ""
                      end
-                     result.push('</div>')
+                     result.push('</ul>')
                  end
 
                  activeStatus=" active"
@@ -891,7 +892,7 @@ module JSONSchemaRenderer
                     end
 
                     if input["spec"]["versions"].length > 1 then
-                        result.push("<div id='%s_%s' class='tabs__content tabs__content__%s%s'>" %
+                        result.push("<div id='%s_%s' class='tabs__container tabs__container--descr tabs__descr__%s%s'>" %
                             [ input["spec"]["names"]["kind"].downcase, item['name'].downcase,
                             input["spec"]["names"]["kind"].downcase, activeStatus ])
                         activeStatus = ""
@@ -995,6 +996,9 @@ module JSONSchemaRenderer
                         result.push("</div>")
                     end
 
+                 end
+                 if input["spec"]["versions"].length > 1 then
+                     result.push('</div>')
                  end
             end
         end

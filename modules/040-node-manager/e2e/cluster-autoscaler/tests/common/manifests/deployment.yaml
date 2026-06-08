@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e2e-nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: e2e-nginx
+  template:
+    metadata:
+      labels:
+        app: e2e-nginx
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+      nodeSelector:
+        app: e2e-autoscaler-test
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - e2e-nginx
+              topologyKey: kubernetes.io/hostname
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: "worker-100"
+          effect: NoExecute
+        - key: dedicated
+          operator: Equal
+          value: "worker-50"
+          effect: NoExecute

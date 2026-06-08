@@ -21,6 +21,6 @@ function check_python() {
       return 0
     fi
   done
-  echo "Python not found, exiting..."
+  echo "Python not found"
   return 1
 }

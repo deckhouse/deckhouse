@@ -70,6 +70,8 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if !opts.Global.SanityCheck {
 			l.Warn(fmt.Sprint(destroyApprovalsMessage))
 

@@ -38,7 +38,7 @@ lang: ru
    EOF
    ```
 
-1. Дождитесь состояния модуля `Ready`. На этом этапе не требуется проверять поды в пространстве имен `d8-sds-node-configurator`.
+1. Дождитесь состояния модуля `Ready`. На этом этапе не требуется проверять поды в неймспейсе `d8-sds-node-configurator`.
 
    ```shell
    d8 k get modules sds-node-configurator -w
@@ -66,7 +66,7 @@ lang: ru
    d8 k get modules sds-local-volume -w
    ```
 
-1. Убедитесь, что в пространствах имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды находятся в статусе `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы LVM.
+1. Убедитесь, что в неймспейсах `d8-sds-local-volume` и `d8-sds-node-configurator` все поды находятся в статусе `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы LVM.
 
    ```shell
    d8 k -n d8-sds-local-volume get pod -owide -w
@@ -106,6 +106,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                           NODE       CONSUMABLE   SIZE           PATH
    dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
@@ -115,6 +116,8 @@ d8 k -n d8-sds-local-volume get pod -owide
    dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
    dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) для узла `worker-0`:
 

@@ -29,26 +29,6 @@ proxy:
   httpsProxy: <HTTPS_PROXY_ADDRESS>
   noProxy: <NO_PROXY_LIST>
 ---
-# [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-# [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  # [<en>] Address of the Docker registry where the Deckhouse images are located.
-  # [<ru>] Адрес Docker registry с образами Deckhouse.
-  imagesRepo: <IMAGES_REPO_URI>
-  # [<en>] A special string with your token to access the Docker registry.
-  # [<ru>] Строка с ключом для доступа к Docker registry.
-  registryDockerCfg: <YOUR_PRIVATE_ACCESS_STRING_IS_HERE>
-  # [<en>] Registry access scheme (HTTP or HTTPS).
-  # [<ru>] Протокол доступа к registry (HTTP или HTTPS).
-  registryScheme: HTTPS
-  # [<en>] Root CA certificate to validate the registry’s HTTPS certificate (if self-signed certificates are used).
-  # [<ru>] Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
-  registryCA: <REGISTRY_CA>
----
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
@@ -64,6 +44,27 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
+     # [<en>] Settings for accessing the container registry with Deckhouse images.
+    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # [<en>] Address of the Docker registry where the Deckhouse images are located.
+        # [<ru>] Адрес хранилища образов контейнеров с образами Deckhouse.
+        imagesRepo: <IMAGES_REPO_URI>
+        # [<en>] The username for authenticating with the container registry.
+        # [<ru>] Имя пользователя для аутентификации в хранилище образов контейнеров.
+        username: <USERNAME>
+        # [<en>] The password for authenticating with the container image repository.
+        # [<ru>] Пароль для аутентификации в хранилище образов контейнеров.
+        password: <PASSWORD>
+        scheme: HTTPS
+        # [<en>] The root CA certificate (in PEM format) for validating the container registry’s server certificate.
+        # [<ru>] Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
 ---
 # [<en>] Global Deckhouse settings.
 # [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters

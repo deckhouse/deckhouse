@@ -43,6 +43,8 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
+		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+
 		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
@@ -71,12 +73,13 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
-			Address:  opts.Converge.ListenAddress,
-			Path:     opts.Converge.MetricsPath,
-			Interval: opts.Converge.CheckInterval,
-			TmpDir:   opts.Global.TmpDir,
+			Address:       opts.Converge.ListenAddress,
+			Path:          opts.Converge.MetricsPath,
+			Interval:      opts.Converge.CheckInterval,
+			Logger:        logger,
+			KubeCl:        kubeCl,
+			GlobalOptions: &opts.Global,
 			IsDebug:  opts.Global.IsDebug,
-			KubeCl:   kubeCl,
 		})
 
 		exporter.Start(ctx)

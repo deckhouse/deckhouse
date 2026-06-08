@@ -1,0 +1,24 @@
+version: "3"
+
+includes:
+  ca-scale-from-zero-dvp:
+    taskfile: ./tests/ca-scale-from-zero-dvp/Taskfile.yml
+    dir: ./tests/ca-scale-from-zero-dvp
+  ca-scale-from-zero-yandex:
+    taskfile: ./tests/ca-scale-from-zero-yandex/Taskfile.yml
+    dir: ./tests/ca-scale-from-zero-yandex
+  ca-priority-fallback-dvp:
+    taskfile: ./tests/ca-priority-fallback-dvp/Taskfile.yml
+    dir: ./tests/ca-priority-fallback-dvp
+  ca-priority-fallback-yandex:
+    taskfile: ./tests/ca-priority-fallback-yandex/Taskfile.yml
+    dir: ./tests/ca-priority-fallback-yandex
+  ca-safe-to-evict-yandex:
+    taskfile: ./tests/ca-safe-to-evict-yandex/Taskfile.yml
+    dir: ./tests/ca-safe-to-evict-yandex
+  ca-safe-to-evict-dvp:
+    taskfile: ./tests/ca-safe-to-evict-dvp/Taskfile.yml
+    dir: ./tests/ca-safe-to-evict-dvp
+  ca-scale-from-zero-node-label-dvp:
+    taskfile: ./tests/ca-scale-from-zero-node-label-dvp/Taskfile.yml
+    dir: ./tests/ca-scale-from-zero-node-label-dvp

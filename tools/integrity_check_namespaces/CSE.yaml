@@ -17,3 +17,4 @@ additionalNamespaces:
   - d8-snapshot-controller
   - d8-storage-volume-data-manager
   - d8-virtualization
+  - d8-static-routing-manager

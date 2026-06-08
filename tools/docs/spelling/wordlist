@@ -122,6 +122,7 @@ Bashible
 BashibleTemplateData
 basicAuditPolicyEnabled
 BasicAuth
+Basis Dynamix
 baz
 bcrypt
 BDU
@@ -248,6 +249,7 @@ ClusterLoggingConfig
 ClusterName
 ClusterPodLoggingConfig
 ClusterRole
+ClusterRoleBinding
 clusterType
 ClusterVirtualImage
 cmctl
@@ -610,6 +612,7 @@ helthcheck
 HighAvailability
 HighLoad
 HighNodeUtilization
+HH
 HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
@@ -1018,6 +1021,7 @@ NotManaged
 Noto
 NotReady
 NotRegex
+nowrap
 npm
 NSX
 NTP
@@ -1485,6 +1489,7 @@ trdl
 trivy
 Trivy
 TrustDomain
+tuf
 tunnelMode
 txt
 Ubuntu
@@ -1497,6 +1502,7 @@ UIs
 un
 uncordoned
 uninstall
+uninstalled
 uninstalling
 Unlabel
 UNPACKEDSIZE
@@ -1807,6 +1813,7 @@ ZvirtInstanceClass
 внутрикластерной
 внутрикластерным
 воркеров
+выгрузок
 выдаватель
 высокогранулярной
 высокодоступном
@@ -2612,3 +2619,9 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
+RoleBinding
+YYYY
+Перевыпустите
+валиден
+валидными
+мультимастерной

@@ -26,15 +26,6 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
-	// ApplicationConditionTypeProcessed changes only by application controller
-	ApplicationConditionTypeInstalled                    = "Installed"
-	ApplicationConditionTypeReady                        = "Ready"
-	ApplicationConditionReasonReconciled                 = "Reconciled"
-	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
-	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"
-	ApplicationConditionReasonVersionIsDraft             = "VersionIsDraft"
-	ApplicationConditionReasonVersionSpecIsCorrupted     = "VersionSpecIsCorrupted"
-
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
 
 	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
@@ -62,9 +53,10 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
-// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
-// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message"
+// +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
+// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
+// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 
 // Application represents a namespace-scoped application instance.
@@ -105,6 +97,15 @@ type ApplicationSpec struct {
 }
 
 type ApplicationStatus struct {
+	// Summary aggregates the high-level user-facing state, message and
+	// resolution hint for the application. The controller always populates it
+	// on reconcile — every application maps to exactly one lifecycle state — so
+	// it is the single source of truth for the UI; clients should not re-derive
+	// these values from the conditions. The pointer leaves it absent only
+	// before the first status computation.
+	// +optional
+	Summary *ApplicationStatusSummary `json:"summary,omitempty"`
+
 	// Information about the currently installed version.
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
@@ -127,6 +128,26 @@ type ApplicationStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+}
+
+// ApplicationStatusSummary aggregates the high-level lifecycle state, message
+// and resolution hint for the application. It is consumed by the UI as a single
+// source of truth so that the frontend does not have to re-implement the state
+// machine on top of conditions.
+type ApplicationStatusSummary struct {
+	// State is the high-level lifecycle state observed for the application.
+	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+	// +optional
+	State string `json:"state,omitempty"`
+
+	// Message is a human-readable description of the current state.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Tip is a human-readable instruction on how to resolve the current
+	// state. Empty when no action is required.
+	// +optional
+	Tip string `json:"tip,omitempty"`
 }
 
 type ApplicationStatusVersion struct {

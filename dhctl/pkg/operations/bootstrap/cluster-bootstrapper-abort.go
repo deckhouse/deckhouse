@@ -96,7 +96,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 	defer func() {
-		_ = b.PhasedExecutionContext.Finalize(ctx, stateCache)
+		if err := b.PhasedExecutionContext.Finalize(ctx, stateCache); err != nil {
+			b.Logger.LogWarnF("failed to finalize phased execution context: %v\n", err)
+		}
 	}()
 
 	hasUUID, err := stateCache.InCache(ctx, "uuid")
@@ -105,11 +107,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	if !hasUUID {
-		if b.CommanderMode {
-			dhlog.FromContext(ctx).InfoContext(ctx, "No UUID found in the cache, will exit now")
-			return nil
-		}
-		return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
+		return b.commanderModeAction(
+			func() error {
+				dhlog.FromContext(ctx).InfoContext(ctx, "No UUID found in the cache, will exit now")
+				return nil
+			},
+			func() error {
+				return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
+			},
+		)
 	}
 
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Get cluster UUID from the cache", func(ctx context.Context) error {

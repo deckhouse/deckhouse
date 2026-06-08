@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.69.0"
+  WERF_VERSION: "v2.70.0"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
@@ -653,6 +653,40 @@ jobs:
 
     # </template: build_template>
 
+
+  # Run the image-based security scans (CVE / rootless / antivirus) as a
+  # reusable workflow right after Build FE has produced the deckhouse-oss
+  # image and the build_report_FE artifact. The called workflow runs as part
+  # of THIS workflow's run, so its jobs (including
+  # `security_scan_images_required`) appear natively on the PR's "Checks" tab
+  # and can be required by branch protection — no commit-status plumbing
+  # needed.
+  #
+  # Re-run: re-running this build workflow re-executes the image scans with
+  # a fresh `github.run_id`. There is no independent re-run entry point for
+  # the called workflow (and that is intentional — the scan results are
+  # bound to the artifacts of this specific Build run).
+  security_scan_images:
+    name: Security scan images
+    needs:
+      - pull_request_info
+      - build_fe
+    if: ${{ success() }}
+    # The called workflow declares its own `permissions:` at workflow level;
+    # the caller job must be at least as permissive (calling-job permissions
+    # are the UPPER BOUND for any nested job's permissions). In particular,
+    # the nested `changed_images` job requests `actions: read` to list the
+    # PR's earlier build-and-test_dev runs via the API (baseline lookup) —
+    # omitting it here makes GitHub reject the whole workflow with:
+    #   "nested job '<name>' is requesting 'actions: read', but is only
+    #    allowed 'actions: none'".
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+      actions: read
+    uses: ./.github/workflows/security-scan-images.yml
+    secrets: inherit
 
   build_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

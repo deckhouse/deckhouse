@@ -116,8 +116,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deckhouse/delivery-kit-sdk v1.1.0 h1:Uu1PoTrpe1pTYLxIEcpau2ONFXgckvET2dw9Ot22ZD4=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
-github.com/deckhouse/lib-connection v0.7.0 h1:RcPiaQJwZ0yw8QkZhxtlpM2ht+e4MoX/6aHvAtTOUcg=
-github.com/deckhouse/lib-connection v0.7.0/go.mod h1:DF2LDhylaHMqJQaOH0Soqv2YDOo64m+uql4bdCBJq5s=
+github.com/deckhouse/lib-connection v0.10.0 h1:pK7a9PL8QkFo5Q7G8oXkHrbonm1QYPq8Z7xhSJ/kCnw=
+github.com/deckhouse/lib-connection v0.10.0/go.mod h1:OjMW+EU3LZFO2huiBBOzO3XHa5FaSCSungSZeTeYRGw=
 github.com/deckhouse/lib-dhctl v0.18.2 h1:vGBDPmWjTy1OcMJ+eFBoteui+eDewkXV94j139ozJ5A=
 github.com/deckhouse/lib-dhctl v0.18.2/go.mod h1:uG4+4vwNjWS4YzvHQ8rAXz8dR/cPmscLZW/+CTLzrys=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
@@ -879,8 +879,8 @@ google.golang.org/protobuf v1.23.1-0.20200526195155-81db48ad09cc/go.mod h1:EGpAD
 google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlbajtzgsN7c=
 google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
 google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
-google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
-google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
+google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af h1:+5/Sw3GsDNlEmu7TfklWKPdQ0Ykja5VEmq2i817+jbI=
+google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=

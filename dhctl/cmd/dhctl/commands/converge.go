@@ -15,8 +15,8 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -55,10 +55,12 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
@@ -138,6 +140,14 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
+		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
+		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
+		// but in exporter and autoconverger we do not need it
+		// and we reset it here
+		// unfortianally global params parsed in place when we do no have command
+		// that user ran
+		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
@@ -148,10 +158,12 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
@@ -195,6 +207,15 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
+		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
+		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
+		// but in exporter and autoconverger we do not need it
+		// and we reset it here
+		// unfortianally global params parsed in place when we do no have command
+		// that user ran
+		// converge migration also can run as sidecar of auto-converger pod
+		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
@@ -203,10 +224,14 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
+
+		loggerFor := log.GetDefaultLogger()
 
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
