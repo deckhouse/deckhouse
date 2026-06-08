@@ -33,7 +33,7 @@ properties:
         x-examples:
         - eu-central-1
         description: |
-          AWS region for ECR authentication (passed as --aws-region to image-availability-exporter).
+          AWS region for ECR authentication.
       ignoredImages:
         type: array
         x-examples:

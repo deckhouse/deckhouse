@@ -23,7 +23,7 @@ properties:
           Если не задан, то используется index.docker.io
       awsRegion:
         description: |
-          AWS-регион для аутентификации в ECR (передаётся в image-availability-exporter как --aws-region).
+          AWS-регион для аутентификации в ECR.
       ignoredImages:
         description: |
           Список образов, для которых нужно пропустить проверку, например `alpine:3.12` или `quay.io/test/test:v1.1`.
