@@ -251,6 +251,29 @@ func (d *EpisodeDao30s) SaveBatch(episodes []check.Episode) error {
 	return nil
 }
 
+// CountDistinctTimeSlots returns how many distinct time slots are currently stored. It is used to
+// log the remaining backlog size while draining the WAL, so the catch-up speed can be measured.
+func (d *EpisodeDao30s) CountDistinctTimeSlots() (int, error) {
+	const query = `
+	SELECT COUNT(DISTINCT timeslot)
+	FROM episodes_30s
+	`
+
+	rows, err := d.DbCtx.StmtRunner().Query(query)
+	if err != nil {
+		return 0, fmt.Errorf("counting distinct timeslots: %v", err)
+	}
+	defer rows.Close()
+
+	var count int
+	if rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return 0, fmt.Errorf("scan count: %w", err)
+		}
+	}
+	return count, nil
+}
+
 func (d *EpisodeDao30s) GetEarliestTimeSlot() (time.Time, error) {
 	const query = `
 	SELECT MIN(timeslot)
