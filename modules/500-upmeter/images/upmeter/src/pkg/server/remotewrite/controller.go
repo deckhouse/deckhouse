@@ -31,12 +31,6 @@ import (
 
 type Exporter interface {
 	Export(origin string, episodes []*check.Episode, slotSize time.Duration) error
-
-	// MaxSampleAge returns the largest acceptance window across all currently active
-	// remote_write syncers. Agents use this to align their local backlog cutoff so that
-	// data is not truncated before the most tolerant backend has a chance to ingest it.
-	// Returns 0 if no syncers are configured.
-	MaxSampleAge() time.Duration
 }
 
 // ControllerConfig configures and creates a Controller
@@ -131,10 +125,6 @@ func (c *Controller) Start(ctx context.Context) error {
 
 func (c *Controller) Export(origin string, episodes []*check.Episode, slotSize time.Duration) error {
 	return c.syncers.AddEpisodes(origin, episodes, slotSize)
-}
-
-func (c *Controller) MaxSampleAge() time.Duration {
-	return c.syncers.MaxSampleAge()
 }
 
 func (c *Controller) Stop() {

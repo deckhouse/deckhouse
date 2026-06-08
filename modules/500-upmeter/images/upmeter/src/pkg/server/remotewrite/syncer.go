@@ -372,21 +372,6 @@ func (sc *syncers) delete(name string) {
 	delete(sc.syncers, name)
 }
 
-// MaxSampleAge returns the largest acceptance window across all active syncers.
-// Stateless: simply iterates over the in-memory map. Returns 0 if no syncers are active.
-func (sc *syncers) MaxSampleAge() time.Duration {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-
-	var maxAge time.Duration
-	for _, s := range sc.syncers {
-		if s.maxSampleAge > maxAge {
-			maxAge = s.maxSampleAge
-		}
-	}
-	return maxAge
-}
-
 func (sc *syncers) AddEpisodes(origin string, episodes []*check.Episode, slotSize time.Duration) error {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
