@@ -1048,6 +1048,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), suite.client.List(suite.Context(), sources))
 
 	for _, source := range sources.Items {
+		source.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"))
 		got, _ := yaml.Marshal(source)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -1057,6 +1058,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), suite.client.List(context.TODO(), releases))
 
 	for _, release := range releases.Items {
+		release.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"))
 		got, _ := yaml.Marshal(release)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -1066,6 +1068,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), suite.client.List(context.TODO(), modules))
 
 	for _, module := range modules.Items {
+		module.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("Module"))
 		got, _ := yaml.Marshal(module)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -1651,6 +1654,15 @@ spec:
     dockerCfg: ""
     scheme: HTTPS
 ---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-policy
+spec:
+  releaseChannel: Stable
+  update:
+    mode: Auto
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
@@ -1658,6 +1670,7 @@ metadata:
   labels:
     source: deckhouse
     module: parca
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: parca
   version: 1.26.2
@@ -1673,6 +1686,7 @@ metadata:
   labels:
     source: deckhouse
     module: commander
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: commander
   version: 1.0.3
@@ -1688,6 +1702,7 @@ metadata:
   labels:
     source: deckhouse
     module: upmeter
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: upmeter
   version: 1.70.0
