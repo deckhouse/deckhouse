@@ -136,10 +136,14 @@ roleRef:
 Each DVP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
 
 For example, for the `networking` subsystem, there are the following manage roles that can be used in `ClusterRoleBinding`:
+
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-The subsystem of the role restricts its action to all system namespaces of the cluster (subsystem `all`) or to those namespaces in which the area modules operate (see the table of area compositions).
+The scope of a role depends on which subsystem it belongs to:
+
+- The scope of roles from the `all` subsystem is all system namespaces (starting with `d8-` or `kube-`) in the cluster.
+- The scope of roles from other subsystems includes the namespaces in which the subsystem’s modules operate (see the subsystem composition table), as well as all cluster-wide objects of the subsystem’s modules.
 
 Role-based model subsystems composition table.
 
