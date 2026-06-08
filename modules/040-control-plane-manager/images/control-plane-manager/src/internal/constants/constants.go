@@ -88,6 +88,14 @@ const (
 	CertRenewalThreshold             = 30 * 24 * time.Hour
 )
 
+var SignatureBuildEnabled = "false"
+
+// SignatureEnabled reports whether the signature feature is built into this binary (CSE only).
+// Flag is overridden by an ldflag in the CSE build (see werf.inc.yaml).
+func SignatureEnabled() bool {
+	return strings.ToLower(SignatureBuildEnabled) == "true"
+}
+
 // ToRelativePath returns path without leading slash for using in tmp directory sync
 func ToRelativePath(absolutePath string) string {
 	return strings.TrimPrefix(absolutePath, "/")

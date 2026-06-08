@@ -188,9 +188,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	currentOps, err = r.ensureSignatureRenewalExists(ctx, cpn, states, currentOps, logger)
-	if err != nil {
-		return reconcile.Result{}, err
+	if constants.SignatureEnabled() {
+		currentOps, err = r.ensureSignatureRenewalExists(ctx, cpn, states, currentOps, logger)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	if err := r.ensureObserveOperations(ctx, cpn, currentOps, logger); err != nil {
@@ -463,6 +465,10 @@ func determineSteps(state componentState, pkiChanged, caChanged bool) []controlp
 				controlplanev1alpha1.StepRenewPKICerts,
 				controlplanev1alpha1.StepRenewKubeconfigs,
 			)
+		}
+		// CSE only, first deploy/join (status.Config still empty)
+		if constants.SignatureEnabled() && state.status.Config == "" {
+			steps = append(steps, controlplanev1alpha1.StepRenewSignature)
 		}
 		steps = append(steps,
 			controlplanev1alpha1.StepSyncManifests,
