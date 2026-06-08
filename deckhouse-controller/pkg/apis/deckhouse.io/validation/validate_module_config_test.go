@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +30,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -36,6 +38,7 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -102,6 +105,43 @@ func newModuleWithDisableOptions(t *testing.T, name string, confirmation bool, m
 	return module
 }
 
+// newStorageModule builds a real *moduletypes.Module with the given stage and
+// exclusive group, used to exercise the experimental / exclusive-group branches.
+func newStorageModule(t *testing.T, name, stage, exclusiveGroup string) *moduletypes.Module {
+	t.Helper()
+
+	def := &moduletypes.Definition{
+		Name:           name,
+		Stage:          stage,
+		ExclusiveGroup: exclusiveGroup,
+	}
+
+	module, err := moduletypes.NewModule(def, nil, nil, nil, log.NewNop())
+	require.NoError(t, err)
+
+	return module
+}
+
+// newModuleCR builds a v1alpha1.Module custom resource so that the cli.Get
+// lookup in the handler returns an object instead of a NotFound error.
+func newModuleCR(name string, availableSources []string, stage string) *v1alpha1.Module {
+	return &v1alpha1.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Properties: v1alpha1.ModuleProperties{
+			Stage:            stage,
+			AvailableSources: availableSources,
+		},
+	}
+}
+
+func newModuleConfigFull(name string, enabled *bool, source, updatePolicy string) *v1alpha1.ModuleConfig {
+	cfg := newModuleConfig(name, enabled, nil)
+	cfg.Spec.Source = source
+	cfg.Spec.UpdatePolicy = updatePolicy
+
+	return cfg
+}
+
 func newModuleConfig(name string, enabled *bool, annotations map[string]string) *v1alpha1.ModuleConfig {
 	return &v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -142,15 +182,37 @@ func newModuleConfigAdmissionReview(operation string, obj, oldObj interface{}) *
 func newTestHandler(t *testing.T, storage *fakeModuleStorage, manager *fakeModuleManager, dependencyExtender moduleDependencyExtender) http.Handler {
 	t.Helper()
 
+	return newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false)
+}
+
+// newTestHandlerWithObjects builds the validation handler with a fake client
+// seeded with the given objects (e.g. Module / ModuleUpdatePolicy CRs). Seeding
+// a Module CR is what lets tests exercise the branches after the cli.Get lookup
+// in moduleConfigValidationHandler instead of always hitting the IsNotFound
+// short-circuit. allowExperimental toggles the AllowExperimentalModules setting.
+func newTestHandlerWithObjects(t *testing.T, storage *fakeModuleStorage, manager *fakeModuleManager, dependencyExtender moduleDependencyExtender, allowExperimental bool, objs ...client.Object) http.Handler {
+	t.Helper()
+
+	return newTestHandlerWithValidator(t, storage, manager, dependencyExtender, allowExperimental, configtools.NewValidator(nil, nil), objs...)
+}
+
+// newTestHandlerWithValidator is the most flexible builder: it also lets a test
+// supply the config validator, which is needed to exercise the
+// configValidator.Validate branch in the handler.
+func newTestHandlerWithValidator(t *testing.T, storage *fakeModuleStorage, manager *fakeModuleManager, dependencyExtender moduleDependencyExtender, allowExperimental bool, validator *configtools.Validator, objs ...client.Object) http.Handler {
+	t.Helper()
+
 	scheme := runtime.NewScheme()
 	require.NoError(t, v1alpha1.AddToScheme(scheme))
 	require.NoError(t, v1alpha2.AddToScheme(scheme))
 
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 
 	metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
-	settings := helpers.NewDeckhouseSettingsContainer(helpers.DefaultDeckhouseSettings(), metricStorage)
-	validator := configtools.NewValidator(nil, nil)
+
+	deckhouseSettings := helpers.DefaultDeckhouseSettings()
+	deckhouseSettings.AllowExperimentalModules = allowExperimental
+	settings := helpers.NewDeckhouseSettingsContainer(deckhouseSettings, metricStorage)
 
 	return moduleConfigValidationHandler(fakeClient, storage, metricStorage, manager, validator, settings, dependencyExtender)
 }
@@ -514,6 +576,581 @@ func TestDisableConfirmationReason(t *testing.T) {
 			}
 			// the suffix must never be duplicated nor glued to the message without a space
 			assert.NotContains(t, got, ".Please")
+		})
+	}
+}
+
+// TestModuleConfigValidationHandler_ModuleResolution exercises the branches that
+// run only after the Module CR is successfully fetched from the client (i.e. the
+// path that the IsNotFound short-circuit otherwise skips): source availability
+// validation and the multiple-sources warning.
+func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
+	const moduleName = "resolvable-module"
+
+	tests := []struct {
+		name                string
+		operation           string
+		newConfig           *v1alpha1.ModuleConfig
+		oldConfig           *v1alpha1.ModuleConfig
+		moduleCR            *v1alpha1.Module
+		expectCheckEnabling bool
+		wantAllowed         bool
+		wantMessage         string
+		wantWarning         string
+	}{
+		{
+			name:        "module CR found, disabled config without source is allowed",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newModuleCR(moduleName, []string{"alpha"}, ""),
+			wantAllowed: true,
+		},
+		{
+			name:        "config referencing an unavailable source is rejected",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "beta", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newModuleCR(moduleName, []string{"alpha"}, ""),
+			wantAllowed: false,
+			wantMessage: "unavailable source",
+		},
+		{
+			name:        "config referencing an available source is allowed",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "alpha", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:    newModuleCR(moduleName, []string{"alpha", "beta"}, ""),
+			wantAllowed: true,
+		},
+		{
+			name:                "enabled module with multiple sources and no source specified warns",
+			operation:           "CREATE",
+			newConfig:           newModuleConfigFull(moduleName, boolPtr(true), "", ""),
+			moduleCR:            newModuleCR(moduleName, []string{"alpha", "beta"}, ""),
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+			wantWarning:         "multiple sources",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newStorageModule(t, moduleName, "", ""),
+				},
+			}
+			manager := &fakeModuleManager{enabled: map[string]bool{}}
+
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+			if tt.expectCheckEnabling {
+				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
+			}
+
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, tt.moduleCR)
+
+			review := newModuleConfigAdmissionReview(tt.operation, tt.newConfig, tt.oldConfig)
+
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed)
+				if tt.wantWarning != "" {
+					require.NotEmpty(t, resp.Warnings)
+					assert.Contains(t, strings.Join(resp.Warnings, " "), tt.wantWarning)
+				}
+				return
+			}
+
+			require.False(t, resp.Allowed)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage)
+		})
+	}
+}
+
+// TestModuleConfigValidationHandler_DeletePullOverride covers the DELETE guard
+// that forbids deleting a module config while a ModulePullOverride for the
+// module still exists.
+func TestModuleConfigValidationHandler_DeletePullOverride(t *testing.T) {
+	const moduleName = "overridden-module"
+
+	tests := []struct {
+		name         string
+		pullOverride bool
+		wantAllowed  bool
+		wantMessage  string
+	}{
+		{
+			name:         "delete is rejected while a ModulePullOverride exists",
+			pullOverride: true,
+			wantAllowed:  false,
+			wantMessage:  "delete the ModulePullOverride before deleting the module config",
+		},
+		{
+			name:         "delete is allowed when no ModulePullOverride exists",
+			pullOverride: false,
+			wantAllowed:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newStorageModule(t, moduleName, "", ""),
+				},
+			}
+			manager := &fakeModuleManager{enabled: map[string]bool{}}
+
+			// DELETE never enables a module, so the dependency extender must not be consulted.
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+			var objs []client.Object
+			if tt.pullOverride {
+				objs = append(objs, &v1alpha2.ModulePullOverride{
+					ObjectMeta: metav1.ObjectMeta{Name: moduleName},
+				})
+			}
+
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, objs...)
+
+			// the disabled config keeps the confirmation guard out of the way so that
+			// the ModulePullOverride check is the deciding factor
+			review := newModuleConfigAdmissionReview("DELETE", nil, newModuleConfig(moduleName, boolPtr(false), nil))
+
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed)
+				return
+			}
+
+			require.False(t, resp.Allowed)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage)
+		})
+	}
+}
+
+// TestModuleConfigValidationHandler_EmbeddedSource verifies that 'Embedded' is
+// rejected as an explicit module config source.
+func TestModuleConfigValidationHandler_EmbeddedSource(t *testing.T) {
+	const moduleName = "embedded-source-module"
+
+	storage := &fakeModuleStorage{
+		modules: map[string]*moduletypes.Module{
+			moduleName: newStorageModule(t, moduleName, "", ""),
+		},
+	}
+	manager := &fakeModuleManager{enabled: map[string]bool{}}
+
+	// disabled config, no enabling transition - the dependency extender is not consulted
+	dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+	handler := newTestHandler(t, storage, manager, dependencyExtender)
+
+	review := newModuleConfigAdmissionReview(
+		"UPDATE",
+		newModuleConfigFull(moduleName, boolPtr(false), v1alpha1.ModuleSourceEmbedded, ""),
+		newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+	)
+
+	resp := callHandler(t, handler, review)
+
+	require.False(t, resp.Allowed)
+	require.NotNil(t, resp.Result)
+	assert.Contains(t, resp.Result.Message, "'Embedded' is a forbidden source")
+}
+
+// TestModuleConfigValidationHandler_UpdatePolicy covers the update-policy
+// existence check, which is only reachable after the Module CR is found.
+func TestModuleConfigValidationHandler_UpdatePolicy(t *testing.T) {
+	const (
+		moduleName = "policy-module"
+		policyName = "my-policy"
+	)
+
+	tests := []struct {
+		name           string
+		registerPolicy bool
+		wantAllowed    bool
+		wantMessage    string
+	}{
+		{
+			name:           "referencing a missing update policy is rejected",
+			registerPolicy: false,
+			wantAllowed:    false,
+			wantMessage:    "module policy does not exist",
+		},
+		{
+			name:           "referencing an existing update policy is allowed",
+			registerPolicy: true,
+			wantAllowed:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newStorageModule(t, moduleName, "", ""),
+				},
+			}
+			manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
+
+			// old=true,new=true: no enabling transition, no dependency check
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+			objs := []client.Object{newModuleCR(moduleName, []string{"alpha"}, "")}
+			if tt.registerPolicy {
+				objs = append(objs, newUpdatePolicy(policyName))
+			}
+
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, objs...)
+
+			review := newModuleConfigAdmissionReview(
+				"UPDATE",
+				newModuleConfigFull(moduleName, boolPtr(true), "alpha", policyName),
+				newModuleConfigFull(moduleName, boolPtr(true), "alpha", policyName),
+			)
+
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed)
+				return
+			}
+
+			require.False(t, resp.Allowed)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage)
+		})
+	}
+}
+
+// TestModuleConfigValidationHandler_ExperimentalOnUpdate covers the experimental
+// gate on the UPDATE enabling transition, both via the storage definition and
+// via the fetched Module CR, plus the "Module CR not found is skipped" branch.
+func TestModuleConfigValidationHandler_ExperimentalOnUpdate(t *testing.T) {
+	const moduleName = "experimental-update-module"
+
+	tests := []struct {
+		name                string
+		allowExperimental   bool
+		storageStage        string
+		registerModuleCR    bool
+		moduleCRStage       string
+		expectCheckEnabling bool
+		wantAllowed         bool
+		wantMessage         string
+	}{
+		{
+			name:         "experimental per storage definition is rejected before the dependency check",
+			storageStage: moduletypes.ExperimentalModuleStage,
+			wantAllowed:  false,
+			wantMessage:  "experimental",
+		},
+		{
+			name:                "experimental per Module CR is rejected after the dependency check",
+			registerModuleCR:    true,
+			moduleCRStage:       v1alpha1.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         false,
+			wantMessage:         "experimental",
+		},
+		{
+			name:                "missing Module CR is skipped and the update is allowed",
+			registerModuleCR:    false,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
+		{
+			name:                "non-experimental Module CR enabling is allowed",
+			registerModuleCR:    true,
+			moduleCRStage:       "",
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
+		{
+			name:                "experimental Module CR enabling is allowed when allowExperimentalModules is true",
+			allowExperimental:   true,
+			registerModuleCR:    true,
+			moduleCRStage:       v1alpha1.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newStorageModule(t, moduleName, tt.storageStage, ""),
+				},
+			}
+			manager := &fakeModuleManager{enabled: map[string]bool{}}
+
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+			if tt.expectCheckEnabling {
+				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
+			}
+
+			var objs []client.Object
+			if tt.registerModuleCR {
+				objs = append(objs, newModuleCR(moduleName, []string{"alpha"}, tt.moduleCRStage))
+			}
+
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, tt.allowExperimental, objs...)
+
+			// disabled -> enabled transition triggers the experimental gate
+			review := newModuleConfigAdmissionReview(
+				"UPDATE",
+				newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""),
+				newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			)
+
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed)
+				return
+			}
+
+			require.False(t, resp.Allowed)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage)
+		})
+	}
+}
+
+// TestModuleConfigValidationHandler_ConfigValidation covers the config validator
+// branch: a hard validation error is rejected, while a validation warning is
+// surfaced as an admission warning without blocking the request.
+func TestModuleConfigValidationHandler_ConfigValidation(t *testing.T) {
+	const moduleName = "validated-module"
+
+	t.Run("validation error is rejected", func(t *testing.T) {
+		storage := &fakeModuleStorage{
+			modules: map[string]*moduletypes.Module{
+				moduleName: newStorageModule(t, moduleName, "", ""),
+			},
+		}
+		manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
+
+		// no enabling transition, the dependency extender must not be consulted
+		dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+		// nil validator returns an error for settings supplied without spec.version
+		handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, newModuleCR(moduleName, []string{"alpha"}, ""))
+
+		cfg := newModuleConfigFull(moduleName, boolPtr(true), "alpha", "")
+		cfg.Spec.Version = 0
+		cfg.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"foo": "bar"})
+
+		review := newModuleConfigAdmissionReview("UPDATE", cfg, newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""))
+
+		resp := callHandler(t, handler, review)
+
+		require.False(t, resp.Allowed)
+		require.NotNil(t, resp.Result)
+		assert.Contains(t, resp.Result.Message, "spec.version is required when spec.settings are specified")
+	})
+
+	t.Run("validation warning is surfaced and request is allowed", func(t *testing.T) {
+		storage := &fakeModuleStorage{
+			modules: map[string]*moduletypes.Module{
+				moduleName: newStorageModule(t, moduleName, "", ""),
+			},
+		}
+		manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
+
+		dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+		// a validator with a (empty) conversions store but no values validator emits
+		// a warning for a spec.version without spec.settings
+		validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
+		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, validator, newModuleCR(moduleName, []string{"alpha"}, ""))
+
+		cfg := newModuleConfigFull(moduleName, boolPtr(true), "alpha", "")
+		cfg.Spec.Version = 1
+
+		review := newModuleConfigAdmissionReview("UPDATE", cfg, newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""))
+
+		resp := callHandler(t, handler, review)
+
+		assert.True(t, resp.Allowed)
+		require.NotEmpty(t, resp.Warnings)
+		assert.Contains(t, strings.Join(resp.Warnings, " "), "spec.version has no effect without spec.settings")
+	})
+}
+
+// TestModuleConfigValidationHandler_StorageModuleNotFound covers the branch where
+// the Module CR is found (so the handler proceeds past the cli.Get lookup) but
+// the module is absent from the storage: accumulated warnings are returned and
+// the request is allowed.
+func TestModuleConfigValidationHandler_StorageModuleNotFound(t *testing.T) {
+	const moduleName = "storage-missing-module"
+
+	// storage is intentionally empty: GetModuleByName will fail
+	storage := &fakeModuleStorage{modules: map[string]*moduletypes.Module{}}
+	manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
+
+	// old=true,new=true: no enabling transition, no dependency check
+	dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+	// the Module CR is found and advertises multiple sources, so a "multiple sources"
+	// warning is produced before the storage lookup fails
+	moduleCR := newModuleCR(moduleName, []string{"alpha", "beta"}, "")
+	handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, moduleCR)
+
+	review := newModuleConfigAdmissionReview(
+		"UPDATE",
+		newModuleConfigFull(moduleName, boolPtr(true), "", ""),
+		newModuleConfigFull(moduleName, boolPtr(true), "", ""),
+	)
+
+	resp := callHandler(t, handler, review)
+
+	assert.True(t, resp.Allowed)
+	require.NotEmpty(t, resp.Warnings)
+	assert.Contains(t, strings.Join(resp.Warnings, " "), "multiple sources")
+}
+
+// TestModuleConfigValidationHandler_ExclusiveGroup verifies the exclusive-group
+// conflict check, which is only reachable when the Module CR is found (the
+// IsNotFound branch returns before it).
+func TestModuleConfigValidationHandler_ExclusiveGroup(t *testing.T) {
+	const (
+		moduleName = "group-module"
+		other      = "other-group-module"
+		group      = "networking"
+	)
+
+	tests := []struct {
+		name        string
+		enabledMods map[string]bool
+		wantAllowed bool
+		wantMessage string
+	}{
+		{
+			name:        "another enabled module in the same exclusive group is rejected",
+			enabledMods: map[string]bool{moduleName: true, other: true},
+			wantAllowed: false,
+			wantMessage: "exclusiveGroup",
+		},
+		{
+			name:        "no other module in the exclusive group is enabled is allowed",
+			enabledMods: map[string]bool{moduleName: true},
+			wantAllowed: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newStorageModule(t, moduleName, "", group),
+				},
+				exclusive: map[string][]string{group: {moduleName, other}},
+			}
+			manager := &fakeModuleManager{enabled: tt.enabledMods}
+
+			// old=true,new=true: no enabling transition, the dependency extender
+			// must not be consulted.
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+			moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, moduleCR)
+
+			review := newModuleConfigAdmissionReview(
+				"UPDATE",
+				newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""),
+				newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""),
+			)
+
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed)
+				return
+			}
+
+			require.False(t, resp.Allowed)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage)
+		})
+	}
+}
+
+// TestModuleConfigValidationHandler_Experimental covers the experimental-module
+// gate, both via the storage module definition and via the fetched Module CR,
+// together with the AllowExperimentalModules setting bypass.
+func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
+	const moduleName = "experimental-module"
+
+	tests := []struct {
+		name                string
+		allowExperimental   bool
+		storageStage        string
+		moduleCRStage       string
+		expectCheckEnabling bool
+		wantAllowed         bool
+		wantMessage         string
+	}{
+		{
+			name:         "experimental module (per storage definition) is rejected by default",
+			storageStage: moduletypes.ExperimentalModuleStage,
+			wantAllowed:  false,
+			wantMessage:  "experimental",
+		},
+		{
+			name:                "experimental module (per Module CR) is rejected by default",
+			moduleCRStage:       v1alpha1.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         false,
+			wantMessage:         "experimental",
+		},
+		{
+			name:                "experimental module is allowed when allowExperimentalModules is true",
+			allowExperimental:   true,
+			storageStage:        moduletypes.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newStorageModule(t, moduleName, tt.storageStage, ""),
+				},
+			}
+			manager := &fakeModuleManager{enabled: map[string]bool{}}
+
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+			if tt.expectCheckEnabling {
+				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
+			}
+
+			moduleCR := newModuleCR(moduleName, []string{"alpha"}, tt.moduleCRStage)
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, tt.allowExperimental, moduleCR)
+
+			// CREATE that enables the module triggers the experimental gate
+			review := newModuleConfigAdmissionReview("CREATE", newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""), nil)
+
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed)
+				return
+			}
+
+			require.False(t, resp.Allowed)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage)
 		})
 	}
 }
