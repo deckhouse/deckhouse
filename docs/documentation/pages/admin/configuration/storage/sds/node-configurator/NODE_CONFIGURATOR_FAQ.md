@@ -3,7 +3,6 @@ title: "FAQ"
 permalink: en/admin/configuration/storage/sds/node-configurator/faq.html
 ---
 
-
 {% alert level="info" %}
 Functionality is guaranteed only when using stock kernels supplied with [supported distributions](../../../../../supported_versions.html#linux). When using non-standard kernels or distributions, behavior may be unpredictable.
 {% endalert %}
