@@ -234,6 +234,9 @@ spec:
                         > **Внимание.** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
+                    seccompDefault:
+                      description: |
+                        Использовать seccomp-профиль `RuntimeDefault` для workload'ов, где seccomp-профиль не задан явно.
             status:
               properties:
                 conditionSummary:
@@ -314,8 +317,7 @@ spec:
                     Количество резервных инстансов в группе.
                 upToDate:
                   description: |
-                    Количество узлов в актуальном состоянии.
-    - name: v1alpha2
+                    Количество узлов в актуальном состоянии.    - name: v1alpha2
       schema:
         openAPIV3Schema:
           description: |
@@ -543,6 +545,9 @@ spec:
                         > **Внимание.** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
+                    seccompDefault:
+                      description: |
+                        Использовать seccomp-профиль `RuntimeDefault` для workload'ов, где seccomp-профиль не задан явно.
             status:
               properties:
                 conditionSummary:
@@ -623,8 +628,7 @@ spec:
                     Количество резервных инстансов в группе.
                 upToDate:
                   description: |
-                    Количество узлов в актуальном состоянии.
-    - name: v1
+                    Количество узлов в актуальном состоянии.    - name: v1
       schema:
         openAPIV3Schema:
           description: |
@@ -1005,6 +1009,9 @@ spec:
                     containerLogMaxFiles:
                       description: |
                         Максимальное количество файлов журналов с учетом ротации.
+                    seccompDefault:
+                      description: |
+                        Использовать seccomp-профиль `RuntimeDefault` для workload'ов, где seccomp-профиль не задан явно.
                     resourceReservation:
                       description: |
                         Управление резервированием ресурсов для системных служб на узле.
