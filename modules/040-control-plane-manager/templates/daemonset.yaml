@@ -156,10 +156,14 @@ in modules/040-control-plane-manager/images/control-plane-manager/src/internal/c
   {{- if hasKey $tpl_context.apiserver "certSANs" }}
 cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
   {{- end }}
-  {{- $ccAlgo := $tpl_context.clusterConfiguration.encryptionAlgorithm }}
-  {{- $mcAlgo := $tpl_context.encryptionAlgorithm }}
-  {{- $effectiveAlgo := coalesce $mcAlgo $ccAlgo "RSA-2048" }}
+  {{- $ccAlgo := $tpl_context.clusterConfiguration.encryptionAlgorithm | default "RSA-2048" }}
+  {{- $mcAlgo := $tpl_context.encryptionAlgorithm | default "" }}
+  {{- $effectiveAlgo := "RSA-2048" }}
   {{- if and (ne $ccAlgo "RSA-2048") (or (eq $mcAlgo "") (eq $mcAlgo "RSA-2048")) }}
+    {{- $effectiveAlgo = $ccAlgo }}
+  {{- else if ne $mcAlgo "" }}
+    {{- $effectiveAlgo = $mcAlgo }}
+  {{- else }}
     {{- $effectiveAlgo = $ccAlgo }}
   {{- end }}
 encryption-algorithm: {{ $effectiveAlgo | b64enc }}
