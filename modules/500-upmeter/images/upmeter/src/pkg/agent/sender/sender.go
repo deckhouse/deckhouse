@@ -19,7 +19,6 @@ package sender
 import (
 	"encoding/json"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -34,11 +33,6 @@ type Sender struct {
 	recv     chan []check.Episode
 	storage  *ListStorage
 	interval time.Duration
-
-	// maxEpisodeAgeSeconds is set from the server's ack on each successful POST.
-	// 0 means "server hasn't told us yet" — the agent then keeps everything until
-	// the first ack arrives. After the first ack, this drives stale-tail cutoff.
-	maxEpisodeAgeSeconds atomic.Int64
 
 	stop chan struct{}
 	done chan struct{}
@@ -128,45 +122,17 @@ func (s *Sender) export() error {
 		return nil
 	}
 
-	slot := episodes[0].TimeSlot
-
-	// Drop the stale prefix of the local WAL in a single SQL call. Without this, after a long
-	// outage the agent would replay every old slot one-by-one (1 slot per --export-interval
-	// tick), starving fresh data from reaching the server and breaking the status API in the UI.
-	// The threshold is pushed by the server in the previous POST's ack; before the first ack
-	// arrives we keep everything (safe: at worst one stale slot leaks through and gets cut on
-	// the server side by the per-CR maxSampleAgeSeconds in syncer).
-	if maxAge := s.serverMaxEpisodeAge(); maxAge > 0 {
-		ageDeadline := time.Now().Add(-maxAge)
-		if slot.Before(ageDeadline) {
-			log.Errorf("dropping stale episodes up to %s (older than %s, hinted by server)", ageDeadline.Format(time.RFC3339), maxAge)
-			if err := s.storage.Clean(ageDeadline); err != nil {
-				return fmt.Errorf("dropping stale episodes: %w", err)
-			}
-			return nil
-		}
-	}
-
 	err = s.send(episodes)
 	if err != nil {
 		return err
 	}
 
+	slot := episodes[0].TimeSlot
 	err = s.storage.Clean(slot)
 	if err != nil {
 		return fmt.Errorf("cleaning send storage, slot=%v: %v", slot, err)
 	}
 	return nil
-}
-
-// serverMaxEpisodeAge returns the cutoff received from the server's last ack.
-// Returns 0 if the server has not provided a hint yet (no ingestion happens in that case).
-func (s *Sender) serverMaxEpisodeAge() time.Duration {
-	secs := s.maxEpisodeAgeSeconds.Load()
-	if secs <= 0 {
-		return 0
-	}
-	return time.Duration(secs) * time.Second
 }
 
 func (s *Sender) send(episodes []check.Episode) error {
@@ -180,18 +146,7 @@ func (s *Sender) send(episodes []check.Episode) error {
 		return fmt.Errorf("marshalling to JSON: %v", err)
 	}
 
-	respBody, err := s.client.Send(body)
-	if err != nil {
-		return err
-	}
-
-	if len(respBody) > 0 {
-		var ack api.EpisodesAck
-		if jerr := json.Unmarshal(respBody, &ack); jerr == nil && ack.MaxEpisodeAgeSeconds > 0 {
-			s.maxEpisodeAgeSeconds.Store(ack.MaxEpisodeAgeSeconds)
-		}
-	}
-	return nil
+	return s.client.Send(body)
 }
 
 func (s *Sender) Stop() {
