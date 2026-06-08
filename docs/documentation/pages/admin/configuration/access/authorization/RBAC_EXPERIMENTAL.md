@@ -140,8 +140,10 @@ For example, the `networking` subsystem includes the following manage roles, whi
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-A role’s subsystem limits its scope to either all system namespaces (those starting with `d8-` or `kube-`) if using `all`,
-or only those namespaces where modules of the specified subsystem are running (refer to the subsystem composition table for details).
+The scope of a role depends on which subsystem it belongs to:
+
+- The scope of roles from the `all` subsystem is all system namespaces (starting with `d8-` or `kube-`) in the cluster.
+- The scope of roles from other subsystems includes the namespaces in which the subsystem’s modules operate (see the subsystem composition table), as well as all cluster-wide objects of the subsystem’s modules.
 
 ### Role model subsystem composition
 
