@@ -26,9 +26,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -37,10 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal/v1"
-)
-
-const (
-	dvpMigrationConfigMapName = "d8-module-is-migrating"
 )
 
 // pccSecretFilterResult holds the parsed data from the PCC secret.
@@ -159,18 +153,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterPCCSecret,
 		},
-		// Binding 1: ModuleConfig for the DVP module (does not trigger hook on change — read-only snapshot)
+		// Binding 1: ModuleConfig for the DVP module - triggers hook on change to detect migration completion.
 		{
 			Name:       "module_config",
-			ApiVersion: dvpModuleConfigAPIVersion,
+			ApiVersion: moduleConfigAPIVersion,
 			Kind:       "ModuleConfig",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpModuleConfigName},
+				MatchNames: []string{dvpModuleName},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterModuleConfig,
+			FilterFunc: filterModuleConfig,
 		},
-		// Binding 2: d8-credentials Secret (does not trigger hook on change — read-only snapshot)
+		// Binding 2: d8-credentials Secret - triggers hook on change to detect migration completion.
 		{
 			Name:       "credential_secret_d8",
 			ApiVersion: "v1",
@@ -183,56 +176,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{dvpCredentialSecretName},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterCredentialSecret,
+			FilterFunc: filterCredentialSecret,
 		},
-		// Binding 3: NodeGroup CRs (does not trigger hook on change — read-only snapshot)
+		// Binding 3: NodeGroup CRs - triggers hook on change to detect migration completion.
 		{
-			Name:                "node_groups",
-			ApiVersion:          "deckhouse.io/v1",
-			Kind:                "NodeGroup",
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
+			Name:       "node_groups",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+			FilterFunc: filterNamedResource,
 		},
-		// Binding 4: DVPInstanceClass CRs (does not trigger hook on change — read-only snapshot)
+		// Binding 4: DVPInstanceClass CRs - triggers hook on change to detect migration completion.
 		{
-			Name:                "dvp_instance_classes",
-			ApiVersion:          dvpModuleConfigAPIVersion,
-			Kind:                dvpInstanceClassKind,
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
-		},
-		// Binding 5: d8-migration-resources Secret in dvp namespace (does not trigger hook on change — read-only snapshot)
-		{
-			Name:       "migration_resources_secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{dvpNamespace},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpMigrationResourcesName},
-			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
-		},
-		// Binding 6: d8-module-is-migrating ConfigMap in dvp namespace (does not trigger hook on change — read-only snapshot)
-		{
-			Name:       "migration_configmap",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{dvpNamespace},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpMigrationConfigMapName},
-			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
+			Name:       "dvp_instance_classes",
+			ApiVersion: moduleConfigAPIVersion,
+			Kind:       dvpInstanceClassKind,
+			FilterFunc: filterNamedResource,
 		},
 	},
 }, handleDVPClusterConfiguration)
@@ -244,14 +202,14 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 
 	// ---- State machine ----
 	if !pccPresent {
-		// State A: no PCC — new cluster on v2, standard flow.
+		// State A: no PCC - new cluster on v2, standard flow.
 		// Values come from ModuleConfig v2 via addon-operator (already in input.Values).
 		// Clean up migration artifacts if they exist.
 		deleteMigrationArtifacts(input)
 		return mergeAndSetDiscoveryData(input, cloudDataV1.DVPCloudProviderDiscoveryData{})
 	}
 
-	// PCC is present — parse it.
+	// PCC is present - parse it.
 	var pccResult pccSecretFilterResult
 	if err := pccSnaps[0].UnmarshalTo(&pccResult); err != nil {
 		return fmt.Errorf("unmarshal PCC snapshot: %w", err)
@@ -277,13 +235,13 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 
 	if newResourcesComplete {
 		// State C: PCC present but migration is done.
-		// Values come from MC v2 (root path) — do NOT override from PCC.
+		// Values come from MC v2 (root path) - do NOT override from PCC.
 		// Clean up migration artifacts.
 		deleteMigrationArtifacts(input)
 		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
-	// State B: PCC present, new resources incomplete — migration in progress.
+	// State B: PCC present, new resources incomplete - migration in progress.
 	// Write root values from PCC so templates can render.
 	if err := mapPCCtoRootValues(input, &pcc); err != nil {
 		return fmt.Errorf("map PCC to root values: %w", err)
@@ -297,14 +255,6 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 	if err := overrideValues(&pcc, &moduleConfiguration); err != nil {
 		return fmt.Errorf("override values: %w", err)
 	}
-
-	// Create d8-migration-resources Secret.
-	if err := createProviderClusterConfigurationResources(input, &pcc); err != nil {
-		return fmt.Errorf("create migration resources: %w", err)
-	}
-
-	// Create d8-module-is-migrating ConfigMap.
-	createMigrationConfigMap(input)
 
 	return mergeAndSetDiscoveryData(input, discoveryData)
 }
@@ -385,7 +335,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 // (cloudProviderDvp.provider/nodes) in v2 format so templates can render during migration.
 // Only individual leaf values are written so that fields populated by addon-operator from
 // config-values defaults (e.g. nodes.enabled, storage.enabled) are never overwritten.
-// storage is left entirely untouched — PCC does not control subsystem enablement.
+// storage is left entirely untouched - PCC does not control subsystem enablement.
 //
 // It also injects a synthetic cloudProviderDvp.internal.credentialSecrets["d8-credentials"]
 // entry built from PCC.provider.kubeconfigDataBase64, but ONLY when the key is absent.
@@ -396,7 +346,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		return nil
 	}
 
-	// provider — set the whole object (provider has no enabled flag, so overwriting is safe).
+	// provider - set the whole object (provider has no enabled flag, so overwriting is safe).
 	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
 		input.Values.Set("cloudProviderDvp.provider", map[string]any{
 			"parameters": map[string]any{
@@ -405,7 +355,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		})
 	}
 
-	// nodes.parameters — only PCC-derived fields; nodes.enabled is intentionally not touched
+	// nodes.parameters - only PCC-derived fields; nodes.enabled is intentionally not touched
 	// so the default from config-values is preserved.
 	nodesParams := map[string]any{}
 	if pcc.Layout != nil {
@@ -424,7 +374,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		input.Values.Set("cloudProviderDvp.nodes.parameters", nodesParams)
 	}
 
-	// storage — not touched; PCC does not control subsystem enablement.
+	// storage - not touched; PCC does not control subsystem enablement.
 
 	// Inject synthetic d8-credentials from PCC kubeconfig only when the real Secret
 	// is not yet present (i.e. credentials.go did not populate it at Order 19).
@@ -448,32 +398,6 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 	}
 
 	return nil
-}
-
-// deleteMigrationArtifacts removes d8-migration-resources Secret and
-// d8-module-is-migrating ConfigMap. Missing objects are ignored by the patch collector.
-func deleteMigrationArtifacts(input *go_hook.HookInput) {
-	input.PatchCollector.Delete("v1", "Secret", dvpNamespace, dvpMigrationResourcesName)
-	input.PatchCollector.Delete("v1", "ConfigMap", dvpNamespace, dvpMigrationConfigMapName)
-}
-
-// createMigrationConfigMap creates (or updates) the d8-module-is-migrating ConfigMap.
-func createMigrationConfigMap(input *go_hook.HookInput) {
-	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dvpMigrationConfigMapName,
-			Namespace: dvpNamespace,
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-				"module":   dvpModuleLabel,
-			},
-		},
-	}
-	input.PatchCollector.CreateOrUpdate(cm)
 }
 
 // mergeAndSetDiscoveryData merges the provided discovery data with any existing values

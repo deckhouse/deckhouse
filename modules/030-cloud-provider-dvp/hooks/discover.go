@@ -71,7 +71,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &meta.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage": "deckhouse",
-					"module":   dvpModuleLabel,
+					"module":   dvpModuleName,
 				},
 			},
 		},
