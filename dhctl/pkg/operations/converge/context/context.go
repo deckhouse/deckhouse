@@ -199,7 +199,7 @@ func (c *Context) CompleteExecutionPhase(ctx context.Context, data any) error {
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 	if c.CommanderMode() {
-		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger)
+		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger, infrastructureprovider.DhctlOperationConverge)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
