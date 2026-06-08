@@ -156,6 +156,7 @@ func TestNewImagePullSecretData(t *testing.T) {
 			name:    "http local registry",
 			args:    args{},
 			newRepo: "my.registry.local/deckhouse",
+			scheme:  "http",
 			want: map[string]string{
 				".dockerconfigjson": `{"auths":{"my.registry.local":{}}}`,
 				"address":           "my.registry.local",
