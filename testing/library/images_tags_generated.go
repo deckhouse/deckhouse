@@ -487,7 +487,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"tomlMerge01":                     "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":                     "imageHash-registrypackages-virtWhat125",
 		"which223":                        "imageHash-registrypackages-which223",
-		"xfsprogs670":                     "imageHash-registrypackages-xfsprogs670",
+		"xfsprogs6160":                    "imageHash-registrypackages-xfsprogs6160",
 		"yq4471":                          "imageHash-registrypackages-yq4471",
 	},
 	"serviceWithHealthchecks": map[string]interface{}{
