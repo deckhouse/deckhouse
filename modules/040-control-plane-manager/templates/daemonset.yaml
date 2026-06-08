@@ -158,7 +158,7 @@ in modules/040-control-plane-manager/images/control-plane-manager/src/internal/c
   {{- if hasKey $tpl_context.apiserver "certSANs" }}
 cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
   {{- end }}
-  {{- if and $tpl_context.encryptionAlgorithm (ne ($tpl_context.encryptionAlgorithm | toString) "RSA-2048") }}
+  {{- if and $tpl_context.encryptionAlgorithm (ne $tpl_context.encryptionAlgorithm "RSA-2048") }}
 encryption-algorithm: {{ $tpl_context.encryptionAlgorithm | b64enc }}
   {{- else if $tpl_context.clusterConfiguration.encryptionAlgorithm }}
 encryption-algorithm: {{ $tpl_context.clusterConfiguration.encryptionAlgorithm | b64enc }}
