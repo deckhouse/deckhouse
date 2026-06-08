@@ -53,3 +53,41 @@ spec:
       fieldPath: $.spec.type
       equals: LoadBalancer
     countable: true
+{{- if .Values.global.enabledModules | has "cert-manager" }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterGrantableResource
+metadata:
+  name: clusterissuers
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+  enforcement: Managed
+  defaultAvailability: All
+  usageReferences:
+  # Certificates that reference a ClusterIssuer by name.
+  - rule:
+      apiGroups:
+      - cert-manager.io
+      apiVersions:
+      - v1
+      resources:
+      - certificates
+    fieldPath: $.spec.issuerRef.name
+    match:
+      fieldPath: $.spec.issuerRef.kind
+      equals: ClusterIssuer
+    countable: true
+  # Ingresses that request a certificate via the cert-manager cluster-issuer annotation.
+  - rule:
+      apiGroups:
+      - networking.k8s.io
+      apiVersions:
+      - v1
+      resources:
+      - ingresses
+    fieldPath: $.metadata.annotations['cert-manager.io/cluster-issuer']
+    countable: true
+{{- end }}
