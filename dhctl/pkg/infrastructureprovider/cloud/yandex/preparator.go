@@ -31,22 +31,24 @@ import (
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
 type MetaConfigPreparator struct {
-	operation string
-	logger    log.Logger
+	validatePrefix bool
+	operation      string
+	logger         log.Logger
 }
 
-func NewMetaConfigPreparator(logger log.Logger, operation string) *MetaConfigPreparator {
+func NewMetaConfigPreparator(validatePrefix bool, logger log.Logger, operation string) *MetaConfigPreparator {
 	if govalue.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
 	return &MetaConfigPreparator{
-		operation: operation,
-		logger:    logger,
+		validatePrefix: validatePrefix,
+		operation:      operation,
+		logger:         logger,
 	}
 }
 
 func (p *MetaConfigPreparator) Validate(_ context.Context, input config.ProviderInput) error {
-	if !prefixRegex.MatchString(input.ClusterPrefix) {
+	if p.validatePrefix && !prefixRegex.MatchString(input.ClusterPrefix) {
 		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", input.ClusterPrefix, ProviderName, prefixRegex.String())
 	}
 

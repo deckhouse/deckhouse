@@ -127,10 +127,14 @@ func (p *Provider) NeedToUseTofu() bool {
 }
 
 func (p *Provider) IsVMChange(rc plan.ResourceChange) bool {
-	if rule := p.settings.VMResource(); rule != nil {
-		return vmresource.Match(rc, rule)
+	rule := p.settings.VMResource()
+	if rule == nil {
+		// Legacy bundle: no vmResource rule in plan_rules.yml. Synthesise a
+		// plain type-match rule from vmResourceType so the matcher path is
+		// uniform.
+		rule = &vmresource.Rule{Type: p.settings.VMResourceType()}
 	}
-	return rc.Type == p.settings.VMResourceType()
+	return vmresource.Match(rc, rule)
 }
 
 func (p *Provider) String() string {

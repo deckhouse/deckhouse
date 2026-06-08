@@ -212,8 +212,8 @@ func hashFileSHA256(filePath string) (string, error) {
 	return hashString, nil
 }
 
-func getHash(digest, dstPath string) (string, error) {
-	path := filepath.Join(dstPath, "images_hashs.json")
+func getHash(digest, cacheDir string) (string, error) {
+	path := filepath.Join(cacheDir, "images_hashs.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("cannot open file %s: %w", path, err)
@@ -231,8 +231,8 @@ func getHash(digest, dstPath string) (string, error) {
 	return "", nil
 }
 
-func saveHash(digest, hash, dstPath string) error {
-	path := filepath.Join(dstPath, "images_hashs.json")
+func saveHash(digest, hash, cacheDir string) error {
+	path := filepath.Join(cacheDir, "images_hashs.json")
 	data, err := os.ReadFile(path)
 	hashs := make(map[string]string)
 	if err != nil {
@@ -391,7 +391,7 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	}
 
 	imgName := ref.Identifier()
-	img, err := tryToRestoreLocalImage(imgName, destDir)
+	img, err := tryToRestoreLocalImage(imgName, destDir, cacheDir)
 	if err == nil {
 		span.AddEvent("image.restored_from_cache")
 		return extractImage(img, destDir)
@@ -520,7 +520,7 @@ func processLayer(r io.Reader, peek []byte, destDir string) error {
 	return nil
 }
 
-func tryToRestoreLocalImage(imgName, destDir string) (v1.Image, error) {
+func tryToRestoreLocalImage(imgName, destDir, cacheDir string) (v1.Image, error) {
 	filename := filepath.Join(destDir, imgName)
 	f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
@@ -536,7 +536,7 @@ func tryToRestoreLocalImage(imgName, destDir string) (v1.Image, error) {
 		return nil, fmt.Errorf("could not calculate file checksum %s: %w", filename, err)
 	}
 
-	storedChecksum, err := getHash(imgName, destDir)
+	storedChecksum, err := getHash(imgName, cacheDir)
 	if err != nil {
 		return nil, fmt.Errorf("could not get checksum %s from file: %w", filename, err)
 	}

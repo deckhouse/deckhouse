@@ -81,7 +81,9 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger, opera
 		// static cluster
 		return config.DummyPreparatorProvider()("", "")
 	case yandex.ProviderName:
-		return yandex.NewMetaConfigPreparator(logger, operation)
+		// Top-level dhctl path (bootstrap/converge/check): validate cluster
+		// prefix. The hook-side caller passes false.
+		return yandex.NewMetaConfigPreparator(true, logger, operation)
 	case vcd.ProviderName:
 		return vcd.NewMetaConfigPreparator(logger)
 	default:

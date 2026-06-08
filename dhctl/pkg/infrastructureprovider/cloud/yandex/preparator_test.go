@@ -98,7 +98,7 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 
 	assertSkipValidationWithNATInstance := func(t *testing.T, settings string, nodeGroups json.RawMessage) {
 		input := getInput(t, settings, nodeGroups)
-		preparator := NewMetaConfigPreparator(log.NewSilentLogger(), "")
+		preparator := NewMetaConfigPreparator(true, log.NewSilentLogger(), "")
 
 		err := preparator.Validate(context.TODO(), input)
 		require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestNilLoggerDoesNotPanic(t *testing.T) {
 	input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
 
 	do := func() {
-		preparator := NewMetaConfigPreparator(nil, "")
+		preparator := NewMetaConfigPreparator(true, nil, "")
 		_ = preparator.Validate(context.TODO(), input)
 	}
 
@@ -177,7 +177,7 @@ func fillTestWithNatInstanceLayout(t *testing.T, input *config.ProviderInput, se
 }
 
 func assertValidation(t *testing.T, _ bool, input config.ProviderInput, hasError bool) {
-	preparator := NewMetaConfigPreparator(log.NewSilentLogger(), "bootstrap")
+	preparator := NewMetaConfigPreparator(true, log.NewSilentLogger(), "bootstrap")
 
 	err := preparator.Validate(context.TODO(), input)
 	if hasError {

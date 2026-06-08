@@ -298,11 +298,6 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 		return fmt.Errorf("override values: %w", err)
 	}
 
-	// Ensure module namespace exists before writing migration resources to it.
-	// The first OperatorStartup pass runs this hook before ModuleRun renders
-	// templates/namespace.yaml, so the namespace does not exist yet.
-	ensureMigrationNamespace(input)
-
 	// Create d8-migration-resources Secret.
 	if err := createProviderClusterConfigurationResources(input, &pcc); err != nil {
 		return fmt.Errorf("create migration resources: %w", err)

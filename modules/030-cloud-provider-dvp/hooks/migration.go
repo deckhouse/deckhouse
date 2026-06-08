@@ -196,31 +196,6 @@ func createMigrationResourcesSecret(input *go_hook.HookInput, resources []any) e
 	return nil
 }
 
-// ensureMigrationNamespace creates the module namespace via the patch collector.
-// Required because the migration hook (OnBeforeHelm) creates Secret/ConfigMap in
-// that namespace before ModuleRun renders templates/namespace.yaml. Without this
-// the hook deadlocks on a non-existent namespace and the module never starts.
-func ensureMigrationNamespace(input *go_hook.HookInput) {
-	ns := &corev1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Namespace",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: dvpNamespace,
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-				"module":   dvpModuleLabel,
-				"prometheus.deckhouse.io/rules-watcher-enabled":      "true",
-				"extended-monitoring.deckhouse.io/enabled":           "",
-				"security.deckhouse.io/pod-policy":                   "restricted",
-				"security.deckhouse.io/enable-security-policy-check": "true",
-			},
-		},
-	}
-	input.PatchCollector.CreateOrUpdate(ns)
-}
-
 func marshalResourcesManifest(resources []any) ([]byte, error) {
 	var buffer bytes.Buffer
 	for index, resource := range resources {
