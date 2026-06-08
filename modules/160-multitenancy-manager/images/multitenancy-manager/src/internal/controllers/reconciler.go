@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -161,6 +162,11 @@ func (r *ProjectReconciler) upsertAvailable(ctx context.Context, ns, project, na
 	ar.Status.GrantedResourceKind = kind
 	ar.Status.Available = available
 	ar.Status.Default = def
+	names := make([]string, 0, len(available))
+	for i := range available {
+		names = append(names, available[i].Name)
+	}
+	ar.Status.AvailableSummary = strings.Join(names, ", ")
 	if err := r.Status().Update(ctx, ar); err != nil {
 		return fmt.Errorf("update AvailableResource status %s/%s: %w", ns, name, err)
 	}

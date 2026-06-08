@@ -51,6 +51,11 @@ type AvailableResourceStatus struct {
 	// +optional
 	Default string `json:"default,omitempty"`
 
+	// AvailableSummary is a comma-separated list of all available names, denormalized from Available
+	// for display: CRD printer columns cannot join an array, so the wide column reads this string.
+	// +optional
+	AvailableSummary string `json:"availableSummary,omitempty"`
+
 	// ObservedGeneration is the controller generation that produced this status.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -61,7 +66,7 @@ type AvailableResourceStatus struct {
 // +kubebuilder:resource:scope=Namespaced,shortName=available
 // +kubebuilder:printcolumn:name="Kind",type=string,JSONPath=`.status.grantedResourceKind`
 // +kubebuilder:printcolumn:name="Default",type=string,JSONPath=`.status.default`
-// +kubebuilder:printcolumn:name="Available",type=string,priority=1,JSONPath=`.status.available[*].name`
+// +kubebuilder:printcolumn:name="Available",type=string,priority=1,JSONPath=`.status.availableSummary`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // AvailableResource is the per-project, controller-owned catalog (discovery only) for one

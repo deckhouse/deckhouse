@@ -26,7 +26,7 @@ spec:
     - jsonPath: .status.default
       name: Default
       type: string
-    - jsonPath: .status.available[*].name
+    - jsonPath: .status.availableSummary
       name: Available
       priority: 1
       type: string
@@ -81,6 +81,11 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              availableSummary:
+                description: |-
+                  AvailableSummary is a comma-separated list of all available names, denormalized from Available
+                  for display: CRD printer columns cannot join an array, so the wide column reads this string.
+                type: string
               default:
                 description: |-
                   Default is the per-project default name used when the referencing field is left empty (or
