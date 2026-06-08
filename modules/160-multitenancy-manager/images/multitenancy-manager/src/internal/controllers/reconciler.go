@@ -74,12 +74,12 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, fmt.Errorf("get namespace: %w", err)
 	}
-	// Only act on project namespaces (carry the project label) or named control namespaces.
+	// Only project namespaces (carrying the project label) get a catalog. Any other namespace —
+	// the default namespace, system namespaces, namespaces of "virtual" projects — must not, even
+	// when a registration's defaultAvailability is All. Clean up any catalog that lingers there
+	// (e.g. left over from a namespace that lost its project membership).
 	if _, isProjectNS := ns.Labels[naming.ProjectLabel]; !isProjectNS {
-		// A namespace that is itself a project (single-namespace) still has its own catalog/quota.
-		if !r.isProjectControl(ctx, ns.Name) {
-			return ctrl.Result{}, nil
-		}
+		return ctrl.Result{}, r.cleanupCatalog(ctx, ns.Name)
 	}
 
 	project := resolve.ProjectName(ns)
@@ -94,12 +94,19 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{RequeueAfter: ResyncInterval}, nil
 }
 
-// isProjectControl reports whether a namespace is a project control namespace (a project exists with
-// that name, i.e. a grant pool or some grant references it). For single-namespace projects the
-// namespace itself is the project, so we treat any non-system namespace as a candidate.
-func (r *ProjectReconciler) isProjectControl(_ context.Context, _ string) bool {
-	// A single-namespace project has no project label; treat the namespace as its own project.
-	return true
+// cleanupCatalog removes every AvailableResource from a namespace that is not (or no longer) a
+// project namespace, so the catalog never leaks into the default/system/virtual-project namespaces.
+func (r *ProjectReconciler) cleanupCatalog(ctx context.Context, ns string) error {
+	list := &v1alpha1.AvailableResourceList{}
+	if err := r.List(ctx, list, client.InNamespace(ns)); err != nil {
+		return fmt.Errorf("list AvailableResource in %s: %w", ns, err)
+	}
+	for i := range list.Items {
+		if err := r.Delete(ctx, &list.Items[i]); err != nil && !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("delete stale AvailableResource %s/%s: %w", ns, list.Items[i].Name, err)
+		}
+	}
+	return nil
 }
 
 // reconcileCatalog upserts an AvailableResource per registration for the namespace, deleting catalogs

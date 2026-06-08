@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,6 +138,43 @@ func TestReconcile_CatalogAndQuota(t *testing.T) {
 	}
 	if !hasMeasure(rendered.Status.Objects, "storageclasses", "standard", "requests.storage", "10Gi") {
 		t.Fatalf("rendered status missing usage: %+v", rendered.Status.Objects)
+	}
+}
+
+// TestReconcile_NonProjectNamespace verifies that a namespace without the project label never gets a
+// catalog — even when a registration's defaultAvailability is All — and that a stale AvailableResource
+// left in such a namespace is cleaned up.
+func TestReconcile_NonProjectNamespace(t *testing.T) {
+	// default namespace: no project label.
+	plain := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
+	reg := &v1alpha1.ClusterGrantableResource{
+		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
+		Spec: v1alpha1.ClusterGrantableResourceSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIVersion: "storage.k8s.io/v1", Kind: "StorageClass"},
+			DefaultAvailability: v1alpha1.AvailabilityAll,
+			UsageReferences: []v1alpha1.UsageReference{{
+				Rule:      v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
+				FieldPath: "$.spec.storageClassName",
+			}},
+		},
+	}
+	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x"}
+	// A stale catalog object that must be cleaned up.
+	stale := &v1alpha1.AvailableResource{ObjectMeta: metav1.ObjectMeta{Name: "storageclasses", Namespace: "default"}}
+	r := buildReconciler(t, plain, reg, sc, stale)
+	ctx := context.Background()
+
+	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "default"}}); err != nil {
+		t.Fatalf("reconcile default: %v", err)
+	}
+
+	ar := &v1alpha1.AvailableResource{}
+	err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "storageclasses"}, ar)
+	if err == nil {
+		t.Fatalf("AvailableResource must not exist in a non-project namespace, got %+v", ar)
+	}
+	if !k8serrors.IsNotFound(err) {
+		t.Fatalf("expected NotFound, got %v", err)
 	}
 }
 
