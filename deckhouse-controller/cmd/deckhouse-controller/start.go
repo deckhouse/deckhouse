@@ -94,12 +94,8 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 			}
 		}
 
-		// addon-operator owns its own AppStartMessage starting with the
-		// "pass completely config when init" refactor; setting the shell-operator
-		// global as well keeps any legacy reader happy without affecting
-		// addon-operator's startup log line.
+		// addon-operator prints its own startup banner via its AppStartMessage.
 		aoapp.AppStartMessage = version()
-		shapp.AppStartMessage = version()
 		shapp.KubeClientFieldManager = "deckhouse-hook"
 
 		ctx := context.Background()

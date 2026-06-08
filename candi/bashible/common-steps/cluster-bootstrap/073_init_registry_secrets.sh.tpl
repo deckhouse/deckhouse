@@ -25,20 +25,20 @@ export BB_KUBE_AUTH_TYPE="admin-cert"
 export BB_KUBE_APISERVER_URL=""
 bb-curl-helper-extract-admin-certs
 
-# Create d8-system namespace if it doesn't exist
+# Create d8-system namespace if it does not exist
 bb-curl-kube "/api/v1/namespaces/d8-system" >/dev/null 2>&1 || \
   bb-curl-kube "/api/v1/namespaces" \
     -X POST \
     -H "Content-Type: application/json" \
-    --data '{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"d8-system"}}'
+    --data '{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"d8-system"}}' >/dev/null
 
 # Upload init registry secret
-bb-curl-kube "/api/v1/namespaces/d8-system/secrets/registry-init" -X DELETE || true
+bb-curl-kube "/api/v1/namespaces/d8-system/secrets/registry-init" -X DELETE >/dev/null || true
 
 bb-curl-kube "/api/v1/namespaces/d8-system/secrets" \
   -X POST \
   -H "Content-Type: application/json" \
   --data "$(jq -nc --arg data "$(base64 -w0 < "$INIT_CONFIG_PATH")" \
-    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"registry-init","namespace":"d8-system"},"type":"Opaque","data":{"config":$data}}')"
+    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"registry-init","namespace":"d8-system"},"type":"Opaque","data":{"config":$data}}')" >/dev/null
 
 {{- end }}

@@ -32,7 +32,7 @@ function bb-patch-instance-condition() {
   bb-curl-kube "/apis/deckhouse.io/v1alpha2/instances/${instanceName}/status?fieldManager=${fieldManager}&force=true" \
     -X PATCH \
     -H "Content-Type: application/apply-patch+yaml" \
-    --data-binary @- <<EOF || true
+    --data-binary @- >/dev/null <<EOF || true
 apiVersion: deckhouse.io/v1alpha2
 kind: Instance
 metadata:
@@ -309,10 +309,10 @@ bb-rpp-get-install() {
       echo "$digest" > "$digest_file"
       return 0
     done
-    >&2 echo "rpp-get-install failed (${attempt}/30), retrying in 5 seconds"
+    >&2 echo "Failed to install rpp-get (attempt ${attempt} of 30), retrying in 5 seconds"
     sleep 5
   done
-  >&2 echo "rpp-get-install failed after 30 attempts"
+  >&2 echo "Failed to install rpp-get after 30 attempts"
   rm -f "$tmp"
   return 1
 }
@@ -458,7 +458,7 @@ fetch_bootstrap() {
     -H "Authorization: Bearer $token" \
     --cacert "$BOOTSTRAP_DIR/ca.crt" \
     -o "$out" -w '%{http_code}') || {
-      >&2 echo "Error fetching bootstrap from ${url}"
+      >&2 echo "Failed to fetch bootstrap from ${url}"
       return 3
   }
   case "$code" in
@@ -466,11 +466,11 @@ fetch_bootstrap() {
       jq -er '.bootstrap' "$out"
       ;;
     401)
-      >&2 echo "Bootstrap-token expired."
+      >&2 echo "Bootstrap token expired"
       return 2
       ;;
     *)
-      >&2 echo "HTTP $code: $(head -c 255 "$out" 2>/dev/null)"
+      >&2 echo "Bootstrap request returned HTTP $code: $(head -c 255 "$out" 2>/dev/null)"
       return 1
       ;;
   esac
@@ -497,7 +497,7 @@ get_phase2() {
           return 1
         fi
       else
-        >&2 echo "failed to get bootstrap from ${url} (exit code $rc)"
+        >&2 echo "Failed to get bootstrap from ${url} (exit code $rc)"
       fi
     done
     sleep 10
@@ -518,7 +518,7 @@ function get_pods() {
       then
       return 0
       else
-        >&2 echo "failed to get $resource $name with curl https://$server..."
+        >&2 echo "Failed to list pods in $namespace from $server"
       fi
     done
     sleep 10
@@ -557,6 +557,6 @@ bb-telemetry-end-span() {
   command -v d8-curl &>/dev/null && curl_cmd=d8-curl
   local endpoint="${BB_TELEMETRY_ENDPOINT:-${OTEL_RELAY_ADDRESS:-http://127.0.0.1:4318}/v1/traces}"
   local payload="{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"bashible\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"bashbooster\"},\"spans\":[{\"traceId\":\"${trace_id}\",\"spanId\":\"${span_id}\",\"name\":\"${2}\",\"kind\":1,\"startTimeUnixNano\":\"${start_time}\",\"endTimeUnixNano\":\"${end_time}\"}]}]}]}"
-  $curl_cmd -s -S -X POST -H "Content-Type: application/json" -d "$payload" "$endpoint"
+  $curl_cmd -s -S -X POST -H "Content-Type: application/json" -d "$payload" "$endpoint" 2>/dev/null || true
 }
 {{- end }}

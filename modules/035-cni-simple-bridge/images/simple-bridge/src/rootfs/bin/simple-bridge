@@ -1,4 +1,17 @@
 #!/bin/bash -e
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 function sigterm() {
   exit $?
@@ -8,6 +21,14 @@ trap sigterm SIGTERM
 function ensure_pod_network_route() {
   if ! ip -json ro show | jq -e --arg dst_subnet "$1" --arg gw "$2" 'any(.[]; .dst == $dst_subnet and .gateway == $gw)' >/dev/null; then
     ip route replace "$1" via "$2"
+  fi
+}
+
+function add_iprule() {
+  local pod_cidr=$1
+
+  if ! ip rule show | grep -q "10000:.*to $pod_cidr"; then
+    ip rule add to "$pod_cidr" table 254 priority 10000
   fi
 }
 
@@ -87,6 +108,9 @@ while true; do
   ]
 }
 END
+    if [ $(find /sys/class/net/ -type l ! -lname '*/devices/virtual/*' | wc -l) -ge 2 ]; then
+      add_iprule "$podcidr"
+    fi
 
     if [ "$ROUTE_POD_NETWORK_TO_GW" == "true" ]; then
       SECONDS=0
@@ -95,12 +119,12 @@ END
         ensure_pod_network_route "$POD_SUBNET" "$gw"
         sleep 30
 
-        if (( SECONDS >= 3600 )); then
+        if (( SECONDS >= 60 )); then
           break
         fi
       done
     else
-      sleep 3600
+      sleep 60
     fi
   else
     echo "Waiting for .spec.podCIDR to be assigned to $NODE_NAME"

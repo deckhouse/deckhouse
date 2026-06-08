@@ -89,11 +89,11 @@ if __name__ == '__main__':
     pid = get_pid_for_listen_port('{{.host}}', '{{.port}}')
     print(pid)
     if pid == '':
-        print('Port not fount')
+        print('No process is listening on the requested port')
         exit(0)
     try:
         os.kill(int(pid), signal.SIGKILL)
-    except Exeption as e:
+    except Exception as e:
         print(e)
 
     exit(0)

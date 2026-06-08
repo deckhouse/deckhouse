@@ -7,7 +7,7 @@ FORMATTING_END = \033[0m
 FOCUS =
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
-SPELLCHECKER_IMAGE = registry.deckhouse.io/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
+SPELLCHECKER_IMAGE = registry.deckhouse.ru/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
 
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
@@ -271,7 +271,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs generate-werf
+generate: generate-kubernetes generate-tools generate-docs dmt-gen generate-werf 
 
 .PHONY: generate-tools
 generate-tools: yq
@@ -607,6 +607,7 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.30.12
+DMT_VERSION ?= 0.1.75
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.33.8
 YQ_VERSION ?= v4.47.2
@@ -623,6 +624,13 @@ generate-werf: yq ## Generate changes in werf files.
 		echo "No GOLANGCI_LINT_VERSION specified. Skipping update."; \
 	fi
 
+
+## Generate dmt version in dmt-lint.sh
+.PHONY: dmt-gen
+dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
+  ##~ Options: DMT_VERSION=X.Y.Z
+	@sed -i 's/DMT_VERSION=[0-9.]\+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh
+	@echo "Updated DMT_VERSION to $(DMT_VERSION) in tools/dmt-lint.sh"
 
 ## Generate tools documentation
 .PHONY: generate-docs
