@@ -23,13 +23,14 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: node-manager :: hooks :: set_api_version_on_capi_resources ::", func() {
+var _ = Describe("Modules :: node-manager :: hooks :: set_fields_on_capi_resources ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager": {"internal": {}}}`, `{}`)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineDeployment", true)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineSet", true)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Machine", true)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachinePool", true)
 	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Cluster", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineHealthCheck", true)
 
 	Context("MachineDeployment", func() {
 		const machineDeployments = `
