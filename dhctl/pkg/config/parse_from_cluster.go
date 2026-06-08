@@ -53,17 +53,16 @@ func newFromClusterMetaConfigFiller(kubeCl *client.KubernetesClient, schemaStore
 //   - mc-flow:     ModuleConfig cloud-provider-<name> exists.
 //   - legacy:      Secret d8-provider-cluster-configuration exists.
 //
-// Preference rules (mc-flow ALWAYS wins when present):
+// Both are loaded when present — a cluster mid-migration carries both, and
+// the ModuleConfig in that case is typically a stub without settings. The
+// downstream split is done by extractProviderClusterFields /
+// applyCloudProviderModuleSettings: PCC populates the typed fields first
+// (Layout, MasterNodeGroupSpec, TerraNodeGroupSpecs), and the ModuleConfig
+// only fills the gaps left over. That preserves legacy correctness during
+// migration; the post-migration state (PCC absent, MC carries real
+// settings) falls out automatically.
 //
-//  1. mc-flow present, legacy present (mid-migration): keep ModuleConfig,
-//     **ignore** the legacy Secret. Treating PCC as authoritative during
-//     migration would silently use the pre-migration values forever,
-//     because extractProviderClusterFields prefers PCC over CloudProviderVars
-//     for typed fields. Wiping ProviderClusterConfig here forces the
-//     mc-flow path.
-//  2. mc-flow present, legacy absent (post-migration): use ModuleConfig.
-//  3. mc-flow absent, legacy present (pre-migration): use PCC.
-//  4. Both absent: descriptive error — the cluster has no provider config.
+// If neither marker is present we return a descriptive error.
 func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
 	if err := metaConfig.prepareProviderName(); err != nil {
 		return nil, err
@@ -75,11 +74,6 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 	}
 	if mc != nil {
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, mc)
-		// mc-flow wins: do not touch the legacy Secret. Skipping the
-		// load also avoids parseLegacyProviderClusterConfig's schema
-		// validation, which is irrelevant once the ModuleConfig is the
-		// authoritative source.
-		return nil, nil
 	}
 
 	pcc, err := loadLegacyProviderClusterConfig(ctx, f.kubeCl, f.schemaStore)
@@ -88,15 +82,18 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 	}
 	if pcc != nil {
 		metaConfig.ProviderClusterConfig = pcc
-		return nil, nil
 	}
 
-	return nil, fmt.Errorf(
-		"cluster has neither ModuleConfig %q nor Secret %q in namespace %q",
-		providerdata.CloudProviderModuleName(metaConfig.ProviderName),
-		legacyProviderClusterConfigSecretName,
-		global.ConfigsNS,
-	)
+	if mc == nil && pcc == nil {
+		return nil, fmt.Errorf(
+			"cluster has neither ModuleConfig %q nor Secret %q in namespace %q",
+			providerdata.CloudProviderModuleName(metaConfig.ProviderName),
+			legacyProviderClusterConfigSecretName,
+			global.ConfigsNS,
+		)
+	}
+
+	return nil, nil
 }
 
 func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, schemaStore *SchemaStore) (*ModuleConfig, error) {
