@@ -1,0 +1,31 @@
+# Storage classes. The project allows only `local` and has coerceToDefault: true.
+#
+# ALLOW   pvc-local        -> storageClassName: local (allowed as-is)
+# COERCE  pvc-omitted      -> no storageClassName; k8s injects the cluster default (replicated),
+#                             which is not allowed, so it is rewritten to the project default `local`.
+# COERCE  pvc-replicated   -> explicit replicated is rewritten to `local` (coerceToDefault).
+#
+# Check the result:  k -n demo get pvc -o custom-columns=NAME:.metadata.name,SC:.spec.storageClassName
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: pvc-local, namespace: demo}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local
+  resources: {requests: {storage: 1Gi}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: pvc-omitted, namespace: demo}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 1Gi}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: pvc-replicated, namespace: demo}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: replicated
+  resources: {requests: {storage: 1Gi}}

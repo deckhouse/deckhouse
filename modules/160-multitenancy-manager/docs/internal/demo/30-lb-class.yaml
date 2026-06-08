@@ -1,0 +1,21 @@
+# loadBalancerClass on a Service (value-backed: the names are free-form strings, not objects).
+# Project allows only `internal`. No coerceToDefault -> a disallowed class is REJECTED.
+#
+# ALLOW  lb-ok   -> loadBalancerClass: internal
+# DENY   lb-bad  -> loadBalancerClass: external
+---
+apiVersion: v1
+kind: Service
+metadata: {name: lb-ok, namespace: demo}
+spec:
+  type: LoadBalancer
+  loadBalancerClass: internal
+  ports: [{port: 80}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: lb-bad, namespace: demo}
+spec:
+  type: LoadBalancer
+  loadBalancerClass: external   # DENY
+  ports: [{port: 80}]

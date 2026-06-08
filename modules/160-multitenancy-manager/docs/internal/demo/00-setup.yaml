@@ -1,0 +1,55 @@
+# Project + grant + object quota for the demo. The ClusterGrantableResource registrations
+# (storageclasses, clusterissuers, loadbalancerclasses, clusterroles) ship with the module.
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: demo
+spec:
+  projectTemplateName: default
+  parameters:
+    administrators:
+    - subject: Group
+      name: demo-admins
+    resourceQuota:
+      requests: {cpu: "2", memory: 4Gi}
+      limits: {cpu: "4", memory: 8Gi}
+---
+# Availability: what each project may reference. (clusterroles is governed by the module's shipped
+# cluster-wide grant, so it is not repeated here.)
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterObjectGrant
+metadata:
+  name: demo-grant
+spec:
+  projectSelector:
+    matchLabels:
+      projects.deckhouse.io/project: demo
+  resources:
+  - resourceRef: storageclasses
+    availabilityDefault: None
+    allowed: [local]
+    default: local
+  - resourceRef: clusterissuers
+    availabilityDefault: None
+    allowed: [selfsigned]
+    default: selfsigned
+  - resourceRef: loadbalancerclasses
+    availabilityDefault: None
+    allowed: [internal]
+---
+# Object quota pool for the project (lives in the project's control namespace = demo).
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantQuota
+metadata:
+  name: objects
+  namespace: demo
+spec:
+  objects:
+    storageclasses:
+      "*":
+        requests.storage: 5Gi          # total requested storage across the project
+        persistentvolumeclaims: "3"     # max number of PVCs
+    loadbalancerclasses:
+      "*":
+        services: "1"                   # max number of LoadBalancer services
