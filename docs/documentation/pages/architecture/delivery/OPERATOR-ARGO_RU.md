@@ -186,7 +186,7 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 1. **kube-apiserver**:
     - управление кастомными ресурсами Application, ApplicationSet, AppProject, ArgoCD, ArgoCDExport, ImageUpdater, NotificationsConfiguration, а также Secret, ConfigMap;
     - управление ресурсами, которые создаются при развертывании пользовательского приложения, описанного в кастомном ресурсе Application;
-    - авторизация запросов на получение метрик.   
+    - авторизация запросов на получение метрик.
 1. **[user-authn](/modules/user-authn/)** — перенаправление пользователя для аутентификации.
 
 С модулем взаимодействуют следующие внешние компоненты:
