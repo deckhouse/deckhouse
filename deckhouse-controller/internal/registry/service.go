@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -109,7 +108,7 @@ func (s *Service) GetImageReader(ctx context.Context, remote Remote, packageName
 		slog.String("digest", digest.String()),
 		slog.Int64("size", size))
 
-	return mutate.Extract(img), nil
+	return cr.Extract(img)
 }
 
 // GetImageDigest downloads package image and returns its digest
@@ -222,7 +221,10 @@ func (s *Service) Download(ctx context.Context, remote Remote, out, packageName,
 
 // download copies tar to path
 func (s *Service) download(_ context.Context, img crv1.Image, output string) error {
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return fmt.Errorf("extract image: %w", err)
+	}
 	defer rc.Close()
 
 	if err := os.MkdirAll(output, 0o700); err != nil {
