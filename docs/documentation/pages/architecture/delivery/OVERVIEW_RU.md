@@ -10,7 +10,4 @@ extractedLinksMax: 0
 
 В данном подразделе описывается архитектура подсистемы Delivery в Deckhouse Kubernetes Platform (DKP).
 
-В подсистему Delivery входят следующие модули:
-
-* [`pod-reloader`](/modules/pod-reloader/) — предоставляет возможность автоматически  перезапустить workload при изменении ConfigMap или Secret;
-* [`operator-argo`](/modules/operator-argo/) — управляет инсталляциями ArgoCD в DKP.
+В подсистему Delivery входит модуль [`operator-argo`](/modules/operator-argo/), управляющий инсталляциями ArgoCD в DKP.

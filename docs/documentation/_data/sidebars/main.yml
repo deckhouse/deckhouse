@@ -1215,8 +1215,8 @@ entries:
                 ru: Обзор
               url: /architecture/delivery/
             - title:
-                en: operator-argo modules
-                ru: Модули operator-argo
+                en: operator-argo module
+                ru: Модуль operator-argo
               url: /architecture/delivery/operator-argo.html
         - title:
             en: Kubernetes & Scheduling subsystem
