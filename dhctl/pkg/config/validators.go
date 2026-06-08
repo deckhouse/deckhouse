@@ -32,7 +32,7 @@ type validator func(
 //   - validateConfigSchema   — schema (OpenAPI) for the whole payload
 //   - validateCNIBootstrap   — domain (CNI mismatch vs cni-bootstrap.yml)
 //
-// New domain validators (database, ingress, ...) plug in as additional
+// New domain validators (CSI,Cloud) plug in as additional
 // Layer-3 entries: they filter the payload to their concern and operate on
 // top of a partial MetaConfig from ParseClusterPayload.
 var ResourcesPipeline = []validator{
