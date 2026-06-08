@@ -27,7 +27,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -154,7 +153,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterPCCSecret,
 		},
-		// Binding 1: ModuleConfig for the DVP module — triggers hook on change to detect migration completion.
+		// Binding 1: ModuleConfig for the DVP module - triggers hook on change to detect migration completion.
 		{
 			Name:       "module_config",
 			ApiVersion: moduleConfigAPIVersion,
@@ -164,7 +163,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterModuleConfig,
 		},
-		// Binding 2: d8-credentials Secret — triggers hook on change to detect migration completion.
+		// Binding 2: d8-credentials Secret - triggers hook on change to detect migration completion.
 		{
 			Name:       "credential_secret_d8",
 			ApiVersion: "v1",
@@ -179,14 +178,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterCredentialSecret,
 		},
-		// Binding 3: NodeGroup CRs — triggers hook on change to detect migration completion.
+		// Binding 3: NodeGroup CRs - triggers hook on change to detect migration completion.
 		{
 			Name:       "node_groups",
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       "NodeGroup",
 			FilterFunc: filterNamedResource,
 		},
-		// Binding 4: DVPInstanceClass CRs — triggers hook on change to detect migration completion.
+		// Binding 4: DVPInstanceClass CRs - triggers hook on change to detect migration completion.
 		{
 			Name:       "dvp_instance_classes",
 			ApiVersion: moduleConfigAPIVersion,
@@ -203,15 +202,14 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 
 	// ---- State machine ----
 	if !pccPresent {
-		// State A: no PCC — new cluster on v2, standard flow.
+		// State A: no PCC - new cluster on v2, standard flow.
 		// Values come from ModuleConfig v2 via addon-operator (already in input.Values).
 		// Clean up migration artifacts if they exist.
 		deleteMigrationArtifacts(input)
-		cleanupProviderClusterConfiguration(input)
 		return mergeAndSetDiscoveryData(input, cloudDataV1.DVPCloudProviderDiscoveryData{})
 	}
 
-	// PCC is present — parse it.
+	// PCC is present - parse it.
 	var pccResult pccSecretFilterResult
 	if err := pccSnaps[0].UnmarshalTo(&pccResult); err != nil {
 		return fmt.Errorf("unmarshal PCC snapshot: %w", err)
@@ -237,14 +235,13 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 
 	if newResourcesComplete {
 		// State C: PCC present but migration is done.
-		// Values come from MC v2 (root path) — do NOT override from PCC.
+		// Values come from MC v2 (root path) - do NOT override from PCC.
 		// Clean up migration artifacts.
 		deleteMigrationArtifacts(input)
-		cleanupProviderClusterConfiguration(input)
 		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
-	// State B: PCC present, new resources incomplete — migration in progress.
+	// State B: PCC present, new resources incomplete - migration in progress.
 	// Write root values from PCC so templates can render.
 	if err := mapPCCtoRootValues(input, &pcc); err != nil {
 		return fmt.Errorf("map PCC to root values: %w", err)
@@ -338,7 +335,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 // (cloudProviderDvp.provider/nodes) in v2 format so templates can render during migration.
 // Only individual leaf values are written so that fields populated by addon-operator from
 // config-values defaults (e.g. nodes.enabled, storage.enabled) are never overwritten.
-// storage is left entirely untouched — PCC does not control subsystem enablement.
+// storage is left entirely untouched - PCC does not control subsystem enablement.
 //
 // It also injects a synthetic cloudProviderDvp.internal.credentialSecrets["d8-credentials"]
 // entry built from PCC.provider.kubeconfigDataBase64, but ONLY when the key is absent.
@@ -349,7 +346,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		return nil
 	}
 
-	// provider — set the whole object (provider has no enabled flag, so overwriting is safe).
+	// provider - set the whole object (provider has no enabled flag, so overwriting is safe).
 	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
 		input.Values.Set("cloudProviderDvp.provider", map[string]any{
 			"parameters": map[string]any{
@@ -358,7 +355,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		})
 	}
 
-	// nodes.parameters — only PCC-derived fields; nodes.enabled is intentionally not touched
+	// nodes.parameters - only PCC-derived fields; nodes.enabled is intentionally not touched
 	// so the default from config-values is preserved.
 	nodesParams := map[string]any{}
 	if pcc.Layout != nil {
@@ -377,7 +374,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		input.Values.Set("cloudProviderDvp.nodes.parameters", nodesParams)
 	}
 
-	// storage — not touched; PCC does not control subsystem enablement.
+	// storage - not touched; PCC does not control subsystem enablement.
 
 	// Inject synthetic d8-credentials from PCC kubeconfig only when the real Secret
 	// is not yet present (i.e. credentials.go did not populate it at Order 19).

@@ -32,7 +32,7 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
-		// Binding 0: PCC secret — read-only snapshot; no events (deletion is handled by dvp_cluster_configuration.go).
+		// Binding 0: PCC secret - read-only snapshot; no events (deletion is handled by dvp_cluster_configuration.go).
 		{
 			Name:       "provider_cluster_configuration",
 			ApiVersion: "v1",
@@ -49,7 +49,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   filterPCCSecret,
 		},
-		// Binding 1: ModuleConfig — read-only snapshot for State B value override.
+		// Binding 1: ModuleConfig - read-only snapshot for State B value override.
 		// ExecuteHookOnSynchronization=false: hook must not fire before the namespace exists (created by Helm).
 		{
 			Name:       "module_config",
@@ -68,7 +68,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleDVPMigrationResources(_ context.Context, input *go_hook.HookInput) error {
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(pccSnaps) == 0 {
-		// State A: no PCC — nothing to create; deletion is handled by dvp_cluster_configuration.go.
+		// State A: no PCC - nothing to create; deletion is handled by dvp_cluster_configuration.go.
 		return nil
 	}
 
@@ -84,7 +84,7 @@ func handleDVPMigrationResources(_ context.Context, input *go_hook.HookInput) er
 		}
 	}
 
-	// State B: PCC present, migration in progress — create artifacts in namespace (which now exists after Helm).
+	// State B: PCC present, migration in progress - create artifacts in namespace (which now exists after Helm).
 	// State C (migration complete) is detected and handled by dvp_cluster_configuration.go (OnBeforeHelm),
 	// which fires on NodeGroup/DVPInstanceClass/ModuleConfig/Secret events and calls deleteMigrationArtifacts.
 	// Running createProviderClusterConfigurationResources in State C is safe: CreateOrUpdate is idempotent

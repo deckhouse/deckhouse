@@ -235,7 +235,7 @@ cloudProviderDvp:
 		It("should NOT overwrite real d8-credentials with PCC-synthetic value", func() {
 			Expect(bReal).To(ExecuteSuccessfully())
 
-			// Real credential must be preserved — PCC-synthetic must NOT overwrite it.
+			// Real credential must be preserved - PCC-synthetic must NOT overwrite it.
 			Expect(bReal.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.authScheme").String()).To(Equal("kubeconfig"))
 			Expect(bReal.ValuesGet("cloudProviderDvp.internal.credentialSecrets.d8-credentials.secret").String()).To(Equal("cmVhbC1rdWJlY29uZmlnLWRhdGE="))
 		})
@@ -464,7 +464,7 @@ metadata:
 		It("should NOT delete migration artifacts and should remain in State B", func() {
 			Expect(bPartial).To(ExecuteSuccessfully())
 
-			// Migration artifacts must still exist — migration is not complete.
+			// Migration artifacts must still exist - migration is not complete.
 			migrationSecret := bPartial.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
 			Expect(migrationSecret.Exists()).To(BeTrue())
 
