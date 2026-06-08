@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,74 +22,49 @@ import (
 
 // NOTE: json tags are required. Any new fields you add must have json tags for the fields to be serialized.
 
-// ApplicablePolicy is a reference to a ClusterObjectGrantPolicy that is referenced in a ClusterObjectGrant as applicable to it.
-type ApplicablePolicy struct {
-	// Name holds the reference to the ClusterObjectGrantPolicy resource.
+// GrantResource is one entry of a grant: it references a ClusterGrantableResource and decides
+// the per-project allow-list and default. It carries no quota (object quota lives on GrantQuota).
+type GrantResource struct {
+	// ResourceRef is the name of a ClusterGrantableResource.
 	// +required
-	Name string `json:"name"`
+	ResourceRef string `json:"resourceRef"`
 
-	// Default is an optional default resource name to apply in case the resource lacks the reference when created.
-	// +optional
-	Default string `json:"default,omitempty"`
-
-	// Allowed is an explicit list of resource names granted to the matching projects.
-	// A resource is granted if its name is listed here OR it matches AllowedSelector (union).
+	// Allowed is an explicit list of granted object names (union with AllowedSelector).
 	// +optional
 	Allowed []string `json:"allowed,omitempty"`
 
-	// AllowedSelector grants every object of the policy's granted resource whose labels match
-	// this selector. It is combined with Allowed as a union. An empty selector matches nothing
-	// (use an explicit empty matchLabels/matchExpressions object to opt in to "match all").
+	// AllowedSelector grants every object of the granted resource whose labels match (union with Allowed).
+	// Only meaningful for object-backed resources.
 	// +optional
 	AllowedSelector *metav1.LabelSelector `json:"allowedSelector,omitempty"`
-}
 
-type AvailableClusterObjectStatusField struct {
-	// Value holds the passed-through value of the status field from available resource.
-	// +required
-	Value string `json:"value"`
-
-	// Descriptions holds a set of human readable descriptions of a field in different languages.
-	// +required
-	Descriptions ObjectStatusFieldDescription `json:"description"`
-}
-
-type AvailableClusterObjectRef struct {
-	// Name is the name of the resource made available in the project.
-	// +required
-	Name string `json:"name"`
-
-	// Default is set to `true` for resources that are selected as default cluster-wide
-	// or via the `.spec.clusterObjectGrantPolicies[].default` field.
+	// Denied lists object names explicitly excluded for matched projects (overrides Allowed).
 	// +optional
-	Default bool `json:"default,omitempty"`
+	Denied []string `json:"denied,omitempty"`
 
-	// StatusFields holds the values of the additional resource fields exported by the
-	// referenced ClusterObjectGrantPolicy via its objectPolicyStatusFields.
+	// DeniedSelector excludes granted objects whose labels match (overrides Allowed/AllowedSelector).
 	// +optional
-	StatusFields []AvailableClusterObjectStatusField `json:"statusFields,omitempty"`
+	DeniedSelector *metav1.LabelSelector `json:"deniedSelector,omitempty"`
+
+	// Default is the per-project default name (overrides the registration's defaultFrom).
+	// +optional
+	Default string `json:"default,omitempty"`
+
+	// AvailabilityDefault overrides the resource's defaultAvailability (All/None) for matched projects.
+	// +optional
+	AvailabilityDefault AvailabilityDefault `json:"availabilityDefault,omitempty"`
 }
 
-// ProjectAvailability lists the objects made available in a single project that this grant matches.
-type ProjectAvailability struct {
-	// Project is the name of the matching project (namespace).
-	// +required
-	Project string `json:"project"`
-
-	// Available is a grouped list of objects available in the project, grouped by resource kind.
-	// +optional
-	Available map[string][]AvailableClusterObjectRef `json:"available,omitempty"`
-}
-
-// ClusterObjectGrantSpec defines the desired state of ClusterObjectGrant
+// ClusterObjectGrantSpec defines the desired state of ClusterObjectGrant.
 type ClusterObjectGrantSpec struct {
-	// ProjectSelector selects the projects (by their namespace labels) this grant applies to.
-	// A nil selector matches no projects; an explicit empty selector matches all project namespaces.
+	// ProjectSelector selects the Projects (by their labels, propagated to namespaces) this grant
+	// applies to. A nil selector matches no projects; an explicit empty selector matches all.
 	// +optional
 	ProjectSelector *metav1.LabelSelector `json:"projectSelector,omitempty"`
 
-	// Policies holds a set of policy rules applied to the projects this grant matches.
-	Policies []ApplicablePolicy `json:"clusterObjectGrantPolicies"`
+	// Resources holds the per-resource allow-list/default entries applied to matched projects.
+	// +required
+	Resources []GrantResource `json:"resources"`
 }
 
 // ClusterObjectGrantStatus defines the observed state of ClusterObjectGrant.
@@ -97,12 +72,6 @@ type ClusterObjectGrantStatus struct {
 	// ObservedGeneration is the most recent generation observed by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
-	// Projects holds, per matching project, the objects made available there.
-	// +listType=map
-	// +listMapKey=project
-	// +optional
-	Projects []ProjectAvailability `json:"projects,omitempty"`
 
 	// Conditions represent the current state of the ClusterObjectGrant resource.
 	// +listType=map
@@ -113,29 +82,29 @@ type ClusterObjectGrantStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=cog
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// ClusterObjectGrant is the Schema for the clusterobjectgrants API
+// ClusterObjectGrant is the Schema for the clusterobjectgrants API.
 type ClusterObjectGrant struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// metadata is a standard object metadata
+	// metadata is a standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitzero"`
 
-	// spec defines the desired state of ClusterObjectGrant
+	// spec defines the desired state of ClusterObjectGrant.
 	// +required
 	Spec ClusterObjectGrantSpec `json:"spec"`
 
-	// status defines the observed state of ClusterObjectGrant
+	// status defines the observed state of ClusterObjectGrant.
 	// +optional
 	Status ClusterObjectGrantStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true
 
-// ClusterObjectGrantList contains a list of ClusterObjectGrant
+// ClusterObjectGrantList contains a list of ClusterObjectGrant.
 type ClusterObjectGrantList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`

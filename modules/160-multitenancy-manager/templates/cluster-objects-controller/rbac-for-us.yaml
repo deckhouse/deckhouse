@@ -17,16 +17,27 @@ metadata:
     module: {{ .Chart.Name }}
   name: d8:cluster-objects-grants-controller
 rules:
-# Own resources: grants and policies (+ status/finalizers).
+# Cluster-scoped inputs: grants and grantable-resource registrations (read-only).
 - apiGroups: ["multitenancy.deckhouse.io"]
   resources:
   - clusterobjectgrants
-  - clusterobjectgrantpolicies
+  - clustergrantableresources
   verbs: ["get", "list", "watch"]
 - apiGroups: ["multitenancy.deckhouse.io"]
   resources:
   - clusterobjectgrants/status
-  - clusterobjectgrantpolicies/status
+  - clustergrantableresources/status
+  verbs: ["get", "update", "patch"]
+# Materialized, controller-owned outputs: per-project catalog and object-quota usage.
+- apiGroups: ["multitenancy.deckhouse.io"]
+  resources:
+  - availableresources
+  - grantquotas
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["multitenancy.deckhouse.io"]
+  resources:
+  - availableresources/status
+  - grantquotas/status
   verbs: ["get", "update", "patch"]
 # Namespaces: matched against projectSelector by the controller and the webhooks.
 - apiGroups: [""]

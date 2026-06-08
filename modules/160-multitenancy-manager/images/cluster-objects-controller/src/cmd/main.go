@@ -62,7 +62,12 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var controllerServiceAccount string
 	var tlsOpts []func(*tls.Config)
+	flag.StringVar(&controllerServiceAccount, "controller-service-account", "",
+		"Username of the controller service account "+
+			"(e.g. system:serviceaccount:d8-multitenancy-manager:cluster-objects-controller); "+
+			"it is always allowed to write the controller-owned AvailableResource/GrantQuota objects.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -183,32 +188,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controllers.ClusterObjectGrantReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	cachingJSONPathFactory := jsonpath.NewWithCache()
+
+	if err := (&controllers.ProjectReconciler{
+		Client:  mgr.GetClient(),
+		Mapper:  mgr.GetRESTMapper(),
+		Factory: cachingJSONPathFactory,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClusterObjectGrant")
+		setupLog.Error(err, "unable to create controller", "controller", "project-grants")
 		os.Exit(1)
 	}
 	// nolint:goconst
 
 	baseLogger := mgr.GetLogger()
-	cachingJSONPathFactory := jsonpath.NewWithCache()
 
-	grantValidatorWebhook := webhooks.NewClusterResourceGrantValidator(
-		baseLogger,
-		mgr.GetClient(),
-		cachingJSONPathFactory,
-	)
-
-	defaultingWebhook := webhooks.NewDefaultingMutator(
-		baseLogger,
-		mgr.GetClient(),
-		cachingJSONPathFactory,
-	)
-
-	grantValidatorWebhook.InstallInto(mgr.GetWebhookServer())
-	defaultingWebhook.InstallInto(mgr.GetWebhookServer())
+	webhooks.NewIsGrantedValidator(baseLogger, mgr.GetClient(), cachingJSONPathFactory).InstallInto(mgr.GetWebhookServer())
+	webhooks.NewDefaultsMutator(baseLogger, mgr.GetClient(), cachingJSONPathFactory).InstallInto(mgr.GetWebhookServer())
+	webhooks.NewProtectValidator(baseLogger, controllerServiceAccount).InstallInto(mgr.GetWebhookServer())
 
 	// +kubebuilder:scaffold:builder
 

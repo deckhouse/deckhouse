@@ -11,6 +11,8 @@ spec:
     kind: ClusterObjectGrant
     listKind: ClusterObjectGrantList
     plural: clusterobjectgrants
+    shortNames:
+    - cog
     singular: clusterobjectgrant
   scope: Cluster
   versions:
@@ -22,7 +24,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: ClusterObjectGrant is the Schema for the clusterobjectgrants
-          API
+          API.
         properties:
           apiVersion:
             description: |-
@@ -42,87 +44,12 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of ClusterObjectGrant
+            description: spec defines the desired state of ClusterObjectGrant.
             properties:
-              clusterObjectGrantPolicies:
-                description: Policies holds a set of policy rules applied to the projects
-                  this grant matches.
-                items:
-                  description: ApplicablePolicy is a reference to a ClusterObjectGrantPolicy
-                    that is referenced in a ClusterObjectGrant as applicable to it.
-                  properties:
-                    allowed:
-                      description: |-
-                        Allowed is an explicit list of resource names granted to the matching projects.
-                        A resource is granted if its name is listed here OR it matches AllowedSelector (union).
-                      items:
-                        type: string
-                      type: array
-                    allowedSelector:
-                      description: |-
-                        AllowedSelector grants every object of the policy's granted resource whose labels match
-                        this selector. It is combined with Allowed as a union. An empty selector matches nothing
-                        (use an explicit empty matchLabels/matchExpressions object to opt in to "match all").
-                      properties:
-                        matchExpressions:
-                          description: matchExpressions is a list of label selector
-                            requirements. The requirements are ANDed.
-                          items:
-                            description: |-
-                              A label selector requirement is a selector that contains values, a key, and an operator that
-                              relates the key and values.
-                            properties:
-                              key:
-                                description: key is the label key that the selector
-                                  applies to.
-                                type: string
-                              operator:
-                                description: |-
-                                  operator represents a key's relationship to a set of values.
-                                  Valid operators are In, NotIn, Exists and DoesNotExist.
-                                type: string
-                              values:
-                                description: |-
-                                  values is an array of string values. If the operator is In or NotIn,
-                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                  the values array must be empty. This array is replaced during a strategic
-                                  merge patch.
-                                items:
-                                  type: string
-                                type: array
-                                x-kubernetes-list-type: atomic
-                            required:
-                            - key
-                            - operator
-                            type: object
-                          type: array
-                          x-kubernetes-list-type: atomic
-                        matchLabels:
-                          additionalProperties:
-                            type: string
-                          description: |-
-                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                            map is equivalent to an element of matchExpressions, whose key field is "key", the
-                            operator is "In", and the values array contains only "value". The requirements are ANDed.
-                          type: object
-                      type: object
-                      x-kubernetes-map-type: atomic
-                    default:
-                      description: Default is an optional default resource name to
-                        apply in case the resource lacks the reference when created.
-                      type: string
-                    name:
-                      description: Name holds the reference to the ClusterObjectGrantPolicy
-                        resource.
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
               projectSelector:
                 description: |-
-                  ProjectSelector selects the projects (by their namespace labels) this grant applies to.
-                  A nil selector matches no projects; an explicit empty selector matches all project namespaces.
+                  ProjectSelector selects the Projects (by their labels, propagated to namespaces) this grant
+                  applies to. A nil selector matches no projects; an explicit empty selector matches all.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -167,11 +94,144 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              resources:
+                description: Resources holds the per-resource allow-list/default entries
+                  applied to matched projects.
+                items:
+                  description: |-
+                    GrantResource is one entry of a grant: it references a ClusterGrantableResource and decides
+                    the per-project allow-list and default. It carries no quota (object quota lives on GrantQuota).
+                  properties:
+                    allowed:
+                      description: Allowed is an explicit list of granted object names
+                        (union with AllowedSelector).
+                      items:
+                        type: string
+                      type: array
+                    allowedSelector:
+                      description: |-
+                        AllowedSelector grants every object of the granted resource whose labels match (union with Allowed).
+                        Only meaningful for object-backed resources.
+                      properties:
+                        matchExpressions:
+                          description: matchExpressions is a list of label selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: |-
+                              A label selector requirement is a selector that contains values, a key, and an operator that
+                              relates the key and values.
+                            properties:
+                              key:
+                                description: key is the label key that the selector
+                                  applies to.
+                                type: string
+                              operator:
+                                description: |-
+                                  operator represents a key's relationship to a set of values.
+                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                type: string
+                              values:
+                                description: |-
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty. This array is replaced during a strategic
+                                  merge patch.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    availabilityDefault:
+                      description: AvailabilityDefault overrides the resource's defaultAvailability
+                        (All/None) for matched projects.
+                      enum:
+                      - All
+                      - None
+                      type: string
+                    default:
+                      description: Default is the per-project default name (overrides
+                        the registration's defaultFrom).
+                      type: string
+                    denied:
+                      description: Denied lists object names explicitly excluded for
+                        matched projects (overrides Allowed).
+                      items:
+                        type: string
+                      type: array
+                    deniedSelector:
+                      description: DeniedSelector excludes granted objects whose labels
+                        match (overrides Allowed/AllowedSelector).
+                      properties:
+                        matchExpressions:
+                          description: matchExpressions is a list of label selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: |-
+                              A label selector requirement is a selector that contains values, a key, and an operator that
+                              relates the key and values.
+                            properties:
+                              key:
+                                description: key is the label key that the selector
+                                  applies to.
+                                type: string
+                              operator:
+                                description: |-
+                                  operator represents a key's relationship to a set of values.
+                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                type: string
+                              values:
+                                description: |-
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty. This array is replaced during a strategic
+                                  merge patch.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    resourceRef:
+                      description: ResourceRef is the name of a ClusterGrantableResource.
+                      type: string
+                  required:
+                  - resourceRef
+                  type: object
+                type: array
             required:
-            - clusterObjectGrantPolicies
+            - resources
             type: object
           status:
-            description: status defines the observed state of ClusterObjectGrant
+            description: status defines the observed state of ClusterObjectGrant.
             properties:
               conditions:
                 description: Conditions represent the current state of the ClusterObjectGrant
@@ -239,71 +299,6 @@ spec:
                   by the controller.
                 format: int64
                 type: integer
-              projects:
-                description: Projects holds, per matching project, the objects made
-                  available there.
-                items:
-                  description: ProjectAvailability lists the objects made available
-                    in a single project that this grant matches.
-                  properties:
-                    available:
-                      additionalProperties:
-                        items:
-                          properties:
-                            default:
-                              description: |-
-                                Default is set to `true` for resources that are selected as default cluster-wide
-                                or via the `.spec.clusterObjectGrantPolicies[].default` field.
-                              type: boolean
-                            name:
-                              description: Name is the name of the resource made available
-                                in the project.
-                              type: string
-                            statusFields:
-                              description: |-
-                                StatusFields holds the values of the additional resource fields exported by the
-                                referenced ClusterObjectGrantPolicy via its objectPolicyStatusFields.
-                              items:
-                                properties:
-                                  description:
-                                    description: Descriptions holds a set of human
-                                      readable descriptions of a field in different
-                                      languages.
-                                    properties:
-                                      en:
-                                        type: string
-                                      ru:
-                                        type: string
-                                    required:
-                                    - en
-                                    - ru
-                                    type: object
-                                  value:
-                                    description: Value holds the passed-through value
-                                      of the status field from available resource.
-                                    type: string
-                                required:
-                                - description
-                                - value
-                                type: object
-                              type: array
-                          required:
-                          - name
-                          type: object
-                        type: array
-                      description: Available is a grouped list of objects available
-                        in the project, grouped by resource kind.
-                      type: object
-                    project:
-                      description: Project is the name of the matching project (namespace).
-                      type: string
-                  required:
-                  - project
-                  type: object
-                type: array
-                x-kubernetes-list-map-keys:
-                - project
-                x-kubernetes-list-type: map
             type: object
         required:
         - spec

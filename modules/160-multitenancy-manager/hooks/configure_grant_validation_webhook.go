@@ -28,8 +28,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const validatingWebhookConfigurationName = "cluster-objects-grants-validator"
@@ -48,17 +46,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/160-multitenancy-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "policies",
+			Name:       "registrations",
 			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
-			Kind:       "ClusterObjectGrantPolicy",
-			FilterFunc: filterPolicies,
+			Kind:       "ClusterGrantableResource",
+			FilterFunc: filterRegistrations,
 		},
 	},
 }, dependency.WithExternalDependencies(configureGrantValidationWebhook))
-
-func filterPolicies(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj, nil
-}
 
 func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kube, err := dc.GetK8sClient()
@@ -108,67 +102,7 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 		return fmt.Errorf("read ValidatingWebhookConfiguration: %w", err)
 	}
 
-	whRules := make([]admissionregistrationv1.RuleWithOperations, 0)
-	seenRules := make(map[string]struct{})
-	snaps := input.Snapshots.Get("policies")
-	for _, snap := range snaps {
-		policy := &unstructured.Unstructured{}
-		if err = snap.UnmarshalTo(policy); err != nil {
-			return fmt.Errorf("unmarshal snapshot: %w", err)
-		}
-
-		// Error is ignored as openapi guarantees it is a slice.
-		usageRefs, found, _ := unstructured.NestedSlice(policy.Object, "spec", "usageReferences")
-		if !found {
-			continue
-		}
-
-		for _, ref := range usageRefs {
-			refMap, ok := ref.(map[string]any)
-			if !ok {
-				continue
-			}
-			apiVersion, _ := refMap["apiVersion"].(string)
-			res, _ := refMap["resource"].(string)
-			if apiVersion == "" || res == "" {
-				input.Logger.InfoContext(ctx, "Skipping usageReference with empty apiVersion/resource",
-					"policy", policy.GetName())
-				continue
-			}
-
-			gv, err := schema.ParseGroupVersion(apiVersion)
-			if err != nil {
-				input.Logger.InfoContext(
-					ctx,
-					"Skipping usageReference with invalid apiVersion field",
-					"apiVersion", apiVersion,
-					"policy", policy.GetName(),
-				)
-				continue
-			}
-
-			// Deduplicate rules: several policies may target the same group/resource.
-			ruleKey := gv.Group + "/" + res
-			if _, dup := seenRules[ruleKey]; dup {
-				continue
-			}
-			seenRules[ruleKey] = struct{}{}
-
-			whRules = append(whRules, admissionregistrationv1.RuleWithOperations{
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{gv.Group},
-					APIVersions: []string{"*"},
-					Resources:   []string{res},
-					Scope:       ptr.To(admissionregistrationv1.NamespacedScope),
-				},
-				Operations: []admissionregistrationv1.OperationType{
-					admissionregistrationv1.Create, admissionregistrationv1.Update,
-				},
-			})
-		}
-	}
-
-	whConfig.Webhooks[0].Rules = whRules
+	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
 	// Reconcile selector/timeout on existing configurations too (e.g. upgrades).
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))

@@ -42,17 +42,17 @@ metadata:
     heritage: multitenancy-manager
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrantPolicy
+kind: ClusterGrantableResource
 metadata:
-  name: testpolicy
+  name: testreg
 spec:
-  grantedResource:
-    apiVersion: storage.k8s.io/v1
-    kind: StorageClass
+  defaultAvailability: None
   usageReferences:
-  - apiVersion: "v1"
+  - rule:
+      apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["configmaps"]
     fieldPath: $.data.scName
-    resource: configmaps
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterObjectGrant
@@ -62,8 +62,8 @@ spec:
   projectSelector:
     matchLabels:
       heritage: multitenancy-manager
-  clusterObjectGrantPolicies:
-  - name: testpolicy
+  resources:
+  - resourceRef: testreg
     allowed: ["local", "abcd"]
 ---
 apiVersion: v1
@@ -88,7 +88,7 @@ data:
 
 	f := HookExecutionConfigInit(initValues, `{}`)
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterObjectGrant", false)
-	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterObjectGrantPolicy", false)
+	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterGrantableResource", false)
 
 	Context("No violations", func() {
 		BeforeEach(func() {

@@ -19,12 +19,12 @@ func ProbeWithInformerCacheStatus(c cache.Cache) func(*http.Request) error {
 			return fmt.Errorf("get grants informer: %w", err)
 		}
 
-		policyInformer, err := c.GetInformer(ctx, &v1alpha1.ClusterObjectGrantPolicy{})
+		regInformer, err := c.GetInformer(ctx, &v1alpha1.ClusterGrantableResource{})
 		if err != nil {
-			return fmt.Errorf("get policies informer: %w", err)
+			return fmt.Errorf("get grantable resources informer: %w", err)
 		}
 
-		if grantInformer.HasSynced() && policyInformer.HasSynced() {
+		if grantInformer.HasSynced() && regInformer.HasSynced() {
 			return nil
 		}
 

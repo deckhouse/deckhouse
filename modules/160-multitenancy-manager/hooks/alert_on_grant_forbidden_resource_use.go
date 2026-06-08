@@ -1,9 +1,24 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package hooks
 
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -23,13 +38,12 @@ import (
 const (
 	grantViolationMetricName = "d8_cluster_objects_grant_violated"
 	// A single shared metric group is expired once per run and then fully
-	// repopulated. This ensures metrics of deleted grants (which are no longer
-	// iterated) disappear instead of lingering as phantom firing alerts.
+	// repopulated. This ensures metrics of deleted grants disappear instead of
+	// lingering as phantom firing alerts.
 	grantViolationMetricGroup = "cluster_objects_grant_violations"
 )
 
-// systemNamespacePrefixes mirrors the in-controller namespaces.IsSystem check: such
-// namespaces are never project namespaces and must be ignored.
+// systemNamespacePrefixes mirrors the in-controller namespaces.IsSystem check.
 var systemNamespacePrefixes = []string{"d8-", "kube-", "upmeter-probe-namespace-"}
 
 func isSystemNamespace(name string) bool {
@@ -45,15 +59,55 @@ type grant struct {
 	ObjectMeta v1.ObjectMeta `json:"metadata"`
 	Spec       struct {
 		ProjectSelector *v1.LabelSelector `json:"projectSelector"`
-		Policies        []policyReference `json:"clusterObjectGrantPolicies"`
+		Resources       []grantResource   `json:"resources"`
 	} `json:"spec"`
 }
 
-type policyReference struct {
-	Name            string            `json:"name"`
-	Default         string            `json:"default"`
-	Allowed         []string          `json:"allowed"`
-	AllowedSelector *v1.LabelSelector `json:"allowedSelector"`
+type grantResource struct {
+	ResourceRef         string            `json:"resourceRef"`
+	Allowed             []string          `json:"allowed"`
+	AllowedSelector     *v1.LabelSelector `json:"allowedSelector"`
+	Denied              []string          `json:"denied"`
+	DeniedSelector      *v1.LabelSelector `json:"deniedSelector"`
+	Default             string            `json:"default"`
+	AvailabilityDefault string            `json:"availabilityDefault"`
+}
+
+type resourceFilter struct {
+	Names            []string                      `json:"names"`
+	MatchLabels      map[string]string             `json:"matchLabels"`
+	MatchExpressions []v1.LabelSelectorRequirement `json:"matchExpressions"`
+}
+
+type usageRule struct {
+	APIGroups   []string `json:"apiGroups"`
+	APIVersions []string `json:"apiVersions"`
+	Resources   []string `json:"resources"`
+}
+
+type pathOverride struct {
+	APIGroups   []string `json:"apiGroups"`
+	APIVersions []string `json:"apiVersions"`
+	FieldPath   string   `json:"fieldPath"`
+}
+
+type usageReference struct {
+	Rule      usageRule      `json:"rule"`
+	FieldPath string         `json:"fieldPath"`
+	Paths     []pathOverride `json:"paths"`
+}
+
+type clusterGrantableResource struct {
+	Spec struct {
+		GrantedResource *struct {
+			APIVersion string `json:"apiVersion"`
+			Kind       string `json:"kind"`
+		} `json:"grantedResource"`
+		Enforcement         string           `json:"enforcement"`
+		DefaultAvailability string           `json:"defaultAvailability"`
+		Excluded            *resourceFilter  `json:"excluded"`
+		UsageReferences     []usageReference `json:"usageReferences"`
+	} `json:"spec"`
 }
 
 type violation struct {
@@ -61,22 +115,6 @@ type violation struct {
 	Project            string
 	Name               string
 	ViolatingFieldPath string
-}
-
-type usageReference struct {
-	APIVersion string `json:"apiVersion"`
-	Resource   string `json:"resource"`
-	FieldPath  string `json:"fieldPath"`
-}
-
-type clusterObjectGrantPolicy struct {
-	Spec struct {
-		GrantedResource struct {
-			APIVersion string `json:"apiVersion"`
-			Kind       string `json:"kind"`
-		} `json:"grantedResource"`
-		UsageReferences []usageReference `json:"usageReferences"`
-	} `json:"spec"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -102,13 +140,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(scanClusterObjectGrantRulesViolations))
 
 func filterGrants(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	p := &grant{}
-	err := sdk.FromUnstructured(obj, p)
-	if err != nil {
+	g := &grant{}
+	if err := sdk.FromUnstructured(obj, g); err != nil {
 		return nil, err
 	}
-
-	return p, nil
+	return g, nil
 }
 
 func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -122,50 +158,18 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 		if err := snap.UnmarshalTo(g); err != nil {
 			return fmt.Errorf("unmarshal grant snapshot: %w", err)
 		}
-
 		violations, err := validateGrantNotViolated(ctx, g, kubeClient, log)
 		if err != nil {
 			return fmt.Errorf("scan grant %s for violations: %w", g.ObjectMeta.Name, err)
 		}
-
-		log.InfoContext(ctx, "Completed violations scan for ClusterObjectGrant",
-			"grant", g.ObjectMeta.Name,
-			"violations_count", len(violations),
-		)
-
 		setGrantViolationMetrics(input, g.ObjectMeta.Name, violations)
 	}
-
 	return nil
-}
-
-// setGrantViolationMetrics emits the violation metrics for a single grant into the
-// shared metric group. It is used by both the event-driven and the scheduled hook so
-// the two paths cannot drift in label set or semantics.
-func setGrantViolationMetrics(input *go_hook.HookInput, grantName string, violations []violation) {
-	metricOpts := metrics.WithGroup(grantViolationMetricGroup)
-
-	for _, v := range violations {
-		metricLabels := map[string]string{
-			"grant":                 grantName,
-			"project":               v.Project,
-			"violating_object_name": v.Name,
-			"violating_field":       v.ViolatingFieldPath,
-			"violating_resource":    v.GVR.Resource,
-		}
-		if v.GVR.Group != "" {
-			metricLabels["violating_resource"] = fmt.Sprintf("%s.%s", v.GVR.Resource, v.GVR.Group)
-		}
-
-		input.MetricsCollector.Set(grantViolationMetricName, 1, metricLabels, metricOpts)
-	}
 }
 
 func scanClusterObjectGrantRulesViolations(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	log := input.Logger
 	kube := dc.MustGetK8sClient()
-
-	log.InfoContext(ctx, "Starting periodic ClusterObjectGrant violations scan")
 
 	grantList, err := kube.Dynamic().Resource(schema.GroupVersionResource{
 		Group:    "multitenancy.deckhouse.io",
@@ -183,43 +187,47 @@ func scanClusterObjectGrantRulesViolations(ctx context.Context, input *go_hook.H
 		if err = runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, g); err != nil {
 			return err
 		}
-
 		violations, err := validateGrantNotViolated(ctx, g, kube, log)
 		if err != nil {
 			return fmt.Errorf("scan grant %s for violations: %w", g.ObjectMeta.Name, err)
 		}
-
-		log.InfoContext(ctx, "Completed violations scan for ClusterObjectGrant",
-			"grant", g.ObjectMeta.Name,
-			"violations_count", len(violations),
-		)
-
 		setGrantViolationMetrics(input, g.ObjectMeta.Name, violations)
 	}
-
-	log.InfoContext(ctx, "Finished periodic ClusterObjectGrant violations scan")
 	return nil
 }
 
-// matchingNamespaces returns the non-system project namespaces whose labels match the
-// grant's projectSelector. A nil selector matches nothing.
+func setGrantViolationMetrics(input *go_hook.HookInput, grantName string, violations []violation) {
+	metricOpts := metrics.WithGroup(grantViolationMetricGroup)
+	for _, v := range violations {
+		metricLabels := map[string]string{
+			"grant":                 grantName,
+			"project":               v.Project,
+			"violating_object_name": v.Name,
+			"violating_field":       v.ViolatingFieldPath,
+			"violating_resource":    v.GVR.Resource,
+		}
+		if v.GVR.Group != "" {
+			metricLabels["violating_resource"] = fmt.Sprintf("%s.%s", v.GVR.Resource, v.GVR.Group)
+		}
+		input.MetricsCollector.Set(grantViolationMetricName, 1, metricLabels, metricOpts)
+	}
+}
+
+// matchingNamespaces returns the non-system project namespaces whose labels match the selector.
 func matchingNamespaces(ctx context.Context, kube k8s.Client, sel *v1.LabelSelector) ([]string, error) {
 	if sel == nil {
 		return nil, nil
 	}
-
 	selector, err := v1.LabelSelectorAsSelector(sel)
 	if err != nil {
 		return nil, fmt.Errorf("invalid projectSelector: %w", err)
 	}
-
 	nsList, err := kube.Dynamic().
 		Resource(schema.GroupVersionResource{Version: "v1", Resource: "namespaces"}).
 		List(ctx, v1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("list namespaces: %w", err)
 	}
-
 	names := make([]string, 0, len(nsList.Items))
 	for _, ns := range nsList.Items {
 		name := ns.GetName()
@@ -233,67 +241,209 @@ func matchingNamespaces(ctx context.Context, kube k8s.Client, sel *v1.LabelSelec
 	return names, nil
 }
 
-// grantPolicyWhitelist mirrors the webhook's whitelist construction: explicit Allowed
-// names, the Default, plus the names of the policy's granted resource objects matching
-// AllowedSelector (union).
-func grantPolicyWhitelist(ctx context.Context, kube k8s.Client, policyRef policyReference, policy *clusterObjectGrantPolicy) ([]string, error) {
-	whitelist := slices.Clone(policyRef.Allowed)
-	if policyRef.Default != "" && !slices.Contains(whitelist, policyRef.Default) {
-		whitelist = append(whitelist, policyRef.Default)
-	}
-
-	if policyRef.AllowedSelector == nil {
-		return whitelist, nil
-	}
-
-	selector, err := v1.LabelSelectorAsSelector(policyRef.AllowedSelector)
-	if err != nil {
-		return nil, fmt.Errorf("invalid allowedSelector: %w", err)
-	}
-
-	gvr, err := grantedResourceGVR(kube, policy.Spec.GrantedResource.APIVersion, policy.Spec.GrantedResource.Kind)
-	if err != nil {
-		return nil, err
-	}
-
-	list, err := kube.Dynamic().Resource(gvr).List(ctx, v1.ListOptions{LabelSelector: selector.String()})
-	if err != nil {
-		return nil, fmt.Errorf("list granted resource %s: %w", policy.Spec.GrantedResource.Kind, err)
-	}
-	for i := range list.Items {
-		name := list.Items[i].GetName()
-		if !slices.Contains(whitelist, name) {
-			whitelist = append(whitelist, name)
-		}
-	}
-
-	return whitelist, nil
+// decisionSets holds the resolved allow/deny/excluded names for a registration in one grant entry.
+type decisionSets struct {
+	allowed             map[string]struct{}
+	denied              map[string]struct{}
+	excluded            map[string]struct{}
+	availabilityDefault string
+	registrationDefault string
 }
 
-// grantedResourceGVR resolves the GroupVersionResource of a granted resource (given by
-// apiVersion + kind) using the cluster's discovery information.
+func (d decisionSets) violates(name string) bool {
+	if _, ok := d.excluded[name]; ok {
+		return true
+	}
+	if _, ok := d.denied[name]; ok {
+		return true
+	}
+	if _, ok := d.allowed[name]; ok {
+		return false
+	}
+	if d.availabilityDefault == "All" {
+		return false
+	}
+	if d.availabilityDefault == "None" {
+		return true
+	}
+	return d.registrationDefault == "None"
+}
+
+func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource, reg *clusterGrantableResource) (decisionSets, error) {
+	d := decisionSets{
+		allowed:             map[string]struct{}{},
+		denied:              map[string]struct{}{},
+		excluded:            map[string]struct{}{},
+		availabilityDefault: entry.AvailabilityDefault,
+		registrationDefault: reg.Spec.DefaultAvailability,
+	}
+	for _, n := range entry.Allowed {
+		d.allowed[n] = struct{}{}
+	}
+	if entry.Default != "" {
+		d.allowed[entry.Default] = struct{}{}
+	}
+	for _, n := range entry.Denied {
+		d.denied[n] = struct{}{}
+	}
+	if reg.Spec.Excluded != nil {
+		for _, n := range reg.Spec.Excluded.Names {
+			d.excluded[n] = struct{}{}
+		}
+	}
+	// Object-backed: expand selectors against live granted objects.
+	if reg.Spec.GrantedResource != nil && reg.Spec.GrantedResource.Kind != "" {
+		gvr, err := grantedResourceGVR(kube, reg.Spec.GrantedResource.APIVersion, reg.Spec.GrantedResource.Kind)
+		if err != nil {
+			return d, err
+		}
+		list, err := kube.Dynamic().Resource(gvr).List(ctx, v1.ListOptions{})
+		if err != nil {
+			return d, fmt.Errorf("list granted resource %s: %w", reg.Spec.GrantedResource.Kind, err)
+		}
+		excludedSel := filterToSelector(reg.Spec.Excluded)
+		allowedSel := labelSelector(entry.AllowedSelector)
+		deniedSel := labelSelector(entry.DeniedSelector)
+		for i := range list.Items {
+			name := list.Items[i].GetName()
+			set := labels.Set(list.Items[i].GetLabels())
+			if excludedSel != nil && excludedSel.Matches(set) {
+				d.excluded[name] = struct{}{}
+			}
+			if deniedSel != nil && deniedSel.Matches(set) {
+				d.denied[name] = struct{}{}
+			}
+			if allowedSel != nil && allowedSel.Matches(set) {
+				d.allowed[name] = struct{}{}
+			}
+		}
+	}
+	return d, nil
+}
+
+func labelSelector(ls *v1.LabelSelector) labels.Selector {
+	if ls == nil {
+		return nil
+	}
+	sel, err := v1.LabelSelectorAsSelector(ls)
+	if err != nil {
+		return nil
+	}
+	return sel
+}
+
+func filterToSelector(f *resourceFilter) labels.Selector {
+	if f == nil || (len(f.MatchLabels) == 0 && len(f.MatchExpressions) == 0) {
+		return nil
+	}
+	sel, err := v1.LabelSelectorAsSelector(&v1.LabelSelector{MatchLabels: f.MatchLabels, MatchExpressions: f.MatchExpressions})
+	if err != nil {
+		return nil
+	}
+	return sel
+}
+
+// grantedResourceGVR resolves a granted resource (apiVersion + kind) to its GVR via discovery.
 func grantedResourceGVR(kube k8s.Client, apiVersion, kind string) (schema.GroupVersionResource, error) {
 	gv, err := schema.ParseGroupVersion(apiVersion)
 	if err != nil {
-		return schema.GroupVersionResource{}, fmt.Errorf("parse grantedResource apiVersion %q: %w", apiVersion, err)
+		return schema.GroupVersionResource{}, fmt.Errorf("parse apiVersion %q: %w", apiVersion, err)
 	}
-
 	groupResources, err := restmapper.GetAPIGroupResources(kube.Discovery())
 	if err != nil {
 		return schema.GroupVersionResource{}, fmt.Errorf("discover api resources: %w", err)
 	}
-
 	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
 	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: gv.Group, Kind: kind}, gv.Version)
 	if err != nil {
-		return schema.GroupVersionResource{}, fmt.Errorf("map %s/%s to resource: %w", apiVersion, kind, err)
+		return schema.GroupVersionResource{}, fmt.Errorf("map %s/%s: %w", apiVersion, kind, err)
 	}
-
 	return mapping.Resource, nil
 }
 
-func validateGrantNotViolated(ctx context.Context, g *grant, kubeClient k8s.Client, log go_hook.Logger) ([]violation, error) {
-	projects, err := matchingNamespaces(ctx, kubeClient, g.Spec.ProjectSelector)
+// usageGVRs resolves the concrete GVRs a usage rule targets (skipping wildcard groups). Concrete
+// versions are used directly; a "*" version is resolved via discovery.
+func usageGVRs(kube k8s.Client, rule usageRule) ([]schema.GroupVersionResource, error) {
+	seen := map[schema.GroupVersionResource]struct{}{}
+	var out []schema.GroupVersionResource
+	add := func(gvr schema.GroupVersionResource) {
+		if _, dup := seen[gvr]; dup {
+			return
+		}
+		seen[gvr] = struct{}{}
+		out = append(out, gvr)
+	}
+
+	var mapper interface {
+		ResourcesFor(schema.GroupVersionResource) ([]schema.GroupVersionResource, error)
+	}
+	needDiscovery := false
+	for _, g := range rule.APIGroups {
+		if g == "*" {
+			continue
+		}
+		for _, v := range rule.APIVersions {
+			if v == "*" {
+				needDiscovery = true
+			}
+		}
+	}
+	if needDiscovery {
+		groupResources, err := restmapper.GetAPIGroupResources(kube.Discovery())
+		if err == nil {
+			mapper = restmapper.NewDiscoveryRESTMapper(groupResources)
+		}
+	}
+
+	for _, g := range rule.APIGroups {
+		if g == "*" {
+			continue
+		}
+		for _, res := range rule.Resources {
+			for _, v := range rule.APIVersions {
+				if v != "*" {
+					add(schema.GroupVersionResource{Group: g, Version: v, Resource: res})
+					continue
+				}
+				if mapper == nil {
+					continue
+				}
+				gvrs, err := mapper.ResourcesFor(schema.GroupVersionResource{Group: g, Resource: res})
+				if err != nil {
+					continue
+				}
+				for _, gvr := range gvrs {
+					add(gvr)
+				}
+			}
+		}
+	}
+	return out, nil
+}
+
+func versionMatches(versions []string, v string) bool {
+	for _, x := range versions {
+		if x == "*" || x == v {
+			return true
+		}
+	}
+	return false
+}
+
+// selectFieldPath returns the path for the given group/version (paths[] override else default).
+func selectFieldPath(ref usageReference, group, version string) string {
+	for _, p := range ref.Paths {
+		groupOK := len(p.APIGroups) == 0 || versionMatches(p.APIGroups, group)
+		versionOK := len(p.APIVersions) == 0 || versionMatches(p.APIVersions, version)
+		if groupOK && versionOK {
+			return p.FieldPath
+		}
+	}
+	return ref.FieldPath
+}
+
+func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, log go_hook.Logger) ([]violation, error) {
+	projects, err := matchingNamespaces(ctx, kube, g.Spec.ProjectSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -301,82 +451,63 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kubeClient k8s.Clie
 		return nil, nil
 	}
 
-	policyGVR := schema.GroupVersionResource{
-		Group:    "multitenancy.deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "clusterobjectgrantpolicies",
-	}
+	regGVR := schema.GroupVersionResource{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Resource: "clustergrantableresources"}
 
 	var violations []violation
-
-	for _, policyRef := range g.Spec.Policies {
-		policyObj, err := kubeClient.Dynamic().Resource(policyGVR).Get(ctx, policyRef.Name, v1.GetOptions{})
+	for _, entry := range g.Spec.Resources {
+		regObj, err := kube.Dynamic().Resource(regGVR).Get(ctx, entry.ResourceRef, v1.GetOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("get ClusterObjectGrantPolicy %s: %w", policyRef.Name, err)
+			return nil, fmt.Errorf("get ClusterGrantableResource %s: %w", entry.ResourceRef, err)
 		}
-
-		policy := &clusterObjectGrantPolicy{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(policyObj.Object, policy); err != nil {
-			return nil, fmt.Errorf("convert ClusterObjectGrantPolicy %s: %w", policyRef.Name, err)
+		reg := &clusterGrantableResource{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(regObj.Object, reg); err != nil {
+			return nil, fmt.Errorf("convert ClusterGrantableResource %s: %w", entry.ResourceRef, err)
 		}
-
-		// Match the admission webhook semantics: the default value and any objects
-		// matching allowedSelector are considered allowed, otherwise objects admitted
-		// by the webhook would be reported here as false-positive violations.
-		whitelist, err := grantPolicyWhitelist(ctx, kubeClient, policyRef, policy)
+		if reg.Spec.Enforcement == "External" {
+			continue
+		}
+		decision, err := buildDecisionSets(ctx, kube, entry, reg)
 		if err != nil {
-			return nil, fmt.Errorf("build whitelist for policy %s: %w", policyRef.Name, err)
+			return nil, fmt.Errorf("build decision for %s: %w", entry.ResourceRef, err)
 		}
 
-		for _, ref := range policy.Spec.UsageReferences {
-			gv, err := schema.ParseGroupVersion(ref.APIVersion)
+		for _, ref := range reg.Spec.UsageReferences {
+			gvrs, err := usageGVRs(kube, ref.Rule)
 			if err != nil {
-				return nil, fmt.Errorf("parse apiVersion %q in policy %s: %w", ref.APIVersion, policyRef.Name, err)
+				return nil, err
 			}
-			gvr := gv.WithResource(ref.Resource)
-
-			// Compile the JSONPath once per reference instead of once per object.
-			jsonPath, err := jsonpath.Parse(ref.FieldPath)
-			if err != nil {
-				log.Error("Invalid JSONPath expression", "expr", ref.FieldPath, "policy", policyRef.Name)
-				continue
-			}
-
-			for _, project := range projects {
-				list, err := kubeClient.Dynamic().Resource(gvr).Namespace(project).List(ctx, v1.ListOptions{})
+			for _, gvr := range gvrs {
+				path := selectFieldPath(ref, gvr.Group, gvr.Version)
+				jsonPath, err := jsonpath.Parse(path)
 				if err != nil {
-					return nil, fmt.Errorf("list %q in namespace %s: %w", gvr, project, err)
+					log.Error("Invalid JSONPath expression", "expr", path, "registration", entry.ResourceRef)
+					continue
 				}
-
-				for _, item := range list.Items {
-					values := jsonPath.Select(item.Object)
-					if len(values) == 0 {
+				for _, project := range projects {
+					list, err := kube.Dynamic().Resource(gvr).Namespace(project).List(ctx, v1.ListOptions{})
+					if err != nil {
 						continue
 					}
-
-					// Check every matched value so multi-match expressions
-					// (e.g. $.spec.containers[*].image) are not silently skipped.
-					for _, raw := range values {
-						s, ok := raw.(string)
-						if !ok {
-							// Non-string values cannot match a string whitelist; skip
-							// to avoid false positives (semantics tracked for redesign).
-							continue
-						}
-						if !slices.Contains(whitelist, s) {
-							violations = append(violations, violation{
-								GVR:                gvr,
-								Project:            project,
-								Name:               item.GetName(),
-								ViolatingFieldPath: ref.FieldPath,
-							})
-							break
+					for _, item := range list.Items {
+						for _, rawVal := range jsonPath.Select(item.Object) {
+							s, ok := rawVal.(string)
+							if !ok || s == "" {
+								continue
+							}
+							if decision.violates(s) {
+								violations = append(violations, violation{
+									GVR:                gvr,
+									Project:            project,
+									Name:               item.GetName(),
+									ViolatingFieldPath: path,
+								})
+								break
+							}
 						}
 					}
 				}
 			}
 		}
 	}
-
 	return violations, nil
 }

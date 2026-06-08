@@ -71,6 +71,7 @@ spec:
           - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
           - --webhook-cert-path=/certs
           - --metrics-cert-path=/certs
+          - --controller-service-account=system:serviceaccount:d8-{{ .Chart.Name }}:cluster-objects-controller
           env:
           ports:
             - containerPort: 8081
