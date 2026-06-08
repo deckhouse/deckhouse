@@ -82,10 +82,7 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 	return state, true, errors.Join(readErrs...)
 }
 
-func observeSignatureExpiration(component controlplanev1alpha1.OperationComponent, pkiDir string, logger *log.Logger) (metav1.Time, bool) {
-	if !signatureEnabled() || component != controlplanev1alpha1.OperationComponentKubeAPIServer {
-		return metav1.Time{}, false
-	}
+func observeSignatureExpiration(pkiDir string, logger *log.Logger) (metav1.Time, bool) {
 	exp, err := signature.ActiveKeyExpiration(pkiDir)
 	if err != nil {
 		logger.Info("no active signature key to observe", "error", err)

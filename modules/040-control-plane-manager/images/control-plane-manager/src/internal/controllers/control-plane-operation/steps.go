@@ -22,10 +22,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
@@ -295,12 +296,13 @@ func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.L
 		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
-	signatureExpiry, ok := observeSignatureExpiration(component, constants.KubernetesPkiPath, logger)
-	if ok {
-		if observedState.CertificatesExpirationTime == nil {
-			observedState.CertificatesExpirationTime = map[string]metav1.Time{}
+	if constants.SignatureEnabled() && component == controlplanev1alpha1.OperationComponentKubeAPIServer {
+		if signatureExpiry, ok := observeSignatureExpiration(constants.KubernetesPkiPath, logger); ok {
+			if observedState.CertificatesExpirationTime == nil {
+				observedState.CertificatesExpirationTime = map[string]metav1.Time{}
+			}
+			observedState.CertificatesExpirationTime[constants.SignatureExpirationKey] = signatureExpiry
 		}
-		observedState.CertificatesExpirationTime[constants.SignatureExpirationKey] = signatureExpiry
 	}
 
 	// Persist whatever was read successfully before surfacing the error
@@ -327,6 +329,10 @@ type renewSignatureStep struct {
 }
 
 func (c *renewSignatureStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+	if !constants.SignatureEnabled() {
+		return StepResult{Outcome: OutcomeCompleted, Message: controlplanev1alpha1.CPOStepResultNotRenewed}, nil
+	}
+
 	if env.State.Raw().Spec.Component != controlplanev1alpha1.OperationComponentKubeAPIServer {
 		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
