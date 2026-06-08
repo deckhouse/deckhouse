@@ -1525,6 +1525,8 @@ UUID
 UUIDs
 uwsgi
 v1
+ValidatingAdmissionPolicy
+ValidatingAdmissionPolicyBinding
 ValidationWebhook
 validator
 vApp

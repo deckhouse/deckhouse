@@ -1,4 +1,4 @@
-2619
+2621
 1GB
 2GB
 5XX
@@ -1524,6 +1524,8 @@ UUID
 UUIDs
 uwsgi
 v1
+ValidatingAdmissionPolicy
+ValidatingAdmissionPolicyBinding
 ValidationWebhook
 validator
 vApp
