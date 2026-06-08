@@ -252,3 +252,25 @@ func (d *EpisodeDao5m) DeleteUpTo(slot time.Time) error {
 	_, err := d.DbCtx.StmtRunner().Exec(query, slot.Unix())
 	return err
 }
+
+// ListEntitiesBySlotRange returns all stored 5m episodes whose time slot is within [fromUnix, toUnix]
+// (inclusive). It loads the current state of the affected 5m slots in a single query.
+func (d *EpisodeDao5m) ListEntitiesBySlotRange(fromUnix, toUnix int64) ([]Entity, error) {
+	const query = selectEntityStmt + `
+	FROM    episodes_5m
+	WHERE   timeslot >= ? AND timeslot <= ?
+	`
+
+	rows, err := d.DbCtx.StmtRunner().Query(query, fromUnix, toUnix)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query SELECT: %v", err)
+	}
+	defer rows.Close()
+
+	return parseEpisodeEntities(rows)
+}
+
+// UpsertEpisodes inserts or overwrites the given 5m episodes in batched multi-row statements.
+func (d *EpisodeDao5m) UpsertEpisodes(episodes []check.Episode) error {
+	return upsert5mEpisodes(d.DbCtx, episodes)
+}

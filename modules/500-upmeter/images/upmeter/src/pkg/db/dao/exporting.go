@@ -128,40 +128,31 @@ func (dao *ExportDAO) DeleteUpTo(syncID string, slot time.Time) error {
 	return nil
 }
 
-// getExportEpisode fetches entity. Input entity is used as filter by sync_id, timeslot, group_name and probe_name.
-func getExportEpisode(ctx *dbcontext.DbContext, filter ExportEntity) (*ExportEntity, error) {
+// listExportEpisodesBySlotRange fetches all stored export episodes for the given sync_id whose time
+// slot is within [fromUnix, toUnix] (inclusive). It loads the current state of a whole batch in a
+// single query so origins can be merged in Go without a query per episode.
+func listExportEpisodesBySlotRange(ctx *dbcontext.DbContext, syncID string, fromUnix, toUnix int64) ([]ExportEntity, error) {
 	const query = `
 	SELECT  sync_id, timeslot, group_name, probe_name,
 		nano_up, nano_down, nano_unknown, nano_unmeasured,
 		origins
 	FROM  export_episodes
-	WHERE   sync_id    = @sync_id    AND
-		timeslot   = @timeslot   AND
-		group_name = @group_name AND
-		probe_name = @probe_name
-	LIMIT 1;
+	WHERE   sync_id  = @sync_id AND
+		timeslot >= @from   AND
+		timeslot <= @to;
 	`
 	rows, err := ctx.StmtRunner().Query(
 		query,
-		sql.Named("sync_id", filter.SyncID),
-		sql.Named("timeslot", filter.Episode.TimeSlot.Unix()),
-		sql.Named("group_name", filter.Episode.ProbeRef.Group),
-		sql.Named("probe_name", filter.Episode.ProbeRef.Probe),
+		sql.Named("sync_id", syncID),
+		sql.Named("from", fromUnix),
+		sql.Named("to", toUnix),
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	entities, err := parseExportEpisodeEntities(rows)
-	if err != nil {
-		return nil, err
-	}
-	if len(entities) == 0 {
-		return nil, nil
-	}
-
-	return &entities[0], nil
+	return parseExportEpisodeEntities(rows)
 }
 
 func parseExportEpisodeEntities(rows *sql.Rows) ([]ExportEntity, error) {
@@ -196,62 +187,119 @@ func parseExportEpisodeEntities(rows *sql.Rows) ([]ExportEntity, error) {
 	return entities, nil
 }
 
+// createOrUpdateExportEpisodes persists a batch of export entities that all share the same sync_id.
+//
+// To avoid a query per episode, it loads the current state of all affected slots in one range query,
+// merges the accumulated origins in Go, and writes everything back with batched UPSERT statements.
+// A conflicting row is overwritten with the merged values; the unique index
+// (sync_id, timeslot, group_name, probe_name) drives the conflict resolution.
 func createOrUpdateExportEpisodes(tx *dbcontext.DbContext, entities []ExportEntity) error {
-	for _, entity := range entities {
-		found, err := getExportEpisode(tx, entity)
-		if err != nil {
-			return fmt.Errorf("cannot fetch: %v", err)
+	if len(entities) == 0 {
+		return nil
+	}
+
+	syncID := entities[0].SyncID
+	minSlot, maxSlot := exportSlotBounds(entities)
+
+	existing, err := listExportEpisodesBySlotRange(tx, syncID, minSlot, maxSlot)
+	if err != nil {
+		return fmt.Errorf("cannot fetch existing export episodes: %w", err)
+	}
+	stored := make(map[string]ExportEntity, len(existing))
+	for _, e := range existing {
+		stored[exportKey(e)] = e
+	}
+
+	for i := range entities {
+		if prev, ok := stored[exportKey(entities[i])]; ok {
+			entities[i].Origins.Merge(prev.Origins)
 		}
-		if found != nil {
-			entity.Origins.Merge(found.Origins)
+	}
+
+	if err := upsertExportEpisodes(tx, entities); err != nil {
+		return fmt.Errorf("cannot save export episodes: %w", err)
+	}
+	return nil
+}
+
+// upsertExportEpisodes inserts or overwrites export entities in batched multi-row statements.
+func upsertExportEpisodes(ctx *dbcontext.DbContext, entities []ExportEntity) error {
+	for start := 0; start < len(entities); start += upsertChunkSize {
+		end := start + upsertChunkSize
+		if end > len(entities) {
+			end = len(entities)
 		}
-		err = saveExportEpisode(tx, entity)
-		if err != nil {
-			return fmt.Errorf("cannot save: %v", err)
+		if err := upsertExportChunk(ctx, entities[start:end]); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func saveExportEpisode(tx *dbcontext.DbContext, entity ExportEntity) error {
-	const query = `
+func upsertExportChunk(ctx *dbcontext.DbContext, entities []ExportEntity) error {
+	query := `
 	INSERT INTO export_episodes
 		(sync_id, timeslot, group_name, probe_name,
 		 nano_up, nano_down, nano_unknown, nano_unmeasured,
 		 origins, origins_count)
-	VALUES
-		(@sync_id, @timeslot, @group_name, @probe_name,
-		 @nano_up, @nano_down, @nano_unknown, @nano_unmeasured,
-		 @origins, @origins_count)
-	ON CONFLICT
-		(sync_id, timeslot, group_name, probe_name)
-	DO UPDATE SET
-		nano_up         = @nano_up,
-		nano_down       = @nano_down,
-		nano_unknown    = @nano_unknown,
-		nano_unmeasured = @nano_unmeasured,
-		origins         = @origins,
-		origins_count   = @origins_count;
-	`
+	VALUES ` + exportValuesPlaceholders(len(entities)) + `
+	ON CONFLICT(sync_id, timeslot, group_name, probe_name) DO UPDATE SET
+		nano_up         = excluded.nano_up,
+		nano_down       = excluded.nano_down,
+		nano_unknown    = excluded.nano_unknown,
+		nano_unmeasured = excluded.nano_unmeasured,
+		origins         = excluded.origins,
+		origins_count   = excluded.origins_count`
 
-	_, err := tx.StmtRunner().Exec(
-		query,
-		sql.Named("sync_id", entity.SyncID),
-		sql.Named("timeslot", entity.Episode.TimeSlot.Unix()),
+	args := make([]interface{}, 0, len(entities)*10)
+	for _, e := range entities {
+		args = append(args,
+			e.SyncID,
+			e.Episode.TimeSlot.Unix(),
+			e.Episode.ProbeRef.Group,
+			e.Episode.ProbeRef.Probe,
+			e.Episode.Up,
+			e.Episode.Down,
+			e.Episode.Unknown,
+			e.Episode.NoData,
+			e.Origins.String(),
+			e.Origins.Size(),
+		)
+	}
 
-		sql.Named("group_name", entity.Episode.ProbeRef.Group),
-		sql.Named("probe_name", entity.Episode.ProbeRef.Probe),
+	if _, err := ctx.StmtRunner().Exec(query, args...); err != nil {
+		return fmt.Errorf("upsert into export_episodes: %w", err)
+	}
+	return nil
+}
 
-		sql.Named("nano_up", entity.Episode.Up),
-		sql.Named("nano_down", entity.Episode.Down),
-		sql.Named("nano_unknown", entity.Episode.Unknown),
-		sql.Named("nano_unmeasured", entity.Episode.NoData),
+// exportValuesPlaceholders returns "(?, ... ten ...), ..." with one group per row.
+func exportValuesPlaceholders(rows int) string {
+	const oneRow = "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	groups := make([]string, rows)
+	for i := range groups {
+		groups[i] = oneRow
+	}
+	return strings.Join(groups, ", ")
+}
 
-		sql.Named("origins", entity.Origins.String()),
-		sql.Named("origins_count", entity.Origins.Size()),
-	)
+func exportKey(e ExportEntity) string {
+	return fmt.Sprintf("%d|%s|%s", e.Episode.TimeSlot.Unix(), e.Episode.ProbeRef.Group, e.Episode.ProbeRef.Probe)
+}
 
-	return err
+func exportSlotBounds(entities []ExportEntity) (minUnix, maxUnix int64) {
+	minUnix = entities[0].Episode.TimeSlot.Unix()
+	maxUnix = minUnix
+	for _, e := range entities[1:] {
+		u := e.Episode.TimeSlot.Unix()
+		if u < minUnix {
+			minUnix = u
+		}
+		if u > maxUnix {
+			maxUnix = u
+		}
+	}
+	return minUnix, maxUnix
 }
 
 func getEarliestExportEpisodes(ctx *dbcontext.DbContext, syncID string, originsCount int) ([]ExportEntity, error) {

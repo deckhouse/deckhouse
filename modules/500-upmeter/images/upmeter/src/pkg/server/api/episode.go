@@ -25,6 +25,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/db"
 	dbcontext "d8.io/upmeter/pkg/db/context"
 	"d8.io/upmeter/pkg/server/entity"
 	"d8.io/upmeter/pkg/server/remotewrite"
@@ -123,27 +124,40 @@ func fmtSlot(t time.Time) string {
 
 // Save episodes to the database
 func save(dbctx *dbcontext.DbContext, remoteWrite remotewrite.Exporter, data EpisodesPayload) error {
-	ctx := dbctx.Start()
-	defer ctx.Stop()
-
 	episodes := data.Episodes
 	origin := data.Origin
 
-	save30sStart := time.Now()
-	saved30s := entity.Save30sEpisodes(ctx, episodes)
-	save30sDur := time.Since(save30sStart)
+	// Persist the whole payload (all slots and probes) in a single transaction. This keeps SQLite's
+	// exclusive write lock held once per request instead of once per episode, which both speeds up
+	// ingestion (one fsync instead of hundreds) and shortens the window during which status reads
+	// are blocked. On any DB error the whole batch is rolled back and the agent retries it later.
+	var (
+		saved30s []*check.Episode
+		saved5m  []*check.Episode
+	)
 
-	update5mStart := time.Now()
-	saved5m := entity.Update5mEpisodes(ctx, saved30s)
-	update5mDur := time.Since(update5mStart)
+	dbStart := time.Now()
+	err := db.WithTx(dbctx, func(tx *dbcontext.DbContext) error {
+		var txErr error
+		saved30s, txErr = entity.Save30sEpisodes(tx, episodes)
+		if txErr != nil {
+			return txErr
+		}
+		saved5m, txErr = entity.Update5mEpisodes(tx, saved30s)
+		return txErr
+	})
+	dbDur := time.Since(dbStart)
+	if err != nil {
+		return fmt.Errorf("saving episodes in a single transaction: %w", err)
+	}
 
-	log.Infof("saved episodes to db: origin=%s received=%d saved30s=%d updated5m=%d save30sDur=%s update5mDur=%s",
-		origin, len(episodes), len(saved30s), len(saved5m), save30sDur, update5mDur)
+	log.Infof("saved episodes to db: origin=%s received=%d saved30s=%d updated5m=%d dbDur=%s",
+		origin, len(episodes), len(saved30s), len(saved5m), dbDur)
 
 	// Send episodes to metrics storage
 
 	rwStart := time.Now()
-	err := remoteWrite.Export(origin, saved30s, 30*time.Second)
+	err = remoteWrite.Export(origin, saved30s, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("error saving 30s episode for remote_write export: %v", err)
 	}

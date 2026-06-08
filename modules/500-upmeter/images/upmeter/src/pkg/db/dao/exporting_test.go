@@ -405,6 +405,42 @@ func Test_ExportDAO_MultipleOrigins_Get_ReturnsExpiredEvenWhenNoneFulfilled(t *t
 	g.Expect(got[0].Episode.TimeSlot).To(Equal(hExpiredAgo), "should have minimal timeslot")
 }
 
+// A single Save batch spanning several slots must merge origins with the rows stored by a previous
+// agent, exercising the batched range-read + per-key merge + multi-row UPSERT path.
+func Test_ExportDAO_Save_BatchMergesOriginsAcrossSlots(t *testing.T) {
+	g := NewWithT(t)
+	dbctx := getTestDatabase(t)
+	storage := NewExportEpisodesDAO(dbctx)
+
+	originA := newSet("a")
+	from := time.Now().Unix()
+	to := from + 30
+
+	entities, opts := genExportEntities(genOpts{n: 6, origins: &originA, slotInt64: from})
+	// Spread the batch across two slots.
+	for i := range entities {
+		if i%2 == 1 {
+			entities[i].Episode.TimeSlot = time.Unix(to, 0)
+		}
+	}
+	g.Expect(storage.Save(entities)).ShouldNot(HaveOccurred(), "first agent stores its data")
+
+	// Second agent sends the same keys (same slots/probes) in one batch.
+	for i := range entities {
+		entities[i].Origins = newSet("b")
+	}
+	g.Expect(storage.Save(entities)).ShouldNot(HaveOccurred(), "second agent stores its data")
+
+	conn := dbctx.Start()
+	defer conn.Stop()
+	got, err := listExportEpisodesBySlotRange(conn, *opts.syncID, from, to)
+	g.Expect(err).ShouldNot(HaveOccurred())
+	g.Expect(got).To(HaveLen(6), "no duplicates, one row per (slot, probe)")
+	for _, e := range got {
+		g.Expect(e.Origins.String()).To(Equal("a:b"), "origins must be merged across agents")
+	}
+}
+
 // UTILS
 
 func assertEqualLists(g *WithT, got, want []ExportEntity) {

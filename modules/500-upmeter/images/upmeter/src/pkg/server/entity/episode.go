@@ -30,65 +30,175 @@ import (
 
 var ErrNotChanged = fmt.Errorf("not changed")
 
-// Save30sEpisodes stores 30 sec downtime episodes into database.
-// It also clears old records and update 5 minute episodes in a database.
-func Save30sEpisodes(ctx *dbcontext.DbContext, episodes []check.Episode) []*check.Episode {
-	saved := make([]*check.Episode, 0)
+const (
+	slotSize30s = 30 * time.Second
+	slotSize5m  = 5 * time.Minute
+)
+
+// Save30sEpisodes stores 30 sec downtime episodes using the provided transaction context.
+//
+// To avoid a query per episode, it loads the current state of all affected slots in one range query,
+// merges the incoming episodes with the stored ones (keeping the existing Combine semantics that
+// deduplicate data coming from multiple agents), and writes everything back with batched UPSERT
+// statements. Outdated and malformed episodes are skipped; a database error aborts the whole batch
+// so the caller can roll back the single transaction and let the agent retry (saving is idempotent).
+func Save30sEpisodes(tx *dbcontext.DbContext, episodes []check.Episode) ([]*check.Episode, error) {
 	dayAgo := time.Now().Add(-24 * time.Hour)
 
+	valid := make([]check.Episode, 0, len(episodes))
 	for _, episode := range episodes {
 		// Ignore episodes older then 24h.
 		if episode.TimeSlot.Before(dayAgo) {
 			log.Warnf("Ignoring outdated episode: %s", episode.String())
 			continue
 		}
-
-		if !episode.IsCorrect(30 * time.Second) {
+		if !episode.IsCorrect(slotSize30s) {
 			log.Errorf("Possible bug!!! Ignoring incorrect episode: %s", episode.String())
 			continue
 		}
-
-		ep, err := save30sEpisode(ctx, episode)
-		if err != nil {
-			log.Errorf("cannot save episode slot=%d, red=%q: %v", episode.TimeSlot.UnixNano(), episode.ProbeRef.Id(), err)
-			continue
-		}
-		saved = append(saved, ep)
+		valid = append(valid, episode)
+	}
+	if len(valid) == 0 {
+		return []*check.Episode{}, nil
 	}
 
-	return saved
+	dao30s := dao.NewEpisodeDao30s(tx)
+
+	// Load the current state of all affected slots in a single query.
+	minSlot, maxSlot := slotBounds(valid)
+	existingEntities, err := dao30s.ListEntitiesBySlotRange(minSlot, maxSlot)
+	if err != nil {
+		return nil, fmt.Errorf("loading existing 30s episodes: %w", err)
+	}
+	stored := make(map[string]check.Episode, len(existingEntities))
+	for _, e := range existingEntities {
+		stored[episodeKey(e.Episode.TimeSlot, e.Episode.ProbeRef)] = e.Episode
+	}
+
+	// Merge incoming episodes with the stored ones.
+	merged := make([]check.Episode, 0, len(valid))
+	saved := make([]*check.Episode, 0, len(valid))
+	for _, episode := range valid {
+		final := episode
+		if prev, ok := stored[episodeKey(episode.TimeSlot, episode.ProbeRef)]; ok {
+			final = episode.Combine(prev, slotSize30s)
+		}
+		merged = append(merged, final)
+
+		ep := final
+		saved = append(saved, &ep)
+	}
+
+	if err := dao30s.UpsertEpisodes(merged); err != nil {
+		return nil, fmt.Errorf("saving 30s episodes: %w", err)
+	}
+
+	return saved, nil
 }
 
-// Update5mEpisodes stores 5 min downtime episodes into database.
-func Update5mEpisodes(ctx *dbcontext.DbContext, episodes30s []*check.Episode) []*check.Episode {
-	// slot -> unique probe ID
-	bySlot := make(map[int64]map[string]check.ProbeRef)
-	saved := make([]*check.Episode, 0)
-
-	for _, episode := range episodes30s {
-		slot5m := episode.TimeSlot.Truncate(5 * time.Minute).Unix()
-
-		if _, ok := bySlot[slot5m]; !ok {
-			bySlot[slot5m] = make(map[string]check.ProbeRef)
-		}
-
-		bySlot[slot5m][episode.ProbeRef.Id()] = episode.ProbeRef
+// Update5mEpisodes recalculates 5 min downtime episodes using the provided transaction context.
+//
+// It refreshes only the (5m slot, probe) pairs touched by the given 30s episodes. Instead of a sum
+// query and a read per pair, it sums all 30s episodes grouped by 5m slot and probe in one query,
+// loads the stored 5m rows in one range query, merges in Go (keeping the existing Combine and
+// "skip unchanged" semantics), and writes the changed rows with batched UPSERT statements.
+func Update5mEpisodes(tx *dbcontext.DbContext, episodes30s []*check.Episode) ([]*check.Episode, error) {
+	if len(episodes30s) == 0 {
+		return []*check.Episode{}, nil
 	}
 
-	for slot5m, probeRefs := range bySlot {
-		for _, ref := range probeRefs {
-			episode, err := update5mEpisode(ctx, time.Unix(slot5m, 0), ref)
-			if err != nil {
-				if err != ErrNotChanged {
-					log.Errorf("Did not save 5m episode slot=%d ref=%s: %v", slot5m, ref.Id(), err)
-				}
-				continue
-			}
-			saved = append(saved, episode)
+	// The set of (5m slot, probe) pairs to refresh, derived from the saved 30s episodes.
+	wanted := make(map[string]struct{}, len(episodes30s))
+	var min5m, max5m int64
+	first := true
+	for _, ep := range episodes30s {
+		slot5m := ep.TimeSlot.Truncate(slotSize5m).Unix()
+		wanted[slot5mKey(slot5m, ep.ProbeRef)] = struct{}{}
+		if first || slot5m < min5m {
+			min5m = slot5m
 		}
+		if first || slot5m > max5m {
+			max5m = slot5m
+		}
+		first = false
 	}
 
-	return saved
+	dao30s := dao.NewEpisodeDao30s(tx)
+	dao5m := dao.NewEpisodeDao5m(tx)
+
+	// Sum all 30s episodes grouped by their parent 5m slot and probe in one query. The range covers
+	// every affected 5m window fully so the sums account for sub-slots stored by previous batches.
+	fifthMinSeconds := int64(slotSize5m / time.Second)
+	sums, err := dao30s.Sum30sGroupedBy5m(min5m, max5m+fifthMinSeconds)
+	if err != nil {
+		return nil, fmt.Errorf("summing 30s episodes by 5m slot: %w", err)
+	}
+
+	// Load the stored 5m rows for the affected range in one query.
+	existingEntities, err := dao5m.ListEntitiesBySlotRange(min5m, max5m)
+	if err != nil {
+		return nil, fmt.Errorf("loading existing 5m episodes: %w", err)
+	}
+	stored := make(map[string]check.Episode, len(existingEntities))
+	for _, e := range existingEntities {
+		stored[slot5mKey(e.Episode.TimeSlot.Unix(), e.Episode.ProbeRef)] = e.Episode
+	}
+
+	toWrite := make([]check.Episode, 0, len(sums))
+	saved := make([]*check.Episode, 0, len(sums))
+	for _, summed := range sums {
+		key := slot5mKey(summed.TimeSlot.Unix(), summed.ProbeRef)
+		if _, ok := wanted[key]; !ok {
+			continue
+		}
+
+		prev, found := stored[key]
+		combined := prev.Combine(summed, slotSize5m)
+		if found && combined.EqualTimers(prev) {
+			// Nothing changed, do not rewrite or re-export.
+			continue
+		}
+		if combined.Up < prev.Up {
+			log.Warnf("Possible bug!!! Combined Up=%d for 5m episode is worse than saved %d for slot=%s ref=%q",
+				combined.Up, prev.Up, summed.TimeSlot.Format(time.Stamp), summed.ProbeRef.Id())
+		}
+		combined.ProbeRef = summed.ProbeRef
+		combined.TimeSlot = summed.TimeSlot
+
+		toWrite = append(toWrite, combined)
+
+		ep := combined
+		saved = append(saved, &ep)
+	}
+
+	if err := dao5m.UpsertEpisodes(toWrite); err != nil {
+		return nil, fmt.Errorf("saving 5m episodes: %w", err)
+	}
+
+	return saved, nil
+}
+
+func episodeKey(slot time.Time, ref check.ProbeRef) string {
+	return fmt.Sprintf("%d|%s|%s", slot.Unix(), ref.Group, ref.Probe)
+}
+
+func slot5mKey(slot5mUnix int64, ref check.ProbeRef) string {
+	return fmt.Sprintf("%d|%s|%s", slot5mUnix, ref.Group, ref.Probe)
+}
+
+func slotBounds(episodes []check.Episode) (minUnix, maxUnix int64) {
+	minUnix = episodes[0].TimeSlot.Unix()
+	maxUnix = episodes[0].TimeSlot.Unix()
+	for _, ep := range episodes[1:] {
+		u := ep.TimeSlot.Unix()
+		if u < minUnix {
+			minUnix = u
+		}
+		if u > maxUnix {
+			maxUnix = u
+		}
+	}
+	return minUnix, maxUnix
 }
 
 // Insert or Update a Episode using a transaction.
