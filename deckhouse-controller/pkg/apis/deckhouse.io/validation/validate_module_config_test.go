@@ -36,6 +36,7 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -76,15 +77,6 @@ func (f *fakeModuleManager) GetEnabledModuleNames() []string {
 		}
 	}
 	return names
-}
-
-// fakeDependencyExtender implements the moduleDependencyExtender interface for tests.
-type fakeDependencyExtender struct {
-	err error
-}
-
-func (f *fakeDependencyExtender) CheckEnabling(string) error {
-	return f.err
 }
 
 func boolPtr(v bool) *bool {
@@ -202,6 +194,9 @@ func TestModuleConfigValidationHandler_DisableConfirmation(t *testing.T) {
 
 		// dependencyErr is returned by the module dependency extender on CheckEnabling
 		dependencyErr error
+		// expectCheckEnabling asserts whether the dependency extender must be
+		// consulted for this case (i.e. the request performs an enabling transition)
+		expectCheckEnabling bool
 
 		wantAllowed bool
 		wantMessage string
@@ -270,26 +265,75 @@ func TestModuleConfigValidationHandler_DisableConfirmation(t *testing.T) {
 			description:      "no enabled->disabled transition, nothing to confirm",
 		},
 		{
-			name:             "update: enabling a module is allowed",
-			confirmation:     true,
-			currentlyEnabled: false,
-			operation:        "UPDATE",
-			newConfig:        newModuleConfig(moduleName, boolPtr(true), nil),
-			oldConfig:        newModuleConfig(moduleName, boolPtr(false), nil),
-			wantAllowed:      true,
-			description:      "enabling is never restricted by disable confirmation",
+			name:                "update: enabling a module is allowed",
+			confirmation:        true,
+			currentlyEnabled:    false,
+			operation:           "UPDATE",
+			newConfig:           newModuleConfig(moduleName, boolPtr(true), nil),
+			oldConfig:           newModuleConfig(moduleName, boolPtr(false), nil),
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+			description:         "enabling is never restricted by disable confirmation, but the dependency extender is consulted",
 		},
 		{
-			name:             "update: enabling a module rejected by dependency constraint",
-			confirmation:     true,
-			currentlyEnabled: false,
-			operation:        "UPDATE",
-			newConfig:        newModuleConfig(moduleName, boolPtr(true), nil),
-			oldConfig:        newModuleConfig(moduleName, boolPtr(false), nil),
-			dependencyErr:    fmt.Errorf("module %q depends on a disabled module", moduleName),
-			wantAllowed:      false,
-			wantMessage:      "depends on a disabled module",
-			description:      "enabling must respect module dependency constraints",
+			name:                "update: enabling a module rejected by dependency constraint",
+			confirmation:        true,
+			currentlyEnabled:    false,
+			operation:           "UPDATE",
+			newConfig:           newModuleConfig(moduleName, boolPtr(true), nil),
+			oldConfig:           newModuleConfig(moduleName, boolPtr(false), nil),
+			dependencyErr:       fmt.Errorf("module %q depends on a disabled module", moduleName),
+			expectCheckEnabling: true,
+			wantAllowed:         false,
+			wantMessage:         "depends on a disabled module",
+			description:         "enabling must respect module dependency constraints",
+		},
+		{
+			name:                "update: keeping an already enabled module enabled does not re-check dependency",
+			confirmation:        true,
+			currentlyEnabled:    true,
+			operation:           "UPDATE",
+			newConfig:           newModuleConfig(moduleName, boolPtr(true), nil),
+			oldConfig:           newModuleConfig(moduleName, boolPtr(true), nil),
+			expectCheckEnabling: false,
+			wantAllowed:         true,
+			description:         "no disabled->enabled transition, the dependency extender must not be consulted",
+		},
+		{
+			name:                "update: enabling a default-disabled module (no explicit old enabled) is checked by dependency",
+			confirmation:        true,
+			currentlyEnabled:    false,
+			operation:           "UPDATE",
+			newConfig:           newModuleConfig(moduleName, boolPtr(true), nil),
+			oldConfig:           newModuleConfig(moduleName, nil, nil),
+			dependencyErr:       fmt.Errorf("module %q depends on a disabled module", moduleName),
+			expectCheckEnabling: true,
+			wantAllowed:         false,
+			wantMessage:         "depends on a disabled module",
+			description:         "an absent old enabled flag is treated as disabled, so enabling triggers the dependency check",
+		},
+		{
+			name:                "create: enabling a module rejected by dependency constraint",
+			confirmation:        true,
+			currentlyEnabled:    false,
+			operation:           "CREATE",
+			newConfig:           newModuleConfig(moduleName, boolPtr(true), nil),
+			dependencyErr:       fmt.Errorf("module %q depends on a disabled module", moduleName),
+			expectCheckEnabling: true,
+			wantAllowed:         false,
+			wantMessage:         "depends on a disabled module",
+			description:         "enabling on create must respect module dependency constraints",
+		},
+		{
+			name:                "create: enabling a module that passes the dependency check is rejected only by the missing Module CR",
+			confirmation:        true,
+			currentlyEnabled:    false,
+			operation:           "CREATE",
+			newConfig:           newModuleConfig(moduleName, boolPtr(true), nil),
+			expectCheckEnabling: true,
+			wantAllowed:         false,
+			wantMessage:         "not found",
+			description:         "the dependency extender allows enabling; the later Module CR lookup is what rejects it",
 		},
 		{
 			name:             "create: disabling a currently enabled module without annotation is rejected",
@@ -359,7 +403,13 @@ func TestModuleConfigValidationHandler_DisableConfirmation(t *testing.T) {
 			manager := &fakeModuleManager{
 				enabled: map[string]bool{moduleName: tt.currentlyEnabled},
 			}
-			dependencyExtender := &fakeDependencyExtender{err: tt.dependencyErr}
+			// CheckEnabling must be consulted only on an enabling transition.
+			// Leaving the mock without expectations fails the test on any
+			// unexpected call.
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+			if tt.expectCheckEnabling {
+				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(tt.dependencyErr)
+			}
 
 			handler := newTestHandler(t, storage, manager, dependencyExtender)
 
@@ -397,7 +447,11 @@ func TestModuleConfigValidationHandler_UnknownModule(t *testing.T) {
 	storage := &fakeModuleStorage{modules: map[string]*moduletypes.Module{}}
 	manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
 
-	handler := newTestHandler(t, storage, manager, &fakeDependencyExtender{})
+	// disabling transition, so the dependency extender must not be consulted;
+	// the mock is left without expectations to fail on any unexpected call
+	dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+	handler := newTestHandler(t, storage, manager, dependencyExtender)
 	review := newModuleConfigAdmissionReview(
 		"UPDATE",
 		newModuleConfig(moduleName, boolPtr(false), nil),
