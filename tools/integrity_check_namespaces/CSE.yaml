@@ -1,6 +1,7 @@
 excludeNamespaces: []
 additionalNamespaces:
   - kube-system
+  - d8-alb
   - d8-commander
   - d8-commander-agent
   - d8-console
