@@ -16,8 +16,10 @@ package config
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 	corev1 "k8s.io/api/core/v1"
@@ -41,18 +43,15 @@ const (
 )
 
 // CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and credential
-// Secrets from the cluster and returns them as CloudProviderVars directly,
-// without serializing to YAML.
+// Secrets from the cluster. Settings is intentionally left empty here — it is
+// later populated by metaConfig.applyCloudProviderModuleSettings from the
+// cloud-provider-<name> ModuleConfig loaded into metaConfig.ModuleConfigs,
+// keeping the cluster-side and bootstrap-from-file flows symmetric.
 func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (*providerdata.CloudProviderVars, error) {
 	ctx, span := telemetry.StartSpan(ctx, "CloudProviderVarsFromCluster")
 	defer span.End()
 
 	span.SetAttributes(otattribute.String("provider.name", providerName))
-
-	settings, err := fetchModuleConfigFromCluster(ctx, kubeCl, providerdata.CloudProviderModuleName(providerName))
-	if err != nil {
-		return nil, err
-	}
 
 	nodeGroups, err := fetchCloudPermanentNodeGroupsFromCluster(ctx, kubeCl)
 	if err != nil {
@@ -76,22 +75,10 @@ func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.Kubernetes
 	)
 
 	return &providerdata.CloudProviderVars{
-		Settings:        settings,
 		NodeGroups:      nodeGroups,
 		InstanceClasses: instanceClasses,
 		Secrets:         secrets,
 	}, nil
-}
-
-func fetchModuleConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, name string) (map[string]interface{}, error) {
-	mc, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("get module config %s: %w", name, err)
-	}
-	return mc.Object, nil
 }
 
 func fetchCloudPermanentNodeGroupsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
@@ -113,30 +100,35 @@ func fetchCloudPermanentNodeGroupsFromCluster(ctx context.Context, kubeCl *clien
 	return result, nil
 }
 
+// instanceClassAPIVersions lists the API versions to probe for
+// <provider>instanceclasses. Legacy providers (yandex, vcd, aws, ...) register
+// under v1; newer external providers (DVP) ship as v1alpha1. We try v1 first
+// to keep the happy path one round-trip for the common case.
+var instanceClassAPIVersions = []string{"v1", "v1alpha1"}
+
 func fetchInstanceClassesFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (map[string]map[string]interface{}, error) {
 	if providerName == "" {
 		return nil, nil
 	}
 
 	resource := strings.ToLower(providerName) + "instanceclasses"
-	gvr := schema.GroupVersionResource{Group: instanceClassAPIGroup, Version: "v1", Resource: resource}
-
-	list, err := kubeCl.Dynamic().Resource(gvr).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) || apierrors.IsMethodNotSupported(err) {
-			return nil, nil
+	for _, version := range instanceClassAPIVersions {
+		gvr := schema.GroupVersionResource{Group: instanceClassAPIGroup, Version: version, Resource: resource}
+		list, err := kubeCl.Dynamic().Resource(gvr).List(ctx, metav1.ListOptions{})
+		if err == nil {
+			result := make(map[string]map[string]interface{}, len(list.Items))
+			for _, item := range list.Items {
+				if name := item.GetName(); name != "" {
+					result[name] = item.Object
+				}
+			}
+			return result, nil
 		}
-		return nil, fmt.Errorf("list instance classes for provider %s: %w", providerName, err)
-	}
-
-	result := make(map[string]map[string]interface{}, len(list.Items))
-	for _, item := range list.Items {
-		name := item.GetName()
-		if name != "" {
-			result[name] = item.Object
+		if !apierrors.IsNotFound(err) && !apierrors.IsMethodNotSupported(err) {
+			return nil, fmt.Errorf("list instance classes for provider %s (version %s): %w", providerName, version, err)
 		}
 	}
-	return result, nil
+	return nil, nil
 }
 
 func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
@@ -150,25 +142,42 @@ func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.Kuber
 		if secret.Type != CloudProviderCredentialsSecretType {
 			continue
 		}
-		result[secret.Name] = secretToMap(&secret)
+		key := secret.Namespace + "/" + secret.Name
+		result[key] = secretToMap(&secret)
 	}
 	return result, nil
 }
 
 func secretToMap(secret *corev1.Secret) map[string]interface{} {
-	stringData := make(map[string]string, len(secret.Data))
+	var stringData, data map[string]string
 	for k, v := range secret.Data {
-		stringData[k] = string(v)
+		if utf8.Valid(v) {
+			if stringData == nil {
+				stringData = make(map[string]string)
+			}
+			stringData[k] = string(v)
+			continue
+		}
+		if data == nil {
+			data = make(map[string]string)
+		}
+		data[k] = base64.StdEncoding.EncodeToString(v)
 	}
 
-	return map[string]interface{}{
+	result := map[string]interface{}{
 		"apiVersion": "v1",
 		"kind":       "Secret",
 		"metadata": map[string]interface{}{
 			"name":      secret.Name,
 			"namespace": secret.Namespace,
 		},
-		"type":       string(secret.Type),
-		"stringData": stringData,
+		"type": string(secret.Type),
 	}
+	if stringData != nil {
+		result["stringData"] = stringData
+	}
+	if data != nil {
+		result["data"] = data
+	}
+	return result
 }

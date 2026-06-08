@@ -62,8 +62,8 @@ type GlobalOptions struct {
 	VersionMap             string
 	ModulesDir             string
 
-	// indecates if download is needed
-	NeedDownload bool
+	// EnsureCandiAvailable is true when the install tree (candi/modules/version_map) is missing on disk and must be downloaded from the registry.
+	EnsureCandiAvailable bool
 }
 
 func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
@@ -80,21 +80,6 @@ func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
 	}
 }
 
-func (o GlobalOptions) RecheckNeedDownload(skip ...string) GlobalOptions {
-	if len(skip) == 0 || !o.NeedDownload || !CheckDirs(skip...) {
-		return o
-	}
-
-	root, err := os.Getwd()
-	if err != nil {
-		root = "/"
-	}
-	cpy := o
-	cpy.NeedDownload = false
-	SetPaths(root, &cpy)
-	return cpy
-}
-
 // NewGlobalOptions returns GlobalOptions with defaults applied.
 //
 // The DHCTL_DEBUG environment variable is honored here so commands receive
@@ -109,13 +94,7 @@ func NewGlobalOptions() GlobalOptions {
 		ConfigPaths:      make([]string, 0),
 	}
 
-	rootPath, _ := os.Getwd()
-	if !CheckDirs() {
-		rootPath = o.DownloadDir
-		o.NeedDownload = true
-	}
-
-	SetPaths(rootPath, &o)
+	ResolveAndApplyPaths(&o)
 
 	return o
 }
@@ -243,6 +222,27 @@ func CheckDirs(skip ...string) bool {
 	}
 
 	return true
+}
+
+// ResolveAndApplyPaths recomputes the install-tree root and the
+// EnsureCandiAvailable flag for opts. If the required install tree is
+// present at pwd (subject to skip), root = pwd and EnsureCandiAvailable
+// is cleared. Otherwise root = opts.DownloadDir and EnsureCandiAvailable
+// is set, signalling that prepareCandiDir must run.
+//
+// skip... lists directories that may legitimately be absent — used by
+// converger/autoconverger pods that intentionally run without the
+// modules tree.
+func ResolveAndApplyPaths(opts *GlobalOptions, skip ...string) {
+	rootPath, err := os.Getwd()
+	if err != nil {
+		rootPath = "/"
+	}
+	opts.EnsureCandiAvailable = !CheckDirs(skip...)
+	if opts.EnsureCandiAvailable {
+		rootPath = opts.DownloadDir
+	}
+	SetPaths(rootPath, opts)
 }
 
 func SetPaths(root string, o *GlobalOptions) {

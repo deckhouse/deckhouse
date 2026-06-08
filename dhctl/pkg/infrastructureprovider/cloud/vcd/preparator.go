@@ -28,34 +28,24 @@ import (
 
 type clientProvider func(pcc map[string]json.RawMessage, l log.Logger) (cloudClient, error)
 
-type MetaConfigPreparatorParams struct {
-	PrepareMetaConfig     bool
-	ValidateClusterPrefix bool
-}
-
 type MetaConfigPreparator struct {
-	params         MetaConfigPreparatorParams
 	logger         log.Logger
 	clientProvider clientProvider
 }
 
-func NewMetaConfigPreparatorWithoutLogger(params MetaConfigPreparatorParams) *MetaConfigPreparator {
-	return NewMetaConfigPreparator(params, log.GetSilentLogger())
-}
-
-func NewMetaConfigPreparator(params MetaConfigPreparatorParams, logger log.Logger) *MetaConfigPreparator {
+func NewMetaConfigPreparator(logger log.Logger) *MetaConfigPreparator {
+	if logger == nil {
+		logger = log.GetSilentLogger()
+	}
 	return &MetaConfigPreparator{
-		params:         params,
 		logger:         logger,
 		clientProvider: newVcdCloudClient,
 	}
 }
 
 func (p MetaConfigPreparator) Validate(_ context.Context, input config.ProviderInput) error {
-	if p.params.ValidateClusterPrefix {
-		if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
-			return fmt.Errorf("%v for provider %s", err, ProviderName)
-		}
+	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
+		return fmt.Errorf("%v for provider %s", err, ProviderName)
 	}
 
 	raw, ok := input.ProviderClusterConfig["provider"]
@@ -81,10 +71,6 @@ func (p MetaConfigPreparator) Validate(_ context.Context, input config.ProviderI
 }
 
 func (p MetaConfigPreparator) Prepare(ctx context.Context, input config.ProviderInput) (providerdata.PrepareResult, error) {
-	if !p.params.PrepareMetaConfig {
-		return providerdata.PrepareResult{}, nil
-	}
-
 	client, err := p.clientProvider(input.ProviderClusterConfig, p.logger)
 	if err != nil {
 		return providerdata.PrepareResult{}, fmt.Errorf("Cannot get cloud client: %w", err)

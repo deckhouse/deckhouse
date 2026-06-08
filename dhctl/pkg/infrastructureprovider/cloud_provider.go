@@ -110,7 +110,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 				Logger:           l,
 				DI:               di,
 				TmpDir:           tmpDir,
-				IsDebug:          params.isDebug(),
+				IsDebug:          params.IsDebug,
 				Settings:         set,
 				AdditionalParams: additionalParams,
 			}

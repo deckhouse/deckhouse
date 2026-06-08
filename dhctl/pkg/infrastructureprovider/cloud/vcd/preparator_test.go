@@ -25,11 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func newTestPreparator(prepareConfig bool, client cloudClient) *MetaConfigPreparator {
-	p := NewMetaConfigPreparator(MetaConfigPreparatorParams{
-		PrepareMetaConfig:     prepareConfig,
-		ValidateClusterPrefix: true,
-	}, log.GetDefaultLogger())
+func newTestPreparator(client cloudClient) *MetaConfigPreparator {
+	p := NewMetaConfigPreparator(log.GetDefaultLogger())
 
 	p.clientProvider = func(_ map[string]json.RawMessage, _ log.Logger) (cloudClient, error) {
 		return client, nil
@@ -38,16 +35,8 @@ func newTestPreparator(prepareConfig bool, client cloudClient) *MetaConfigPrepar
 	return p
 }
 
-func TestDisableMetaConfigPreparator(t *testing.T) {
-	preparator := newTestPreparator(false, testGetLegacyClient())
-	result, err := preparator.Prepare(context.TODO(), config.ProviderInput{})
-
-	require.NoError(t, err)
-	require.Nil(t, result.ProviderClusterConfig)
-}
-
 func TestPreparatorWithCurrentAPI(t *testing.T) {
-	preparator := newTestPreparator(false, testGetCurrentClient())
+	preparator := newTestPreparator(testGetCurrentClient())
 	result, err := preparator.Prepare(context.TODO(), config.ProviderInput{})
 
 	require.NoError(t, err)
@@ -55,7 +44,7 @@ func TestPreparatorWithCurrentAPI(t *testing.T) {
 }
 
 func TestPreparatorWithLegacyAPI(t *testing.T) {
-	preparator := newTestPreparator(true, testGetLegacyClient())
+	preparator := newTestPreparator(testGetLegacyClient())
 
 	result, err := preparator.Prepare(context.TODO(), config.ProviderInput{})
 	require.NoError(t, err)
@@ -90,7 +79,7 @@ func TestValidateMetaConfig(t *testing.T) {
 	}
 
 	assertPrefix := func(t *testing.T, prefix string, hasError bool) {
-		preparator := newTestPreparator(true, testGetLegacyClient())
+		preparator := newTestPreparator(testGetLegacyClient())
 		err := preparator.Validate(context.TODO(), makeInput(validServer, prefix))
 		if hasError {
 			require.Error(t, err)
@@ -103,12 +92,7 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "1abc", false)
 	assertPrefix(t, "abc-abc", false)
 
-	preparator := newTestPreparator(false, testGetLegacyClient())
-	preparator.params.ValidateClusterPrefix = false
-
-	err := preparator.Validate(context.TODO(), makeInput(validServer, ""))
-	require.NoError(t, err)
-
-	err = preparator.Validate(context.TODO(), makeInput("https://myserver:8080/api/", "test"))
+	preparator := newTestPreparator(testGetLegacyClient())
+	err := preparator.Validate(context.TODO(), makeInput("https://myserver:8080/api/", "test"))
 	require.Error(t, err)
 }

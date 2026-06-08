@@ -142,13 +142,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
-		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
-		// but in exporter and autoconverger we do not need it
-		// and we reset it here
-		// unfortianally global params parsed in place when we do no have command
-		// that user ran
-		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
@@ -215,14 +209,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 
 		logger := log.GetDefaultLogger()
 
-		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
-		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
-		// but in exporter and autoconverger we do not need it
-		// and we reset it here
-		// unfortianally global params parsed in place when we do no have command
-		// that user ran
-		// converge migration also can run as sidecar of auto-converger pod
-		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
 		loggerProvider := log.ExternalLoggerProvider(logger)
 		params := app.ProviderParams(&opts.Global, loggerProvider)

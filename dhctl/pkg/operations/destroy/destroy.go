@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
@@ -135,7 +136,7 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		stateLoaderKubeProvider = newKubeClientErrorProvider("Skip resources flag was provided. State not found in cache")
 	}
 
-	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, params.logger).
+	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, params.logger, infrastructureprovider.DhctlOperationDestroy).
 		WithForceFromCache(params.forceFromCache)
 	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
 }
