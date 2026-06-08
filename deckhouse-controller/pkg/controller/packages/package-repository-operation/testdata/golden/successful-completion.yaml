@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   labels:
     packages.deckhouse.io/operation-trigger: manual
@@ -37,6 +39,8 @@ status:
     total: 1
   startTime: "2025-10-31T12:00:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
 metadata:
   labels:
     heritage: deckhouse
@@ -57,6 +61,8 @@ spec:
   packageVersion: v1.0.0
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   name: deckhouse
   resourceVersion: "3"

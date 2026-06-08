@@ -1,5 +1,7 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.25.0
   resourceVersion: "1000"
@@ -11,7 +13,9 @@ status:
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/isUpdating: "true"
@@ -28,6 +32,8 @@ status:
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: v1
+kind: Pod
 metadata:
   labels:
     app: deckhouse
@@ -50,6 +56,8 @@ status:
     restartCount: 0
     state: {}
 ---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: deckhouse
   namespace: d8-system
@@ -66,9 +74,11 @@ spec:
         resources: {}
 status: {}
 ---
+apiVersion: v1
 data:
   isUpdating: "false"
   notified: "true"
+kind: ConfigMap
 metadata:
   name: d8-release-data
   namespace: d8-system

@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:00:00Z"
   labels:
@@ -13,6 +15,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:18:00Z"
   labels:
@@ -29,6 +33,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:18:00Z"
   labels:
@@ -45,6 +51,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:18:00Z"
   labels:
@@ -61,6 +69,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:03:00Z"
   labels:
@@ -75,6 +85,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:06:00Z"
   labels:
@@ -89,6 +101,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:09:00Z"
   labels:
@@ -103,6 +117,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:12:00Z"
   labels:
@@ -117,6 +133,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:15:00Z"
   labels:
@@ -131,6 +149,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:18:00Z"
   labels:
@@ -154,6 +174,8 @@ status:
     type: Completed
   startTime: "2025-10-31T12:00:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:18:00Z"
   labels:
@@ -170,6 +192,8 @@ spec:
     timeout: 5m
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: "2025-10-31T12:18:00Z"
   labels:

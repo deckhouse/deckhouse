@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
 metadata:
   finalizers:
   - application.deckhouse.io/statistic-registered
@@ -26,6 +28,8 @@ status:
   lastAppliedConfiguration: null
   tracking: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
 metadata:
   labels:
     heritage: deckhouse
@@ -40,6 +44,8 @@ status:
     version: v1.0.1
   usedByCount: 1
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
 metadata:
   labels:
     packages.deckhouse.io/package: test
@@ -73,6 +79,8 @@ status:
     namespace: foobar
   usedByCount: 1
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   name: deckhouse
   resourceVersion: "1"

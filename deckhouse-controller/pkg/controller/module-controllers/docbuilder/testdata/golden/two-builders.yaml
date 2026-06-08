@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleDocumentation
 metadata:
   finalizers:
   - modules.deckhouse.io/documentation-exists

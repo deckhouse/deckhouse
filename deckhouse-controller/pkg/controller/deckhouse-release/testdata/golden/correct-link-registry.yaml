@@ -1,5 +1,7 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: true
+kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/current-restored: "true"
@@ -20,7 +22,9 @@ status:
   phase: Deployed
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/change-cause: check release (step-by-step)
@@ -38,7 +42,9 @@ status:
   message: ""
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/change-cause: check release (step-by-step)
@@ -56,7 +62,9 @@ status:
   message: ""
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/change-cause: check release (step-by-step)

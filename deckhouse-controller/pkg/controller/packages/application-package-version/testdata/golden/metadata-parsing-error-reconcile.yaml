@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
 metadata:
   labels:
     packages.deckhouse.io/draft: "true"
@@ -19,6 +21,8 @@ status:
     status: "False"
     type: MetadataLoaded
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   name: deckhouse
   resourceVersion: "1"

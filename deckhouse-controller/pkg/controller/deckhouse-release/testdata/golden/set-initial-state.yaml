@@ -1,5 +1,7 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.26.0
   resourceVersion: "1000"

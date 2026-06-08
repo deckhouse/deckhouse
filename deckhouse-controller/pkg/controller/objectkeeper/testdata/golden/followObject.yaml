@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
 metadata:
   name: follow-obj
   resourceVersion: "1000"

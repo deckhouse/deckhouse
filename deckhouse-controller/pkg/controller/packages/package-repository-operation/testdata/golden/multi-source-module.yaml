@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   labels:
     packages.deckhouse.io/operation-trigger: manual
@@ -37,6 +39,8 @@ status:
     total: 1
   startTime: "2025-10-31T12:00:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
 metadata:
   labels:
     heritage: deckhouse
@@ -57,6 +61,8 @@ spec:
   packageVersion: v1.0.0
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
 metadata:
   labels:
     heritage: deckhouse
@@ -77,6 +83,8 @@ spec:
   packageVersion: v1.0.0
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
 metadata:
   labels:
     heritage: deckhouse
@@ -97,6 +105,8 @@ status:
   availableRepositories:
   - deckhouse-clone
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   name: deckhouse
   resourceVersion: "1"
@@ -107,6 +117,8 @@ status:
   lastNewVersions: 0
   partialScanAvailable: false
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   name: deckhouse-clone
   resourceVersion: "3"

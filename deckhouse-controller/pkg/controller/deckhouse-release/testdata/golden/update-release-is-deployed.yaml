@@ -1,5 +1,7 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/isUpdating: "false"
@@ -14,6 +16,8 @@ status:
   phase: Deployed
   transitionTime: null
 ---
+apiVersion: v1
+kind: Pod
 metadata:
   labels:
     app: deckhouse
@@ -36,6 +40,8 @@ status:
     restartCount: 0
     state: {}
 ---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: deckhouse
   namespace: d8-system
@@ -52,9 +58,11 @@ spec:
         resources: {}
 status: {}
 ---
+apiVersion: v1
 data:
   isUpdating: "true"
   notified: "false"
+kind: ConfigMap
 metadata:
   name: d8-release-data
   namespace: d8-system

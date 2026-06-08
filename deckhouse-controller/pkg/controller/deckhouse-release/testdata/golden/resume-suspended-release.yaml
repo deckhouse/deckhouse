@@ -1,5 +1,7 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: true
+kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/change-cause: check release (restore release)
@@ -18,7 +20,9 @@ status:
   phase: Deployed
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.16.0
   resourceVersion: "1001"

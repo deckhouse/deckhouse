@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
@@ -21,6 +23,8 @@ status:
   phase: ""
   syncTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
@@ -50,6 +54,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
@@ -79,6 +85,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
@@ -108,6 +116,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
@@ -140,6 +150,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
 metadata:
   name: echo
   resourceVersion: "1000"

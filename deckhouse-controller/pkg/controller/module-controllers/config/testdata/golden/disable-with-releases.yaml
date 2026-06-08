@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
 metadata:
   finalizers:
   - modules.deckhouse.io/module-registered
@@ -10,6 +12,8 @@ status:
   message: ""
   version: "1"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
 metadata:
   name: test-module
   resourceVersion: "1000"

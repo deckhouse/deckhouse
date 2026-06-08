@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
@@ -24,6 +26,8 @@ status:
   phase: Active
   syncTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/change-cause: check release (LTS channel - direct release)
@@ -53,6 +57,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   labels:
     module: testmodule

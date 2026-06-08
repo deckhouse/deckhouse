@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/default-source: "true"
@@ -37,6 +39,8 @@ status:
   phase: Active
   syncTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"
@@ -67,6 +71,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"
@@ -97,6 +103,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"

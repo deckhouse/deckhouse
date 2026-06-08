@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
 metadata:
   name: pending-missing-ttl
   resourceVersion: "1000"

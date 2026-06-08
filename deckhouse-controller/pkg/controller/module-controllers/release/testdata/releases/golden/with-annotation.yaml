@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
@@ -19,6 +21,8 @@ status:
   phase: ""
   syncTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     a: b
@@ -52,6 +56,8 @@ status:
   size: 3087774
   transitionTime: "2024-05-05T10:41:06Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
 metadata:
   name: deckhouse-commander
   resourceVersion: "999"

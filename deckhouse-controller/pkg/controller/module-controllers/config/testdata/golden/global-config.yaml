@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
 metadata:
   name: global
   resourceVersion: "999"

@@ -1048,6 +1048,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), suite.client.List(suite.Context(), sources))
 
 	for _, source := range sources.Items {
+		source.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"))
 		got, _ := yaml.Marshal(source)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -1057,6 +1058,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), suite.client.List(context.TODO(), releases))
 
 	for _, release := range releases.Items {
+		release.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"))
 		got, _ := yaml.Marshal(release)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -1066,6 +1068,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), suite.client.List(context.TODO(), modules))
 
 	for _, module := range modules.Items {
+		module.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("Module"))
 		got, _ := yaml.Marshal(module)
 		result.WriteString("---\n")
 		result.Write(got)

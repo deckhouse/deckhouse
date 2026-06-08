@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   annotations:
     packages.deckhouse.io/registry-spec-checksum: 2720f396ada9d3a58be0d5f8fd16c26a
@@ -17,6 +19,8 @@ status:
   lastNewVersions: 0
   partialScanAvailable: false
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   labels:
     packages.deckhouse.io/repository: deckhouse

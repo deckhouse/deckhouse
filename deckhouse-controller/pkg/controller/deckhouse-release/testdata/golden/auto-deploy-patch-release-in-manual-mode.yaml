@@ -1,5 +1,7 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.25.0
   resourceVersion: "999"
@@ -11,7 +13,9 @@ status:
   phase: Deployed
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/isUpdating: "false"
@@ -26,7 +30,9 @@ status:
   phase: Pending
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.26.0
   resourceVersion: "1001"
@@ -38,6 +44,8 @@ status:
   phase: Pending
   transitionTime: null
 ---
+apiVersion: v1
+kind: Pod
 metadata:
   labels:
     app: deckhouse
@@ -60,6 +68,8 @@ status:
     restartCount: 0
     state: {}
 ---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: deckhouse
   namespace: d8-system

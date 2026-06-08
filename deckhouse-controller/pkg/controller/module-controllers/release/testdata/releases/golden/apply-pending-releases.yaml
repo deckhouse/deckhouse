@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: c12a99d96e9ec5e0b07d24cc9615835f
@@ -18,6 +20,8 @@ status:
   phase: ""
   syncTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   labels:
     module: commander
@@ -38,6 +42,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   labels:
     module: commander
@@ -58,6 +64,8 @@ status:
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "true"
@@ -85,6 +93,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   labels:
     module: parca
@@ -105,6 +115,8 @@ status:
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "true"
@@ -132,6 +144,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
 metadata:
   name: commander
   resourceVersion: "1000"
@@ -143,6 +157,8 @@ status:
     status: "True"
     type: LastReleaseDeployed
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
 metadata:
   name: parca
   resourceVersion: "1000"

@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
 metadata:
   name: test-app
   namespace: foobar
@@ -11,6 +13,8 @@ status:
   lastAppliedConfiguration: null
   tracking: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
 metadata:
   labels:
     heritage: deckhouse
@@ -20,6 +24,8 @@ status:
   availableRepositories:
   - deckhouse
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
 metadata:
   labels:
     packages.deckhouse.io/draft: "true"

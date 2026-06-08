@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
@@ -21,6 +23,8 @@ status:
   phase: ""
   syncTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   finalizers:
   - modules.deckhouse.io/metrics-registered
@@ -48,6 +52,8 @@ status:
   size: 0
   transitionTime: "2021-12-08T08:34:01Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
@@ -75,6 +81,8 @@ status:
   size: 0
   transitionTime: null
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
 metadata:
   name: parca
   resourceVersion: "1000"

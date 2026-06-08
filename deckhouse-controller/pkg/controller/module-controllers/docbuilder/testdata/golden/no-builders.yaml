@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleDocumentation
 metadata:
   name: testmodule
   resourceVersion: "999"

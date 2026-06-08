@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
 metadata:
   labels:
     packages.deckhouse.io/draft: "false"
@@ -12,6 +14,8 @@ spec:
   packageVersion: v1.0.0
 status: {}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   name: deckhouse
   resourceVersion: "1"

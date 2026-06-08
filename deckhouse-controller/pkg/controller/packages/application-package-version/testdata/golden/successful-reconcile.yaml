@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
 metadata:
   finalizers:
   - applicationpackageversion.deckhouse.io/used-by-application
@@ -30,6 +32,8 @@ status:
       ru: Ru Test package
     stage: Preview
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   name: deckhouse
   resourceVersion: "1"

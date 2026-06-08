@@ -239,6 +239,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, source := range sources.Items {
+		source.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"))
 		got, _ := yaml.Marshal(source)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -249,6 +250,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, release := range releases.Items {
+		release.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"))
 		got, _ := yaml.Marshal(release)
 		result.WriteString("---\n")
 		result.Write(got)

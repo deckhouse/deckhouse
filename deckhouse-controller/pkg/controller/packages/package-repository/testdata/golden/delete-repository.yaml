@@ -1,4 +1,6 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
 metadata:
   name: deckhouse
   resourceVersion: "1"
@@ -12,6 +14,8 @@ status:
   lastNewVersions: 0
   partialScanAvailable: false
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   labels:
     packages.deckhouse.io/repository: deckhouse
@@ -31,6 +35,8 @@ status:
     status: "True"
     type: Completed
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
 metadata:
   labels:
     packages.deckhouse.io/repository: deckhouse

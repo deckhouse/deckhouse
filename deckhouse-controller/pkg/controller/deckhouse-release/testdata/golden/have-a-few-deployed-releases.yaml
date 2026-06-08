@@ -1,5 +1,7 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.28.0
   resourceVersion: "1000"
@@ -11,7 +13,9 @@ status:
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.28.1
   resourceVersion: "1000"
@@ -23,7 +27,9 @@ status:
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.28.2
   resourceVersion: "1000"
@@ -35,7 +41,9 @@ status:
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.28.3
   resourceVersion: "999"

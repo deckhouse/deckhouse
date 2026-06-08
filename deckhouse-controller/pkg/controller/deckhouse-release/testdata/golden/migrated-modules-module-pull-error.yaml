@@ -1,5 +1,7 @@
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.49.0
   resourceVersion: "999"
@@ -11,7 +13,9 @@ status:
   phase: Deployed
   transitionTime: "2019-10-17T15:32:00Z"
 ---
+apiVersion: deckhouse.io/v1alpha1
 approved: false
+kind: DeckhouseRelease
 metadata:
   name: v1.50.0
   resourceVersion: "1000"
@@ -25,6 +29,8 @@ status:
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: deckhouse
   namespace: d8-system
