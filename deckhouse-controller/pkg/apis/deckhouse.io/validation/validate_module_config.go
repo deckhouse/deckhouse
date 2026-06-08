@@ -38,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
@@ -57,6 +56,21 @@ type ObjectMeta struct {
 
 const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disabling=true` if you're sure that you want to disable the module."
 
+// disableConfirmationReason builds a rejection message for a module that requires
+// confirmation before being disabled. The reason/needConfirm pair comes from
+// Module.GetConfirmationDisableReason. It returns ("", false) when no confirmation is needed.
+func disableConfirmationReason(reason string, needConfirm bool) (string, bool) {
+	if !needConfirm {
+		return "", false
+	}
+
+	if !strings.HasSuffix(reason, ".") {
+		reason += "."
+	}
+
+	return reason + " " + disableReasonSuffix, true
+}
+
 // moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler(
 	cli client.Client,
@@ -65,7 +79,7 @@ func moduleConfigValidationHandler(
 	moduleManager moduleManager,
 	configValidator *configtools.Validator,
 	setting *helpers.DeckhouseSettingsContainer,
-	exts *extenders.ExtendersStack,
+	dependencyExtender moduleDependencyExtender,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
@@ -86,12 +100,7 @@ func moduleConfigValidationHandler(
 					if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
 						// we can delete unknown module without any further check
 						if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
-							if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
-								if !strings.HasSuffix(reason, ".") {
-									reason += "."
-								}
-								reason += disableReasonSuffix
-
+							if reason, ok := disableConfirmationReason(module.GetConfirmationDisableReason()); ok {
 								return rejectResult(reason)
 							}
 						}
@@ -120,6 +129,18 @@ func moduleConfigValidationHandler(
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 
+			// if the config explicitly disables a module that is currently enabled,
+			// check the confirmation restriction before allowing the disable
+			if _, hasAllowDisable := cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; !hasAllowDisable {
+				if cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled && moduleManager.IsModuleEnabled(cfg.Name) {
+					if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
+						if reason, ok := disableConfirmationReason(module.GetConfirmationDisableReason()); ok {
+							return rejectResult(reason)
+						}
+					}
+				}
+			}
+
 			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
 				// Check experimental policy from moduleStorage (when module is downloaded).
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
@@ -130,7 +151,7 @@ func moduleConfigValidationHandler(
 					}
 				}
 
-				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
+				if err := dependencyExtender.CheckEnabling(cfg.Name); err != nil {
 					return rejectResult(err.Error())
 				}
 
@@ -181,7 +202,7 @@ func moduleConfigValidationHandler(
 					}
 				}
 
-				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
+				if err := dependencyExtender.CheckEnabling(cfg.Name); err != nil {
 					return rejectResult(err.Error())
 				}
 
@@ -203,15 +224,13 @@ func moduleConfigValidationHandler(
 			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 
-			if !ok && !oldOk && oldEnabled && !newEnabled {
+			// the module is being disabled when the new config does not keep it enabled
+			// while it is currently enabled - either explicitly (oldEnabled) or by default
+			// (e.g. enabled in the bundle, but with no explicit enabled flag in the config)
+			if !ok && !oldOk && !newEnabled && (oldEnabled || moduleManager.IsModuleEnabled(cfg.Name)) {
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
-					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
-						if !strings.HasSuffix(reason, ".") {
-							reason += "."
-						}
-						reason += disableReasonSuffix
-
+					if reason, ok := disableConfirmationReason(module.GetConfirmationDisableReason()); ok {
 						return rejectResult(reason)
 					}
 				}
