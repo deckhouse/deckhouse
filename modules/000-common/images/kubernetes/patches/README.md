@@ -84,3 +84,5 @@ Patch prevents the scheduler from placing new pods on nodes that are in graceful
 
 Why it is needed:
 During graceful node shutdown, kubelet reports the shutdown state through the `NodeReady` condition. The scheduler must treat such nodes as unschedulable and react to `NodeReady` condition updates so pods can be queued again when the shutdown state is cleared.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/139249
