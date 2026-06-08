@@ -57,7 +57,7 @@ func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
 	if stopSSH {
 		err := p.sshProvider.Cleanup(ctx)
 		if err != nil {
-			log.WarnF("failed to cleanup ssh provider: %v", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to cleanup ssh provider: %v", err))
 		}
 	}
 }

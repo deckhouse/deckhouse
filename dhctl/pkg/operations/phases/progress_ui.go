@@ -144,9 +144,10 @@ func consumeProgress(ctx context.Context, l *slog.Logger, progressCh chan Progre
 func phaseToString(p Progress, completed bool) string {
 	// Butify bootstrap: phases with subphases
 	phasesMap := make(map[OperationPhase]string)
+	phasesMap[PreInfraPreflightsPhase] = "Common preflight checks"
+	phasesMap[PostInfraPreflightsPhase] = "Static and post-infra preflight checks"
 	phasesMap[BaseInfraPhase] = "Base Infrastructure"
-	phasesMap[RegistryPackagesProxyPhase] = "Preparing registry packages proxy"
-	phasesMap[ExecuteBashibleBundlePhase] = "Bootstrap Kubernetes on first master node"
+	phasesMap[InstallKubernetesPhase] = "Install Kubernetes on the first master node"
 	phasesMap[InstallDeckhousePhase] = "Install Deckhouse"
 	phasesMap[CreateResourcesPhase] = "Create resources"
 	phasesMap[InstallAdditionalMastersAndStaticNodes] = "Install additional master nodes and CloudPermanent nodes"
@@ -172,6 +173,15 @@ func phaseToString(p Progress, completed bool) string {
 	subphasesMap[InstallDeckhouseSubPhaseWait] = "Wait for the first master readiness"
 	subphasesMap[OperationSubPhase(CheckInfra)] = "Check Infrastructure"
 	subphasesMap[OperationSubPhase(CheckConfiguration)] = "Check configuration"
+	subphasesMap[BaseInfraSubPhaseBaseInfra] = "Base Infrastructure"
+	subphasesMap[BaseInfraSubPhaseFirstMaster] = "First master node"
+	subphasesMap[InstallKubernetesSubPhaseBundlePreparation] = "Prepare bashible bundle"
+	subphasesMap[InstallKubernetesSubPhaseRegistryPackagesProxy] = "Prepare registry packages proxy"
+	subphasesMap[InstallKubernetesSubPhaseNodePreparation] = "Prepare node"
+	subphasesMap[InstallKubernetesSubPhaseExecuteBashibleBundle] = "Execute bashible bundle"
+	subphasesMap[InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters] = "Install additional master nodes"
+	subphasesMap[InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes] = "Install additional static nodes"
+	subphasesMap[InstallAdditionalMastersAndStaticNodesSubPhaseWait] = "Wait for control plane manager become ready"
 
 	msg := ""
 	if completed {

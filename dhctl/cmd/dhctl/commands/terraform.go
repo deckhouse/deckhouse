@@ -76,10 +76,9 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 			Address:       opts.Converge.ListenAddress,
 			Path:          opts.Converge.MetricsPath,
 			Interval:      opts.Converge.CheckInterval,
-			Logger:        logger,
 			KubeCl:        kubeCl,
 			GlobalOptions: &opts.Global,
-			IsDebug:  opts.Global.IsDebug,
+			IsDebug:       opts.Global.IsDebug,
 		})
 
 		exporter.Start(ctx)

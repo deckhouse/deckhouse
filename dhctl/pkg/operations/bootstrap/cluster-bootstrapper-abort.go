@@ -97,7 +97,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 	defer func() {
 		if err := b.PhasedExecutionContext.Finalize(ctx, stateCache); err != nil {
-			b.Logger.LogWarnF("failed to finalize phased execution context: %v\n", err)
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to finalize phased execution context: %v", err))
 		}
 	}()
 

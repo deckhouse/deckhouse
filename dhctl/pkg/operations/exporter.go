@@ -120,7 +120,7 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		GaugeMetrics:          make(map[string]*prometheus.GaugeVec),
 		CounterMetrics:        make(map[string]*prometheus.CounterVec),
 		tmpDir:                params.GlobalOptions.TmpDir,
-		globalOptions:         params.GlogalOptions,
+		globalOptions:         params.GlobalOptions,
 		isDebug:               params.IsDebug,
 	}
 }

@@ -485,7 +485,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 	}
 	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
 
-	if tag := m.deckhouseImageTag(); tag != "" && registryContext.ImagesBase != "" {
+	if tag := m.deckhouseImageTag(ctx); tag != "" && registryContext.ImagesBase != "" {
 		configForBashibleBundleTemplate["deckhouseImageRef"] = fmt.Sprintf("%s:%s", registryContext.ImagesBase, tag)
 	}
 
@@ -768,9 +768,9 @@ func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
 
 // deckhouseImageTag returns the deckhouse-controller image tag for the bashible
 // prefetch: semver from the installer's version file, falling back to DevBranch.
-func (m *MetaConfig) deckhouseImageTag() string {
+func (m *MetaConfig) deckhouseImageTag(ctx context.Context) string {
 	if m.VersionFilePath != "" {
-		if tag, ok := ReadVersionTagFromInstallerContainer(m.VersionFilePath, m.DownloadRootDir); ok {
+		if tag, ok := ReadVersionTagFromInstallerContainer(ctx, m.VersionFilePath, m.DownloadRootDir); ok {
 			return tag
 		}
 	}
