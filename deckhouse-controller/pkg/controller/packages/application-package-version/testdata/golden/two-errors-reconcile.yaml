@@ -1,8 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/draft: "true"
   name: deckhouse-test-v1.0.0
@@ -19,10 +16,7 @@ status:
     status: "False"
     type: MetadataLoaded
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:

@@ -1,10 +1,7 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: foxtrot-suitable
@@ -24,10 +21,7 @@ status:
   phase: ""
   syncTime: "2024-05-03T21:05:05Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -54,17 +48,13 @@ status:
   size: 0
   transitionTime: "2021-12-08T08:34:01Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
     module: parca
-    modules.deckhouse.io/update-policy: ""
   name: parca-2.0.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -72,23 +62,20 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1010"
+  resourceVersion: "1001"
 spec:
   moduleName: parca
   version: 2.0.0
   weight: 900
 status:
   approved: true
-  message: major version is greater than deployed 1.26.2
+  message: ""
   phase: Pending
   pullDuration: 0s
   size: 0
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
 metadata:
-  creationTimestamp: null
   name: parca
   resourceVersion: "1000"
 properties: {}

@@ -1,8 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
   finalizers:
   - applicationpackageversion.deckhouse.io/used-by-application
   labels:
@@ -27,10 +24,7 @@ status:
       ru: Ru Test package
     stage: Preview
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:

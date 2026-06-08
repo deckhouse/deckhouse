@@ -1,9 +1,6 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.16
   resourceVersion: "999"
 spec:
@@ -16,11 +13,8 @@ status:
   phase: Superseded
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.17
   resourceVersion: "1000"
 spec:
@@ -34,11 +28,8 @@ status:
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.18
   resourceVersion: "999"
 spec:
@@ -51,11 +42,8 @@ status:
   phase: Deployed
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.19
   resourceVersion: "999"
 spec:
@@ -69,11 +57,8 @@ status:
   phase: Pending
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.9
   resourceVersion: "999"
 spec:

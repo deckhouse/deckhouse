@@ -1,8 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -15,10 +12,7 @@ status:
   lastNewVersions: 0
   partialScanAvailable: false
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1234567890
@@ -37,10 +31,7 @@ status:
     status: "True"
     type: Completed
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1234567891

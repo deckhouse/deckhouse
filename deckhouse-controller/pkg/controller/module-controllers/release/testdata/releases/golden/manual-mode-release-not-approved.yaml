@@ -1,10 +1,7 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: c12a99d96e9ec5e0b07d24cc9615835f
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: test
@@ -21,13 +18,10 @@ status:
   phase: ""
   syncTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -49,10 +43,7 @@ status:
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
 metadata:
-  creationTimestamp: null
   name: echo
   resourceVersion: "1000"
 properties: {}

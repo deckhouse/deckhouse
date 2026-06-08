@@ -1,9 +1,6 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.57.3
   resourceVersion: "999"
 spec:
@@ -14,15 +11,12 @@ status:
   phase: Deployed
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   name: v1.58.1
   resourceVersion: "1"
 spec:
@@ -33,15 +27,12 @@ status:
   message: ""
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   name: v1.59.3
   resourceVersion: "1"
 spec:
@@ -52,15 +43,12 @@ status:
   message: ""
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
   annotations:
     release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   name: v1.60.2
   resourceVersion: "1"
 spec:

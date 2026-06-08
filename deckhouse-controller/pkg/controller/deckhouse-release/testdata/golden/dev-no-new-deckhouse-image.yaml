@@ -1,9 +1,6 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.25.0
   resourceVersion: "999"
 spec:
@@ -14,11 +11,8 @@ status:
   phase: Deployed
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.26.0
   resourceVersion: "999"
 spec:
@@ -29,10 +23,7 @@ status:
   phase: Pending
   transitionTime: null
 ---
-apiVersion: v1
-kind: Pod
 metadata:
-  creationTimestamp: null
   labels:
     app: deckhouse
     leader: "true"
@@ -56,10 +47,7 @@ status:
     state: {}
   phase: Running
 ---
-apiVersion: apps/v1
-kind: Deployment
 metadata:
-  creationTimestamp: null
   name: deckhouse
   namespace: d8-system
   resourceVersion: "999"
@@ -67,8 +55,7 @@ spec:
   selector: null
   strategy: {}
   template:
-    metadata:
-      creationTimestamp: null
+    metadata: {}
     spec:
       containers:
       - image: my.registry.com/deckhouse:v1.25.0

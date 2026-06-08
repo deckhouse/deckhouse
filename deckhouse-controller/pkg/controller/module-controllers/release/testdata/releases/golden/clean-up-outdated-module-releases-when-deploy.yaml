@@ -1,10 +1,7 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   generation: 1
@@ -24,12 +21,9 @@ status:
   phase: ""
   syncTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
@@ -56,12 +50,9 @@ status:
   size: 0
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
@@ -88,12 +79,9 @@ status:
   size: 0
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
@@ -120,14 +108,11 @@ status:
   size: 0
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
     release.deckhouse.io/notified: "false"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -157,10 +142,7 @@ status:
   size: 0
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
 metadata:
-  creationTimestamp: null
   name: echo
   resourceVersion: "1000"
 properties: {}

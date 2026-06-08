@@ -1,8 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
   finalizers:
   - modulepackageversion.deckhouse.io/used-by-module
   labels:
@@ -36,10 +33,7 @@ status:
         constraint: '>= 1.27'
     stage: Sandbox
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:

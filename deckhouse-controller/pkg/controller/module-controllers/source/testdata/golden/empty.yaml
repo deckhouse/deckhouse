@@ -1,10 +1,7 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-  creationTimestamp: null
   name: test-source-1
   resourceVersion: "1000"
 spec:

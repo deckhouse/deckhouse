@@ -1,9 +1,6 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.49.0
   resourceVersion: "999"
 spec:
@@ -14,11 +11,8 @@ status:
   phase: Deployed
   transitionTime: "2019-10-17T15:32:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
 approved: false
-kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.50.0
   resourceVersion: "1000"
 spec:
@@ -31,10 +25,7 @@ status:
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: apps/v1
-kind: Deployment
 metadata:
-  creationTimestamp: null
   name: deckhouse
   namespace: d8-system
   resourceVersion: "999"
@@ -46,7 +37,6 @@ spec:
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: deckhouse
     spec:

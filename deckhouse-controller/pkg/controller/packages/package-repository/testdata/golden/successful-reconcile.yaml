@@ -1,10 +1,7 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepository
 metadata:
   annotations:
     packages.deckhouse.io/registry-spec-checksum: 2720f396ada9d3a58be0d5f8fd16c26a
-  creationTimestamp: null
   finalizers:
   - packages.deckhouse.io/package-version-exists
   name: deckhouse
@@ -20,10 +17,7 @@ status:
   lastNewVersions: 0
   partialScanAvailable: false
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/operation-trigger: auto
     packages.deckhouse.io/operation-type: Update

@@ -1,8 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: test-source
@@ -21,10 +18,7 @@ status:
   phase: ""
   syncTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -47,10 +41,7 @@ status:
   size: 0
   transitionTime: "2021-12-08T08:34:01Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -75,12 +66,9 @@ status:
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -105,13 +93,10 @@ status:
   size: 0
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -136,10 +121,7 @@ status:
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
 metadata:
-  creationTimestamp: null
   name: demo
   resourceVersion: "1005"
 properties: {}

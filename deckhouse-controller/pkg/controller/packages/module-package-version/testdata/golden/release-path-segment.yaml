@@ -1,8 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
   finalizers:
   - modulepackageversion.deckhouse.io/used-by-module
   labels:
@@ -29,10 +26,7 @@ status:
       en: Legacy module from old registry
     stage: Sandbox
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:

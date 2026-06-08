@@ -1,8 +1,5 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/operation-trigger: manual
     packages.deckhouse.io/operation-type: Update
@@ -49,10 +46,7 @@ status:
     total: 1
   startTime: "2025-10-31T12:00:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
@@ -72,10 +66,7 @@ spec:
   packageVersion: v1.0.0
 status: {}
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModulePackage
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
   name: test-package
@@ -90,10 +81,7 @@ status:
   availableRepositories:
   - deckhouse
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "3"
 spec:

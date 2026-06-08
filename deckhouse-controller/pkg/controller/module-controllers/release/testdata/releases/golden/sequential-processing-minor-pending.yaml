@@ -1,10 +1,7 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: foxtrot
@@ -24,10 +21,7 @@ status:
   phase: ""
   syncTime: "2024-05-03T21:05:05Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -60,13 +54,10 @@ status:
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -99,13 +90,10 @@ status:
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -138,10 +126,7 @@ status:
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
 metadata:
-  creationTimestamp: null
   name: upmeter
   resourceVersion: "1000"
 properties: {}
