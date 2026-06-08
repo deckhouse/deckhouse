@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/storage/sds/lvm-replicated-faq.html
 lang: ru
 ---
 
-Систематизированные ответы на типовые сценарии администрирования — в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Систематизированные ответы на типовые сценарии администрирования подробно разобраны в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 
 {% alert level="warning" %}
 Работоспособность гарантируется только при соблюдении [системных требований](#системные-требования). Использование в иных условиях возможно, однако стабильная работа не гарантируется.

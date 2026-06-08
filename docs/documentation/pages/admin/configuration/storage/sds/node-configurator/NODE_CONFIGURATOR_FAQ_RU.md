@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/storage/sds/node-configurator/faq.html
 lang: ru
 ---
 
-Систематизированные ответы на типовые сценарии администрирования — в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Систематизированные ответы на типовые сценарии администрирования подробно разобраны в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 
 {% alert level="info" %}
 Работоспособность гарантируется только при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](../../../../../supported_versions.html#linux). При использовании нестандартных ядер или дистрибутивов поведение может быть непредсказуемым.

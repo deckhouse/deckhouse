@@ -3,7 +3,6 @@ title: "Managing local storage based on LVM"
 permalink: en/admin/configuration/storage/sds/lvm-local-faq.html
 ---
 
-
 ## Selecting specific nodes for module usage
 
 To restrict the module's usage to specific cluster nodes, you need to set labels in the [`nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) field in the module settings.

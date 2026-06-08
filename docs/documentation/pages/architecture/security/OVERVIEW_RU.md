@@ -9,7 +9,7 @@ extractedLinksMax: 0
 ---
 
 В данном подразделе описывается архитектура подсистемы Security (подсистемы безопасности) Deckhouse Kubernetes Platform (DKP).
-Практические материалы по этим модулям — в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Практические материалы по этим модулям подробно разобраны в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 
 В подсистему Security входят следующие модули:
 

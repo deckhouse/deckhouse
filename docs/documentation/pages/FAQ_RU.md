@@ -10,7 +10,7 @@ lang: ru
 ---
 
 На странице представлены часто задаваемые вопросы по настройке и использованию Deckhouse Kubernetes Platform.
-Систематизированные ответы на типовые сценарии администрирования — в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Систематизированные ответы на типовые сценарии администрирования подробно разобраны в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 
 <button class="show__containers--expand">Развернуть все</button>
 <button class="show__containers--collapse">Свернуть все</button>
