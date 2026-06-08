@@ -36,7 +36,13 @@ import (
 func makeTestConfig(t *testing.T, dir string, opts ...configOption) config {
 	t.Helper()
 	opts = append([]configOption{WithPKIDir(dir)}, opts...)
-	cfg, err := newConfig("test-node", "cluster.local", net.ParseIP("10.0.0.1"), "10.96.0.0/12", opts...)
+	cfg, err := newConfig(
+		"test-node",
+		"cluster.local",
+		net.ParseIP("10.0.0.1"),
+		"10.96.0.0/12",
+		opts...,
+	)
 	require.NoError(t, err)
 	return *cfg
 }
