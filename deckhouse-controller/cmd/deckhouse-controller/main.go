@@ -176,6 +176,25 @@ func main() {
 		dhctlOpts.Kube.InCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
 		dhctlOpts.Global.TmpDir = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
 
+		// Pin the dhctl content directories to the deckhouse image layout
+		// (/deckhouse/...). The legacy kingpin entrypoint relied on
+		// dhctl/pkg/config package globals that defaulted to these absolute
+		// paths, so commands like `cluster-configuration` and
+		// `cloud-discovery-data` found their schemas under /deckhouse/candi.
+		// options.New() instead calls NewGlobalOptions(), which auto-detects
+		// these dirs relative to the current working directory and otherwise
+		// points them at a download dir under TmpDir (/tmp/dhctl/deckhouse/...).
+		// That directory does not exist in the deckhouse image, so config
+		// parsing failed with "init configuration index not found". Restore the
+		// previous behavior by setting the image paths explicitly.
+		dhctlOpts.Global.DeckhouseDir = options.DefaultDeckhouseDir
+		dhctlOpts.Global.CandiDir = options.DefaultCandiDir
+		dhctlOpts.Global.ModulesDir = options.DefaultModulesDir
+		dhctlOpts.Global.GlobalHooksModule = options.DefaultGlobalHooksModule
+		dhctlOpts.Global.InfrastructureVersions = options.DefaultInfrastructureVersions
+		dhctlOpts.Global.VersionMap = options.DefaultVersionMap
+		dhctlOpts.Global.NeedDownload = false
+
 		dhctlcli.RegisterCobraBridges(rootCmd, fileName, dhctlOpts)
 	}
 

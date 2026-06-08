@@ -20,6 +20,9 @@
     - condition:
         k8s: "1.35"
       version: v1.35.1
+    - condition:
+        k8s: "1.36"
+      version: v1.35.1
 
 - name: VMware vSphere CSI driver
   link: https://github.com/kubernetes-sigs/vsphere-csi-driver
@@ -42,6 +45,9 @@
       version: v3.7.1
     - condition:
         k8s: "1.35"
+      version: v3.7.1
+    - condition:
+        k8s: "1.36"
       version: v3.7.1
 
 - name: VMware vSphere Terraform provider

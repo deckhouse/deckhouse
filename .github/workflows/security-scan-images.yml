@@ -16,19 +16,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Security Scans
+name: Security Scan Images
 
+# Image-based scans (CVE / rootless / antivirus). Invoked as a reusable
+# workflow from the Build workflow once `Build FE` succeeds — see the
+# `security_scan_images` job in build-and-test_dev. Because this workflow is
+# called via `uses:`, its jobs run as part of the parent's workflow run and
+# automatically appear on the PR's "Checks" tab (no commit-status plumbing
+# needed). The pull-request event context (head SHA, PR number, run_id) is
+# inherited from the calling workflow, so we read it straight from
+# `github.event.pull_request.*` / `github.run_id`.
+#
+# Re-run semantics: there is no "Re-run all jobs" entry-point on this workflow
+# alone — it is part of the parent. To re-execute the image scans, re-run the
+# Build workflow ("Build and test for dev branches"). The parent's
+# `concurrency.cancel-in-progress` automatically cancels any in-flight nested
+# scan when a new build for the same PR starts, so this workflow intentionally
+# does NOT declare its own `concurrency:` block: under workflow_call,
+# `github.workflow` is inherited from the parent, which would resolve into the
+# same group as the parent and produce a self-deadlock (GitHub then cancels
+# both runs with: "deadlock was detected for concurrency group … between a top
+# level workflow and 'Security scan images'").
 on:
-  pull_request_target:
-    types:
-      - opened
-      - reopened
-      - synchronize
-
-# Cancel in-progress security scans for the same PR.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number }}
-  cancel-in-progress: true
+  workflow_call:
 
 permissions:
   contents: read
@@ -265,86 +275,82 @@ jobs:
 
   # </template: pull_request_info>
 
-
-  # </template: block-until-image-is-not-ready>
-  block-until-image-is-not-ready:
-    name: Block until the docker image is not ready
-    runs-on: "ubuntu-slim"
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v3.5.2
-        with:
-          ref: "main"
-      - name: Block until the docker image is not ready
-        id: block-image-dont-ready
-        uses: actions/github-script@v6.4.1
-        with:
-          script: |
-            const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
-            const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
-            const isTag = (branch) => branch.includes("/tags/")
-
-            let branchName;
-            let prNum;
-
-            if (context.eventName === 'pull_request' || context.eventName === 'pull_request_target') {
-              branchName = context.payload.pull_request.head.ref;
-              prNum = context.payload.pull_request.number;
-            } else if (context.eventName === 'workflow_dispatch') {
-              branchName = context.payload.inputs.ci_commit_ref_name;
-              prNum = context.payload.inputs.issue_number;
-            }
-
-            if (!branchName) {
-              branchName = githubAction.GetBranchNameFromContext(context);
-            }
-
-            if (!branchName) {
-              core.setFailed("Branch not found.");
-              return false;
-            }
-
-            core.info(`${branchName} is main? ${branchName === 'main'}`)
-            core.info(`${branchName} is release? ${isReleaseBranch(branchName)}`)
-            core.info(`${branchName} is tag? ${isTag(branchName)}`)
-            if (branchName === 'main' || isReleaseBranch(branchName) || isTag(branchName)) {
-              core.info(`Skip a job because it's a tag, release or main branch: ${branchName}`);
-              return true;
-            }
-
-            let infoText = `Check build workflow is completed for branch: ${branchName}`;
-            if (prNum) {
-              infoText += ` | PR: ${context.payload.repository.html_url}/pull/${prNum}`;
-            }
-            core.info(infoText);
-
-            const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
-            try {
-              let workflowName = 'Build and test for dev branches';
-              let jobName = 'Build FE';
-              await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
-            } catch(error) {
-              core.setFailed(error);
-            }
-
-
-  # </template: block-until-image-is-not-ready>
-
   # ============================================================================
-  # Gitleaks — secret scanning on PR diff.
-  # NOTE: does NOT depend on block-until-image-is-not-ready (text scan, no images).
+  # Compute the set of module images that actually changed in this PR.
+  #
+  # Baseline source: the FIRST `Build and test for dev branches` run of THIS
+  # PR whose `Build FE` job finished with conclusion=success — discovered via
+  # GitHub API, see the "Find baseline ..." step below. On the very first PR
+  # build werf's cache could only contain main-published layers, so
+  # `Rebuilt: false` in that report reliably means "identical to main". On
+  # any *later* build `Rebuilt: false` can also mean "identical to a layer
+  # this PR itself built earlier", which would silently mask images already
+  # modified by the PR. Anchoring the baseline to the first successful Build
+  # FE run sidesteps that.
+  #
+  # First PR build is naturally covered: the "first successful Build FE" is
+  # the current run itself, so digests_old_main is derived from this run's
+  # report. Images with `Rebuilt: true` are absent from digests_old_main and
+  # therefore correctly surface as "changed" in the diff against the current
+  # PR image.
+  #
+  # If the baseline run's `build_report_FE` artifact is no longer available
+  # (retention window elapsed), the download step stays soft and
+  # changed_images.py emits an empty filter (`changed_compact=[]`); downstream
+  # CVE / rootless / antivirus scans then fall back to full-scan mode (every
+  # image scanned), with an explicit log line stating the reason.
+  #
+  # Flow:
+  #   1. Resolve baseline run_id (first PR run with Build FE success).
+  #   2. Download `build_report_FE` from that run (soft; missing = full-scan).
+  #   3. Keep only Final=true && Rebuilt=false entries -> digests_old_main.json
+  #      (.github/scripts/python/changed_images.py).
+  #   4. Extract images_digests.json from the current PR image and diff its
+  #      digests against digests_old_main by content (digest), not by name.
+  #
+  # Outputs (changed_count / matrix / changed_compact) drive subsequent
+  # CVE / rootless / antivirus scans.
   # ============================================================================
-  gitleaks_scan:
-    name: Gitleaks scan
-    runs-on: ubuntu-slim
-    needs: pull_request_info
+  changed_images:
+    name: Compute changed images
+    runs-on: [self-hosted, regular]
+    needs:
+      - pull_request_info
+    # Runs in main repo and test mirrors (deckhouse/deckhouse-*). All required
+    # secrets (dev-registry creds) are the same ones Build FE already uses, so
+    # any repo where Build FE works can run this job too.
+    if: startsWith(github.repository, 'deckhouse/deckhouse')
     permissions:
       contents: read
       id-token: write
+      actions: read
+    outputs:
+      changed_count:    ${{ steps.diff.outputs.changed_count }}
+      matrix:           ${{ steps.diff.outputs.matrix }}
+      changed_compact:  ${{ steps.diff.outputs.changed_compact }}
+      baseline_run_id:  ${{ steps.baseline.outputs.run_id }}
     steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+
+      - name: Set PR tag
+        id: tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -366,66 +372,158 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
 
       # </template: import_secrets>
-      # The action checks out refs/pull/<num>/merge itself,
-      # so the PR branch is scanned (not the base branch).
-      - name: Run Gitleaks diff scan
-        uses: deckhouse/modules-actions/gitleaks@main
+
+      # Resolve the baseline: the first build-and-test_dev run of this PR
+      # whose `Build FE` job finished with conclusion=success.
+      #
+      # API strategy (important for main `deckhouse/deckhouse` scale, where
+      # build-and-test_dev has ~40k total runs):
+      #   * Filter at the API layer by the PR's head branch + status=success.
+      #     `listWorkflowRunsForRepo?branch=<head>&workflow_id=...&status=success`
+      #     normally returns a single-digit list — usually 1..20 runs.
+      #   * A run with conclusion=success means every required top-level job
+      #     succeeded, so `Build FE` (which is required) is implicitly success.
+      #     This avoids the N+1 `listJobsForWorkflowRun` calls we used to do.
+      #
+      # Soft degrade: if for any reason we cannot resolve a baseline (API rate
+      # limit, branch came from a fork without success runs yet, etc.) — emit
+      # an empty `run_id` and let the download step / changed_images.py
+      # fall back to full-scan with a clear warning. We intentionally do NOT
+      # `setFailed` here, because changed_images is plumbing, not a scanner.
+      - name: Find baseline Build FE run for this PR
+        id: baseline
+        timeout-minutes: 3
+        uses: actions/github-script@v6.4.1
         with:
-          scan_mode: diff
-          gitleaks_version: v8.28.0
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const prNumber = pr.number;
+            const headRef  = pr.head.ref;
+            core.info(`PR #${prNumber} head ref: ${headRef}`);
 
-      # <template: send_fail_report>
-      - name: Send fail report
-        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
-        env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
-          JOB_NAME: ${{ github.job }}
-          WORKFLOW_NAME: ${{ github.workflow }}
-          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-        run: |
-          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>
+            try {
+              const runs = await github.paginate(
+                github.rest.actions.listWorkflowRunsForRepo,
+                {
+                  owner: context.repo.owner,
+                  repo:  context.repo.repo,
+                  workflow_id: 'build-and-test_dev.yml',
+                  branch: headRef,
+                  status: 'success',
+                  per_page: 100,
+                },
+              );
+              core.info(`Found ${runs.length} successful build-and-test_dev run(s) on '${headRef}'`);
 
-  set_security_gitleaks_requirement_status:
-    name: Set commit status after gitleaks scan run
-    runs-on: "ubuntu-slim"
-    needs: gitleaks_scan
-    if: ${{ always() }}
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - name: Install GitHub CLI
-        run: sudo apt-get install gh -y
-      - name: Auth with GitHub CLI
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-      - name: Set PR Label
+              if (runs.length === 0) {
+                core.warning(
+                  `No successful build-and-test_dev run on '${headRef}' yet. ` +
+                  `Emitting empty baseline -> downstream scanners run in full-scan mode.`,
+                );
+                core.setOutput('run_id', '');
+                return;
+              }
+
+              runs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+              const chosen = runs[0];
+              core.info(`Baseline run: id=${chosen.id} created_at=${chosen.created_at}`);
+              core.setOutput('run_id', String(chosen.id));
+            } catch (err) {
+              core.warning(
+                `Failed to resolve baseline run (${err.message}). ` +
+                `Emitting empty baseline -> downstream scanners run in full-scan mode.`,
+              );
+              core.setOutput('run_id', '');
+            }
+
+      # Skipped when the baseline step could not find a successful Build FE
+      # run on this branch (empty run_id). In that case no build_report
+      # is fetched and changed_images.py degrades to full-scan with a
+      # warning logged from the "Compute changed images" step.
+      - name: Download build_report_FE from baseline run
+        if: ${{ steps.baseline.outputs.run_id != '' }}
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          run_id: ${{ steps.baseline.outputs.run_id }}
+          name: build_report_FE
+          path: ./build_report
+          # Soft on missing/expired: changed_images.py detects the absent
+          # report and falls back to full-scan (empty filter) with a clear
+          # log line, instead of failing the whole image-scan workflow.
+          if_no_artifact_found: warn
+
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+
+      - name: Extract images_digests.json from dev:${{ steps.tag.outputs.TAG }}
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          GH_REPO: ${{ github.repository }}
-          RESULT: ${{ needs.gitleaks_scan.result }}
+          DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          TAG: ${{ steps.tag.outputs.TAG }}
         run: |
-          echo "PR Number: $PR_NUMBER | Result: $RESULT"
-          if [ "$RESULT" == "success" ]; then
-            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
-          elif [ "$RESULT" == "skipped" ]; then
-            gh pr edit "$PR_NUMBER" --remove-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
-          else
-            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/failed" --remove-label "security/gitleaks/success"
-          fi
+          set -euo pipefail
+          regctl image get-file "${DEV_REGISTRY}/sys/deckhouse-oss:${TAG}" \
+            /deckhouse/modules/images_digests.json > images_digests.json
+          modules=$(jq 'keys | length' images_digests.json)
+          images=$(jq '[.[] | to_entries[]] | length' images_digests.json)
+          echo "images_digests.json: ${modules} modules, ${images} module images."
+
+      - name: Compute changed images
+        id: diff
+        env:
+          # Baseline (first successful PR build) for digests_old_main:
+          BUILD_REPORT_PATH:   ./build_report/images_tags_werf.json
+          # Current PR image (this run):
+          IMAGES_DIGESTS_PATH: ./images_digests.json
+          OUTPUT_OLD_DIGESTS:  ./digests_old_main.json
+          OUTPUT_CHANGED:      ./changed_images.json
+          BASELINE_RUN_ID:     ${{ steps.baseline.outputs.run_id }}
+        run: |
+          echo "Baseline build_report_FE source: run_id=${BASELINE_RUN_ID}"
+          python3 .github/scripts/python/changed_images.py
+
+      - name: Upload diff artifacts
+        if: ${{ always() && steps.diff.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: changed-images-pr${{ github.event.pull_request.number }}
+          path: |
+            digests_old_main.json
+            changed_images.json
+          retention-days: 14
+      # NOTE: no `send_fail_report` here. Loop notifications on this workflow
+      # are reserved for actual scanner findings (rootless / antivirus) and
+      # for the gitleaks workflow. `changed_images` is plumbing — its
+      # failures (GitHub API unavailable, baseline build_report_FE expired,
+      # regctl pull failed, etc.) surface in Actions UI and indirectly via
+      # downstream scan jobs that will skip and turn the `security/*` PR
+      # labels red. Adding a Loop ping here would only create noise.
 
   # ============================================================================
   # CVE — Trivy scan on PR images.
+  # TEMPORARILY DISABLED: PR-mode CVE scan currently misbehaves (false-positive
+  # noise / wrong PR-diff filter). Re-enable by removing the `if: false` guard
+  # once the underlying script is fixed. While disabled, the aggregator below
+  # explicitly allows `cve: skipped`, so it does not block PR merges.
   # ============================================================================
   test_cve_report_main:
     name: Trivy scan dev images
+    if: ${{ false }}
     # External/fork PRs gated by 'status/ok-to-test' via pull_request_info (setFailed → this job is skipped).
     needs:
       - pull_request_info
-      - block-until-image-is-not-ready
+      - changed_images
     permissions:
       contents: read
       id-token: write
@@ -463,7 +561,6 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_OUTPUT
           echo "SCAN_SEVERAL_LATEST_RELEASES=False" >> $GITHUB_OUTPUT
           echo "LATEST_RELEASES_AMOUNT=0" >> $GITHUB_OUTPUT
-
       # <template: cve_scan_deckhouse_images>
       # <template: import_secrets>
       - name: Split repository name
@@ -500,8 +597,32 @@ jobs:
         with:
           cosign-release: "v3.0.4"
 
+      # PR-mode CVE: announce the changed-images filter that we forward to cve_scan.sh.
+      # `changed_compact` is the same JSON allow-list used by rootless / drweb scans;
+      # an empty "[]" (no PR-vs-main delta, or baseline build_report_FE missing) is
+      # treated by cve_scan.sh as "scan every image" — matching the script's legacy
+      # behaviour and our policy of preferring over-scan to under-scan.
+      - name: Announce CVE delta-scan filter
+        env:
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+        run: |
+          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+            echo "🎯 CVE delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to cve_scan.sh"
+            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+          else
+            echo "📋 CVE full-scan: ONLY_IMAGES is empty (no delta or baseline missing)"
+          fi
+
       - name: Run Deckhouse images CVE tests on "${{ steps.scan_type.outputs.tag }}"
         uses: deckhouse/modules-actions/cve_scan@main
+        env:
+          # Forward the changed-images allow-list to cve_scan.sh. GitHub Actions
+          # propagates step-level env into the composite action's inner steps, so
+          # `cve_scan.sh` reads ${ONLY_IMAGES} directly from the environment (see
+          # the ONLY_IMAGES_SET block in /home/nikmor/Flant/GitLab/SSDLC-tools/cve-scan/cve_scan.sh).
+          # Empty "[]" makes the script fall back to full scan — no extra glue.
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
         with:
           prod_registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
           prod_registry_user: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
@@ -554,18 +675,16 @@ jobs:
         run: |
           rm bin
       # </template: unlink_bin_step>
-
-      # <template: send_fail_report>
-      - name: Send fail report
-        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
-        env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
-          JOB_NAME: ${{ github.job }}
-          WORKFLOW_NAME: ${{ github.workflow }}
-          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-        run: |
-          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>
+      # NOTE: no `send_fail_report` here. PR-time CVE notifications are
+      # intentionally silent — Loop pings on this workflow are reserved for
+      # rootless / antivirus findings (and gitleaks lives in security-scan-src).
+      # CVE-found vs technical-fail aren't distinguishable from the current
+      # cve_scan.sh exit code, so a blanket failure() ping would be noisy.
+      # Weekly CVE (`cve-weekly`) keeps its own `send_fail_report` independent
+      # of this template — that behaviour is unchanged.
+      # The shared `cve_scan_deckhouse_images` step still imports
+      # LOOP_SERVICE_NOTIFICATIONS because that secret block is reused by
+      # cve-weekly; leaving it as-is here is intentional and harmless.
 
 
 
@@ -607,7 +726,7 @@ jobs:
     runs-on: [self-hosted, large]
     needs:
       - pull_request_info
-      - block-until-image-is-not-ready
+      - changed_images
     # <template: security_scan_template>
     steps:
 
@@ -689,8 +808,23 @@ jobs:
           TAG: ${{ steps.scan_tag.outputs.TAG }}
           IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
           DECKHOUSE_PRIVATE_REPO: ${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}
+          # PR mode: restrict scanning to the images that actually changed in this
+          # PR (computed by the `changed_images` job upstream). Empty list ("[]")
+          # makes check-non-root.sh fall back to the full scan (see the script).
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
         run: |
           echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+          echo "----------------------------------------------"
+          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+            echo "🎯 Delta-scan mode: ONLY_IMAGES filter active (${keys_count} image key(s))."
+            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+            echo "    ⚠️  If check-non-root.sh below still iterates every image, the"
+            echo "        script is an outdated revision without ONLY_IMAGES support."
+          else
+            echo "📋 Full-scan mode: ONLY_IMAGES is unset or empty."
+          fi
+          echo "----------------------------------------------"
           make cve-base-images-check-default-user
 
       # <template: unlink_bin_step>
@@ -753,18 +887,19 @@ jobs:
   # ============================================================================
   get-tags:
     name: Get PR tag for scanning
-    runs-on: [self-hosted, regular]
+    runs-on: ubuntu-slim
     needs:
       - pull_request_info
-      - block-until-image-is-not-ready
-    if: github.repository == 'deckhouse/deckhouse'
+    # No secrets needed, just composes the PR tag — runs in main and test mirrors.
+    if: startsWith(github.repository, 'deckhouse/deckhouse')
     outputs:
       tags: ${{ steps.set-pr-tag.outputs.tags }}
     steps:
       - name: Set PR tag
         id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
           if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
             TAG="pr${PR_NUMBER}"
@@ -780,7 +915,8 @@ jobs:
     name: Dr.Web Scan ${{ matrix.branch }}
     runs-on: [self-hosted, antivirus]
     if: github.repository == 'deckhouse/deckhouse'
-    needs: get-tags
+    # PR mode: filter scanned images by the changed_images diff (delta-only scan).
+    needs: [get-tags, changed_images]
     strategy:
       matrix:
         branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
@@ -815,8 +951,19 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
 
       # </template: import_secrets>
+
       - name: Run drweb scan
         id: scan
+        env:
+          # `ONLY_IMAGES` comes from needs.changed_images.outputs.changed_compact
+          # (JSON array of "<module>.<image>" keys). Wired here for PR runs of both
+          # drweb-scan and kaspersky-scan when their templates are called with
+          # `withChangedImages: true` (see security-scan-images.yml). In weekly /
+          # release runs the templates pass empty `only_images_expr`, so this env
+          # block is omitted and the Go scanner falls back to full-scan.
+          # Empty value / "[]" is treated by the Go scanner as full-scan, so the
+          # bash side does not need to branch on it.
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
         run: |
           registry_image_path=/sys/deckhouse-oss
           ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
@@ -846,7 +993,21 @@ jobs:
           echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
           echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
           echo $CONTAINER_NAME
-          docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
+          echo "----------------------------------------------"
+          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+            echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the drweb scanner."
+            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+          else
+            echo "📋 Full-scan: ONLY_IMAGES is empty (no delta in this PR)."
+          fi
+          echo "----------------------------------------------"
+          docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
+            scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          # Drop container-uid ownership so the host-side Upload/Cleanup steps below
+          # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
+          # touch the bind-mounted scan artifacts under the runner's UID (this step
+          # came from main's runner-side refactor that removed `docker cp`).
           docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
 
           if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
@@ -899,7 +1060,8 @@ jobs:
     name: Kaspersky Scan ${{ matrix.branch }}
     runs-on: [self-hosted, antivirus]
     if: github.repository == 'deckhouse/deckhouse'
-    needs: get-tags
+    # PR mode: filter scanned images by the changed_images diff (delta-only scan).
+    needs: [get-tags, changed_images]
     strategy:
       matrix:
         branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
@@ -934,8 +1096,19 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
 
       # </template: import_secrets>
+
       - name: Run kaspersky scan
         id: scan
+        env:
+          # `ONLY_IMAGES` comes from needs.changed_images.outputs.changed_compact
+          # (JSON array of "<module>.<image>" keys). Wired here for PR runs of both
+          # drweb-scan and kaspersky-scan when their templates are called with
+          # `withChangedImages: true` (see security-scan-images.yml). In weekly /
+          # release runs the templates pass empty `only_images_expr`, so this env
+          # block is omitted and the Go scanner falls back to full-scan.
+          # Empty value / "[]" is treated by the Go scanner as full-scan, so the
+          # bash side does not need to branch on it.
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
         run: |
           registry_image_path=/sys/deckhouse-oss
           ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
@@ -965,7 +1138,21 @@ jobs:
           echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
           echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
           echo $CONTAINER_NAME
-          docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
+          echo "----------------------------------------------"
+          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+            echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the kaspersky scanner."
+            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+          else
+            echo "📋 Full-scan: ONLY_IMAGES is empty (no delta in this PR)."
+          fi
+          echo "----------------------------------------------"
+          docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
+            scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          # Drop container-uid ownership so the host-side Upload/Cleanup steps below
+          # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
+          # touch the bind-mounted scan artifacts under the runner's UID (this step
+          # came from main's runner-side refactor that removed `docker cp`).
           docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
 
           if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
@@ -1101,9 +1288,10 @@ jobs:
           MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
           MESSAGE+="**Failed jobs:**\n"
           MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
-          if [ "${{ github.event_name }}" == "pull_request_target" ]; then
-            pr_url="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
-            MESSAGE+="**PR:** [#${{ github.event.pull_request.number }}]($pr_url)\n"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if [ -n "$PR_NUMBER" ]; then
+            pr_url="https://github.com/${{ github.repository }}/pull/${PR_NUMBER}"
+            MESSAGE+="**PR:** [#${PR_NUMBER}]($pr_url)\n"
           fi
           MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
 
@@ -1115,17 +1303,19 @@ jobs:
 
   # ============================================================================
   # Aggregator — single required check for branch protection.
-  # Fails if any scan did not finish with success
+  # Fails if any image scan did not finish with success
   # (covers blocker failure, scan failure, and skipped due to upstream issues).
+  # Because this workflow is invoked via `uses:` from the build workflow, this
+  # job appears on the PR's Checks tab natively — no extra commit-status
+  # plumbing is required for it to be require-able by branch protection.
   # ============================================================================
-  security_scans_required:
-    name: Security scans required
+  security_scan_images_required:
+    name: Security scan images required
     runs-on: ubuntu-slim
     if: ${{ always() && needs.pull_request_info.result == 'success' }}
     needs:
       - pull_request_info
-      - block-until-image-is-not-ready
-      - gitleaks_scan
+      - changed_images
       - test_cve_report_main
       - security_scan_images
       - drweb-scan
@@ -1134,14 +1324,16 @@ jobs:
       - name: Aggregate scan results
         run: |
           declare -A results=(
-            [blocker]="${{ needs.block-until-image-is-not-ready.result }}"
-            [gitleaks]="${{ needs.gitleaks_scan.result }}"
+            [changed_images]="${{ needs.changed_images.result }}"
             [cve]="${{ needs.test_cve_report_main.result }}"
             [rootless]="${{ needs.security_scan_images.result }}"
             [drweb]="${{ needs.drweb-scan.result }}"
             [kaspersky]="${{ needs.kaspersky-scan.result }}"
           )
-          # Antivirus jobs intentionally skip in test repositories (self-hosted antivirus runners are only in main repo).
+          # Antivirus jobs intentionally skip in test repositories
+          # (self-hosted antivirus runners are only in the main repo). All
+          # other image scans (changed_images, rootless) are expected to run
+          # in both main and test repos.
           IS_MAIN_REPO=false
           if [[ "${{ github.repository }}" == "deckhouse/deckhouse" ]]; then
             IS_MAIN_REPO=true
@@ -1152,6 +1344,11 @@ jobs:
             r="${results[$name]}"
             if [[ "$r" == "success" ]]; then
               echo "✅ $name: $r"
+              continue
+            fi
+            # CVE PR-mode is temporarily disabled (test_cve_report_main has `if: false`); allow skipped until re-enabled.
+            if [[ "$name" == "cve" && "$r" == "skipped" ]]; then
+              echo "ℹ️  $name: $r (temporarily disabled)"
               continue
             fi
             if [[ "$IS_MAIN_REPO" == "false" && ( "$name" == "drweb" || "$name" == "kaspersky" ) && "$r" == "skipped" ]]; then
