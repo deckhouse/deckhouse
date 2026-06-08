@@ -273,7 +273,25 @@ func Resolve(
 			r.def = def
 		}
 	}
+
+	// A default the project cannot use is not a usable default. This happens when the cluster-default
+	// object (e.g. the default StorageClass via defaultFrom) — or even an explicit grant default — is
+	// not in the project's available set. Drop it so Default() never returns an unavailable name and
+	// the /defaults webhook never coerces to something /is-granted will reject.
+	if r.def != "" && !r.isAvailable(r.def) {
+		r.def = ""
+	}
 	return r, nil
+}
+
+// isAvailable reports whether a name is in the project's available set.
+func (r *Resolved) isAvailable(name string) bool {
+	for _, a := range r.Available() {
+		if a.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func filterSelector(f *v1alpha1.ResourceFilter) (labels.Selector, error) {

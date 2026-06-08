@@ -280,6 +280,40 @@ func TestDefaults_CoercesUnavailableValue(t *testing.T) {
 	}
 }
 
+func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
+	// storageclasses with defaultFrom annotation; the cluster default (replicated) is NOT allowed in
+	// this project (allowed: local only). The annotation-derived default must be dropped, so a PVC
+	// without a storageClassName gets no patch (and is then denied by /is-granted).
+	reg := &v1alpha1.ClusterGrantableResource{
+		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
+		Spec: v1alpha1.ClusterGrantableResourceSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIVersion: "storage.k8s.io/v1", Kind: "StorageClass"},
+			DefaultAvailability: v1alpha1.AvailabilityNone,
+			DefaultFrom:         &v1alpha1.DefaultFrom{AnnotationKey: "storageclass.kubernetes.io/is-default-class"},
+			UsageReferences: []v1alpha1.UsageReference{{
+				Rule:      v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
+				FieldPath: "$.spec.storageClassName",
+			}},
+		},
+	}
+	grant := &v1alpha1.ClusterObjectGrant{
+		ObjectMeta: metav1.ObjectMeta{Name: "g"},
+		Spec: v1alpha1.ClusterObjectGrantSpec{
+			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+			Resources:       []v1alpha1.GrantResource{{ResourceRef: "storageclasses", Allowed: []string{"local"}}},
+		},
+	}
+	repl := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "replicated", Annotations: map[string]string{"storageclass.kubernetes.io/is-default-class": "true"}}, Provisioner: "x"}
+	local := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "local"}, Provisioner: "x"}
+	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), reg, grant, repl, local)
+	m := NewDefaultsMutator(logr.Discard(), cl, jsonpath.NewWithCache())
+
+	pvc := raw(t, map[string]any{"apiVersion": "v1", "kind": "PersistentVolumeClaim", "metadata": map[string]any{"name": "p", "namespace": "proj"}, "spec": map[string]any{}})
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, pvcGVR, pvcGVK, "proj", "p", pvc, nil)); len(resp.Patch) != 0 {
+		t.Fatalf("must not coerce to an unavailable default, got patch %s", resp.Patch)
+	}
+}
+
 func TestIsGranted_ObjectBackedSelector(t *testing.T) {
 	reg := &v1alpha1.ClusterGrantableResource{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},

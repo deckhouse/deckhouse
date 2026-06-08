@@ -46,6 +46,11 @@ type AvailableResourceStatus struct {
 	// +optional
 	Available []AvailableObject `json:"available,omitempty"`
 
+	// Default is the per-project default name used when the referencing field is left empty (or
+	// carries a value not available to the project). Empty when the project has no usable default.
+	// +optional
+	Default string `json:"default,omitempty"`
+
 	// ObservedGeneration is the controller generation that produced this status.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -55,6 +60,7 @@ type AvailableResourceStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=available
 // +kubebuilder:printcolumn:name="Kind",type=string,JSONPath=`.status.grantedResourceKind`
+// +kubebuilder:printcolumn:name="Default",type=string,JSONPath=`.status.default`
 // +kubebuilder:printcolumn:name="Available",type=string,priority=1,JSONPath=`.status.available[*].name`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 

@@ -137,14 +137,14 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 		if reg.Spec.GrantedResource != nil {
 			kind = reg.Spec.GrantedResource.Kind
 		}
-		if err := r.upsertAvailable(ctx, ns.Name, project, reg.Name, kind, available); err != nil {
+		if err := r.upsertAvailable(ctx, ns.Name, project, reg.Name, kind, available, resolved.Default()); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *ProjectReconciler) upsertAvailable(ctx context.Context, ns, project, name, kind string, available []v1alpha1.AvailableObject) error {
+func (r *ProjectReconciler) upsertAvailable(ctx context.Context, ns, project, name, kind string, available []v1alpha1.AvailableObject, def string) error {
 	ar := &v1alpha1.AvailableResource{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns}}
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, ar, func() error {
 		if ar.Labels == nil {
@@ -160,6 +160,7 @@ func (r *ProjectReconciler) upsertAvailable(ctx context.Context, ns, project, na
 	}
 	ar.Status.GrantedResourceKind = kind
 	ar.Status.Available = available
+	ar.Status.Default = def
 	if err := r.Status().Update(ctx, ar); err != nil {
 		return fmt.Errorf("update AvailableResource status %s/%s: %w", ns, name, err)
 	}

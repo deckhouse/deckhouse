@@ -23,6 +23,9 @@ spec:
     - jsonPath: .status.grantedResourceKind
       name: Kind
       type: string
+    - jsonPath: .status.default
+      name: Default
+      type: string
     - jsonPath: .status.available[*].name
       name: Available
       priority: 1
@@ -78,6 +81,11 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              default:
+                description: |-
+                  Default is the per-project default name used when the referencing field is left empty (or
+                  carries a value not available to the project). Empty when the project has no usable default.
+                type: string
               grantedResourceKind:
                 description: GrantedResourceKind is the kind of the granted resource
                   (informational).
