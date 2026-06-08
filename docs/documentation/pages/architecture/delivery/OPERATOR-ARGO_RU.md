@@ -34,17 +34,17 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 Основной вариант развёртывания с базой данных Redis в неотказоустойчивой конфигурации:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля operator-argo с Redis non-HA](../../../images/architecture/delivery/c4-l2-operator-argo.ru.png)
+![Архитектура модуля operator-argo с Redis non-HA](../../../images/architecture/delivery/c4-l2-operator-argo.ru.svg)
 
 Вариант с отказоустойчивой конфигурацией Redis (на диаграмме отражены только отличия от основного варианта развёртывания):
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля operator-argo с Redis HA](../../../images/architecture/delivery/c4-l2-operator-argo-ha.ru.png)
+![Архитектура модуля operator-argo с Redis HA](../../../images/architecture/delivery/c4-l2-operator-argo-ha.ru.svg)
 
 Вариант развёртывания ArgoCD в [управляющем кластере](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) в мультикластерной конфигурации (на диаграмме отражены только отличия от основного варианта развёртывания):
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля operator-argo с Principal](../../../images/architecture/delivery/c4-l2-operator-argo-principal.ru.png)
+![Архитектура модуля operator-argo с Principal](../../../images/architecture/delivery/c4-l2-operator-argo-principal.ru.svg)
 
 ## Компоненты модуля
 
@@ -130,8 +130,8 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
    Более подробную информацию о настройках Dex-сервера в составе ArgoCD можно найти в [документации ArgoCD по Dex](https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/#dex).
 
-   {% alert level="info" %}
-   Модуль также позволяет использовать единую систему аутентификации пользователей DKP. Подробнее см. в [примерах использования модуля `operator-argo`](/modules/operator-argo/examples.html#аутентификация).
+   {% alert level="warning" %}
+   В качестве внешней аутентификации модуль `operator-argo` позволяет использовать только встроенную аутентификацию пользователей DKP, реализуемую модулем [`user-authn`](/modules/user-authn/). Подробнее см. в [примерах использования модуля `operator-argo`](/modules/operator-argo/examples.html#аутентификация).
    {% endalert %}
 
 1. **&lt;ArgoCD name&gt;-redis** (Deployment) — обязательный компонент, состоящий из одного контейнера **redis** и отвечающий за хранение данных очередей задач и состояния сессий в ArgoCD. &lt;ArgoCD name&gt;-redis реализует отдельный экземпляр базы данных [Redis](https://redis.io/).
@@ -175,18 +175,19 @@ description: Архитектура модуля operator-argo в Deckhouse Kube
 
 Модуль взаимодействует со следующими компонентами:
 
-1. Внешние провайдеры аутентификации — перенаправление пользователя для аутентификации.
 1. Внешние репозитории образов — получение списка образов.
 1. Внешние репозитории кода/манифестов:
     - получение манифестов развёртывания приложения из репозиториев;
-    - обновление `image` в исходном коде.
+    - обновление `image` в исходном коде Helm Chart.
 1. Внешний ArgoCD Principal:
     - подключение к управляющему кластеру ArgoCD;
     - получение запросов на обработку;
     - передача результатов отработки запросов.
 1. **kube-apiserver**:
     - управление кастомными ресурсами Application, ApplicationSet, AppProject, ArgoCD, ArgoCDExport, ImageUpdater, NotificationsConfiguration, а также Secret, ConfigMap;
-    - авторизация запросов на получение метрик.
+    - управление ресурсами, которые создаются при развертывании пользовательского приложения, описанного в кастомном ресурсе Application;
+    - авторизация запросов на получение метрик.   
+1. **[user-authn](/modules/user-authn/)** — перенаправление пользователя для аутентификации.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
