@@ -84,6 +84,7 @@ type InteractiveLogger struct {
 	logChan   chan string
 
 	pbStarted bool
+	sendLogs  bool
 }
 
 func newInteractiveLogger(logger external.Logger, interactive bool) *InteractiveLogger {
@@ -149,7 +150,9 @@ func (i *InteractiveLogger) LogProcess(p, t string, run func() error) error {
 
 	if i.pbStarted {
 		i.phaseChan <- t
-		i.logChan <- fmt.Sprintf("process started: %s", t)
+		if i.sendLogs {
+			i.logChan <- fmt.Sprintf("process started: %s", t)
+		}
 	}
 
 	if err := run(); err != nil {
@@ -158,7 +161,9 @@ func (i *InteractiveLogger) LogProcess(p, t string, run func() error) error {
 
 	if i.pbStarted {
 		i.phaseChan <- t
-		i.logChan <- fmt.Sprintf("process finished: %s", t)
+		if i.sendLogs {
+			i.logChan <- fmt.Sprintf("process finished: %s", t)
+		}
 	}
 
 	return nil
@@ -167,7 +172,7 @@ func (i *InteractiveLogger) LogProcess(p, t string, run func() error) error {
 func (i *InteractiveLogger) LogInfoF(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
-		if i.pbStarted {
+		if i.pbStarted && i.sendLogs {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -178,7 +183,7 @@ func (i *InteractiveLogger) LogInfoF(format string, a ...interface{}) {
 func (i *InteractiveLogger) LogInfoLn(a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
-		if i.pbStarted {
+		if i.pbStarted && i.sendLogs {
 			i.logChan <- fmt.Sprintf("%s", a...)
 		}
 	} else {
@@ -189,7 +194,7 @@ func (i *InteractiveLogger) LogInfoLn(a ...interface{}) {
 func (i *InteractiveLogger) LogErrorF(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
-		if i.pbStarted {
+		if i.pbStarted && i.sendLogs {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -200,7 +205,7 @@ func (i *InteractiveLogger) LogErrorF(format string, a ...interface{}) {
 func (i *InteractiveLogger) LogErrorLn(a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
-		if i.pbStarted {
+		if i.pbStarted && i.sendLogs {
 			i.logChan <- fmt.Sprintf("%s", a...)
 		}
 	} else {
@@ -237,7 +242,7 @@ func (i *InteractiveLogger) LogFailRetry(l string) {
 func (i *InteractiveLogger) LogWarnLn(a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugF("%v", a...)
-		if i.pbStarted {
+		if i.pbStarted && i.sendLogs {
 			i.logChan <- fmt.Sprintf("%s", a...)
 		}
 	} else {
@@ -248,7 +253,7 @@ func (i *InteractiveLogger) LogWarnLn(a ...interface{}) {
 func (i *InteractiveLogger) LogWarnF(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
-		if i.pbStarted {
+		if i.pbStarted && i.sendLogs {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -383,14 +388,16 @@ func (i *InteractiveLoggerWrapper) Process(p external.Process, t string, run fun
 
 	if isPbStarted() {
 		i.phaseChan <- t
-		i.logChan <- fmt.Sprintf("process started: %s", t)
+		if isLogSendingEnabled() {
+			i.logChan <- fmt.Sprintf("process started: %s", t)
+		}
 	}
 
 	if err := run(); err != nil {
 		return err
 	}
 
-	if isPbStarted() {
+	if isPbStarted() && isLogSendingEnabled() {
 		i.logChan <- fmt.Sprintf("process finished: %s", t)
 	}
 
@@ -400,7 +407,7 @@ func (i *InteractiveLoggerWrapper) Process(p external.Process, t string, run fun
 func (i *InteractiveLoggerWrapper) InfoFWithoutLn(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -411,7 +418,7 @@ func (i *InteractiveLoggerWrapper) InfoFWithoutLn(format string, a ...interface{
 func (i *InteractiveLoggerWrapper) InfoLn(a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf("%s", a...)
 		}
 	} else {
@@ -422,7 +429,7 @@ func (i *InteractiveLoggerWrapper) InfoLn(a ...interface{}) {
 func (i *InteractiveLoggerWrapper) InfoF(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -433,7 +440,7 @@ func (i *InteractiveLoggerWrapper) InfoF(format string, a ...interface{}) {
 func (i *InteractiveLoggerWrapper) ErrorFWithoutLn(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -444,7 +451,7 @@ func (i *InteractiveLoggerWrapper) ErrorFWithoutLn(format string, a ...interface
 func (i *InteractiveLoggerWrapper) ErrorLn(a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf("%s", a...)
 		}
 	} else {
@@ -455,7 +462,7 @@ func (i *InteractiveLoggerWrapper) ErrorLn(a ...interface{}) {
 func (i *InteractiveLoggerWrapper) ErrorF(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -478,7 +485,7 @@ func (i *InteractiveLoggerWrapper) DebugF(format string, a ...interface{}) {
 func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -489,7 +496,7 @@ func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...interface{
 func (i *InteractiveLoggerWrapper) WarnLn(a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf("%s", a...)
 		}
 	} else {
@@ -500,7 +507,7 @@ func (i *InteractiveLoggerWrapper) WarnLn(a ...interface{}) {
 func (i *InteractiveLoggerWrapper) WarnF(format string, a ...interface{}) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
-		if isPbStarted() {
+		if isPbStarted() && isLogSendingEnabled() {
 			i.logChan <- fmt.Sprintf(format, a...)
 		}
 	} else {
@@ -571,10 +578,29 @@ func isPbStarted() bool {
 	return started
 }
 
+func isLogSendingEnabled() bool {
+	enabled := false
+	logger := GetDefaultLogger()
+	l, ok := logger.(*InteractiveLogger)
+	if ok {
+		enabled = l.sendLogs
+	}
+
+	return enabled
+}
+
 func WithProgressBar(b bool) {
 	logger := GetDefaultLogger()
 	l, ok := logger.(*InteractiveLogger)
 	if ok {
 		l.pbStarted = b
+	}
+}
+
+func WithLogSending(b bool) {
+	logger := GetDefaultLogger()
+	l, ok := logger.(*InteractiveLogger)
+	if ok {
+		l.sendLogs = b
 	}
 }

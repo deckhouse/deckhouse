@@ -16,6 +16,7 @@ package progressbar
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"time"
 
@@ -56,6 +57,77 @@ type Pb struct {
 	StopCh             chan struct{}
 	LogBox             *LogBox
 	WriterFabric       *WriterFabric
+
+	// pbOpts are using for control of appearance of LogBox
+	pbOpts *pbOpts
+}
+
+// disable appearance of LogBox for additional masters subphase
+func (p *Pb) WithEmptyAdditionalMasters() {
+	if p == nil {
+		return
+	}
+
+	p.pbOpts.aditionalMasters = false
+}
+
+// disable appearance of LogBox for additional static nodes subphase
+func (p *Pb) WithEmptyAdditionalNGs() {
+	if p == nil {
+		return
+	}
+
+	p.pbOpts.staticNodes = false
+}
+
+// disable appearance of LogBox for additional static nodes subphase
+func (p *Pb) WithEmptyBostBootstrapScript() {
+	if p == nil {
+		return
+	}
+
+	p.pbOpts.postBootstrapScripts = false
+}
+
+// disable appearance of LogBox for additional static nodes subphase
+func (p *Pb) WithEmptyFinalization() {
+	if p == nil {
+		return
+	}
+
+	p.pbOpts.finalizationResources = false
+}
+
+type pbOpts struct {
+	aditionalMasters      bool
+	staticNodes           bool
+	postBootstrapScripts  bool
+	finalizationResources bool
+}
+
+func (p *Pb) CheckPhase(phase string, subphase ...string) bool {
+	switch phase {
+	case string(phases.InstallAdditionalMastersAndStaticNodes):
+		switch subphase[0] {
+		case string(phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters):
+			return p.pbOpts.aditionalMasters
+		case string(phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes):
+			return p.pbOpts.staticNodes
+		case string(phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait):
+			return false
+		default:
+			return true
+		}
+	case string(phases.ExecPostBootstrapPhase):
+		return p.pbOpts.postBootstrapScripts
+	case string(phases.FinalizationPhase):
+		return p.pbOpts.finalizationResources
+	case string(phases.CreateResourcesPhase):
+		log.DebugF("create rasources loop")
+		return false
+	default:
+		return true
+	}
 }
 
 func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), chan phases.Progress, error) {
@@ -88,13 +160,14 @@ func InitProgressBar(param *PbParam) error {
 	}
 
 	width := pterm.GetTerminalWidth()
-	effectiveWidth := width - 10
+	effectiveWidth := width - 20
 	if width < 160 {
 		effectiveWidth = 120
 	}
 	p := pterm.DefaultProgressbar.
 		WithTotal(param.size).
 		WithMaxWidth(effectiveWidth).
+		// WithMaxWidth(120).
 		WithWriter(writerFabric.GetWriter()).
 		WithTitle(param.startMsg)
 
@@ -134,9 +207,16 @@ func InitProgressBar(param *PbParam) error {
 		StopCh:             stopChan,
 		LogBox:             logBox,
 		WriterFabric:       &writerFabric,
+		pbOpts: &pbOpts{
+			aditionalMasters:      true,
+			staticNodes:           true,
+			postBootstrapScripts:  true,
+			finalizationResources: true,
+		},
 	}
 
 	log.WithProgressBar(true)
+	// log.WithLogSending(true)
 
 	go updateProgress(p, param.labelChan, param.phasesChan, stopChan, staticSpinner, &writerFabric)
 	go logBox.Update()
@@ -198,7 +278,6 @@ func updateProgress(
 					continue
 				}
 
-				status := defaultpb.LogBox.getStatusString()
 				if err := defaultpb.LogBox.Stop(); err != nil {
 					return
 				}
@@ -218,31 +297,51 @@ func updateProgress(
 				lastCompleted = completed
 				p.UpdateTitle(phaseToString(msg, false))
 
-				logBox := newLogBox(writerFabric, defaultpb.LogBox.logChan).WithStatusString(status)
-				if err := logBox.Start(); err != nil {
-					return
+				if defaultpb.CheckPhase(string(msg.CurrentPhase), string(msg.CurrentSubPhase)) {
+					log.DebugF("Starting logbox: %s\n", phaseToString(msg, false))
+					logBox := newLogBox(writerFabric, defaultpb.LogBox.logChan).WithStatusString(defaultpb.LogBox.getStatusString())
+					if err := logBox.Start(); err != nil {
+						return
+					}
+					defaultpb.LogBox = logBox
+					go logBox.Update()
 				}
-				defaultpb.LogBox = logBox
-				go logBox.Update()
 			}
 		}
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 
 // if Progressbar used, this func allows to print to new MultiPrinter Writer
 func InfoF(format string, a ...any) {
-	writer := defaultpb.LogBox.ShiftDown()
+	var writer io.Writer
+	if defaultpb.LogBox != nil {
+		writer = defaultpb.LogBox.ShiftDown()
+	} else {
+		writer = defaultpb.WriterFabric.GetWriter()
+	}
+
 	pterm.Info.WithWriter(writer).Printf(format, a...)
 }
 
 func WarnF(format string, a ...any) {
-	writer := defaultpb.LogBox.ShiftDown()
+	var writer io.Writer
+	if defaultpb.LogBox != nil {
+		writer = defaultpb.LogBox.ShiftDown()
+	} else {
+		writer = defaultpb.WriterFabric.GetWriter()
+	}
 	pterm.Warning.WithWriter(writer).Printf(format, a...)
 }
 
 func ErrorF(format string, a ...any) {
 	if defaultpb != nil {
-		writer := defaultpb.WriterFabric.GetWriter()
+		var writer io.Writer
+		if defaultpb.LogBox != nil {
+			writer = defaultpb.LogBox.ShiftDown()
+		} else {
+			writer = defaultpb.WriterFabric.GetWriter()
+		}
 		pterm.Error.WithWriter(writer).Printf(format, a...)
 	} else {
 		pterm.Error.Printf(format, a...)
@@ -366,14 +465,18 @@ func FinishDefaultProgressBar() {
 
 	// stopping the updateProgress goroutine
 	pb.StopCh <- struct{}{}
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 
-	if err := pb.LogBox.Stop(); err != nil {
-		log.WarnF("failed to stop log box: %s\n", err.Error())
+	if pb.LogBox != nil {
+		if err := pb.LogBox.Stop(); err != nil {
+			log.WarnF("failed to stop log box: %s\n", err.Error())
+		}
 	}
 
-	pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-	if _, err := pb.MultiPrinter.Stop(); err != nil {
-		log.WarnF("failed to stop multi printer: %v", err)
+	if pb.ProgressBarPrinter.IsActive {
+		pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+		if _, err := pb.MultiPrinter.Stop(); err != nil {
+			log.WarnF("failed to stop multi printer: %v", err)
+		}
 	}
 }

@@ -368,6 +368,17 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 		}
 
 		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
+
+		pb := progressbar.GetDefaultPb()
+		if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
+			pb.WithEmptyAdditionalMasters()
+		}
+		if len(metaConfig.GetTerraNodeGroups()) == 0 {
+			pb.WithEmptyAdditionalNGs()
+		}
+		if b.Options.Bootstrap.PostBootstrapScriptPath == "" {
+			pb.WithEmptyBostBootstrapScript()
+		}
 	}
 
 	clusterUUID, err := generateClusterUUID(ctx, stateCache)
@@ -566,16 +577,18 @@ func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *boot
 
 			interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 			if interactive {
-				sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
-				if err != nil {
-					return err
+				if progressbar.GetDefaultPb().LogBox != nil {
+					sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+					if err != nil {
+						return err
+					}
+					sshClient, err := sshProvider.Client(ctx)
+					if err != nil {
+						return err
+					}
+					sshString := sshClient.Session().String()
+					progressbar.GetDefaultPb().LogBox.WithStatusString(fmt.Sprintf("First master connection string: %s", sshString))
 				}
-				sshClient, err := sshProvider.Client(ctx)
-				if err != nil {
-					return err
-				}
-				sshString := sshClient.Session().String()
-				progressbar.GetDefaultPb().LogBox.WithStatusString(fmt.Sprintf("First master connection string: %s", sshString))
 			}
 			return nil
 		})
@@ -727,6 +740,12 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 		return err
 	}
 	bctx.installDeckhouseResult = installDeckhouseResult
+
+	if input.IsTerminal() && !b.Options.Global.ShowProgress {
+		if len(installDeckhouseResult.ManifestResult.PostBootstrapMCTasks) == 0 {
+			progressbar.GetDefaultPb().WithEmptyFinalization()
+		}
+	}
 
 	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseInstall)
 
@@ -988,8 +1007,10 @@ func bootstrapAdditionalNodesForCloudCluster(
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
 
-	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions); err != nil {
-		return err
+	if metaConfig.MasterNodeGroupSpec.Replicas > 1 {
+		if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global(), globalOptions); err != nil {
+			return err
+		}
 	}
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
@@ -998,10 +1019,16 @@ func bootstrapAdditionalNodesForCloudCluster(
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
-	pec.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
+	if metaConfig.MasterNodeGroupSpec.Replicas > 1 {
+		pec.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
+	}
 
-	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions); err != nil {
-		return err
+	if len(terraNodeGroups) > 0 {
+		if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions); err != nil {
+			return err
+		}
+	} else {
+		log.DebugF("number of terraNodesGroup: %d\n", len(terraNodeGroups))
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Waiting for node groups to become ready", func(ctx context.Context) error {
