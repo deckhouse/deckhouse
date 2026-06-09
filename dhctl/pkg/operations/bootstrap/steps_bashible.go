@@ -253,8 +253,8 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 			p := retry.NewEmptyParams(
 				retry.WithName("%s", name),
-				retry.WithAttempts(30),
-				retry.WithWait(5*time.Second),
+				retry.WithAttempts(150),
+				retry.WithWait(1*time.Second),
 				retry.WithLogger(extLogger()),
 			)
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
