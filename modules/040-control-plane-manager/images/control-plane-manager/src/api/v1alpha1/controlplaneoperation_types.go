@@ -32,7 +32,7 @@ import (
 //   - WaitPodReady     — waits for the component static pod to become Ready after restart.
 //   - CertObserve      — collects current certificate expiration dates for the component and publishes them to status.observedState.
 //
-// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;CertObserve
+// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;CertObserve;RenewSignature
 type StepName string
 
 const (
