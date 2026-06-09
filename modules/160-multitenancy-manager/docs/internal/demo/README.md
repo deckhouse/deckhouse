@@ -44,7 +44,7 @@ Issuers / LB / cluster roles have no such defaulter, so a disallowed explicit va
 k -n demo get availableresources
 
 # Full list of available names for one resource:
-k -n demo get availableresource clusterroles -o jsonpath='{.status.availableSummary}'
+k -n demo get availableresource clusterroles -o jsonpath='{.status.available[*].name}'
 # or the structured form (with the default flagged):
 k -n demo get availableresource storageclasses -o yaml
 

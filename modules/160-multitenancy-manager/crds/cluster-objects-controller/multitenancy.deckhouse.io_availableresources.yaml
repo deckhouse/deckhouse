@@ -82,15 +82,10 @@ spec:
                 x-kubernetes-list-type: map
               availableCount:
                 description: |-
-                  AvailableCount is the number of available names. It is the wide-column value, because the full
-                  list can be long (e.g. dozens of cluster roles) and would break the table; get the names from
-                  Available or AvailableSummary.
+                  AvailableCount is the number of available names. It is the column value, because the full list
+                  can be long (e.g. dozens of cluster roles) and would break the table; get the names from
+                  Available (status.available[*].name).
                 type: integer
-              availableSummary:
-                description: |-
-                  AvailableSummary is a comma-separated list of all available names, denormalized from Available
-                  for on-demand display (kubectl get ... -o jsonpath='{.status.availableSummary}').
-                type: string
               default:
                 description: |-
                   Default is the per-project default name used when the referencing field is left empty (or

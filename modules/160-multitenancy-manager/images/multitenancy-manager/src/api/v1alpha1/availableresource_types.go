@@ -51,16 +51,11 @@ type AvailableResourceStatus struct {
 	// +optional
 	Default string `json:"default,omitempty"`
 
-	// AvailableCount is the number of available names. It is the wide-column value, because the full
-	// list can be long (e.g. dozens of cluster roles) and would break the table; get the names from
-	// Available or AvailableSummary.
+	// AvailableCount is the number of available names. It is the column value, because the full list
+	// can be long (e.g. dozens of cluster roles) and would break the table; get the names from
+	// Available (status.available[*].name).
 	// +optional
 	AvailableCount int `json:"availableCount,omitempty"`
-
-	// AvailableSummary is a comma-separated list of all available names, denormalized from Available
-	// for on-demand display (kubectl get ... -o jsonpath='{.status.availableSummary}').
-	// +optional
-	AvailableSummary string `json:"availableSummary,omitempty"`
 
 	// ObservedGeneration is the controller generation that produced this status.
 	// +optional
