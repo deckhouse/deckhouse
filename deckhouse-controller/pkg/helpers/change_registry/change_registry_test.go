@@ -153,25 +153,24 @@ func TestNewImagePullSecretData(t *testing.T) {
 			},
 		},
 		{
-			// https://github.com/google/go-containerregistry/pull/2281
-			name:    "http localhost registry",
+			name:    "http local registry",
 			args:    args{},
-			newRepo: "my.registry.localhost/deckhouse",
+			newRepo: "my.registry.local/deckhouse",
 			want: map[string]string{
-				".dockerconfigjson": `{"auths":{"my.registry.localhost":{}}}`,
-				"address":           "my.registry.localhost",
+				".dockerconfigjson": `{"auths":{"my.registry.local":{}}}`,
+				"address":           "my.registry.local",
 				"path":              "/deckhouse",
 				"scheme":            "http",
 			},
 		},
 		{
-			name:    "https localhost registry",
+			name:    "https local registry",
 			args:    args{},
-			newRepo: "my.registry.localhost/deckhouse",
+			newRepo: "my.registry.local/deckhouse",
 			scheme:  "https",
 			want: map[string]string{
-				".dockerconfigjson": `{"auths":{"my.registry.localhost":{}}}`,
-				"address":           "my.registry.localhost",
+				".dockerconfigjson": `{"auths":{"my.registry.local":{}}}`,
+				"address":           "my.registry.local",
 				"path":              "/deckhouse",
 				"scheme":            "https",
 			},
