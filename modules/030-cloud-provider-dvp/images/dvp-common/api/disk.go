@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	storagev1 "k8s.io/api/storage/v1"
@@ -288,7 +289,10 @@ func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) erro
 		if vmd.Status.Phase == v1alpha2.DiskFailed {
 			for _, cond := range vmd.Status.Conditions {
 				if cond.Type == vdcondition.ReadyType.String() && cond.Status == metav1.ConditionFalse {
-					return false, fmt.Errorf("%s", cond.Message)
+					if cond.Reason == vdcondition.QuotaExceeded.String() {
+						return false, fmt.Errorf("%w: %s", ErrQuotaExceeded, cond.Message)
+					}
+					return false, errors.New(cond.Message)
 				}
 			}
 			return false, fmt.Errorf("disk %q is in Failed phase", vmdName)
