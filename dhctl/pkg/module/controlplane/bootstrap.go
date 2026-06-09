@@ -47,7 +47,7 @@ const (
 )
 
 var (
-	createSigDirDefaultOpts = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+	createSigDirDefaultOpts = retry.AttemptsWithWaitOpts(20, 5*time.Second)
 )
 
 type LoopsParams struct {

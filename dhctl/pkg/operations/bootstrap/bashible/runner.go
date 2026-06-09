@@ -39,10 +39,10 @@ const (
 )
 
 var (
-	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(10, 10*time.Second)
-	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(10, 3*time.Second)
+	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(60, 5*time.Second)
+	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(60, 5*time.Second)
+	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(20, 5*time.Second)
+	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(20, 1500*time.Millisecond)
 )
 
 type LoopsParams struct {

@@ -36,7 +36,7 @@ func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*ima
 	conf := &image.RegistryConfig{}
 	var b64dc string
 
-	err := retry.NewLoop("Get registry data from cluster", 45, 5*time.Second).RunContext(ctx, func() error {
+	err := retry.NewLoop("Get registry data from cluster", 90, 2500*time.Millisecond).RunContext(ctx, func() error {
 		secret, err := kubeCl.CoreV1().
 			Secrets(d8RppSecretNamespace).
 			Get(ctx, d8RppSecretName, metav1.GetOptions{})

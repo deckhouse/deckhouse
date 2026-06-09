@@ -139,7 +139,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 }
 
 func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, labels []string) error {
-	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 45, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 90, 2500*time.Millisecond).RunContext(ctx, func() error {
 		node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
