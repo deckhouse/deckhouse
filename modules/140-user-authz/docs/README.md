@@ -559,8 +559,8 @@ read-write:
     - deckhouse.io/useroperations
     - deckhouse.io/users
     - infrastructure.cluster.x-k8s.io/staticmachinetemplates
-    - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
     - multitenancy.deckhouse.io/clusterresourcegrantpolicies
+    - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
     - nodes/configz
     - nodes/healthz
     - nodes/log

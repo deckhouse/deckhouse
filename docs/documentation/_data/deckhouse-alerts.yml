@@ -326,17 +326,17 @@ alerts:
         Cloud data discoverer found orphaned disks in the cloud.
       severity: "6"
       markupFormat: markdown
-    - name: ClusterObjectGrantViolation
+    - name: ClusterResourceGrantPolicyViolation
       sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/cluster_objects_grant_violation.yaml
       moduleUrl: 160-multitenancy-manager
       module: multitenancy-manager
       edition: ce
       description: |
-        One or more resources that are not allowed by ClusterObjectGrant are in use within this cluster's projects.
+        One or more resources that are not allowed by ClusterResourceGrantPolicy are in use within this cluster's projects.
 
         Check the "Security > Cluster Object Grant Violations" dashboard for detailed overview of violating objects.
       summary: |
-        One or more resources not allowed by ClusterObjectGrant are in use.
+        One or more resources not allowed by ClusterResourceGrantPolicy are in use.
       severity: "6"
       markupFormat: markdown
     - name: CniCiliumNonStandardVXLANPortFound
