@@ -1,0 +1,18 @@
+{{- with $.Values.istio.jwksResolverExtraRootCA }}
+  {{- $jwksResolverExtraRootCA := . }}
+  {{- range $version := $.Values.istio.internal.versionsToInstall }}
+    {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- if not (get $versionInfo "supportsOperator") }}
+      {{- $revision := get $versionInfo "revision" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pilot-jwks-extra-cacerts-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
+data:
+  extra.pem: {{ $jwksResolverExtraRootCA | quote }}
+    {{- end }}
+  {{- end }}
+{{- end }}

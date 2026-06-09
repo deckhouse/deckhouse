@@ -70,6 +70,12 @@ const istioValues = `
       applicationNamespaces: []
       globalVersion: "1.21.6"
       versionMap:
+        "1.27.9":
+          revision: "v1x27x9"
+          fullVersion: "1.27.9"
+          imageSuffix: "V1x27x9"
+          supportsAmbient: true
+          supportsOperator: false
         "1.25.2":
           revision: "v1x25x2"
           fullVersion: "1.25.2"
@@ -159,6 +165,10 @@ const istioValues = `
               max: "1Gi"
               min: "64Mi"
 `
+
+const jwksResolverExtraRootCA = `-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAN...
+-----END CERTIFICATE-----`
 
 func getSubdirs(dir string) ([]string, error) {
 	var subdirs []string
@@ -376,6 +386,33 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.name").String()).To(Equal(`authservice-grpc`))
 			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.service").String()).To(Equal(`authservice.d8-istio.svc.cluster.local`))
 			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.port").Int()).To(Equal(int64(10003)))
+		})
+	})
+
+	Context("JWKS resolver extra root CA is configured", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.25.2","1.27.9"]`)
+			f.ValuesSet("istio.jwksResolverAdditionalRootCA", jwksResolverAdditionalRootCA)
+			f.HelmRender()
+		})
+
+		It("passes the certificate to pilot configuration for supported Istio versions", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			jwksExtraRootCAV27 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x27x9")
+
+			Expect(iopV21.Exists()).To(BeTrue())
+			Expect(istioV25.Exists()).To(BeTrue())
+			Expect(jwksExtraRootCAV27.Exists()).To(BeTrue())
+
+			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 		})
 	})
 
