@@ -223,10 +223,10 @@ func parsePathSegments(expr string) ([]string, bool) {
 	return segs, true
 }
 
-// fieldState reports whether all parent objects of the field exist (so a JSON Patch "add" is safe)
-// and returns the field's current string value (empty string if the field is absent, nil, or not a
-// string).
-func fieldState(obj map[string]any, segs []string) (parentOK bool, value string) {
+// fieldState reports whether all parent objects of the field exist (so a JSON Patch "add" is safe,
+// first return) and the field's current string value (second return; empty if the field is absent,
+// nil, or not a string).
+func fieldState(obj map[string]any, segs []string) (bool, string) {
 	cur := obj
 	for i := 0; i < len(segs)-1; i++ {
 		m, ok := cur[segs[i]].(map[string]any)
