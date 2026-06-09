@@ -6,21 +6,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const sidebarAndToc = document.querySelectorAll('.sidebar__wrapper-inner');
+    const header = document.querySelector('header');
     let lastScroll = window.scrollY;
+    let rafPending = false;
+
+    // navigationContainer.offsetHeight is stable (doesn't depend on page content),
+    // but reading it forces a full reflow on large DOMs. We prime the cache on the
+    // 'load' event (after first paint) and use 0 as a safe fallback until then.
+    let cachedNavigationHeight = 0;
+    window.addEventListener('load', () => {
+        cachedNavigationHeight = navigationContainer.offsetHeight;
+        const newTop = updateTop();
+        scrollHandler(newTop);
+    }, { once: true });
 
     function applyHeaderOffsets() {
-        const header = document.querySelector('header');
-        const headerHeight = header.getBoundingClientRect().height;
+        // Read all layout properties first, before any writes, to avoid forced reflow.
+        const headerHeight = header ? header.getBoundingClientRect().height : 0;
+        // Write phase: apply styles after all reads are done.
         navigationContainer.style.top = `${headerHeight}px`;
         sidebarAndToc.forEach(e => {
             e.style.top = `${headerHeight}px`;
         });
-        return headerHeight;
+        return { headerHeight, navigationHeight: cachedNavigationHeight };
     }
 
     function updateTop() {
-        const headerHeight = applyHeaderOffsets();
-        const navigationHeight = navigationContainer.offsetHeight;
+        const { headerHeight, navigationHeight } = applyHeaderOffsets();
         return headerHeight + navigationHeight;
     }
 
@@ -96,11 +108,17 @@ document.addEventListener('DOMContentLoaded', () => {
     scrollHandler(initTop);
 
     window.addEventListener('scroll', () => {
-        const newTop = updateTop();
-        scrollHandler(newTop)
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+            rafPending = false;
+            const newTop = updateTop();
+            scrollHandler(newTop);
+        });
     });
 
     window.addEventListener('resize', () => {
+        cachedNavigationHeight = navigationContainer.offsetHeight;
         const newTop = updateTop();
         scrollHandler(newTop)
     });

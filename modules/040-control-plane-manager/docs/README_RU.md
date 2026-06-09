@@ -11,7 +11,7 @@ description: Deckhouse управляет компонентами control plane
 - **Настройка компонентов**. Автоматически создает необходимые конфигурации и манифесты компонентов `control-plane`.
 - **Upgrade/downgrade компонентов**. Поддерживает в кластере одинаковые версии компонентов.
 - **Управление конфигурацией etcd-кластера** и его членов. Масштабирует master-узлы, выполняет миграцию из single-master в multi-master и обратно.
-- **Настройка kubeconfig**. Обеспечивает актуальные файлы kubeconfig на узлах control-plane. Генерирует, продлевает и обновляет kubeconfig для компонентов control-plane и admin kubeconfig (`admin.conf`). По умолчанию создаёт символическую ссылку для root-пользователя (`/root/.kube/config` -> `admin.conf`). При включённом модуле [user-authz](/modules/user-authz/) симлинк можно отключить параметром `rootKubeconfigSymlink` в модуле **control-plane-manager** (см. [FAQ](faq.html#модель-административного-доступа-к-кластеру)). Также ужесточает права доступа к файлам `admin.conf` и `super-admin.conf`.
+- **Настройка kubeconfig**. Обеспечивает актуальные файлы kubeconfig на узлах control-plane. Генерирует, продлевает и обновляет kubeconfig для компонентов control-plane и admin kubeconfig (`admin.conf`). По умолчанию создаёт символическую ссылку для root-пользователя (`/root/.kube/config` -> `admin.conf`). При включённом модуле [user-authz](/modules/user-authz/) символическую ссылку можно отключить параметром `rootKubeconfigSymlink` в модуле **control-plane-manager** (см. [FAQ](faq.html#модель-административного-доступа-к-кластеру)). Также ужесточает права доступа к файлам `admin.conf` и `super-admin.conf`.
 - **Расширение работы планировщика**, за счет подключения внешних плагинов через вебхуки. Управляется ресурсом [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration). Позволяет использовать более сложную логику при решении задач планирования нагрузки в кластере. Например:
   - размещение подов приложений организации хранилища данных ближе к самим данным,
   - приоритизация узлов в зависимости от их состояния (сетевой нагрузки, состояния подсистемы хранения и т. д.),
@@ -76,11 +76,37 @@ description: Deckhouse управляет компонентами control plane
 Эта функция применяется только в средах, где параметр `--terminated-pod-gc-threshold` можно настраивать. В управляемых Kubernetes-кластерах, таких как EKS, GKE, AKS, это значение контролируется провайдером.
 {% endalert %}
 
+## Настройка ресурсных запросов control plane
+
+Модуль позволяет задать суммарные ресурсные запросы CPU и памяти для компонентов control plane на каждом master-узле: `kube-apiserver`, `etcd`, `kube-controller-manager` и `kube-scheduler`.
+
+Для настройки используйте параметр [`resourcesRequests`](configuration.html#parameters-resourcesrequests) в ModuleConfig `control-plane-manager`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    resourcesRequests:
+      cpu: 1000m
+      memory: 500Mi
+```
+
+Указанные значения используются как общий бюджет запросов для компонентов control plane на каждом master-узле. Deckhouse Kubernetes Platform (DKP) распределяет этот бюджет между статическими подами control plane при формировании их манифестов.
+
+{% alert level="info" %}
+Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например в GKE, AKS или EKS.
+{% endalert %}
+
 ## Управление версиями
 
-Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.
+Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии DKP. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов control plane (например, с `1.31.*` на `1.32.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 Обновление control plane выполняется безопасно и для single-master-, и для multi-master-кластеров. Во время обновления может быть кратковременная недоступность API-сервера. На работу приложений в кластере обновление не влияет и может выполняться без выделения окна для регламентных работ.
 
@@ -89,7 +115,7 @@ description: Deckhouse управляет компонентами control plane
 - Общие замечания:
   - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NogeGroup узлы обновляются последовательно, по одному.
 - При upgrade:
-  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.31 -> 1.32, 1.32 -> 1.33, 1.33 -> 1.34.
+  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.32 -> 1.33, 1.33 -> 1.34, 1.35 -> 1.36.
   - На каждом этапе сначала обновляется версия control plane, затем происходит обновление kubelet на узлах кластера.  
 - При downgrade (не поддерживается для редакций CSE):
   - Успешное понижение версии гарантируется только на одну версию вниз от максимальной минорной версии control plane, когда-либо использовавшейся в кластере.
@@ -125,7 +151,7 @@ description: Deckhouse управляет компонентами control plane
 
 Если требуется журналировать операции с API или отдебажить неожиданное поведение, для этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/). Его можно настроить путем создания правил [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy), а результатом работы аудита будет лог-файл `/var/log/kube-audit/audit.log` со всеми интересующими операциями.
 
-В установках Deckhouse по умолчанию созданы базовые политики, которые отвечают за логирование событий, которые:
+В установках DKP по умолчанию созданы базовые политики, которые отвечают за логирование событий, которые:
 
 - связаны с операциями создания, удаления и изменения ресурсов;
 - совершаются от имен сервисных аккаунтов из системных Namespace `kube-system`, `d8-*`;
@@ -174,7 +200,7 @@ spec:
 
 ## Защита чувствительных полей кастомных ресурсов
 
-Feature gate `CRDSensitiveData` обеспечивает защиту чувствительных данных на уровне полей в ресурсах, помеченных маркером `x-kubernetes-sensitive-data: true`. Функция реализована в виде патча к `kube-apiserver` (apiextensions-apiserver)
+Feature gate `CRDSensitiveData` обеспечивает защиту чувствительных данных на уровне полей в ресурсах, помеченных маркером `x-kubernetes-sensitive-data: true`. Функция реализована в виде патча к `kube-apiserver` (`apiextensions-apiserver`)
 и поддерживается, начиная с версии Kubernetes 1.31.
 
 Маркер `x-kubernetes-sensitive-data` проверяется `kube-apiserver` при применении ресурса:

@@ -115,7 +115,7 @@ if ! bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/kubead
   bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings" \
     -X POST \
     -H "Content-Type: application/json" \
-    --data @- <<'EOF'
+    --data @- >/dev/null <<'EOF'
 {
   "apiVersion": "rbac.authorization.k8s.io/v1",
   "kind": "ClusterRoleBinding",
@@ -163,7 +163,7 @@ bb-curl-helper-patch-node-metadata "$node_name" "labels" "node-role.kubernetes.i
 bb-curl-kube "/api/v1/nodes/${node_name}" \
   -X PATCH \
   -H "Content-Type: application/strategic-merge-patch+json" \
-  --data "$(jq -nc --argjson taints "$node_taints_patch" '{"spec":{"taints":$taints}}')"
+  --data "$(jq -nc --argjson taints "$node_taints_patch" '{"spec":{"taints":$taints}}')" >/dev/null
 __sec rbac_label_taint
 
 # CIS benchmark purposes
@@ -211,7 +211,7 @@ if [[ "${#have_signatures_files[@]}" != "0" ]]; then
   done
 fi
 
-bb-curl-kube "/api/v1/namespaces/kube-system/secrets/d8-pki" -X DELETE || true
+bb-curl-kube "/api/v1/namespaces/kube-system/secrets/d8-pki" -X DELETE >/dev/null || true
 
 # Build secret JSON with base64-encoded PKI files
 pki_data="{}"
@@ -229,7 +229,7 @@ bb-curl-kube "/api/v1/namespaces/kube-system/secrets" \
   -X POST \
   -H "Content-Type: application/json" \
   --data "$(jq -nc --argjson data "$pki_data" \
-    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"d8-pki","namespace":"kube-system"},"type":"Opaque","data":$data}')"
+    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"d8-pki","namespace":"kube-system"},"type":"Opaque","data":$data}')" >/dev/null
 __sec pki_upload
 
 # Setup kubectl for root user during bootstrap.
@@ -245,7 +245,7 @@ if ! bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/d8:con
   bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings" \
     -X POST \
     -H "Content-Type: application/json" \
-    --data @- <<'EOF'
+    --data @- >/dev/null <<'EOF'
 {
   "apiVersion": "rbac.authorization.k8s.io/v1",
   "kind": "ClusterRoleBinding",

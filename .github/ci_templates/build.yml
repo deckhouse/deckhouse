@@ -92,6 +92,8 @@ steps:
     id: build
     env:
       WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+      WERF_TELEMETRY: "1"
+      WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}

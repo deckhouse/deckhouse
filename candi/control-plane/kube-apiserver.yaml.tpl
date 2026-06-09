@@ -1,4 +1,7 @@
-{{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" "CRDSensitiveData=true" -}}
+{{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" "CRDSensitiveData=true" -}}
+{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
+{{- end }}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
@@ -71,8 +74,12 @@
 {{- if .apiserver.etcdServers -}}
   {{- $etcdServers = printf "https://127.0.0.1:2379,%s" (.apiserver.etcdServers | join ",") -}}
 {{- end -}}
-{{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
-{{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
+{{- $resourcesRequests := dict -}}
+{{- if and .settings .settings.resourcesRequests -}}
+  {{- $resourcesRequests = .settings.resourcesRequests -}}
+{{- end -}}
+{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
+{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 {{- /* kube-apiserver */ -}}
 apiVersion: v1
 kind: Pod

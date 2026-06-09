@@ -27,10 +27,8 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.69.0"
+  WERF_VERSION: "v2.70.0"
   WERF_ENV: "FE"
-  WERF_TELEMETRY: "1"
-  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   REGISTRY_PATH: "sys/deckhouse-oss"
@@ -286,6 +284,8 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -1006,7 +1006,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:2fa0da12f239d1696f2f790ac8332ae4790f1b9db9d1e785778c4a64e2481544"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:5f09a2c36ae78d40d8196ddab19797aae92c5ecce38749022d04625548d798b6"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -1934,6 +1934,8 @@ jobs:
           env: web-production
         env:
           WERF_REQUIRE_BUILT_IMAGES: "true"
+          WERF_SET_DOCS_WATCHER_DOP_URL: "global.dop_url=${{ vars.DOCS_WATCHER_DOP_URL }}"
+          WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "global.dop_auth_token=${{ secrets.DOCS_WATCHER_DOP_AUTH_TOKEN }}"
           WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/site"
           WERF_RELEASE: "deckhouse-site"
@@ -2020,6 +2022,8 @@ jobs:
           env: web-production
         env:
           WERF_REQUIRE_BUILT_IMAGES: "true"
+          WERF_SET_DOCS_WATCHER_DOP_URL: "global.dop_url=${{ vars.DOCS_WATCHER_DOP_URL }}"
+          WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "global.dop_auth_token=${{ secrets.DOCS_WATCHER_DOP_AUTH_TOKEN }}"
           WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"

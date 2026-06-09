@@ -1,4 +1,7 @@
-{{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" -}}
+{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
+{{- end }}
 {{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
@@ -24,8 +27,12 @@
   {{- end -}}
 {{- end -}}
 {{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
-{{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
-{{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 }}
+{{- $resourcesRequests := dict -}}
+{{- if and $.settings $.settings.resourcesRequests -}}
+  {{- $resourcesRequests = $.settings.resourcesRequests -}}
+{{- end -}}
+{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
+{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 apiVersion: v1
 kind: Pod
 metadata:

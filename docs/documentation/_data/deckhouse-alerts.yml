@@ -2869,8 +2869,92 @@ alerts:
         Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
       markupFormat: markdown
+    - name: D8ObsoleteGlobalControlPlaneResourcesRequests
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane resource requests are being migrated from global settings to `moduleconfig control-plane-manager`.
+
+        The obsolete settings are still used as a fallback, but they should be moved to the `control-plane-manager` module settings.
+        The migration does not change the meaning of the values: `cpu` and `memory` remain the total resource requests for control-plane components on each master node.
+
+        **To complete the migration, follow the steps below:**
+
+        1. Review the current obsolete settings in `moduleconfig global`:
+
+           ```bash
+           d8 k get mc global -o jsonpath='{.spec.settings.modules.resourcesRequests.controlPlane}'; echo
+           ```
+
+           Example of obsolete settings:
+
+           ```yaml
+           spec:
+             settings:
+               modules:
+                 resourcesRequests:
+                   controlPlane:
+                     cpu: 1000m
+                     memory: 500Mi
+           ```
+
+        2. Make sure the `moduleconfig control-plane-manager` resource exists and uses settings version `3`.
+
+           If the resource does not exist, create it:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+           Set the settings version:
+
+           ```bash
+           d8 k patch mc control-plane-manager --type merge \
+             -p '{"spec":{"version":3}}'
+           ```
+
+        3. Copy the obsolete values from `moduleconfig global` to `moduleconfig control-plane-manager`.
+
+           The following command preserves the original JSON value types, including numeric CPU values:
+
+           ```bash
+           d8 k patch mc control-plane-manager --type merge -p "$(
+             d8 k get mc global -o json | jq -c \
+               '{"spec":{"version":3,"settings":{"resourcesRequests": .spec.settings.modules.resourcesRequests.controlPlane}}}'
+           )"
+           ```
+
+           After migration, the `moduleconfig control-plane-manager` resource should contain:
+
+           ```yaml
+           spec:
+             version: 3
+             settings:
+               resourcesRequests:
+                 cpu: 1000m
+                 memory: 500Mi
+           ```
+
+        4. Check that the values were applied:
+
+           ```bash
+           d8 k get mc control-plane-manager -o jsonpath='{.spec.settings.resourcesRequests}'; echo
+           ```
+
+        5. Remove the obsolete settings from `moduleconfig global`:
+
+           ```bash
+           d8 k patch mc global --type merge \
+             -p '{"spec":{"settings":{"modules":{"resourcesRequests":null}}}}'
+           ```
+      summary: |
+        Obsolete global control-plane resource requests need to be migrated.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoletePublishAPIinUserAuthn
-      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/migrate-publish-api.yaml
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
       module: control-plane-manager
       edition: ce

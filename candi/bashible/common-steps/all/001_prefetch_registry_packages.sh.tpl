@@ -28,7 +28,7 @@
 {{- end }}
 
 if ! command -v systemd-run >/dev/null 2>&1 || ! command -v systemctl >/dev/null 2>&1; then
-  bb-log-warning "systemd-run/systemctl not available; skip prefetch — 007 will fetch inline"
+  bb-log-warning "systemd-run or systemctl is not available, skipping prefetch. Step 007 will fetch packages inline."
   return 0 2>/dev/null || exit 0
 fi
 
@@ -36,13 +36,13 @@ fi
 case "$(systemctl is-system-running 2>/dev/null || true)" in
   running|degraded|starting|initializing|maintenance) ;;
   *)
-    bb-log-warning "systemd not in usable state; skip prefetch"
+    bb-log-warning "systemd is not in a usable state, skipping prefetch"
     return 0 2>/dev/null || exit 0
     ;;
 esac
 
 if ! command -v rpp-get >/dev/null 2>&1; then
-  bb-log-warning "rpp-get not yet available; skip prefetch — 007 will fetch inline"
+  bb-log-warning "rpp-get is not yet available, skipping prefetch. Step 007 will fetch packages inline."
   return 0 2>/dev/null || exit 0
 fi
 
@@ -54,7 +54,7 @@ env_file="/run/rpp-prefetch.env"
 #   - inactive/failed  → reset and (re)launch
 case "$(systemctl is-active $unit 2>/dev/null || true)" in
   active|activating)
-    bb-log-info "$unit already running; nothing to do"
+    bb-log-info "$unit is already running, nothing to do"
     return 0 2>/dev/null || exit 0
     ;;
   failed)
@@ -71,7 +71,7 @@ esac
 # persist the RPP auth/context explicitly for the background fetch. Keep the
 # token out of the unit definition by sourcing a root-only env file at runtime.
 if ! (umask 077 && : > "$env_file"); then
-  bb-log-warning "failed to create $env_file; skip prefetch — 007 will fetch inline"
+  bb-log-warning "Failed to create $env_file, skipping prefetch. Step 007 will fetch packages inline."
   return 0 2>/dev/null || exit 0
 fi
 
@@ -107,8 +107,8 @@ if ! systemd-run \
       \"toml-merge:{{ .images.registrypackages.tomlMerge01 }}\" \
       \"pause:{{ .images.registrypackages.pause }}\"" \
     >/dev/null 2>&1; then
-  bb-log-warning "systemd-run failed to launch $unit; 007 will fetch inline"
+  bb-log-warning "systemd-run failed to launch $unit, step 007 will fetch packages inline"
   return 0 2>/dev/null || exit 0
 fi
 
-bb-log-info "$unit launched; subsequent step 007 will wait for it"
+bb-log-info "$unit launched, step 007 will wait for it"

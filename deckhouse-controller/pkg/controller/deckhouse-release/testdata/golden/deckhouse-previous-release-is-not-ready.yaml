@@ -3,7 +3,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.25.0
   resourceVersion: "999"
 spec:
@@ -18,7 +17,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.26.0
   resourceVersion: "1000"
 spec:
@@ -32,7 +30,6 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: null
   labels:
     app: deckhouse
   name: deckhouse-6f46df5bd7-nk4j7
@@ -57,7 +54,6 @@ status:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   name: deckhouse
   namespace: d8-system
   resourceVersion: "999"
@@ -65,8 +61,7 @@ spec:
   selector: null
   strategy: {}
   template:
-    metadata:
-      creationTimestamp: null
+    metadata: {}
     spec:
       containers:
       - image: my.registry.com/deckhouse:v1.25.0
