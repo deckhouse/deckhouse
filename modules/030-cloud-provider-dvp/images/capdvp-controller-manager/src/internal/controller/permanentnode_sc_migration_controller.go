@@ -19,11 +19,13 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -190,11 +192,20 @@ func (r *PermanentNodeSCMigrationReconciler) reconcileNode(
 
 	log := ctrl.LoggerFrom(ctx).WithValues("node", hostname)
 	anyMigrating := false
+	var errs []error
 
 	for i := range disks {
 		vd := &disks[i]
 		desiredSC := desiredSCForDisk(vd.Name, cfg)
 		if desiredSC == "" {
+			continue
+		}
+
+		// Skip disks in terminal failure — manual intervention required
+		switch vd.Status.Phase {
+		case v1alpha2.DiskFailed, v1alpha2.DiskLost:
+			log.Error(nil, "disk in terminal failure state, skipping SC migration",
+				"disk", vd.Name, "phase", vd.Status.Phase)
 			continue
 		}
 
@@ -211,14 +222,21 @@ func (r *PermanentNodeSCMigrationReconciler) reconcileNode(
 			continue
 		}
 
+		// Validate SC exists before patching (mirrors DeckhouseMachineReconciler behaviour)
+		if _, err := r.DVP.DiskService.GetStorageClass(ctx, desiredSC); err != nil {
+			errs = append(errs, fmt.Errorf("storage class %q for disk %q: %w", desiredSC, vd.Name, err))
+			continue
+		}
+
 		log.Info("patching disk SC", "disk", vd.Name, "currentSC", specSC, "desiredSC", desiredSC)
 		if err := r.DVP.DiskService.MigrateDiskStorageClass(ctx, vd.Name, desiredSC); err != nil {
-			return false, fmt.Errorf("migrate disk %q to SC %q: %w", vd.Name, desiredSC, err)
+			errs = append(errs, fmt.Errorf("migrate disk %q to SC %q: %w", vd.Name, desiredSC, err))
+			continue
 		}
 		anyMigrating = true
 	}
 
-	return anyMigrating, nil
+	return anyMigrating, errors.Join(errs...)
 }
 
 // desiredSCForDisk identifies disk type from its name and returns the desired StorageClass.
