@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// nolint:gci
+// nolint:gci,goimports
 package controller
 
 import (
@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	dvpapi "dvp-common/api"
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -35,6 +34,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
+	dvpapi "dvp-common/api"
 )
 
 const (
