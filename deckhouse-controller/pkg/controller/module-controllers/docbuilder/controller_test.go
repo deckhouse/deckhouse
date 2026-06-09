@@ -15,9 +15,7 @@
 package docbuilder
 
 import (
-	"bytes"
 	"context"
-	"flag"
 	"io"
 	"net/http"
 	"os"
@@ -30,67 +28,71 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"helm.sh/helm/v3/pkg/releaseutil"
-	coordv1 "k8s.io/api/coordination/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
-
-var golden bool
-
-func init() {
-	flag.BoolVar(&golden, "golden", false, "generate golden files")
-}
 
 func TestControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(ControllerTestSuite))
 }
 
 type ControllerTestSuite struct {
-	suite.Suite
+	reconcilertest.Suite
 
-	kubeClient client.Client
-	ctr        *reconciler
-
-	tmpDir           string
-	testDataFileName string
-}
-
-func (suite *ControllerTestSuite) TearDownSubTest() {
-	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	got := suite.fetchResults()
-
-	if golden {
-		err := os.WriteFile(goldenFile, got, 0666)
-		require.NoError(suite.T(), err)
-	} else {
-		exp, err := os.ReadFile(goldenFile)
-		require.NoError(suite.T(), err)
-		assert.YAMLEq(suite.T(), string(exp), string(got))
-	}
+	ctr    *reconciler
+	tmpDir string
 }
 
 func (suite *ControllerTestSuite) SetupSuite() {
-	flag.Parse()
-	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.tmpDir = suite.T().TempDir()
 	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
-	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
+	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0o777)
+
+	suite.Init(reconcilertest.Config{
+		StatusSubresources: []client.Object{&v1alpha1.ModuleDocumentation{}},
+		SnapshotKinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation"),
+		},
+		ObjectNormalizers: []reconcilertest.ObjectNormalizer{suite.normalizeTmpDir},
+		GoldenMode:        reconcilertest.WholeDocument,
+	})
+}
+
+// normalizeTmpDir replaces the random temp dir in condition messages with a
+// stable placeholder for golden comparison.
+func (suite *ControllerTestSuite) normalizeTmpDir(obj client.Object) {
+	md, ok := obj.(*v1alpha1.ModuleDocumentation)
+	if !ok {
+		return
+	}
+	for i := range md.Status.Conditions {
+		md.Status.Conditions[i].Message = strings.ReplaceAll(md.Status.Conditions[i].Message, suite.tmpDir, "/testdir")
+	}
+}
+
+func (suite *ControllerTestSuite) setupController(filename string) {
+	suite.Seed(filename)
+
+	dc := dependency.NewDependencyContainer()
+	suite.ctr = &reconciler{
+		client:               suite.Client(),
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		logger:               log.NewNop(),
+		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
+		dc:                   dc,
+	}
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("with no builder endpoints", func() {
-		suite.setupController(string(suite.fetchTestFileData("no-builders.yaml")))
+		suite.setupController("no-builders.yaml")
 
 		md := suite.getModuleDocumentation("testmodule")
 		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -98,21 +100,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with only one builder", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		suite.prepareModuleOpenAPI("testmodule")
+		dependency.TestDC.HTTPClient.DoMock.Set(docBuildResponder("/api/v1/doc/testmodule/v1.0.0"))
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
-			switch req.URL.Path {
-			case "/api/v1/doc/testmodule/v1.0.0":
-				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
-
-			case "/api/v1/build":
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
-			}
-			return &http.Response{StatusCode: http.StatusBadRequest}, nil
-		})
-
-		suite.setupController(string(suite.fetchTestFileData("one-builder.yaml")))
+		suite.setupController("one-builder.yaml")
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -121,21 +112,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with two builders", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		suite.prepareModuleOpenAPI("testmodule")
+		dependency.TestDC.HTTPClient.DoMock.Set(docBuildResponder("/api/v1/doc/testmodule/v1.0.0"))
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
-			switch req.URL.Path {
-			case "/api/v1/doc/testmodule/v1.0.0":
-				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
-
-			case "/api/v1/build":
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
-			}
-			return &http.Response{StatusCode: http.StatusBadRequest}, nil
-		})
-
-		suite.setupController(string(suite.fetchTestFileData("two-builders.yaml")))
+		suite.setupController("two-builders.yaml")
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -144,9 +124,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("one builder cannot render", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
-
+		suite.prepareModuleOpenAPI("testmodule")
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			if strings.HasPrefix(req.Host, "10-111-111-11") {
 				return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader("I'm broken"))}, nil
@@ -162,7 +140,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
 		})
 
-		suite.setupController(string(suite.fetchTestFileData("two-builders-partially.yaml")))
+		suite.setupController("two-builders-partially.yaml")
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -171,21 +149,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new version", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		suite.prepareModuleOpenAPI("testmodule")
+		dependency.TestDC.HTTPClient.DoMock.Set(docBuildResponder("/api/v1/doc/testmodule/v1.1.1"))
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
-			switch req.URL.Path {
-			case "/api/v1/doc/testmodule/v1.1.1":
-				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
-
-			case "/api/v1/build":
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
-			}
-			return &http.Response{StatusCode: http.StatusBadRequest}, nil
-		})
-
-		suite.setupController(string(suite.fetchTestFileData("render-new-version.yaml")))
+		suite.setupController("render-new-version.yaml")
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -194,21 +161,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new lease", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		suite.prepareModuleOpenAPI("testmodule")
+		dependency.TestDC.HTTPClient.DoMock.Set(docBuildResponder("/api/v1/doc/testmodule/v1.1.1"))
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
-			switch req.URL.Path {
-			case "/api/v1/doc/testmodule/v1.1.1":
-				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
-
-			case "/api/v1/build":
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
-			}
-			return &http.Response{StatusCode: http.StatusBadRequest}, nil
-		})
-
-		suite.setupController(string(suite.fetchTestFileData("render-new-lease.yaml")))
+		suite.setupController("render-new-lease.yaml")
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -217,21 +173,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new checksum", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		suite.prepareModuleOpenAPI("testmodule")
+		dependency.TestDC.HTTPClient.DoMock.Set(docBuildResponder("/api/v1/doc/testmodule/mpo-tag"))
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
-			switch req.URL.Path {
-			case "/api/v1/doc/testmodule/mpo-tag":
-				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
-
-			case "/api/v1/build":
-				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
-			}
-			return &http.Response{StatusCode: http.StatusBadRequest}, nil
-		})
-
-		suite.setupController(string(suite.fetchTestFileData("render-new-checksum.yaml")))
+		suite.setupController("render-new-checksum.yaml")
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -240,11 +185,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("keep up-to-date rendered documentation", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		suite.prepareModuleOpenAPI("testmodule")
 		dependency.TestDC.GetClock().(*clockwork.FakeClock).Advance(1 * time.Hour)
 
-		suite.setupController(string(suite.fetchTestFileData("keep-actual.yaml")))
+		suite.setupController("keep-actual.yaml")
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -253,7 +197,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with empty dir", func() {
-		suite.setupController(string(suite.fetchTestFileData("empty-dir.yaml")))
+		suite.setupController("empty-dir.yaml")
 
 		md := suite.getModuleDocumentation("absentmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
@@ -262,98 +206,33 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 }
 
-func (suite *ControllerTestSuite) setupController(yamlDoc string) {
-	manifests := releaseutil.SplitManifests(yamlDoc)
-
-	var initObjects = make([]client.Object, 0, len(manifests))
-
-	for _, manifest := range manifests {
-		obj := suite.assembleInitObject(manifest)
-		initObjects = append(initObjects, obj)
-	}
-
-	sc := runtime.NewScheme()
-	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
-	_ = corev1.AddToScheme(sc)
-	_ = coordv1.AddToScheme(sc)
-	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleDocumentation{}).Build()
-	dc := dependency.NewDependencyContainer()
-	rec := &reconciler{
-		client:               cl,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		logger:               log.NewNop(),
-		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
-		dc:                   dc,
-	}
-
-	suite.ctr = rec
-	suite.kubeClient = cl
+// prepareModuleOpenAPI lays down a minimal module openapi config so the builder
+// has something to read.
+func (suite *ControllerTestSuite) prepareModuleOpenAPI(module string) {
+	openapiDir := filepath.Join(suite.tmpDir, "modules", module, "openapi")
+	_ = os.MkdirAll(openapiDir, 0o777)
+	_ = os.WriteFile(filepath.Join(openapiDir, "config-values.yaml"), []byte("{}"), 0o666)
 }
 
-func (suite *ControllerTestSuite) assembleInitObject(obj string) client.Object {
-	var res client.Object
-
-	var typ runtime.TypeMeta
-
-	err := yaml.Unmarshal([]byte(obj), &typ)
-	require.NoError(suite.T(), err)
-
-	switch typ.Kind {
-	case "ModuleDocumentation":
-		var ms v1alpha1.ModuleDocumentation
-		err = yaml.Unmarshal([]byte(obj), &ms)
-		require.NoError(suite.T(), err)
-		res = &ms
-
-	case "Lease":
-		var ms coordv1.Lease
-		err = yaml.Unmarshal([]byte(obj), &ms)
-		require.NoError(suite.T(), err)
-		res = &ms
-
-	default:
-		require.Fail(suite.T(), "unknown Kind:"+typ.Kind)
+// docBuildResponder answers the doc-upload path with 201 and the build path with
+// 200, and anything else with 400.
+func docBuildResponder(docPath string) func(*http.Request) (*http.Response, error) {
+	return func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case docPath:
+			return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
+		case "/api/v1/build":
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
+		}
+		return &http.Response{StatusCode: http.StatusBadRequest}, nil
 	}
-
-	return res
 }
 
 // nolint:unparam
 func (suite *ControllerTestSuite) getModuleDocumentation(name string) *v1alpha1.ModuleDocumentation {
 	var md v1alpha1.ModuleDocumentation
-	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &md)
+	err := suite.Client().Get(context.TODO(), client.ObjectKey{Name: name}, &md)
 	require.NoError(suite.T(), err)
 
 	return &md
-}
-
-func (suite *ControllerTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
-
-	var mdlist v1alpha1.ModuleDocumentationList
-	err := suite.kubeClient.List(context.TODO(), &mdlist)
-	require.NoError(suite.T(), err)
-
-	for _, item := range mdlist.Items {
-		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation"))
-		for i, cond := range item.Status.Conditions {
-			cond.Message = strings.ReplaceAll(cond.Message, suite.tmpDir, "/testdir")
-			item.Status.Conditions[i] = cond
-		}
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	return result.Bytes()
-}
-
-func (suite *ControllerTestSuite) fetchTestFileData(filename string) []byte {
-	dir := "./testdata"
-	data, err := os.ReadFile(filepath.Join(dir, filename))
-	require.NoError(suite.T(), err)
-
-	suite.testDataFileName = filename
-
-	return data
 }

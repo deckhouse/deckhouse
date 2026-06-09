@@ -17,7 +17,6 @@ limitations under the License.
 package deckhouse_release
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,24 +24,22 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -53,17 +50,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
-
-var (
-	golden     bool
-	mDelimiter *regexp.Regexp
-)
-
-func init() {
-	flag.BoolVar(&golden, "golden", false, "generate golden files")
-	mDelimiter = regexp.MustCompile("(?m)^---$")
-}
 
 var embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
 	Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
@@ -137,20 +125,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
-
-	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0o666)
-		require.NoError(suite.T(), err)
-	} else {
-		got := singleDocToManifests(gotB)
-		expB, err := os.ReadFile(goldenFile)
-		require.NoError(suite.T(), err)
-		exp := singleDocToManifests(expB)
-		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
-		for i := range got {
-			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
-		}
-	}
+	reconcilertest.CompareOrUpdate(suite.T(), goldenFile, gotB, reconcilertest.PerDocument)
 }
 
 func (suite *ControllerTestSuite) setupController(
@@ -1068,66 +1043,17 @@ func newDependencyContainer(t *testing.T) *dependency.MockedContainer {
 }
 
 func (suite *ControllerTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
-
-	var releaseList v1alpha1.DeckhouseReleaseList
-	err := suite.kubeClient.List(context.TODO(), &releaseList)
+	got, err := reconcilertest.Snapshot(context.TODO(), suite.kubeClient, suite.kubeClient.Scheme(), reconcilertest.SnapshotSpec{
+		Kinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind(v1alpha1.DeckhouseReleaseKind),
+			corev1.SchemeGroupVersion.WithKind("Pod"),
+			appsv1.SchemeGroupVersion.WithKind("Deployment"),
+			corev1.SchemeGroupVersion.WithKind("ConfigMap"),
+		},
+	})
 	require.NoError(suite.T(), err)
 
-	for _, item := range releaseList.Items {
-		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind(v1alpha1.DeckhouseReleaseKind))
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var podsList corev1.PodList
-	err = suite.kubeClient.List(context.TODO(), &podsList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range podsList.Items {
-		item.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var deploymentList appsv1.DeploymentList
-	err = suite.kubeClient.List(context.TODO(), &deploymentList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range deploymentList.Items {
-		item.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var cmList corev1.ConfigMapList
-	err = suite.kubeClient.List(context.TODO(), &cmList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range cmList.Items {
-		item.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ConfigMap"))
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	return result.Bytes()
-}
-
-func singleDocToManifests(doc []byte) []string {
-	split := mDelimiter.Split(string(doc), -1)
-
-	result := make([]string, 0, len(split))
-	for i := range split {
-		if split[i] != "" {
-			result = append(result, split[i])
-		}
-	}
-
-	return result
+	return got
 }
 
 func (suite *ControllerTestSuite) getDeckhouseRelease(name string) *v1alpha1.DeckhouseRelease {

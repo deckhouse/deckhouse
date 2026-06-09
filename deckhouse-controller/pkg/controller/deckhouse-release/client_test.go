@@ -27,13 +27,8 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
-	"helm.sh/helm/v3/pkg/releaseutil"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -42,8 +37,10 @@ import (
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
 
 var testDeckhouseVersion = "v1.15.0"
@@ -79,18 +76,13 @@ func setupControllerSettings(
 	options ...reconcilerOption,
 ) (*deckhouseReleaseReconciler, client.Client) {
 	yamlDoc := fetchTestFileData(t, filename, values)
-	manifests := releaseutil.SplitManifests(yamlDoc)
 
-	initObjects := make([]client.Object, 0, len(manifests))
-	for _, manifest := range manifests {
-		obj := assembleInitObject(t, manifest)
-		initObjects = append(initObjects, obj)
-	}
+	sc, err := project.Scheme()
+	require.NoError(t, err)
 
-	sc := runtime.NewScheme()
-	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
-	_ = appsv1.AddToScheme(sc)
-	_ = corev1.AddToScheme(sc)
+	initObjects, err := reconcilertest.Decode(sc, []byte(yamlDoc))
+	require.NoError(t, err)
+
 	cl := fake.NewClientBuilder().
 		WithScheme(sc).
 		WithObjects(initObjects...).
@@ -115,43 +107,7 @@ func setupControllerSettings(
 		option(rec)
 	}
 
-	for _, option := range options {
-		option(rec)
-	}
-
 	return rec, cl
-}
-
-func assembleInitObject(t *testing.T, obj string) client.Object {
-	var res client.Object
-	var typ runtime.TypeMeta
-
-	err := yaml.Unmarshal([]byte(obj), &typ)
-	require.NoErrorf(t, err, "try unmarshal yaml\n%s", obj)
-
-	switch typ.Kind {
-	case "Secret":
-		res = unmarshalRelease[corev1.Secret](obj, t)
-	case "Pod":
-		res = unmarshalRelease[corev1.Pod](obj, t)
-	case "Deployment":
-		res = unmarshalRelease[appsv1.Deployment](obj, t)
-	case "DeckhouseRelease":
-		res = unmarshalRelease[v1alpha1.DeckhouseRelease](obj, t)
-	case "ConfigMap":
-		res = unmarshalRelease[corev1.ConfigMap](obj, t)
-	case "ModuleSource":
-		res = unmarshalRelease[v1alpha1.ModuleSource](obj, t)
-	case "Module":
-		res = unmarshalRelease[v1alpha1.Module](obj, t)
-	case "ModuleConfig":
-		res = unmarshalRelease[v1alpha1.ModuleConfig](obj, t)
-
-	default:
-		require.Fail(t, "unknown Kind:"+typ.Kind)
-	}
-
-	return res
 }
 
 func fetchTestFileData(t *testing.T, filename, valuesJSON string) string {
@@ -212,11 +168,4 @@ data:
 	require.NoError(t, err)
 
 	return buf.String()
-}
-
-func unmarshalRelease[T any](manifest string, t *testing.T) *T {
-	var obj T
-	err := yaml.Unmarshal([]byte(manifest), &obj)
-	require.NoError(t, err)
-	return &obj
 }

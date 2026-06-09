@@ -15,14 +15,12 @@
 package source
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -37,6 +35,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -54,21 +53,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
 
-var (
-	generateGolden     bool
-	manifestsDelimiter *regexp.Regexp
-	manifestStub       = func() (*crv1.Manifest, error) {
-		return &crv1.Manifest{
-			Layers: []crv1.Descriptor{},
-		}, nil
-	}
-)
-
-func init() {
-	flag.BoolVar(&generateGolden, "golden", false, "generate golden files")
-	manifestsDelimiter = regexp.MustCompile("(?m)^---$")
+var manifestStub = func() (*crv1.Manifest, error) {
+	return &crv1.Manifest{
+		Layers: []crv1.Descriptor{},
+	}, nil
 }
 
 type ControllerTestSuite struct {
@@ -211,65 +202,19 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		return
 	}
 
-	currentObjects := suite.fetchResults()
-
-	if generateGolden {
-		err := os.WriteFile(suite.goldenFile, currentObjects, 0666)
-		require.NoError(suite.T(), err)
-		return
-	}
-
-	raw, err := os.ReadFile(suite.goldenFile)
-	require.NoError(suite.T(), err)
-
-	exp := splitManifests(raw)
-	got := splitManifests(currentObjects)
-
-	require.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
-	for i := range got {
-		assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
-	}
+	reconcilertest.CompareOrUpdate(suite.T(), suite.goldenFile, suite.fetchResults(), reconcilertest.PerDocument)
 }
 
 func (suite *ControllerTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
-
-	sources := new(v1alpha1.ModuleSourceList)
-	err := suite.client.List(context.TODO(), sources)
+	got, err := reconcilertest.Snapshot(context.TODO(), suite.client, suite.client.Scheme(), reconcilertest.SnapshotSpec{
+		Kinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
+		},
+	})
 	require.NoError(suite.T(), err)
 
-	for _, source := range sources.Items {
-		source.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"))
-		got, _ := yaml.Marshal(source)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	releases := new(v1alpha1.ModuleReleaseList)
-	err = suite.client.List(context.TODO(), releases)
-	require.NoError(suite.T(), err)
-
-	for _, release := range releases.Items {
-		release.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"))
-		got, _ := yaml.Marshal(release)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	return result.Bytes()
-}
-
-func splitManifests(doc []byte) []string {
-	splits := manifestsDelimiter.Split(string(doc), -1)
-
-	result := make([]string, 0, len(splits))
-	for i := range splits {
-		if splits[i] != "" {
-			result = append(result, splits[i])
-		}
-	}
-
-	return result
+	return got
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
