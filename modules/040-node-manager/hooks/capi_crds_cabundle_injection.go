@@ -61,39 +61,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyCAPICRDFilter,
 		},
-		{
-			Name:       "cabundle",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-cloud-instance-manager"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"capi-webhook-tls"},
-			},
-			FilterFunc: applyCAPICertFilter,
-		},
 	},
 }, injectCAIntoCAPICRDs)
 
 type CRDCAPI struct {
 	Name     string
 	CABundle string
-}
-
-func applyCAPICertFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	data, found, err := unstructured.NestedMap(obj.Object, "data")
-	if err != nil || !found {
-		return "", nil
-	}
-	caCrt, _ := data["ca.crt"].(string)
-	decoded, err := base64.StdEncoding.DecodeString(caCrt)
-	if err != nil {
-		return "", nil
-	}
-	return string(decoded), nil
 }
 
 func applyCAPICRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -130,14 +103,7 @@ func injectCAIntoCAPICRDs(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	var ca string
-	snaps := input.Snapshots.Get("cabundle")
-	if len(snaps) > 0 {
-		_ = snaps[0].UnmarshalTo(&ca)
-	}
-	if ca == "" {
-		ca = input.Values.Get("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()
-	}
+	ca := input.Values.Get("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()
 	if ca == "" {
 		return nil
 	}
