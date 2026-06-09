@@ -162,7 +162,7 @@ properties:
         description: |
           The amount of resources (CPU and memory) allocated to some components.
 
-          [More](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) about resource units in Kubernetes.
+          More info in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
         type: object
         default: {}
         additionalProperties: false

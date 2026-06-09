@@ -152,7 +152,7 @@ properties:
                           В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике сделает невалидными ранее сгенерированные файлы конфигурации kubectl.
           loadBalancer:
             description: 'Настройки для публикации API через service с типом LoadBalancer.'
-            properties: 
+            properties:
               enabled:
                 description: 'Если указать `true`, будет создан сервис `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.'
               annotations:
@@ -250,7 +250,7 @@ properties:
       Количество ресурсов CPU и памяти, выделяемых компонентам control plane на каждом master-узле.
 
       Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например Google Kubernetes Engine или Azure Kubernetes Service.
-      Подробнее об единицах измерения ресурсов см. в [документации Kubernetes](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
+      Подробнее об единицах измерения ресурсов — в [документации Kubernetes](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
     properties:
       cpu:
         description: |

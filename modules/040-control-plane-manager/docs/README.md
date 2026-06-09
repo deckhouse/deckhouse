@@ -96,7 +96,7 @@ spec:
       memory: 500Mi
 ```
 
-The specified values are used as a common requests budget for control plane components on each master node. Deckhouse distributes this budget between control plane static pods when rendering their manifests.
+The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
 
 {% alert level="info" %}
 These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.
@@ -104,7 +104,7 @@ These settings do not apply if the cluster control plane is managed by a cloud p
 
 ## Version control
 
-**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
+**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the DKP version updates. You can't manage patch version upgrades.
 
 Upgrading **minor versions** of control plane components (e.g. from `1.31.*` to `1.32.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
@@ -163,7 +163,7 @@ By default, a special CA certificate will be generated and the kubeconfig genera
 
 Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy). As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.
 
-By default, in a cluster with Deckhouse, a basic policy is created for logging events:
+By default, in a cluster with DKP, a basic policy is created for logging events:
 
 - related to the creation, deletion, and changing of resources;
 - committed from the names of ServiceAccounts from the "system" Namespace `kube-system`, `d8-*`;
