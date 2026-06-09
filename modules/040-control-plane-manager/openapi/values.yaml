@@ -60,6 +60,7 @@ properties:
         type: boolean
         default: false
         x-examples: [false]
+<<<<<<< HEAD
       etcdDefrag:
         type: object
         default: {}
@@ -71,6 +72,12 @@ properties:
           cronSchedule:
             type: string
             x-examples: ["*/3 * * * *"]
+=======
+      hasVirtualControlPlane:
+        type: boolean
+        default: false
+        x-examples: [false]
+>>>>>>> 81da115eb5 (add hook)
       kubeadmClusterAdminsTargetRoleName:
         type: string
         enum: ["cluster-admin", "user-authz:cluster-admin"]
