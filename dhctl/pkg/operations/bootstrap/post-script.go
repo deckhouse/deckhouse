@@ -51,12 +51,12 @@ func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 	return log.ProcessCtx(ctx, "bootstrap", "Execute post-bootstrap script", func(ctx context.Context) error {
 		resultToSetState, err := e.run(ctx)
 		if err != nil {
-			msg := fmt.Sprintf("Post execution script was failed: %v", err)
+			msg := fmt.Sprintf("Post-bootstrap script failed: %v", err)
 			return errors.New(msg)
 		}
 
 		if err := e.state.SavePostBootstrapScriptResult(ctx, resultToSetState); err != nil {
-			log.ErrorF("Post bootstrap script result was not saved: %v", err)
+			log.ErrorF("Failed to save post-bootstrap script result: %v", err)
 		}
 
 		return nil
@@ -86,7 +86,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	cmd.Sudo(ctx)
 
 	if err := cmd.Run(ctx); err != nil {
-		return "", fmt.Errorf("Cannot create output file for script: %v", err)
+		return "", fmt.Errorf("Cannot create output file for script: %w", err)
 	}
 
 	defer func() {
@@ -108,7 +108,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	script.Sudo()
 
 	if _, err := script.Execute(ctx); err != nil {
-		return "", fmt.Errorf("Running %s done with error: %w", e.path, err)
+		return "", fmt.Errorf("Running %s failed with error: %w", e.path, err)
 	}
 
 	content, err := sshClient.File().DownloadBytes(ctx, outputFile)
@@ -120,24 +120,24 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 }
 
 func ValidateScriptFile(ctx context.Context, path string) error {
-	_, span := telemetry.StartSpan(ctx, "ValidatePostBootstrapScript")
+	ctx, span := telemetry.StartSpan(ctx, "ValidatePostBootstrapScript") //nolint:ineffassign,staticcheck // ctx reassigned for span propagation to future calls
 	defer span.End()
 
 	info, err := os.Stat(path)
 	if err != nil {
-		return fmt.Errorf("Cannot get stats for path %s: %v", path, err)
+		return fmt.Errorf("Cannot get stats for path %s: %w", path, err)
 	}
 
 	mode := info.Mode()
 
 	if !mode.IsRegular() {
-		return fmt.Errorf("Post bootstrap script should be regular file")
+		return fmt.Errorf("Post-bootstrap script must be a regular file")
 	}
 
 	perm := info.Mode().Perm()
 
 	if perm&0o111 != 0o111 || perm&0o444 != 0o444 {
-		return fmt.Errorf("Post bootstrap script should be readable and executable for user group and other (-r-xr-xr-x)")
+		return fmt.Errorf("Post-bootstrap script must be readable and executable for user, group, and other (-r-xr-xr-x)")
 	}
 
 	return nil

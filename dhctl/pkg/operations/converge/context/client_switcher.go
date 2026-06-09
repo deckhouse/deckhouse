@@ -139,7 +139,7 @@ func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 			}
 
 			return fmt.Errorf(
-				"Cannot find first control-plane node state or it is empty. Has states for [%s]",
+				"Cannot find first control-plane node state or it is empty. Available states for [%s]",
 				strings.Join(mastersNames, ", "),
 			)
 		}
@@ -182,10 +182,10 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 
 		if len(statesMap) == 0 {
 			if firstMasterState == nil {
-				return fmt.Errorf("Cannot switch to another control-plane, no any states found")
+				return fmt.Errorf("Cannot switch to another control-plane node: no states found")
 			}
 
-			s.warn("Another control-plane nodes states not found. Try to continue with first")
+			s.warn("States for other control-plane nodes not found. Trying to continue with the first one")
 			statesMap[firstMasterState.Name] = firstMasterState.State
 		}
 
@@ -198,7 +198,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 }
 
 func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error {
-	const action = "Switch clients when destructive cahange control-plane nodes"
+	const action = "Switch clients on destructive change of control-plane nodes"
 
 	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
 		return err
@@ -214,11 +214,11 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 	s.debug("SwitchClientsToAnotherNodeIfNeed sshClient: %v", sshClient)
 	currentHost := session.CurrentHost(sshClient.Session())
 	if currentHost.Host == "" {
-		return fmt.Errorf("Got empty current host")
+		return fmt.Errorf("Got an empty current host")
 	}
 
 	if nodeName != currentHost.Name {
-		s.debug("Skip %s: current host is not deleted host '%s'", action, nodeName)
+		s.debug("Skipping %s: current host is not the deleted host '%s'", action, nodeName)
 		return nil
 	}
 
@@ -252,7 +252,7 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 	const action = "Switch clients when decrease control-plane nodes"
 
 	logSkip := func(f string, args ...any) {
-		s.debug(fmt.Sprintf("Skip %s: ", action)+f, args...)
+		s.debug(fmt.Sprintf("Skipping %s: ", action)+f, args...)
 	}
 
 	if ngName != global.MasterNodeGroupName {
@@ -279,7 +279,7 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 	s.debug("SwitchWhenDecreaseMastersIfNeed sshClient: %v", sshClient)
 	currentHost := session.CurrentHost(sshClient.Session())
 	if currentHost.Host == "" {
-		return fmt.Errorf("Got empty current host")
+		return fmt.Errorf("Got an empty current host")
 	}
 
 	needReconnect := false
@@ -332,11 +332,11 @@ type replaceKubeClientParams struct {
 
 func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params replaceKubeClientParams) error {
 	if len(params.state) == 0 {
-		return fmt.Errorf("Empty nodes states for replace client")
+		return fmt.Errorf("Empty node states for replacing client")
 	}
 
 	if params.convergeState == nil {
-		return fmt.Errorf("Internal error. Empty converge state for replace client")
+		return fmt.Errorf("Internal error: empty converge state for replacing client")
 	}
 
 	sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
@@ -374,7 +374,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	}
 
 	if len(availableHosts) == 0 {
-		return fmt.Errorf("Cannot switch clients. Got empty available hosts from node states")
+		return fmt.Errorf("Cannot switch clients: no available hosts found in node states")
 	}
 
 	if s.lockRunner != nil {
@@ -388,7 +388,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	// also because we will use kube provider
 	// setting kube client not needed
 
-	s.debug("Create new ssh client for replacing kube client")
+	s.debug("Creating new ssh client for replacing kube client")
 
 	sess := session.NewSession(session.Input{
 		User:           params.convergeState.NodeUserCredentials.Name,
@@ -444,7 +444,7 @@ func (s *KubeClientSwitcher) tmpDirForConverger() (string, error) {
 		return "", fmt.Errorf("Failed to create tmp directory for converge: %w", err)
 	}
 
-	s.debug("Temp dir %s created for switch kube client", tmpDir)
+	s.debug("Temp dir %s created for switching kube client", tmpDir)
 	return tmpDir, nil
 }
 
@@ -455,7 +455,25 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 	}
 
 	if convergeState.NodeUserCredentials != nil {
-		return convergeState, nil
+		exists, err := entity.NodeUserExists(s.ctx.Ctx(), s.ctx, convergeState.NodeUserCredentials.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		if exists {
+			return convergeState, nil
+		}
+
+		s.warn(
+			"NodeUser %q is missing while converge state exists; recreating NodeUser",
+			convergeState.NodeUserCredentials.Name,
+		)
+
+		convergeState.NodeUserCredentials = nil
+
+		if err := s.ctx.SetConvergeState(convergeState); err != nil {
+			return nil, fmt.Errorf("Failed to reset stale node user credentials: %w", err)
+		}
 	}
 
 	s.debugStartOperation("create node user")
@@ -479,7 +497,7 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 
 	err = entity.NewConvergerNodeUserExistsWaiter(s.ctx).WaitPresentOnNodes(ctx, nodeUserCredentials)
 	if err != nil {
-		return nil, fmt.Errorf("Could not ensure converger user is presented on control plane hosts: %w", err)
+		return nil, fmt.Errorf("Could not ensure converger user is present on control plane hosts: %w", err)
 	}
 
 	convergeState.NodeUserCredentials = nodeUserCredentials
@@ -585,7 +603,7 @@ func (s *KubeClientSwitcher) isSkipOrLogStart(action string, strict bool) (bool,
 
 	if s.switchDisbled(action) {
 		if strict {
-			return true, fmt.Errorf("Internal error. Disable switch to node user passed, but it needs for %s", action)
+			return true, fmt.Errorf("Internal error: disabling switch to node user was requested, but it is needed for %s", action)
 		}
 
 		return true, nil
@@ -669,7 +687,7 @@ func (e *sshIPExtractor) getIPForSSH(ctx context.Context, params *sshIPExtractor
 	addresses, err := infrastructure.GetMasterIPAddressForSSH(ctx, statePath, executor)
 	if err != nil {
 		e.switcher.warn(
-			"Cannot extract ips for node '%s':\n%v\nSkip adding node to ssh client",
+			"Cannot extract IPs for node '%s':\n%v\nSkipping adding node to ssh client",
 			nodeName,
 			err,
 		)
@@ -680,7 +698,7 @@ func (e *sshIPExtractor) getIPForSSH(ctx context.Context, params *sshIPExtractor
 	internal := addresses.Internal
 
 	if sshIP == "" && internal == "" {
-		e.switcher.warn("IPs for node '%s' not found. Skip adding node to ssh client", nodeName)
+		e.switcher.warn("IPs for node '%s' not found. Skipping adding node to ssh client", nodeName)
 		return "", nil
 	}
 
@@ -688,7 +706,7 @@ func (e *sshIPExtractor) getIPForSSH(ctx context.Context, params *sshIPExtractor
 
 	if bastion != "" {
 		e.switcher.debug(
-			"Use node internal ip '%s' for node %s because bastion host '%s' was passed",
+			"Using node internal IP '%s' for node %s because bastion host '%s' was passed",
 			internal,
 			nodeName,
 			bastion,
@@ -697,7 +715,7 @@ func (e *sshIPExtractor) getIPForSSH(ctx context.Context, params *sshIPExtractor
 		return internal, nil
 	}
 
-	e.switcher.debug("Use direct ssh ip '%s' for node %s", sshIP, nodeName)
+	e.switcher.debug("Using direct ssh IP '%s' for node %s", sshIP, nodeName)
 
 	return sshIP, nil
 }
@@ -739,7 +757,7 @@ func (e *sshIPExtractor) prepareState(params *sshIPExtractorParams) (string, err
 
 	statePath := filepath.Join(e.tmpDir, fmt.Sprintf("%s-%s.tfstate", nodeName, e.suffix))
 
-	e.switcher.debug("State path for extracting ip for node %s: %s", nodeName, statePath)
+	e.switcher.debug("State path for extracting IP for node %s: %s", nodeName, statePath)
 
 	err := os.WriteFile(statePath, params.state, 0o644)
 	if err != nil {

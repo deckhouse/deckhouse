@@ -47,7 +47,7 @@ shell:
   - rm -rf .git manifest/test/
 ---
 image: terraform-provider-kubernetes
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
@@ -58,9 +58,6 @@ import:
   to: /src
   before: install
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src

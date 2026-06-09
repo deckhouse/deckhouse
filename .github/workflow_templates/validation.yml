@@ -273,7 +273,7 @@ needs:
   - discover
   - pull_request_info
 if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
-runs-on: ubuntu-24.04
+runs-on: [self-hosted, regular]
 permissions:
   contents: read
   id-token: write

@@ -229,18 +229,8 @@
       "se-plus",
       "ee"
     ],
-    "editionsWithRestrictions": [
-      "ce",
-      "be"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "The system part of Deckhouse is read-only in the web UI",
-        "ru": "Системная часть Deckhouse доступна в веб-интерфейсе только для чтения"
-      }
-    },
     "external": "true",
-    "path": "/modules/console/stable/"
+    "path": "/modules/console/"
   },
   "csi-ceph": {
     "editions": [

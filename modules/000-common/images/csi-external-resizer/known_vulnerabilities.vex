@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-383c59e1e8e174c5ac09edcd448bf4bd6b835799c2bec62853b1cc2e209958fa",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-29181"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Уязвимость CVE-2026-29181 связана с обработкой входящих HTTP baggage-заголовков пакетом OpenTelemetry. Образ csi-external-resizer работает как gRPC-клиент к CSI-драйверу по Unix-сокету и как watcher Kubernetes API server; входящих HTTP-запросов от внешних источников он не принимает, otelhttp/otelgrpc baggage propagation в штатной конфигурации не активируется. Следовательно, уязвимый код разбора baggage-заголовков не достигается и эксплуатация уязвимости в данном контексте невозможна.",
+      "timestamp": "2026-05-28T08:00:00Z"
+    }
+  ],
+  "timestamp": "2026-05-28T08:00:00Z"
+}

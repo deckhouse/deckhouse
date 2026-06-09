@@ -15,6 +15,12 @@
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
 
+# d8 is the largest registrypackage. Step 004 deliberately skips it; the 001 prefetch
+# keeps downloading it in parallel with the rest of bashible. Wait + install happen
+# here, right before the first `d8` invocation below.
+bb-rpp-wait-fetched "d8" "{{ .images.registrypackages.d8 }}" || true
+bb-package-install "d8:{{ .images.registrypackages.d8 }}"
+
 bb-event-on 'bb-package-installed' 'post-install-kubelet'
 
 post-install-kubelet() {

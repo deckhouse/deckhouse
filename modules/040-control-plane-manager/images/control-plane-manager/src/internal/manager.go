@@ -145,6 +145,16 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 						constants.KubeSystemNamespace: {},
 					},
 				},
+				&controlplanev1alpha1.ControlPlaneOperation{}: {
+					Namespaces: map[string]cache.Config{
+						constants.KubeSystemNamespace: {},
+					},
+				},
+				&controlplanev1alpha1.ControlPlaneNode{}: {
+					Namespaces: map[string]cache.Config{
+						constants.KubeSystemNamespace: {},
+					},
+				},
 				&corev1.Node{}: {
 					Transform: func(in any) (any, error) {
 						node, ok := in.(*corev1.Node)

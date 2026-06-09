@@ -416,7 +416,7 @@ func ExternalLoggerProvider(logger Logger) external.LoggerProvider {
 		l = ext.logger
 	} else {
 		i := logger.(*InteractiveLogger)
-		wrapper := &InteractiveLoggerWrapper{logger: i.logger, interactive: i.interactive, phaseChan: i.phaseChan}
+		wrapper := &InteractiveLoggerWrapper{logger: i.logger, interactive: i.interactive, phaseChan: i.phaseChan, logChan: i.logChan}
 		return external.SimpleLoggerProvider(wrapper)
 	}
 

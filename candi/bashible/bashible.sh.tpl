@@ -30,6 +30,7 @@ set -Eeo pipefail
 {{ template "bb-discover-node-name" $ }}
 {{ template "bb-minget" $ }}
 {{ template "bb-status" $ }}
+{{ template "bb-telemetry" $ }}
 ` $lib) $ctx }}
 
 bb-curl-kube-healthz() {
@@ -44,11 +45,17 @@ bb-curl-kube() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
   local -a auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem)
 
-  # If auth type is overridden (admin-cert for cluster-bootstrap), use those creds.
-  if [[ "${BB_KUBE_AUTH_TYPE:-}" == "admin-cert" ]]; then
-    auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-admin-cert.pem" --key "${TMPDIR}/bb-kube-admin-key.pem")
-    kubeconfig="/etc/kubernetes/admin.conf"
-  fi
+  # If auth type is overridden for cluster-bootstrap flows, use those creds.
+  case "${BB_KUBE_AUTH_TYPE:-}" in
+    admin-cert)
+      auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-admin-cert.pem" --key "${TMPDIR}/bb-kube-admin-key.pem")
+      kubeconfig="/etc/kubernetes/admin.conf"
+      ;;
+    super-admin-cert)
+      auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-super-admin-cert.pem" --key "${TMPDIR}/bb-kube-super-admin-key.pem")
+      kubeconfig="/etc/kubernetes/super-admin.conf"
+      ;;
+  esac
 
   if [[ -z "${BB_KUBE_APISERVER_URL:-}" ]]; then
     local kube_server
@@ -71,7 +78,7 @@ bb-curl-kube() {
       if [[ -n "${kube_server:-}" ]]; then
         export BB_KUBE_APISERVER_URL="$kube_server"
       else
-        >&2 echo "bb-curl-kube: cannot resolve API server endpoint"
+        >&2 echo "bb-curl-kube: cannot resolve Kubernetes API server endpoint"
         return 1
       fi
     fi
@@ -124,7 +131,7 @@ bb-curl-helper-patch-node-metadata() {
   bb-curl-kube "/api/v1/nodes/${node_name}" \
     -X PATCH \
     -H "Content-Type: application/strategic-merge-patch+json" \
-    --data "$patch"
+    --data "$patch" >/dev/null
 }
 
 bb-label-node-bashible-first-run-finished() {
@@ -133,16 +140,16 @@ bb-label-node-bashible-first-run-finished() {
 
   while [ $attempt -le $max_attempts ]; do
     if bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/bashible-first-run-finished=true"; then
-      echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
+      echo "Set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
       return 0
     fi
 
-    echo "[$attempt/$max_attempts] Failed to set label on node $(bb-d8-node-name), retrying in 5 seconds..."
+    echo "Attempt $attempt of $max_attempts to set first-run-finished label on node $(bb-d8-node-name) failed, retrying in 5 seconds"
     attempt=$((attempt + 1))
     sleep 5
   done
 
-  echo "ERROR: Timed out after $max_attempts attempts. Could not set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)." >&2
+  echo "ERROR: Could not set node.deckhouse.io/bashible-first-run-finished label on node $(bb-d8-node-name) after $max_attempts attempts" >&2
   bb-bashible-ready-error "Failed to set node.deckhouse.io/bashible-first-run-finished label"
   exit 1
 }
@@ -159,12 +166,12 @@ bb-node-has-bashible-uninitialized-taint() {
         return 1
       fi
     fi
-    echo "[$attempt/$max_attempts] Failed to get node $(bb-d8-node-name), retrying in 5 seconds..."
+    echo "Attempt $attempt of $max_attempts to read node $(bb-d8-node-name) failed, retrying in 5 seconds"
     attempt=$((attempt + 1))
     sleep 5
   done
 
-  echo "ERROR: Timed out after $max_attempts attempts. Could not check taint node.deckhouse.io/bashible-uninitialized on node $(bb-d8-node-name)." >&2
+  echo "ERROR: Could not check the node.deckhouse.io/bashible-uninitialized taint on node $(bb-d8-node-name) after $max_attempts attempts" >&2
   return 1
 }
 
@@ -184,23 +191,21 @@ bb-indent-text() {
 }
 
 function annotate_node() {
-  echo "Annotate node $(bb-d8-node-name) with annotation ${@}"
   attempt=0
   until error=$(bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${@}" 2>&1); do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Failed to annotate node $(bb-d8-node-name) with annotation ${@} after ${MAX_RETRIES} retries. Last error: ${error}"
+      >&2 echo "ERROR: Failed to annotate node $(bb-d8-node-name) with ${@} after ${MAX_RETRIES} retries. Last error: ${error}"
       bb-bashible-ready-error "Failed to annotate node after retry limit"
       exit 1
     fi
     if [ "$attempt" -gt "2" ]; then
-      >&2 echo "Failed to annotate node $(bb-d8-node-name) with annotation ${@} after 3 tries. Last message: ${error}"
-      >&2 echo "Retrying..."
+      >&2 echo "Failed to annotate node $(bb-d8-node-name) with ${@} after 3 tries, will keep retrying. Last error: ${error}"
       attempt=0
     fi
     sleep 10
   done
-  echo "Successful annotate node $(bb-d8-node-name) with annotation ${@}"
+  echo "Annotated node $(bb-d8-node-name) with ${@}"
 }
 
 function get_secret() {
@@ -211,11 +216,11 @@ function get_secret() {
     until bb-curl-kube "/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"; do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        >&2 echo "ERROR: Failed to get secret $secret"
+        >&2 echo "ERROR: Failed to get secret $secret after ${MAX_RETRIES} retries"
         bb-bashible-ready-error "Failed to get secret ${secret} after retry limit"
         exit 1
       fi
-      >&2 echo "failed to get secret $secret"
+      >&2 echo "Failed to get secret $secret, retrying in 2 seconds"
       sleep 2
     done
 {{ if eq .runType "Normal" }}
@@ -228,14 +233,14 @@ function get_secret() {
         then
           return 0
         else
-          >&2 echo "failed to get secret $secret with curl https://$server..."
+          >&2 echo "Failed to get secret $secret from $server"
         fi
       done
       sleep 2
     done
 {{ end }}
   else
-    >&2 echo "failed to get secret $secret: can't find kubelet.conf or bootstrap-token"
+    >&2 echo "Failed to get secret $secret: neither kubelet.conf nor bootstrap-token is available"
     bb-bashible-ready-error "Failed to get secret ${secret}: kubelet.conf and bootstrap-token are unavailable"
     exit 1
   fi
@@ -250,11 +255,11 @@ function get_bundle() {
     until bb-curl-kube "/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"; do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        >&2 echo "ERROR: Failed to get $resource $name"
+        >&2 echo "ERROR: Failed to get $resource $name after ${MAX_RETRIES} retries"
         bb-bashible-ready-error "Failed to get ${resource} ${name} after retry limit"
         exit 1
       fi
-      >&2 echo "failed to get $resource $name"
+      >&2 echo "Failed to get $resource $name, retrying in 2 seconds"
       sleep 2
     done
 {{ if eq .runType "Normal" }}
@@ -267,14 +272,14 @@ function get_bundle() {
         then
          return 0
         else
-          >&2 echo "failed to get $resource $name with curl https://$server..."
+          >&2 echo "Failed to get $resource $name from $server"
         fi
       done
       sleep 2
     done
 {{ end }}
   else
-    >&2 echo "failed to get $resource $name: can't find kubelet.conf or bootstrap-token"
+    >&2 echo "Failed to get $resource $name: neither kubelet.conf nor bootstrap-token is available"
     bb-bashible-ready-error "Failed to get ${resource} ${name}: kubelet.conf and bootstrap-token are unavailable"
     exit 1
   fi
@@ -307,7 +312,7 @@ function get_pods() {
       then
       return 0
       else
-        >&2 echo "failed to get $resource $name with curl https://$server..."
+        >&2 echo "Failed to list pods in $namespace from $server"
       fi
     done
     sleep 10
@@ -361,6 +366,10 @@ function main() {
 {{ end }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
+  if [ -f "/var/lib/bashible/telemetry.env" ]; then
+    source "/var/lib/bashible/telemetry.env"
+  fi
+
   if [ -z "${is_local-}" ]; then
 {{- if ne .runType "Normal" }}
     bb-minget-install
@@ -388,7 +397,7 @@ function main() {
     if tmp="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
       NODE_GROUP="$tmp"
       if [ "${NODE_GROUP}" == "null" ] ; then
-        >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
+        >&2 echo "Node group label is missing. Set 'node.deckhouse.io/group' on this node."
       fi
     fi
   fi
@@ -416,13 +425,13 @@ function main() {
 
     printf '%s\n' "$bashible_bundle" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
-      >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
+      >&2 echo "ERROR: bashible-new.sh is empty (path: $BOOTSTRAP_DIR/bashible-new.sh)"
       bb-bashible-ready-error "Got empty bashible-new.sh"
       exit 1
     fi
     read -r first_line < $BOOTSTRAP_DIR/bashible-new.sh
     if [[ "$first_line" != '#!/usr/bin/env bash' ]] ; then
-      >&2 echo "ERROR: $BOOTSTRAP_DIR/bashible-new.sh is not a bash script."
+      >&2 echo "ERROR: bashible-new.sh is not a bash script (path: $BOOTSTRAP_DIR/bashible-new.sh)"
       bb-bashible-ready-error "bashible-new.sh is not a bash script"
       exit 1
     fi
@@ -448,7 +457,7 @@ function main() {
   fi
   if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]] && [[ -f "$BASHIBLE_INITIALIZED_FILE" ]] && test -f /etc/kubernetes/kubelet.conf; then
     if bb-node-has-bashible-uninitialized-taint; then
-      echo "WARNING: Node is initialized but bashible-uninitialized taint is still present. Re-applying first-run-finished label..."
+      echo "WARNING: node is initialized but bashible-uninitialized taint is still present, re-applying first-run-finished label"
       bb-label-node-bashible-first-run-finished
     fi
   fi
@@ -458,7 +467,8 @@ function main() {
 
     local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
     bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
-
+    echo "Configuration is in sync, nothing to do."
+    
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"
@@ -514,9 +524,10 @@ function main() {
     # parsed by dhctl-side measurement tooling to map where bashible time goes.
     local start_ts
     start_ts=$(date +%s.%N)
-    echo ===
-    echo === Step: $step
-    echo ===
+    echo "=== Step ${step_base} ==="
+
+    span_ctx=$(bb-telemetry-start-span "$step_base" "${BB_TELEMETRY_PARENT_SPAN_ID:-}")
+
     until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee "$per_step_log" >&2)
     do
       attempt=$(( attempt + 1 ))
@@ -526,14 +537,15 @@ function main() {
         bb-event-error-create "$step"
         {{- end }}
         bb-bashible-ready-steps-failed "$step_base"
-        >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
+        >&2 echo "ERROR: Failed to execute step ${step_base}, retry limit reached"
+
+        bb-telemetry-end-span "$span_ctx" "$step_base"
+
         return 1
       fi
-      >&2 echo -e "Failed to execute step "$step" ... retry in 10 seconds.\n"
+      >&2 echo "Failed to execute step ${step_base}, retrying in 2 seconds"
       sleep 2
-      echo ===
-      echo === Step: $step
-      echo ===
+      echo "=== Step ${step_base} retry ${attempt} ==="
       if [ "$attempt" -gt 2 ]; then
         sx=x
       fi
@@ -543,9 +555,13 @@ function main() {
       bb-bashible-ready-steps-failed "$step_base"
     done
     cp -f "$per_step_log" "$step_log" 2>/dev/null || true
+
+    bb-telemetry-end-span "$span_ctx" "$step_base"
+
     local dur
     dur=$(awk -v s="$start_ts" -v e="$(date +%s.%N)" 'BEGIN{printf "%.3f", e-s}')
     echo "[bashible-timing] step=$step_base dur=${dur}s"
+
     return 0
   }
 
@@ -572,7 +588,7 @@ function main() {
         bb-run-step "$s" || exit 1
       done
     else
-      echo "=== bashible parallel-group '$group_name' start (${#steps[@]} steps) ==="
+      echo "=== Group ${group_name} start (${#steps[@]} steps) ==="
       local -a pids=()
       local s
       for s in "${steps[@]}"; do
@@ -587,10 +603,10 @@ function main() {
         fi
       done
       if [ "$failed" -gt 0 ]; then
-        >&2 echo "ERROR: parallel-group '$group_name': $failed/${#steps[@]} steps failed"
+        >&2 echo "ERROR: Group ${group_name}: ${failed} of ${#steps[@]} steps failed"
         exit 1
       fi
-      echo "=== bashible parallel-group '$group_name' done ==="
+      echo "=== Group ${group_name} done ==="
     fi
   }
 
@@ -650,7 +666,7 @@ if [ -n "${no_lock-}" ]; then
   main
 else
   (
-    flock -n 200 || { >&2 echo "Can't acquire lockfile /var/lock/bashible."; exit 1; }
+    flock -n 200 || { >&2 echo "Cannot acquire lockfile /var/lock/bashible (another bashible run is in progress)"; exit 1; }
     main
   ) 200>/var/lock/bashible
 fi

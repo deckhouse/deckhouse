@@ -1,5 +1,9 @@
-{{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
-{{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 }}
+{{- $resourcesRequests := dict -}}
+{{- if and $.settings $.settings.resourcesRequests -}}
+  {{- $resourcesRequests = $.settings.resourcesRequests -}}
+{{- end -}}
+{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
+{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 {{- $nodesCount := .nodesCount | default 0 | int }}
 {{- $gcThresholdCount := 1000 }}
 {{- if lt $nodesCount 100 }}
@@ -9,7 +13,10 @@
 {{- else }}
     {{- $gcThresholdCount = 6000 }}
 {{- end }}
-{{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" -}}
+{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
+{{- end }}
 {{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
@@ -51,6 +58,7 @@ spec:
         - --cluster-signing-key-file=/etc/kubernetes/pki/ca.key
         - --controllers=*,bootstrapsigner,tokencleaner
         - --kubeconfig=/etc/kubernetes/controller-manager.conf
+        - --kube-api-qps=-1
         - --leader-elect=true
         - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
         - --root-ca-file=/etc/kubernetes/pki/ca.crt

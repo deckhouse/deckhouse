@@ -65,11 +65,11 @@ type ClusterConfig struct {
 func ValidateResources(configData string, opts ...ValidateOption) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateResources operation currently supported only in commander mode")
+		panic("ValidateResources operation is currently supported only in commander mode")
 	}
 
 	if k8sYAML.IsJSONBuffer([]byte(configData)) {
-		return errors.New("got json format, but expected yaml")
+		return errors.New("got JSON format, but expected YAML")
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
@@ -121,7 +121,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts ...ValidateOption) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateInitConfiguration operation currently supported only in commander mode")
+		panic("ValidateInitConfiguration operation is currently supported only in commander mode")
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
@@ -200,7 +200,7 @@ func ValidateClusterConfiguration(
 ) (ClusterConfig, error) {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateClusterConfiguration operation currently supported only in commander mode")
+		panic("ValidateClusterConfiguration operation is currently supported only in commander mode")
 	}
 
 	clusterConfigurationDocs := input.YAMLSplitRegexp.Split(strings.TrimSpace(clusterConfigData), -1)
@@ -299,7 +299,7 @@ func ValidateProviderSpecificClusterConfiguration(
 ) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateProviderSpecificClusterConfiguration operation currently supported only in commander mode")
+		panic("ValidateProviderSpecificClusterConfiguration operation is currently supported only in commander mode")
 	}
 
 	if clusterConfig.ClusterType == "Static" {
@@ -389,7 +389,7 @@ func ValidateStaticClusterConfiguration(
 ) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateStaticClusterConfiguration operation currently supported only in commander mode")
+		panic("ValidateStaticClusterConfiguration operation is currently supported only in commander mode")
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(staticClusterConfiguration), -1)
@@ -470,7 +470,7 @@ func ValidateClusterSettingsChanges(
 ) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateClusterSettingsChanges operation currently supported only in commander mode")
+		panic("ValidateClusterSettingsChanges operation is currently supported only in commander mode")
 	}
 
 	// todo: > bashible

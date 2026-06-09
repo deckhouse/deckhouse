@@ -184,8 +184,8 @@ func ParseConfigFromCluster(
 	var metaConfig *MetaConfig
 	var err error
 
-	return metaConfig, log.ProcessCtx(ctx, "common", "Get Cluster configuration", func(ctx context.Context) error {
-		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).
+	return metaConfig, log.ProcessCtx(ctx, "common", "Get cluster configuration", func(ctx context.Context) error {
+		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 10, 5*time.Second).
 			RunContext(ctx, func() error {
 				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
 				return err
@@ -204,7 +204,7 @@ func ParseConfigInCluster(
 		err        error
 	)
 
-	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
+	err = retry.NewSilentLoop("Get cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
 		RunContext(ctx, func() error {
 			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
 			return err
@@ -458,7 +458,7 @@ func ParseConfigFromData(
 	// init configuration can be empty, but we need default from openapi spec
 	// Note: InitConfiguration can also be provided via ModuleConfig deckhouse (registry settings)
 	if len(metaConfig.InitClusterConfig) == 0 {
-		log.DebugF("Init configuration not found use empty")
+		log.DebugF("Init configuration not found, using empty")
 		doc := `
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration

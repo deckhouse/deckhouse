@@ -93,7 +93,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("Nodes to delete %d. Starting update nodes\n", len(nodesToDeleteInfo))
+	log.DebugF("Nodes to delete: %d. Starting to update nodes\n", len(nodesToDeleteInfo))
 
 	if err := c.nodeGroup.beforeUpdateNodes(ctx); err != nil {
 		return err
@@ -104,7 +104,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("starting delete nodes\n")
+	log.DebugF("starting to delete nodes\n")
 
 	if err := c.switchClientBeforeDeleteNodesIfNeed(ctx, nodesToDeleteInfo); err != nil {
 		return err
@@ -120,7 +120,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("Starting converge node template\n")
+	log.DebugF("Starting to converge node template\n")
 
 	if groupSpec != nil {
 		return c.tryUpdateNodeTemplate(ctx, groupSpec.NodeTemplate)
@@ -132,7 +132,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 func (c *NodeGroupController) switchClientBeforeDeleteNodesIfNeed(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	clientSwitcher := ctx.ClientSwitcher()
 	if govalue.IsNil(clientSwitcher) {
-		log.DebugF("Skip switch client before delete nodes. Got empty switcher\n")
+		log.DebugF("Skipping switch of client before deleting nodes. Got empty switcher\n")
 		return nil
 	}
 
@@ -155,7 +155,7 @@ func (c *NodeGroupController) tryDeleteNodes(ctx *context.Context, nodesToDelete
 	}
 
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		log.DebugLn("Skip delete nodes because destructive operations are disabled")
+		log.DebugLn("Skipping node deletion because destructive operations are disabled")
 		return nil
 	}
 
@@ -199,13 +199,13 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	var allErrs *multierror.Error
 	for _, nodeToDeleteInfo := range nodesToDeleteInfo {
 		if _, ok := c.excludedNodes[nodeToDeleteInfo.name]; ok {
-			log.InfoF("Skip delete excluded node %v\n", nodeToDeleteInfo.name)
+			log.InfoF("Skipping deletion of excluded node %v\n", nodeToDeleteInfo.name)
 			continue
 		}
 
 		nodeIndex, err := config.GetIndexFromNodeName(nodeToDeleteInfo.name)
 		if err != nil {
-			log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, nodeToDeleteInfo.name)
+			log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, nodeToDeleteInfo.name)
 			return nil
 		}
 
@@ -266,7 +266,7 @@ func getNodeTemplateDiff(fromNG, fromConfig map[string]any) string {
 	// prevent compare nil and empty map
 	// this case generates diff for gcmp.Diff
 	if len(fromNG) == 0 && len(fromConfig) == 0 {
-		log.DebugF("Node templates does not have keys. Returns no diff\n")
+		log.DebugF("Node templates have no keys. Returning no diff\n")
 		return ""
 	}
 
@@ -293,7 +293,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 
 		diff := getNodeTemplateDiff(templateInCluster, nodeTemplate)
 		if diff == "" {
-			log.DebugF("Node template of the %s NodeGroup is not changed", c.name)
+			log.DebugF("Node template of the %s NodeGroup has not changed", c.name)
 			return nil
 		}
 
@@ -326,12 +326,12 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 
 func (c *NodeGroupController) tryDeleteNodeGroup(ctx *context.Context) error {
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		log.DebugF("Skip delete %s node group because destructive operations are disabled\n", c.name)
+		log.DebugF("Skipping deletion of %s node group because destructive operations are disabled\n", c.name)
 		return nil
 	}
 
 	if c.name == global.MasterNodeGroupName {
-		log.DebugF("Skip delete %s node group because it is master\n", c.name)
+		log.DebugF("Skipping deletion of %s node group because it is master\n", c.name)
 		return nil
 	}
 
@@ -383,7 +383,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 		err := log.Process("converge", processTitle, func() error {
 			if _, ok := c.excludedNodes[nodeName]; ok {
-				log.InfoF("Skip update excluded node %v\n", nodeName)
+				log.InfoF("Skipping update of excluded node %v\n", nodeName)
 				return nil
 			}
 
@@ -420,7 +420,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 func getNodesToDeleteInfo(desiredReplicas int, state map[string][]byte) ([]nodeToDeleteInfo, error) {
 	if desiredReplicas >= len(state) {
-		log.DebugF("desired replicas >= in state. skip nodes info\n")
+		log.DebugF("desired replicas >= replicas in state. skipping nodes info\n")
 		return nil, nil
 	}
 
@@ -442,7 +442,7 @@ func getNodesToDeleteInfo(desiredReplicas int, state map[string][]byte) ([]nodeT
 		count--
 
 		if count == desiredReplicas {
-			log.DebugF("stopping getting deletes nodes info. count %v\n", count)
+			log.DebugF("stopping collection of nodes-to-delete info. count %v\n", count)
 			break
 		}
 	}

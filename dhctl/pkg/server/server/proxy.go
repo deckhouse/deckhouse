@@ -143,7 +143,7 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		d.writeLogs(log, stdOutReader, stdErrReader)
 
-		log.Info("dhctl instance will start with next command arguments", slog.String("cmd", strings.Join(cmd.Args, " ")))
+		log.Info("dhctl instance will start with the following command arguments", slog.String("cmd", strings.Join(cmd.Args, " ")))
 
 		err = cmd.Start()
 		if err != nil {

@@ -118,7 +118,7 @@ func SecretEdit(
 					}
 
 					if editOpts.SanityCheck {
-						log.InfoLn("Remove allow-unsafe annotation")
+						log.InfoLn("Removing allow-unsafe annotation")
 						removeUnsafeAnnotation(config)
 
 						_, err = kubeCl.CoreV1().

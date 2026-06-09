@@ -155,7 +155,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: xfsprogs
-  version: "6.7.0"
+  version: "6.16.0"
 - name: jq
   link: https://github.com/jqlang/jq
   description: Lightweight and flexible command-line JSON processor.
@@ -193,3 +193,6 @@
     - condition:
         k8s: "1.35"
       version: v1.35.0
+    - condition:
+        k8s: "1.36"
+      version: v1.36.0

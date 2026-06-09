@@ -69,5 +69,7 @@ shell:
   - cp bin/csi-resizer /csi-resizer
   - chown 64535:64535 /csi-resizer
   - chmod 0755 /csi-resizer
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}

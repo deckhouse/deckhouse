@@ -22,5 +22,5 @@ import (
 
 type ClientProviderWithCleanup interface {
 	KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error)
-	Cleanup(stopSSH bool)
+	Cleanup(ctx context.Context, stopSSH bool)
 }
