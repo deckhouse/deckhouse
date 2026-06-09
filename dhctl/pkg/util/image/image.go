@@ -108,7 +108,7 @@ func RegistryConfigFromDockerConfig(dc *dockerConfig, scheme, registry string) (
 
 	_, ok := dc.Auths[baseRegistry]
 	if !ok {
-		return nil, fmt.Errorf("docker config doesn't contains %s registry credentials", registry)
+		return nil, fmt.Errorf("docker config doesn't contain %s registry credentials", registry)
 	}
 	rc := &RegistryConfig{
 		scheme:   scheme,
