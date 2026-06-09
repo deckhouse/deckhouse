@@ -1,0 +1,87 @@
+spec:
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |
+          Описывает tenant control plane Kubernetes, которым управляет модуль `control-plane-manager`.
+
+          Ресурс является cluster-scoped. Каждый объект VirtualControlPlane представляет один control plane тенанта и
+          используется как источник желаемого состояния для ресурсов, необходимых для его запуска в управляющем кластере.
+        properties:
+          spec:
+            description: |
+              Желаемое состояние виртуального control plane.
+            properties:
+              kubernetesVersion:
+                description: |
+                  Желаемая версия Kubernetes для control plane тенанта.
+              replicas:
+                description: |
+                  Желаемое количество реплик control plane.
+              datastoreRef:
+                description: |
+                  Ссылка на конфигурацию хранилища, используемого control plane тенанта.
+
+                  На этом этапе контракт хранилища намеренно оставлен минимальным и может быть расширен после появления реализации datastore.
+                properties:
+                  name:
+                    description: |
+                      Имя конфигурации хранилища.
+              expose:
+                description: |
+                  Настройки публикации Kubernetes API.
+                properties:
+                  type:
+                    description: |
+                      Тип Service, через который публикуется Kubernetes API тенанта.
+
+                      Возможные значения:
+                      * `ClusterIP` — API доступен внутри управляющего кластера;
+                      * `LoadBalancer` — API публикуется через внешний балансировщик;
+                      * `NodePort` — API публикуется через порт на узлах управляющего кластера.
+          status:
+            description: |
+              Наблюдаемое состояние виртуального control plane.
+            properties:
+              endpoint:
+                description: |
+                  Endpoint Kubernetes API для пользователей и worker-узлов тенанта.
+              observedKubernetesVersion:
+                description: |
+                  Версия Kubernetes, фактически наблюдаемая в control plane тенанта.
+              kubeconfigSecretRef:
+                description: |
+                  Ссылка на Secret с kubeconfig для доступа к Kubernetes API тенанта.
+                properties:
+                  name:
+                    description: |
+                      Имя Secret.
+                  namespace:
+                    description: |
+                      Namespace Secret.
+              conditions:
+                description: |
+                  Текущее состояние virtual control plane.
+
+                  Основное условие — `Ready`.
+                items:
+                  properties:
+                    type:
+                      description: |
+                        Тип условия.
+                    status:
+                      description: |
+                        Статус условия.
+                    reason:
+                      description: |
+                        Машиночитаемая причина текущего состояния условия.
+                    message:
+                      description: |
+                        Человекочитаемое сообщение с деталями перехода.
+                    observedGeneration:
+                      description: |
+                        Значение `.metadata.generation`, на основании которого было выставлено условие.
+                    lastTransitionTime:
+                      description: |
+                        Время последнего изменения состояния условия.
