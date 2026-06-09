@@ -20,7 +20,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - pm install binutils linux-headers openssl-devel pcre-devel pcre2-devel net-snmp-devel
+  - pm install automake autoconf binutils linux-headers openssl-devel pcre-devel pcre2-devel net-snmp-devel
   install:
   - cd /src
   - ./autogen.sh
