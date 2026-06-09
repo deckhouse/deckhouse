@@ -51,6 +51,9 @@ type GrantResource struct {
 	Default string `json:"default,omitempty"`
 
 	// AvailabilityDefault overrides the resource's defaultAvailability (All/None) for matched projects.
+	// Usually unnecessary: an allow-list (Allowed/AllowedSelector) already implies a None baseline
+	// (restrict to the list). Set this explicitly only to flip the baseline without a list — All to
+	// open the resource fully for matched projects, None to lock it down.
 	// +optional
 	AvailabilityDefault AvailabilityDefault `json:"availabilityDefault,omitempty"`
 }

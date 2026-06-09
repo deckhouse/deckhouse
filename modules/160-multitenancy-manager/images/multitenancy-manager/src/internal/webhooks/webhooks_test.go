@@ -165,11 +165,25 @@ func TestIsGranted_ValueBacked_AllowDeny(t *testing.T) {
 }
 
 func TestIsGranted_DefaultAll_AllowsUngranted(t *testing.T) {
-	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), lbRegistration(v1alpha1.AvailabilityAll), lbGrant())
+	// No grant restricts the resource, so the registration's All baseline allows any value.
+	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), lbRegistration(v1alpha1.AvailabilityAll))
 	v := NewIsGrantedValidator(logr.Discard(), cl, jsonpath.NewWithCache())
 	resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("anything", "LoadBalancer"), nil))
 	if !resp.Allowed {
 		t.Fatal("All default must allow ungranted value")
+	}
+}
+
+func TestIsGranted_AllowListImpliesRestrict(t *testing.T) {
+	// A grant with an allow-list and no explicit availabilityDefault restricts the resource to that
+	// list, even though the registration default is All.
+	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), lbRegistration(v1alpha1.AvailabilityAll), lbGrant())
+	v := NewIsGrantedValidator(logr.Discard(), cl, jsonpath.NewWithCache())
+	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("internal", "LoadBalancer"), nil)); !resp.Allowed {
+		t.Fatal("allowed value must pass")
+	}
+	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("anything", "LoadBalancer"), nil)); resp.Allowed {
+		t.Fatal("value outside the allow-list must be denied (allow-list implies None baseline)")
 	}
 }
 

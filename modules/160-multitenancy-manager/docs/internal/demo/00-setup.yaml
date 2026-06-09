@@ -30,18 +30,17 @@ spec:
     matchLabels:
       projects.deckhouse.io/project: demo
   resources:
+    # An allow-list restricts the resource to it (baseline None is inferred); set availabilityDefault
+    # explicitly only to flip the baseline without a list (All to open fully, None to lock down).
     - resourceRef: storageclasses
-      availabilityDefault: None
       allowed:
         - local
       default: local
     - resourceRef: clusterissuers
-      availabilityDefault: None
       allowed:
         - selfsigned
       default: selfsigned
     - resourceRef: loadbalancerclasses
-      availabilityDefault: None
       allowed:
         - internal
 ---

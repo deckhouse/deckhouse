@@ -222,6 +222,14 @@ func Resolve(
 			r.anyAll = true
 		case v1alpha1.AvailabilityNone:
 			r.anyNone = true
+		default:
+			// No explicit baseline: an allow-list (names or selector) means "restrict to it", so the
+			// baseline for everything else is None. This lets a grant omit availabilityDefault in the
+			// common allow-list case; set it explicitly only to flip the baseline without a list
+			// (All to open a project fully, None to lock it down).
+			if len(e.Allowed) > 0 || e.AllowedSelector != nil {
+				r.anyNone = true
+			}
 		}
 	}
 	// Registration excluded literal names (union across all excluded filters).
