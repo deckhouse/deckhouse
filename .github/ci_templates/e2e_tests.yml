@@ -279,6 +279,8 @@ run: |
   export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
   export LAYOUT=${LAYOUT:-not_provided}
   export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+  export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+  export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
   {!{- if or (eq $provider "gcp") (and (eq $script_arg "run-test") $run_from_issue_or_pr (ne $provider "static") (ne $provider "eks")) }!}
   export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
   {!{- end }!}
@@ -512,6 +514,8 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa" "id_rsa_b64" "LAYOUT_SSH_KEY" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent" "e2e_log_agent_token" "E2E_LOG_AGENT_TOKEN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent" "pull_artifact_token" "E2E_LOG_AGENT_PULL_ARTIFACT" ) $secrets -}!}
 {!{- if has $newCommanderProviders $provider }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
@@ -730,6 +734,8 @@ check_e2e_labels:
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+        E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+        E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
 {!{- end }!}
@@ -926,6 +932,8 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa" "id_rsa_b64" "LAYOUT_SSH_KEY" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent" "e2e_log_agent_token" "E2E_LOG_AGENT_TOKEN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent" "pull_artifact_token" "E2E_LOG_AGENT_PULL_ARTIFACT" ) $secrets -}!}
 {!{- if has $newCommanderProviders $provider }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_NEW_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
