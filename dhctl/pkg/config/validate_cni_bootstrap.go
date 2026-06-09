@@ -50,10 +50,26 @@ func validateCNIBootstrap(ctx context.Context, payload string, _ *SchemaStore, _
 	if analysis.SkipReason != "" || analysis.Matches {
 		return nil
 	}
-	out := &ValidationError{}
-	out.Append(cniMismatchReasonToErrorKind(analysis.MismatchReason), Error{
+	// Point the error at the offending user MC: it's the cni-* ModuleConfig the
+	// user wrote (or, on DifferentModule, the one they should remove). Falls back
+	// to the recommended MC's name when the user supplied none (shouldn't happen
+	// here — Matches=true in that case — but keep the wire-format sane).
+	e := Error{
+		Group:    ModuleConfigGroup,
+		Version:  ModuleConfigVersion,
+		Kind:     ModuleConfigKind,
 		Messages: []string{analysis.ReasonMessage},
-	})
+	}
+	if mc := analysis.ModuleConfig; mc != nil {
+		switch {
+		case mc.UserInput != nil:
+			e.Name = mc.UserInput.GetName()
+		case mc.Recommended != nil:
+			e.Name = mc.Recommended.GetName()
+		}
+	}
+	out := &ValidationError{}
+	out.Append(cniMismatchReasonToErrorKind(analysis.MismatchReason), e)
 	return out
 }
 

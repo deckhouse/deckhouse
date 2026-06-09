@@ -653,11 +653,16 @@ func TestError_JSONOmitemptyKeepsNonZeroFields(t *testing.T) {
 	}`, string(b))
 }
 
-func TestError_JSON_CNIErrorIsCompact(t *testing.T) {
-	// Regression check matching the wire example in the PR description:
-	// CNI errors have only Reason + Messages on the wire.
+func TestError_JSON_CNIErrorCarriesResourceIdentity(t *testing.T) {
+	// CNI errors point at the offending user MC: GVK + Name are populated
+	// so commander UI can navigate to the resource. Index is unset (we don't
+	// re-derive doc position in the filtered payload).
 	ve := &ValidationError{}
 	ve.Append(ErrKindCNIMismatch, Error{
+		Group:    ModuleConfigGroup,
+		Version:  ModuleConfigVersion,
+		Kind:     ModuleConfigKind,
+		Name:     "cni-simple-bridge",
 		Messages: []string{`user configured "cni-simple-bridge", provider recommends "cni-cilium"`},
 	})
 	b, err := json.Marshal(ve)
@@ -667,6 +672,10 @@ func TestError_JSON_CNIErrorIsCompact(t *testing.T) {
 		"Errors": [
 			{
 				"Reason": 4,
+				"Group": "deckhouse.io",
+				"Version": "v1alpha1",
+				"Kind": "ModuleConfig",
+				"Name": "cni-simple-bridge",
 				"Messages": ["user configured \"cni-simple-bridge\", provider recommends \"cni-cilium\""]
 			}
 		]

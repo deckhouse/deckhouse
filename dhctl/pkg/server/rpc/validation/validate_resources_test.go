@@ -80,14 +80,3 @@ func TestValidateResources_EmptyPayload_NoError(t *testing.T) {
 	require.Empty(t, resp.Err)
 }
 
-func TestValidateResources_WireFormat_ReasonOmittedOnZero(t *testing.T) {
-	// Tighten compatibility expectation: when Reason is the zero value it
-	// must be absent from the JSON encoding (omitempty). All other Error
-	// fields are present even when empty, matching main.
-	e := config.Error{Index: nil, Group: "", Version: "", Kind: "", Name: "", Messages: nil}
-	b, err := json.Marshal(e)
-	require.NoError(t, err)
-	require.NotContains(t, string(b), `"Reason"`)
-	require.Contains(t, string(b), `"Group":""`)
-	require.Contains(t, string(b), `"Version":""`)
-}

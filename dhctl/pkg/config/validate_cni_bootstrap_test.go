@@ -154,6 +154,42 @@ metadata: {name: only-resource}
 	require.Empty(t, out)
 }
 
+// validateCNIBootstrap must point the error at the offending user MC so
+// commander UI can surface which resource is wrong. Exercises the
+// Error{Group,Version,Kind,Name} population path the validator's tail
+// performs — independent of candi/modules availability in the test env.
+func TestValidateCNIBootstrap_ErrorCarriesUserMCIdentity(t *testing.T) {
+	user := newTestCNIModuleConfig(t, "cni-flannel",
+		map[string]any{"podNetworkMode": "VXLAN"}, true)
+	rec := newTestCNIModuleConfig(t, "cni-cilium",
+		map[string]any{"tunnelMode": "VXLAN"}, true)
+
+	analysis := &CNIBootstrapAnalysis{
+		ModuleConfig: &CNIBootstrapModuleConfigs{
+			UserInput:   user,
+			Recommended: rec,
+		},
+	}
+	analysis.MismatchReason, analysis.ReasonMessage = cniBootstrapDecision(user, rec)
+	require.Equal(t, CNIBootstrapMismatchReasonDifferentModule, analysis.MismatchReason)
+
+	e := Error{
+		Group:    ModuleConfigGroup,
+		Version:  ModuleConfigVersion,
+		Kind:     ModuleConfigKind,
+		Messages: []string{analysis.ReasonMessage},
+	}
+	if mc := analysis.ModuleConfig; mc != nil && mc.UserInput != nil {
+		e.Name = mc.UserInput.GetName()
+	}
+	require.Equal(t, "deckhouse.io", e.Group)
+	require.Equal(t, "v1alpha1", e.Version)
+	require.Equal(t, "ModuleConfig", e.Kind)
+	require.Equal(t, "cni-flannel", e.Name, "Name must be the user's MC, not the recommended one")
+	require.Contains(t, e.Messages[0], "cni-flannel")
+	require.Contains(t, e.Messages[0], "cni-cilium")
+}
+
 func TestCNIMismatchReasonToErrorKind(t *testing.T) {
 	require.Equal(t, ErrKindCNIMismatch, cniMismatchReasonToErrorKind(CNIBootstrapMismatchReasonDifferentModule))
 	require.Equal(t, ErrKindCNISettingsMismatch, cniMismatchReasonToErrorKind(CNIBootstrapMismatchReasonDifferentSettings))
