@@ -299,6 +299,18 @@ function main() {
         nodeuser_add_error "${user_name}" "${error_message}"
         continue
       fi
+
+      # d8-dhctl-converger is also used to destroy static masters, on Astra Linux it needs
+      # an elevated PDPL level to be able to perform privileged operations.
+      if [[ "$user_name" == "d8-dhctl-converger" ]] && [[ $(bb-is-bundle) == "astra" ]]; then
+        error_message=$(pdpl-user -i 63 d8-dhctl-converger 2>&1)
+        if bb-error?
+        then
+          bb-log-error "Error setting PDPL level for user '$user_name': ${error_message}"
+          nodeuser_add_error "${user_name}" "${error_message}"
+          continue
+        fi
+      fi
     fi
     nodeuser_clear_error "${user_name}"
   done
