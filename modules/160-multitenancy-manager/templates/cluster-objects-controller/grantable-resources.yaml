@@ -106,31 +106,17 @@ spec:
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
   enforcement: Managed
-  # Available by default to every project — but only the delegatable cluster roles: the "use"
-  # capability/aggregate roles (rbac.deckhouse.io/kind: use) and the user-authz access-level roles
-  # (module: user-authz, with no rbac.deckhouse.io/kind). Everything else (cluster-admin, the
-  # d8:manage:* permission roles, raw component roles) is hard-excluded, so binding it from a project
-  # RoleBinding is rejected. The two excluded filters are unioned: a role is excluded if it matches
-  # either, which keeps exactly (kind=use) OR (module=user-authz AND no kind).
+  # Available by default to every project, but only the cluster roles explicitly marked delegatable
+  # with the rbac.deckhouse.io/delegatable label — the namespace-level access roles: d8:use:role:*
+  # (the "use" role aggregates) and user-authz:{user,privileged-user,editor,admin}. Everything else
+  # (use capabilities, cluster-scoped roles like cluster-admin/super-admin, the d8:manage:* permission
+  # roles, the admin-kubeconfig roles, raw component roles) lacks the label and is excluded, so binding
+  # it from a project RoleBinding is rejected.
   defaultAvailability: All
   excluded:
-  # Exclude everything that is neither a "use" role nor a user-authz-module role.
   - matchExpressions:
-    - key: rbac.deckhouse.io/kind
-      operator: NotIn
-      values:
-      - use
-    - key: module
-      operator: NotIn
-      values:
-      - user-authz
-  # Exclude the "manage" permission roles (these carry module: user-authz, so the filter above keeps
-  # them; drop them explicitly).
-  - matchExpressions:
-    - key: rbac.deckhouse.io/kind
-      operator: In
-      values:
-      - manage
+    - key: rbac.deckhouse.io/delegatable
+      operator: DoesNotExist
   usageReferences:
   # RoleBindings in project namespaces that reference a ClusterRole by name.
   - rule:

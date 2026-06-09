@@ -1,7 +1,8 @@
-# RoleBinding referencing a ClusterRole. The clusterroles ClusterGrantableResource makes only the
-# delegatable roles available by default in every project: the "use" capability/aggregate roles
-# (rbac.deckhouse.io/kind: use) and the user-authz access-level roles (module: user-authz). Everything
-# else (cluster-admin, the d8:manage:* permission roles, raw component roles) is rejected.
+# RoleBinding referencing a ClusterRole. The clusterroles ClusterGrantableResource makes available by
+# default only the roles marked with the rbac.deckhouse.io/delegatable label — the namespace-level
+# access roles: d8:use:role:{viewer,user,manager,admin} and user-authz:{user,privileged-user,editor,
+# admin}. Everything else (use capabilities, cluster-admin/super-admin and other cluster-scoped roles,
+# the d8:manage:* permission roles, admin-kubeconfig, raw component roles) is rejected.
 #
 # ALLOW  rb-use          -> ClusterRole d8:use:role:viewer
 # ALLOW  rb-userauthz    -> ClusterRole user-authz:admin

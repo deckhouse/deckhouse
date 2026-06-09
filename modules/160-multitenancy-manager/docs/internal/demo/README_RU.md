@@ -30,7 +30,7 @@ k apply -f 00-setup.yaml
 | storageclasses        | `local`            | `local`     | 5Gi суммарно, 3 PVC            | да              |
 | clusterissuers        | `selfsigned`       | `selfsigned`| —                              | нет             |
 | loadbalancerclasses   | `internal`         | —           | 1 LoadBalancer-сервис          | нет             |
-| clusterroles          | `d8:use:*`, `user-authz:*` | —   | —                              | нет             |
+| clusterroles          | d8:use:role:* + user-authz access (user,priv-user,editor,admin) | —   | —                              | нет             |
 
 Ключевое отличие: у стораджа `coerceToDefault: true` (встроенный DefaultStorageClass admission
 заранее проставляет `storageClassName`), поэтому недоступный/опущенный класс молча переписывается в

@@ -30,7 +30,7 @@ prints a `Forbidden` error for the denied ones — that is the demo.
 | storageclasses        | `local`            | `local`     | 5Gi total, 3 PVCs             | yes             |
 | clusterissuers        | `selfsigned`       | `selfsigned`| —                             | no              |
 | loadbalancerclasses   | `internal`         | —           | 1 LoadBalancer service        | no              |
-| clusterroles          | `d8:use:*`, `user-authz:*` | —   | —                             | no              |
+| clusterroles          | d8:use:role:* + user-authz access (user,priv-user,editor,admin) | —   | —                             | no              |
 
 Key difference: storage has `coerceToDefault: true` (the built-in DefaultStorageClass admission
 pre-fills `storageClassName`), so a disallowed/omitted storage class is silently rewritten to `local`.
