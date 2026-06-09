@@ -6,34 +6,43 @@ description: |
 lang: ru
 ---
 
-В кластерах с модулем [`cni-cilium`](/modules/cni-cilium/) дополнительно к стандартному `NetworkPolicy` доступны два формата от Cilium:
+В кластерах с включённым модулем [`cni-cilium`](/modules/cni-cilium/) дополнительно к стандартному `NetworkPolicy` доступны два формата от Cilium:
 
-- `CiliumNetworkPolicy` (CNP) — namespaced-ресурс с правилами уровней L3–L7;
-- `CiliumClusterwideNetworkPolicy` (CCNP) — cluster-scoped-ресурс с теми же правилами и поддержкой `nodeSelector`.
+- `CiliumNetworkPolicy` — namespaced-ресурс с правилами уровней L3–L7;
+- `CiliumClusterwideNetworkPolicy` — cluster-scoped-ресурс с теми же правилами и поддержкой `nodeSelector`.
 
 Cilium может одновременно применять политики всех трёх форматов.
 
 {% alert level="warning" %}
-При одновременном использовании `NetworkPolicy`, CNP и CCNP итоговый набор разрешённого трафика становится сложнее анализировать. Используйте режим аудита перед применением и проверяйте поведение в Hubble.
+При одновременном использовании `NetworkPolicy`, `CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy` итоговый набор разрешённого трафика становится сложнее анализировать. Используйте режим аудита перед применением и проверяйте поведение в Hubble.
 {% endalert %}
 
-## Что добавляют CNP и CCNP
+## Порядок обработки правил
+
+При оценке соединения Cilium использует следующие принципы:
+
+- deny-правила имеют приоритет над allow-правилами;
+- allow-правила из `NetworkPolicy`, `CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy` объединяются;
+- если для эндпоинта выбрана хотя бы одна политика, начинает действовать модель default-deny для соответствующего направления трафика;
+- L7-правила применяются после прохождения проверок уровней L3/L4.
+
+## Что добавляют CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy
 
 По сравнению со стандартным `NetworkPolicy`:
 
-- правила уровней L7 — HTTP, gRPC, Kafka и DNS;
+- правила уровней L7 — протоколы HTTP, gRPC, Kafka и DNS;
 - FQDN-правила в egress — фильтрация по DNS-именам;
 - deny-правила — явный запрет соединений;
-- сущности (`entities`) — встроенные группы получателей и отправителей, например `kube-apiserver`, `host`, `remote-node`, `world`;
+- сущности (`entities`) — источники и получатели трафика, например `kube-apiserver`, `host`, `remote-node`, `world`;
 - ссылки на Kubernetes-сервисы по имени или лейблам (`toServices`) — разрешения на egress без указания CIDR;
 - фильтрация ICMP и ICMPv6 по типу пакета;
 - фильтрация TLS по Server Name Indication (SNI);
-- `nodeSelector` (только в CCNP) — применение правила к самим узлам; это даёт основу для [host firewall на узлах](host_firewall.html);
+- `nodeSelector` (только в `CiliumClusterwideNetworkPolicy`) — применение правила к самим узлам; это даёт основу для [host firewall на узлах](host_firewall.html);
 - режим аудита через [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) — логирование вердиктов без блокировки.
 
 ## Структура ресурса
 
-CNP и CCNP описываются единым набором полей `spec`. Минимальная структура:
+`CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy` описываются единым набором полей `spec`. Минимальная структура:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -58,7 +67,7 @@ spec:
 Ключевые поля:
 
 - `endpointSelector` — выбор подов, к которым применяется политика. Аналог `podSelector` в стандартном `NetworkPolicy`.
-- `nodeSelector` — выбор узлов (только в CCNP). Не используется одновременно с `endpointSelector` в одной политике.
+- `nodeSelector` — выбор узлов (только в `CiliumClusterwideNetworkPolicy`). В одной политике может быть указан либо `endpointSelector`, либо `nodeSelector`.
 - `ingress` и `egress` — массивы правил. Каждое правило содержит источник или получатель (`fromEndpoints`, `fromEntities`, `fromCIDR`, `fromCIDRSet`, `toEndpoints`, `toEntities`, `toCIDR`, `toCIDRSet`, `toFQDNs`, `toServices`) и опциональный фильтр портов и протоколов в `toPorts`.
 - `ingressDeny` и `egressDeny` — deny-правила. Применяются раньше allow-правил.
 
@@ -88,11 +97,11 @@ spec:
             namespace: data
 ```
 
-В отличие от `toEndpoints`, политика автоматически следит за изменением списка эндпоинтов сервиса.
+В отличие от `toEndpoints`, политика автоматически отслеживает изменения бэкендов сервиса и пересчитывает соответствующие правила.
 
 ## Сущности (entities)
 
-Сущности — это встроенные группы получателей и отправителей, по которым удобно описывать трафик до системных компонентов кластера и инфраструктуры:
+Сущности — это источники и получатели трафика, по которым удобно описывать трафик до системных компонентов кластера и инфраструктуры:
 
 - `host` — собственный узел пода, включая трафик хоста;
 - `remote-node` — другие узлы кластера;
@@ -185,7 +194,7 @@ spec:
 
 ## Правила L7
 
-CNP и CCNP позволяют описать разрешённые операции уровня приложения. L7-правила указывают внутри `toPorts[].rules`:
+`CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy` позволяют описать разрешённые операции уровня приложения. L7-правила указывают внутри `toPorts[].rules`:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -255,7 +264,7 @@ spec:
 
 ## FQDN-правила
 
-В egress можно ограничить трафик по DNS-именам через `toFQDNs`. Чтобы Cilium успевал обновлять разрешённые IP-адреса, в той же политике обязательно разрешите DNS-запросы и включите DNS-инспекцию через `rules.dns`:
+В egress можно ограничить трафик по DNS-именам через `toFQDNs`. Для работы `toFQDNs` необходимо разрешить DNS-запросы и включить DNS-инспекцию через `rules.dns`. Это можно сделать в той же политике или в другой политике, которая выбирает те же поды:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -290,7 +299,7 @@ spec:
 
 ## Deny-правила
 
-В отличие от стандартного `NetworkPolicy`, в CNP и CCNP можно явно запретить трафик, не отменяя при этом более широкие allow-правила:
+В отличие от стандартного `NetworkPolicy`, в `CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy` можно явно запретить трафик, не отменяя при этом более широкие allow-правила:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -306,9 +315,11 @@ spec:
 
 Deny-правила применяются раньше allow-правил, поэтому они приоритетнее любых разрешений из других политик.
 
-## Default-политики через CNP
+## Default-политики через CiliumNetworkPolicy
 
-Чтобы перевести namespace в режим default-deny, создайте CNP с пустым списком правил:
+Как и в стандартном `NetworkPolicy`, наличие политики с пустыми списками правил переводит выбранные эндпоинты в режим deny по умолчанию.
+
+Чтобы перевести namespace в режим default-deny, создайте `CiliumNetworkPolicy` с пустым списком правил:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -335,7 +346,7 @@ spec:
 Рекомендуемый порядок:
 
 1. Включите параметр `policyAuditMode: true` в [настройках модуля `cni-cilium`](/modules/cni-cilium/configuration.html#parameters-policyauditmode).
-1. Примените набор политик. Host-политики применяйте отдельно по процедуре из раздела [Host firewall на узлах](host_firewall.html).
+1. Примените набор политик. Политики для узлов применяйте отдельно по процедуре из раздела [Host firewall на узлах](host_firewall.html).
 1. Проверьте вердикты в Hubble UI и через `hubble observe --type policy-verdict`. В выводе должны появиться записи `verdict=AUDITED` для соединений, которые без режима аудита были бы заблокированы.
 1. Доработайте политики до того момента, пока в логе не останется только записей `verdict=ALLOWED` и `verdict=AUDITED` для ожидаемых сценариев.
 1. Отключите режим аудита (`policyAuditMode: false`).

@@ -46,11 +46,11 @@ If the underlying infrastructure restricts network communication between servers
 
 - [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html) — isolation model, selectors, default policies, API limitations.
 - [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) — Cilium extensions, entities, L7 rules, FQDN rules, audit mode.
-- [Host firewall on nodes](host_firewall.html) — protecting nodes with CCNP and `nodeSelector`.
+- [Host firewall on nodes](host_firewall.html) — protecting nodes with `CiliumClusterwideNetworkPolicy` and `nodeSelector`.
 - [Common policy examples](examples.html) — recipes for typical tasks.
 - [Diagnostics and observability](troubleshooting.html) — how to verify and debug policies.
 
-## See also
+## Additional documentation
 
 - [Network Policies — Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
 - [Network Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/)

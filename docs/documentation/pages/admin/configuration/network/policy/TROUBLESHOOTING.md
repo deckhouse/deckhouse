@@ -103,16 +103,16 @@ Behavior for in-flight connections is not defined by the standard — some engin
 
 If a policy is created but traffic does not behave as expected, walk through these checks:
 
-1. Which engine is enabled. The standard `NetworkPolicy` is supported by both engines; CNP, CCNP, L7, and FQDN require `cni-cilium`. The engine capabilities are listed in [What is available in each engine](configuration.html#what-is-available-in-each-engine).
+1. Which engine is enabled. The standard `NetworkPolicy` is supported by both engines; `CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy`, L7, and FQDN require `cni-cilium`. The engine capabilities are listed in [What is available in each engine](configuration.html#what-is-available-in-each-engine).
 1. The selector matches the pods: `d8 k get pods -n <namespace> -l <key>=<value>` should return the expected list.
 1. `policyTypes` is correct. With `Ingress` only, egress stays unrestricted; with `Egress` only, ingress stays unrestricted.
 1. AND vs OR in selectors. Re-check the array structure — a common cause of overly broad or overly narrow rules.
 1. Audit mode. When [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) is on, policies do not block traffic. `cilium-dbg endpoint list` shows this as `Disabled (Audit)`.
 1. Eventual consistency. Cilium and kube-router apply policies asynchronously. Wait a few seconds and re-test.
-1. Policy status (CNP and CCNP only). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` shows parse and apply errors in `status`.
+1. Policy status (`CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` only). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` shows parse and apply errors in `status`.
 1. Conflict with a deny rule. Cilium deny rules override any allow rules. Look for policies with `ingressDeny` or `egressDeny` selecting the same endpoint.
 
-## See also
+## Additional documentation
 
 - [HubbleMonitoringConfig — cni-cilium module](/modules/cni-cilium/cr.html#hubblemonitoringconfig)
 - [Troubleshooting Policy — Cilium documentation](https://docs.cilium.io/en/v1.17/security/policy/#troubleshooting)

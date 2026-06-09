@@ -104,13 +104,13 @@ Cilium должен видеть DNS-запросы, чтобы поддержи
 
 Если ресурс создан, но трафик не ведёт себя ожидаемо, последовательно проверьте:
 
-1. Какой движок включён. Стандартный `NetworkPolicy` поддерживается обоими движками; CNP, CCNP, L7 и FQDN — только в кластерах с `cni-cilium`. Возможности движков перечислены в разделе [Что доступно в зависимости от движка](configuration.html#что-доступно-в-зависимости-от-движка).
+1. Какой движок включён. Стандартный `NetworkPolicy` поддерживается обоими движками; `CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy`, L7 и FQDN — только в кластерах с `cni-cilium`. Возможности движков перечислены в разделе [Что доступно в зависимости от движка](configuration.html#что-доступно-в-зависимости-от-движка).
 1. Selector действительно выбирает поды: `d8 k get pods -n <namespace> -l <key>=<value>` должен вернуть ожидаемый список.
 1. `policyTypes` указан корректно. Если перечислен только `Ingress`, egress не ограничен; если только `Egress`, ingress не ограничен.
 1. AND vs OR в селекторах. Проверьте структуру массива — частая причина «слишком широкого» или «слишком узкого» правила.
 1. Режим аудита. Если включён [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode), политики не блокируют трафик. В `cilium-dbg endpoint list` это видно как `Disabled (Audit)`.
 1. Eventual consistency. После создания политики Cilium и kube-router применяют её асинхронно. Подождите несколько секунд и повторите проверку.
-1. Статус политики (только для CNP и CCNP). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` покажет в `status` ошибки парсинга или применения.
+1. Статус политики (только для `CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy`). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` покажет в `status` ошибки парсинга или применения.
 1. Конфликт с deny-правилом. Deny-правила Cilium имеют приоритет над любыми allow-правилами. Найдите политики с `ingressDeny` и `egressDeny`, выбирающие тот же эндпоинт.
 
 ## Дополнительная документация

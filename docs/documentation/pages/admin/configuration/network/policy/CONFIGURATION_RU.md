@@ -47,7 +47,7 @@ search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, Ci
 
 - [Стандартный NetworkPolicy Kubernetes](kubernetes_networkpolicy.html) — модель изоляции, селекторы, default-политики, ограничения API.
 - [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) — расширения Cilium, entities, правила L7, FQDN, режим аудита.
-- [Host firewall на узлах](host_firewall.html) — защита самих узлов с помощью CCNP и `nodeSelector`.
+- [Host firewall на узлах](host_firewall.html) — защита самих узлов с помощью `CiliumClusterwideNetworkPolicy` и `nodeSelector`.
 - [Типовые примеры политик](examples.html) — рецепты для частых задач.
 - [Диагностика и наблюдаемость политик](troubleshooting.html) — как проверить применение политики и расследовать проблемы.
 

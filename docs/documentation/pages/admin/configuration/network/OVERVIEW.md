@@ -61,6 +61,6 @@ The section includes the following pages:
 
 - [Kubernetes NetworkPolicy](./policy/kubernetes_networkpolicy.html) — isolation model, selectors, default policies, API limitations.
 - [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](./policy/cilium_networkpolicy.html) — Cilium extensions, entities, L7 rules, FQDN rules, audit mode.
-- [Host firewall on nodes](./policy/host_firewall.html) — protecting nodes with CCNP and `nodeSelector`.
+- [Host firewall on nodes](./policy/host_firewall.html) — protecting nodes with `CiliumClusterwideNetworkPolicy` and `nodeSelector`.
 - [Common policy examples](./policy/examples.html) — recipes for typical tasks.
 - [Diagnostics and observability](./policy/troubleshooting.html) — verifying and debugging policies.

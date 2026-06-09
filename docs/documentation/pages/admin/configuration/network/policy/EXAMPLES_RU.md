@@ -6,7 +6,7 @@ description: |
 lang: ru
 ---
 
-В этом разделе собраны типовые сценарии настройки сетевых политик. Стандартные примеры (`NetworkPolicy`) работают в любых кластерах с поддержкой политик; примеры с `CiliumNetworkPolicy` (CNP) и `CiliumClusterwideNetworkPolicy` (CCNP) — только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/).
+В этом разделе собраны типовые сценарии настройки сетевых политик. Стандартные примеры (`NetworkPolicy`) работают в любых кластерах с поддержкой политик; примеры с `CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy` — только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/).
 
 Для конструкций самих ресурсов используйте описание из [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html) и [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html).
 

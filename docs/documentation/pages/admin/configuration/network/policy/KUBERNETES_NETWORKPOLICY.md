@@ -200,7 +200,7 @@ In clusters without Cilium, the [`network-policy-engine`](/modules/network-polic
 - each isolated pod gets a `KUBE-POD-SPECIFIC-FW-*` chain;
 - source and destination pod IPs are stored in ipsets, which keeps large rule sets compact and updates fast.
 
-Only the standard Kubernetes formats are supported: `networking.k8s.io/NetworkPolicy API`, V1/GA, and beta semantics. Cilium extensions (CNP, CCNP, L7 rules, FQDN, deny rules) are not supported by this engine.
+Only the standard Kubernetes formats are supported: `networking.k8s.io/NetworkPolicy API`, V1/GA, and beta semantics. Cilium extensions (`CiliumNetworkPolicy`, `CiliumClusterwideNetworkPolicy`, L7 rules, FQDN, deny rules) are not supported by this engine.
 
 Ready-to-use standard policy examples that work with both `network-policy-engine` and `cni-cilium` are available on the [Common policy examples](examples.html) page.
 
@@ -218,7 +218,7 @@ The Kubernetes `NetworkPolicy` API does not support the following scenarios (the
 
 Some of these tasks are addressed by [`CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy`](cilium_networkpolicy.html), available in clusters with `cni-cilium`.
 
-## See also
+## Additional documentation
 
 - [Network Policies — Kubernetes documentation](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
 - [Kube-router: Enforcing Kubernetes network policies with iptables and ipset](https://cloudnativelabs.github.io/post/2017-05-1-kube-network-policies/)

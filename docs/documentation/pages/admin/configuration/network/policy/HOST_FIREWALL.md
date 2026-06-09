@@ -5,7 +5,7 @@ description: |
   Host firewall in Deckhouse Kubernetes Platform via CiliumClusterwideNetworkPolicy with nodeSelector. Safe rollout, mandatory rules, and control plane protection.
 ---
 
-A host firewall is a Cilium mode where network policies apply to cluster nodes themselves rather than to pods. In DKP, you configure it through [`CiliumClusterwideNetworkPolicy`](cilium_networkpolicy.html) (CCNP) with the `nodeSelector` field. Available only in clusters with the [`cni-cilium`](/modules/cni-cilium/) module.
+A host firewall is a Cilium mode where network policies apply to cluster nodes themselves rather than to pods. In DKP, you configure it through [`CiliumClusterwideNetworkPolicy`](cilium_networkpolicy.html) with the `nodeSelector` field. Available only in clusters with the [`cni-cilium`](/modules/cni-cilium/) module.
 
 {% alert level="danger" %}
 A bug in host policies can break SSH access, control plane operation, kubelet, or etcd. Always roll out host firewall through [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) and verify verdicts in Hubble before enforcing.
@@ -13,7 +13,7 @@ A bug in host policies can break SSH access, control plane operation, kubelet, o
 
 ## How a host firewall differs from regular policies
 
-A CCNP with `nodeSelector` applies to a special host endpoint with the label `reserved:host` and filters traffic entering and leaving the node, including `hostNetwork` pods. Pod policies that use `endpointSelector` do not apply to the host endpoint — they target a different entity.
+A `CiliumClusterwideNetworkPolicy` with `nodeSelector` applies to a special host endpoint with the label `reserved:host` and filters traffic entering and leaving the node, including `hostNetwork` pods. Pod policies that use `endpointSelector` do not apply to the host endpoint — they target a different entity.
 
 Host policies do not replace infrastructure-level protection (physical firewalls, cloud security groups). They are an additional filter layer inside the cluster.
 
@@ -27,7 +27,7 @@ Roll out a host firewall in stages, using audit mode:
 1. Tune the policies until no unexpected `AUDITED` entries remain. Pay close attention to kubelet, etcd, kube-apiserver, ingress controllers, monitoring, and DNS.
 1. Turn audit mode off (`policyAuditMode: false`).
 
-If something breaks after enforcement, the fastest recovery path is to re-enable audit mode or delete the CCNP. Detailed recovery steps are in [Cilium Emergency Recovery](https://docs.cilium.io/en/v1.17/security/host-firewall/#emergency-recovery).
+If something breaks after enforcement, the fastest recovery path is to re-enable audit mode or delete the `CiliumClusterwideNetworkPolicy`. Detailed recovery steps are in [Cilium Emergency Recovery](https://docs.cilium.io/en/v1.17/security/host-firewall/#emergency-recovery).
 
 ## Mandatory rules
 
@@ -53,7 +53,7 @@ Use entities to describe peers:
 
 ## Example: API server access for the control plane
 
-A CCNP that binds control plane nodes to the `kube-apiserver` entity. Without this binding, control plane operations may stutter for up to a minute when `cilium-agent` pods restart, due to a [Cilium Conntrack table reset](https://github.com/cilium/cilium/issues/19367):
+A `CiliumClusterwideNetworkPolicy` that binds control plane nodes to the `kube-apiserver` entity. Without this binding, control plane operations may stutter for up to a minute when `cilium-agent` pods restart, due to a [Cilium Conntrack table reset](https://github.com/cilium/cilium/issues/19367):
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -129,7 +129,7 @@ spec:
 
 This is a starting point. Extend the policy with rules for monitoring, ingress controllers, load balancers, and SSH that match your setup.
 
-## See also
+## Additional documentation
 
 - [Host Firewall — Cilium documentation](https://docs.cilium.io/en/v1.17/security/host-firewall/)
 - [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)

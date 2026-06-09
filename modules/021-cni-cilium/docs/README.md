@@ -56,7 +56,7 @@ Network equipment must be ready for asymmetric traffic flow: IP address anti-spo
 Applying CiliumClusterwideNetworkPolicy without [`policyAuditMode`](configuration.html#parameters-policyauditmode) enabled may break control plane operation or cut SSH access to all cluster nodes.
 {% endalert %}
 
-The safe rollout procedure for CCNP, including mandatory control plane and host firewall rules, is described in the [Network policies](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html) section of the documentation. For details on the Cilium policy formats, see [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/cilium_networkpolicy.html).
+The safe rollout procedure for `CiliumClusterwideNetworkPolicy`, including mandatory control plane and host firewall rules, is described in the [Network policies](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html) section of the documentation. For details on the Cilium policy formats, refer to [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/cilium_networkpolicy.html).
 
 ## Changing Cilium Operation Mode
 
