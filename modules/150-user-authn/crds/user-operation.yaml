@@ -81,7 +81,7 @@ spec:
                         Lock duration as a Go-style duration string (`30s`, `10m`, `1h`, `2h30m`, `7d`),
                         or `permanent` for an indefinite lock released only by `Unlock`.
                         Days are expanded as `1d = 24h` by the hook before parsing.
-                      pattern: '^(permanent|([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h|d))+)$'
+                      pattern: '^(permanent|([0-9]+(\.[0-9]+)?(s|m|h|d))+)$'
                       x-kubernetes-validations:
                         # Self-sufficient: re-asserts shape (so garbage like "permanent7d" or
                         # "abc1d" cannot slip through if `pattern` ever regresses) and then
@@ -89,8 +89,8 @@ spec:
                         # all-segments-are-non-negative shape — guarantees a positive total
                         # ("30m" passes, "0s" / "0d0h" do not). We avoid CEL's `duration()`
                         # because it does not accept the "d" unit we surface here.
-                        - rule: 'self == "permanent" || (self.matches("^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h|d))+$") && self.matches("[1-9]"))'
-                          message: 'lock.for must be "permanent" or a positive Go-style duration using ns/us/µs/ms/s/m/h/d (e.g. "30m", "1h", "2h30m", "7d").'
+                        - rule: 'self == "permanent" || (self.matches("^([0-9]+(\\.[0-9]+)?(s|m|h|d))+$") && self.matches("[1-9]"))'
+                          message: 'lock.for must be "permanent" or a positive Go-style duration using s/m/h/d (e.g. "30m", "1h", "2h30m", "7d").'
             status:
               type: object
               properties:
@@ -232,7 +232,7 @@ spec:
                         Lock duration as a Go-style duration string (`30s`, `10m`, `1h`, `2h30m`, `7d`),
                         or `permanent` for an indefinite lock released only by `Unlock`.
                         Days are expanded as `1d = 24h` by the hook before parsing.
-                      pattern: '^(permanent|([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h|d))+)$'
+                      pattern: '^(permanent|([0-9]+(\.[0-9]+)?(s|m|h|d))+)$'
                       x-kubernetes-validations:
                         # Self-sufficient: re-asserts shape (so garbage like "permanent7d" or
                         # "abc1d" cannot slip through if `pattern` ever regresses) and then
@@ -240,8 +240,8 @@ spec:
                         # all-segments-are-non-negative shape — guarantees a positive total
                         # ("30m" passes, "0s" / "0d0h" do not). We avoid CEL's `duration()`
                         # because it does not accept the "d" unit we surface here.
-                        - rule: 'self == "permanent" || (self.matches("^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h|d))+$") && self.matches("[1-9]"))'
-                          message: 'lock.for must be "permanent" or a positive Go-style duration using ns/us/µs/ms/s/m/h/d (e.g. "30m", "1h", "2h30m", "7d").'
+                        - rule: 'self == "permanent" || (self.matches("^([0-9]+(\\.[0-9]+)?(s|m|h|d))+$") && self.matches("[1-9]"))'
+                          message: 'lock.for must be "permanent" or a positive Go-style duration using s/m/h/d (e.g. "30m", "1h", "2h30m", "7d").'
             status:
               type: object
               properties:
