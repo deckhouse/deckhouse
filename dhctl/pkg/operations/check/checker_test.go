@@ -568,6 +568,11 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	kubeCl := client.NewFakeKubernetesClient()
 	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
 
+	// Cloud-cluster parseConfigFromCluster fetches d8-system/deckhouse-registry
+	// unconditionally; seed it so the retry-loop doesn't trip the 600 s
+	// go-test timeout.
+	testCreateDeckhouseRegistrySecret(t, kubeCl)
+
 	commanderMetaConfig := &config.MetaConfig{}
 	commanderMetaConfig.ClusterType = p.clusterType
 
@@ -641,6 +646,25 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 	}
 
 	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.TODO(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesClient) {
+	t.Helper()
+
+	secret := &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse-registry",
+			Namespace: "d8-system",
+		},
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`),
+			"imagesRegistry":    []byte("registry.example.com/deckhouse"),
+			"scheme":            []byte("HTTPS"),
+		},
+	}
+
+	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }
 

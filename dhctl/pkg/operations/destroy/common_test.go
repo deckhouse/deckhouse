@@ -768,6 +768,29 @@ func testCreateProviderClusterConfigSecret(t *testing.T, kubeCl *client.Kubernet
 	})
 }
 
+// testCreateDeckhouseRegistrySecret seeds the d8-system/deckhouse-registry
+// Secret that registrydata.GetRegistryData looks up unconditionally for
+// Cloud clusters. Without it parseConfigFromCluster retry-loops for
+// 45 × 5 s and trips the 600 s go-test timeout.
+func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesClient) {
+	t.Helper()
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse-registry",
+			Namespace: "d8-system",
+		},
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`),
+			"imagesRegistry":    []byte("registry.example.com/deckhouse"),
+			"scheme":            []byte("HTTPS"),
+		},
+	}
+
+	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
 func testCreateClusterConfigSecret(t *testing.T, kubeCl *client.KubernetesClient, configYAML string) {
 	testCreateKubeSystemSecret(t, kubeCl, "d8-cluster-configuration", map[string][]byte{
 		"cluster-configuration.yaml": []byte(configYAML),

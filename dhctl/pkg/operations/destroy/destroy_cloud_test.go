@@ -801,6 +801,10 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		testCreateClusterConfigSecret(t, kubeCl, cloudClusterGenericConfigYAML)
 		testCreateProviderClusterConfigSecret(t, kubeCl, providerConfigYAML)
 		testCreateClusterUUIDCM(t, kubeCl, clusterUUID)
+		// Cloud-cluster parseConfigFromCluster fetches d8-system/
+		// deckhouse-registry unconditionally; seed it so the retry-loop
+		// doesn't trip the 600 s go-test timeout.
+		testCreateDeckhouseRegistrySecret(t, kubeCl)
 		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil, "")
 		require.NoError(t, err)
 	}
