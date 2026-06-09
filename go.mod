@@ -16,7 +16,7 @@ require (
 	github.com/go-openapi/spec v0.22.1
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.3
+	github.com/google/go-containerregistry v0.21.3 // v0.21.4-v0.21.6 issues: realm handling fixed in v0.21.6 (https://github.com/google/go-containerregistry/pull/2243), but pull hang introduced in this version and still not fixed (https://github.com/google/go-containerregistry/issues/2341).
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
