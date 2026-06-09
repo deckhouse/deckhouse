@@ -240,6 +240,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "DeckhouseMachine")
 		os.Exit(1)
 	}
+	if err = (&controller.PermanentNodeSCMigrationReconciler{
+		Client:      mgr.GetClient(),
+		DVP:         cloudAPI,
+		ClusterUUID: cloudConfig.ClusterUUID,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PermanentNodeSCMigration")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if metricsCertWatcher != nil {
