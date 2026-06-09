@@ -373,7 +373,7 @@ properties:
           > **Warning.** Once enabled, this parameter can't be disabled.
   encryptionAlgorithm:
     type: string
-    x-doc-default: "RSA-2048"
+    default: "RSA-2048"
     description: |
       Asymmetric encryption algorithm used when generating keys and certificates for the following control-plane components:
 
