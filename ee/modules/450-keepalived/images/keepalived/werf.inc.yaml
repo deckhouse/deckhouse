@@ -25,8 +25,9 @@ shell:
   - cd /src
   - ./autogen.sh
   - export PKG_CONFIG=pkg-config
+  - export PERL_CORE=$(perl -MConfig -e 'print $Config{archlib}')/CORE
+  - export KA_LIBS="-L/usr/lib -lpcre2-8 -Wl,--start-group -lnetsnmpmibs -lnetsnmpagent -lnetsnmp -lssl -lcrypto -L$PERL_CORE -lperl -Wl,--end-group -ldl -pthread -lcrypt -lm"
   - CFLAGS='-static -s' LDFLAGS='-static -L/usr/lib' ac_cv_lib_ssl_SSL_CTX_new=yes ac_cv_func_netsnmp_enable_subagent=yes ./configure --disable-dynamic-linking --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --sysconfdir=/etc --datadir=/usr/share --localstatedir=/var --mandir=/usr/share/man --enable-bfd --enable-snmp --enable-snmp-rfc --enable-nftables --enable-regex --enable-json --enable-vrrp
-  - KA_LIBS="-L/usr/lib -lpcre2-8 -Wl,--start-group -lnetsnmpmibs -lnetsnmpagent -lnetsnmp -lssl -lcrypto -L$(perl -MConfig -e 'print $Config{archlib}')/CORE -lperl -Wl,--end-group -ldl -pthread -lcrypt -lm"
   - make -j"$(nproc)" KA_LIBS="${KA_LIBS}"
   - DESTDIR=/opt/keepalived-static make install KA_LIBS="${KA_LIBS}"
   - chown -R 64535:64535 /opt/keepalived-static
