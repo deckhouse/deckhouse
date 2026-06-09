@@ -2611,6 +2611,45 @@ alerts:
         Node {{ $labels.node }} is using deprecated containerd v1 – migration to v2 required.
       severity: "8"
       markupFormat: markdown
+    - name: D8NodeControllerReconcileErrorsHigh
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-controller.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Controller `{{ $labels.controller }}` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
+
+        Check node-controller logs and recent NodeGroup or Node changes.
+      summary: |
+        Node-controller reconcile errors are high for {{ $labels.controller }}.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8NodeControllerReconcileP99High
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-controller.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The p99 reconcile duration for controller `{{ $labels.controller }}` has been above 5 seconds for more than 10 minutes.
+
+        This may indicate slow reconciliation, Kubernetes API latency, or degraded controller performance.
+      summary: |
+        Node-controller reconcile p99 is high for {{ $labels.controller }}.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8NodeControllerWorkqueueDepthHigh
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-controller.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The node-controller workqueue `{{ $labels.name }}` has more than 50 queued objects for more than 15 minutes.
+
+        This may indicate that the controller cannot process reconciliation events fast enough.
+      summary: |
+        Node-controller workqueue {{ $labels.name }} has a high backlog.
+      severity: "8"
+      markupFormat: markdown
     - name: D8NodeGroupIsNotUpdating
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
