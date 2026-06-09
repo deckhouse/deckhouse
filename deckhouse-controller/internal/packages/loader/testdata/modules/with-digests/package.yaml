@@ -1,3 +1,4 @@
-name: with-digests
+apiVersion: v1
 type: Module
+name: with-digests
 version: v2.0.0

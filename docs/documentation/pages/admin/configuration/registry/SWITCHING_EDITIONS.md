@@ -359,11 +359,14 @@ Removing this parameter will trigger a check for the presence of critical compon
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME     NODES   READY   UPTODATE
    master   1       1       1
    worker   2       2       2
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Also, a message stating `Configuration is in sync, nothing to do` should appear in the systemd service log for bashible by executing the following command:
 

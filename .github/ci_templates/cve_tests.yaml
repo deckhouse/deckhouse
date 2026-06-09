@@ -3,49 +3,32 @@
 # <template: set_security_scan_requirement_status>
 set_security_scan_requirement_status:
   name: Set commit status after security scan run
-  runs-on: "ubuntu-latest"
+  runs-on: "ubuntu-slim"
   needs: test_cve_report_main
-  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
+  if: ${{ always() }}
+  permissions:
+    contents: read
+    pull-requests: write
   steps:
-{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Install GitHub CLI
       run: sudo apt-get install gh -y
     - name: Auth with GitHub CLI
       run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
     - name: Set PR Label
       env:
-        PR_NUMBER: ${{ inputs.issue_number }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GH_REPO: ${{ github.repository }}
+        RESULT: ${{ needs.test_cve_report_main.result }}
       run: |
-        echo "PR Number: $PR_NUMBER"
-        if [ "${{ needs.test_cve_report_main.result }}" == "success" ]; then
-          gh pr edit "$PR_NUMBER" --add-label "security/cve/success"
+        echo "PR Number: $PR_NUMBER | Result: $RESULT"
+        if [ "$RESULT" == "success" ]; then
+          gh pr edit "$PR_NUMBER" --add-label "security/cve/success" --remove-label "security/cve/failed"
+        elif [ "$RESULT" == "skipped" ]; then
+          gh pr edit "$PR_NUMBER" --remove-label "security/cve/success" --remove-label "security/cve/failed"
         else
-          gh pr edit "$PR_NUMBER" --add-label "security/cve/failed"
+          gh pr edit "$PR_NUMBER" --add-label "security/cve/failed" --remove-label "security/cve/success"
         fi
 # </template: set_security_scan_requirement_status>
-{!{- end -}!}
-
-{!{ define "remove_labels_job" }!}
-{!{- $ctx := . -}!}
-# <template: remove_labels_job>
-remove_labels:
-  name: Remove labels
-  runs-on: "ubuntu-latest"
-  if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
-  steps:
-{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
-    - name: Remove labels
-      id: remove
-      uses: {!{ index (ds "actions") "actions/github-script" }!}
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const label = "security/cve";
-          const ci = require('./.github/scripts/js/ci');
-          const issue_number = context.payload.inputs.issue_number;
-          console.log("Issue number is", issue_number);
-          return await ci.removeLabel({github, context, core, issue_number, label});
-# </template: remove_labels_job>
 {!{- end -}!}
 
 {!{ define "cve_scan_type_weekly" }!}
@@ -76,25 +59,25 @@ remove_labels:
 - name: Set scan target type
   id: scan_type
   run: |
-    if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_name }}" == "main" ]; then
-      echo "TAG=main" >> $GITHUB_OUTPUT
-    elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.pull_request_ref }}" ]; then
-      echo "REF=${{ github.event.inputs.pull_request_ref }}"
-      PR_NUMBER=$(echo "${{ github.event.inputs.pull_request_ref }}" | sed -E 's#refs/pull/([0-9]+)/head#\1#')
-      echo "PR_NUMBER=${PR_NUMBER}"
-      REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-      if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
-        TAG="pr${PR_NUMBER}"
-      else
-        TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
-      fi
-      echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+    PR_NUMBER="${{ github.event.pull_request.number }}"
+    echo "PR_NUMBER=${PR_NUMBER}"
+    REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+    if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+      TAG="pr${PR_NUMBER}"
+    else
+      TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
     fi
+    echo "TAG=${TAG}" >> $GITHUB_OUTPUT
     echo "SCAN_SEVERAL_LATEST_RELEASES=False" >> $GITHUB_OUTPUT
     echo "LATEST_RELEASES_AMOUNT=0" >> $GITHUB_OUTPUT
 {!{- end -}!}
 
 {!{ define "cve_scan_deckhouse_images" }!}
+{!{- $ctx := . -}!}
+{!{- $withChangedImages := false -}!}
+{!{- if coll.Has $ctx "withChangedImages" -}!}
+{!{-   $withChangedImages = (index $ctx "withChangedImages") -}!}
+{!{- end -}!}
 # <template: cve_scan_deckhouse_images>
 {!{- $secrets := slice -}!}
 {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
@@ -109,9 +92,37 @@ remove_labels:
   uses: {!{ index (ds "actions") "cosign" }!}
   with:
     cosign-release: "v3.0.4"
+{!{- if $withChangedImages }!}
+
+# PR-mode CVE: announce the changed-images filter that we forward to cve_scan.sh.
+# `changed_compact` is the same JSON allow-list used by rootless / drweb scans;
+# an empty "[]" (no PR-vs-main delta, or baseline build_report_FE missing) is
+# treated by cve_scan.sh as "scan every image" — matching the script's legacy
+# behaviour and our policy of preferring over-scan to under-scan.
+- name: Announce CVE delta-scan filter
+  env:
+    ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+  run: |
+    if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+      keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+      echo "🎯 CVE delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to cve_scan.sh"
+      jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+    else
+      echo "📋 CVE full-scan: ONLY_IMAGES is empty (no delta or baseline missing)"
+    fi
+{!{- end }!}
 
 - name: Run Deckhouse images CVE tests on "${{ steps.scan_type.outputs.tag }}"
   uses: deckhouse/modules-actions/cve_scan@main
+{!{- if $withChangedImages }!}
+  env:
+    # Forward the changed-images allow-list to cve_scan.sh. GitHub Actions
+    # propagates step-level env into the composite action's inner steps, so
+    # `cve_scan.sh` reads ${ONLY_IMAGES} directly from the environment (see
+    # the ONLY_IMAGES_SET block in /home/nikmor/Flant/GitLab/SSDLC-tools/cve-scan/cve_scan.sh).
+    # Empty "[]" makes the script fall back to full scan — no extra glue.
+    ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+{!{- end }!}
   with:
     prod_registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
     prod_registry_user: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}

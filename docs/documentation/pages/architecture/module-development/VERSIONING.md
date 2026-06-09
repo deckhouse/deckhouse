@@ -47,8 +47,8 @@ During its life cycle, the module goes through the following stages:
 
 Depending on the stage of the module lifecycle and the release channel from which the specific module version was installed, the overall stability can be determined by the following table:
 
-<table class="versioning-table">
-<thead>
+<table class="supported_versions table__small" style="width: 100%; max-width: 100%; table-layout: auto;">
+<thead class="versioning-table">
     <tr class="header-row">
       <th rowspan="2">Lifecycle Stage</th>
       <th colspan="5">Release Channels</th>

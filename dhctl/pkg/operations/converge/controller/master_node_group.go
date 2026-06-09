@@ -255,6 +255,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 				index,
 				c.cloudConfig,
 				ctx.InfrastructureContext(metaConfig),
+				c.globalOptions,
 			)
 			if err != nil {
 				return err
@@ -396,7 +397,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, infrastructure.GetMasterNodeResult)
+	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, c.globalOptions, infrastructure.GetMasterNodeResult)
 	if err != nil {
 		if errors.Is(err, controlplane.ErrSingleMasterClusterInfrastructurePlanHasDestructiveChanges) {
 			confirmation := input.NewConfirmation().WithMessage("A single-master cluster has disruptive changes in the infrastructure plan. Trying to migrate to a multi-master cluster and back to a single-master cluster. Do you want to continue?")

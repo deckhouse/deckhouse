@@ -196,6 +196,7 @@ func (suite *ObjectKeeperControllerTestSuite) fetchResults() []byte {
 	err := suite.kubeClient.List(context.TODO(), &retList)
 	require.NoError(suite.T(), err)
 	for _, item := range retList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ObjectKeeper"))
 		shouldUpdateMessage := item.Status.Phase == v1alpha1.PhaseExpiring
 		if item.Status.LostAt != nil {
 			item.Status.LostAt =  &constantTime

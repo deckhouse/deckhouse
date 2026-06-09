@@ -98,7 +98,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           i.Params.TmpDir,
-		DownloadDir:      i.Params.Options.Global.DownloadDir,
+		GlobalOptions:    &i.Params.Options.Global,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           i.Params.Logger,
 		IsDebug:          i.Params.IsDebug,

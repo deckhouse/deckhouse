@@ -31,7 +31,7 @@ The module consists of the following components:
 
    The created StorageClass configures the NFS server connection settings, a reclaim policy, the volume binding mode, etc. These settings are used by the provisioner of the `csi-nfs` CSI driver when managing NFS-based volumes.
 
-   Also the controller synchronizes node labels with the [`spec.workloadNodes.nodeSelector`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) parameter value of the NFSStorageClass custom resource.
+   Also the controller sets the `storage.deckhouse.io/csi-nfs-node` label on the cluster nodes according to the [`spec.workloadNodes.nodeSelector`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) parameter value of the NFSStorageClass custom resource.
 
    It consists of the following containers:
 
@@ -39,6 +39,8 @@ The module consists of the following components:
    * **webhooks**: A sidecar container that implements a webhook server for validating ModuleConfig and NFSStorageClass custom resources, as well as StorageClass resources.
 
 2. **Csi-nfs-scheduler-extender**: It consists of a single container. It is a kube-scheduler extender, which implements a scheduling logic specific for pods using NFS-based volumes. When scheduling pods, it relies on the node selectors set in the NFSStorageClass custom resource.
+
+   The **csi-nfs-scheduler-extender** may be absent if node selectors are not set in the NFSStorageClass custom resource.
 
 3. **CSI driver (`csi-nfs`)**: It is an implementation of the CSI driver for `nfs.csi.k8s.io` ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). To study the `csi-nfs` CSI driver architecture, refer to [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-nfs.html).
 

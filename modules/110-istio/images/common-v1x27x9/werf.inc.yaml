@@ -1,0 +1,38 @@
+{{- if ne $.Env "CSE" }}
+---
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-27" $ ) }}
+{{- $kialiVersion := printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-27" $ )) }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/istio/istio.git
+  tag: {{ $istioVersion }}
+  add: /
+  to: /src/istio
+  excludePaths:
+  - samples
+- url: {{ .SOURCE_REPO }}/istio/kiali.git
+  tag: {{ $kialiVersion }}
+  add: /
+  to: /src/kiali
+- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
+  tag: {{ $kialiVersion }}
+  add: /static
+  to: /src/kiali/frontend/build
+shell:
+  install:
+  # istio
+  - cd /src/istio/
+  - git apply --verbose /patches/001-istio-gomod_gosum.patch
+  - git apply --verbose /patches/002-istio-multicluster-regenerate-token-timeout.patch
+  # kiali
+  - cd /src/kiali/
+  - git apply --verbose /patches/001-kiali-gomod_gosum.patch
+{{- end }}

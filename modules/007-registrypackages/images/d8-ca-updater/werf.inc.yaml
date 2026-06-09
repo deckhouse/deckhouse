@@ -25,7 +25,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ index $.Images "builder/golang-bookworm" }}
+from: {{ index $.Images "builder/distroless" }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -39,8 +39,8 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get install -y python3-cryptography
+  - pm install python@3.12 gnu-glibc gnu-gcc-lib gnu-glibc-locale perl python-wheel coreutils curl
+  - pip3 install -f file:///wheels --no-index cryptography==44.0.1
   install:
   - mv /mk-ca-bundle.pl /ca-certificates/mozilla
   - cd /ca-certificates/mozilla

@@ -35,10 +35,15 @@ trustedPeers:
 {{- end }}
 {{- if $context.Values.userAuthn.internal.publishAPI.enabled }}
 - kubeconfig-generator
+  {{- if $context.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry }}
+- kubeconfig-publish-api
+  {{- end }}
 {{- end }}
 {{- if $context.Values.userAuthn.kubeconfigGenerator}}
   {{- range $index, $cluster := $context.Values.userAuthn.kubeconfigGenerator }}
 - kubeconfig-generator-{{ $index }}
+    {{- $slug := $cluster.id | replace "@" "-at-" | replace ":" "-" }}
+- kubeconfig-{{ $slug }}
   {{- end }}
 {{- end }}
 redirectURIs:

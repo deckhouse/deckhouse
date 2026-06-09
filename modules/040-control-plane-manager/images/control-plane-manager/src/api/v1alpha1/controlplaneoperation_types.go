@@ -165,10 +165,10 @@ type ControlPlaneOperationSpec struct {
 
 // ObservedComponentState holds the certificate state of a component collected by CertObserve.
 type ObservedComponentState struct {
-	// CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+	// CertificatesExpirationTime maps each component certificate file name to its NotAfter timestamp.
 	// Used by the module to renew certificates in time and to drive related alerts.
 	// +optional
-	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
+	CertificatesExpirationTime map[string]metav1.Time `json:"certificatesExpirationTime,omitempty"`
 }
 
 // ControlPlaneOperationStatus describes the observed state of an operation.
@@ -176,9 +176,10 @@ type ControlPlaneOperationStatus struct {
 	// Conditions reflects the operation progress.
 	//
 	// The primary condition is "Completed". Its "reason" field is shown in the Phase column of `kubectl get cpo`:
-	//   - InProgress — the operation is running. The current step name is shown in the CurrentStep column.
-	//   - Succeeded  — the operation finished successfully.
-	//   - Failed     — the operation finished with an error; details are in "message".
+	//   - OperationInProgress — the operation is running. The current step name is shown in the CurrentStep column.
+	//   - OperationCompleted  — the operation finished successfully.
+	//   - OperationFailed     — the operation finished with an error; details are in "message".
+	//   - OperationAbandoned  — desired checksums became stale before the operation finished.
 	//
 	// In addition to "Completed", a separate condition is created for each executed step,
 	// where "type" equals the step name (for example RenewPKICerts, SyncManifests).
@@ -197,7 +198,7 @@ type ControlPlaneOperationStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName=cpo
+// +kubebuilder:resource:scope=Namespaced,shortName=cpo
 // +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component",priority=1
 // +kubebuilder:printcolumn:name="Node",type="string",JSONPath=".spec.nodeName",description="Target node"
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=`.status.conditions[?(@.type=="Completed")].reason`,description="Operation phase"

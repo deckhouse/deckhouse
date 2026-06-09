@@ -36,6 +36,7 @@
 **/007-registrypackages/images/virt-what                         @borg-z @090809
 **/007-registrypackages/images/which                             @borg-z @090809
 **/007-registrypackages/images/yq                                @borg-z @090809
+**/007-registrypackages/images/docker-registry                   @borg-z @090809
 015-admission-policy-engine/                                     @nabokihms @AlwxSin
 021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
@@ -63,6 +64,7 @@
 **/040-node-manager/templates/nvidia-gpu                         @serg-su
 **/040-node-manager/hooks/fencing**                              @yalosev @ergoz
 **/040-node-manager/e2e/fencing**                                @yalosev @ergoz
+**/040-node-manager/e2e/cluster-autoscaler                       @yalosev @ergoz
 040-terraform-manager/                                           @borg-z @090809
 **/040-terraform-manager/images                                  @aleksey-su @pabateman
 **/040-terraform-manager/images/base-terraform-manager           @borg-z @090809
@@ -102,7 +104,7 @@
 600-namespace-configurator/                                      @nabokihms @AlwxSin
 610-service-with-healthchecks                                    @AndreyPavlovFlant @apolovov
 800-deckhouse-tools/                                             @RomanenkoDenys @borg-z @090809
-810-documentation/                                               @z9r5
+810-documentation/                                               @zhbert
 
 /candi/                                  @borg-z @090809
 /candi/control-plane/                    @sprait
@@ -115,14 +117,15 @@ cloud-controller-manager/                @aleksey-su @pabateman
 csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @borg-z @090809
-docs/                                    @z9r5
+docs/                                    @zhbert
 docs/documentation/pages/architecture/   @voitenkov
 helm_lib/                                @ldmonster
-crds/                                    @z9r5
-openapi/                                 @z9r5
+crds/                                    @zhbert
+openapi/                                 @zhbert
 /pkg/                                    @ldmonster
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
 /release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su @pabateman
 go_lib/registry/                         @nabokihms @vadimartynov
+go_lib/controlplane/                     @sprait @AmazinMax

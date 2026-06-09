@@ -19,7 +19,7 @@ on:
 
 jobs:
   gitleaks_full_scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       id-token: write

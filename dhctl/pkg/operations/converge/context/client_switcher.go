@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -50,7 +51,7 @@ type KubeClientSwitcher struct {
 
 type KubeClientSwitcherParams struct {
 	TmpDir        string
-	DownloadDir   string
+	GlobalOptions *options.GlobalOptions
 	IsDebug       bool
 	Logger        log.Logger
 	DisableSwitch bool
@@ -454,7 +455,25 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 	}
 
 	if convergeState.NodeUserCredentials != nil {
-		return convergeState, nil
+		exists, err := entity.NodeUserExists(s.ctx.Ctx(), s.ctx, convergeState.NodeUserCredentials.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		if exists {
+			return convergeState, nil
+		}
+
+		s.warn(
+			"NodeUser %q is missing while converge state exists; recreating NodeUser",
+			convergeState.NodeUserCredentials.Name,
+		)
+
+		convergeState.NodeUserCredentials = nil
+
+		if err := s.ctx.SetConvergeState(convergeState); err != nil {
+			return nil, fmt.Errorf("Failed to reset stale node user credentials: %w", err)
+		}
 	}
 
 	s.debugStartOperation("create node user")
@@ -713,7 +732,7 @@ func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractor
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           e.tmpDir,
-		DownloadDir:      e.switcher.params.DownloadDir,
+		GlobalOptions:    e.switcher.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           logger,
 		IsDebug:          e.switcher.params.IsDebug,
@@ -746,4 +765,8 @@ func (e *sshIPExtractor) prepareState(params *sshIPExtractorParams) (string, err
 	}
 
 	return statePath, nil
+}
+
+func (s *KubeClientSwitcher) GetGlobalOptions() *options.GlobalOptions {
+	return s.params.GlobalOptions
 }

@@ -4,7 +4,6 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/module-exists
   name: test-source-1
@@ -42,7 +41,6 @@ metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"
     modules.deckhouse.io/change-cause: check release (no releases in cluster)
-  creationTimestamp: null
   labels:
     module: enabledmodule
     modules.deckhouse.io/update-policy: ""
@@ -75,7 +73,6 @@ metadata:
   annotations:
     modules.deckhouse.io/apply-now: "true"
     modules.deckhouse.io/change-cause: check release (no releases in cluster)
-  creationTimestamp: null
   labels:
     module: withpolicymodule
     modules.deckhouse.io/update-policy: test-alpha

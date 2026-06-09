@@ -103,6 +103,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range repoList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("PackageRepository"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -113,6 +114,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range operationList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("PackageRepositoryOperation"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)

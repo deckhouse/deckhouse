@@ -1,7 +1,7 @@
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
 args: 'sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --user $(id -u):$(id -g) -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 # </template: unit_run_args>
 {!{- end -}!}
 

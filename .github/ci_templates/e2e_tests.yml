@@ -21,7 +21,7 @@
 {!{ end -}!}
 
 {!{- define "e2e_kubernetes_default_version" -}!}
-1.33
+1.34
 {!{- end -}!}
 
 # job for set e2e requirement status
@@ -204,6 +204,7 @@ run: |
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e WERF_ENV=${WERF_ENV} \
   -e USER_RUNNER_ID=${user_runner_id} \
   -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v $(pwd)/testing:/deckhouse/testing \
@@ -222,6 +223,7 @@ run: |
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e WERF_ENV=${WERF_ENV} \
   -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v "$PWD/config.yml:/config.yml" \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -240,6 +242,7 @@ run: |
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
   -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+  -e WERF_ENV=${WERF_ENV} \
   -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e CRI=${CRI} \
@@ -411,7 +414,7 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 # <template: check_e2e_labels_job>
 check_e2e_labels:
   name: Check e2e labels
-  runs-on: "ubuntu-latest"
+  runs-on: "ubuntu-slim"
   permissions:
     contents: read
     issues: write

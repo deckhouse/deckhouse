@@ -4,6 +4,7 @@ go 1.25.6
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
+	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
 	go.etcd.io/etcd/api/v3 v3.5.16

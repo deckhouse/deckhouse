@@ -294,15 +294,27 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 
 	// reportCh receives progress reports from nelm during resource tracking.
 	// A background goroutine converts each report into a tracking event and
-	// forwards it to the caller's callback. The channel is closed when the
-	// install operation completes.
+	// forwards it to the caller's callback.
+	//
+	// We must NOT close reportCh: when a Timeout is set, nelm's ReleaseInstall
+	// returns on ctx.Done() without joining the goroutine that actually runs
+	// the install. That detached goroutine keeps sending progress reports via
+	// sendNonBlocking, so closing the channel here would panic it with
+	// "send on closed channel" and crash the process. Instead we stop the
+	// forwarder via done and let the buffered channel be garbage-collected.
 	reportCh := make(chan progrep.ProgressReport, 1)
-	defer close(reportCh)
+	done := make(chan struct{})
+	defer close(done)
 
 	go func() {
-		for report := range reportCh {
-			if opts.OnTrackingEvent != nil {
-				opts.OnTrackingEvent(releaseName, report)
+		for {
+			select {
+			case <-done:
+				return
+			case report := <-reportCh:
+				if opts.OnTrackingEvent != nil {
+					opts.OnTrackingEvent(releaseName, report)
+				}
 			}
 		}
 	}()

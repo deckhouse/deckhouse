@@ -92,6 +92,7 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 			ctx.InfrastructureContext(metaConfig),
 			log.GetDefaultLogger(),
 			false,
+			c.globalOptions,
 		)
 		return err
 	})
@@ -151,7 +152,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		return err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, infrastructure.OnlyState)
+	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, c.globalOptions, infrastructure.OnlyState)
 	if err != nil {
 		log.ErrorF("Infrastructure utility exited with an error:\n%s\n", err.Error())
 		return err

@@ -72,7 +72,7 @@ by adding extra checks to the existing ones.
 
 To extend a policy:
 
-1. Create a validation template using ConstraintTemplate.
+1. Create a validation template using `ConstraintTemplate`.
 1. Apply the template to the `baseline` or `restricted` policy.
 
 Example template for validating the container image repository address:
@@ -474,10 +474,10 @@ To sign an image with Cosign, do the following:
 
 To enable container image signature verification in a DVP cluster:
 
-1. Use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
-   in SecurityPolicy, specifying the generated public key.
+1. Use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures)
+   parameter in SecurityPolicy and specify the generated public key.
 
-   Example SecurityPolicy configuration for verifying container image signatures:
+   Example SecurityPolicy configuration for verifying signatures of container images in `registry.private.ru`, located under `/labs/application/`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -490,7 +490,7 @@ To enable container image signature verification in a DVP cluster:
        namespaceSelector:
          labelSelector:
            matchLabels:
-             kubernetes.io/metadata.name: test-namespace
+             example-security-policy/enabled: true
      policies:
        allowHostIPC: true
        allowHostNetwork: true
@@ -504,10 +504,14 @@ To enable container image signature verification in a DVP cluster:
                -----BEGIN PUBLIC KEY-----
                ...
                -----END PUBLIC KEY-----
-           reference: registry.private.com/labs/application/*
+           reference: registry.private.ru/labs/application/*
    ```
 
-1. Create an [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) that restricts pod launches from third-party registries:
+   The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
+
+   More details about selector usage are available in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+
+1. Create an [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) that restricts running pods from third-party registries:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -519,30 +523,40 @@ To enable container image signature verification in a DVP cluster:
      match:
        namespaceSelector:
          labelSelector:
-          matchLabels:
-            operation-policy.deckhouse.io/enabled: "true"
-   policies:
-     allowedRepos:
-     - registry.private.com
+           matchLabels:
+             example-operation-policy/enabled: "true"
+     policies:
+       allowedRepos:
+       - registry.private.ru
    ```
 
-1. Add a label to the namespace where you want to enable signature verification with the command (specify the desired namespace):
+   The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
+
+   More details about selector usage are available in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+
+1. Add a label to the namespace where signature verification should be enabled (specify your namespace):
 
    ```shell
-   d8 k label ns <NAMESPACE> security.deckhouse.io/verify-image-test=
+   d8 k label ns <NAMESPACE> example-security-policy/enabled=true
    ```
 
-1. To test the image signing mechanism, deploy pods in a namespace with signed and unsigned images (specify the desired namespace):
+1. Add a label to the namespace where running pods from third-party registries should be restricted (specify your namespace):
 
    ```shell
-   d8 k  -n <NAMESPACE> run signed-pod --image=<SIGNED_IMAGE>
-   d8 k  -n <NAMESPACE> run unsigned-pod --image=<UNSIGNED_IMAGE>
+   d8 k label ns <NAMESPACE> example-operation-policy/enabled=true
    ```
 
-With this policy, if a container image address matches the value of the `reference` parameter
-and the image is unsigned or the signature does not match the specified keys, Pod creation will be denied.
+1. To verify how image signing works, deploy pods in the namespace with signed and unsigned images (specify your namespace):
 
-Example error output when creating a Pod with an unverified container image:
+   ```shell
+   d8 k -n <NAMESPACE> run signed-pod --image=<SIGNED_IMAGE>
+   d8 k -n <NAMESPACE> run unsigned-pod --image=<UNSIGNED_IMAGE>
+   ```
+
+According to this policy, if any container image address matches the `reference` parameter value and the image is unsigned,
+or the signature does not match the specified keys, pod creation will be denied.
+
+Example error output when creating a pod with an image that fails signature verification:
 
 ```console
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2

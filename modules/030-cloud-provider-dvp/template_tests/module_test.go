@@ -17,8 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
-	"fmt"
 	"encoding/base64"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -50,7 +50,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -61,15 +61,12 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.31.1
+    kubernetesVersion: 1.32.1
     clusterUUID: cluster
 `
 
 const moduleValuesA = `
 internal:
-  discoveryData:
-    loadBalancer:
-      enabled: false
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: DVPClusterConfiguration
@@ -185,6 +182,8 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(ccmDeployment.Exists()).To(BeTrue())
 			Expect(ccmDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 			Expect(ccmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+			Expect(ccmDeployment.Field(`spec.template.spec.containers.0.args`).String()).
+				To(ContainSubstring(`--controllers=cloud-node,cloud-node-lifecycle,service-lb-controller`))
 
 			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
 			Expect(ccmVPA.Exists()).To(BeTrue())
@@ -286,5 +285,6 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
 		})
+
 	})
 })

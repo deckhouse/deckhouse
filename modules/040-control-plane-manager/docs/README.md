@@ -106,7 +106,7 @@ These settings do not apply if the cluster control plane is managed by a cloud p
 
 **Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the DKP version updates. You can't manage patch version upgrades.
 
-Upgrading **minor versions** of control plane components (e.g. from `1.31.*` to `1.32.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
 
@@ -115,7 +115,7 @@ If the target version (set with the [kubernetesVersion](/products/kubernetes-pla
 - General remarks
   - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
 - When upgrading:
-  - Upgrades are carried out sequentially, one minor version at a time: 1.31 -> 1.32, 1.32 -> 1.33, 1.33 -> 1.34.
+  - Upgrades are carried out sequentially, one minor version at a time: 1.32 -> 1.33, 1.33 -> 1.34, 1.35 -> 1.36.
   - At each step, the control plane version is upgraded first, followed by kubelet upgrades on the cluster nodes.
 - When downgrading:
   - Successful downgrading is only guaranteed for a single version down from the maximum minor version of the control plane ever used in the cluster.
@@ -192,7 +192,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     enabledFeatureGates:
@@ -247,7 +247,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     apiserver:

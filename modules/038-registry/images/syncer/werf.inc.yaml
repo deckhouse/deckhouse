@@ -13,6 +13,9 @@ git:
     stageDependencies:
       install:
         - '**/*'
+shell:
+  install:
+  - set -e
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ index $.Images "builder/golang-alpine" }}

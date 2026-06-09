@@ -37,6 +37,7 @@ To perform the migration, follow these steps:
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                      READY STATUS  RESTARTS    AGE
    agent-5zzfv               2/2   Running 5 (23m ago) 26m
@@ -47,6 +48,8 @@ To perform the migration, follow these steps:
    safe-agent-updater-qlbrh  3/3   Running 0           26m
    safe-agent-updater-wjjr5  3/3   Running 0           26m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    If the Cilium agent pods do not transition to the `Ready` state:
 

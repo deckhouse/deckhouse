@@ -56,7 +56,6 @@ var _ = Describe("Modules :: cni-flannel :: hooks :: check_cni_configuration", f
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   name: desired-cni-moduleconfig
   namespace: d8-system
 data:
@@ -64,7 +63,6 @@ data:
     apiVersion: deckhouse.io/v1alpha1
     kind: ModuleConfig
     metadata:
-      creationTimestamp: null
       name: cni-flannel
     spec:
       enabled: true
@@ -368,7 +366,6 @@ data:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  creationTimestamp: null
   name: cni-flannel
 spec:
   enabled: true
@@ -416,7 +413,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  creationTimestamp: null
   name: cni-flannel
 spec:
   enabled: true
@@ -715,7 +711,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  creationTimestamp: null
   name: cni-flannel
 spec:
   enabled: true

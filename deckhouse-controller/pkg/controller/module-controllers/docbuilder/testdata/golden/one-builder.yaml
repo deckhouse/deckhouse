@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleDocumentation
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/documentation-exists
   name: testmodule

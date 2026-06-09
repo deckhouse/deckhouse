@@ -1,4 +1,7 @@
-{{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" "CRDSensitiveData=true" -}}
+{{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" "CRDSensitiveData=true" -}}
+{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
+{{- end }}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
@@ -233,7 +236,7 @@ spec:
 {{- if .apiserver.auditWebhookURL }}
     - --audit-webhook-config-file=/etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
 {{- end }}
-{{- if .apiserver.secretEncryptionKey }}
+{{- if or (.apiserver.secretEncryptionKey) (.apiserver.signature) }}
     - --encryption-provider-config=/etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml
     - --encryption-provider-config-automatic-reload=true
 {{- end }}
