@@ -128,6 +128,24 @@ func (dao *ExportDAO) DeleteUpTo(syncID string, slot time.Time) error {
 	return nil
 }
 
+func (dao *ExportDAO) DeleteBefore(syncID string, slot time.Time) error {
+	ctx := dao.ctx.Start()
+	defer ctx.Stop()
+
+	const q = `
+	DELETE FROM export_episodes
+	WHERE sync_id = @sync_id AND timeslot < @timeslot
+	`
+	_, err := ctx.StmtRunner().Exec(q,
+		sql.Named("sync_id", syncID),
+		sql.Named("timeslot", slot.Unix()),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // listExportEpisodesBySlotRange fetches all stored export episodes for the given sync_id whose time
 // slot is within [fromUnix, toUnix] (inclusive). It loads the current state of a whole batch in a
 // single query so origins can be merged in Go without a query per episode.

@@ -207,8 +207,8 @@ func (s *syncer) getTimeseries() ([]*prompb.TimeSeries, time.Time, error) {
 	if s.maxSampleAge > 0 {
 		ageDeadline := time.Now().Add(-s.maxSampleAge)
 		if slot.Before(ageDeadline) {
-			s.logger.Warnf("dropping stale slots up to %s (older than %s)", ageDeadline.Format(time.RFC3339), s.maxSampleAge)
-			if err := s.storage.Delete(s.syncID, ageDeadline); err != nil {
+			s.logger.Warnf("dropping stale slots older than %s (%s)", ageDeadline.Format(time.RFC3339), s.maxSampleAge)
+			if err := s.storage.DeleteBefore(s.syncID, ageDeadline); err != nil {
 				return nil, slot, fmt.Errorf("dropping stale slots: %w", err)
 			}
 			return nil, slot, ErrNoCompleteEpisodes

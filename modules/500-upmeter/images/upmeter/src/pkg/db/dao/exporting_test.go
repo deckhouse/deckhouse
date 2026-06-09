@@ -91,7 +91,7 @@ func Test_ExportDAO_Get_GetsRepeatedly(t *testing.T) {
 	assertEqualLists(g, fetched, entities)
 }
 
-func Test_ExportDAO_DeleteBefore_DeletesExclusively(t *testing.T) {
+func Test_ExportDAO_DeleteUpTo_DeletesInclusively(t *testing.T) {
 	g := NewWithT(t)
 	storage := newExportDao(t)
 	originsCount := 1
@@ -102,7 +102,7 @@ func Test_ExportDAO_DeleteBefore_DeletesExclusively(t *testing.T) {
 	err := storage.Save(entities)
 	g.Expect(err).ShouldNot(HaveOccurred(), "no error on creation")
 
-	// Delete
+	// Delete up to (and including) the slot
 	err = storage.DeleteUpTo(*opts.syncID, opts.slot)
 	g.Expect(err).ShouldNot(HaveOccurred(), "no error on deletion")
 
@@ -111,6 +111,35 @@ func Test_ExportDAO_DeleteBefore_DeletesExclusively(t *testing.T) {
 	g.Expect(fetched).To(BeNil(), "should return nil, not slice")
 	g.Expect(err).Should(HaveOccurred(), "should return error for nonexistent episodes")
 	g.Expect(err).Should(Equal(ErrNotFound), "should be particular error for nonexistent episodes")
+}
+
+// DeleteBefore must drop strictly older slots while keeping the slot exactly on the boundary, so
+// that data the remote storage would still accept (rejection is strict t < minValidTime) is not lost.
+func Test_ExportDAO_DeleteBefore_KeepsBoundarySlot(t *testing.T) {
+	g := NewWithT(t)
+	dbctx := getTestDatabase(t)
+	storage := NewExportEpisodesDAO(dbctx)
+
+	boundary := time.Now().Truncate(time.Second)
+	older := boundary.Add(-30 * time.Second)
+
+	olderEnts, opts := genExportEntities(genOpts{n: 3, slotInt64: older.Unix(), origins: randOrigins(1)})
+	syncID := *opts.syncID
+	boundaryEnts, _ := genExportEntities(genOpts{n: 3, slotInt64: boundary.Unix(), origins: randOrigins(1), syncID: &syncID})
+
+	g.Expect(storage.Save(olderEnts)).ShouldNot(HaveOccurred(), "store older slot")
+	g.Expect(storage.Save(boundaryEnts)).ShouldNot(HaveOccurred(), "store boundary slot")
+
+	g.Expect(storage.DeleteBefore(syncID, boundary)).ShouldNot(HaveOccurred(), "no error on deletion")
+
+	conn := dbctx.Start()
+	defer conn.Stop()
+	got, err := listExportEpisodesBySlotRange(conn, syncID, older.Unix(), boundary.Unix())
+	g.Expect(err).ShouldNot(HaveOccurred())
+	g.Expect(got).To(HaveLen(len(boundaryEnts)), "only the boundary slot must remain")
+	for _, e := range got {
+		g.Expect(e.Episode.TimeSlot).To(Equal(boundary), "remaining rows must be exactly the boundary slot")
+	}
 }
 
 func Test_ExportDAO_Delete_LetsResurrect(t *testing.T) {
