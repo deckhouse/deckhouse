@@ -39,8 +39,14 @@ Issuers / LB / cluster roles have no such defaulter, so a disallowed explicit va
 ## Discovery & protection (run, don't apply)
 
 ```bash
-# Tenant's "what can I use" view (the controller-owned catalog):
-k -n demo get availableresources -o wide
+# Tenant's "what can I use" view (the controller-owned catalog). The AVAILABLE column is a count,
+# so the table stays readable even for cluster roles (dozens of entries):
+k -n demo get availableresources
+
+# Full list of available names for one resource:
+k -n demo get availableresource clusterroles -o jsonpath='{.status.availableSummary}'
+# or the structured form (with the default flagged):
+k -n demo get availableresource storageclasses -o yaml
 
 # Object-quota usage vs limit:
 k -n demo get grantquota objects -o yaml

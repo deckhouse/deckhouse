@@ -51,8 +51,14 @@ type AvailableResourceStatus struct {
 	// +optional
 	Default string `json:"default,omitempty"`
 
+	// AvailableCount is the number of available names. It is the wide-column value, because the full
+	// list can be long (e.g. dozens of cluster roles) and would break the table; get the names from
+	// Available or AvailableSummary.
+	// +optional
+	AvailableCount int `json:"availableCount,omitempty"`
+
 	// AvailableSummary is a comma-separated list of all available names, denormalized from Available
-	// for display: CRD printer columns cannot join an array, so the wide column reads this string.
+	// for on-demand display (kubectl get ... -o jsonpath='{.status.availableSummary}').
 	// +optional
 	AvailableSummary string `json:"availableSummary,omitempty"`
 
@@ -66,7 +72,7 @@ type AvailableResourceStatus struct {
 // +kubebuilder:resource:scope=Namespaced,shortName=available
 // +kubebuilder:printcolumn:name="Kind",type=string,JSONPath=`.status.grantedResourceKind`
 // +kubebuilder:printcolumn:name="Default",type=string,JSONPath=`.status.default`
-// +kubebuilder:printcolumn:name="Available",type=string,priority=1,JSONPath=`.status.availableSummary`
+// +kubebuilder:printcolumn:name="Available",type=integer,JSONPath=`.status.availableCount`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // AvailableResource is the per-project, controller-owned catalog (discovery only) for one

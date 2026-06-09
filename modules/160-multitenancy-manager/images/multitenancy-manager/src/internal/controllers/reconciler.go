@@ -166,6 +166,7 @@ func (r *ProjectReconciler) upsertAvailable(ctx context.Context, ns, project, na
 	for i := range available {
 		names = append(names, available[i].Name)
 	}
+	ar.Status.AvailableCount = len(available)
 	ar.Status.AvailableSummary = strings.Join(names, ", ")
 	if err := r.Status().Update(ctx, ar); err != nil {
 		return fmt.Errorf("update AvailableResource status %s/%s: %w", ns, name, err)

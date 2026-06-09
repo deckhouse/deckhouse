@@ -26,10 +26,9 @@ spec:
     - jsonPath: .status.default
       name: Default
       type: string
-    - jsonPath: .status.availableSummary
+    - jsonPath: .status.availableCount
       name: Available
-      priority: 1
-      type: string
+      type: integer
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -81,10 +80,16 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              availableCount:
+                description: |-
+                  AvailableCount is the number of available names. It is the wide-column value, because the full
+                  list can be long (e.g. dozens of cluster roles) and would break the table; get the names from
+                  Available or AvailableSummary.
+                type: integer
               availableSummary:
                 description: |-
                   AvailableSummary is a comma-separated list of all available names, denormalized from Available
-                  for display: CRD printer columns cannot join an array, so the wide column reads this string.
+                  for on-demand display (kubectl get ... -o jsonpath='{.status.availableSummary}').
                 type: string
               default:
                 description: |-
