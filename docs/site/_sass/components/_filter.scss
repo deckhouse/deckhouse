@@ -64,6 +64,27 @@
 
     &__container {
 
+        @include breakpoints.max-w(xl) {
+            &--stages {
+                .filter__container--title {
+                    padding-right: 30px;
+
+                    &.closing-title {
+                        &::before {
+                            top: -12px;
+                        }
+                    }
+
+                    &.filter-selected {
+                        &::after {
+                            top: 30px;
+                        }
+                    }
+                    
+                }
+            }
+        }
+
         &--title {
             margin-bottom: 12px;
             color: #00122C;

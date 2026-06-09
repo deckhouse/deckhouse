@@ -15,9 +15,19 @@
 package registry
 
 import (
+	"archive/tar"
+	"bytes"
+	"context"
 	"encoding/base64"
+	"io"
+	"os"
+	"path/filepath"
 	"testing"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -82,4 +92,53 @@ func TestBuildRemote_ModuleSource_LoginPasswordNotApplicable(t *testing.T) {
 	assert.Equal(t, existingDockerCfg, got.DockerConfig)
 	assert.Empty(t, got.Login)
 	assert.Empty(t, got.Password)
+}
+
+// reproLayer builds a tar layer; a non-empty opaqueDir adds an AUFS opaque
+// whiteout marker on that directory ("remove everything in it from lower layers").
+func reproLayer(t *testing.T, files map[string]string, opaqueDir string) v1.Layer {
+	t.Helper()
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	if opaqueDir != "" {
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: opaqueDir + "/", Typeflag: tar.TypeDir, Mode: 0o755}))
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: opaqueDir + "/.wh..wh..opq", Mode: 0o644}))
+	}
+	for name, body := range files {
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(body))}))
+		_, err := io.WriteString(tw, body)
+		require.NoError(t, err)
+	}
+	require.NoError(t, tw.Close())
+
+	data := buf.Bytes()
+	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(data)), nil
+	})
+	require.NoError(t, err)
+	return layer
+}
+
+// TestServiceDownload_OpaqueWhiteout pins the fix for go-containerregistry#2029:
+// download() must drop files removed via an opaque whiteout, not resurrect them.
+// Lower layer holds test/hello.txt; the upper layer does `rm -rf /test` (opaque
+// whiteout) and re-adds test/hello2.txt — only hello2.txt must land on disk.
+func TestServiceDownload_OpaqueWhiteout(t *testing.T) {
+	lower := reproLayer(t, map[string]string{"test/hello.txt": "old"}, "")
+	upper := reproLayer(t, map[string]string{"test/hello2.txt": "new"}, "test")
+
+	img, err := mutate.AppendLayers(empty.Image, lower, upper)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, (&Service{}).download(context.Background(), img, dir))
+
+	// File deleted by the opaque whiteout must not reappear.
+	assert.NoFileExists(t, filepath.Join(dir, "test", "hello.txt"))
+
+	// Recreated file must be present with its current content.
+	got, err := os.ReadFile(filepath.Join(dir, "test", "hello2.txt"))
+	require.NoError(t, err)
+	assert.Equal(t, "new", string(got))
 }

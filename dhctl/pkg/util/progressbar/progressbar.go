@@ -36,14 +36,16 @@ type PbParam struct {
 	size       int
 	labelChan  chan string
 	phasesChan chan phases.Progress
+	logChan    chan string
 }
 
-func NewPbParams(size int, startMsg string, labelChan chan string, phasesChan chan phases.Progress) *PbParam {
+func NewPbParams(size int, startMsg string, labelChan chan string, phasesChan chan phases.Progress, logChan chan string) *PbParam {
 	return &PbParam{
 		size:       size,
 		startMsg:   startMsg,
 		labelChan:  labelChan,
 		phasesChan: phasesChan,
+		logChan:    logChan,
 	}
 }
 
@@ -52,6 +54,8 @@ type Pb struct {
 	MultiPrinter       *pterm.MultiPrinter
 	SpinnerPrinter     *pterm.SpinnerPrinter
 	StopCh             chan struct{}
+	LogBox             *LogBox
+	WriterFabric       *WriterFabric
 }
 
 func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), chan phases.Progress, error) {
@@ -61,8 +65,9 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 	}
 	labelChan := intLogger.GetPhaseChan()
 	phasesChan := make(chan phases.Progress, 5)
+	logChan := intLogger.GetLogChan()
 
-	pbParam := NewPbParams(100, name, labelChan, phasesChan)
+	pbParam := NewPbParams(100, name, labelChan, phasesChan, logChan)
 
 	if err := InitProgressBar(pbParam); err != nil {
 		return nil, phasesChan, err
@@ -77,19 +82,28 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 
 func InitProgressBar(param *PbParam) error {
 	multi := pterm.DefaultMultiPrinter
+	writerFabric := newWriterFabric(&multi)
 	if param.size == 0 {
 		param.size = 100
 	}
+
+	width := pterm.GetTerminalWidth()
+	effectiveWidth := width - 10
+	if width < 160 {
+		effectiveWidth = 120
+	}
 	p := pterm.DefaultProgressbar.
 		WithTotal(param.size).
-		WithMaxWidth(120).
-		WithWriter(multi.NewWriter()).
+		WithMaxWidth(effectiveWidth).
+		WithWriter(writerFabric.GetWriter()).
 		WithTitle(param.startMsg)
 
 	staticSpinner := pterm.DefaultSpinner.
 		WithSequence(" ").
 		WithDelay(time.Hour).
-		WithWriter(multi.NewWriter())
+		WithWriter(writerFabric.GetWriter())
+
+	logBox := newLogBox(&writerFabric, param.logChan)
 
 	_, startErr := multi.Start()
 	if startErr != nil {
@@ -106,6 +120,11 @@ func InitProgressBar(param *PbParam) error {
 		return err
 	}
 
+	err = logBox.Start()
+	if err != nil {
+		return err
+	}
+
 	stopChan := make(chan struct{}, 2)
 
 	defaultpb = &Pb{
@@ -113,11 +132,14 @@ func InitProgressBar(param *PbParam) error {
 		MultiPrinter:       &multi,
 		SpinnerPrinter:     staticSpinner,
 		StopCh:             stopChan,
+		LogBox:             logBox,
+		WriterFabric:       &writerFabric,
 	}
 
-	log.WithProgressBar()
+	log.WithProgressBar(true)
 
-	go updateProgress(p, param.labelChan, param.phasesChan, stopChan, staticSpinner, &multi)
+	go updateProgress(p, param.labelChan, param.phasesChan, stopChan, staticSpinner, &writerFabric)
+	go logBox.Update()
 
 	return nil
 }
@@ -128,7 +150,7 @@ func updateProgress(
 	successChan chan phases.Progress,
 	stopChan chan struct{},
 	spinner *pterm.SpinnerPrinter,
-	mp *pterm.MultiPrinter,
+	writerFabric *WriterFabric,
 ) {
 	if p == nil {
 		return
@@ -176,7 +198,12 @@ func updateProgress(
 					continue
 				}
 
-				pterm.Success.WithWriter(mp.NewWriter()).Println(completed)
+				status := defaultpb.LogBox.getStatusString()
+				if err := defaultpb.LogBox.Stop(); err != nil {
+					return
+				}
+
+				pterm.Success.WithWriter(writerFabric.GetWriter()).Println(completed)
 				increment := int(math.Round(msg.Progress*100) - float64(p.Current))
 
 				if increment == 0 {
@@ -190,6 +217,13 @@ func updateProgress(
 				p.Add(increment)
 				lastCompleted = completed
 				p.UpdateTitle(phaseToString(msg, false))
+
+				logBox := newLogBox(writerFabric, defaultpb.LogBox.logChan).WithStatusString(status)
+				if err := logBox.Start(); err != nil {
+					return
+				}
+				defaultpb.LogBox = logBox
+				go logBox.Update()
 			}
 		}
 	}
@@ -197,18 +231,18 @@ func updateProgress(
 
 // if Progressbar used, this func allows to print to new MultiPrinter Writer
 func InfoF(format string, a ...any) {
-	writer := defaultpb.MultiPrinter.NewWriter()
+	writer := defaultpb.LogBox.ShiftDown()
 	pterm.Info.WithWriter(writer).Printf(format, a...)
 }
 
 func WarnF(format string, a ...any) {
-	writer := defaultpb.MultiPrinter.NewWriter()
+	writer := defaultpb.LogBox.ShiftDown()
 	pterm.Warning.WithWriter(writer).Printf(format, a...)
 }
 
 func ErrorF(format string, a ...any) {
 	if defaultpb != nil {
-		writer := defaultpb.MultiPrinter.NewWriter()
+		writer := defaultpb.WriterFabric.GetWriter()
 		pterm.Error.WithWriter(writer).Printf(format, a...)
 	} else {
 		pterm.Error.Printf(format, a...)
@@ -216,11 +250,12 @@ func ErrorF(format string, a ...any) {
 }
 
 func phaseToString(p phases.Progress, completed bool) string {
-	// Butify bootstrap: phases with subphases
+	// Beautify bootstrap: phases with subphases
 	phasesMap := make(map[phases.OperationPhase]string)
+	phasesMap[phases.PreInfraPreflightsPhase] = "Common preflight checks"
+	phasesMap[phases.PostInfraPreflightsPhase] = "Static and post-infra preflight checks"
 	phasesMap[phases.BaseInfraPhase] = "Base Infrastructure"
-	phasesMap[phases.RegistryPackagesProxyPhase] = "Preparing registry packages proxy"
-	phasesMap[phases.ExecuteBashibleBundlePhase] = "Bootstrap Kubernetes on first master node"
+	phasesMap[phases.InstallKubernetesPhase] = "Install Kubernetes on the first master node"
 	phasesMap[phases.InstallDeckhousePhase] = "Install Deckhouse"
 	phasesMap[phases.CreateResourcesPhase] = "Create resources"
 	phasesMap[phases.InstallAdditionalMastersAndStaticNodes] = "Install additional master nodes and CloudPermanent nodes"
@@ -246,22 +281,60 @@ func phaseToString(p phases.Progress, completed bool) string {
 	subphasesMap[phases.InstallDeckhouseSubPhaseWait] = "Wait for the first master readiness"
 	subphasesMap[phases.OperationSubPhase(phases.CheckInfra)] = "Check Infrastructure"
 	subphasesMap[phases.OperationSubPhase(phases.CheckConfiguration)] = "Check configuration"
+	subphasesMap[phases.BaseInfraSubPhaseBaseInfra] = "Base Infrastructure"
+	subphasesMap[phases.BaseInfraSubPhaseFirstMaster] = "First master node"
+	subphasesMap[phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters] = "Install additional master nodes"
+	subphasesMap[phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes] = "Install additional static nodes"
+	subphasesMap[phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait] = "Wait for control plane manager become ready"
+	subphasesMap[phases.InstallKubernetesSubPhaseBundlePreparation] = "Prepare bashible bundle"
+	subphasesMap[phases.InstallKubernetesSubPhaseRegistryPackagesProxy] = "Prepare registry packages proxy"
+	subphasesMap[phases.InstallKubernetesSubPhaseNodePreparation] = "Prepare node"
+	subphasesMap[phases.InstallKubernetesSubPhaseExecuteBashibleBundle] = "Execute bashible bundle"
 
+	// TODO: too complicated, has to be refactored
 	msg := ""
 	if completed {
 		if p.CompletedSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", phasesMap[p.CurrentPhase], subphasesMap[p.CompletedSubPhase])
+			currentPhase, ok := phasesMap[p.CurrentPhase]
+			if !ok {
+				currentPhase = string(p.CurrentPhase)
+			}
+			subPhase, ok := subphasesMap[p.CompletedSubPhase]
+			if !ok {
+				subPhase = string(p.CompletedSubPhase)
+			}
+			msg = fmt.Sprintf("%s: %s", currentPhase, subPhase)
 		} else {
-			msg = phasesMap[p.CompletedPhase]
+			completedPhase, ok := phasesMap[p.CompletedPhase]
+			if !ok {
+				completedPhase = string(p.CompletedPhase)
+			}
+			msg = completedPhase
 		}
 	} else {
 		if p.CurrentSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", phasesMap[p.CurrentPhase], subphasesMap[p.CurrentSubPhase])
+			currentPhase, ok := phasesMap[p.CurrentPhase]
+			if !ok {
+				currentPhase = string(p.CurrentPhase)
+			}
+			subPhase, ok := subphasesMap[p.CurrentSubPhase]
+			if !ok {
+				subPhase = string(p.CurrentSubPhase)
+			}
+			msg = fmt.Sprintf("%s: %s", currentPhase, subPhase)
 		} else {
 			if p.CurrentPhase != "" {
-				msg = phasesMap[p.CurrentPhase]
+				phase, ok := phasesMap[p.CurrentPhase]
+				if !ok {
+					phase = string(p.CurrentPhase)
+				}
+				msg = phase
 			} else {
-				msg = phasesMap[p.CompletedPhase]
+				phase, ok := phasesMap[p.CompletedPhase]
+				if !ok {
+					phase = string(p.CompletedPhase)
+				}
+				msg = phase
 			}
 		}
 	}
@@ -294,6 +367,10 @@ func FinishDefaultProgressBar() {
 	// stopping the updateProgress goroutine
 	pb.StopCh <- struct{}{}
 	time.Sleep(50 * time.Millisecond)
+
+	if err := pb.LogBox.Stop(); err != nil {
+		log.WarnF("failed to stop log box: %s\n", err.Error())
+	}
 
 	pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
 	if _, err := pb.MultiPrinter.Stop(); err != nil {

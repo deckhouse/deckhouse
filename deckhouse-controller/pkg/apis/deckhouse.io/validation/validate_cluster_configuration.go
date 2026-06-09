@@ -324,16 +324,6 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse old version: %w", err)
 		}
-
-		if maxUsedVersionSemver != nil {
-			// extra validation: if the cluster was on a higher version already,
-			// we cannot downgrade more, than 1 minor from a higher version,
-			// so set oldVersion to maxUsedVersion
-			if maxUsedVersionSemver.GreaterThan(oldVersionSemver) {
-				nameForOldVersion = "maxUsedControlPlaneKubernetesVersion"
-				oldVersionSemver = maxUsedVersionSemver
-			}
-		}
 	}
 
 	// Resolve newVersion: if it's "Automatic", get actual version from secret
@@ -363,6 +353,16 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 		newVersionSemver, err = parseVersion(newVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse new version: %w", err)
+		}
+
+		// Switching to an explicit version: guard against downgrading more than
+		// 1 minor below the highest version the cluster ever ran. This baseline only
+		// makes sense for an explicit target — a switch to "Automatic" is compared
+		// against the actual current version, so a no-op like "1.33" -> Automatic(=1.33)
+		// stays allowed.
+		if maxUsedVersionSemver != nil && maxUsedVersionSemver.GreaterThan(oldVersionSemver) {
+			nameForOldVersion = "maxUsedControlPlaneKubernetesVersion"
+			oldVersionSemver = maxUsedVersionSemver
 		}
 	}
 

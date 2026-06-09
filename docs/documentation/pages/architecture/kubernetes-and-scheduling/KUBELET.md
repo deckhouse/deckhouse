@@ -9,6 +9,12 @@ Kubelet is not a control plane component, but it plays a key role in the operati
 
 Kubelet is an agent that runs on every node in a Kubernetes cluster. It ensures that containers in pods are started and run according to their specifications. Kubelet continuously interacts with kube-apiserver to verify and maintain the state of nodes and containers. It is also responsible for starting control plane components.
 
+## Static pod manifests
+
+Kubelet starts control plane components from static pod manifests located in the `/etc/kubernetes/manifests` directory. In Deckhouse Kubernetes Platform, kubelet processes only files with the `.yaml` or `.yml` extension in this directory.
+
+Files with other extensions, such as `kube-apiserver.backup`, `kube-apiserver.yaml.bak`, editor swap files, or other temporary files, are ignored. This prevents accidental processing of backup or non-manifest files as static pod manifests.
+
 ## Kubelet interactions
 
 Kubelet interactions are shown in the [architecture diagram of the `control-plane-manager` module](control-plane-management.html).

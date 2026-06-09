@@ -236,6 +236,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range operationList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("PackageRepositoryOperation"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -246,6 +247,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range appList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("Application"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -256,6 +258,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range apvList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ApplicationPackageVersion"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -266,6 +269,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range mpvList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModulePackageVersion"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -276,6 +280,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range mpList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModulePackage"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -286,6 +291,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range repoList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("PackageRepository"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -533,6 +539,32 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("multi-source module package", func() {
+		// A ModulePackage already exists owned (Controller=false) by the "deckhouse" repo.
+		// A scan operation now runs for a second repo ("deckhouse-clone") that contributes
+		// the same package. The existing ModulePackage must end up with both repositories
+		// as non-controller owners; the new ModulePackageVersion is created with a
+		// Controller=true ownerRef on "deckhouse-clone" (single-source).
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", moduleVersionImage().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("multi-source-module.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-clone-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("failed versions from registry", func() {
 		// Root: "test-package", Versions: v1.0.0, v1.1.0, v1.2.0 (Application type).
 		// k8s-level Create errors injected for v1.1.0 and v1.2.0.
@@ -691,6 +723,59 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		psm := createFakePSM(ic)
 
 		suite.setupController("legacy-module-old-registry.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("empty /version tags with legacy /release", func() {
+		// /version path exists but has only non-semver tags (no semver tags to process).
+		// On a full scan this must behave identically to NAME_UNKNOWN: fall back to /release.
+		// /release has semver tags + channel names -> legacy v1alpha1 module processed.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		// Non-semver tags in /version: path reachable, but extractOnlySemverTags returns [].
+		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "stable", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "early-access", fakeRegistry.NewImageBuilder().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("empty-version-tags-legacy-release.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("empty /version tags and no /release", func() {
+		// /version exists with only non-semver tags, /release does not exist at all.
+		// Must emit the same error as the NAME_UNKNOWN+no-/release path:
+		// "package %q has neither /version nor /release path".
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
+		// Intentionally NOT adding any test-package/release image.
+		// Note: the fake registry returns an empty tag list for a missing repo (not NAME_UNKNOWN),
+		// so this exercises the "empty /release tags" branch -> "no semver release tags found".
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("empty-version-tags-no-release.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

@@ -405,8 +405,8 @@
 }
 
 .searchV3 .spinner-small {
-  width: 16px;
-  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
   border: 2px solid #e0e0e0;
   border-top: 2px solid #4075FF;
   border-radius: 50%;

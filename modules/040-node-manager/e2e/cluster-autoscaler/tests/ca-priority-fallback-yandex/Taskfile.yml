@@ -1,0 +1,29 @@
+version: "3"
+
+vars:
+  CONFIG: ../../chainsaw-config.yaml
+
+tasks:
+  run:
+    desc: Run ca-priority-fallback-yandex e2e test with JUNIT report
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/
+
+  run:quiet:
+    desc: Run e2e test with suppressed output (only errors, failures, summary)
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --quiet
+
+  dry-run:
+    desc: Validate test and configuration YAML against the chainsaw schema (no cluster needed)
+    cmds:
+      - chainsaw lint test -f chainsaw-test.yaml
+      - chainsaw lint configuration -f {{.CONFIG}}
+
+  run:debug:
+    desc: Run test with pause on failure and fail-fast
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --pause-on-failure --fail-fast

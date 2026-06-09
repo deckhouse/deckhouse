@@ -65,7 +65,7 @@ func (p *CloudProviderGetterParams) getProvidersCache() (CloudProvidersCache, er
 	return providersCache, nil
 }
 
-func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error) {
+func (p *CloudProviderGetterParams) getFSDIParams() (*fsprovider.DIParams, error) {
 	logger, err := p.getLogger()
 	if err != nil {
 		return nil, err

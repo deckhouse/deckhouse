@@ -188,6 +188,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, config := range configs.Items {
+		config.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleConfig"))
 		got, _ := yaml.Marshal(config)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -198,6 +199,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, module := range modules.Items {
+		module.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("Module"))
 		// Clear timestamp fields from conditions to avoid test flakiness
 		for i := range module.Status.Conditions {
 			module.Status.Conditions[i].LastProbeTime = metav1.Time{}
@@ -213,6 +215,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, release := range releases.Items {
+		release.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"))
 		got, _ := yaml.Marshal(release)
 		result.WriteString("---\n")
 		result.Write(got)

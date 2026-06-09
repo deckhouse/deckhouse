@@ -22,17 +22,17 @@ pod_kill_and_wait() {
   echo "Removing pod: ${pod_prefix}"
 
   if [ -z "${pod_prefix}" ]; then
-    echo "Empty prefix, skip"
+    echo "Empty pod prefix, skipping"
     return 0
   fi
 
   if ! command -v crictl > /dev/null 2>&1; then
-    echo "crictl not found, skip"
+    echo "crictl is not installed, skipping pod cleanup"
     return 0
   fi
 
   if ! crictl info > /dev/null 2>&1; then
-    echo "containerd not ready, skip"
+    echo "containerd is not ready, skipping pod cleanup"
     return 0
   fi
 
@@ -43,7 +43,7 @@ pod_kill_and_wait() {
   ' 2>/dev/null)
 
   if [ -z "${pods}" ]; then
-    echo "${pod_prefix}: no pods, skip"
+    echo "${pod_prefix}: no matching pods, nothing to remove"
     return 0
   fi
 
@@ -52,9 +52,9 @@ pod_kill_and_wait() {
     crictl rmp "${pod}" > /dev/null 2>&1 || true
   done
 
-  echo "${pod_prefix}: waiting for removal..."
+  echo "${pod_prefix}: waiting for pods to be removed"
   for ((i=1; i<=max_attempts; i++)); do
-    echo "Attempt: ${i}/${max_attempts}"
+    echo "${pod_prefix}: waiting for removal, attempt ${i} of ${max_attempts}"
     sleep ${sleep_interval}
 
     local remaining_pods=$(crictl pods -o json 2>/dev/null | jq -r --arg PREFIX "${pod_prefix}" '
@@ -64,12 +64,12 @@ pod_kill_and_wait() {
     ' 2>/dev/null)
 
     if [ -z "${remaining_pods}" ]; then
-      echo "${pod_prefix}: successfully removed"
+      echo "${pod_prefix}: removed"
       return 0
     fi
   done
 
-  echo "${pod_prefix}: failed to remove (timeout ${sleep_interval}s * ${max_attempts})"
+  echo "${pod_prefix}: failed to remove pods within ${sleep_interval}s x ${max_attempts}"
   exit 1
 }
 
@@ -311,7 +311,7 @@ start_and_wait() {
     local sleep_interval=1
     local max_attempts=10
 
-    echo "Starting and waiting background process: \${bin_path}"
+    echo "Starting background process: \${bin_path}"
 
     if pgrep -f "\${bin_path}" > /dev/null 2>&1; then
         echo "\${bin_path}: already running"
@@ -321,7 +321,7 @@ start_and_wait() {
     "\${bin_path}" "\${args[@]}" > "\${log_path}" 2>&1 &
 
     for ((i=1; i<=max_attempts; i++)); do
-        echo "Attempt: \${i}/\${max_attempts}"
+        echo "\${bin_path}: waiting for process to come up, attempt \${i} of \${max_attempts}"
         sleep \${sleep_interval}
 
         if pgrep -f "\${bin_path}" > /dev/null 2>&1; then
@@ -330,7 +330,7 @@ start_and_wait() {
         fi
     done
 
-    echo "\${bin_path}: failed to start (timeout \${sleep_interval}s * \${max_attempts})"
+    echo "\${bin_path}: failed to start within \${sleep_interval}s x \${max_attempts}"
     return 1
 }
 
@@ -341,11 +341,11 @@ liveness_probe() {
     local sleep_interval=1
     local max_attempts=20
 
-    echo "Waiting liveness probe: \${address}"
+    echo "Probing liveness of \${address}"
 
     for ((i=1; i<=max_attempts; i++)); do
         if [[ \${i} -ne 1 ]]; then
-            echo "Attempt: \${i}/\${max_attempts}"
+            echo "\${address}: probe attempt \${i} of \${max_attempts}"
             sleep \${sleep_interval}
         fi
 
@@ -356,11 +356,11 @@ liveness_probe() {
         fi
     done
 
-    echo "\${address}: not reachable (timeout \${sleep_interval}s * \${max_attempts})"
+    echo "\${address}: not reachable within \${sleep_interval}s x \${max_attempts}"
     return 1
 }
 
-echo "Starting registry auth..."
+echo "Starting registry auth"
 if ! start_and_wait "${log_path}/auth.log" /opt/deckhouse/bin/ign-auth -logtostderr "${auth_path}/config.yaml"; then
     echo "ERROR: registry auth failed to start, see ${log_path}/auth.log"
     exit 1
@@ -370,7 +370,7 @@ if ! liveness_probe "https://127.0.0.1:5051" "${pki_path}/ca.crt"; then
     exit 1
 fi
 
-echo "Starting registry distribution..."
+echo "Starting registry distribution"
 if ! start_and_wait "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"; then
     echo "ERROR: registry distribution failed to start, see ${log_path}/distribution.log"
     exit 1
@@ -380,7 +380,7 @@ if ! liveness_probe "https://${discovered_node_ip}:5001" "${pki_path}/ca.crt"; t
     exit 1
 fi
 
-echo "All services started successfully, logs: ${log_path}"
+echo "Registry services started, logs are in ${log_path}"
 EOF
 
 # Prepare stop script
@@ -390,7 +390,7 @@ bb-sync-file "${igniter_stop_sh}" - << EOF
 kill_and_wait() {
     local bin_path=\${1}
 
-    echo "Stopping and waiting background process: \${bin_path}"
+    echo "Stopping background process: \${bin_path}"
 
     pkill -f "\${bin_path}" 2>/dev/null || true
 
@@ -398,7 +398,7 @@ kill_and_wait() {
     local max_attempts=10
     for ((i=1; i<=max_attempts; i++)); do
         if [[ \${i} -ne 1 ]]; then
-            echo "Attempt: \${i}/\${max_attempts}"
+            echo "\${bin_path}: waiting for process to exit, attempt \${i} of \${max_attempts}"
             sleep \${sleep_interval}
         fi
 
@@ -408,40 +408,40 @@ kill_and_wait() {
         fi
     done
 
-    echo "\${bin_path}: timeout, sending SIGKILL and wait"
+    echo "\${bin_path}: timeout, sending SIGKILL"
     pkill -9 -f "\${bin_path}" 2>/dev/null || true
 
     local sleep_interval=1
     local max_attempts=5
     for ((i=1; i<=max_attempts; i++)); do
         if [[ \${i} -ne 1 ]]; then
-            echo "Attempt: \${i}/\${max_attempts}"
+            echo "\${bin_path}: waiting for process to exit after SIGKILL, attempt \${i} of \${max_attempts}"
             sleep \${sleep_interval}
         fi
 
         if ! pgrep -f "\${bin_path}" > /dev/null 2>&1; then
-            echo "\${bin_path}: stopped (forced)"
+            echo "\${bin_path}: stopped after SIGKILL"
             return 0
         fi
     done
 
-    echo "\${bin_path}: still running after SIGKILL."
+    echo "\${bin_path}: still running after SIGKILL"
     return 1
 }
 
-echo "Stopping registry distribution..."
+echo "Stopping registry distribution"
 if ! kill_and_wait "/opt/deckhouse/bin/ign-registry"; then
     echo "ERROR: Failed to stop registry distribution, see ${log_path}/distribution.log"
     exit 1
 fi
 
-echo "Stopping registry auth..."
+echo "Stopping registry auth"
 if ! kill_and_wait "/opt/deckhouse/bin/ign-auth"; then
     echo "ERROR: Failed to stop registry auth, see ${log_path}/auth.log"
     exit 1
 fi
 
-echo "All services stopped"
+echo "Registry services stopped"
 EOF
 
 chmod a+x "${igniter_stop_sh}"

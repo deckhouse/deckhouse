@@ -44,7 +44,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.31.8
+  kubernetesVersion: 1.32.8
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   cloud:
@@ -54,7 +54,7 @@ clusterConfiguration:
   clusterType: Cloud
   defaultCRI: Containerd
   kind: ClusterConfiguration
-  kubernetesVersion: "1.31"
+  kubernetesVersion: "1.32"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -144,7 +144,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -203,7 +203,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -290,7 +290,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -348,7 +348,7 @@ internal:
     instanceClass:
       flavorName: m1.large
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -416,7 +416,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -438,7 +438,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -500,7 +500,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -527,7 +527,7 @@ internal:
         nestedHardwareVirtualization: false
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -597,7 +597,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -635,7 +635,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
 `
@@ -742,6 +742,8 @@ const (
 	vcdCAPIPath         = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
 	vcdCAPISymlink      = "/deckhouse/modules/040-node-manager/capi/vcd"
 )
+
+var nodeManagerAWSSpot = strings.Replace(nodeManagerAWS, "      instanceType: t2.medium\n", "      instanceType: t2.medium\n      spot: true\n", 1)
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -940,6 +942,27 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
 			assertBashibleAPIServerTLS(f)
+		})
+	})
+
+	Context("AWS spot", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWSSpot)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+		})
+
+		It("sets creation timeout for spot node groups", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			machineDeploymentA := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+
+			Expect(machineDeploymentA.Exists()).To(BeTrue())
+			Expect(machineDeploymentA.Field("spec.template.spec.creationTimeout").String()).To(Equal("5m"))
+
+			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			Expect(machineDeploymentB.Field("spec.template.spec.creationTimeout").String()).To(Equal("5m"))
 		})
 	})
 
@@ -2200,7 +2223,7 @@ internal:
         resourceReservation:
           mode: Auto
         topologyManager: {}
-      kubernetesVersion: "1.31"
+      kubernetesVersion: "1.32"
       manualRolloutID: ""
       name: worker
       nodeType: CloudEphemeral

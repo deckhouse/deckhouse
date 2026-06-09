@@ -76,7 +76,7 @@ var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
 		"clusterConfiguration": {
-			"kubernetesVersion": "1.31"
+			"kubernetesVersion": "1.35"
 		},
 		"modulesImages": {
 			"registry": {
@@ -1075,6 +1075,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range releaseList.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind(v1alpha1.DeckhouseReleaseKind))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -1085,6 +1086,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range podsList.Items {
+		item.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Pod"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -1095,6 +1097,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range deploymentList.Items {
+		item.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)
@@ -1105,6 +1108,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range cmList.Items {
+		item.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ConfigMap"))
 		got, _ := yaml.Marshal(item)
 		result.WriteString("---\n")
 		result.Write(got)

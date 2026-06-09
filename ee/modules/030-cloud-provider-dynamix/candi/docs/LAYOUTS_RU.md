@@ -1,6 +1,6 @@
 ---
-title: "Cloud provider - Базис.DynamiX: схемы размещения"
-description: "Описание схем размещения и взаимодействия ресурсов в Базис.DynamiX при работе облачного провайдера Deckhouse."
+title: "Cloud provider - Basis Dynamix: схемы размещения"
+description: "Описание схем размещения и взаимодействия ресурсов в Basis Dynamix при работе облачного провайдера Deckhouse."
 ---
 
 ## Standard
