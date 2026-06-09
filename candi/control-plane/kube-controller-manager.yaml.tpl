@@ -58,6 +58,7 @@ spec:
         - --cluster-signing-key-file=/etc/kubernetes/pki/ca.key
         - --controllers=*,bootstrapsigner,tokencleaner
         - --kubeconfig=/etc/kubernetes/controller-manager.conf
+        - --kube-api-qps=-1
         - --leader-elect=true
         - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
         - --root-ca-file=/etc/kubernetes/pki/ca.crt
