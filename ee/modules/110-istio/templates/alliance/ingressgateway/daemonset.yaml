@@ -46,7 +46,7 @@ spec:
     metadata:
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
-        {{- with $.Values.istio.alliance.ingressGateway.daemonSetAnnotations }}
+        {{- with $.Values.istio.alliance.ingressGateway.gatewayPodAnnotations }}
         {{- . | toYaml | nindent 8 }}
         {{- end }}
       labels:

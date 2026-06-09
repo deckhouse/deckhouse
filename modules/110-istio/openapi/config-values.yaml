@@ -135,7 +135,7 @@ properties:
               - cse-pro
             example:
               yandex.cpi.flant.com/listener-subnet-id: xyz-123
-          daemonSetAnnotations:
+          gatewayPodAnnotations:
             type: object
             additionalProperties:
               type: string

@@ -371,7 +371,7 @@ neighbour-0:
   clusterUUID: r-e-m-o-t-e
   rootCA: ---ROOT CA---
 `)
-			f.ValuesSetFromYaml("istio.alliance.ingressGateway.daemonSetAnnotations", `
+			f.ValuesSetFromYaml("istio.alliance.ingressGateway.gatewayPodAnnotations", `
 test.deckhouse.io/annotation: test-value
 `)
 			f.HelmRender()
