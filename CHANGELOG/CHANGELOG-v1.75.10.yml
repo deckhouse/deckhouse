@@ -1,0 +1,21 @@
+candi:
+  fixes:
+    - summary: fix cve node-manager and opentofu.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19942
+deckhouse-controller:
+  fixes:
+    - summary: fix module config validation for disable warnings
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20545
+docs:
+  fixes:
+    - summary: Fix CRD version tabs markup and nesting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20447
+istio:
+  fixes:
+    - summary: Implement graceful metadata secret renewal for multiclusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20207
+node-manager:
+  fixes:
+    - summary: Fix static NodeGroup readiness calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20382
+
