@@ -321,9 +321,6 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
   RotateKubeletServerCertificate: true
-{{- if eq $topologyManagerEnabled true }}
-  MemoryManager: true
-{{- end }}
 {{- if semverCompare "<=1.32" .kubernetesVersion }}
   InPlacePodVerticalScaling: true
 {{- end }}
@@ -383,7 +380,7 @@ registryBurst: 20
 resolvConf: ${resolvConfPath}
 rotateCertificates: true
 runtimeRequestTimeout: 4m0s
-serializeImagePulls: true
+serializeImagePulls: false
 syncFrequency: 1m0s
 {{- if eq $resourceReservationMode "Auto" }}
 systemReserved:

@@ -1,4 +1,4 @@
-2619
+2628
 1GB
 2GB
 5XX
@@ -250,6 +250,7 @@ ClusterLoggingConfig
 ClusterName
 ClusterPodLoggingConfig
 ClusterRole
+ClusterRoleBinding
 clusterType
 ClusterVirtualImage
 cmctl
@@ -609,6 +610,7 @@ healthchecks
 HEC
 helmignore
 helthcheck
+HH
 HighAvailability
 HighLoad
 HighNodeUtilization
@@ -1263,6 +1265,7 @@ RESTful
 Restic
 RHEL
 RockSolid
+RoleBinding
 roleRef
 RollingUpdate
 rollout
@@ -1658,6 +1661,7 @@ YC
 YCloud
 yml
 YouTube
+YYYY
 zabbix
 Zabbix
 ZFS
@@ -1775,11 +1779,13 @@ ZvirtInstanceClass
 валидации
 валидацию
 валидация
+валиден
 валидирования
 валидировать
 валидирует
 валидируется
 валидируются
+валидными
 вебхук
 вебхука
 вебхуки
@@ -2085,6 +2091,7 @@ ZvirtInstanceClass
 мультикластером
 мультимастер
 мультимастерного
+мультимастерной
 мультимастерном
 мультимастерный
 мультиплатформенной
@@ -2200,6 +2207,7 @@ ZvirtInstanceClass
 перевыпуск
 перевыпуска
 перевыпускаются
+Перевыпустите
 перевыпустить
 перегенерации
 перегенерация
@@ -2528,6 +2536,7 @@ ZvirtInstanceClass
 трудозатраты
 туториала
 увереным
+УЦ
 уязвимостей
 уязвимостям
 уязвимостями

@@ -3,7 +3,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.16
   resourceVersion: "999"
 spec:
@@ -20,7 +19,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.17
   resourceVersion: "1000"
 spec:
@@ -38,7 +36,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.18
   resourceVersion: "999"
 spec:
@@ -55,7 +52,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.19
   resourceVersion: "999"
 spec:
@@ -73,7 +69,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.30.9
   resourceVersion: "999"
 spec:

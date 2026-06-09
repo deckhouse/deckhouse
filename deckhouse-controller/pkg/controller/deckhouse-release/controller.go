@@ -105,7 +105,7 @@ type MetricsUpdater interface {
 type deckhouseReleaseReconciler struct {
 	client client.Client
 	dc     dependency.Container
-	exts   *extenders.ExtendersStack
+	exts   extenders.IExtendersStack
 
 	logger        *log.Logger
 	moduleManager moduleManager
@@ -124,7 +124,7 @@ type deckhouseReleaseReconciler struct {
 	deckhouseVersion string
 }
 
-func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts *extenders.ExtendersStack,
+func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts extenders.IExtendersStack,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metricsstorage.Storage,
 	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
