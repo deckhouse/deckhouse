@@ -11,9 +11,9 @@ The switching process differs depending on how you work with the image registry.
 A valid license key is required when switching to DKP BE/SE/SE+/EE. It is not required when switching to DKP CE.
 
 {% alert level="warning" %}
-This guide assumes the use of a public container image registry (`registry.deckhouse.io`). If you use a different registry address, adjust the commands or refer to the [guide for switching Deckhouse to a third-party container image registry](./registry/third-party.html).
+This guide assumes the use of a public container image registry (`registry.deckhouse.io`). If you use a different registry address, adjust the commands or refer to the [guide for switching Deckhouse to a third-party container image registry](../registry/third-party.html).
 
-All commands are executed on the master node of the existing cluster as the `root` user.
+Execute all commands on the master node of the existing cluster as the `root` user.
 {% endalert %}
 
 {% capture wait_queue %}
@@ -35,6 +35,12 @@ Summary:
 {% endcapture %}
 
 ## Pre-switch preparation
+
+Before switching between revisions, follow these steps:
+
+1. Make sure that [the DKP queues are empty](#pre-switch-preparation).
+1. Determine the [current DKP revision and version](#determining-the-current-edition-and-version).
+1. Verify that you can switch [from the current version to the desired one](#checking-whether-switching-to-the-desired-edition-is-possible).
 
 ### Queue check
 
@@ -67,25 +73,19 @@ You can find the edition and version currently used in the cluster on the main p
 ```shell
 (set -e
 trap 'echo "Execution error"' ERR
-
 <!REMOVE_FOR_CE>
 d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.io --docker-username=license-token --docker-password=${LICENSE_TOKEN}
 <!/REMOVE_FOR_CE>
-
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
 d8 k run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
 <!REMOVE_FOR_CE>    --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \<!/REMOVE_FOR_CE>
     --command sleep -- infinity
-
 d8 k wait --for=condition=ready pod/$NEW_EDITION-image --timeout=300s
-
 NEW_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ |   grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
 USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
 MODULES_TO_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_MODULES | tr ' ' '\n'))
-
 d8 k delete pod/$NEW_EDITION-image --wait=false
 d8 k delete secret/$NEW_EDITION-image-pull-secret
-
 echo
 echo "Modules not supported in the desired edition (edition code - $NEW_EDITION, version - $DECKHOUSE_VERSION):"
 echo $MODULES_TO_DISABLE)
@@ -109,7 +109,7 @@ echo $MODULES_TO_DISABLE)
 
 Different DKP editions support different sets of modules, Kubernetes versions, and features. It is important to understand what functional changes will occur during the switch and which capabilities will become unavailable. This will help you prepare for the switching process.
 
-A comparison of DKP editions by module set can be found in the documentation on the [Edition comparison](../../reference/revision-comparison.html) page.
+A comparison of DKP editions by module set can be found in the documentation on the [Edition comparison](../../../reference/revision-comparison.html) page.
 
 What to consider before switching:
 
@@ -119,7 +119,7 @@ What to consider before switching:
 
    1. Get the list of modules not supported in DKP CE:
 
-      {{ check_new_modules | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\$NEW_EDITION", "ce" | regex_replace: "^", "      " }}
+      {{ check_new_modules | regex_replace: "(?m)\n<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\$NEW_EDITION", "ce" | regex_replace: "^", "      " }}
 
 {{ disable_modules }}
 {% endtab %}
@@ -167,7 +167,7 @@ What to consider before switching:
 
    1. Get the list of modules not supported in the desired DKP edition:
 
-      {{ check_new_modules | regex_replace: "<!/?REMOVE_FOR_CE>", "" | regex_replace: "^", "      " }}
+      {{ check_new_modules | | regex_replace: "\n?<!REMOVE_FOR_CE>", "" | regex_replace: "<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "^", "      " }}
 
 {{ disable_modules }}
 {% endtab %}
@@ -175,14 +175,19 @@ What to consider before switching:
 
 ## Switching the edition
 
-There are two ways to work with the DKP container image registry:
-- Using the [registry](/modules/registry/) module — **(recommended)**, the configuration for working with the DKP image registry is set in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module parameters (ModuleConfig `deckhouse`). This method provides a smoother transition process and automatic verification that the required images are present.
+### Selecting a switching method
 
-- Without the `registry` module — the configuration for working with the DKP image registry is set during cluster installation [in InitConfiguration](../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), and the [registry.mode](/modules/deckhouse/configuration.html#parameters-registry-mode) parameter of the `deckhouse` module (ModuleConfig `deckhouse`) is set to `Unmanaged`.
+When selecting a switching method, consider how the DKP container image repository is configured within the cluster.
+
+There are two ways to work with the DKP container image registry:
+
+- Using the [`registry`](/modules/registry/) module — **(recommended)** — the configuration for working with the DKP registry is specified in the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module parameters (ModuleConfig `deckhouse`). This method provides a smoother transition process and automatic verification that the required images are present. If your cluster uses this method for working with the DKP container registry, use the section ["Switching Using the registry Module"](#switching-using-the-registry-module) to switch editions.
+
+- Without using the `registry` module — the configuration for working with the DKP registry is set during cluster installation [in `InitConfiguration`](../../../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), and the [`registry.mode`](/modules/deckhouse/configuration. html#parameters-registry-mode) of the `deckhouse` module (ModuleConfig `deckhouse`) is set to `Unmanaged`, and the [`registry.unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged) parameter of the `deckhouse` module is not specified.
 
   This method is the only one available for managed Kubernetes clusters where the control plane is managed by a cloud provider rather than DKP (e.g. Amazon EKS, Azure AKS, Google GKE, etc.).
 
-Use the method that matches your cluster configuration.
+  If your cluster uses this method for managing the DKP container image repository, refer to the section ["Switching without using the registry module"](#switching-without-the-registry-module) to switch versions.
 
 Before proceeding, complete the preparatory steps described in the [Pre-switch preparation](#pre-switch-preparation) section.
 
@@ -317,7 +322,7 @@ conditions:
 
 {% endcapture %}
 
-1. In ModuleConfig `deckhouse`, set `imagesRepo` to the target edition and `checkMode: Relax`.
+1. In ModuleConfig [`deckhouse`](/modules/deckhouse/configuration.html#parameters-registry), set `imagesRepo` to the target edition and `checkMode: Relax`:
 
    Run the command to edit ModuleConfig `deckhouse`:
 
@@ -336,26 +341,26 @@ conditions:
    {% endtab %}
    {% tab "DKP BE" %}
    {% tabs switch-registry-be-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% tab "DKP SE" %}
    {% tabs switch-registry-se-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% tab "DKP SE+" %}
    {% tabs switch-registry-seplus-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% tab "DKP EE" %}
    {% tabs switch-registry-ee-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<EDITION_CODE>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<EDITION_CODE>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.io" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% endtabs %}

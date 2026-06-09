@@ -14,9 +14,9 @@ lang: ru
 {% alert level="warning" %}
 Инструкция не подходит для переключения **с** DKP CSE на другие редакции, но подходит для переключения **на** DKP CSE с DKP EE.
 
-Инструкция подразумевает использование публичного хранилища образов контейнеров (`registry-cse.deckhouse.ru` для DKP CSE, и `registry.deckhouse.ru` в остальных случаях). При использовании другого адреса хранилища образов измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего хранилища образов контейнеров](./registry/third-party.html).
+Инструкция подразумевает использование публичного хранилища образов контейнеров (`registry-cse.deckhouse.ru` для DKP CSE, и `registry.deckhouse.ru` в остальных случаях). При использовании другого адреса хранилища образов измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего хранилища образов контейнеров](../registry/third-party.html).
 
-Все команды выполняются на master-узле существующего кластера под пользователем `root`.
+Выполняйте все команды на master-узле существующего кластера под пользователем `root`.
 {% endalert %}
 
 {% capture wait_queue %}
@@ -37,7 +37,13 @@ Summary:
 {% endofftopic %}
 {% endcapture %}
 
-## Подготовка перед переключением
+## Подготовка к переключению
+
+Перед переключением между редакциями выполните следующие действия:
+
+1. Убедитесь, что [очереди DKP пусты](#проверка-очереди).
+1. Определите [текущую редакцию и версию DKP](#определение-текущей-редакции-и-версии).
+1. Убедитесь в возможности переключения [с текущей редакции на желаемую](#определение-возможности-переключения-на-желаемую-редакцию).
 
 ### Проверка очереди
 
@@ -51,13 +57,13 @@ Summary:
 
 Узнать используемые в кластере редакцию и версию DKP можно на главной странице веб-интерфейса DKP, либо с помощью CLI-команд:
 
-- редакция:
+- получение текущей редакции DKP:
 
   ```bash
   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values -o yaml | yq '.deckhouseEdition'
   ```
 
-- версия:
+- получение текущей версии DKP:
 
   ```bash
   d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}'
@@ -70,27 +76,21 @@ Summary:
 ```shell
 (set -e
 trap 'echo "Ошибка выполнения"' ERR
-
 <!REMOVE_FOR_CE>
 d8 k create secret docker-registry $NEW_EDITION-image-pull-secret --docker-server=registry.deckhouse.ru --docker-username=license-token --docker-password=${LICENSE_TOKEN}
 <!/REMOVE_FOR_CE>
-
 <!REMOVE_FOR_CSE>
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
 <!/REMOVE_FOR_CSE>
 d8 k run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
 <!REMOVE_FOR_CE>    --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \<!/REMOVE_FOR_CE>
     --command sleep -- infinity
-
 d8 k wait --for=condition=ready pod/$NEW_EDITION-image --timeout=300s
-
 NEW_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ |   grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
 USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
 MODULES_TO_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_MODULES | tr ' ' '\n'))
-
 d8 k delete pod/$NEW_EDITION-image --wait=false
 d8 k delete secret/$NEW_EDITION-image-pull-secret
-
 echo
 echo "Модули, которые не поддерживаются в желаемой редакции (код редакции - $NEW_EDITION, версия - $DECKHOUSE_VERSION):"
 echo $MODULES_TO_DISABLE)
@@ -107,14 +107,14 @@ echo $MODULES_TO_DISABLE)
    echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
-1. Убедитесь в выполнении всех задач в очереди DKP, прежде чем продолжить процесс переключения:
+1. Убедитесь в выполнении всех задач в очередях DKP, прежде чем продолжить процесс переключения:
 
    {{ wait_queue | regex_replace: "^", "   " }}
 {% endcapture %}
 
-Разные редакции DKP поддерживают разный набор модулей, поддерживаемых версий Kubernetes и функциональных возможностей. Важно понимать, какие изменения в функциональности произойдут при переключении, какие возможности станут недоступными. Это поможет вам подготовиться к процессу переключения.
+Редакции DKP различаются набором модулей, поддерживаемых версий Kubernetes и функциональными возможностями. Важно понимать, какие изменения в функциональности произойдут при переключении, какие возможности станут недоступными. Это поможет вам подготовиться к процессу переключения.
 
-Сравнение редакций DKP по составу модулей можно найти в документации на странице [«Сравнение редакций»](../../reference/revision-comparison.html).
+Сравнение редакций DKP по составу модулей представлено странице [«Сравнение редакций»](../../../reference/revision-comparison.html).
 
 Что необходимо учесть перед переключением:
 
@@ -124,7 +124,7 @@ echo $MODULES_TO_DISABLE)
 
    1. Получите список модулей, которые не поддерживаются в DKP CE:
 
-      {{ check_new_modules | regex_replace: "NEW_EDITION=<КОД_РЕДАКЦИИ>\n", ""  | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\$NEW_EDITION", "ce" | regex_replace: "<!/?REMOVE_FOR_CSE>", "" | regex_replace: "^", "      " }}
+      {{ check_new_modules | regex_replace: "NEW_EDITION=<КОД_РЕДАКЦИИ>\n", ""  | regex_replace: "(?m)\n?<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\$NEW_EDITION", "ce" | regex_replace: "<!REMOVE_FOR_CSE>", "" | regex_replace: "<!/REMOVE_FOR_CSE>\n?", "" | regex_replace: "^", "      " }}
 
 {{ disable_modules }}
 {% endtab %}
@@ -172,7 +172,7 @@ echo $MODULES_TO_DISABLE)
 
    1. Получите список модулей, которые не поддерживаются в DKP желаемой редакции:
 
-      {{ check_new_modules | regex_replace: "<!/?REMOVE_FOR_CE>", "" | regex_replace: "<!/?REMOVE_FOR_CSE>", "" | regex_replace: "^", "      " }}
+      {{ check_new_modules | regex_replace: "\n?<!REMOVE_FOR_CE>", "" | regex_replace: "<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\n?<!REMOVE_FOR_CSE>", "" | regex_replace: "<!/REMOVE_FOR_CSE>\n?", "" | regex_replace: "^", "      " }}
 
 {{ disable_modules }}
 {% endtab %}
@@ -197,7 +197,7 @@ echo $MODULES_TO_DISABLE)
 
    - Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.29"` (в кавычках) для Kubernetes 1.29.
    - Сохраните изменения. Узлы кластера начнут последовательно обновляться.
-   - Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+   - Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление считается завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
 1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP CSE. Для этого выполните следующие шаги:
 
@@ -216,7 +216,7 @@ echo $MODULES_TO_DISABLE)
    1. Получите список модулей, которые не поддерживаются в DKP CSE:
 
       {% assign new_edition="se-plus" %}
-      {{ check_new_modules | regex_replace: "NEW_EDITION=<КОД_РЕДАКЦИИ>\n", "" | regex_replace: "<!/?REMOVE_FOR_CE>", "" | regex_replace: "(?m)<!REMOVE_FOR_CSE>.+?<!/REMOVE_FOR_CSE>\n?", "" | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru" | regex_replace: "\$NEW_EDITION", "cse" | regex_replace: "^", "      " }}
+      {{ check_new_modules | regex_replace: "NEW_EDITION=<КОД_РЕДАКЦИИ>\n", "" | regex_replace: "\n?<!REMOVE_FOR_CE>", "" | regex_replace: "<!/REMOVE_FOR_CE>", "" | regex_replace: "(?m)\n?<!REMOVE_FOR_CSE>.+?<!/REMOVE_FOR_CSE>\n?", "" | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru" | regex_replace: "\$NEW_EDITION", "cse" | regex_replace: "^", "      " }}
 
 {{ disable_modules }}
 {% endtab %}
@@ -224,16 +224,21 @@ echo $MODULES_TO_DISABLE)
 
 ## Переключение редакции
 
-Существует два способа работы с хранилищем образов контейнеров DKP:
-- с помощью модуля [registry](/modules/registry/) — **(рекомендованный способ)**, конфигурация работы с хранилищем образов DKP задаётся в секции [registry](/modules/deckhouse/configuration.html#parameters-registry) параметров модуля `deckhouse` (ModuleConfig `deckhouse`). Этот способ обеспечивает более плавный процесс перехода и автоматическую проверку наличия необходимых образов.
+### Выбор способа переключения
 
-- без использования модуля `registry` — конфигурация работы с хранилищем образов DKP задаётся при установке кластера [в InitConfiguration](../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), параметр [registry.mode](/modules/deckhouse/configuration.html#parameters-registry-mode) модуля `deckhouse` (ModuleConfig `deckhouse`) установлен в `Unmanaged`.
+При выборе способа переключения редакции учитывайте то, каким образом в кластере организована работа с хранилищем образов контейнеров DKP.
+
+Существует два способа работы с хранилищем образов контейнеров DKP:
+
+- С использованием модуля [`registry`](/modules/registry/) — **(рекомендованный способ)**, конфигурация работы с хранилищем образов DKP задана в секции [`registry`](/modules/deckhouse/configuration.html#parameters-registry) параметров модуля `deckhouse` (ModuleConfig `deckhouse`). Это обеспечивает более плавный процесс перехода и автоматическую проверку наличия необходимых образов. Если в кластере используется этот способ работы с хранилищем образов контейнеров DKP, для переключения редакции воспользуйтесь разделом [«Переключение с помощью модуля registry»](#переключение-с-помощью-модуля-registry).
+
+- Без использования модуля `registry` — конфигурация работы с хранилищем образов DKP задаётся при установке кластера [в `InitConfiguration`](../../../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), параметр [`registry.mode`](/modules/deckhouse/configuration.html#parameters-registry-mode) модуля `deckhouse` (ModuleConfig `deckhouse`) установлен в `Unmanaged`, параметр [`registry.unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged) модуля `deckhouse` не задан.
 
   Этот способ — единственный доступный для managed Kubernetes-кластеров, где control plane управляется провайдером облачных услуг, а не DKP (например, Amazon EKS, Azure AKS, Google GKE и др.).
 
-Далее используйте способ, который соответствует конфигурации вашего кластера.
+  Если в кластере используется этот способ работы с хранилищем образов контейнеров DKP, для переключения редакции воспользуйтесь разделом [«Переключение без использования модуля registry»](#переключение-без-использования-модуля-registry).
 
-Перед выполнением дальнейших шагов, выполните подготовительные действия, описанные в разделе [«Подготовка перед переключением»](#подготовка-перед-переключением).
+Перед выполнением дальнейших шагов выполните подготовительные действия, описанные в разделе [«Подготовка к переключению»](#подготовка-к-переключению).
 
 {% capture bashible_sync_wait %}
 Дождитесь синхронизации сервиса bashible (значение в колонке `UPTODATE` у NodeGroup должно совпадать с `NODES`):
@@ -374,9 +379,9 @@ conditions:
 
 {% endcapture %}
 
-1. В ModuleConfig `deckhouse` укажите `imagesRepo` целевой редакции и `checkMode: Relax`.
+1. В ModuleConfig [`deckhouse`](/modules/deckhouse/configuration.html#parameters-registry) укажите `imagesRepo` целевой редакции и `checkMode: Relax`:
 
-   Выполните команду, для редактирования ModuleConfig `deckhouse`:
+   Выполните команду для редактирования ModuleConfig `deckhouse`:
 
    ```shell
    d8 k edit moduleconfig deckhouse
@@ -393,45 +398,45 @@ conditions:
    {% endtab %}
    {% tab "DKP BE" %}
    {% tabs switch-registry-be-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "be" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% tab "DKP SE" %}
    {% tabs switch-registry-se-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% tab "DKP SE+" %}
    {% tabs switch-registry-seplus-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "se-plus" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% tab "DKP EE" %}
    {% tabs switch-registry-ee-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "ee" | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% tab "DKP CSE" %}
    {% tabs switch-registry-cse-mode %}
-   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "cse" | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
-   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "cse" | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>", "" }}{% endtab %}
+   {% tab "Direct" %}{{ change-registry-mc-deckhouse-direct | regex_replace: "<КОД_РЕДАКЦИИ>", "cse" | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
+   {% tab "Unmanaged" %}{{ change-registry-mc-deckhouse-unmanaged | regex_replace: "<КОД_РЕДАКЦИИ>", "cse" | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "<!/?REMOVE_FOR_CE>\n?", "" }}{% endtab %}
    {% endtabs %}
    {% endtab %}
    {% endtabs %}
 
 1. Дождитесь переключения.
 
-   Проверка статуса:
+   Проверка статуса переключения:
 
    {{ registry_status_cmd | regex_replace: "^", "   " }}
 
    Пример успешного вывода:
 
-   {% tabs switch-registry-status-example %}
+   {% tabs switch-registry-status-example-2 %}
    {% tab "CE/BE/SE/SE+/EE" %}{{ registry_status_example | regex_replace: "<REGISTRY_HOST>", "registry.deckhouse.ru" | regex_replace: "^", "   " }}{% endtab %}
    {% tab "CSE" %}{{ registry_status_example | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "^", "   " }}{% endtab %}
    {% endtabs %}
@@ -468,7 +473,7 @@ conditions:
    {% tab "CSE" %}{{ registry_status_example | regex_replace: "<REGISTRY_HOST>", "registry-cse.deckhouse.ru" | regex_replace: "^", "   " }}{% endtab %}
    {% endtabs %}
 
-1. Проверьте поды с ошибками загрузки образов:
+1. Проверьте наличие подов с ошибками загрузки образов:
 
    ```shell
    d8 k get pods -A | awk 'NR==1 || /^d8-/' | grep -E 'ImagePullBackOff|ErrImagePull'
@@ -481,7 +486,7 @@ conditions:
    d8 k rollout restart deploy -n d8-system deckhouse
    ```
 
-1. Проверьте поды со старым registry:
+1. Проверьте поды с образами из хранилища образов контейнеров для старой редакции:
 
    {% tabs switch-registry-check-old %}
    {% tab "Direct" %}{{ check_old_pods_direct }}{% endtab %}
@@ -676,7 +681,7 @@ d8 k delete ngc del-temp-config.sh
 
 {% tabs switch-without-registry %}
 {% tab "DKP CE" %}
-1. Переключите registry:
+1. Переключите хранилище образов контейнеров:
 
    {{ change_registry_helper_ce | regex_replace: "^", "   " }}
 
@@ -689,13 +694,13 @@ d8 k delete ngc del-temp-config.sh
    {{ check_old_pods_unmanaged | regex_replace: "^", "   " }}
 {% endtab %}
 {% tab "DKP BE" %}
-1. Выполните команду, для задания данных аутентификации в хранилище образов::
+1. Выполните команду для указания данных аутентификации в хранилище образов:
 
    {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
 
    {{ bashible_sync_wait | regex_replace: "^", "   " }}
 
-1. Переключите registry:
+1. Переключите хранилище образов контейнеров:
 
    {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
 
@@ -712,13 +717,13 @@ d8 k delete ngc del-temp-config.sh
    {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "be" | regex_replace: "^", "   " }}
 {% endtab %}
 {% tab "DKP SE" %}
-1. Выполните команду, для задания данных аутентификации в хранилище образов:
+1. Выполните команду для указания данных аутентификации в хранилище образов:
 
    {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
 
    {{ bashible_sync_wait | regex_replace: "^", "   " }}
 
-1. Переключите registry:
+1. Переключите хранилище образов контейнеров:
 
    {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
 
@@ -735,13 +740,13 @@ d8 k delete ngc del-temp-config.sh
    {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "se" | regex_replace: "^", "   " }}
 {% endtab %}
 {% tab "DKP SE+" %}
-1. Выполните команду, для задания данных аутентификации в хранилище образов:
+1. Выполните команду для указания данных аутентификации в хранилище образов:
 
    {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
 
    {{ bashible_sync_wait | regex_replace: "^", "   " }}
 
-1. Переключите registry:
+1. Переключите хранилище образов контейнеров:
 
    {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
 
@@ -758,13 +763,13 @@ d8 k delete ngc del-temp-config.sh
    {{ ngc_cleanup_registry | regex_replace: "\$NEW_EDITION", "se-plus" | regex_replace: "^", "   " }}
 {% endtab %}
 {% tab "DKP EE" %}
-1. Выполните команду, для задания данных аутентификации в хранилище образов:
+1. Выполните команду для указания данных аутентификации в хранилище образов:
 
    {{ ngc_auth_registry | regex_replace: "\$NEW_EDITION", "ee" | regex_replace: "^", "   " }}
 
    {{ bashible_sync_wait | regex_replace: "^", "   " }}
 
-1. Переключите registry:
+1. Переключите хранилище образов контейнеров:
 
    {{ change_registry_helper_commercial | regex_replace: "\$NEW_EDITION", "ee" | regex_replace: "^", "   " }}
 
@@ -814,7 +819,7 @@ d8 k delete ngc del-temp-config.sh
    {% endtab %}
    {% endtabs %}
 
-1. Выполните команду, для задания данных аутентификации в хранилище образов:
+1. Выполните команду для указания данных аутентификации в хранилище образов:
 
    {{ ngc_auth_cse | regex_replace: "^", "   " }}
 
