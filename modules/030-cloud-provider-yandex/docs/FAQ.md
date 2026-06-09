@@ -2,7 +2,7 @@
 title: "Cloud provider — Yandex Cloud: FAQ"
 ---
 
-## How do I set up the INTERNAL LoadBalancer?
+## Setting up the INTERNAL LoadBalancer
 
 Attach the following annotation to the service:
 
@@ -12,7 +12,7 @@ yandex.cpi.flant.com/listener-subnet-id: SubnetID
 
 The annotation links the LoadBalancer with the appropriate Subnet.
 
-## How to reserve a public IP address?
+## Reserving a public IP address
 
 This on is used in `externalIPAddresses` and `natInstanceExternalAddress`. It also can be used for a bastion host.
 
@@ -45,7 +45,7 @@ If the dhcpOptions parameter is set, all DNS are routed to the DNS servers speci
 
 **Do not use** this option if the recursive DNSs specified cannot resolve the same list of zones that the recursive DNSs in the Yandex Cloud subnet can resolve.
 
-## How to set a custom StorageClass as default?
+## Setting a custom StorageClass as default
 
 Specify the StorageClass name in the [defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
 Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously set as the default one.
@@ -64,7 +64,7 @@ You can find out the `nodeNetworkCIDR` of the cluster using the command below:
 d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
 ```
 
-## How do I create a cluster in a new VPC and set up bastion host to access the nodes?
+## Creating a cluster in a new VPC and setting up a bastion host to access the nodes
 
 1. Bootstrap the base-infrastructure of the cluster:
 
@@ -98,6 +98,6 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
 
    > Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
 
-## What to do if switching to nodes in lower-priority groups takes a long time?
+## Long switching to nodes in lower-priority groups
 
 If switching to nodes in lower-priority groups takes a long time (for example, when node groups with preemptible instances are set to the highest priority and, if such instances are unavailable, switching to nodes from other groups takes a very long time), follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).
