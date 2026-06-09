@@ -203,6 +203,10 @@ spec:
 
     pilot:
       autoscaleEnabled: false
+  {{- with $.Values.istio.jwksResolverExtraRootCA }}
+      jwksResolverExtraRootCA: |-
+{{ . | indent 8 }}
+  {{- end }}
       env:
         PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER: false
         PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER: false
