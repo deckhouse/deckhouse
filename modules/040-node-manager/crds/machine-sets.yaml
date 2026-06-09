@@ -10,6 +10,16 @@ metadata:
     cluster.x-k8s.io/provider: cluster-api
   name: machinesets.cluster.x-k8s.io
 spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      conversionReviewVersions: ["v1"]
+      clientConfig:
+        service:
+          namespace: nonexistent-ns
+          name: nonexistent-conversion-svc
+          path: /convert
+          port: 443
   group: cluster.x-k8s.io
   names:
     categories:
