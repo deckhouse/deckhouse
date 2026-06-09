@@ -620,11 +620,55 @@ func TestValidationError_Merge_NilNoop(t *testing.T) {
 	require.Equal(t, ErrKindValidationFailed, a.Kind)
 }
 
-func TestError_JSONOmitemptyReasonOnly(t *testing.T) {
-	// Reason omitempty: zero value disappears. All other fields are present
-	// even when zero, matching main wire-format byte-for-byte.
+func TestError_JSONOmitemptyAllFields(t *testing.T) {
+	// All fields are omitempty: zero values disappear from the wire.
+	// Keeps CNI/domain errors compact (no Index/Group/Version/Kind/Name noise).
 	e := Error{Index: nil, Group: "", Version: "", Kind: "", Name: "", Messages: nil}
 	b, err := json.Marshal(e)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"Index":null,"Group":"","Version":"","Kind":"","Name":"","Messages":null}`, string(b))
+	require.JSONEq(t, `{}`, string(b))
+}
+
+func TestError_JSONOmitemptyKeepsNonZeroFields(t *testing.T) {
+	idx := 2
+	e := Error{
+		Reason:   ErrKindValidationFailed,
+		Index:    &idx,
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Kind:     "ModuleConfig",
+		Name:     "cni-cilium",
+		Messages: []string{"bad"},
+	}
+	b, err := json.Marshal(e)
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+		"Reason": 2,
+		"Index": 2,
+		"Group": "deckhouse.io",
+		"Version": "v1alpha1",
+		"Kind": "ModuleConfig",
+		"Name": "cni-cilium",
+		"Messages": ["bad"]
+	}`, string(b))
+}
+
+func TestError_JSON_CNIErrorIsCompact(t *testing.T) {
+	// Regression check matching the wire example in the PR description:
+	// CNI errors have only Reason + Messages on the wire.
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNIMismatch, Error{
+		Messages: []string{`user configured "cni-simple-bridge", provider recommends "cni-cilium"`},
+	})
+	b, err := json.Marshal(ve)
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+		"Kind": 2,
+		"Errors": [
+			{
+				"Reason": 4,
+				"Messages": ["user configured \"cni-simple-bridge\", provider recommends \"cni-cilium\""]
+			}
+		]
+	}`, string(b))
 }

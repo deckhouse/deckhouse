@@ -743,18 +743,17 @@ func (v *ValidationError) ErrorOrNil() error {
 	return v
 }
 
-// Error fields other than Reason intentionally have no json tags: the JSON
-// shape must stay byte-equivalent to main, where these fields are emitted
-// even when zero. Reason is the only new field and is omitempty so old
-// clients see it as absent.
+// All fields are omitempty so domain-specific errors (e.g. CNI mismatch)
+// that lack a resource identity don't carry null/empty noise on the wire.
+// Consumers decode missing field == empty value (Go json, TS optional fields).
 type Error struct {
 	Reason   ErrorKind `json:"Reason,omitempty"`
-	Index    *int
-	Group    string
-	Version  string
-	Kind     string
-	Name     string
-	Messages []string
+	Index    *int      `json:"Index,omitempty"`
+	Group    string    `json:"Group,omitempty"`
+	Version  string    `json:"Version,omitempty"`
+	Kind     string    `json:"Kind,omitempty"`
+	Name     string    `json:"Name,omitempty"`
+	Messages []string  `json:"Messages,omitempty"`
 }
 
 type namedIndex struct {
