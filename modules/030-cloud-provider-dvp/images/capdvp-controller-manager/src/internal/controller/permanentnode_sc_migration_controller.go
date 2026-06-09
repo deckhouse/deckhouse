@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package controller
 
 import (
@@ -107,10 +108,7 @@ func (r *PermanentNodeSCMigrationReconciler) Reconcile(ctx context.Context, req 
 		return reconcile.Result{}, nil
 	}
 
-	anyMigrating, err := r.reconcileAllPermanentNodes(ctx, cfg)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	anyMigrating := r.reconcileAllPermanentNodes(ctx, cfg)
 	if anyMigrating {
 		return reconcile.Result{RequeueAfter: permanentNodeMigrationRequeue}, nil
 	}
@@ -120,7 +118,7 @@ func (r *PermanentNodeSCMigrationReconciler) Reconcile(ctx context.Context, req 
 func (r *PermanentNodeSCMigrationReconciler) reconcileAllPermanentNodes(
 	ctx context.Context,
 	cfg *permanentNodeProviderConfig,
-) (bool, error) {
+) bool {
 	anyMigrating := false
 
 	if cfg.MasterNodeGroup != nil {
@@ -150,7 +148,7 @@ func (r *PermanentNodeSCMigrationReconciler) reconcileAllPermanentNodes(
 		anyMigrating = anyMigrating || migrating
 	}
 
-	return anyMigrating, nil
+	return anyMigrating
 }
 
 func (r *PermanentNodeSCMigrationReconciler) reconcileNodeGroup(
