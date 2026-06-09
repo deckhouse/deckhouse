@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.30.20",
+  "version": "v0.31.0",
   "aliases": null,
   "flags": {
     "help": {
@@ -25845,6 +25845,11 @@
           "shorthand": "",
           "global": false
         },
+        "kuberc": {
+          "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+          "shorthand": "",
+          "global": false
+        },
         "log-flush-frequency": {
           "description": "Maximum number of seconds between log flushes",
           "shorthand": "",
@@ -25984,6 +25989,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -26162,6 +26172,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -26378,6 +26393,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -26404,7 +26424,7 @@
               "global": false
             },
             "output": {
-              "description": "Output format. One of: (wide, name).",
+              "description": "Output format. One of: (json, yaml, name, wide).",
               "shorthand": "o",
               "global": false
             },
@@ -26432,6 +26452,11 @@
               "description": "The address and port of the Kubernetes API server",
               "shorthand": "s",
               "global": true
+            },
+            "show-managed-fields": {
+              "description": "If true, keep the managedFields when printing objects in JSON or YAML format.",
+              "shorthand": "",
+              "global": false
             },
             "sort-by": {
               "description": "If non-empty, sort list of resources using specified field. The field can be either 'name' or 'kind'.",
@@ -26543,6 +26568,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -26731,6 +26761,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -26971,6 +27006,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "kustomize": {
                   "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
                   "shorthand": "k",
@@ -27174,6 +27214,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -27339,6 +27384,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -27512,6 +27562,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -27675,6 +27730,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -27819,6 +27879,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -27997,6 +28062,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -28183,6 +28253,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -28279,7 +28354,7 @@
           ]
         },
         {
-          "name": "autoscale (-f FILENAME | TYPE NAME | TYPE/NAME) [--min=MINPODS] --max=MAXPODS [--cpu-percent=CPU]",
+          "name": "autoscale (-f FILENAME | TYPE NAME | TYPE/NAME) [--min=MINPODS] --max=MAXPODS [--cpu=CPU] [--memory=MEMORY]",
           "description": "Auto-scale a deployment, replica set, stateful set, or replication controller",
           "aliases": null,
           "flags": {
@@ -28333,6 +28408,11 @@
               "shorthand": "",
               "global": true
             },
+            "cpu": {
+              "description": "Target CPU utilization over all the pods. When specified as a percentage (e.g.\"70%\" for 70% of requested CPU) it will target average utilization. When specified as quantity (e.g.\"500m\" for 500 milliCPU) it will target average value. Value without units is treated as a quantity with miliCPU being the unit (e.g.\"500\" is \"500m\").",
+              "shorthand": "",
+              "global": false
+            },
             "cpu-percent": {
               "description": "The target average CPU utilization (represented as a percent of requested CPU) over all the pods. If it's not specified or negative, a default autoscaling policy will be used.",
               "shorthand": "",
@@ -28368,6 +28448,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "kustomize": {
               "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
               "shorthand": "k",
@@ -28385,6 +28470,11 @@
             },
             "max": {
               "description": "The upper limit for the number of pods that can be set by the autoscaler. Required.",
+              "shorthand": "",
+              "global": false
+            },
+            "memory": {
+              "description": "Target memory utilization over all the pods. When specified  as a percentage (e.g.\"60%\" for 60% of requested memory) it will target average utilization. When specified as quantity (e.g.\"200Mi\" for 200 MiB, \"1Gi\" for 1 GiB) it will target average value. Value without units is treated as a quantity with mebibytes being the unit (e.g.\"200\" is \"200Mi\").",
               "shorthand": "",
               "global": false
             },
@@ -28561,6 +28651,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -28715,6 +28810,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -28901,6 +29001,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "kustomize": {
                   "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
                   "shorthand": "k",
@@ -29071,6 +29176,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -29220,6 +29330,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -29398,6 +29513,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -29541,6 +29661,11 @@
               "shorthand": "",
               "global": false
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -29680,6 +29805,11 @@
                 },
                 "kubeconfig": {
                   "description": "use a particular kubeconfig file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -29826,6 +29956,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -29966,6 +30101,11 @@
                 },
                 "kubeconfig": {
                   "description": "use a particular kubeconfig file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -30112,6 +30252,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -30255,6 +30400,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -30395,6 +30545,11 @@
                 },
                 "kubeconfig": {
                   "description": "use a particular kubeconfig file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -30551,6 +30706,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -30694,6 +30854,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -30834,6 +30999,11 @@
                 },
                 "kubeconfig": {
                   "description": "use a particular kubeconfig file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -30990,6 +31160,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -31140,6 +31315,11 @@
                 },
                 "kubeconfig": {
                   "description": "use a particular kubeconfig file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -31331,6 +31511,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -31471,6 +31656,11 @@
                 },
                 "kubeconfig": {
                   "description": "use a particular kubeconfig file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -31616,6 +31806,11 @@
                 },
                 "kubeconfig": {
                   "description": "use a particular kubeconfig file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -31769,6 +31964,11 @@
                 },
                 "kubeconfig": {
                   "description": "use a particular kubeconfig file",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -31952,6 +32152,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -32102,6 +32307,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -32280,6 +32490,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -32500,6 +32715,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -32713,6 +32933,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -32923,6 +33148,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -33110,6 +33340,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -33310,6 +33545,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -33523,6 +33763,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -33721,6 +33966,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -33906,6 +34156,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -34088,6 +34343,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -34301,6 +34561,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -34501,6 +34766,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -34686,6 +34956,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -34897,6 +35172,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -35072,6 +35352,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -35259,6 +35544,11 @@
                     },
                     "kubeconfig": {
                       "description": "Path to the kubeconfig file to use for CLI requests.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                       "shorthand": "",
                       "global": true
                     },
@@ -35465,6 +35755,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "log-flush-frequency": {
                       "description": "Maximum number of seconds between log flushes",
                       "shorthand": "",
@@ -35668,6 +35963,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "log-flush-frequency": {
                       "description": "Maximum number of seconds between log flushes",
                       "shorthand": "",
@@ -35840,6 +36140,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -35999,6 +36304,11 @@
                     },
                     "kubeconfig": {
                       "description": "Path to the kubeconfig file to use for CLI requests.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                       "shorthand": "",
                       "global": true
                     },
@@ -36195,6 +36505,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "log-flush-frequency": {
                       "description": "Maximum number of seconds between log flushes",
                       "shorthand": "",
@@ -36383,6 +36698,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "log-flush-frequency": {
                       "description": "Maximum number of seconds between log flushes",
                       "shorthand": "",
@@ -36568,6 +36888,11 @@
                     },
                     "kubeconfig": {
                       "description": "Path to the kubeconfig file to use for CLI requests.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                       "shorthand": "",
                       "global": true
                     },
@@ -36768,6 +37093,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -36963,6 +37293,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -37201,6 +37536,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -37434,6 +37774,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "kustomize": {
               "description": "Process a kustomization directory. This flag can't be used together with -f or -R.",
               "shorthand": "k",
@@ -37632,6 +37977,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "kustomize": {
               "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
               "shorthand": "k",
@@ -37812,6 +38162,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -38028,6 +38383,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -38203,6 +38563,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -38424,6 +38789,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -38607,6 +38977,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -38772,6 +39147,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -38955,6 +39335,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -39207,7 +39592,7 @@
               "global": false
             },
             "ignore-not-found": {
-              "description": "If the requested object does not exist the command will return exit code 0.",
+              "description": "If set to true, suppresses NotFound error for specific objects that do not exist. Using this flag with commands that query for collections of resources has no effect when no resources are found.",
               "shorthand": "",
               "global": false
             },
@@ -39218,6 +39603,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -39494,6 +39884,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "load-restrictor": {
               "description": "if set to 'LoadRestrictionsNone', local kustomizations may load files from outside their root. This does, however, break the relocatability of the kustomization.",
               "shorthand": "",
@@ -39699,6 +40094,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -39930,6 +40330,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "limit-bytes": {
               "description": "Maximum bytes of logs to return. Defaults to no limit.",
               "shorthand": "",
@@ -40123,6 +40528,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -40283,6 +40693,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -40484,6 +40899,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -40623,6 +41043,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -40778,6 +41203,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -40961,6 +41391,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -41172,6 +41607,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "kustomize": {
               "description": "Process a kustomization directory. This flag can't be used together with -f or -R.",
               "shorthand": "k",
@@ -41370,6 +41810,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -41519,6 +41964,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -41715,6 +42165,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "kustomize": {
                   "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
                   "shorthand": "k",
@@ -41900,6 +42355,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -42091,6 +42551,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "kustomize": {
                   "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
                   "shorthand": "k",
@@ -42266,6 +42731,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -42454,6 +42924,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -42704,6 +43179,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -42980,6 +43460,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "kustomize": {
               "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
               "shorthand": "k",
@@ -43173,6 +43658,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -43357,6 +43847,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -43583,6 +44078,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "kustomize": {
                   "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
                   "shorthand": "k",
@@ -43793,6 +44293,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -44014,6 +44519,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "local": {
                   "description": "If true, annotation will NOT contact api-server but run locally.",
                   "shorthand": "",
@@ -44216,6 +44726,11 @@
                 },
                 "kubeconfig": {
                   "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
                   "shorthand": "",
                   "global": true
                 },
@@ -44427,6 +44942,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "kustomize": {
                   "description": "Process the kustomization directory. This flag can't be used together with -f or -R.",
                   "shorthand": "k",
@@ -44632,6 +45152,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -44805,6 +45330,11 @@
               "shorthand": "",
               "global": true
             },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+              "shorthand": "",
+              "global": true
+            },
             "log-flush-frequency": {
               "description": "Maximum number of seconds between log flushes",
               "shorthand": "",
@@ -44950,6 +45480,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -45002,6 +45537,11 @@
                 },
                 "show-capacity": {
                   "description": "Print node resources based on Capacity instead of Allocatable(default) of the nodes.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "show-swap": {
+                  "description": "Print node resources related to swap memory.",
                   "shorthand": "",
                   "global": false
                 },
@@ -45136,6 +45676,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "log-flush-frequency": {
                   "description": "Maximum number of seconds between log flushes",
                   "shorthand": "",
@@ -45185,6 +45730,11 @@
                   "description": "The address and port of the Kubernetes API server",
                   "shorthand": "s",
                   "global": true
+                },
+                "show-swap": {
+                  "description": "Print pod resources related to swap memory.",
+                  "shorthand": "",
+                  "global": false
                 },
                 "sort-by": {
                   "description": "If non-empty, sort pods list using specified field. The field can be either 'cpu' or 'memory'.",
@@ -45308,6 +45858,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -45461,6 +46016,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -45639,6 +46199,11 @@
             },
             "kubeconfig": {
               "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "kuberc": {
+              "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
               "shorthand": "",
               "global": true
             },
@@ -47774,6 +48339,58 @@
                     }
                   },
                   "subcommands": null
+                },
+                {
+                  "name": "renew (all | PATH)",
+                  "description": "Renew control-plane certificates and kubeconfig client certificates",
+                  "aliases": null,
+                  "flags": {
+                    "dry-run": {
+                      "description": "Run all without writing any files",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "kubeconfig-dir": {
+                      "description": "Directory containing kubeconfig files (defaults to the parent of --path)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "path": {
+                      "description": "Directory containing the PKI certificates and CA files",
+                      "shorthand": "",
+                      "global": false
+                    }
+                  },
+                  "subcommands": [
+                    {
+                      "name": "all",
+                      "description": "Renew all control-plane certificates and kubeconfig client certificates",
+                      "aliases": null,
+                      "flags": {
+                        "dry-run": {
+                          "description": "Run all without writing any files",
+                          "shorthand": "",
+                          "global": false
+                        },
+                        "kubeconfig-dir": {
+                          "description": "Directory containing kubeconfig files (defaults to the parent of --path)",
+                          "shorthand": "",
+                          "global": false
+                        },
+                        "path": {
+                          "description": "Directory containing the PKI certificates and CA files",
+                          "shorthand": "",
+                          "global": false
+                        },
+                        "san": {
+                          "description": "New IP SAN to add to serving certificates (e.g. the new master IP)",
+                          "shorthand": "",
+                          "global": false
+                        }
+                      },
+                      "subcommands": null
+                    }
+                  ]
                 }
               ]
             }
