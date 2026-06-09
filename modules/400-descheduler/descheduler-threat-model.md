@@ -14,9 +14,35 @@
 | **Критичные функции** | (1) Принятие решения о вытеснении и само вытеснение/удаление подов в масштабах всего кластера; (2) корректность и неизменность политики `DeschedulerPolicy`; (3) защита привилегированной учётной записи (ServiceAccount `descheduler` с правом cluster-wide `pods` `delete` и `pods/eviction` `create`); (4) соблюдение защитных ограничений (`DefaultEvictor`: PDB, `system-critical` приоритет, DaemonSet, локальное хранилище; патч Deckhouse: namespaces `d8-*` и `kube-system`); (5) целостность цепочки поставки образа. |
 | **Критичные последствия** | Массовое вытеснение/удаление рабочих нагрузок → отказ в обслуживании приложений и нарушение работоспособности кластера; вытеснение в обход PDB при использовании verb `pods/delete`; искажение политики вытеснения; раскрытие топологии кластера (имена подов/namespace/узлов) через метрики и подробные логи; компрометация привилегированного SA-токена; внедрение скомпрометированного кода через цепочку поставки (выполнение в контексте SA с правом массового вытеснения). |
 | **Объекты защиты** | Ресурсы `Descheduler` (`deckhouse.io/v1alpha1`, `v1alpha2`, cluster-scoped) и `ModuleConfig/descheduler`; `ConfigMap d8-descheduler/descheduler-policy` (сгенерированная политика); токен ServiceAccount `descheduler` и его `ClusterRole`; `Secret d8-descheduler/deckhouse-registry` (dockerconfigjson); данные состояния кластера, читаемые модулем; Prometheus-метрики и журналы; контейнерный образ и цепочка его сборки. |
-| **Категории субъектов** | (0) Внешний неаутентифицированный субъект сети кластера — достижим только endpoint `:10258/healthz` (исключён из авторизации), влияние минимально; (0′) Внешний поставщик цепочки поставки (`SOURCE_REPO`, `GOPROXY`, upstream-репозиторий, registry) — **высокий потенциал**; (1) Пользователь Kubernetes с правами в собственном namespace — **низкий внутренний потенциал** (влияет на метки/поведение только своих подов); (2) Субъект с доступом к метрикам/логам (`d8-monitoring`, Prometheus) — **средний внутренний потенциал**; (3) Администратор кластера / infrastructure-manager — право создавать/изменять `Descheduler` и `ModuleConfig` — **высокий внутренний потенциал**; (4) Привилегированный внутренний нарушитель с доступом к control-plane / namespace `d8-descheduler` / SA-токену / возможности регистрировать `APIService` — **высокий внутренний потенциал**. Доверенные/ограниченно доверенные компоненты: Kubernetes API, addon-operator (hooks), `kube-rbac-proxy`, metrics-server. |
-| **Реализованные меры защиты, выявленные по исходным данным** | Бинарь не root (`runAsUser` `deckhouse`), контекст безопасности по профилю PSS Restricted (`helm_lib_module_container_security_context_pss_restricted_flexible`); образ `distroless`, статический бинарь без CGO; `--bind-address 127.0.0.1` (secure-serving только на loopback); метрики только через `kube-rbac-proxy` с авторизацией `SubjectAccessReview` на subresource `deployments/prometheus-metrics`, `/healthz` исключён; ServiceAccount с `automountServiceAccountToken: false` (включается только на уровне пода); локальный патч Deckhouse запрещает вытеснение подов из `d8-*` и `kube-system`; в политике жёстко зафиксированы `evictSystemCriticalPods: false`, `nodeFit: true` (в v1alpha2 нет параметра для включения вытеснения system-critical подов); порог приоритета по умолчанию — `system-cluster-critical`; `DefaultEvictor` соблюдает PDB; `PodDisruptionBudget` и `VerticalPodAutoscaler` для самого модуля; запись на CRD `Descheduler` разрешена только уровню ClusterAdmin/infrastructure-manager (`user-authz`, `rbacv2/manage`); наличие VEX (`known_vulnerabilities.vex`) для 5 CVE. |
+| **Категории субъектов** | См. подраздел [1.1. Категории субъектов](#11-категории-субъектов) ниже. |
+| **Реализованные меры защиты, выявленные по исходным данным** | См. подраздел [1.2. Реализованные меры защиты](#12-реализованные-меры-защиты-выявленные-по-исходным-данным) ниже. |
 | **Неопределённости** | **Требует уточнения:** полный SBOM релизного образа (в исходных данных есть `go.mod`/`go.sum`, `oss.yaml`, VEX, но не машиночитаемый SBOM); расхождение версий зависимостей между VEX и `go.mod` (см. раздел 2); фактическое использование verb `pods` `delete` бинарём (RBAC выдаёт `delete` сверх `eviction`); наличие `NetworkPolicy` для `d8-descheduler`; конфигурация аудита Kubernetes API; точные значения `seccompProfile`/capabilities/`readOnlyRootFilesystem`, формируемые helm-хелпером; назначение зависимости `kubevirt.io/*` в `go.mod`. |
+
+### 1.1. Категории субъектов
+
+- **(0) Внешний неаутентифицированный субъект сети кластера** — достижим только endpoint `:10258/healthz` (исключён из авторизации), влияние минимально.
+- **(0′) Внешний поставщик цепочки поставки** (`SOURCE_REPO`, `GOPROXY`, upstream-репозиторий, registry) — **высокий потенциал**.
+- **(1) Пользователь Kubernetes с правами в собственном namespace** — **низкий внутренний потенциал** (влияет на метки/поведение только своих подов).
+- **(2) Субъект с доступом к метрикам/логам** (`d8-monitoring`, Prometheus) — **средний внутренний потенциал**.
+- **(3) Администратор кластера / infrastructure-manager** — право создавать/изменять `Descheduler` и `ModuleConfig` — **высокий внутренний потенциал**.
+- **(4) Привилегированный внутренний нарушитель** с доступом к control-plane / namespace `d8-descheduler` / SA-токену / возможности регистрировать `APIService` — **высокий внутренний потенциал**.
+
+Доверенные/ограниченно доверенные компоненты: Kubernetes API, addon-operator (hooks), `kube-rbac-proxy`, metrics-server.
+
+### 1.2. Реализованные меры защиты, выявленные по исходным данным
+
+- Бинарь не root (`runAsUser` `deckhouse`), контекст безопасности по профилю PSS Restricted (`helm_lib_module_container_security_context_pss_restricted_flexible`).
+- Образ `distroless`, статический бинарь без CGO.
+- `--bind-address 127.0.0.1` (secure-serving только на loopback).
+- Метрики только через `kube-rbac-proxy` с авторизацией `SubjectAccessReview` на subresource `deployments/prometheus-metrics`, `/healthz` исключён.
+- ServiceAccount с `automountServiceAccountToken: false` (включается только на уровне пода).
+- Локальный патч Deckhouse запрещает вытеснение подов из `d8-*` и `kube-system`.
+- В политике жёстко зафиксированы `evictSystemCriticalPods: false`, `nodeFit: true` (в v1alpha2 нет параметра для включения вытеснения system-critical подов).
+- Порог приоритета по умолчанию — `system-cluster-critical`.
+- `DefaultEvictor` соблюдает PDB.
+- `PodDisruptionBudget` и `VerticalPodAutoscaler` для самого модуля.
+- Запись на CRD `Descheduler` разрешена только уровню ClusterAdmin/infrastructure-manager (`user-authz`, `rbacv2/manage`).
+- Наличие VEX (`known_vulnerabilities.vex`) для 5 CVE.
 
 ---
 
