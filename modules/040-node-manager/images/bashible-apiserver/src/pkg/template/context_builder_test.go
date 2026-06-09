@@ -234,4 +234,14 @@ updateEpoch: "1680009541"
 			return
 		}
 	})
+
+	t.Run("changing kubelet seccompDefault affects checksum", func(t *testing.T) {
+		bc.NodeGroup["kubelet"].(map[string]interface{})["seccompDefault"] = true
+
+		newHash := hash(t, &bc)
+
+		if expectedHash == newHash {
+			t.Fatalf("expected checksum to change when seccompDefault changes")
+		}
+	})
 }
