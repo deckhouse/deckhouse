@@ -27,8 +27,12 @@
   {{- end -}}
 {{- end -}}
 {{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
-{{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
-{{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 }}
+{{- $resourcesRequests := dict -}}
+{{- if and $.settings $.settings.resourcesRequests -}}
+  {{- $resourcesRequests = $.settings.resourcesRequests -}}
+{{- end -}}
+{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
+{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 apiVersion: v1
 kind: Pod
 metadata:

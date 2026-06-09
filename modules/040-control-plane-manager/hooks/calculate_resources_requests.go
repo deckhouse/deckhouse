@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
 	v1 "k8s.io/api/core/v1"
@@ -45,6 +46,9 @@ const (
 	// kube-apiserver/etcd/kcm/ks right in the middle of Deckhouse install.
 	kubeletResourceReservationMemoryFloor = 900 * 1024 * 1024 // 900 MiB
 	kubeletResourceReservationCPUFloor    = 100               // 0.1 cpu
+
+	obsoleteGlobalResourcesRequestsMetricName  = "d8_obsolete_global_control_plane_resources_requests"
+	obsoleteGlobalResourcesRequestsMetricGroup = "D8ObsoleteGlobalControlPlaneResourcesRequests"
 )
 
 type Node struct {
@@ -118,6 +122,8 @@ func effectiveMasterResources(n *Node) (int64, int64) {
 }
 
 func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) error {
+	input.MetricsCollector.Expire(obsoleteGlobalResourcesRequestsMetricGroup)
+
 	var (
 		calculatedMasterNodeMilliCPU int64
 		calculatedMasterNodeMemory   int64
@@ -167,26 +173,59 @@ func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) err
 	calculatedControlPlaneMilliCPU = calculatedMasterNodeMilliCPU * controlPlanePercent / 100
 	calculatedControlPlaneMemory = calculatedMasterNodeMemory * controlPlanePercent / 100
 
-	path := "global.modules.resourcesRequests.controlPlane.cpu"
-	if input.Values.Exists(path) {
-		quantity, err := getAndParseResourceQuantity(input.Values.Get(path))
+	cpmCPUPath := "controlPlaneManager.resourcesRequests.cpu"
+	cpmMemoryPath := "controlPlaneManager.resourcesRequests.memory"
+	globalCPUPath := "global.modules.resourcesRequests.controlPlane.cpu"
+	globalMemoryPath := "global.modules.resourcesRequests.controlPlane.memory"
+
+	cpmCPUExists := input.Values.Exists(cpmCPUPath)
+	cpmMemoryExists := input.Values.Exists(cpmMemoryPath)
+	globalCPUExists := input.Values.Exists(globalCPUPath)
+	globalMemoryExists := input.Values.Exists(globalMemoryPath)
+
+	usedGlobalFallback := false
+
+	if cpmCPUExists {
+		quantity, err := getAndParseResourceQuantity(input.Values.Get(cpmCPUPath))
 		if err != nil {
 			return err
 		}
 		calculatedControlPlaneMilliCPU = quantity.MilliValue()
+	} else if globalCPUExists {
+		quantity, err := getAndParseResourceQuantity(input.Values.Get(globalCPUPath))
+		if err != nil {
+			return err
+		}
+		calculatedControlPlaneMilliCPU = quantity.MilliValue()
+		usedGlobalFallback = true
 	}
 
-	path = "global.modules.resourcesRequests.controlPlane.memory"
-	if input.Values.Exists(path) {
-		quantity, err := getAndParseResourceQuantity(input.Values.Get(path))
+	if cpmMemoryExists {
+		quantity, err := getAndParseResourceQuantity(input.Values.Get(cpmMemoryPath))
 		if err != nil {
 			return err
 		}
 		calculatedControlPlaneMemory = quantity.Value()
+	} else if globalMemoryExists {
+		quantity, err := getAndParseResourceQuantity(input.Values.Get(globalMemoryPath))
+		if err != nil {
+			return err
+		}
+		calculatedControlPlaneMemory = quantity.Value()
+		usedGlobalFallback = true
 	}
 
-	input.Values.Set("global.internal.modules.resourcesRequests.milliCpuControlPlane", calculatedControlPlaneMilliCPU)
-	input.Values.Set("global.internal.modules.resourcesRequests.memoryControlPlane", calculatedControlPlaneMemory)
+	if usedGlobalFallback {
+		input.MetricsCollector.Set(
+			obsoleteGlobalResourcesRequestsMetricName,
+			1,
+			map[string]string{},
+			metrics.WithGroup(obsoleteGlobalResourcesRequestsMetricGroup),
+		)
+	}
+
+	input.Values.Set("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane", calculatedControlPlaneMilliCPU)
+	input.Values.Set("controlPlaneManager.internal.resourcesRequests.memoryControlPlane", calculatedControlPlaneMemory)
 
 	return nil
 }
@@ -201,12 +240,4 @@ func getAndParseResourceQuantity(input gjson.Result) (resource.Quantity, error) 
 	}
 
 	return quantity, nil
-}
-
-func absDiff(a, b int64) int64 {
-	d := a - b
-	if d > 0 {
-		return d
-	}
-	return b - a
 }

@@ -74,8 +74,12 @@
 {{- if .apiserver.etcdServers -}}
   {{- $etcdServers = printf "https://127.0.0.1:2379,%s" (.apiserver.etcdServers | join ",") -}}
 {{- end -}}
-{{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
-{{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
+{{- $resourcesRequests := dict -}}
+{{- if and .settings .settings.resourcesRequests -}}
+  {{- $resourcesRequests = .settings.resourcesRequests -}}
+{{- end -}}
+{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
+{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 {{- /* kube-apiserver */ -}}
 apiVersion: v1
 kind: Pod

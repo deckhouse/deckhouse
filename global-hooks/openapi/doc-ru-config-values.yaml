@@ -93,15 +93,21 @@ properties:
         properties:
           controlPlane:
             description: |
+              > **Устарело**. Вместо этого используйте параметр `.spec.settings.resourcesRequests` в конфигурации модуля `control-plane-manager`.
+
               Объём ресурсов (CPU и памяти), выделяемых для компонентов control plane на каждом master-узле кластера.
 
               Настройки не применяются, если control plane кластера управляется облачным провайдером (например, Google Kubernetes Engine или Azure Kubernetes Service).
             properties:
               cpu:
                 description: |
+                  > **Устарело**. Вместо этого используйте параметр `controlPlaneManager.spec.settings.resourcesRequests.cpu`.
+
                   Количество CPU, выделяемых для компонентов control plane, работающих на каждом master-узле кластера.
               memory:
                 description: |
+                  > **Устарело**. Вместо этого используйте параметр `controlPlaneManager.spec.settings.resourcesRequests.memory`.
+
                   Объем памяти, выделяемой для компонентов control plane, работающих на каждом master-узле кластера.
       storageClass:
         description: |

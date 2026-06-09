@@ -96,11 +96,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
-  internal:
-    modules:
-      resourcesRequests:
-        milliCpuControlPlane: 1024
-        memoryControlPlane: 536870912
   modules:
     placement: {}
   discovery:
@@ -126,6 +121,9 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     kubeSchedulerExtenders: []
     authn: {}
     selfSignedCA: {}
+    resourcesRequests:
+      milliCpuControlPlane: 1024
+      memoryControlPlane: 536870912
 `
 
 	const defaultAudience = "https://kubernetes.default.svc.cluster.local"
