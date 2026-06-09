@@ -17,6 +17,7 @@ package reconcilertest
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -54,6 +55,9 @@ func CompareOrUpdate(t testing.TB, goldenPath string, got []byte, mode Mode) {
 	t.Helper()
 
 	if Update {
+		// Recreate the golden directory if it is missing so that deleting it and
+		// rerunning with -golden regenerates the fixtures from scratch.
+		require.NoError(t, os.MkdirAll(filepath.Dir(goldenPath), 0o755))
 		require.NoError(t, os.WriteFile(goldenPath, got, 0o666))
 		return
 	}
