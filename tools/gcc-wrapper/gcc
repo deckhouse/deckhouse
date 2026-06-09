@@ -1,0 +1,49 @@
+#!/bin/sh
+
+# Current wrapper
+SELF="$(readlink -f "$0")"
+
+# Name of compiler
+NAME=$(basename "$0")
+
+# Are looking for the real compiler name, skipping ourselves
+REAL=""
+for p in $(echo "$PATH" | tr ':' ' '); do
+    CAND="$p/${NAME}"
+    if [ -x "$CAND" ]; then
+        CAND_REAL="$(readlink -f "$CAND")"
+        if [ "$CAND_REAL" != "$SELF" ]; then
+            REAL="$CAND_REAL"
+            break
+        fi
+    fi
+done
+
+if [ -z "$REAL" ]; then
+    echo "${NAME} wrapper: real ${NAME} not found" >&2
+    exit 1
+fi
+
+# Log tag: C vs C++ toolchain (same script for gcc and g++ via symlink)
+case "$NAME" in
+    g++|c++|*-g++)
+        LOG_TAG="[CXX]"
+        ;;
+    *)
+        LOG_TAG="[CC]"
+        ;;
+esac
+
+FLAGS_PART=""
+for _var in CFLAGS CPPFLAGS CXXFLAGS LDFLAGS; do
+    eval "_set=\${${_var}+x}"
+    if [ -n "$_set" ]; then
+        eval "_val=\$$_var"
+        FLAGS_PART="${FLAGS_PART}${_var}=${_val} "
+    fi
+done
+
+echo "${LOG_TAG} ${FLAGS_PART}${NAME} $*" >&2
+
+# Transfer control
+exec "$REAL" "$@"

@@ -31,6 +31,8 @@ import:
   includePaths:
   - libmnl
   - ethtool
+git:
+{{ include "gcc compiler wrapper git" . }}
 mount:
 {{ include "mount points for golang builds" . }}
 shell:
@@ -38,6 +40,7 @@ shell:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache autoconf automake make libtool g++ linux-headers pkgconfig
   setup:
+  {{- include "gcc compiler wrapper shell" . | nindent 2 }}
   - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
   - cd /src/libmnl
   - ./autogen.sh

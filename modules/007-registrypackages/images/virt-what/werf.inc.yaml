@@ -47,11 +47,14 @@ import:
   add: /src
   to: /src
   before: install
+git:
+{{ include "gcc compiler wrapper git" . }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make autoconf pkgconf automake build-base
   setup:
+  {{- include "gcc compiler wrapper shell" . | nindent 2 }}
   - cd /src/virt-what
   - autoreconf -fi
   - autoconf
