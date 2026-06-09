@@ -53,7 +53,7 @@ func GetDrainConfirmation(commanderMode bool) func(string) bool {
 func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, confirm func(string) bool, opts DrainOptions) error {
 	// todo it is deeper for pass from command root, use app package directly
 	if app.SkipDrainingNodes() {
-		log.InfoF("Skipping draining node %s because draining disabled by env\n", nodeName)
+		log.InfoF("Skipping draining node %s because draining is disabled by env\n", nodeName)
 		return nil
 	}
 
@@ -63,8 +63,8 @@ func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeNa
 		})
 	if err != nil {
 		if goerrors.Is(err, kubedrain.ErrDrainTimeout) {
-			if confirm("Cannot drain node, because process was timeout. Do we continue without full-fledged drain?") {
-				log.WarnLn("Continue without full-fledged drain")
+			if confirm("Cannot drain the node because the process timed out. Continue without a full-fledged drain?") {
+				log.WarnLn("Continuing without a full-fledged drain")
 				return nil
 			}
 

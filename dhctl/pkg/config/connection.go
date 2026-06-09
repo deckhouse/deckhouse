@@ -97,10 +97,10 @@ func ParseConnectionConfig(
 	}
 
 	unmarshallError := func(err error, kind string, docNumber int) string {
-		return fmt.Sprintf("Cannot unmarshal to %s document %d: %v", kind, docNumber, err)
+		return fmt.Sprintf("Cannot unmarshal %s document %d: %v", kind, docNumber, err)
 	}
 
-	log.DebugF("Parsing connection config has %d documents\n", len(docs))
+	log.DebugF("Connection config has %d documents\n", len(docs))
 
 	config := &ConnectionConfig{}
 
@@ -126,7 +126,7 @@ func ParseConnectionConfig(
 			Version: gvk.GroupVersion().String(),
 		}
 
-		log.DebugF("Process validate and parse connection config document %d for index %v\n", i, index)
+		log.DebugF("Validating and parsing connection config document %d for index %v\n", i, index)
 
 		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
@@ -143,7 +143,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHConfig = &sshConfig
-			log.DebugF("SSHConfig added in result config\n")
+			log.DebugF("SSHConfig added to the result config\n")
 		case SSHConfigHostKind:
 			sshHostConfigDocsCount++
 			var sshHost SSHHost
@@ -152,7 +152,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHHosts = append(config.SSHHosts, sshHost)
-			log.DebugF("SSHHost added in result config, host in result config %d\n", len(config.SSHHosts))
+			log.DebugF("SSHHost added to the result config, hosts in result config %d\n", len(config.SSHHosts))
 		default:
 			msg := fmt.Sprintf("Unknown kind, expected one of (%q, %q)", SSHConfigKind, SSHConfigHostKind)
 			appendValidationError(msg, i, &gvk, &obj)
@@ -224,7 +224,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 		keysPaths = append(keysPaths, fullPath)
 		if len(key.Passphrase) > 0 {
-			log.DebugF("Passphrase for key %s added in map\n", fullPath)
+			log.DebugF("Passphrase for key %s added to the map\n", fullPath)
 			pathToPassPhrase[fullPath] = key.Passphrase
 		}
 	}

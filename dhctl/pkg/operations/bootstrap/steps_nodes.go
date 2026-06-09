@@ -55,7 +55,7 @@ func BootstrapAdditionalMasterNodes(
 	globalOptions *options.GlobalOptions,
 ) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
-		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
+		log.DebugF("Skipping additional master node bootstrap because replicas == 1")
 		return nil
 	}
 

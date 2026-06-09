@@ -36,7 +36,7 @@ func DeleteNodeObjectFromCluster(ctx context.Context, kubeCl *client.KubernetesC
 		err := kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' already deleted. Skip\n", nodeName)
+				log.InfoF("Node '%s' already deleted. Skipping\n", nodeName)
 				return nil
 			}
 			return err
