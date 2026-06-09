@@ -19,7 +19,7 @@ This section describes two ways to add worker nodes:
 Before you begin, make sure that the following conditions are met:
 
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- [Network connectivity](./overview#general-network-requirements) is configured between the network of static nodes and the Yandex Cloud VPC.
+- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the Yandex Cloud VPC.
 - Yandex Cloud nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
 - The requirements from the [Connection and authorization in Yandex Cloud](../public/yandex/authorization.html) section are met:
   - A service account is prepared.
@@ -55,6 +55,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    ```shell
    yc vpc network list --folder-id "$FOLDER_ID"
    yc vpc subnet list --folder-id "$FOLDER_ID"
+   yc compute zone list
    ```
 
 1. Specify the obtained values in variables:
@@ -355,7 +356,7 @@ Before you begin, make sure that the following conditions are met:
 - The virtual machine is connected to the Yandex Cloud network and subnet used for hybrid integration with the cluster.
 - The virtual machine has a network interface in the Yandex Cloud VPC network and subnet used for hybrid integration with the cluster. The IP address of this interface must belong to the CIDR specified in `nodeNetworkCIDR` and be reachable from the static cluster nodes.
 - The virtual machine name in Yandex Cloud matches the hostname inside the operating system.
-- One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine. In RED OS, `yum` and `which` may be absent by default, so they must be installed in advance.
+- One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine.
 
 1. Check the virtual machine metadata in Yandex Cloud.
 

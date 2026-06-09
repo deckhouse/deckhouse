@@ -19,7 +19,7 @@ This section describes two ways to add worker nodes:
 Before you begin, make sure that the following conditions are met:
 
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- [Network connectivity](./overview#general-network-requirements) is configured between the network of static nodes and the network of virtual machines in vSphere.
+- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the network of virtual machines in vSphere.
 - vSphere nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
 - The requirements from the [Connection and authorization in VMware vSphere](../virtualization/vsphere/authorization.html) section are met:
   - Access to vCenter is configured.
@@ -238,7 +238,7 @@ Before you begin, make sure that the following conditions are met:
   ```
 
 - The virtual machine is connected to the network specified in the [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) parameter of the `cloud-provider-vsphere` module configuration.
-- One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine. In RED OS, `yum` and `which` may be absent by default, so they must be installed in advance.
+- One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine.
 
 1. Create a file with a NodeGroup resource and the CloudStatic node type. For example, `cloud-static-nodegroup.yaml`:
 

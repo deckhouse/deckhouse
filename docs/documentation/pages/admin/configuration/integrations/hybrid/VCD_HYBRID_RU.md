@@ -20,7 +20,7 @@ description: Подготовка к гибридной интеграции с 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов и сетью виртуальных машин в VCD настроена [сетевая связность](./overview#общие-сетевые-требования).
+- Между сетью статических узлов и сетью виртуальных машин в VCD настроена [сетевая связность](./overview.html#общие-сетевые-требования).
 - Узлы VCD, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
 - Выполнены требования из раздела [«Подключение и авторизация в VMware vCloud Director»](../virtualization/vcd/connection-and-authorization.html):
   - настроен тенант в VCD с выделенными ресурсами;

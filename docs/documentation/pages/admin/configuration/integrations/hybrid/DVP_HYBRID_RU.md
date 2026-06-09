@@ -20,7 +20,7 @@ description: Подготовка к гибридной интеграции с 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов кластера DKP и сетью виртуальных машин в DVP настроена [сетевая связность](./overview#общие-сетевые-требования).
+- Между сетью статических узлов кластера DKP и сетью виртуальных машин в DVP настроена [сетевая связность](./overview.html#общие-сетевые-требования).
 - Создаваемые в DVP worker-узлы имеют доступ к Kubernetes API подключаемого DKP-кластера, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
 - Выполнены требования из раздела [«Подготовка окружения»](/modules/cloud-provider-dvp/environment.html):
   - создан [ServiceAccount](/modules/cloud-provider-dvp/environment.html#создание-пользователя) для доступа к API DVP;
