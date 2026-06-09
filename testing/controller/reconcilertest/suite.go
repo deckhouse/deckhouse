@@ -33,6 +33,7 @@ import (
 	"context"
 	"flag"
 	"path/filepath"
+	"reflect"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -61,6 +62,17 @@ type Config struct {
 	// StatusSubresources are registered on the fake client so that status
 	// updates from the reconciler are persisted (mirrors WithStatusSubresource).
 	StatusSubresources []client.Object
+
+	// SeedStatusSubresources lists kinds whose .status must survive seeding.
+	// The fake client strips the status of a status subresource on Create, so a
+	// fixture that carries a non-empty status (e.g. a pre-existing release in a
+	// terminal phase) would otherwise lose it. For every seeded object whose
+	// kind is listed here and whose status is non-zero, the framework restores
+	// the fixture status with a Status().Update right after Create, interleaved
+	// in fixture order to keep resourceVersion sequencing identical to the
+	// hand-written seeders this replaces. Only meaningful together with
+	// SeedViaCreate; kinds listed here should also appear in StatusSubresources.
+	SeedStatusSubresources []client.Object
 
 	// SnapshotKinds lists the resource kinds dumped into the golden snapshot,
 	// in order.
@@ -104,6 +116,8 @@ type Suite struct {
 	dyn        dynamic.Interface
 	restMapper meta.RESTMapper
 
+	seedStatusGVKs map[schema.GroupVersionKind]struct{}
+
 	fixtureName string
 }
 
@@ -125,6 +139,15 @@ func (s *Suite) Init(cfg Config) {
 
 	s.cfg = cfg
 	s.scheme = cfg.Scheme
+
+	s.seedStatusGVKs = make(map[schema.GroupVersionKind]struct{}, len(cfg.SeedStatusSubresources))
+	for _, obj := range cfg.SeedStatusSubresources {
+		gvks, _, err := cfg.Scheme.ObjectKinds(obj)
+		require.NoErrorf(s.T(), err, "resolve GVK for seed status subresource %T", obj)
+		for _, gvk := range gvks {
+			s.seedStatusGVKs[gvk] = struct{}{}
+		}
+	}
 
 	flag.Parse()
 	if !cfg.SkipTestEnv {
@@ -193,13 +216,61 @@ func (s *Suite) SeedObjects(name string, objs ...client.Object) {
 
 	if s.cfg.SeedViaCreate {
 		for _, obj := range objs {
-			require.NoError(s.T(), s.cl.Create(context.TODO(), obj))
+			s.seedCreate(obj)
 		}
 	}
 
 	if s.cfg.WithDynamic {
 		s.dyn = s.buildDynamic(objs)
 	}
+}
+
+// seedCreate creates a single seed object and, when its kind is configured as a
+// SeedStatusSubresource and the fixture carries a non-zero status, restores that
+// status via a Status().Update right after Create. Capturing the status before
+// Create matters: the fake client clears the status of a status subresource on
+// Create, so it has to be re-applied from the decoded fixture.
+func (s *Suite) seedCreate(obj client.Object) {
+	statusVal, restore := s.seedStatusToRestore(obj)
+
+	require.NoError(s.T(), s.cl.Create(context.TODO(), obj))
+
+	if restore {
+		reflect.ValueOf(obj).Elem().FieldByName("Status").Set(statusVal)
+		require.NoError(s.T(), s.cl.Status().Update(context.TODO(), obj))
+	}
+}
+
+// seedStatusToRestore reports whether obj's status must be restored after Create
+// and returns a copy of the fixture status to re-apply.
+func (s *Suite) seedStatusToRestore(obj client.Object) (reflect.Value, bool) {
+	if len(s.seedStatusGVKs) == 0 {
+		return reflect.Value{}, false
+	}
+
+	gvks, _, err := s.scheme.ObjectKinds(obj)
+	require.NoErrorf(s.T(), err, "resolve GVK for seeded object %T", obj)
+
+	matched := false
+	for _, gvk := range gvks {
+		if _, ok := s.seedStatusGVKs[gvk]; ok {
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		return reflect.Value{}, false
+	}
+
+	status := reflect.ValueOf(obj).Elem().FieldByName("Status")
+	if !status.IsValid() || status.IsZero() {
+		return reflect.Value{}, false
+	}
+
+	saved := reflect.New(status.Type()).Elem()
+	saved.Set(status)
+
+	return saved, true
 }
 
 func (s *Suite) buildDynamic(objs []client.Object) dynamic.Interface {

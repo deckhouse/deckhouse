@@ -62,6 +62,18 @@ func Decode(scheme *runtime.Scheme, raw []byte) ([]client.Object, error) {
 			continue
 		}
 
+		// A document that holds only comments or whitespace decodes to an empty
+		// mapping. The hand-written seeders this replaces silently skipped such
+		// documents (their `switch obj.Kind` had no matching case), so fixtures
+		// commonly use a comment-only file to mean "seed nothing".
+		var content map[string]interface{}
+		if err := yaml.Unmarshal([]byte(doc), &content); err != nil {
+			return nil, fmt.Errorf("read manifest: %w\n%s", err, doc)
+		}
+		if len(content) == 0 {
+			continue
+		}
+
 		var typeMeta metav1.TypeMeta
 		if err := yaml.Unmarshal([]byte(doc), &typeMeta); err != nil {
 			return nil, fmt.Errorf("read type meta: %w\n%s", err, doc)
