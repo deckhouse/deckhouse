@@ -65,7 +65,7 @@ type grant struct {
 }
 
 type grantResource struct {
-	ResourceName         string            `json:"resourceName"`
+	ResourceName        string            `json:"resourceName"`
 	Allowed             []string          `json:"allowed"`
 	AllowedSelector     *v1.LabelSelector `json:"allowedSelector"`
 	Denied              []string          `json:"denied"`
