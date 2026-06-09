@@ -1,4 +1,4 @@
-# RoleBinding referencing a ClusterRole. The clusterroles ClusterGrantableResource makes available by
+# RoleBinding referencing a ClusterRole. The clusterroles GrantableClusterResourceDefinition makes available by
 # default only the roles marked with the rbac.deckhouse.io/delegatable label — the namespace-level
 # access roles: d8:use:role:{viewer,user,manager,admin} and user-authz:{user,privileged-user,editor,
 # admin}. Everything else (use capabilities, cluster-admin/super-admin and other cluster-scoped roles,

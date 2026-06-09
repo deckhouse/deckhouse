@@ -13,8 +13,8 @@ rules:
 - apiGroups:
   - multitenancy.deckhouse.io
   resources:
-  - availableresources
-  - grantquotas
+  - availableclusterresources
+  - clusterresourcegrants
   verbs:
   - get
   - list

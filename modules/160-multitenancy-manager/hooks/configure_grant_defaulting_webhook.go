@@ -44,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       "registrations",
 			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
-			Kind:       "ClusterGrantableResource",
+			Kind:       "GrantableClusterResourceDefinition",
 			FilterFunc: filterRegistrations,
 		},
 	},

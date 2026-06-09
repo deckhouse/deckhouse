@@ -20,8 +20,8 @@ rules:
 - apiGroups:
   - multitenancy.deckhouse.io
   resources:
-  - availableresources
-  - grantquotas
+  - availableclusterresources
+  - clusterresourcegrants
   verbs:
   - get
   - list
@@ -50,9 +50,9 @@ rules:
 - apiGroups:
   - multitenancy.deckhouse.io
   resources:
-  - clusterobjectgrants
-  - clustergrantableresources
-  - grantquotas
+  - clusterresourcegrantpolicies
+  - grantableclusterresourcedefinitions
+  - clusterresourcegrants
   verbs:
   - get
   - list

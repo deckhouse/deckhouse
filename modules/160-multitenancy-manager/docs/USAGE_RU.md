@@ -314,9 +314,9 @@ data:
 
 Используются два ресурса:
 
-- `ClusterObjectGrantPolicy` — описывает контролируемый ресурс и места, где ссылки на него
+- `ClusterResourceGrantPolicyPolicy` — описывает контролируемый ресурс и места, где ссылки на него
   должны проверяться (`usageReferences`), а также способ определения значения по умолчанию.
-- `ClusterObjectGrant` — выбирает проекты (по меткам namespace через `projectSelector`) и для
+- `ClusterResourceGrantPolicy` — выбирает проекты (по меткам namespace через `projectSelector`) и для
   каждой политики задаёт разрешённые имена (`allowed`, `allowedSelector`) и `default` для проекта.
 
 {% raw %}
@@ -324,7 +324,7 @@ data:
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrantPolicy
+kind: ClusterResourceGrantPolicyPolicy
 metadata:
   name: storageclasses
 spec:
@@ -339,7 +339,7 @@ spec:
     fieldPath: $.spec.storageClassName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: production-storage
 spec:

@@ -22,10 +22,10 @@ rules:
 - apiGroups:
   - multitenancy.deckhouse.io
   resources:
-  - clustergrantableresources
-  - clusterobjectgrants
-  - grantquotas
-  - availableresources
+  - grantableclusterresourcedefinitions
+  - clusterresourcegrantpolicies
+  - clusterresourcegrants
+  - availableclusterresources
   verbs:
   - get
   - list

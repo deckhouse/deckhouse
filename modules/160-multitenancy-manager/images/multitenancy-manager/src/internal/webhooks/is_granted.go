@@ -127,7 +127,7 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		}
 	}
 
-	var pool *v1alpha1.GrantQuota
+	var pool *v1alpha1.ClusterResourceGrant
 	var projectNamespaces []string
 
 	for _, reg := range regs {

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package resolve turns the cluster-scoped grant model (ClusterGrantableResource + ClusterObjectGrant)
+// Package resolve turns the cluster-scoped grant model (GrantableClusterResourceDefinition + ClusterResourceGrantPolicy)
 // into per-project decisions: which grants apply to a namespace, and the resolved allow/deny/excluded
 // name sets and default for a registration. Selector-based rules are expanded against the live granted
 // objects so the webhook and reconciler share identical semantics.
@@ -48,9 +48,9 @@ func ProjectName(ns *corev1.Namespace) string {
 	return ns.Name
 }
 
-// ApplicableGrants returns every ClusterObjectGrant whose projectSelector matches the labels of the
+// ApplicableGrants returns every ClusterResourceGrantPolicy whose projectSelector matches the labels of the
 // given namespace. A nil selector matches nothing; an invalid selector is skipped.
-func ApplicableGrants(ctx context.Context, cl client.Client, namespace string) ([]*v1alpha1.ClusterObjectGrant, error) {
+func ApplicableGrants(ctx context.Context, cl client.Client, namespace string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
 	ns := &corev1.Namespace{}
 	if err := cl.Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -61,14 +61,14 @@ func ApplicableGrants(ctx context.Context, cl client.Client, namespace string) (
 	return GrantsForLabels(ctx, cl, ns.Labels)
 }
 
-// GrantsForLabels returns every ClusterObjectGrant whose projectSelector matches the given labels.
-func GrantsForLabels(ctx context.Context, cl client.Client, nsLabels map[string]string) ([]*v1alpha1.ClusterObjectGrant, error) {
-	grantList := &v1alpha1.ClusterObjectGrantList{}
+// GrantsForLabels returns every ClusterResourceGrantPolicy whose projectSelector matches the given labels.
+func GrantsForLabels(ctx context.Context, cl client.Client, nsLabels map[string]string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
+	grantList := &v1alpha1.ClusterResourceGrantPolicyList{}
 	if err := cl.List(ctx, grantList); err != nil {
-		return nil, fmt.Errorf("list ClusterObjectGrants: %w", err)
+		return nil, fmt.Errorf("list ClusterResourceGrantPolicys: %w", err)
 	}
 	set := labels.Set(nsLabels)
-	out := make([]*v1alpha1.ClusterObjectGrant, 0)
+	out := make([]*v1alpha1.ClusterResourceGrantPolicy, 0)
 	for i := range grantList.Items {
 		g := &grantList.Items[i]
 		if g.Spec.ProjectSelector == nil {
@@ -87,7 +87,7 @@ func GrantsForLabels(ctx context.Context, cl client.Client, nsLabels map[string]
 
 // EntriesFor collects the grant resource entries referencing the given registration name across all
 // the supplied grants.
-func EntriesFor(grants []*v1alpha1.ClusterObjectGrant, resourceName string) []v1alpha1.GrantResource {
+func EntriesFor(grants []*v1alpha1.ClusterResourceGrantPolicy, resourceName string) []v1alpha1.GrantResource {
 	out := make([]v1alpha1.GrantResource, 0)
 	for _, g := range grants {
 		for i := range g.Spec.Resources {
@@ -101,12 +101,12 @@ func EntriesFor(grants []*v1alpha1.ClusterObjectGrant, resourceName string) []v1
 
 // RegistrationsForRequest returns the Managed-enforcement registrations that govern a usage object of
 // the given (group, version, resource), i.e. one of their usageReferences' rules matches.
-func RegistrationsForRequest(ctx context.Context, cl client.Client, group, version, resource string) ([]*v1alpha1.ClusterGrantableResource, error) {
-	regList := &v1alpha1.ClusterGrantableResourceList{}
+func RegistrationsForRequest(ctx context.Context, cl client.Client, group, version, resource string) ([]*v1alpha1.GrantableClusterResourceDefinition, error) {
+	regList := &v1alpha1.GrantableClusterResourceDefinitionList{}
 	if err := cl.List(ctx, regList); err != nil {
-		return nil, fmt.Errorf("list ClusterGrantableResources: %w", err)
+		return nil, fmt.Errorf("list GrantableClusterResourceDefinitions: %w", err)
 	}
-	out := make([]*v1alpha1.ClusterGrantableResource, 0)
+	out := make([]*v1alpha1.GrantableClusterResourceDefinition, 0)
 	for i := range regList.Items {
 		reg := &regList.Items[i]
 		if reg.Spec.Enforcement == v1alpha1.EnforcementExternal {
@@ -124,7 +124,7 @@ func RegistrationsForRequest(ctx context.Context, cl client.Client, group, versi
 
 // Resolved holds the resolved availability for one registration in one project.
 type Resolved struct {
-	Reg       *v1alpha1.ClusterGrantableResource
+	Reg       *v1alpha1.GrantableClusterResourceDefinition
 	allowed   map[string]struct{}
 	denied    map[string]struct{}
 	excluded  map[string]struct{}
@@ -195,7 +195,7 @@ func (r *Resolved) Available() []v1alpha1.AvailableObject {
 func Resolve(
 	ctx context.Context,
 	cl client.Client,
-	reg *v1alpha1.ClusterGrantableResource,
+	reg *v1alpha1.GrantableClusterResourceDefinition,
 	entries []v1alpha1.GrantResource,
 ) (*Resolved, error) {
 	r := &Resolved{
@@ -334,7 +334,7 @@ func matchSel(ls *metav1.LabelSelector, objLabels labels.Set) bool {
 }
 
 // defaultFromAnnotation finds the single granted object annotated as the cluster-wide default.
-func defaultFromAnnotation(ctx context.Context, cl client.Client, reg *v1alpha1.ClusterGrantableResource) (string, error) {
+func defaultFromAnnotation(ctx context.Context, cl client.Client, reg *v1alpha1.GrantableClusterResourceDefinition) (string, error) {
 	gv, err := schema.ParseGroupVersion(reg.Spec.GrantedResource.APIVersion)
 	if err != nil {
 		return "", err

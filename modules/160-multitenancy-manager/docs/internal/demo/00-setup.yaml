@@ -1,4 +1,4 @@
-# Project + grant + object quota for the demo. The ClusterGrantableResource registrations
+# Project + grant + object quota for the demo. The GrantableClusterResourceDefinition registrations
 # (storageclasses, clusterissuers, loadbalancerclasses, clusterroles) ship with the module.
 ---
 apiVersion: deckhouse.io/v1alpha2
@@ -20,9 +20,9 @@ spec:
         memory: 8Gi
 ---
 # Availability: what each project may reference. clusterroles is available by default from its
-# ClusterGrantableResource (use + user-authz roles), so it is not listed here.
+# GrantableClusterResourceDefinition (use + user-authz roles), so it is not listed here.
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: demo-grant
 spec:
@@ -46,7 +46,7 @@ spec:
 ---
 # Object quota pool for the project (lives in the project's control namespace = demo).
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantQuota
+kind: ClusterResourceGrant
 metadata:
   name: objects
   namespace: demo

@@ -41,18 +41,18 @@ Issuers / LB / cluster roles have no such defaulter, so a disallowed explicit va
 ```bash
 # Tenant's "what can I use" view (the controller-owned catalog). The AVAILABLE column is a count,
 # so the table stays readable even for cluster roles (dozens of entries):
-k -n demo get availableresources
+k -n demo get availableclusterresources
 
 # Full list of available names for one resource:
-k -n demo get availableresource clusterroles -o jsonpath='{.status.available[*].name}'
+k -n demo get availableclusterresource clusterroles -o jsonpath='{.status.available[*].name}'
 # or the structured form (with the default flagged):
-k -n demo get availableresource storageclasses -o yaml
+k -n demo get availableclusterresource storageclasses -o yaml
 
 # Object-quota usage vs limit:
-k -n demo get grantquota objects -o yaml
+k -n demo get clusterresourcegrant objects -o yaml
 
 # The catalog is read-only (protected webhook) — this is denied:
-k -n demo delete availableresource storageclasses
+k -n demo delete availableclusterresource storageclasses
 ```
 
 ## Cleanup

@@ -1,6 +1,6 @@
 - name: d8.multitenancy-manager.grant-violation
   rules:
-  - alert: ClusterObjectGrantViolation
+  - alert: ClusterResourceGrantPolicyViolation
     expr: max by (project) (d8_cluster_objects_grant_violated) != 0
     labels:
       severity_level: "6"
@@ -8,8 +8,8 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: One or more resources not allowed by ClusterObjectGrant are in use.
+      summary: One or more resources not allowed by ClusterResourceGrantPolicy are in use.
       description: |
-          One or more resources that are not allowed by ClusterObjectGrant are in use within this cluster's projects.
+          One or more resources that are not allowed by ClusterResourceGrantPolicy are in use within this cluster's projects.
 
           Check the "Security > Cluster Object Grant Violations" dashboard for detailed overview of violating objects.

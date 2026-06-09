@@ -107,10 +107,10 @@ var (
 )
 
 // lbRegistration is a value-backed registration for loadBalancerClass with the given default availability.
-func lbRegistration(defAvail v1alpha1.AvailabilityDefault) *v1alpha1.ClusterGrantableResource {
-	return &v1alpha1.ClusterGrantableResource{
+func lbRegistration(defAvail v1alpha1.AvailabilityDefault) *v1alpha1.GrantableClusterResourceDefinition {
+	return &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "loadbalancerclasses"},
-		Spec: v1alpha1.ClusterGrantableResourceSpec{
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
 			DefaultAvailability: defAvail,
 			UsageReferences: []v1alpha1.UsageReference{{
 				Rule:      v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"services"}},
@@ -122,10 +122,10 @@ func lbRegistration(defAvail v1alpha1.AvailabilityDefault) *v1alpha1.ClusterGran
 	}
 }
 
-func lbGrant() *v1alpha1.ClusterObjectGrant {
-	return &v1alpha1.ClusterObjectGrant{
+func lbGrant() *v1alpha1.ClusterResourceGrantPolicy {
+	return &v1alpha1.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterObjectGrantSpec{
+		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
 			Resources: []v1alpha1.GrantResource{{
 				ResourceName: "loadbalancerclasses",
@@ -217,9 +217,9 @@ func TestIsGranted_SystemNamespaceBypass(t *testing.T) {
 }
 
 func TestIsGranted_QuotaDeny(t *testing.T) {
-	pool := &v1alpha1.GrantQuota{
+	pool := &v1alpha1.ClusterResourceGrant{
 		ObjectMeta: metav1.ObjectMeta{Name: "objects", Namespace: "proj"},
-		Spec: v1alpha1.GrantQuotaSpec{Objects: map[string]map[string]map[string]resource.Quantity{
+		Spec: v1alpha1.ClusterResourceGrantSpec{Objects: map[string]map[string]map[string]resource.Quantity{
 			"loadbalancerclasses": {"external": {"services": resource.MustParse("1")}},
 		}},
 	}
@@ -319,9 +319,9 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 	// storageclasses with defaultFrom annotation; the cluster default (replicated) is NOT allowed in
 	// this project (allowed: local only). The annotation-derived default must be dropped, so a PVC
 	// without a storageClassName gets no patch (and is then denied by /is-granted).
-	reg := &v1alpha1.ClusterGrantableResource{
+	reg := &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
-		Spec: v1alpha1.ClusterGrantableResourceSpec{
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
 			GrantedResource:     &v1alpha1.GrantedResource{APIVersion: "storage.k8s.io/v1", Kind: "StorageClass"},
 			DefaultAvailability: v1alpha1.AvailabilityNone,
 			DefaultFrom:         &v1alpha1.DefaultFrom{AnnotationKey: "storageclass.kubernetes.io/is-default-class"},
@@ -331,9 +331,9 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 			}},
 		},
 	}
-	grant := &v1alpha1.ClusterObjectGrant{
+	grant := &v1alpha1.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterObjectGrantSpec{
+		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
 			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"local"}}},
 		},
@@ -350,9 +350,9 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 }
 
 func TestIsGranted_ObjectBackedSelector(t *testing.T) {
-	reg := &v1alpha1.ClusterGrantableResource{
+	reg := &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
-		Spec: v1alpha1.ClusterGrantableResourceSpec{
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
 			GrantedResource:     &v1alpha1.GrantedResource{APIVersion: "storage.k8s.io/v1", Kind: "StorageClass"},
 			DefaultAvailability: v1alpha1.AvailabilityNone,
 			UsageReferences: []v1alpha1.UsageReference{{
@@ -361,9 +361,9 @@ func TestIsGranted_ObjectBackedSelector(t *testing.T) {
 			}},
 		},
 	}
-	grant := &v1alpha1.ClusterObjectGrant{
+	grant := &v1alpha1.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterObjectGrantSpec{
+		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
 			Resources: []v1alpha1.GrantResource{{
 				ResourceName:    "storageclasses",
@@ -389,8 +389,8 @@ func TestIsGranted_ObjectBackedSelector(t *testing.T) {
 
 func TestProtect(t *testing.T) {
 	p := NewProtectValidator(logr.Discard(), "system:serviceaccount:d8-multitenancy-manager:coc")
-	arGVK := metav1.GroupVersionKind{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Kind: "AvailableResource"}
-	gqGVK := metav1.GroupVersionKind{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Kind: "GrantQuota"}
+	arGVK := metav1.GroupVersionKind{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Kind: "AvailableClusterResource"}
+	gqGVK := metav1.GroupVersionKind{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Kind: "ClusterResourceGrant"}
 
 	mk := func(gvk metav1.GroupVersionKind, sub, user string) admissionv1.AdmissionReview {
 		r := review(admissionv1.Update, metav1.GroupVersionResource{}, gvk, "proj", "objects", []byte("{}"), nil)
@@ -398,12 +398,12 @@ func TestProtect(t *testing.T) {
 		r.Request.UserInfo.Username = user
 		return r
 	}
-	// AvailableResource: user denied, controller allowed.
+	// AvailableClusterResource: user denied, controller allowed.
 	if resp := serve(t, p, "/protect", mk(arGVK, "", "alice")); resp.Allowed {
-		t.Fatal("user must not write AvailableResource")
+		t.Fatal("user must not write AvailableClusterResource")
 	}
 	if resp := serve(t, p, "/protect", mk(arGVK, "", "system:serviceaccount:d8-multitenancy-manager:coc")); !resp.Allowed {
-		t.Fatal("controller must write AvailableResource")
+		t.Fatal("controller must write AvailableClusterResource")
 	}
 	// System controllers (kube-system namespace-controller / GC, masters) bypass
 	// protection so namespace teardown and garbage collection can delete the
@@ -412,13 +412,13 @@ func TestProtect(t *testing.T) {
 	sysReview.Request.Operation = admissionv1.Delete
 	sysReview.Request.UserInfo.Groups = []string{"system:serviceaccounts:kube-system"}
 	if resp := serve(t, p, "/protect", sysReview); !resp.Allowed {
-		t.Fatal("system controller must bypass AvailableResource protection")
+		t.Fatal("system controller must bypass AvailableClusterResource protection")
 	}
-	// GrantQuota status: user denied; spec: user allowed (RBAC governs).
+	// ClusterResourceGrant status: user denied; spec: user allowed (RBAC governs).
 	if resp := serve(t, p, "/protect", mk(gqGVK, "status", "alice")); resp.Allowed {
-		t.Fatal("user must not write GrantQuota status")
+		t.Fatal("user must not write ClusterResourceGrant status")
 	}
 	if resp := serve(t, p, "/protect", mk(gqGVK, "", "alice")); !resp.Allowed {
-		t.Fatal("GrantQuota spec write is governed by RBAC, webhook allows")
+		t.Fatal("ClusterResourceGrant spec write is governed by RBAC, webhook allows")
 	}
 }

@@ -32,7 +32,7 @@ kind: Project
 metadata:
   name: team-a
   labels:
-    environment: production        # used by ClusterObjectGrant.projectSelector
+    environment: production        # used by ClusterResourceGrantPolicy.projectSelector
 spec:
   projectTemplateName: default
   parameters: {}
@@ -61,7 +61,7 @@ spec:
     vulnerabilityScanning: true            # operator-trivy scans the project's namespaces
     monitoring: true                       # tenant monitoring: scrape + PodMonitor/PrometheusRule + Grafana
   # Project-total COMPUTE quota (native ResourceQuota keys), distributed to namespaces.
-  # OBJECT quota (per-class storage/LB/… limits) lives on a separate GrantQuota — see Quotas.
+  # OBJECT quota (per-class storage/LB/… limits) lives on a separate ClusterResourceGrant — see Quotas.
   quota:
     compute:
       requests.cpu: "40"
@@ -79,7 +79,7 @@ spec:
 | `podSecurityStandard` | first-class PSS level (`Privileged`/`Baseline`/`Restricted`); sets `pod-security.kubernetes.io/enforce`, effective = max(cluster floor, this) |
 | `nodeSelector` / `tolerations` | default pod placement for the project; stamped onto every project namespace (see [Default features](#default-features-for-projects-baseline)) |
 | `features.vulnerabilityScanning` / `features.monitoring` | first-class toggles wired to `operator-trivy` / the monitoring stack for the project's namespaces (labels + RBAC); no-op if that module is off |
-| `quota` | the project-total **compute** budget (native `ResourceQuota` keys) distributed per namespace; object quota lives on `GrantQuota` (see [Quotas](#quotas)) |
+| `quota` | the project-total **compute** budget (native `ResourceQuota` keys) distributed per namespace; object quota lives on `ClusterResourceGrant` (see [Quotas](#quotas)) |
 
 Per-namespace *rendered* resources (NetworkPolicy, LimitRange, security profile, default RBAC) stay
 in `ProjectTemplate` (see [ProjectTemplate in multi-namespace](#projecttemplate-in-multi-namespace)).
@@ -93,9 +93,9 @@ admin manages it with ordinary namespace-scoped RBAC, no cluster permissions). A
 
 `ProjectNamespace` is both the **namespace claim** and the **quota claim** for that namespace: its
 `spec.quota` (a `compute`/`objects` slice) is this namespace's portion of the project budget — the
-controller renders a native `ResourceQuota` from `compute` and a per-namespace `GrantQuota` from
+controller renders a native `ResourceQuota` from `compute` and a per-namespace `ClusterResourceGrant` from
 `objects`, keeping `Σ slices ≤ pool` (compute pool: `Project.spec.quota.compute`; object pool: the
-project `GrantQuota`; see [Quotas](#quotas)).
+project `ClusterResourceGrant`; see [Quotas](#quotas)).
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -134,7 +134,7 @@ status:
 The controller creates `Namespace` `<prefix>-<suffix>` (here `team-a-backend`), labels it
 `projects.deckhouse.io/project=team-a`, renders the per-namespace `ProjectTemplate` resources into
 it (network isolation, limits, security — see [Network isolation and security](#network-isolation-and-security)),
-renders a native `ResourceQuota` from `spec.quota.compute`, and a per-namespace `GrantQuota` from
+renders a native `ResourceQuota` from `spec.quota.compute`, and a per-namespace `ClusterResourceGrant` from
 `spec.quota.objects`. `status.appliedQuota` reflects the **whole** slice that was applied (every entry
 of both `compute` and `objects`, clamped per-key to what remains of the project budget — not just CPU).
 Deleting the `ProjectNamespace` deletes the namespace and releases its slice back to the project
@@ -198,7 +198,7 @@ multi-namespace mode:
   - **per-namespace** (NetworkPolicy, LimitRange, default RBAC, security profile, the quota slice) —
     rendered into every namespace;
   - **per-project** (owner bindings, compute quota, namespace policy) — moved to `Project.spec`
-    (above); object quota to the project `GrantQuota` — not the template.
+    (above); object quota to the project `ClusterResourceGrant` — not the template.
 
 Open: do we render the whole template per-namespace, or let the template author mark resources
 per-namespace vs per-project? Leaning: render per-namespace by default; project-level concerns are
@@ -210,7 +210,7 @@ In multi-namespace mode the controller still creates a namespace named after the
 **control namespace**), but it is **not a workload namespace**:
 
 - a **validating webhook** allows only a whitelist of kinds in it — `ProjectNamespace`,
-  `ProjectRoleBinding`, the project `GrantQuota` (object-quota pool), the read-only `AvailableResource`
+  `ProjectRoleBinding`, the project `ClusterResourceGrant` (object-quota pool), the read-only `AvailableClusterResource`
   catalog — and **rejects workloads** (Pods, Deployments, Services, PVCs, …). Conversely,
   `ProjectNamespace` and `ProjectRoleBinding` are valid **only** here and rejected in any other namespace;
 - it is the project admin's console: order namespaces, `kubectl get available`, manage owner-scoped
@@ -262,7 +262,7 @@ not replaced, only its intra-project selector is broadened.
 
 PSS / seccomp / capabilities are **not** rendered per project. The cluster admin **pre-creates**
 `SecurityPolicy` (admission-policy-engine) once and **attaches it to projects by a label selector** —
-exactly the "author once, match by label" model of `ClusterObjectGrant`. The controller's only job is
+exactly the "author once, match by label" model of `ClusterResourceGrantPolicy`. The controller's only job is
 to ensure the matching label is on every project namespace (via the propagated `Project` labels
 above).
 
@@ -347,7 +347,7 @@ The **control namespace** is excluded from workload-oriented defaults (node plac
 The controller stamps a consistent set of labels so policies can target namespaces, ownership is
 clear, and rendered objects trace back to their source (for updates and GC).
 
-**On every controller-managed object** (project namespaces, `AvailableResource`, rendered `GrantQuota`,
+**On every controller-managed object** (project namespaces, `AvailableClusterResource`, rendered `ClusterResourceGrant`,
 rendered `RoleBinding`/`NetworkPolicy`/`ResourceQuota`):
 
 | label | value | purpose |
@@ -391,11 +391,11 @@ A project has a **total budget** distributed across its namespaces, in two parts
 - **compute — native, on `Project.spec.quota.compute`.** `requests.cpu`/`memory`, `limits.*`, `pods`,
   raw `count/<resource>`. The controller renders a native `ResourceQuota` into each namespace. This
   *is* the natural `ResourceQuota` model, so it stays native.
-- **objects — ours, on `GrantQuota`.** Per-class limits keyed by **grantable-resource → granted name
+- **objects — ours, on `ClusterResourceGrant`.** Per-class limits keyed by **grantable-resource → granted name
   (or `*`) → measure** (storage per StorageClass, count per LoadBalancerClass/IngressClass, …). The
-  pool is a `GrantQuota` in the control namespace; the controller renders a read-only `GrantQuota` into
+  pool is a `ClusterResourceGrant` in the control namespace; the controller renders a read-only `ClusterResourceGrant` into
   each workload namespace with usage. Full model in the
-  [cluster object grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md#grantquota).
+  [cluster object grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md#clusterresourcegrant).
 
 ```yaml
 # compute pool — on the Project
@@ -412,9 +412,9 @@ spec:
       limits.memory: 120Gi
       pods: "400"
 ---
-# object pool — a GrantQuota in the control namespace (cluster-admin-writable only)
+# object pool — a ClusterResourceGrant in the control namespace (cluster-admin-writable only)
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantQuota
+kind: ClusterResourceGrant
 metadata:
   name: objects
   namespace: team-a
@@ -435,23 +435,23 @@ spec:
 **Why object limits are ours even when Kubernetes has a native key.** Native `ResourceQuota` *can*
 cap storage per class (`fast.storageclass.storage.k8s.io/requests.storage`) but **cannot** cap per
 `LoadBalancerClass` or per `IngressClass` (it only knows the *total* `services.loadbalancers`,
-`count/ingresses`). So all per-class object limits are ours and uniform on `GrantQuota`, regardless of
+`count/ingresses`). So all per-class object limits are ours and uniform on `ClusterResourceGrant`, regardless of
 whether a native key happens to exist.
 
 | Limit | Lives in |
 |-------|----------|
 | cpu/memory (requests/limits), pods, raw `count/<resource>` | `Project.spec.quota.compute` (native) |
-| storage per StorageClass (`*` and per class) | `GrantQuota.spec.objects.storageclasses` |
-| count per LoadBalancerClass (e.g. 5 external) | `GrantQuota.spec.objects.loadbalancerclasses` |
-| count per IngressClass / per custom granted object | `GrantQuota.spec.objects.<resource>` |
+| storage per StorageClass (`*` and per class) | `ClusterResourceGrant.spec.objects.storageclasses` |
+| count per LoadBalancerClass (e.g. 5 external) | `ClusterResourceGrant.spec.objects.loadbalancerclasses` |
+| count per IngressClass / per custom granted object | `ClusterResourceGrant.spec.objects.<resource>` |
 | **namespace count** | `Project.spec.namespaces.max` (enforced on namespace create) |
 
 **Pool, slice, RBAC.** Both budgets are project pools shared across the project's namespaces. The
 **pool** is cluster-admin-authored (`Project.spec.quota.compute` and the control-namespace
-`GrantQuota.spec` — both writable by cluster admin only, so a tenant can never raise the total). The
+`ClusterResourceGrant.spec` — both writable by cluster admin only, so a tenant can never raise the total). The
 project admin optionally carves **per-namespace slices** via `ProjectNamespace.spec.quota`
 (`Σ slices ≤ pool`). The controller renders the native `ResourceQuota` and the read-only per-namespace
-`GrantQuota` into each workload namespace (tenant-visible). Full RBAC table in the
+`ClusterResourceGrant` into each workload namespace (tenant-visible). Full RBAC table in the
 [grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md#quotas).
 
 ### Usage accounting — per-namespace detail, rolled up to the project
@@ -459,10 +459,10 @@ project admin optionally carves **per-namespace slices** via `ProjectNamespace.s
 Usage is counted at the namespace level and rolled up so the whole budget is visible:
 
 - **per namespace (detail)** — `compute` is the native `ResourceQuota.status.used`; `objects` is that
-  namespace's rendered `GrantQuota.status`;
+  namespace's rendered `ClusterResourceGrant.status`;
 - **compute rollup** — `Project.status.quota` carries `total` (overall consumption) + a `namespaces[]`
   array, compute `used` summed from each namespace's `ResourceQuota.status.used`;
-- **object rollup** — the control-namespace `GrantQuota.status` carries the project total
+- **object rollup** — the control-namespace `ClusterResourceGrant.status` carries the project total
   (`projectUsed` vs limit) for every object measure.
 
 ```yaml
@@ -494,9 +494,9 @@ status:
         used: "10"
 ```
 
-Object usage lives on `GrantQuota` (project total in the control-namespace object; per-namespace in
+Object usage lives on `ClusterResourceGrant` (project total in the control-namespace object; per-namespace in
 each workload namespace's rendered object) — see the
-[grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md#grantquota).
+[grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md#clusterresourcegrant).
 
 A compute `ResourceQuota` makes Kubernetes require `requests`/`limits` on pods; the defaults come from
 the `LimitRange` the `ProjectTemplate` already renders — that is the standard Kubernetes mechanism,
@@ -504,8 +504,8 @@ nothing new here.
 
 ## Cluster object grants attach by label
 
-Quota lives on the `Project` (compute) and `GrantQuota` (objects); **availability** — *which* cluster
-objects a project may use and the per-project default — is authored separately as a `ClusterObjectGrant`
+Quota lives on the `Project` (compute) and `ClusterResourceGrant` (objects); **availability** — *which* cluster
+objects a project may use and the per-project default — is authored separately as a `ClusterResourceGrantPolicy`
 and **attaches to a project by label**. A grant's `projectSelector` matches the **Project's labels**; the controller expands the
 matched Projects to their namespaces and materializes availability there. This is the same
 "author once, match by label" model used for `SecurityPolicy` ([above](#security-policies--pre-created-by-the-admin-matched-by-label));
@@ -514,7 +514,7 @@ the full grant model is in the [cluster object grants design](./CLUSTER_OBJECT_G
 ```yaml
 # A reusable preset: attaches to every Project labelled environment=production.
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: production
 spec:
@@ -531,7 +531,7 @@ spec:
 So to give a project a set of available resources you **label the Project** (e.g.
 `environment: production`) and the matching grants apply — no per-project grant authoring needed.
 Quota is **optional and orthogonal**: a resource may be made available with no quota at all (many
-have nothing to measure), and a `GrantQuota` entry without a grant making the resource available does
+have nothing to measure), and a `ClusterResourceGrant` entry without a grant making the resource available does
 nothing.
 
 ## End-to-end example
@@ -565,7 +565,7 @@ spec:
     vulnerabilityScanning: true     # operator-trivy on the project's namespaces
     monitoring: true                # tenant monitoring (scrape + monitors + Grafana)
   quota:
-    compute:                        # native ResourceQuota keys (objects go on GrantQuota below)
+    compute:                        # native ResourceQuota keys (objects go on ClusterResourceGrant below)
       requests.cpu: "40"
       limits.cpu: "60"
       requests.memory: 80Gi
@@ -573,9 +573,9 @@ spec:
       pods: "400"
       count/jobs.batch: "50"
 ---
-# 2a. Object-quota pool — a GrantQuota in the control namespace (cluster-admin-writable only).
+# 2a. Object-quota pool — a ClusterResourceGrant in the control namespace (cluster-admin-writable only).
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantQuota
+kind: ClusterResourceGrant
 metadata:
   name: objects
   namespace: team-a
@@ -594,10 +594,10 @@ spec:
 ---
 # 2b. Which cluster objects this project may use (storage / load-balancer classes and defaults) are
 #     authored SEPARATELY — see the cluster object grants design (CLUSTER_OBJECT_GRANTS_DESIGN.md).
-#     The grant does allow-list + default only; the per-class limits live on the GrantQuota above.
+#     The grant does allow-list + default only; the per-class limits live on the ClusterResourceGrant above.
 #     A grant attaches to this project by matching its labels:
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: production
 spec:
@@ -715,16 +715,16 @@ Existing projects are single-namespace (project == namespace) and must keep work
 - **ProjectTemplate renders per-namespace** in multi-namespace mode; project-level concerns move to
   `Project.spec`.
 - **Quotas, by mechanism**: compute → `Project.spec.quota.compute` (native `ResourceQuota`, per
-  namespace); objects → `GrantQuota` (`spec` pool in the control namespace + rendered read-only per
+  namespace); objects → `ClusterResourceGrant` (`spec` pool in the control namespace + rendered read-only per
   namespace). Both cluster-admin-authored pools; project admin carves per-NS slices via
   `ProjectNamespace.spec.quota` (`Σ ≤ pool`). The grant does allow-list + default only. `max`
   namespaces enforced on create.
-- **Availability via grants attaches by label**: a `ClusterObjectGrant.projectSelector` matches the
+- **Availability via grants attaches by label**: a `ClusterResourceGrantPolicy.projectSelector` matches the
   Project's labels (reusable preset, like `SecurityPolicy`). Quota is optional and orthogonal to
   availability.
 - **Usage rollup**: compute on `Project.status.quota` (`total` + `namespaces[]`, summed from per-NS
-  `ResourceQuota.status.used`); objects on `GrantQuota.status` (project total in the control namespace,
-  per-NS in each rendered `GrantQuota`).
+  `ResourceQuota.status.used`); objects on `ClusterResourceGrant.status` (project total in the control namespace,
+  per-NS in each rendered `ClusterResourceGrant`).
 - **A compute `ResourceQuota` is always rendered together with a `LimitRange`** (defaults + min/max
   from the template), because Kubernetes rejects pods without requests/limits under a compute quota.
 - **The controller propagates `Project` labels onto its namespaces**, so network isolation and

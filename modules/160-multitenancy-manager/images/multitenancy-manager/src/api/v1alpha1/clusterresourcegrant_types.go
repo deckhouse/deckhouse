@@ -23,18 +23,18 @@ import (
 
 // NOTE: json tags are required. Any new fields you add must have json tags for the fields to be serialized.
 
-// GrantQuotaSpec is the object-quota pool. Objects is keyed by grantable-resource name → granted
+// ClusterResourceGrantSpec is the object-quota pool. Objects is keyed by grantable-resource name → granted
 // name (or "*") → measure → limit (a resource.Quantity; -1 means unlimited).
-type GrantQuotaSpec struct {
+type ClusterResourceGrantSpec struct {
 	// Objects holds the per-class object-quota limits.
 	// +optional
 	Objects map[string]map[string]map[string]resource.Quantity `json:"objects,omitempty"`
 }
 
-// GrantQuotaMeasureStatus is the live usage of one (resource, name, measure) tuple. On the pool
+// ClusterResourceGrantMeasureStatus is the live usage of one (resource, name, measure) tuple. On the pool
 // object Used/Limit equal the project total; on a rendered per-namespace object Used/Limit are
 // this namespace's, and ProjectUsed/ProjectLimit carry the project total.
-type GrantQuotaMeasureStatus struct {
+type ClusterResourceGrantMeasureStatus struct {
 	// Resource is the grantable resource name (e.g. storageclasses).
 	// +required
 	Resource string `json:"resource"`
@@ -64,17 +64,17 @@ type GrantQuotaMeasureStatus struct {
 	ProjectLimit *resource.Quantity `json:"projectLimit,omitempty"`
 }
 
-// GrantQuotaStatus is the observed usage.
-type GrantQuotaStatus struct {
+// ClusterResourceGrantStatus is the observed usage.
+type ClusterResourceGrantStatus struct {
 	// ObservedGeneration is the controller generation that produced this status.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// Objects lists usage per (resource, name, measure).
 	// +optional
-	Objects []GrantQuotaMeasureStatus `json:"objects,omitempty"`
+	Objects []ClusterResourceGrantMeasureStatus `json:"objects,omitempty"`
 
-	// Conditions represent the current state of the GrantQuota resource.
+	// Conditions represent the current state of the ClusterResourceGrant resource.
 	// +listType=map
 	// +listMapKey=type
 	// +optional
@@ -83,13 +83,13 @@ type GrantQuotaStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced,shortName=gq
+// +kubebuilder:resource:scope=Namespaced,shortName=crg
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// GrantQuota is the object-quota resource: spec is the project pool (authored in the control
+// ClusterResourceGrant is the object-quota resource: spec is the project pool (authored in the control
 // namespace, cluster-admin only), status is the live usage. The controller renders read-only
 // per-namespace copies into each workload namespace.
-type GrantQuota struct {
+type ClusterResourceGrant struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is a standard object metadata.
@@ -98,22 +98,22 @@ type GrantQuota struct {
 
 	// spec defines the object-quota pool.
 	// +optional
-	Spec GrantQuotaSpec `json:"spec,omitzero"`
+	Spec ClusterResourceGrantSpec `json:"spec,omitzero"`
 
 	// status defines the observed usage.
 	// +optional
-	Status GrantQuotaStatus `json:"status,omitzero"`
+	Status ClusterResourceGrantStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true
 
-// GrantQuotaList contains a list of GrantQuota.
-type GrantQuotaList struct {
+// ClusterResourceGrantList contains a list of ClusterResourceGrant.
+type ClusterResourceGrantList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`
-	Items           []GrantQuota `json:"items"`
+	Items           []ClusterResourceGrant `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&GrantQuota{}, &GrantQuotaList{})
+	SchemeBuilder.Register(&ClusterResourceGrant{}, &ClusterResourceGrantList{})
 }

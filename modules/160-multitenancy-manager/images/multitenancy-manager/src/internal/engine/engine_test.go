@@ -90,9 +90,9 @@ func TestEvalMatch(t *testing.T) {
 	}
 }
 
-func reg(defAvail v1alpha1.AvailabilityDefault, excluded []v1alpha1.ResourceFilter) *v1alpha1.ClusterGrantableResource {
-	return &v1alpha1.ClusterGrantableResource{
-		Spec: v1alpha1.ClusterGrantableResourceSpec{DefaultAvailability: defAvail, Excluded: excluded},
+func reg(defAvail v1alpha1.AvailabilityDefault, excluded []v1alpha1.ResourceFilter) *v1alpha1.GrantableClusterResourceDefinition {
+	return &v1alpha1.GrantableClusterResourceDefinition{
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{DefaultAvailability: defAvail, Excluded: excluded},
 	}
 }
 
@@ -192,7 +192,7 @@ func TestAvailabilitySelectors(t *testing.T) {
 }
 
 func TestMeasures(t *testing.T) {
-	r := &v1alpha1.ClusterGrantableResource{Spec: v1alpha1.ClusterGrantableResourceSpec{
+	r := &v1alpha1.GrantableClusterResourceDefinition{Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
 		UsageReferences: []v1alpha1.UsageReference{{
 			Rule:       v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
 			Countable:  true,
@@ -218,7 +218,7 @@ func TestMeasures(t *testing.T) {
 }
 
 func TestContributions(t *testing.T) {
-	r := &v1alpha1.ClusterGrantableResource{Spec: v1alpha1.ClusterGrantableResourceSpec{
+	r := &v1alpha1.GrantableClusterResourceDefinition{Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
 		UsageReferences: []v1alpha1.UsageReference{{
 			Rule:       v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
 			FieldPath:  "$.spec.storageClassName",

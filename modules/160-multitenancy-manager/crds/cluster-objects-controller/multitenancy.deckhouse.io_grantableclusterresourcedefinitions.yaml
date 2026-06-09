@@ -7,16 +7,16 @@ metadata:
     module: multitenancy-manager
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: clustergrantableresources.multitenancy.deckhouse.io
+  name: grantableclusterresourcedefinitions.multitenancy.deckhouse.io
 spec:
   group: multitenancy.deckhouse.io
   names:
-    kind: ClusterGrantableResource
-    listKind: ClusterGrantableResourceList
-    plural: clustergrantableresources
+    kind: GrantableClusterResourceDefinition
+    listKind: GrantableClusterResourceDefinitionList
+    plural: grantableclusterresourcedefinitions
     shortNames:
-    - cgr
-    singular: clustergrantableresource
+    - gcrd
+    singular: grantableclusterresourcedefinition
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -35,8 +35,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterGrantableResource registers a cluster-scoped resource
-          as grant-controllable.
+        description: GrantableClusterResourceDefinition registers a cluster-scoped
+          resource as grant-controllable.
         properties:
           apiVersion:
             description: |-
@@ -56,7 +56,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of ClusterGrantableResource.
+            description: spec defines the desired state of GrantableClusterResourceDefinition.
             properties:
               coerceToDefault:
                 description: |-
@@ -234,7 +234,7 @@ spec:
                               value to sum.
                             type: string
                           name:
-                            description: Name is the measure key used in GrantQuota
+                            description: Name is the measure key used in ClusterResourceGrant
                               (e.g. requests.storage).
                             type: string
                         required:
@@ -276,7 +276,7 @@ spec:
                 type: array
             type: object
           status:
-            description: status defines the observed state of ClusterGrantableResource.
+            description: status defines the observed state of GrantableClusterResourceDefinition.
             properties:
               conditions:
                 description: Conditions represent the current state of the resource.

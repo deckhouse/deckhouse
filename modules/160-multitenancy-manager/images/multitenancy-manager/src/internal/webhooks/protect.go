@@ -27,8 +27,8 @@ import (
 var _ http.Handler = &ProtectValidator{}
 
 // ProtectValidator is the /protect validating webhook: it keeps the controller-owned status surfaces
-// (AvailableResource catalog and GrantQuota usage) read-only to everyone but the controller. The
-// GrantQuota pool spec itself is governed by RBAC (cluster-admin only), so spec writes pass here.
+// (AvailableClusterResource catalog and ClusterResourceGrant usage) read-only to everyone but the controller. The
+// ClusterResourceGrant pool spec itself is governed by RBAC (cluster-admin only), so spec writes pass here.
 type ProtectValidator struct {
 	log          logr.Logger
 	controllerSA string // e.g. system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
@@ -61,7 +61,7 @@ func (p *ProtectValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // heritage objects (see modules/002-deckhouse validation): cluster components and
 // system controllers must never be blocked by the catalog protection. Without this,
 // the kube-system namespace-controller and garbage-collector cannot delete the
-// controller-owned AvailableResource objects during namespace teardown, which
+// controller-owned AvailableClusterResource objects during namespace teardown, which
 // deadlocks namespace deletion.
 var systemBypassGroups = []string{
 	"system:nodes",
@@ -97,14 +97,14 @@ func (p *ProtectValidator) decide(req *admissionv1.AdmissionRequest) *admissionv
 	}
 
 	switch req.Kind.Kind {
-	case "AvailableResource":
+	case "AvailableClusterResource":
 		return deniedResponse(req.UID,
-			"[multitenancy] AvailableResource is a read-only catalog managed by multitenancy-manager.")
-	case "GrantQuota":
+			"[multitenancy] AvailableClusterResource is a read-only catalog managed by multitenancy-manager.")
+	case "ClusterResourceGrant":
 		// Usage status is controller-owned; only the controller may write it.
 		if req.SubResource == "status" {
 			return deniedResponse(req.UID,
-				"[multitenancy] GrantQuota status is managed by multitenancy-manager and is read-only.")
+				"[multitenancy] ClusterResourceGrant status is managed by multitenancy-manager and is read-only.")
 		}
 		// Spec writes (the pool) are governed by RBAC — cluster admins only; let them through.
 		return allowedResponse(req.UID)

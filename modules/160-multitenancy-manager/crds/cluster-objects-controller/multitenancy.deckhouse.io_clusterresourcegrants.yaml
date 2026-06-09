@@ -7,16 +7,16 @@ metadata:
     module: multitenancy-manager
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: grantquotas.multitenancy.deckhouse.io
+  name: clusterresourcegrants.multitenancy.deckhouse.io
 spec:
   group: multitenancy.deckhouse.io
   names:
-    kind: GrantQuota
-    listKind: GrantQuotaList
-    plural: grantquotas
+    kind: ClusterResourceGrant
+    listKind: ClusterResourceGrantList
+    plural: clusterresourcegrants
     shortNames:
-    - gq
-    singular: grantquota
+    - crg
+    singular: clusterresourcegrant
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -27,7 +27,7 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          GrantQuota is the object-quota resource: spec is the project pool (authored in the control
+          ClusterResourceGrant is the object-quota resource: spec is the project pool (authored in the control
           namespace, cluster-admin only), status is the live usage. The controller renders read-only
           per-namespace copies into each workload namespace.
         properties:
@@ -69,7 +69,7 @@ spec:
             description: status defines the observed usage.
             properties:
               conditions:
-                description: Conditions represent the current state of the GrantQuota
+                description: Conditions represent the current state of the ClusterResourceGrant
                   resource.
                 items:
                   description: Condition contains details for one aspect of the current
@@ -133,7 +133,7 @@ spec:
                 description: Objects lists usage per (resource, name, measure).
                 items:
                   description: |-
-                    GrantQuotaMeasureStatus is the live usage of one (resource, name, measure) tuple. On the pool
+                    ClusterResourceGrantMeasureStatus is the live usage of one (resource, name, measure) tuple. On the pool
                     object Used/Limit equal the project total; on a rendered per-namespace object Used/Limit are
                     this namespace's, and ProjectUsed/ProjectLimit carry the project total.
                   properties:

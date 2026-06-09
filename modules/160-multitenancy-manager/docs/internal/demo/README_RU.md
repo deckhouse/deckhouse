@@ -41,18 +41,18 @@ k apply -f 00-setup.yaml
 ```bash
 # Каталог «что мне доступно» для тенанта. Колонка AVAILABLE — счётчик, чтобы таблица оставалась
 # читаемой даже для cluster roles (десятки записей):
-k -n demo get availableresources
+k -n demo get availableclusterresources
 
 # Полный список доступных имён для ресурса:
-k -n demo get availableresource clusterroles -o jsonpath='{.status.available[*].name}'
+k -n demo get availableclusterresource clusterroles -o jsonpath='{.status.available[*].name}'
 # или структурно (с флагом дефолта):
-k -n demo get availableresource storageclasses -o yaml
+k -n demo get availableclusterresource storageclasses -o yaml
 
 # Потребление квоты vs лимит:
-k -n demo get grantquota objects -o yaml
+k -n demo get clusterresourcegrant objects -o yaml
 
 # Каталог read-only (protect-вебхук) — это будет запрещено:
-k -n demo delete availableresource storageclasses
+k -n demo delete availableclusterresource storageclasses
 ```
 
 ## Очистка

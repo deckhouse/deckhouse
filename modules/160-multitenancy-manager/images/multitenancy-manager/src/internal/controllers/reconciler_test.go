@@ -57,7 +57,7 @@ func buildReconciler(t *testing.T, objs ...client.Object) *ProjectReconciler {
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(objs...).
-		WithStatusSubresource(&v1alpha1.AvailableResource{}, &v1alpha1.GrantQuota{}, &v1alpha1.ClusterObjectGrant{}, &v1alpha1.ClusterGrantableResource{}).
+		WithStatusSubresource(&v1alpha1.AvailableClusterResource{}, &v1alpha1.ClusterResourceGrant{}, &v1alpha1.ClusterResourceGrantPolicy{}, &v1alpha1.GrantableClusterResourceDefinition{}).
 		Build()
 	return &ProjectReconciler{Client: cl, Mapper: testMapper(), Factory: jsonpath.NewWithCache()}
 }
@@ -67,9 +67,9 @@ func TestReconcile_CatalogAndQuota(t *testing.T) {
 	control := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: labels}}
 	workload := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a-be", Labels: labels}}
 
-	reg := &v1alpha1.ClusterGrantableResource{
+	reg := &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
-		Spec: v1alpha1.ClusterGrantableResourceSpec{
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
 			GrantedResource:     &v1alpha1.GrantedResource{APIVersion: "storage.k8s.io/v1", Kind: "StorageClass"},
 			DefaultAvailability: v1alpha1.AvailabilityNone,
 			UsageReferences: []v1alpha1.UsageReference{{
@@ -80,17 +80,17 @@ func TestReconcile_CatalogAndQuota(t *testing.T) {
 			}},
 		},
 	}
-	grant := &v1alpha1.ClusterObjectGrant{
+	grant := &v1alpha1.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterObjectGrantSpec{
+		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
 			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"standard"}, Default: "standard"}},
 		},
 	}
 	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x"}
-	pool := &v1alpha1.GrantQuota{
+	pool := &v1alpha1.ClusterResourceGrant{
 		ObjectMeta: metav1.ObjectMeta{Name: "objects", Namespace: "team-a"},
-		Spec: v1alpha1.GrantQuotaSpec{Objects: map[string]map[string]map[string]resource.Quantity{
+		Spec: v1alpha1.ClusterResourceGrantSpec{Objects: map[string]map[string]map[string]resource.Quantity{
 			"storageclasses": {"*": {"requests.storage": resource.MustParse("100Gi")}},
 		}},
 	}
@@ -110,10 +110,10 @@ func TestReconcile_CatalogAndQuota(t *testing.T) {
 		}
 	}
 
-	// Catalog: AvailableResource in the workload namespace lists "standard" as default.
-	ar := &v1alpha1.AvailableResource{}
+	// Catalog: AvailableClusterResource in the workload namespace lists "standard" as default.
+	ar := &v1alpha1.AvailableClusterResource{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: "team-a-be", Name: "storageclasses"}, ar); err != nil {
-		t.Fatalf("get AvailableResource: %v", err)
+		t.Fatalf("get AvailableClusterResource: %v", err)
 	}
 	if len(ar.Status.Available) != 1 || ar.Status.Available[0].Name != "standard" || !ar.Status.Available[0].Default {
 		t.Fatalf("unexpected catalog: %+v", ar.Status.Available)
@@ -123,7 +123,7 @@ func TestReconcile_CatalogAndQuota(t *testing.T) {
 	}
 
 	// Pool status: project total usage for standard/requests.storage = 10Gi.
-	gotPool := &v1alpha1.GrantQuota{}
+	gotPool := &v1alpha1.ClusterResourceGrant{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: "team-a", Name: "objects"}, gotPool); err != nil {
 		t.Fatal(err)
 	}
@@ -131,10 +131,10 @@ func TestReconcile_CatalogAndQuota(t *testing.T) {
 		t.Fatalf("pool status missing usage: %+v", gotPool.Status.Objects)
 	}
 
-	// Rendered GrantQuota in the workload namespace carries this-namespace used + project totals.
-	rendered := &v1alpha1.GrantQuota{}
+	// Rendered ClusterResourceGrant in the workload namespace carries this-namespace used + project totals.
+	rendered := &v1alpha1.ClusterResourceGrant{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: "team-a-be", Name: "objects"}, rendered); err != nil {
-		t.Fatalf("get rendered GrantQuota: %v", err)
+		t.Fatalf("get rendered ClusterResourceGrant: %v", err)
 	}
 	if !hasMeasure(rendered.Status.Objects, "storageclasses", "standard", "requests.storage", "10Gi") {
 		t.Fatalf("rendered status missing usage: %+v", rendered.Status.Objects)
@@ -142,14 +142,14 @@ func TestReconcile_CatalogAndQuota(t *testing.T) {
 }
 
 // TestReconcile_NonProjectNamespace verifies that a namespace without the project label never gets a
-// catalog — even when a registration's defaultAvailability is All — and that a stale AvailableResource
+// catalog — even when a registration's defaultAvailability is All — and that a stale AvailableClusterResource
 // left in such a namespace is cleaned up.
 func TestReconcile_NonProjectNamespace(t *testing.T) {
 	// default namespace: no project label.
 	plain := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
-	reg := &v1alpha1.ClusterGrantableResource{
+	reg := &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
-		Spec: v1alpha1.ClusterGrantableResourceSpec{
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
 			GrantedResource:     &v1alpha1.GrantedResource{APIVersion: "storage.k8s.io/v1", Kind: "StorageClass"},
 			DefaultAvailability: v1alpha1.AvailabilityAll,
 			UsageReferences: []v1alpha1.UsageReference{{
@@ -160,7 +160,7 @@ func TestReconcile_NonProjectNamespace(t *testing.T) {
 	}
 	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x"}
 	// A stale catalog object that must be cleaned up.
-	stale := &v1alpha1.AvailableResource{ObjectMeta: metav1.ObjectMeta{Name: "storageclasses", Namespace: "default"}}
+	stale := &v1alpha1.AvailableClusterResource{ObjectMeta: metav1.ObjectMeta{Name: "storageclasses", Namespace: "default"}}
 	r := buildReconciler(t, plain, reg, sc, stale)
 	ctx := context.Background()
 
@@ -168,17 +168,17 @@ func TestReconcile_NonProjectNamespace(t *testing.T) {
 		t.Fatalf("reconcile default: %v", err)
 	}
 
-	ar := &v1alpha1.AvailableResource{}
+	ar := &v1alpha1.AvailableClusterResource{}
 	err := r.Get(ctx, types.NamespacedName{Namespace: "default", Name: "storageclasses"}, ar)
 	if err == nil {
-		t.Fatalf("AvailableResource must not exist in a non-project namespace, got %+v", ar)
+		t.Fatalf("AvailableClusterResource must not exist in a non-project namespace, got %+v", ar)
 	}
 	if !k8serrors.IsNotFound(err) {
 		t.Fatalf("expected NotFound, got %v", err)
 	}
 }
 
-func hasMeasure(list []v1alpha1.GrantQuotaMeasureStatus, res, name, measure, used string) bool {
+func hasMeasure(list []v1alpha1.ClusterResourceGrantMeasureStatus, res, name, measure, used string) bool {
 	for _, m := range list {
 		if m.Resource == res && m.Name == name && m.Measure == measure && m.Used.String() == used {
 			return true

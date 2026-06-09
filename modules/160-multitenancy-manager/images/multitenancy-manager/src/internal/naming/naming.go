@@ -32,8 +32,8 @@ const (
 	ModuleLabel = "module"
 	ModuleValue = "multitenancy-manager"
 
-	// GrantQuotaName is the fixed name of the per-namespace GrantQuota object.
-	GrantQuotaName = "objects"
+	// ClusterResourceGrantName is the fixed name of the per-namespace ClusterResourceGrant object.
+	ClusterResourceGrantName = "objects"
 )
 
 // ManagedLabels returns the ownership labels every controller-managed object carries.

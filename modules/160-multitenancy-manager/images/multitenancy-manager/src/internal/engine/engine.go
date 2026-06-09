@@ -181,7 +181,7 @@ func selectorMatches(ls *metav1.LabelSelector, objLabels labels.Set) (bool, erro
 // grantEntries are the applicable grant resource entries (already filtered to this resource name).
 // objLabels are the granted object's labels (nil for value-backed resources).
 func Available(
-	reg *v1alpha1.ClusterGrantableResource,
+	reg *v1alpha1.GrantableClusterResourceDefinition,
 	grantEntries []v1alpha1.GrantResource,
 	name string,
 	objLabels labels.Set,
@@ -260,7 +260,7 @@ type Measure struct {
 
 // Measures returns the deduplicated set of quota measures declared by a registration: the resource
 // plural of every countable usage reference, plus every quantities[].name.
-func Measures(reg *v1alpha1.ClusterGrantableResource) []Measure {
+func Measures(reg *v1alpha1.GrantableClusterResourceDefinition) []Measure {
 	seen := map[string]bool{}
 	out := make([]Measure, 0)
 	add := func(key string, count bool) {
@@ -297,7 +297,7 @@ type Contribution struct {
 // path. Objects that do not match any rule, or whose guard is false, contribute nothing.
 func Contributions(
 	factory jsonpath.Factory,
-	reg *v1alpha1.ClusterGrantableResource,
+	reg *v1alpha1.GrantableClusterResourceDefinition,
 	obj map[string]any,
 	group, version, resourcePlural string,
 ) ([]Contribution, error) {

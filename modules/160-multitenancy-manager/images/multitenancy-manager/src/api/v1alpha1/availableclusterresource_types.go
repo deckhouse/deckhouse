@@ -33,9 +33,9 @@ type AvailableObject struct {
 	Default bool `json:"default,omitempty"`
 }
 
-// AvailableResourceStatus is the per-project catalog for one ClusterGrantableResource: the
-// allowed names and the default. It carries no quota (that is GrantQuota).
-type AvailableResourceStatus struct {
+// AvailableClusterResourceStatus is the per-project catalog for one GrantableClusterResourceDefinition: the
+// allowed names and the default. It carries no quota (that is ClusterResourceGrant).
+type AvailableClusterResourceStatus struct {
 	// GrantedResourceKind is the kind of the granted resource (informational).
 	// +optional
 	GrantedResourceKind string `json:"grantedResourceKind,omitempty"`
@@ -70,9 +70,9 @@ type AvailableResourceStatus struct {
 // +kubebuilder:printcolumn:name="Available",type=integer,JSONPath=`.status.availableCount`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// AvailableResource is the per-project, controller-owned catalog (discovery only) for one
-// ClusterGrantableResource. metadata.name equals the grantable resource name.
-type AvailableResource struct {
+// AvailableClusterResource is the per-project, controller-owned catalog (discovery only) for one
+// GrantableClusterResourceDefinition. metadata.name equals the grantable resource name.
+type AvailableClusterResource struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is a standard object metadata.
@@ -81,18 +81,18 @@ type AvailableResource struct {
 
 	// status defines the observed catalog for this project.
 	// +optional
-	Status AvailableResourceStatus `json:"status,omitzero"`
+	Status AvailableClusterResourceStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true
 
-// AvailableResourceList contains a list of AvailableResource.
-type AvailableResourceList struct {
+// AvailableClusterResourceList contains a list of AvailableClusterResource.
+type AvailableClusterResourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`
-	Items           []AvailableResource `json:"items"`
+	Items           []AvailableClusterResource `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&AvailableResource{}, &AvailableResourceList{})
+	SchemeBuilder.Register(&AvailableClusterResource{}, &AvailableClusterResourceList{})
 }

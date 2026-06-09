@@ -25,7 +25,7 @@ Enforcement/materialization is **per namespace**. A project's namespaces are the
 - **A1 (admin)** — assign the set of resources available in a project.
 - **A2 (admin)** — set the per-project default resource.
 - **A3 (admin)** — set quotas on the project (e.g. 5 external LBs, unlimited internal; 1 TiB any disk,
-  200 GiB fast): compute on `Project.spec.quota.compute`, object limits on [`GrantQuota`](#grantquota)
+  200 GiB fast): compute on `Project.spec.quota.compute`, object limits on [`ClusterResourceGrant`](#clusterresourcegrant)
   (see [Quotas](#quotas)).
 - **A4 (admin)** — pre-configure and attach these settings to projects easily (presets).
 - **D2 (module developer)** — define a global default (e.g. the default-class annotation) and reuse it.
@@ -36,10 +36,10 @@ Enforcement/materialization is **per namespace**. A project's namespaces are the
 - **D4 (module developer)** — exclude some objects of my resource from default availability
   (e.g. system/service `ClusterRole`s that must never be tenant-bindable).
 
-Coverage: U1 → [`AvailableResource`](#availableresource); D1/D2 →
-[`ClusterGrantableResource`](#clustergrantableresource); A1/A2/A4/A5 →
-[`ClusterObjectGrant`](#clusterobjectgrant); A3 (quota) → `Project.spec.quota.compute` +
-[`GrantQuota`](#grantquota) (see [Quotas](#quotas)).
+Coverage: U1 → [`AvailableClusterResource`](#availableclusterresource); D1/D2 →
+[`GrantableClusterResourceDefinition`](#grantableclusterresourcedefinition); A1/A2/A4/A5 →
+[`ClusterResourceGrantPolicy`](#clusterresourcegrantpolicy); A3 (quota) → `Project.spec.quota.compute` +
+[`ClusterResourceGrant`](#clusterresourcegrant) (see [Quotas](#quotas)).
 
 ## Architecture
 
@@ -52,18 +52,18 @@ type duplication, no cross-module split.
 There are **four surfaces**, easy to confuse — each does a different job:
 
 - **admission webhooks** (`/is-granted`, `/defaults`) — control **writes** (use of a granted object);
-- **`AvailableResource`** — a synthetic per-project **catalog** (`get available`), namespaced, so a
+- **`AvailableClusterResource`** — a synthetic per-project **catalog** (`get available`), namespaced, so a
   tenant discovers *which* resources their project may use (names + default) via ordinary namespace RBAC;
-- **`GrantQuota`** — the **object-quota** resource: `spec` is the project's object-quota pool (limits),
+- **`ClusterResourceGrant`** — the **object-quota** resource: `spec` is the project's object-quota pool (limits),
   `status` is the live usage. Namespaced, rendered into every project namespace so usage is visible
-  there. Compute quota stays native (`ResourceQuota`); `GrantQuota` is its counterpart for granted
+  there. Compute quota stays native (`ResourceQuota`); `ClusterResourceGrant` is its counterpart for granted
   objects;
-- **reconciler** — materializes the catalog, renders `GrantQuota`, and computes effective availability.
+- **reconciler** — materializes the catalog, renders `ClusterResourceGrant`, and computes effective availability.
 
 **Non-goal — filtering native `kubectl get <cluster-resource>`.** A Capsule-proxy-style filter
 operates on the **requesting user**, not the project; it breaks down when one user belongs to several
 projects, which is a separate problem. Project-scoped discovery is therefore done via the namespaced
-`AvailableResource` (no user-identity ambiguity), not by filtering the native cluster-scoped lists.
+`AvailableClusterResource` (no user-identity ambiguity), not by filtering the native cluster-scoped lists.
 
 ```mermaid
 flowchart TB
@@ -72,7 +72,7 @@ flowchart TB
       C1[project]
       C2[namespace]
       C3[template]
-      C4["grants + quota reconcile (new):<br/>AvailableResource + GrantQuota"]
+      C4["grants + quota reconcile (new):<br/>AvailableClusterResource + ClusterResourceGrant"]
     end
     subgraph WH["webhooks"]
       W1["/validate/projects"]
@@ -80,7 +80,7 @@ flowchart TB
       W3["/validate/templates"]
       W4["/is-granted (new, validating)"]
       W5["/defaults (new, mutating)"]
-      W6["/protect (new): AvailableResource & GrantQuota<br/>read-only; GrantQuota.spec cluster-admin only"]
+      W6["/protect (new): AvailableClusterResource & ClusterResourceGrant<br/>read-only; ClusterResourceGrant.spec cluster-admin only"]
     end
     subgraph SCH["scheme"]
       direction LR
@@ -97,23 +97,23 @@ Four CRDs in group `multitenancy.deckhouse.io/v1alpha1`:
 
 | Kind | Scope | Owner (writes) | Purpose |
 |------|-------|----------------|---------|
-| [`ClusterGrantableResource`](#clustergrantableresource) | Cluster | module developer | register a governed resource: GVK, where referenced, default source, what is measurable |
-| [`ClusterObjectGrant`](#clusterobjectgrant) | Cluster | admin | per-project (by selector) allow-list + default; the preset |
-| [`AvailableResource`](#availableresource) | Namespaced | controller | per-project **catalog** — available names + default (read-only to users) |
-| [`GrantQuota`](#grantquota) | Namespaced | cluster admin (`spec`) / controller (`status`) | object-quota **pool** (`spec`) + live **usage** (`status`); rendered into every project namespace |
+| [`GrantableClusterResourceDefinition`](#grantableclusterresourcedefinition) | Cluster | module developer | register a governed resource: GVK, where referenced, default source, what is measurable |
+| [`ClusterResourceGrantPolicy`](#clusterresourcegrantpolicy) | Cluster | admin | per-project (by selector) allow-list + default; the preset |
+| [`AvailableClusterResource`](#availableclusterresource) | Namespaced | controller | per-project **catalog** — available names + default (read-only to users) |
+| [`ClusterResourceGrant`](#clusterresourcegrant) | Namespaced | cluster admin (`spec`) / controller (`status`) | object-quota **pool** (`spec`) + live **usage** (`status`); rendered into every project namespace |
 
 ```mermaid
 flowchart LR
-  COG["ClusterObjectGrant<br/>(who gets what — admin)"]
-  CGR["ClusterGrantableResource<br/>(what & how — dev)"]
-  AR["AvailableResource<br/>(catalog; namespaced)"]
-  GQ["GrantQuota<br/>(object quota: pool + usage; namespaced)"]
+  COG["ClusterResourceGrantPolicy<br/>(who gets what — admin)"]
+  CGR["GrantableClusterResourceDefinition<br/>(what & how — dev)"]
+  AR["AvailableClusterResource<br/>(catalog; namespaced)"]
+  GQ["ClusterResourceGrant<br/>(object quota: pool + usage; namespaced)"]
   COG -- "resources[].resourceName" --> CGR
   COG -- "reconcile: project labels ⇒ namespaces" --> AR
   GQ -- "spec.objects pool ⇒ rendered per namespace" --> GQ
 ```
 
-### ClusterGrantableResource
+### GrantableClusterResourceDefinition
 
 Registered once by the module developer. **Measurement is declared per `usageReference`** (where it
 is actually counted), which removes the "count of what?" ambiguity and needs no value-type field:
@@ -121,9 +121,9 @@ a count is an integer, a quantity is a `resource.Quantity`.
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
-  name: storageclasses           # referenced by grants; also the AvailableResource name
+  name: storageclasses           # referenced by grants; also the AvailableClusterResource name
 spec:
   grantedResource:               # the cluster-scoped resource being governed
     apiVersion: storage.k8s.io/v1
@@ -149,8 +149,8 @@ spec:
     - name: requests.storage                        # measure key
       fieldPath: $.spec.resources.requests.storage
   # Allow-list/default need only `rule` + `fieldPath`. Measurement (countable/quantities) is OPTIONAL —
-  # many resources have none (then the resource is allow-list only; no GrantQuota entry).
-  # Quota LIMITS live on GrantQuota.spec — see Quotas; the grant (below) carries no quota.
+  # many resources have none (then the resource is allow-list only; no ClusterResourceGrant entry).
+  # Quota LIMITS live on ClusterResourceGrant.spec — see Quotas; the grant (below) carries no quota.
 status:
   conditions: []           # standard Ready condition, set by the controller
   observedGeneration: 1
@@ -159,7 +159,7 @@ status:
 | Field | Type | Req | Meaning |
 |-------|------|-----|---------|
 | `grantedResource.apiVersion`/`.kind` | string | no | GVK of the cluster-scoped resource being granted. **Present ⇒ object-backed** (names are real objects; `allowedSelector` applies). **Absent ⇒ value-backed** (names are values of the reference field, e.g. `loadBalancerClass`; literal `allowed` only) |
-| `enforcement` | enum | no | `Managed` (default — our webhooks deny/default) or `External` (the module's own webhook enforces; we only materialize `AvailableResource`) — see [Module-owned validation](#module-owned-validation-external-enforcement) |
+| `enforcement` | enum | no | `Managed` (default — our webhooks deny/default) or `External` (the module's own webhook enforces; we only materialize `AvailableClusterResource`) — see [Module-owned validation](#module-owned-validation-external-enforcement) |
 | `defaultAvailability` | enum | no | baseline when no grant allows an object: `All` (default — usable unless a grant narrows) or `None` (opt-in — nothing usable unless granted). Admin may override per project with `grant.availabilityDefault` |
 | `excluded` | names / LabelSelector | no | objects of this resource **never** available to tenants, regardless of any grant (hard deny; story D4 — e.g. system `ClusterRole`s) |
 | `defaultFrom.annotationKey` | string | no | annotation on a granted object marking the cluster-wide default (fallback only) |
@@ -175,20 +175,20 @@ status:
 The set of quota **measures** for a granted resource is therefore: the resource plural of every
 `countable` usage reference, plus every `quantities[].name`. **If there are none, the resource is
 availability-only** (allow-list + default, no quota). Otherwise these measures are what an admin may
-put limits on under `GrantQuota.spec.objects.<resource>.<name|"*">.<measure>` — the registration
-declares the measures, [`GrantQuota`](#grantquota) **carries the limits** (see [Quotas](#quotas)).
+put limits on under `ClusterResourceGrant.spec.objects.<resource>.<name|"*">.<measure>` — the registration
+declares the measures, [`ClusterResourceGrant`](#clusterresourcegrant) **carries the limits** (see [Quotas](#quotas)).
 
-### ClusterObjectGrant
+### ClusterResourceGrantPolicy
 
 Authored by the admin; one grant is a preset attached to a class of projects by label.
 It does **allow-list + default only** — it carries **no quota** (object quota lives on
-[`GrantQuota`](#grantquota); see [Quotas](#quotas)).
+[`ClusterResourceGrant`](#clusterresourcegrant); see [Quotas](#quotas)).
 `allowed` and `allowedSelector` are **not exclusive** — the granted set is their **union** (use
 either, or both).
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: production-storage
 spec:
@@ -213,7 +213,7 @@ spec:
 | Field | Type | Req | Meaning |
 |-------|------|-----|---------|
 | `projectSelector` | LabelSelector | yes | selects Projects by labels (nil ⇒ none; empty ⇒ all) |
-| `resources[].resourceName` | string | yes | name of a `ClusterGrantableResource` |
+| `resources[].resourceName` | string | yes | name of a `GrantableClusterResourceDefinition` |
 | `resources[].allowed` | []string | no | granted object names allowed (union with `allowedSelector`) |
 | `resources[].allowedSelector` | LabelSelector | no | granted objects matching these labels are allowed (union with `allowed`) |
 | `resources[].denied` | []string | no | object names explicitly excluded for matched projects (story A5); overrides `allowed` |
@@ -221,14 +221,14 @@ spec:
 | `resources[].default` | string | no | per-project default name (overrides `defaultFrom`) |
 | `resources[].availabilityDefault` | enum | no | override the resource's `defaultAvailability` (`All`/`None`) for matched projects (story A5) |
 
-The grant has **no `quota` field** — object-quota limits are set on [`GrantQuota`](#grantquota). Quota
+The grant has **no `quota` field** — object-quota limits are set on [`ClusterResourceGrant`](#clusterresourcegrant). Quota
 scope and multi-namespace sharing are described in [Quotas](#quotas).
 
-### AvailableResource
+### AvailableClusterResource
 
-Per-project **catalog** (discovery only — names + default; **no quota**, that is [`GrantQuota`](#grantquota)).
+Per-project **catalog** (discovery only — names + default; **no quota**, that is [`ClusterResourceGrant`](#clusterresourcegrant)).
 Namespaced, **status-only**, `shortName: available`, one per `(project namespace,
-ClusterGrantableResource)` with `metadata.name` = the grantable resource name, so:
+GrantableClusterResourceDefinition)` with `metadata.name` = the grantable resource name, so:
 
 ```shell
 d8 k get available -n <project-ns>                 # which resources are available to me here
@@ -237,7 +237,7 @@ d8 k get available storageclasses -n <project-ns>  # one resource: allowed names
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: AvailableResource
+kind: AvailableClusterResource
 metadata:
   name: storageclasses
   namespace: team-a-prod
@@ -256,22 +256,22 @@ status:
 Protection: these objects carry `module: multitenancy-manager` (+ `heritage: deckhouse`,
 `projects.deckhouse.io/project`) and are **controller-owned** (label scheme: [projects design](./PROJECTS_DESIGN.md#service-labels-and-annotations)).
 Beyond read-only RBAC for tenants, a **validating admission policy** rejects create/update/delete of
-`AvailableResource` by anyone other than the controller's service account — they are a status
+`AvailableClusterResource` by anyone other than the controller's service account — they are a status
 surface, not user input.
 
-### GrantQuota
+### ClusterResourceGrant
 
 The **object-quota** resource — the counterpart to the native `ResourceQuota` (which covers compute),
 but for granted objects. Namespaced, with **both `spec` (limits) and `status` (usage)**. Unlike
-`AvailableResource` (one per `(namespace, resource)`), there is **one `GrantQuota` per namespace**
+`AvailableClusterResource` (one per `(namespace, resource)`), there is **one `ClusterResourceGrant` per namespace**
 listing every measure — exactly as a single `ResourceQuota` lists every compute measure. It appears in
 two roles, same Kind:
 
-- **the pool** — one `GrantQuota` in the project's **control namespace** (in single-namespace projects:
+- **the pool** — one `ClusterResourceGrant` in the project's **control namespace** (in single-namespace projects:
   the project's only namespace). Its `spec.objects` is the project's object-quota budget; `status` is
   the project total. **`spec` is writable by the cluster admin only** (a tenant must never raise their
   own quota — see [Quotas](#quotas) for RBAC).
-- **the per-namespace view** — the controller renders a **read-only** `GrantQuota` into every workload
+- **the per-namespace view** — the controller renders a **read-only** `ClusterResourceGrant` into every workload
   namespace; `status` shows that namespace's `used`, its effective `limit` (the per-namespace slice if
   the project admin set one via `ProjectNamespace`, else the shared pool), and the project totals. This
   is what a tenant reads in their own namespace.
@@ -287,7 +287,7 @@ measure → limit** (`-1` = unlimited).
 ```yaml
 # THE POOL — control namespace; spec writable by the cluster admin only.
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantQuota
+kind: ClusterResourceGrant
 metadata:
   name: objects
   namespace: team-a                    # the project control namespace
@@ -319,7 +319,7 @@ status:                                # project total (rollup)
 ---
 # THE PER-NAMESPACE VIEW — rendered by the controller, read-only to tenants.
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantQuota
+kind: ClusterResourceGrant
 metadata:
   name: objects
   namespace: team-a-backend            # a workload namespace
@@ -338,8 +338,8 @@ status:
     projectLimit: 5
 ```
 
-Protection: the rendered (workload-namespace) `GrantQuota`s carry `module: multitenancy-manager` and
-are controller-owned (read-only via the same admission policy as `AvailableResource`). The pool's
+Protection: the rendered (workload-namespace) `ClusterResourceGrant`s carry `module: multitenancy-manager` and
+are controller-owned (read-only via the same admission policy as `AvailableClusterResource`). The pool's
 `status` is controller-owned too; only its `spec` is admin-writable, and only by the cluster admin.
 
 ### Effective availability (precedence)
@@ -362,27 +362,27 @@ set; in particular the webhook **must enforce even when no grant matches the pro
 
 Field meanings are in [Resource model](#resource-model); this section is the runtime behaviour only.
 
-### Reconcile → materialize catalog + render GrantQuota
+### Reconcile → materialize catalog + render ClusterResourceGrant
 
-Triggered by changes to any grant, grantable resource, `Project` (labels), the pool `GrantQuota.spec`,
+Triggered by changes to any grant, grantable resource, `Project` (labels), the pool `ClusterResourceGrant.spec`,
 `ProjectNamespace` (slices), a granted object, or a usage object. For each matched Project (by
 `projectSelector`) → expand to its namespaces and:
 
-- upsert an `AvailableResource` per `(namespace, resourceName)` — the available set
+- upsert an `AvailableClusterResource` per `(namespace, resourceName)` — the available set
   (`allowed` ∪ `allowedSelector`) and the default (the **catalog**);
-- render a read-only `GrantQuota` per workload namespace — effective `limit` (the `ProjectNamespace`
-  slice if set, else the pool from the control-namespace `GrantQuota.spec`) and `used` recomputed from
+- render a read-only `ClusterResourceGrant` per workload namespace — effective `limit` (the `ProjectNamespace`
+  slice if set, else the pool from the control-namespace `ClusterResourceGrant.spec`) and `used` recomputed from
   live usage objects, plus the project totals;
-- roll the project totals into the pool `GrantQuota.status` (objects) and `Project.status.quota`
+- roll the project totals into the pool `ClusterResourceGrant.status` (objects) and `Project.status.quota`
   (compute, summed from per-NS `ResourceQuota.status`).
 
 ```mermaid
 flowchart LR
-  G[ClusterObjectGrant] --> P[matched Projects]
-  GQ["GrantQuota.spec (pool)"] --> P
+  G[ClusterResourceGrantPolicy] --> P[matched Projects]
+  GQ["ClusterResourceGrant.spec (pool)"] --> P
   P --> N[project namespaces]
-  N --> A["AvailableResource per (ns, resource): catalog"]
-  N --> Q["GrantQuota per ns: limit + used"]
+  N --> A["AvailableClusterResource per (ns, resource): catalog"]
+  N --> Q["ClusterResourceGrant per ns: limit + used"]
   Q -- "used := recount(usage objs)" --> Q
   T(["change to grant / project / pool / slice / usage"]) -.-> P
 ```
@@ -402,11 +402,11 @@ flowchart TB
   DEF -- no --> DENY2[DENY: not available]
   DEF -- yes --> QUOTA
   QUOTA -- no --> DENY3[DENY: quota]
-  QUOTA -- yes --> ALLOW["ALLOW + reserve in pool (and ns slice) GrantQuota.status"]
+  QUOTA -- yes --> ALLOW["ALLOW + reserve in pool (and ns slice) ClusterResourceGrant.status"]
 ```
 
 **Which counters.** Object usage is a **project pool**, so the authoritative ledger is the **pool**
-`GrantQuota.status` in the control namespace; the per-namespace rendered `GrantQuota` carries that
+`ClusterResourceGrant.status` in the control namespace; the per-namespace rendered `ClusterResourceGrant` carries that
 namespace's `used`. On admission the webhook (controller service account) checks and optimistically
 reserves on **both** where a Level-2 slice exists — `used(ns)+1 ≤ slice` *and* `projectUsed+1 ≤ pool` —
 and only the pool when there is no slice. The reconcile/alert pass recomputes both from live objects.
@@ -423,7 +423,7 @@ annotated by `defaultFrom.annotationKey`. Never on UPDATE.
 
 ### Reconcile / alert (drift & tightening)
 
-A periodic pass recomputes the true `used`, corrects `GrantQuota.status`, and **alerts** on quota breach
+A periodic pass recomputes the true `used`, corrects `ClusterResourceGrant.status`, and **alerts** on quota breach
 (race drift), objects using a now-revoked name, or objects over a tightened quota.
 **Tightening only alerts — nothing is ever deleted.**
 
@@ -431,14 +431,14 @@ A periodic pass recomputes the true `used`, corrects `GrantQuota.status`, and **
 
 Some modules already run their own admission webhook for a resource and want to keep that single
 decision point (bespoke validation our generic field-path checks cannot express). They set
-`enforcement: External` on the `ClusterGrantableResource`. Then:
+`enforcement: External` on the `GrantableClusterResourceDefinition`. Then:
 
 - our `/is-granted` and `/defaults` webhooks **do not** intercept that resource;
-- the controller **still** materializes `AvailableResource` (allow-list + default) and `GrantQuota`
+- the controller **still** materializes `AvailableClusterResource` (allow-list + default) and `ClusterResourceGrant`
   (limits + usage) per project — so they are the **read/integration API** the module's own webhook
   consults to make its decision (and to surface the catalog to users, story U1);
 - if `usageReferences` are declared, the controller still recomputes `used` and exposes it in
-  `GrantQuota`; the module reads it for quota decisions. If they are not declared, `used` is unknown
+  `ClusterResourceGrant`; the module reads it for quota decisions. If they are not declared, `used` is unknown
   and quota for that resource is entirely the module's responsibility (see Open questions).
 
 `Managed` (the default) needs zero code from the developer; `External` answers story D3 without
@@ -451,15 +451,15 @@ Two kinds of quota, by mechanism:
 - **compute — native.** `requests.cpu`/`memory`, `limits.*`, `pods`, raw `count/<resource>`. Lives on
   `Project.spec.quota.compute`, rendered as a native `ResourceQuota` per namespace. (See the
   [projects design](./PROJECTS_DESIGN.md#quotas).)
-- **objects — ours, on `GrantQuota`.** Per-class limits keyed by **grantable-resource → granted name
+- **objects — ours, on `ClusterResourceGrant`.** Per-class limits keyed by **grantable-resource → granted name
   (or `*`) → measure** — the limits native quota cannot express. **Entirely optional**: a resource with
-  no measures has no `GrantQuota` entry and is governed by availability (allow-list + default) alone.
+  no measures has no `ClusterResourceGrant` entry and is governed by availability (allow-list + default) alone.
 
 **Why object quota is ours, not native.** Native `ResourceQuota` *can* limit storage per class
 (`fast.storageclass.storage.k8s.io/requests.storage`) but cannot limit per `loadBalancerClass` or per
 `IngressClass` at all (it only knows the *total* `services.loadbalancers`, `count/ingresses`), and its
 plugin is not pluggable beyond `count/<resource>.<group>`. So all per-class object limits are ours and
-uniform — one `GrantQuota.spec.objects` block, regardless of whether Kubernetes happens to have a
+uniform — one `ClusterResourceGrant.spec.objects` block, regardless of whether Kubernetes happens to have a
 native key.
 
 **No "flavor" grouping.** The key is the granted name itself (or `*`) — a real object name
@@ -468,7 +468,7 @@ per-name).
 
 **Two levels — pool and slice.**
 
-- **Pool (project total, Level 1).** One `GrantQuota` in the project's **control namespace** (in a
+- **Pool (project total, Level 1).** One `ClusterResourceGrant` in the project's **control namespace** (in a
   single-namespace project: its only namespace). `spec.objects` is the project budget; by default it is
   a shared pool across all the project's namespaces (not one pool across many projects — unlike OpenShift
   `ClusterResourceQuota`). `status` is the project total.
@@ -480,22 +480,22 @@ per-name).
 
 | surface | write | read |
 |---|---|---|
-| `GrantQuota.spec` (the pool, control ns) | **cluster admin only** | project admin |
+| `ClusterResourceGrant.spec` (the pool, control ns) | **cluster admin only** | project admin |
 | `ProjectNamespace.spec.quota` (the slice) | project admin (≤ pool) | project admin |
-| rendered `GrantQuota` (workload ns) `status` | controller only | tenant |
+| rendered `ClusterResourceGrant` (workload ns) `status` | controller only | tenant |
 | native `ResourceQuota` | controller only | tenant |
 
 The pool lives in the control namespace, which tenants can't reach — but they don't need to: the
-rendered per-namespace `GrantQuota` carries `projectUsed`/`projectLimit`, so a tenant sees the project
+rendered per-namespace `ClusterResourceGrant` carries `projectUsed`/`projectLimit`, so a tenant sees the project
 total from their own namespace. The pool's `spec` is namespaced but the project-admin role does **not**
-get write on `GrantQuota` (verb omitted + admission guard) — so a project admin distributes the budget
+get write on `ClusterResourceGrant` (verb omitted + admission guard) — so a project admin distributes the budget
 but cannot grow the total. Cluster admin sets *how much the project gets*; project admin decides *how it
 is split*; tenant *sees* usage.
 
 **Visibility — rendered into every namespace.** The pool is authored once (control namespace); the
-controller renders a read-only `GrantQuota` into every workload namespace showing that namespace's
+controller renders a read-only `ClusterResourceGrant` into every workload namespace showing that namespace's
 `used`, its effective `limit`, and the project totals. A tenant in `team-a-backend` runs
-`d8 k get grantquota -n team-a-backend` (and `get resourcequota` for compute) — both via plain
+`d8 k get clusterresourcegrant -n team-a-backend` (and `get resourcequota` for compute) — both via plain
 namespace RBAC.
 
 **How object quota matches and counts (the "5 external" mechanism).** For a value-backed resource
@@ -504,8 +504,8 @@ like `loadBalancerClass`:
 1. the granted **name** is extracted from each usage object by `usageReferences[].fieldPath` — for a
    `Service` that is `spec.loadBalancerClass`, whose value (`external`) *is* the name; the `match`
    guard (`spec.type == LoadBalancer`) skips non-LB Services;
-2. `GrantQuota.spec.objects.loadbalancerclasses.external.services: 5` sets the limit on that name;
-3. on CREATE/UPDATE the webhook reads the name, reads `used` for it from the project's `GrantQuota`,
+2. `ClusterResourceGrant.spec.objects.loadbalancerclasses.external.services: 5` sets the limit on that name;
+3. on CREATE/UPDATE the webhook reads the name, reads `used` for it from the project's `ClusterResourceGrant`,
    and denies if `used + 1 > 5`; `used` aggregates Services with that value across **all the project's
    namespaces**;
 4. the reconciler periodically recomputes the true count and alerts on drift.
@@ -515,27 +515,27 @@ project, `*` caps total storage, a named class caps that class.
 
 **Single vs multi-namespace.**
 
-- **Single-namespace:** the one project namespace holds both the pool `GrantQuota` (spec cluster-admin
+- **Single-namespace:** the one project namespace holds both the pool `ClusterResourceGrant` (spec cluster-admin
   only, status = used) and the native `ResourceQuota`. No slices (nothing to divide).
-- **Multi-namespace:** the pool `GrantQuota` + `Project.spec.quota.compute` live with the control
-  namespace; optional per-NS slices via `ProjectNamespace`; the controller renders a `GrantQuota` +
+- **Multi-namespace:** the pool `ClusterResourceGrant` + `Project.spec.quota.compute` live with the control
+  namespace; optional per-NS slices via `ProjectNamespace`; the controller renders a `ClusterResourceGrant` +
   `ResourceQuota` into each workload namespace.
 
 **Atomicity.** Native `ResourceQuota` is itself only mostly atomic (optimistic concurrency on
 `status.used`, with known bugs e.g. kube #118509). Our webhook uses the same pattern — optimistic
-check-and-update of `GrantQuota.status` `used` (retry on conflict) — so it is not inherently less
+check-and-update of `ClusterResourceGrant.status` `used` (retry on conflict) — so it is not inherently less
 atomic; the reconcile/alert pass is the backstop.
 
 ## Guide — module developer (register a resource)
 
 Goal: make a cluster-scoped resource your module ships grant-controllable. You create one
-[`ClusterGrantableResource`](#clustergrantableresource); admins do the rest.
+[`GrantableClusterResourceDefinition`](#grantableclusterresourcedefinition); admins do the rest.
 
 1. **Identify**: the granted GVK; every usage object as a `rule` (its `apiGroups`/`apiVersions`/
    `resources`, with `*` where it spans many) + the `fieldPath` to the referenced name (add `paths[]`
    if that field sits in different places across versions); optionally what is measurable (count via
    `countable`; quantities via `quantities[]`) — many resources have nothing to measure.
-2. **Create** the `ClusterGrantableResource` (ship it from your module templates) — see the example
+2. **Create** the `GrantableClusterResourceDefinition` (ship it from your module templates) — see the example
    above.
 3. **Make objects grant-friendly**: stable, meaningful names (they are the allow-list and quota
    keys); labels for `allowedSelector`; model variants with different limits (external/internal LB)
@@ -547,14 +547,14 @@ Remember: `fieldPath` must resolve to the granted object's **name**; validation 
 
 ## Guide — administrator (grant resources to projects)
 
-You use [`ClusterObjectGrant`](#clusterobjectgrant). One grant is a reusable preset attached to a
+You use [`ClusterResourceGrantPolicy`](#clusterresourcegrantpolicy). One grant is a reusable preset attached to a
 class of projects by label (story A4).
 
 - **A1 — assign resources.** Set `resources[].resourceName` and `allowed` / `allowedSelector` (union).
   Example: allow `standard` plus any StorageClass labelled `shared=true`.
 - **A2 — set the default.** Set `resources[].default` (overrides the developer's `defaultFrom`).
 - **A3 — set quotas.** Quotas are **not** on the grant. Compute → `Project.spec.quota.compute`; object
-  limits → the pool [`GrantQuota`](#grantquota) in the control namespace
+  limits → the pool [`ClusterResourceGrant`](#clusterresourcegrant) in the control namespace
   (`spec.objects.<resource>.<name|"*">.<measure>`, cluster-admin-writable only). `-1` = unlimited; the
   most restrictive applicable limit wins (`*` and a named entry both apply). The project admin may then
   carve per-namespace slices via `ProjectNamespace.spec.quota` (≤ pool) — see [Quotas](#quotas).
@@ -574,7 +574,7 @@ tenants:
   keeps working; you only add restrictions where you create grants. Safe default for rollout.
 - `defaultAvailability: None` or `excluded` is a **breaking change** for projects already using the
   resource (new objects get denied). Roll out in stages: register with `All` first (observe via the
-  alert hook and the `AvailableResource` catalog), create the grants, then tighten to `None` per
+  alert hook and the `AvailableClusterResource` catalog), create the grants, then tighten to `None` per
   project once grants are in place.
 - Diff-based UPDATE already grandfathers in-place objects, so existing objects are not broken by an
   update; only **new** uses are subject to the tightened policy.
@@ -587,14 +587,14 @@ tenants:
 - Four CRDs; the grant uses `resources[]` with `resourceName`.
 - `projectSelector` matches Project labels, then expands to the project's namespaces.
 - **Quota by mechanism, not on the grant.** Compute → `Project.spec.quota.compute` (native
-  `ResourceQuota`). Objects → [`GrantQuota`](#grantquota): `spec` (pool, control namespace) + `status`
+  `ResourceQuota`). Objects → [`ClusterResourceGrant`](#clusterresourcegrant): `spec` (pool, control namespace) + `status`
   (usage), keyed by grantable-resource → granted name (+ `*`) → measure; no flavor grouping; uniform
   even where Kubernetes has a native per-class key (e.g. storage).
-- **`GrantQuota` is spec + status, rendered per namespace.** Pool authored in the control namespace
-  (cluster-admin-writable `spec`); controller renders a read-only `GrantQuota` into every workload
+- **`ClusterResourceGrant` is spec + status, rendered per namespace.** Pool authored in the control namespace
+  (cluster-admin-writable `spec`); controller renders a read-only `ClusterResourceGrant` into every workload
   namespace (`status`: per-ns used, effective limit, project totals) so usage is visible via namespace
   RBAC. Per-namespace slices via `ProjectNamespace.spec.quota` (project admin, `Σ ≤ pool`).
-- **Quota RBAC**: a tenant can never raise their own quota — `GrantQuota.spec` is cluster-admin-only;
+- **Quota RBAC**: a tenant can never raise their own quota — `ClusterResourceGrant.spec` is cluster-admin-only;
   the project admin only distributes the pool across namespaces (slices ≤ pool).
 - **Measurement is declared per `usageReference`** (`countable`, `quantities[]`); no separate
   `measures` block and no value-type field — count ⇒ integer, quantity ⇒ `resource.Quantity`.
@@ -606,14 +606,14 @@ tenants:
   is the default and `paths[]` overrides it for specific groups/versions.
 - **Granted names are object-backed or value-backed.** `grantedResource` present ⇒ object-backed
   (real objects; `allowedSelector` applies). Absent ⇒ value-backed (the name is a field value, e.g.
-  `loadBalancerClass`; literal `allowed`). Either way per-name quota is ours on `GrantQuota`
+  `loadBalancerClass`; literal `allowed`). Either way per-name quota is ours on `ClusterResourceGrant`
   — including the "5 external LB" case native cannot express.
 - `allowed` and `allowedSelector` are a **union**, not exclusive.
 - **Guarded references**: `usageReferences[].match` (`{fieldPath, equals|in}`) scopes a reference to
   objects where the predicate holds (e.g. `roleRef.kind == ClusterRole`,
   `objectRef.kind == ClusterVirtualImage`); non-matching objects are ignored.
 - **Enforcement mode** per resource: `Managed` (our webhooks) or `External` (the module's own
-  webhook enforces; we only materialize `AvailableResource` + `GrantQuota` as the read API). Answers story D3.
+  webhook enforces; we only materialize `AvailableClusterResource` + `ClusterResourceGrant` as the read API). Answers story D3.
 - **Default availability is configurable, not always-allow.** Registration `defaultAvailability:
   All|None` (developer; `None` = opt-in), admin override via grant `availabilityDefault`. The webhook
   enforces even when no grant matches (so `None`/`excluded` actually deny). Answers A5.
@@ -622,19 +622,19 @@ tenants:
   excluded → denied → allowed → grant `availabilityDefault` → registration `defaultAvailability`.
 - **Non-goal:** filtering native `kubectl get <cluster-resource>` per project. A proxy filters by the
   requesting **user**, not the project, and breaks for users in multiple projects — a separate story.
-  Project discovery is the namespaced `AvailableResource`.
-- Quota limits are **per project** (the pool `GrantQuota`), shared across its namespaces (Level 1);
+  Project discovery is the namespaced `AvailableClusterResource`.
+- Quota limits are **per project** (the pool `ClusterResourceGrant`), shared across its namespaces (Level 1);
   optional per-namespace slice by the project admin (Level 2) is nested/additive (`Σ slices ≤ pool`).
-- `AvailableResource`: namespaced, status-only **catalog** (names + default), `shortName available`,
+- `AvailableClusterResource`: namespaced, status-only **catalog** (names + default), `shortName available`,
   `module: multitenancy-manager` + `projects.deckhouse.io/project` labels, protected by an admission
-  policy in addition to read-only RBAC. Quota is a separate resource (`GrantQuota`).
+  policy in addition to read-only RBAC. Quota is a separate resource (`ClusterResourceGrant`).
 - Defaulting: per-project `default` overrides `defaultFrom`; CREATE only.
 - UPDATE is diff-based (pre-existing values grandfathered).
 - Tightening/revocation = alert only, never delete.
 - Overlapping grants: no hard-deny on create (conflicts emerge dynamically). Runtime resolution:
   `allowed` = union; `default` = oldest grant wins (creationTimestamp, tie-break name); genuine
   disagreement ⇒ `Conflict` condition + alert (webhook may soft-warn, never hard-deny). Quota is not
-  on the grant, so it never conflicts between grants; within `GrantQuota.spec.objects` a `*` and a
+  on the grant, so it never conflicts between grants; within `ClusterResourceGrant.spec.objects` a `*` and a
   named limit both apply (most restrictive wins).
 - ProjectTemplate integration for presets — later (reference/embed TBD).
 
@@ -653,7 +653,7 @@ tenants:
 
 ## User-docs TODO (when implemented)
 
-Document in USAGE: `get available` discovery and `get grantquota` for usage; the four resources and
+Document in USAGE: `get available` discovery and `get clusterresourcegrant` for usage; the four resources and
 their owners; conflict resolution ("like multiple ResourceQuotas — the most restrictive wins");
 defaulting precedence (CREATE only); that tightening never deletes, only alerts.
 
@@ -687,15 +687,15 @@ total). See the LoadBalancer example below. ² Virtualization (`virtualization.d
 `PriorityClass`, `RuntimeClass` and `VolumeSnapshotClass` follow the same shapes as below and are
 omitted for brevity. Full registrations (developer side) and paired grants (admin side):
 
-### StorageClass — allow-list, default; storage quota on GrantQuota
+### StorageClass — allow-list, default; storage quota on ClusterResourceGrant
 
 Registration declares the measures (PVC count, summed `requests.storage`); the grant does allow-list +
-default; the **limits live on the pool `GrantQuota`** (uniform per-class keys — `*` and a named class —
+default; the **limits live on the pool `ClusterResourceGrant`** (uniform per-class keys — `*` and a named class —
 not the native `…storageclass.storage.k8s.io/…` keys).
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: storageclasses
 spec:
@@ -719,7 +719,7 @@ spec:
       fieldPath: $.spec.resources.requests.storage
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: production-storage
 spec:
@@ -735,9 +735,9 @@ spec:
         shared: "true"
     default: standard
 ---
-# Storage limits for the project — the pool GrantQuota in the control namespace (cluster-admin only).
+# Storage limits for the project — the pool ClusterResourceGrant in the control namespace (cluster-admin only).
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantQuota
+kind: ClusterResourceGrant
 metadata:
   name: objects
   namespace: team-a                 # the project control namespace
@@ -759,7 +759,7 @@ version-scoped `paths[]` override.
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: ingressclasses
 spec:
@@ -791,11 +791,11 @@ spec:
 is a **value-backed** grant: the granted names (`external`/`internal`) are *values* of the reference
 field, so `grantedResource` is omitted and `allowed` is a literal list (no `allowedSelector`). The
 quota is **ours** — native `ResourceQuota` has only the *total* `services.loadbalancers`, no per-class
-key. This is the canonical "our own quota" case; the limits go on the pool `GrantQuota`.
+key. This is the canonical "our own quota" case; the limits go on the pool `ClusterResourceGrant`.
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: loadbalancerclasses
 spec:
@@ -815,7 +815,7 @@ spec:
     countable: true                       # measure: number of such Services, keyed by the value
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: production-loadbalancers
 spec:
@@ -829,9 +829,9 @@ spec:
     - internal
     default: internal
 ---
-# LB limits for the project — the pool GrantQuota (the "5 external" case)
+# LB limits for the project — the pool ClusterResourceGrant (the "5 external" case)
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantQuota
+kind: ClusterResourceGrant
 metadata:
   name: objects
   namespace: team-a                       # the project control namespace
@@ -848,7 +848,7 @@ spec:
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: virtualmachineclasses
 spec:
@@ -875,7 +875,7 @@ A `VirtualDisk` references it via `spec.dataSource.objectRef`, but only when
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: clustervirtualimages
 spec:
@@ -905,7 +905,7 @@ ClusterRoles a tenant is allowed to bind; another `match` case.
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: clusterroles
 spec:
@@ -932,7 +932,7 @@ spec:
     # no countable/quantities — ClusterRole is availability-only
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: production-clusterroles
 spec:
@@ -963,7 +963,7 @@ allow-list only.
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: clusterissuers
 spec:
@@ -1000,7 +1000,7 @@ One `PodLoggingConfig` may reference several destinations, so the path is multi-
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: clusterlogdestinations
 spec:

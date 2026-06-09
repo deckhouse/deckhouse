@@ -127,7 +127,7 @@ type MatchPredicate struct {
 
 // QuantityMeasure is a summable quantity field; Name is the measure (quota) key.
 type QuantityMeasure struct {
-	// Name is the measure key used in GrantQuota (e.g. requests.storage).
+	// Name is the measure key used in ClusterResourceGrant (e.g. requests.storage).
 	// +required
 	Name string `json:"name"`
 
@@ -165,8 +165,8 @@ type UsageReference struct {
 	Quantities []QuantityMeasure `json:"quantities,omitempty"`
 }
 
-// ClusterGrantableResourceSpec is the desired state of a ClusterGrantableResource.
-type ClusterGrantableResourceSpec struct {
+// GrantableClusterResourceDefinitionSpec is the desired state of a GrantableClusterResourceDefinition.
+type GrantableClusterResourceDefinitionSpec struct {
 	// GrantedResource is the cluster-scoped resource being governed (absent ⇒ value-backed).
 	// +optional
 	GrantedResource *GrantedResource `json:"grantedResource,omitempty"`
@@ -205,8 +205,8 @@ type ClusterGrantableResourceSpec struct {
 	UsageReferences []UsageReference `json:"usageReferences,omitempty"`
 }
 
-// ClusterGrantableResourceStatus is the observed state of a ClusterGrantableResource.
-type ClusterGrantableResourceStatus struct {
+// GrantableClusterResourceDefinitionStatus is the observed state of a GrantableClusterResourceDefinition.
+type GrantableClusterResourceDefinitionStatus struct {
 	// ObservedGeneration is the most recent generation observed by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
@@ -220,43 +220,43 @@ type ClusterGrantableResourceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName=cgr
+// +kubebuilder:resource:scope=Cluster,shortName=gcrd
 // +kubebuilder:printcolumn:name="Granted",type=string,JSONPath=`.spec.grantedResource.kind`
 // +kubebuilder:printcolumn:name="Enforcement",type=string,JSONPath=`.spec.enforcement`
 // +kubebuilder:printcolumn:name="Default",type=string,JSONPath=`.spec.defaultAvailability`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// ClusterGrantableResource registers a cluster-scoped resource as grant-controllable.
-type ClusterGrantableResource struct {
+// GrantableClusterResourceDefinition registers a cluster-scoped resource as grant-controllable.
+type GrantableClusterResourceDefinition struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is a standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitzero"`
 
-	// spec defines the desired state of ClusterGrantableResource.
+	// spec defines the desired state of GrantableClusterResourceDefinition.
 	// +required
-	Spec ClusterGrantableResourceSpec `json:"spec"`
+	Spec GrantableClusterResourceDefinitionSpec `json:"spec"`
 
-	// status defines the observed state of ClusterGrantableResource.
+	// status defines the observed state of GrantableClusterResourceDefinition.
 	// +optional
-	Status ClusterGrantableResourceStatus `json:"status,omitzero"`
+	Status GrantableClusterResourceDefinitionStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true
 
-// ClusterGrantableResourceList contains a list of ClusterGrantableResource.
-type ClusterGrantableResourceList struct {
+// GrantableClusterResourceDefinitionList contains a list of GrantableClusterResourceDefinition.
+type GrantableClusterResourceDefinitionList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`
-	Items           []ClusterGrantableResource `json:"items"`
+	Items           []GrantableClusterResourceDefinition `json:"items"`
 }
 
 // IsValueBacked reports whether the resource is value-backed (no grantedResource GVK).
-func (r *ClusterGrantableResource) IsValueBacked() bool {
+func (r *GrantableClusterResourceDefinition) IsValueBacked() bool {
 	return r.Spec.GrantedResource == nil || r.Spec.GrantedResource.Kind == ""
 }
 
 func init() {
-	SchemeBuilder.Register(&ClusterGrantableResource{}, &ClusterGrantableResourceList{})
+	SchemeBuilder.Register(&GrantableClusterResourceDefinition{}, &GrantableClusterResourceDefinitionList{})
 }

@@ -7,16 +7,16 @@ metadata:
     module: multitenancy-manager
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: availableresources.multitenancy.deckhouse.io
+  name: availableclusterresources.multitenancy.deckhouse.io
 spec:
   group: multitenancy.deckhouse.io
   names:
-    kind: AvailableResource
-    listKind: AvailableResourceList
-    plural: availableresources
+    kind: AvailableClusterResource
+    listKind: AvailableClusterResourceList
+    plural: availableclusterresources
     shortNames:
     - available
-    singular: availableresource
+    singular: availableclusterresource
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -36,8 +36,8 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          AvailableResource is the per-project, controller-owned catalog (discovery only) for one
-          ClusterGrantableResource. metadata.name equals the grantable resource name.
+          AvailableClusterResource is the per-project, controller-owned catalog (discovery only) for one
+          GrantableClusterResourceDefinition. metadata.name equals the grantable resource name.
         properties:
           apiVersion:
             description: |-

@@ -16,7 +16,7 @@ limitations under the License.
 
 // Package quota computes object-quota usage and limits. Usage is recounted from the live usage
 // objects across the project's namespaces (authoritative, no drift); the reconciler mirrors the
-// result into GrantQuota.status for visibility.
+// result into ClusterResourceGrant.status for visibility.
 package quota
 
 import (
@@ -35,15 +35,15 @@ import (
 	"controller/internal/naming"
 )
 
-// Pool returns the project's object-quota pool GrantQuota (control namespace == project name), or
+// Pool returns the project's object-quota pool ClusterResourceGrant (control namespace == project name), or
 // nil when none exists (no object quota configured).
-func Pool(ctx context.Context, cl client.Client, project string) (*v1alpha1.GrantQuota, error) {
-	gq := &v1alpha1.GrantQuota{}
-	if err := cl.Get(ctx, client.ObjectKey{Namespace: project, Name: naming.GrantQuotaName}, gq); err != nil {
+func Pool(ctx context.Context, cl client.Client, project string) (*v1alpha1.ClusterResourceGrant, error) {
+	gq := &v1alpha1.ClusterResourceGrant{}
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: project, Name: naming.ClusterResourceGrantName}, gq); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("get pool GrantQuota %s/%s: %w", project, naming.GrantQuotaName, err)
+		return nil, fmt.Errorf("get pool ClusterResourceGrant %s/%s: %w", project, naming.ClusterResourceGrantName, err)
 	}
 	return gq, nil
 }
@@ -97,7 +97,7 @@ func ProjectUsage(
 	ctx context.Context,
 	cl client.Client,
 	factory jsonpath.Factory,
-	reg *v1alpha1.ClusterGrantableResource,
+	reg *v1alpha1.GrantableClusterResourceDefinition,
 	gvk schema.GroupVersionKind,
 	plural string,
 	namespaces []string,
@@ -142,7 +142,7 @@ func (v Violation) String() string {
 // Check reports the first limit violation when adding `adding` on top of `used`, against the pool's
 // limits for the given registration (resourceName). Unlimited (negative) limits and unset measures
 // never violate. Returns nil when within quota.
-func Check(pool *v1alpha1.GrantQuota, resourceName string, used, adding Usage) *Violation {
+func Check(pool *v1alpha1.ClusterResourceGrant, resourceName string, used, adding Usage) *Violation {
 	if pool == nil {
 		return nil
 	}

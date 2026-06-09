@@ -124,7 +124,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       "grants",
 			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
-			Kind:       "ClusterObjectGrant",
+			Kind:       "ClusterResourceGrantPolicy",
 			FilterFunc: filterGrants,
 		},
 	},
@@ -138,7 +138,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Crontab: "*/2 * * * *",
 		},
 	},
-}, dependency.WithExternalDependencies(scanClusterObjectGrantRulesViolations))
+}, dependency.WithExternalDependencies(scanClusterResourceGrantPolicyRulesViolations))
 
 func filterGrants(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	g := &grant{}
@@ -168,14 +168,14 @@ func checkIfGrantRulesAreViolated(ctx context.Context, input *go_hook.HookInput,
 	return nil
 }
 
-func scanClusterObjectGrantRulesViolations(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+func scanClusterResourceGrantPolicyRulesViolations(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	log := input.Logger
 	kube := dc.MustGetK8sClient()
 
 	grantList, err := kube.Dynamic().Resource(schema.GroupVersionResource{
 		Group:    "multitenancy.deckhouse.io",
 		Version:  "v1alpha1",
-		Resource: "clusterobjectgrants",
+		Resource: "clusterresourcegrantpolicies",
 	}).List(ctx, v1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("fetch grants: %w", err)
@@ -452,17 +452,17 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 		return nil, nil
 	}
 
-	regGVR := schema.GroupVersionResource{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Resource: "clustergrantableresources"}
+	regGVR := schema.GroupVersionResource{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Resource: "grantableclusterresourcedefinitions"}
 
 	var violations []violation
 	for _, entry := range g.Spec.Resources {
 		regObj, err := kube.Dynamic().Resource(regGVR).Get(ctx, entry.ResourceName, v1.GetOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("get ClusterGrantableResource %s: %w", entry.ResourceName, err)
+			return nil, fmt.Errorf("get GrantableClusterResourceDefinition %s: %w", entry.ResourceName, err)
 		}
 		reg := &clusterGrantableResource{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(regObj.Object, reg); err != nil {
-			return nil, fmt.Errorf("convert ClusterGrantableResource %s: %w", entry.ResourceName, err)
+			return nil, fmt.Errorf("convert GrantableClusterResourceDefinition %s: %w", entry.ResourceName, err)
 		}
 		if reg.Spec.Enforcement == "External" {
 			continue

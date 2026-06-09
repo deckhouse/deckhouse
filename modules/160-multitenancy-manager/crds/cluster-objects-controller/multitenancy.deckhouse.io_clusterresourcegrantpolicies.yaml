@@ -7,16 +7,16 @@ metadata:
     module: multitenancy-manager
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: clusterobjectgrants.multitenancy.deckhouse.io
+  name: clusterresourcegrantpolicies.multitenancy.deckhouse.io
 spec:
   group: multitenancy.deckhouse.io
   names:
-    kind: ClusterObjectGrant
-    listKind: ClusterObjectGrantList
-    plural: clusterobjectgrants
+    kind: ClusterResourceGrantPolicy
+    listKind: ClusterResourceGrantPolicyList
+    plural: clusterresourcegrantpolicies
     shortNames:
-    - cog
-    singular: clusterobjectgrant
+    - crgp
+    singular: clusterresourcegrantpolicy
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -26,7 +26,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterObjectGrant is the Schema for the clusterobjectgrants
+        description: ClusterResourceGrantPolicy is the Schema for the clusterresourcegrantpolicies
           API.
         properties:
           apiVersion:
@@ -47,7 +47,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of ClusterObjectGrant.
+            description: spec defines the desired state of ClusterResourceGrantPolicy.
             properties:
               projectSelector:
                 description: |-
@@ -102,8 +102,8 @@ spec:
                   applied to matched projects.
                 items:
                   description: |-
-                    GrantResource is one entry of a grant: it references a ClusterGrantableResource and decides
-                    the per-project allow-list and default. It carries no quota (object quota lives on GrantQuota).
+                    GrantResource is one entry of a grant: it references a GrantableClusterResourceDefinition and decides
+                    the per-project allow-list and default. It carries no quota (object quota lives on ClusterResourceGrant).
                   properties:
                     allowed:
                       description: Allowed is an explicit list of granted object names
@@ -227,7 +227,7 @@ spec:
                       type: object
                       x-kubernetes-map-type: atomic
                     resourceName:
-                      description: ResourceName is the name of the ClusterGrantableResource
+                      description: ResourceName is the name of the GrantableClusterResourceDefinition
                         this entry configures.
                       type: string
                   required:
@@ -238,10 +238,10 @@ spec:
             - resources
             type: object
           status:
-            description: status defines the observed state of ClusterObjectGrant.
+            description: status defines the observed state of ClusterResourceGrantPolicy.
             properties:
               conditions:
-                description: Conditions represent the current state of the ClusterObjectGrant
+                description: Conditions represent the current state of the ClusterResourceGrantPolicy
                   resource.
                 items:
                   description: Condition contains details for one aspect of the current

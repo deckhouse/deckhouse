@@ -22,10 +22,10 @@ import (
 
 // NOTE: json tags are required. Any new fields you add must have json tags for the fields to be serialized.
 
-// GrantResource is one entry of a grant: it references a ClusterGrantableResource and decides
-// the per-project allow-list and default. It carries no quota (object quota lives on GrantQuota).
+// GrantResource is one entry of a grant: it references a GrantableClusterResourceDefinition and decides
+// the per-project allow-list and default. It carries no quota (object quota lives on ClusterResourceGrant).
 type GrantResource struct {
-	// ResourceName is the name of the ClusterGrantableResource this entry configures.
+	// ResourceName is the name of the GrantableClusterResourceDefinition this entry configures.
 	// +required
 	ResourceName string `json:"resourceName"`
 
@@ -58,8 +58,8 @@ type GrantResource struct {
 	AvailabilityDefault AvailabilityDefault `json:"availabilityDefault,omitempty"`
 }
 
-// ClusterObjectGrantSpec defines the desired state of ClusterObjectGrant.
-type ClusterObjectGrantSpec struct {
+// ClusterResourceGrantPolicySpec defines the desired state of ClusterResourceGrantPolicy.
+type ClusterResourceGrantPolicySpec struct {
 	// ProjectSelector selects the Projects (by their labels, propagated to namespaces) this grant
 	// applies to. A nil selector matches no projects; an explicit empty selector matches all.
 	// +optional
@@ -70,13 +70,13 @@ type ClusterObjectGrantSpec struct {
 	Resources []GrantResource `json:"resources"`
 }
 
-// ClusterObjectGrantStatus defines the observed state of ClusterObjectGrant.
-type ClusterObjectGrantStatus struct {
+// ClusterResourceGrantPolicyStatus defines the observed state of ClusterResourceGrantPolicy.
+type ClusterResourceGrantPolicyStatus struct {
 	// ObservedGeneration is the most recent generation observed by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Conditions represent the current state of the ClusterObjectGrant resource.
+	// Conditions represent the current state of the ClusterResourceGrantPolicy resource.
 	// +listType=map
 	// +listMapKey=type
 	// +optional
@@ -85,35 +85,35 @@ type ClusterObjectGrantStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName=cog
+// +kubebuilder:resource:scope=Cluster,shortName=crgp
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// ClusterObjectGrant is the Schema for the clusterobjectgrants API.
-type ClusterObjectGrant struct {
+// ClusterResourceGrantPolicy is the Schema for the clusterresourcegrantpolicies API.
+type ClusterResourceGrantPolicy struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is a standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitzero"`
 
-	// spec defines the desired state of ClusterObjectGrant.
+	// spec defines the desired state of ClusterResourceGrantPolicy.
 	// +required
-	Spec ClusterObjectGrantSpec `json:"spec"`
+	Spec ClusterResourceGrantPolicySpec `json:"spec"`
 
-	// status defines the observed state of ClusterObjectGrant.
+	// status defines the observed state of ClusterResourceGrantPolicy.
 	// +optional
-	Status ClusterObjectGrantStatus `json:"status,omitzero"`
+	Status ClusterResourceGrantPolicyStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true
 
-// ClusterObjectGrantList contains a list of ClusterObjectGrant.
-type ClusterObjectGrantList struct {
+// ClusterResourceGrantPolicyList contains a list of ClusterResourceGrantPolicy.
+type ClusterResourceGrantPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`
-	Items           []ClusterObjectGrant `json:"items"`
+	Items           []ClusterResourceGrantPolicy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ClusterObjectGrant{}, &ClusterObjectGrantList{})
+	SchemeBuilder.Register(&ClusterResourceGrantPolicy{}, &ClusterResourceGrantPolicyList{})
 }

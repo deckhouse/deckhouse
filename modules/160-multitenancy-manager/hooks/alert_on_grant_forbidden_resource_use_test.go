@@ -20,9 +20,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
+
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 var _ = Describe("Modules :: multitenancy-manager :: hooks :: alert_on_grant_forbidden_resource_use ::", func() {
@@ -42,7 +43,7 @@ metadata:
     heritage: multitenancy-manager
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: testreg
 spec:
@@ -55,7 +56,7 @@ spec:
     fieldPath: $.data.scName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: testgrant
 spec:
@@ -87,8 +88,8 @@ data:
 `
 
 	f := HookExecutionConfigInit(initValues, `{}`)
-	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterObjectGrant", false)
-	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterGrantableResource", false)
+	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterResourceGrantPolicy", false)
+	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceDefinition", false)
 
 	Context("No violations", func() {
 		BeforeEach(func() {

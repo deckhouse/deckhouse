@@ -6,17 +6,17 @@ metadata:
   name: cluster-objects-grants-protect
   {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-objects-controller")) | nindent 2 }}
 webhooks:
-  # Keep the controller-owned catalog (AvailableResource) and object-quota usage (GrantQuota status)
-  # read-only to everyone but the controller. The GrantQuota pool spec is governed by RBAC.
+  # Keep the controller-owned catalog (AvailableClusterResource) and object-quota usage (ClusterResourceGrant status)
+  # read-only to everyone but the controller. The ClusterResourceGrant pool spec is governed by RBAC.
   - name: protect.cluster-objects-grants.multitenancy.deckhouse.io
     rules:
       - apiGroups: ["multitenancy.deckhouse.io"]
         apiVersions: ["v1alpha1"]
         resources:
-          - availableresources
-          - availableresources/status
-          - grantquotas
-          - grantquotas/status
+          - availableclusterresources
+          - availableclusterresources/status
+          - clusterresourcegrants
+          - clusterresourcegrants/status
         operations: ["CREATE", "UPDATE", "DELETE"]
         scope: Namespaced
     admissionReviewVersions: ["v1"]

@@ -24,13 +24,13 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
-// filterRegistrations is the snapshot filter for ClusterGrantableResource objects.
+// filterRegistrations is the snapshot filter for GrantableClusterResourceDefinition objects.
 func filterRegistrations(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj, nil
 }
 
 // grantableWebhookRules derives the admission webhook rules from the registered, Managed-enforcement
-// ClusterGrantableResources: one CREATE/UPDATE rule per (group, resource) of their usageReferences'
+// GrantableClusterResourceDefinitions: one CREATE/UPDATE rule per (group, resource) of their usageReferences'
 // rules. Versions are matched with "*" (the controller selects the right path per version). Snapshots
 // must be collected under the name "registrations".
 func grantableWebhookRules(input *go_hook.HookInput) []admissionregistrationv1.RuleWithOperations {

@@ -1,11 +1,11 @@
 {{- /*
-  Example, module-shipped ClusterGrantableResource registrations so the feature works out of the box.
+  Example, module-shipped GrantableClusterResourceDefinition registrations so the feature works out of the box.
   Both use defaultAvailability: All, so nothing is restricted until a cluster admin creates a
-  ClusterObjectGrant (to narrow availability) and/or a GrantQuota (to cap usage).
+  ClusterResourceGrantPolicy (to narrow availability) and/or a ClusterResourceGrant (to cap usage).
 */}}
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: storageclasses
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
@@ -36,7 +36,7 @@ spec:
       fieldPath: $.spec.resources.requests.storage
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: loadbalancerclasses
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
@@ -60,7 +60,7 @@ spec:
 {{- if .Values.global.enabledModules | has "cert-manager" }}
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: clusterissuers
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
@@ -97,7 +97,7 @@ spec:
 {{- end }}
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterGrantableResource
+kind: GrantableClusterResourceDefinition
 metadata:
   name: clusterroles
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}

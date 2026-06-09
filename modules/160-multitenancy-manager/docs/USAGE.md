@@ -312,9 +312,9 @@ objects (for example `StorageClass`) may be referenced from within project names
 
 Two resources drive it:
 
-- `ClusterObjectGrantPolicy` — declares which resource is governed and where references
+- `ClusterResourceGrantPolicyPolicy` — declares which resource is governed and where references
   to it must be validated (`usageReferences`), plus how its default is discovered.
-- `ClusterObjectGrant` — selects projects (by namespace labels via `projectSelector`) and,
+- `ClusterResourceGrantPolicy` — selects projects (by namespace labels via `projectSelector`) and,
   per policy, the granted names (`allowed`, `allowedSelector`) and the per-project `default`.
 
 {% raw %}
@@ -322,7 +322,7 @@ Two resources drive it:
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrantPolicy
+kind: ClusterResourceGrantPolicyPolicy
 metadata:
   name: storageclasses
 spec:
@@ -337,7 +337,7 @@ spec:
     fieldPath: $.spec.storageClassName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
+kind: ClusterResourceGrantPolicy
 metadata:
   name: production-storage
 spec:
