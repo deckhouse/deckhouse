@@ -647,7 +647,7 @@ Field description:
 * `rotation`: Password rotation settings:
   * `rotation.interval`: Period for mandatory password change.
 
-Example with a custom complexity level:
+Example with a custom complexity rules:
 
 {% raw %}
 
