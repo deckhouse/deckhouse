@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if and (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) (include "machine_controller_manager_enabled" .) (hasKey $.Values.nodeManager.internal "cloudProvider") }}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -19,3 +21,5 @@ spec:
         metadata:
           description: Metrics endpoint exposed through kube-rbac-proxy
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

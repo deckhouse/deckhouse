@@ -146,6 +146,13 @@ func WithControlPlaneEndpoint(controlPlaneIP string) option {
 	}
 }
 
+// WithControlPlaneEndpointURL is an option to set the control plane endpoint as a full URL.
+func WithControlPlaneEndpointURL(endpoint string) option {
+	return func(o *options) {
+		o.ControlPlaneEndpoint = strings.TrimSpace(endpoint)
+	}
+}
+
 // WithNodeName is an option to set the node name.
 func WithNodeName(nodeName string) option {
 	return func(o *options) {

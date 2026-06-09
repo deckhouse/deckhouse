@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 ---
 apiVersion: v1
@@ -13,3 +15,5 @@ spec:
   selector:
     app: caps-controller-manager
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

@@ -30,6 +30,17 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
+- add: /{{ $.ModulePath }}go_lib/bashiblecontext
+  to: /go_lib/bashiblecontext
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
 - add: /{{ $.ModulePath }}go_lib/dependency/k8s/drain
   to: /go_lib/dependency/k8s/drain
   includePaths:
@@ -52,6 +63,10 @@ import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
+  before: install
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go_lib/bashiblecontext
+  to: /go_lib/bashiblecontext
   before: install
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /go_lib/dependency/k8s/drain

@@ -202,6 +202,8 @@ spec:
             {{- include "helm_lib_container_kube_rbac_proxy_resources" $ctx | nindent 12 }}
     {{- end }}
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if include "cluster_autoscaler_enabled" . }}
     {{- if not (include "cluster_autoscaler_split_mode" .) }}
@@ -217,3 +219,5 @@ spec:
 {{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "clusterapi" .Values.nodeManager.internal.autoscalerNodes "cluster-autoscaler") }}
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

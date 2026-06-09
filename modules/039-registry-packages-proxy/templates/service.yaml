@@ -1,3 +1,22 @@
+{{- $rppGetBootstrapPort := 4282 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-packages-proxy-bootstrap
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+spec:
+  # TODO: Render this Service only when at least one VirtualControlPlane exists.
+  # The registry-packages-proxy module needs its own discovery hook/value for that
+  # instead of reading controlPlaneManager.internal.hasVirtualControlPlane directly.
+  ports:
+  - name: bootstrap
+    port: {{ $rppGetBootstrapPort }}
+    targetPort: {{ $rppGetBootstrapPort }}
+    protocol: TCP
+  selector:
+    app: registry-packages-proxy
 {{- if and .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped }}
 ---
 apiVersion: v1

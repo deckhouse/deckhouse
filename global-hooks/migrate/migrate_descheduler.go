@@ -54,6 +54,19 @@ func deschedulerConfigMigration(_ context.Context, input *go_hook.HookInput, dc 
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
+	// A cluster without the d8-system namespace is a fresh cluster (e.g. a
+	// nested virtual control plane managed via a kubeconfig): there is no
+	// legacy descheduler config to migrate, and creating the marker
+	// ConfigMap would fail anyway.
+	_, err = kubeCl.CoreV1().Namespaces().Get(context.TODO(), migrationNS, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		input.Logger.Info("Namespace does not exist, skipping descheduler config migration", slog.String("namespace", migrationNS))
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get namespace %s: %w", migrationNS, err)
+	}
+
 	mcGVR := schema.ParseGroupResource("moduleconfigs.deckhouse.io").WithVersion("v1alpha1")
 
 	_, err = kubeCl.CoreV1().ConfigMaps(migrationNS).Get(context.TODO(), migrationCM, metav1.GetOptions{})

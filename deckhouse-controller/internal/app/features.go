@@ -21,6 +21,7 @@ import "os"
 const (
 	EnvEnablePackageSystem  = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
 	EnvEnableModulePackages = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
+	EnvDisableVerity        = "DECKHOUSE_DISABLE_VERITY"
 )
 
 // PackageSystemEnabled reports whether the package-system controllers
@@ -30,3 +31,9 @@ func PackageSystemEnabled() bool { return os.Getenv(EnvEnablePackageSystem) == "
 // ModulePackagesEnabled reports whether the module-package controllers
 // (ModulePackage, ModulePackageVersion, Module v2) are enabled.
 func ModulePackagesEnabled() bool { return os.Getenv(EnvEnableModulePackages) == "true" }
+
+// VerityDisabled reports whether the erofs/dm-verity backend must not be used
+// even when the node kernel supports erofs. Set it where the pod has no access
+// to device-mapper (no /dev, no privileges), so module installation falls back
+// to the symlink backend instead of failing. (Virtual Control Plane)
+func VerityDisabled() bool { return os.Getenv(EnvDisableVerity) == "true" }

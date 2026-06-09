@@ -31,6 +31,8 @@ subjects:
   name: prometheus
   namespace: d8-monitoring
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if include "cluster_autoscaler_enabled" . }}
   {{- if not (include "cluster_autoscaler_split_mode" .) }}
@@ -42,3 +44,5 @@ subjects:
 {{ include "cluster_autoscaler_rbac_to_us" (list . "cluster-autoscaler") }}
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

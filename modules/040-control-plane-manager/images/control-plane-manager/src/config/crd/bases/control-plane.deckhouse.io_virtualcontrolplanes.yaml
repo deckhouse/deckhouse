@@ -1,0 +1,303 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: virtualcontrolplanes.control-plane.deckhouse.io
+spec:
+  group: control-plane.deckhouse.io
+  names:
+    kind: VirtualControlPlane
+    listKind: VirtualControlPlaneList
+    plural: virtualcontrolplanes
+    shortNames:
+    - vcp
+    singular: virtualcontrolplane
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Desired Kubernetes version
+      jsonPath: .spec.kubernetesVersion
+      name: Version
+      type: string
+    - description: Desired number of control plane replicas
+      jsonPath: .spec.replicas
+      name: Replicas
+      type: integer
+    - description: Virtual control plane readiness
+      jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              datastoreRef:
+                description: DatastoreRef points to the datastore configuration used
+                  by the tenant control plane.
+                properties:
+                  name:
+                    description: Name is the datastore configuration name used by
+                      the tenant control plane.
+                    type: string
+                required:
+                - name
+                type: object
+              expose:
+                description: Expose describes how the tenant Kubernetes API should
+                  be published.
+                properties:
+                  type:
+                    default: LoadBalancer
+                    description: |-
+                      Type is how the tenant Kubernetes API is published. Only LoadBalancer is supported for now
+                      (the per-VCP ALB uses a LoadBalancer inlet).
+                    enum:
+                    - LoadBalancer
+                    type: string
+                type: object
+              kubernetesVersion:
+                description: KubernetesVersion is the desired Kubernetes version for
+                  the tenant control plane.
+                type: string
+              networking:
+                description: |-
+                  Networking is the tenant cluster's network configuration (Service/Pod CIDRs, cluster
+                  domain). Required so that the "clusterDomain" default always materialises and its
+                  immutability CEL rule always has an oldSelf to compare against.
+
+                  The two cross-field rules below are the relationships the per-field patterns cannot express.
+
+                  Each node is carved a podSubnetNodeCIDRPrefix-sized slice out of podSubnetCIDR, so the node
+                  prefix must be strictly longer than the pod CIDR's own prefix, otherwise not a single node
+                  subnet fits. The gap is log2(max nodes): /16 with /24 per node is 2^8 = 256 nodes.
+
+                  The Pod and Service ranges are allocated by different components (cilium via Kubernetes IPAM,
+                  kube-apiserver's Service allocator) that do not know about each other, so an overlap hands the
+                  same address out twice. Two CIDRs are either disjoint or nested, so testing containment in
+                  both directions is an exact overlap test.
+                properties:
+                  clusterDomain:
+                    default: cluster.virtual
+                    description: |-
+                      ClusterDomain is the tenant cluster's DNS domain. It is used to build the apiserver's
+                      --service-account-issuer and the "kubernetes.default.svc.<ClusterDomain>" certificate SAN.
+
+                      Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+                      The apiserver serving certificate SAN and --service-account-issuer are derived from it once,
+                      at creation. Recreate the VirtualControlPlane and migrate workloads instead.
+                    maxLength: 253
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: 'clusterDomain is immutable: the apiserver serving
+                        certificate and --service-account-issuer are derived from
+                        it at creation. Create a new VirtualControlPlane and migrate
+                        workloads.'
+                      rule: self == oldSelf
+                  podSubnetCIDR:
+                    description: |-
+                      PodSubnetCIDR is the address space of the tenant cluster's Pods, passed to
+                      kube-controller-manager as --cluster-cidr and to cilium as the Kubernetes-IPAM Pod CIDR
+                      source.
+
+                      Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+                      Existing nodes and Pods already hold addresses from the current range; switching it requires
+                      re-allocating every node's PodCIDR, which in practice means recreating the nodes. Recreate
+                      the VirtualControlPlane and migrate workloads instead.
+                      Must be an IPv4 CIDR between /8 and /24, and shorter than podSubnetNodeCIDRPrefix so that at
+                      least one node subnet fits (see the rule on the networking block itself).
+                    pattern: ^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/([89]|1[0-9]|2[0-4])$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: 'podSubnetCIDR is immutable: existing nodes and Pods
+                        already hold addresses from the current range. Create a new
+                        VirtualControlPlane and migrate workloads.'
+                      rule: self == oldSelf
+                  podSubnetNodeCIDRPrefix:
+                    description: |-
+                      PodSubnetNodeCIDRPrefix is the prefix size of the Pod network allocated to each node out of
+                      PodSubnetCIDR, passed to kube-controller-manager as --node-cidr-mask-size.
+
+                      Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+                      Nodes that already received a PodCIDR sized from the previous prefix keep it; a mismatched
+                      prefix on new nodes silently fragments the Pod address space. Recreate the
+                      VirtualControlPlane and migrate workloads instead.
+                      This is a policy choice, not something derivable from podSubnetCIDR: the gap between the two
+                      trades maximum node count against Pod addresses per node. With podSubnetCIDR /16 — /23 gives
+                      128 nodes x 510 addresses, /24 gives 256 x 254, /25 gives 512 x 126.
+
+                      The upper bound is /25, not /30, because kubelet's maxPods is picked from a lookup table in
+                      candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl whose last branch is "prefix >=
+                      24 -> 120". A /25 leaves 126 usable addresses and still fits those 120 Pods; a /26 leaves 62
+                      and does not, so the scheduler would place Pods the node cannot address and they would hang
+                      in ContainerCreating. A normal cluster can work around this by setting
+                      nodeGroup.kubelet.maxPods, but a tenant's NodeGroup is synthesised in Go (see
+                      bashible-apiserver.BuildExternalInputsYAML) and carries no kubelet section, so there is no
+                      escape hatch here. Widen this bound only together with a maxPods that follows the prefix.
+                    pattern: ^(1[6-9]|2[0-5])$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: 'podSubnetNodeCIDRPrefix is immutable: nodes already
+                        hold PodCIDRs sized from the previous prefix. Create a new
+                        VirtualControlPlane and migrate workloads.'
+                      rule: self == oldSelf
+                  serviceSubnetCIDR:
+                    description: |-
+                      ServiceSubnetCIDR is the address space of the tenant cluster's Services (kube-apiserver
+                      --service-cluster-ip-range and kube-controller-manager --service-cluster-ip-range). The
+                      tenant apiserver serving certificate carries the range's 1st address as an IP SAN and the
+                      tenant DNS Service is addressed at the range's 10th address.
+
+                      Warning: changing this value on a running tenant is unsafe and is blocked by immutability.
+                      Existing Services keep ClusterIPs from the current range, the apiserver serving certificate
+                      would silently regenerate with a different SAN (dropping the old kubernetes.default SAN),
+                      and the tenant DNS Service stays stranded at the old address. Recreate the
+                      VirtualControlPlane and migrate workloads instead.
+                      Must be an IPv4 CIDR between /12 and /24. /12 is the largest range kube-apiserver accepts
+                      (it rejects anything above 2^20 addresses); /24 leaves room for the kubernetes Service, the
+                      DNS Service and every Deckhouse module Service.
+                    pattern: ^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(1[2-9]|2[0-4])$
+                    type: string
+                    x-kubernetes-validations:
+                    - message: 'serviceSubnetCIDR is immutable: existing Services
+                        hold ClusterIPs from the current range and the apiserver serving
+                        certificate cannot be re-addressed in place. Create a new
+                        VirtualControlPlane and migrate workloads.'
+                      rule: self == oldSelf
+                required:
+                - podSubnetCIDR
+                - podSubnetNodeCIDRPrefix
+                - serviceSubnetCIDR
+                type: object
+                x-kubernetes-validations:
+                - message: podSubnetNodeCIDRPrefix must be greater than the prefix
+                    length of podSubnetCIDR, otherwise no node subnet fits into the
+                    Pod address space
+                  rule: int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()
+                - message: 'podSubnetCIDR and serviceSubnetCIDR must not overlap:
+                    Pod addresses are allocated by cilium and Service addresses by
+                    kube-apiserver, and neither knows about the other''s range'
+                  rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR)
+                    && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
+              replicas:
+                default: 1
+                description: Replicas is the desired number of control plane replicas.
+                format: int32
+                type: integer
+            required:
+            - kubernetesVersion
+            - networking
+            type: object
+          status:
+            properties:
+              conditions:
+                description: Conditions describe the current state of the virtual
+                  control plane.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              endpoint:
+                description: Endpoint is the published Kubernetes API endpoint for
+                  this virtual control plane.
+                type: string
+              kubeconfigSecretRef:
+                description: KubeconfigSecretRef points to a Secret with a kubeconfig
+                  for this virtual control plane.
+                properties:
+                  name:
+                    description: Name is the kubeconfig Secret name.
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace that contains the kubeconfig
+                      Secret.
+                    type: string
+                type: object
+              observedKubernetesVersion:
+                description: ObservedKubernetesVersion is the version currently observed
+                  by the controller.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $policyName := "machines.deckhouse.io" }}
 ---
@@ -49,3 +51,5 @@ spec:
         heritage: deckhouse
 {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

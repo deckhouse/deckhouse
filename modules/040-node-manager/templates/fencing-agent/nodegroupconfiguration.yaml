@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{ $ctx := . }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- $mode := dig "fencing" "mode" "" $ng }}
@@ -131,3 +133,5 @@ spec:
     chmod +x /opt/deckhouse/bin/nodegroup-watchdog.sh
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

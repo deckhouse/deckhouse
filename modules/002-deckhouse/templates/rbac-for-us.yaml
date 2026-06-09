@@ -36,6 +36,13 @@ subjects:
   - kind: ServiceAccount
     name: bashible-apiserver
     namespace: d8-cloud-instance-manager
+  {{- if not .Values.global.deckhouseSelfHosted }}
+  # In a virtual control plane tenant cluster bashible-apiserver runs in the
+  # parent cluster and authenticates against the tenant API as this User.
+  - kind: User
+    name: bashible-apiserver
+    apiGroup: rbac.authorization.k8s.io
+  {{- end }}
 
 # RBAC for registry-packages-proxy - access to registry secret
 ---

@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -38,3 +40,5 @@ subjects:
     name: fencing-agent
     namespace: d8-cloud-instance-manager
 
+{{- end }}
+{{- /* /vcp-gate */ -}}

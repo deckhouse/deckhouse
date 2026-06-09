@@ -56,7 +56,7 @@ type config struct {
 	// CertTreeScheme defines the PKI tree structure: which CAs exist and
 	// which leaf certificates are signed by each of them.
 	// nil falls back to defaultCertTreeScheme (full set including etcd).
-	CertTreeScheme map[RootCertName][]LeafCertName
+	CertTreeScheme map[RootCertBaseName][]LeafCertBaseName
 
 	// pkiDir is the directory where certificates and keys are written.
 	// Default: constants.DefaultCertificatesDir (/etc/kubernetes/pki).
@@ -172,7 +172,7 @@ type configOption func(*config)
 //	    pki.EtcdCACertName: {pki.EtcdServerCertName, pki.EtcdPeerCertName, pki.EtcdHealthcheckClientCertName},
 //	}
 //	CreatePKIBundle(..., WithCertTreeScheme(scheme))
-func WithCertTreeScheme(certTreeScheme map[RootCertName][]LeafCertName) configOption {
+func WithCertTreeScheme(certTreeScheme map[RootCertBaseName][]LeafCertBaseName) configOption {
 	return func(c *config) {
 		c.CertTreeScheme = certTreeScheme
 	}

@@ -131,7 +131,7 @@ data:
 }
 
 var _ = Describe("Modules :: node-group :: hooks :: order_bootstrap_token ::", func() {
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global":{"deckhouseSelfHosted":true},"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 	Context("Cluster is empty", func() {

@@ -33,6 +33,8 @@ spec:
     matchNames:
     - d8-cloud-instance-manager
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if and (.Values.global.enabledModules | has "operator-prometheus") (include "cluster_autoscaler_enabled" .) (hasKey $.Values.nodeManager.internal "cloudProvider") }}
   {{- if not (include "cluster_autoscaler_split_mode" .) }}
@@ -44,3 +46,5 @@ spec:
 {{ include "cluster_autoscaler_pod_monitor" (list . "cluster-autoscaler") }}
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

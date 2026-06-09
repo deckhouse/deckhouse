@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
@@ -140,3 +142,5 @@ webhooks:
           - staticmachinetemplates
     sideEffects: None
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

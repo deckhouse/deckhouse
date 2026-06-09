@@ -29,6 +29,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 )
 
 const (
@@ -127,6 +129,10 @@ func CreateImageByTar(ctx context.Context, rc io.ReadCloser, imagePath string) e
 // used. The result is computed once per process (memoized) via a real
 // self-test rather than passive inspection.
 func IsSupported() bool {
+	if app.VerityDisabled() {
+		return false
+	}
+
 	return isSupported()
 }
 

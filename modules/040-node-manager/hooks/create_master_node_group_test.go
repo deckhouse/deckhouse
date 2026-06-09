@@ -30,6 +30,9 @@ import (
 var _ = Describe("Global hooks :: migrate :: add_control_plane_role_to_master_ng_test ::", func() {
 	const initValues = `
 global:
+  # The default of the global schema. Without it the hook takes itself for a nested cluster,
+  # where the master NodeGroup belongs to the virtual control plane, and writes nothing.
+  deckhouseSelfHosted: true
   clusterConfiguration:
     apiVersion: deckhouse.io/v1alpha1
     cloud:

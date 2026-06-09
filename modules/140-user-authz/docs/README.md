@@ -487,6 +487,8 @@ write:
 create:
     - deckhouse.io/dexauthenticators/allow-access-to-kubernetes
     - deckhouse.io/dexclients/allow-access-to-kubernetes
+create,delete,get,list,patch,update,watch:
+    - control-plane.deckhouse.io/virtualcontrolplanes
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
 patch,update:

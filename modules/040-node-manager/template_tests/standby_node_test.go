@@ -33,6 +33,7 @@ var _ = Describe("Module :: node-manager :: helm template :: standby node", func
 			f.ValuesSetFromYaml("nodeManager.internal.capsControllerManagerWebhookCert", `{ca: string, crt: string, key: string}`)
 			f.ValuesSetFromYaml("nodeManager.internal.nodeControllerWebhookCert", `{ca: string, crt: string, key: string}`)
 			f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{"master":1}`)
+			f.ValuesSet("global.deckhouseSelfHosted", true)
 			f.ValuesSetFromYaml("global.clusterConfiguration", `apiVersion: deckhouse.io/v1
 cloud:
   prefix: sandbox
