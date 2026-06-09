@@ -335,6 +335,7 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	require.NoError(suite.T(), err)
 
 	for _, item := range mdlist.Items {
+		item.SetGroupVersionKind(v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation"))
 		for i, cond := range item.Status.Conditions {
 			cond.Message = strings.ReplaceAll(cond.Message, suite.tmpDir, "/testdir")
 			item.Status.Conditions[i] = cond

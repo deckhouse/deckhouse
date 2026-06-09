@@ -1,5 +1,5 @@
 {{- $required_patches_from_ee_dir_by_versions := dict }}
-{{- $integrity_patches_version := "v0.1.0" }}
+{{- $integrity_patches_version := "v0.2.0" }}
 
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}

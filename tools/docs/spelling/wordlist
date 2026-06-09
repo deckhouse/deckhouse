@@ -609,10 +609,10 @@ healthchecks
 HEC
 helmignore
 helthcheck
+HH
 HighAvailability
 HighLoad
 HighNodeUtilization
-HH
 HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
@@ -1264,6 +1264,7 @@ RESTful
 Restic
 RHEL
 RockSolid
+RoleBinding
 roleRef
 RollingUpdate
 rollout
@@ -1661,6 +1662,7 @@ YC
 YCloud
 yml
 YouTube
+YYYY
 zabbix
 Zabbix
 ZFS
@@ -1778,11 +1780,13 @@ ZvirtInstanceClass
 валидации
 валидацию
 валидация
+валиден
 валидирования
 валидировать
 валидирует
 валидируется
 валидируются
+валидными
 вебхук
 вебхука
 вебхуки
@@ -2088,6 +2092,7 @@ ZvirtInstanceClass
 мультикластером
 мультимастер
 мультимастерного
+мультимастерной
 мультимастерном
 мультимастерный
 мультиплатформенной
@@ -2203,6 +2208,7 @@ ZvirtInstanceClass
 перевыпуск
 перевыпуска
 перевыпускаются
+Перевыпустите
 перевыпустить
 перегенерации
 перегенерация
@@ -2531,6 +2537,7 @@ ZvirtInstanceClass
 трудозатраты
 туториала
 увереным
+УЦ
 уязвимостей
 уязвимостям
 уязвимостями
@@ -2621,9 +2628,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-RoleBinding
-YYYY
-Перевыпустите
-валиден
-валидными
-мультимастерной

@@ -7,7 +7,7 @@ FORMATTING_END = \033[0m
 FOCUS =
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
-SPELLCHECKER_IMAGE = registry.deckhouse.io/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
+SPELLCHECKER_IMAGE = registry.deckhouse.ru/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
 
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
@@ -608,8 +608,8 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.30.12
 DMT_VERSION ?= 0.1.75
-CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CODE_GENERATOR_VERSION ?= v0.33.8
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
+CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
 GOTESTSUM_VERSION ?= v1.13.0
 
