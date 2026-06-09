@@ -33,7 +33,7 @@ properties:
       Настройки trivy-провайдера.
 
       Trivy-провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
-      Если на namespace нет этого лейбла, проверка уязвимостей для него не применяется.
+      Если на неймспейсе нет этого лейбла, проверка уязвимостей для него не применяется.
     properties:
       allowedSeverityLevels:
         description: |-
