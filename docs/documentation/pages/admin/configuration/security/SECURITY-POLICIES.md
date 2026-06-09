@@ -11,7 +11,7 @@ In the DKP policies are divided into three categories:
 
 - [Pod Security Standards](#applying-pod-security-standards): Policies that comply with the relevant [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
 - [Operational policies](#operational-policies): Policies for creating additional requirements for objects by validating the values of parameters that are **not directly related** to security (for example, a list of allowed prefixes for container images, an image download policy, a list of required container images, etc.).
-- [Security policies](#security-policies): Policies for creating additional requirements on objects by validating the values of security-related parameters (e.g., container access to the host’s IPC or PID namespaces, privilege lists for containers, etc.).
+- [Security policies](#security-policies): Policies for creating additional requirements on objects by validating the values of security-related parameters (for example, container access to the host’s IPC or PID namespaces, privilege lists for containers, etc.).
 
 {% alert level="info" %}
 These policies complement each other. If multiple policies are applied to a single namespace, objects are validated against each of them. If even one policy is violated, the object will not be created.
@@ -24,11 +24,11 @@ Depending on how pods are created, there are differences in how the API generate
 - If a pod is created directly, the validation error is returned in the API response indicating a validation failure (policy violation).
 - If pods are created via Deployment, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
 
-## Pod validation when policies are modified or new ones are added
+## Pod validation when policies are modified or added
 
 For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.
 
-The `admission-policy-engine` module provides alerts (`kind: ClusterObservabilityAlert`) for such cases, notifying you of pods in the namespace that violate policies after an existing policy is modified or a new one is added.
+In DKP, there are alerts (ClusterObservabilityAlert resources) for such cases, notifying you of pods in the namespace that violate policies after an existing policy is modified or a new one is added.
 
 To get a list of alerts, use the command:
 
