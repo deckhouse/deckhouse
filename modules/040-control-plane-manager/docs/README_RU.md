@@ -11,7 +11,7 @@ description: Deckhouse управляет компонентами control plane
 - **Настройка компонентов**. Автоматически создает необходимые конфигурации и манифесты компонентов `control-plane`.
 - **Upgrade/downgrade компонентов**. Поддерживает в кластере одинаковые версии компонентов.
 - **Управление конфигурацией etcd-кластера** и его членов. Масштабирует master-узлы, выполняет миграцию из single-master в multi-master и обратно.
-- **Настройка kubeconfig**. Обеспечивает актуальные файлы kubeconfig на узлах control-plane. Генерирует, продлевает и обновляет kubeconfig для компонентов control-plane и admin kubeconfig (`admin.conf`). По умолчанию создаёт символическую ссылку для root-пользователя (`/root/.kube/config` -> `admin.conf`). При включённом модуле [user-authz](/modules/user-authz/) симлинк можно отключить параметром `rootKubeconfigSymlink` в модуле **control-plane-manager** (см. [FAQ](faq.html#модель-административного-доступа-к-кластеру)). Также ужесточает права доступа к файлам `admin.conf` и `super-admin.conf`.
+- **Настройка kubeconfig**. Обеспечивает актуальные файлы kubeconfig на узлах control-plane. Генерирует, продлевает и обновляет kubeconfig для компонентов control-plane и admin kubeconfig (`admin.conf`). По умолчанию создаёт символическую ссылку для root-пользователя (`/root/.kube/config` -> `admin.conf`). При включённом модуле [user-authz](/modules/user-authz/) символическую ссылку можно отключить параметром `rootKubeconfigSymlink` в модуле **control-plane-manager** (см. [FAQ](faq.html#модель-административного-доступа-к-кластеру)). Также ужесточает права доступа к файлам `admin.conf` и `super-admin.conf`.
 - **Расширение работы планировщика**, за счет подключения внешних плагинов через вебхуки. Управляется ресурсом [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration). Позволяет использовать более сложную логику при решении задач планирования нагрузки в кластере. Например:
   - размещение подов приложений организации хранилища данных ближе к самим данным,
   - приоритизация узлов в зависимости от их состояния (сетевой нагрузки, состояния подсистемы хранения и т. д.),
@@ -200,7 +200,7 @@ spec:
 
 ## Защита чувствительных полей кастомных ресурсов
 
-Feature gate `CRDSensitiveData` обеспечивает защиту чувствительных данных на уровне полей в ресурсах, помеченных маркером `x-kubernetes-sensitive-data: true`. Функция реализована в виде патча к `kube-apiserver` (apiextensions-apiserver)
+Feature gate `CRDSensitiveData` обеспечивает защиту чувствительных данных на уровне полей в ресурсах, помеченных маркером `x-kubernetes-sensitive-data: true`. Функция реализована в виде патча к `kube-apiserver` (`apiextensions-apiserver`)
 и поддерживается, начиная с версии Kubernetes 1.31.
 
 Маркер `x-kubernetes-sensitive-data` проверяется `kube-apiserver` при применении ресурса:

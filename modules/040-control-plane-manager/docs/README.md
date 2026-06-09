@@ -214,7 +214,7 @@ More information about feature gates is available in the [Kubernetes documentati
 
 The `CRDSensitiveData` feature gate provides field-level protection for sensitive data in resources
 marked with the `x-kubernetes-sensitive-data: true` annotation.
-This feature is implemented as a patch to `kube-apiserver` (apiextensions-apiserver)
+This feature is implemented as a patch to `kube-apiserver` (`apiextensions-apiserver`)
 and is supported starting from Kubernetes version 1.31.
 
 The `x-kubernetes-sensitive-data` marker is validated by `kube-apiserver` when applying a resource:
