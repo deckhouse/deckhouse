@@ -47,18 +47,19 @@ func mustMetaConfigForProvider(t *testing.T, providerName string) *MetaConfig {
 
 func mustSeedCloudProviderMC(t *testing.T, kubeCl *client.KubernetesClient, providerName string) {
 	t.Helper()
+	// schemaStore=nil in these tests skips the validation path entirely,
+	// so the content of settings does not matter for correctness. Keep it
+	// empty to remain compatible should a future test wire a real schema
+	// store: real cloud-provider-<name> schemas do not expose
+	// nodes.parameters.layout.
 	mc := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "ModuleConfig",
 		"metadata":   map[string]interface{}{"name": "cloud-provider-" + providerName},
 		"spec": map[string]interface{}{
-			"version": float64(2),
-			"enabled": true,
-			"settings": map[string]interface{}{
-				"nodes": map[string]interface{}{
-					"parameters": map[string]interface{}{"layout": "Standard"},
-				},
-			},
+			"version":  float64(2),
+			"enabled":  true,
+			"settings": map[string]interface{}{},
 		},
 	}}
 	_, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Create(t.Context(), mc, metav1.CreateOptions{})

@@ -855,18 +855,20 @@ provider:
 func testCreateCloudProviderModuleConfig(t *testing.T, kubeCl *client.KubernetesClient, providerName string) {
 	t.Helper()
 
+	// Real cloud-provider-<name> ModuleConfig schemas vary per provider
+	// (yandex exposes additionalExternalNetworkIDs/storageClass, not
+	// nodes.parameters.layout). These tests don't exercise
+	// applyCloudProviderModuleSettings — they only need the MC to exist as
+	// a marker — so seed an empty-settings spec that validates under any
+	// provider's schema.
 	mc := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "ModuleConfig",
 		"metadata":   map[string]interface{}{"name": "cloud-provider-" + providerName},
 		"spec": map[string]interface{}{
-			"version": float64(2),
-			"enabled": true,
-			"settings": map[string]interface{}{
-				"nodes": map[string]interface{}{
-					"parameters": map[string]interface{}{"layout": "Standard"},
-				},
-			},
+			"version":  float64(2),
+			"enabled":  true,
+			"settings": map[string]interface{}{},
 		},
 	}}
 
