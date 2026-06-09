@@ -668,11 +668,6 @@ func testYAMLToUnstructured(t *testing.T, r string) *unstructured.Unstructured {
 func testCreateFakeKubeClient() *client.KubernetesClient {
 	kinds := map[schema.GroupVersionResource]string{
 		v1.NodeUserGVR: v1.NodeUserList,
-		{
-			Group:    "infrastructure.cluster.x-k8s.io",
-			Version:  "v1alpha1",
-			Resource: "deckhouseclusters",
-		}: "DeckhouseClusterList",
 	}
 
 	apisToAdd := []apis.ListKindToGVR{

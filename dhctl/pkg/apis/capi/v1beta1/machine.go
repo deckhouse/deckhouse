@@ -27,15 +27,18 @@ const (
 	group        = "cluster.x-k8s.io"
 	groupVersion = "v1beta1"
 
+	clustersName    = "clusters"
 	machinesName    = "machines"
 	deploymentsName = "machinedeployments"
 )
 
 var (
+	ClusterGVR           = schema.GroupVersionResource{Group: group, Version: groupVersion, Resource: clustersName}
 	MachineDeploymentGVR = schema.GroupVersionResource{Group: group, Version: groupVersion, Resource: deploymentsName}
 	MachineGVR           = schema.GroupVersionResource{Group: group, Version: groupVersion, Resource: machinesName}
 
 	listKindsToGVR = apis.ListKindToGVR{
+		"ClusterList":           ClusterGVR,
 		"MachineDeploymentList": MachineDeploymentGVR,
 		"MachineList":           MachineGVR,
 	}
@@ -45,6 +48,14 @@ var (
 		Version: groupVersion,
 	}
 
+	ClusterAPIResource = metav1.APIResource{
+		Kind:       "Cluster",
+		Name:       clustersName,
+		Verbs:      metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+		Group:      group,
+		Version:    groupVersion,
+		Namespaced: true,
+	}
 	MachineDeploymentAPIResource = metav1.APIResource{
 		Kind:       "MachineDeployment",
 		Name:       deploymentsName,
@@ -70,6 +81,6 @@ func ListsGVRs() apis.ListKindToGVR {
 func APIResourcesList() *metav1.APIResourceList {
 	return &metav1.APIResourceList{
 		GroupVersion: GV.String(),
-		APIResources: []metav1.APIResource{MachineAPIResource, MachineDeploymentAPIResource},
+		APIResources: []metav1.APIResource{ClusterAPIResource, MachineAPIResource, MachineDeploymentAPIResource},
 	}
 }
