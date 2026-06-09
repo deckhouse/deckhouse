@@ -1,0 +1,181 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: control-plane-manager
+  name: virtualcontrolplanes.control-plane.deckhouse.io
+spec:
+  group: control-plane.deckhouse.io
+  names:
+    kind: VirtualControlPlane
+    listKind: VirtualControlPlaneList
+    plural: virtualcontrolplanes
+    shortNames:
+    - vcp
+    singular: virtualcontrolplane
+  preserveUnknownFields: false
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Desired Kubernetes version.
+      jsonPath: .spec.kubernetesVersion
+      name: Version
+      type: string
+    - description: Desired number of control plane replicas.
+      jsonPath: .spec.replicas
+      name: Replicas
+      type: integer
+    - description: Published Kubernetes API endpoint.
+      jsonPath: .status.endpoint
+      name: Endpoint
+      priority: 1
+      type: string
+    - description: Virtual control plane readiness.
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VirtualControlPlane describes a tenant Kubernetes control plane managed by the control-plane-manager module.
+
+          The resource is cluster-scoped. Each VirtualControlPlane represents one tenant control plane and is used as
+          the desired-state source for the resources required to run it in the management cluster.
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Desired state of the virtual control plane.
+            properties:
+              datastoreRef:
+                description: |-
+                  Reference to a datastore configuration used by the tenant control plane.
+
+                  The exact datastore contract is intentionally kept small at this stage and can be extended when the
+                  datastore implementation is introduced.
+                properties:
+                  name:
+                    description: Datastore configuration name.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                required:
+                - name
+                type: object
+              expose:
+                description: Kubernetes API exposure settings.
+                properties:
+                  type:
+                    default: ClusterIP
+                    description: Service type used to expose the tenant Kubernetes API.
+                    enum:
+                    - ClusterIP
+                    - LoadBalancer
+                    - NodePort
+                    type: string
+                type: object
+              kubernetesVersion:
+                description: Desired Kubernetes version for the tenant control plane.
+                minLength: 1
+                pattern: ^[0-9]+\.[0-9]+(\.[0-9]+)?$
+                type: string
+              replicas:
+                default: 1
+                description: Desired number of control plane replicas.
+                minimum: 1
+                type: integer
+            required:
+            - kubernetesVersion
+            type: object
+          status:
+            description: Observed state of the virtual control plane.
+            properties:
+              conditions:
+                description: Current service state of the virtual control plane.
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human-readable message with details about the transition.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: The .metadata.generation value that the condition was set based upon.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: Machine-readable reason for the condition state.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: Status of the condition.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: Type of condition.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              endpoint:
+                description: Kubernetes API endpoint exposed for users and tenant worker nodes.
+                type: string
+              kubeconfigSecretRef:
+                description: Reference to a Secret with kubeconfig for accessing the tenant Kubernetes API.
+                properties:
+                  name:
+                    description: Secret name.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  namespace:
+                    description: Secret namespace.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
+              observedKubernetesVersion:
+                description: Kubernetes version currently observed in the tenant control plane.
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    subresources:
+      status: {}
+    served: true
+    storage: true
