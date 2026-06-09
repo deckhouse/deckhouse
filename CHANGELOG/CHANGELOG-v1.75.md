@@ -133,7 +133,7 @@
  - **[admission-policy-engine]** Fixed multiple CVEs in admission-policy-engine module images (ratify, gatekeeper) by updating. dependencies. [#17667](https://github.com/deckhouse/deckhouse/pull/17667)
  - **[admission-policy-engine]** Fixed tri-state semantics for empty arrays and avoided empty objects in OperationPolicy/SecurityPolicy values. [#17343](https://github.com/deckhouse/deckhouse/pull/17343)
  - **[admission-policy-engine]** Added and extend unit tests to cover tri-state behavior (omitted / empty / non-empty) and nested empty-array cases for both hooks. [#17308](https://github.com/deckhouse/deckhouse/pull/17308)
- - **[admission-policy-engine]** Refactor main documentation page. [#20048](https://github.com/deckhouse/deckhouse/pull/20048)
+ - **[candi]** fix cve node-manager and opentofu. [#19942](https://github.com/deckhouse/deckhouse/pull/19942)
  - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#19448](https://github.com/deckhouse/deckhouse/pull/19448)
  - **[candi]** Server bootstrap logs are no longer transmitted via nc; Python is used instead. [#17451](https://github.com/deckhouse/deckhouse/pull/17451)
  - **[candi]** Improved static node cleanup script. [#17418](https://github.com/deckhouse/deckhouse/pull/17418)
@@ -282,6 +282,7 @@
     restart controllers
  - **[ingress-nginx]** Added architecture-bashed node affinity settings. [#16939](https://github.com/deckhouse/deckhouse/pull/16939)
  - **[ingress-nginx]** Fixed the display of IP addresses in the status of Ingress resources with the LoadBalancer type. [#15892](https://github.com/deckhouse/deckhouse/pull/15892)
+ - **[istio]** Implement graceful metadata secret renewal for multiclusters. [#20207](https://github.com/deckhouse/deckhouse/pull/20207)
  - **[istio]** fixed CVEs in module images [#19364](https://github.com/deckhouse/deckhouse/pull/19364)
     module pods will be restarted
  - **[istio]** fixed CVE-2026-34986 [#18972](https://github.com/deckhouse/deckhouse/pull/18972)
@@ -304,6 +305,7 @@
  - **[network-policy-engine]** Fixed a bug that led to CrashLoopBackOff kube-router's pods. [#17737](https://github.com/deckhouse/deckhouse/pull/17737)
  - **[node-local-dns]** Fix werf manifest [#18738](https://github.com/deckhouse/deckhouse/pull/18738)
  - **[node-local-dns]** Adapt node-local-dns for air-gapped environments. [#18643](https://github.com/deckhouse/deckhouse/pull/18643)
+ - **[node-manager]** Fix static NodeGroup readiness calculation. [#20382](https://github.com/deckhouse/deckhouse/pull/20382)
  - **[node-manager]** CAPI crd served version fix [#19665](https://github.com/deckhouse/deckhouse/pull/19665)
  - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19652](https://github.com/deckhouse/deckhouse/pull/19652)
  - **[node-manager]** rollback inject capi conversion hook in crds as on-before-helm [#19137](https://github.com/deckhouse/deckhouse/pull/19137)
