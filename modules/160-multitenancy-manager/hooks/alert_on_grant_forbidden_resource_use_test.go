@@ -63,7 +63,7 @@ spec:
     matchLabels:
       heritage: multitenancy-manager
   resources:
-  - resourceRef: testreg
+  - resourceName: testreg
     allowed: ["local", "abcd"]
 ---
 apiVersion: v1

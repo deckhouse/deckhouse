@@ -522,7 +522,7 @@ spec:
     matchLabels:
       environment: production    # matches Project.metadata.labels
   resources:
-  - resourceRef: storageclasses  # allow-list + default only (quota is on the Project)
+  - resourceName: storageclasses  # allow-list + default only (quota is on the Project)
     allowed:
     - standard
     default: standard

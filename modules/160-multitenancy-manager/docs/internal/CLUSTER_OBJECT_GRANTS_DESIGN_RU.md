@@ -107,7 +107,7 @@ flowchart LR
   CGR["ClusterGrantableResource<br/>(что и как — разработчик)"]
   AR["AvailableResource<br/>(каталог; namespaced)"]
   GQ["GrantQuota<br/>(квота объектов: пул + расход; namespaced)"]
-  COG -- "resources[].resourceRef" --> CGR
+  COG -- "resources[].resourceName" --> CGR
   COG -- "реконсиляция: метки project ⇒ namespaces" --> AR
   GQ -- "spec.objects пул ⇒ рендер по namespace" --> GQ
 ```
@@ -193,14 +193,14 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: storageclasses    # storage-классы: allow-list + default
+  - resourceName: storageclasses    # storage-классы: allow-list + default
     allowed:                       # по имени…
     - standard
     allowedSelector:               # …объединение с granted-объектами по меткам
       matchLabels:
         shared: "true"
     default: standard              # per-project дефолт (перекрывает defaultFrom)
-  - resourceRef: loadbalancerclasses
+  - resourceName: loadbalancerclasses
     allowed:
     - external
     - internal
@@ -210,7 +210,7 @@ spec:
 | Поле | Тип | Обяз. | Значение |
 |------|-----|-------|----------|
 | `projectSelector` | LabelSelector | да | выбирает Project по меткам (nil ⇒ никого; пустой ⇒ все) |
-| `resources[].resourceRef` | string | да | имя `ClusterGrantableResource` |
+| `resources[].resourceName` | string | да | имя `ClusterGrantableResource` |
 | `resources[].allowed` | []string | нет | разрешённые имена granted-объектов (объединение с `allowedSelector`) |
 | `resources[].allowedSelector` | LabelSelector | нет | granted-объекты с этими метками разрешены (объединение с `allowed`) |
 | `resources[].denied` | []string | нет | имена объектов, явно исключённые для совпавших проектов (история A5); перекрывают `allowed` |
@@ -363,7 +363,7 @@ status:
 `ProjectNamespace` (слайсы), granted-объекта или usage-объекта. Для каждого совпавшего Project (по
 `projectSelector`) → развернуть в его namespace и:
 
-- upsert `AvailableResource` на `(namespace, resourceRef)` — доступный набор (`allowed` ∪
+- upsert `AvailableResource` на `(namespace, resourceName)` — доступный набор (`allowed` ∪
   `allowedSelector`) и дефолт (**каталог**);
 - отрендерить read-only `GrantQuota` на каждый рабочий namespace — эффективный `limit` (слайс
   `ProjectNamespace`, если задан, иначе пул из `GrantQuota.spec` в control namespace) и `used`,
@@ -541,7 +541,7 @@ optimistic check-and-update `used` в `GrantQuota.status` (retry на конфл
 Используется [`ClusterObjectGrant`](#clusterobjectgrant). Один грант — переиспользуемый пресет,
 навешиваемый на класс проектов по метке (история A4).
 
-- **A1 — назначить ресурсы.** Задайте `resources[].resourceRef` и `allowed` / `allowedSelector`
+- **A1 — назначить ресурсы.** Задайте `resources[].resourceName` и `allowed` / `allowedSelector`
   (объединение). Пример: разрешить `standard` плюс любой StorageClass с меткой `shared=true`.
 - **A2 — задать дефолт.** `resources[].default` (перекрывает `defaultFrom` разработчика).
 - **A3 — задать квоты.** Квоты задаются **не** в гранте. Compute → `Project.spec.quota.compute`;
@@ -576,7 +576,7 @@ optimistic check-and-update `used` в `GrantQuota.status` (retry на конфл
 
 - Один контроллер, влит в `multitenancy-manager`; без отдельного образа.
 - Оставляем свои вебхуки (не `ValidatingAdmissionPolicy`): квоты всё равно требуют своего энфорсмента.
-- Четыре CRD; грант использует `resources[]` с `resourceRef`.
+- Четыре CRD; грант использует `resources[]` с `resourceName`.
 - `projectSelector` матчит метки Project, затем разворачивается в namespace проекта.
 - **Квота по механизму, не в гранте.** Compute → `Project.spec.quota.compute` (нативный `ResourceQuota`).
   Objects → [`GrantQuota`](#grantquota): `spec` (пул, control namespace) + `status` (расход), по ключу
@@ -719,7 +719,7 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: storageclasses     # только allow-list + default
+  - resourceName: storageclasses     # только allow-list + default
     allowed:
     - standard
     allowedSelector:
@@ -814,7 +814,7 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: loadbalancerclasses     # только allow-list + default
+  - resourceName: loadbalancerclasses     # только allow-list + default
     allowed:
     - external
     - internal
@@ -931,7 +931,7 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: clusterroles
+  - resourceName: clusterroles
     allowedSelector:                 # разрешить биндить любой ClusterRole с этой меткой
       matchLabels:
         rbac.deckhouse.io/tenant-bindable: "true"

@@ -108,7 +108,7 @@ flowchart LR
   CGR["ClusterGrantableResource<br/>(what & how — dev)"]
   AR["AvailableResource<br/>(catalog; namespaced)"]
   GQ["GrantQuota<br/>(object quota: pool + usage; namespaced)"]
-  COG -- "resources[].resourceRef" --> CGR
+  COG -- "resources[].resourceName" --> CGR
   COG -- "reconcile: project labels ⇒ namespaces" --> AR
   GQ -- "spec.objects pool ⇒ rendered per namespace" --> GQ
 ```
@@ -196,14 +196,14 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: storageclasses    # storage classes: allow-list + default
+  - resourceName: storageclasses    # storage classes: allow-list + default
     allowed:                       # by name…
     - standard
     allowedSelector:               # …union with granted objects carrying these labels
       matchLabels:
         shared: "true"
     default: standard              # per-project default (overrides defaultFrom)
-  - resourceRef: loadbalancerclasses
+  - resourceName: loadbalancerclasses
     allowed:
     - external
     - internal
@@ -213,7 +213,7 @@ spec:
 | Field | Type | Req | Meaning |
 |-------|------|-----|---------|
 | `projectSelector` | LabelSelector | yes | selects Projects by labels (nil ⇒ none; empty ⇒ all) |
-| `resources[].resourceRef` | string | yes | name of a `ClusterGrantableResource` |
+| `resources[].resourceName` | string | yes | name of a `ClusterGrantableResource` |
 | `resources[].allowed` | []string | no | granted object names allowed (union with `allowedSelector`) |
 | `resources[].allowedSelector` | LabelSelector | no | granted objects matching these labels are allowed (union with `allowed`) |
 | `resources[].denied` | []string | no | object names explicitly excluded for matched projects (story A5); overrides `allowed` |
@@ -368,7 +368,7 @@ Triggered by changes to any grant, grantable resource, `Project` (labels), the p
 `ProjectNamespace` (slices), a granted object, or a usage object. For each matched Project (by
 `projectSelector`) → expand to its namespaces and:
 
-- upsert an `AvailableResource` per `(namespace, resourceRef)` — the available set
+- upsert an `AvailableResource` per `(namespace, resourceName)` — the available set
   (`allowed` ∪ `allowedSelector`) and the default (the **catalog**);
 - render a read-only `GrantQuota` per workload namespace — effective `limit` (the `ProjectNamespace`
   slice if set, else the pool from the control-namespace `GrantQuota.spec`) and `used` recomputed from
@@ -550,7 +550,7 @@ Remember: `fieldPath` must resolve to the granted object's **name**; validation 
 You use [`ClusterObjectGrant`](#clusterobjectgrant). One grant is a reusable preset attached to a
 class of projects by label (story A4).
 
-- **A1 — assign resources.** Set `resources[].resourceRef` and `allowed` / `allowedSelector` (union).
+- **A1 — assign resources.** Set `resources[].resourceName` and `allowed` / `allowedSelector` (union).
   Example: allow `standard` plus any StorageClass labelled `shared=true`.
 - **A2 — set the default.** Set `resources[].default` (overrides the developer's `defaultFrom`).
 - **A3 — set quotas.** Quotas are **not** on the grant. Compute → `Project.spec.quota.compute`; object
@@ -584,7 +584,7 @@ tenants:
 
 - One controller, merged into `multitenancy-manager`; no separate image.
 - Keep custom webhooks (not `ValidatingAdmissionPolicy`): quotas need custom enforcement anyway.
-- Four CRDs; the grant uses `resources[]` with `resourceRef`.
+- Four CRDs; the grant uses `resources[]` with `resourceName`.
 - `projectSelector` matches Project labels, then expands to the project's namespaces.
 - **Quota by mechanism, not on the grant.** Compute → `Project.spec.quota.compute` (native
   `ResourceQuota`). Objects → [`GrantQuota`](#grantquota): `spec` (pool, control namespace) + `status`
@@ -727,7 +727,7 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: storageclasses     # allow-list + default only
+  - resourceName: storageclasses     # allow-list + default only
     allowed:
     - standard
     allowedSelector:
@@ -823,7 +823,7 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: loadbalancerclasses     # allow-list + default only
+  - resourceName: loadbalancerclasses     # allow-list + default only
     allowed:
     - external
     - internal
@@ -940,7 +940,7 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: clusterroles
+  - resourceName: clusterroles
     allowedSelector:                 # allow binding any ClusterRole labelled for tenants
       matchLabels:
         rbac.deckhouse.io/tenant-bindable: "true"

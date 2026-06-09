@@ -226,11 +226,12 @@ spec:
                           type: object
                       type: object
                       x-kubernetes-map-type: atomic
-                    resourceRef:
-                      description: ResourceRef is the name of a ClusterGrantableResource.
+                    resourceName:
+                      description: ResourceName is the name of the ClusterGrantableResource
+                        this entry configures.
                       type: string
                   required:
-                  - resourceRef
+                  - resourceName
                   type: object
                 type: array
             required:

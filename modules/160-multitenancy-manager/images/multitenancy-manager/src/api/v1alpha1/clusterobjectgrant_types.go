@@ -25,9 +25,9 @@ import (
 // GrantResource is one entry of a grant: it references a ClusterGrantableResource and decides
 // the per-project allow-list and default. It carries no quota (object quota lives on GrantQuota).
 type GrantResource struct {
-	// ResourceRef is the name of a ClusterGrantableResource.
+	// ResourceName is the name of the ClusterGrantableResource this entry configures.
 	// +required
-	ResourceRef string `json:"resourceRef"`
+	ResourceName string `json:"resourceName"`
 
 	// Allowed is an explicit list of granted object names (union with AllowedSelector).
 	// +optional

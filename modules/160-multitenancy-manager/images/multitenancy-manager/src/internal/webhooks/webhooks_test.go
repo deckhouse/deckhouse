@@ -128,9 +128,9 @@ func lbGrant() *v1alpha1.ClusterObjectGrant {
 		Spec: v1alpha1.ClusterObjectGrantSpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
 			Resources: []v1alpha1.GrantResource{{
-				ResourceRef: "loadbalancerclasses",
-				Allowed:     []string{"external", "internal"},
-				Default:     "internal",
+				ResourceName: "loadbalancerclasses",
+				Allowed:      []string{"external", "internal"},
+				Default:      "internal",
 			}},
 		},
 	}
@@ -335,7 +335,7 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
 		Spec: v1alpha1.ClusterObjectGrantSpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
-			Resources:       []v1alpha1.GrantResource{{ResourceRef: "storageclasses", Allowed: []string{"local"}}},
+			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"local"}}},
 		},
 	}
 	repl := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "replicated", Annotations: map[string]string{"storageclass.kubernetes.io/is-default-class": "true"}}, Provisioner: "x"}
@@ -366,7 +366,7 @@ func TestIsGranted_ObjectBackedSelector(t *testing.T) {
 		Spec: v1alpha1.ClusterObjectGrantSpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
 			Resources: []v1alpha1.GrantResource{{
-				ResourceRef:     "storageclasses",
+				ResourceName:    "storageclasses",
 				AllowedSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"shared": "true"}},
 			}},
 		},

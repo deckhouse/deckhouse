@@ -65,7 +65,7 @@ type grant struct {
 }
 
 type grantResource struct {
-	ResourceRef         string            `json:"resourceRef"`
+	ResourceName         string            `json:"resourceName"`
 	Allowed             []string          `json:"allowed"`
 	AllowedSelector     *v1.LabelSelector `json:"allowedSelector"`
 	Denied              []string          `json:"denied"`
@@ -456,20 +456,20 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 
 	var violations []violation
 	for _, entry := range g.Spec.Resources {
-		regObj, err := kube.Dynamic().Resource(regGVR).Get(ctx, entry.ResourceRef, v1.GetOptions{})
+		regObj, err := kube.Dynamic().Resource(regGVR).Get(ctx, entry.ResourceName, v1.GetOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("get ClusterGrantableResource %s: %w", entry.ResourceRef, err)
+			return nil, fmt.Errorf("get ClusterGrantableResource %s: %w", entry.ResourceName, err)
 		}
 		reg := &clusterGrantableResource{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(regObj.Object, reg); err != nil {
-			return nil, fmt.Errorf("convert ClusterGrantableResource %s: %w", entry.ResourceRef, err)
+			return nil, fmt.Errorf("convert ClusterGrantableResource %s: %w", entry.ResourceName, err)
 		}
 		if reg.Spec.Enforcement == "External" {
 			continue
 		}
 		decision, err := buildDecisionSets(ctx, kube, entry, reg)
 		if err != nil {
-			return nil, fmt.Errorf("build decision for %s: %w", entry.ResourceRef, err)
+			return nil, fmt.Errorf("build decision for %s: %w", entry.ResourceName, err)
 		}
 
 		for _, ref := range reg.Spec.UsageReferences {
@@ -477,7 +477,7 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 				path := selectFieldPath(ref, gvr.Group, gvr.Version)
 				jsonPath, err := jsonpath.Parse(path)
 				if err != nil {
-					log.Error("Invalid JSONPath expression", "expr", path, "registration", entry.ResourceRef)
+					log.Error("Invalid JSONPath expression", "expr", path, "registration", entry.ResourceName)
 					continue
 				}
 				for _, project := range projects {

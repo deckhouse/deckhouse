@@ -513,7 +513,7 @@ spec:
     matchLabels:
       environment: production    # матчит Project.metadata.labels
   resources:
-  - resourceRef: storageclasses  # только allow-list + default (квота — на Project)
+  - resourceName: storageclasses  # только allow-list + default (квота — на Project)
     allowed:
     - standard
     default: standard
@@ -594,14 +594,14 @@ spec:
     matchLabels:
       environment: production
   resources:
-  - resourceRef: storageclasses     # allow-list + default
+  - resourceName: storageclasses     # allow-list + default
     allowed:
     - standard
     allowedSelector:
       matchLabels:
         tier: fast
     default: standard
-  - resourceRef: loadbalancerclasses   # allow-list + default
+  - resourceName: loadbalancerclasses   # allow-list + default
     allowed:
     - external
     - internal

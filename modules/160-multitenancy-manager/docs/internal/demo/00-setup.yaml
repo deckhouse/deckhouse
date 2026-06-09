@@ -32,15 +32,15 @@ spec:
   resources:
     # An allow-list restricts the resource to it (baseline None is inferred); set availabilityDefault
     # explicitly only to flip the baseline without a list (All to open fully, None to lock down).
-    - resourceRef: storageclasses
+    - resourceName: storageclasses
       allowed:
         - local
       default: local
-    - resourceRef: clusterissuers
+    - resourceName: clusterissuers
       allowed:
         - selfsigned
       default: selfsigned
-    - resourceRef: loadbalancerclasses
+    - resourceName: loadbalancerclasses
       allowed:
         - internal
 ---

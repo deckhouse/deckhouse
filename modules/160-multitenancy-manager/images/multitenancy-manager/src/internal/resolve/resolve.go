@@ -87,11 +87,11 @@ func GrantsForLabels(ctx context.Context, cl client.Client, nsLabels map[string]
 
 // EntriesFor collects the grant resource entries referencing the given registration name across all
 // the supplied grants.
-func EntriesFor(grants []*v1alpha1.ClusterObjectGrant, resourceRef string) []v1alpha1.GrantResource {
+func EntriesFor(grants []*v1alpha1.ClusterObjectGrant, resourceName string) []v1alpha1.GrantResource {
 	out := make([]v1alpha1.GrantResource, 0)
 	for _, g := range grants {
 		for i := range g.Spec.Resources {
-			if g.Spec.Resources[i].ResourceRef == resourceRef {
+			if g.Spec.Resources[i].ResourceName == resourceName {
 				out = append(out, g.Spec.Resources[i])
 			}
 		}

@@ -178,7 +178,7 @@ func selectorMatches(ls *metav1.LabelSelector, objLabels labels.Set) (bool, erro
 
 // Available decides whether a project may use a given granted object, applying the precedence:
 // excluded → denied → allowed → grant availabilityDefault → registration defaultAvailability.
-// grantEntries are the applicable grant resource entries (already filtered to this resourceRef).
+// grantEntries are the applicable grant resource entries (already filtered to this resource name).
 // objLabels are the granted object's labels (nil for value-backed resources).
 func Available(
 	reg *v1alpha1.ClusterGrantableResource,

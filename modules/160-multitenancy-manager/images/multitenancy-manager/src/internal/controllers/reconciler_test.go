@@ -84,7 +84,7 @@ func TestReconcile_CatalogAndQuota(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
 		Spec: v1alpha1.ClusterObjectGrantSpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
-			Resources:       []v1alpha1.GrantResource{{ResourceRef: "storageclasses", Allowed: []string{"standard"}, Default: "standard"}},
+			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"standard"}, Default: "standard"}},
 		},
 	}
 	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x"}
