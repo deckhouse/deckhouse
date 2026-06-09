@@ -43,7 +43,20 @@ var (
 	once     sync.Once
 )
 
+type IExtender interface {
+	extenders.Extender
+	extenders.TopologicalExtender
+	extenders.StatefulExtender
+
+	SetModulesVersionHelper(f func(moduleName string) (string, error))
+	AddConstraint(name string, value map[string]string) error
+	DeleteConstraint(name string)
+	ValidateRelease(moduleName, moduleRelease string, version *semver.Version, value map[string]string) error
+	CheckEnabling(moduleName string) error
+}
+
 var (
+	_ IExtender                     = &Extender{}
 	_ extenders.Extender            = &Extender{}
 	_ extenders.TopologicalExtender = &Extender{}
 	_ extenders.StatefulExtender    = &Extender{}
