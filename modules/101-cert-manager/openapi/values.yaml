@@ -43,3 +43,10 @@ properties:
         format: email
         x-examples: ["example@example.com"]
 
+      enableCAInjector:
+        type: boolean
+        default: false
+        description: |
+          Internal flag that controls CAInjector rendering.
+          It is resolved from manual setting (`certManager.enableCAInjector`) or automatic resource discovery.
+
