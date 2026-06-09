@@ -133,6 +133,10 @@ func (c *ControllerService) CreateVolume(
 				)
 			}
 
+			if err := c.dvpCloudAPI.DiskService.WaitDiskCreation(ctx, disk.Name); err != nil {
+				return nil, status.Errorf(codes.Internal, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
+			}
+
 			result.Volume.VolumeId = disk.Name
 			result.Volume.CapacityBytes = requiredSize
 			return result, nil
@@ -171,6 +175,10 @@ func (c *ControllerService) CreateVolume(
 	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while creating disk %s: %v", diskName, err)
+	}
+
+	if err := c.dvpCloudAPI.DiskService.WaitDiskCreation(ctx, disk.Name); err != nil {
+		return nil, status.Errorf(codes.Internal, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
 	}
 
 	result.Volume.VolumeId = disk.Name

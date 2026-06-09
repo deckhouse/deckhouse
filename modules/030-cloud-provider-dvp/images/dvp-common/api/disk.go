@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	"github.com/deckhouse/virtualization/api/core/v1alpha2/vdcondition"
 )
 
 const (
@@ -282,6 +283,15 @@ func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) erro
 		vmd, ok := obj.(*v1alpha2.VirtualDisk)
 		if !ok {
 			return false, fmt.Errorf("expected a VirtualMachineDisk but got a %T", obj)
+		}
+
+		if vmd.Status.Phase == v1alpha2.DiskFailed {
+			for _, cond := range vmd.Status.Conditions {
+				if cond.Type == vdcondition.ReadyType.String() && cond.Status == metav1.ConditionFalse {
+					return false, fmt.Errorf("%s", cond.Message)
+				}
+			}
+			return false, fmt.Errorf("disk %q is in Failed phase", vmdName)
 		}
 
 		return vmd.Status.Phase == v1alpha2.DiskReady, nil
