@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/stretchr/testify/require"
@@ -201,7 +202,7 @@ func TestResourceMapper(t *testing.T) {
 }
 
 func TestUpdateTrackedObjectsConfigMapRetryOnConflict(t *testing.T) {
-	client := fake.NewFakeCluster(fake.ClusterVersionV121).Kubernetes
+	client := k8sfake.NewSimpleClientset()
 
 	_, err := client.CoreV1().ConfigMaps("d8-admission-policy-engine").Create(context.Background(), &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -212,7 +213,7 @@ func TestUpdateTrackedObjectsConfigMapRetryOnConflict(t *testing.T) {
 	require.NoError(t, err)
 
 	var updateAttempts int
-	client.Fake.PrependReactor("update", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
+	client.PrependReactor("update", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
 		updateAttempts++
 		if updateAttempts == 1 {
 			return true, nil, apierrors.NewConflict(schema.GroupResource{Group: "", Resource: "configmaps"}, "constraint-exporter", assert.AnError)
