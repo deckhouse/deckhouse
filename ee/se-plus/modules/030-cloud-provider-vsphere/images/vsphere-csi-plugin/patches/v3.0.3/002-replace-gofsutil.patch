@@ -1,0 +1,12 @@
+diff --git a/go.mod b/go.mod
+index db8c4231..dbbe14c4 100644
+--- a/go.mod
++++ b/go.mod
+@@ -194,6 +194,7 @@ replace (
+ 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.25.2
+ 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.25.2
+ 	k8s.io/code-generator => k8s.io/code-generator v0.25.2
++	github.com/akutz/gofsutil => ../gofsutil
+ 	k8s.io/component-base => k8s.io/component-base v0.25.2
+ 	k8s.io/component-helpers => k8s.io/component-helpers v0.25.2
+ 	k8s.io/controller-manager => k8s.io/controller-manager v0.25.2
