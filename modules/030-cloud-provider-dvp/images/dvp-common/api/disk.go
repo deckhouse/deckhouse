@@ -238,6 +238,17 @@ func (d *DiskService) ResizeDisk(ctx context.Context, diskName string, newSize s
 	return nil
 }
 
+func (d *DiskService) ListDisksByLabels(ctx context.Context, matchLabels map[string]string) ([]v1alpha2.VirtualDisk, error) {
+	var list v1alpha2.VirtualDiskList
+	if err := d.client.List(ctx, &list,
+		client.InNamespace(d.namespace),
+		client.MatchingLabels(matchLabels),
+	); err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
 func (d *DiskService) MigrateDiskStorageClass(ctx context.Context, diskName string, newStorageClass string) error {
 	vmd, err := d.GetDiskByName(ctx, diskName)
 	if err != nil {
