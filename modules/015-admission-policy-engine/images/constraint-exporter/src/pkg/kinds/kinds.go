@@ -43,7 +43,7 @@ const (
 )
 
 type KindTracker struct {
-	client      *kubernetes.Clientset
+	client      kubernetes.Interface
 	cmNamespace string
 	cmName      string
 
@@ -51,7 +51,7 @@ type KindTracker struct {
 	latestMutationsChecksum   string
 }
 
-func NewKindTracker(client *kubernetes.Clientset, cmNS, cmName string) *KindTracker {
+func NewKindTracker(client kubernetes.Interface, cmNS, cmName string) *KindTracker {
 	return &KindTracker{
 		client:      client,
 		cmNamespace: cmNS,
