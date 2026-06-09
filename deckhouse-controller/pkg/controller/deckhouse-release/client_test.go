@@ -51,13 +51,19 @@ func setupFakeController(
 	mup *v1alpha2.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
 ) (*deckhouseReleaseReconciler, client.Client) {
+	return setupControllerSettings(t, filename, values, newDeckhouseSettings(mup), options...)
+}
+
+// newDeckhouseSettings derives the controller's DeckhouseSettings from a module
+// update policy spec, the shape every controller test starts from.
+func newDeckhouseSettings(mup *v1alpha2.ModuleUpdatePolicySpec) *helpers.DeckhouseSettings {
 	ds := &helpers.DeckhouseSettings{
 		ReleaseChannel: mup.ReleaseChannel,
 	}
 	ds.Update.Mode = mup.Update.Mode
 	ds.Update.Windows = mup.Update.Windows
 	ds.Update.DisruptionApprovalMode = "Auto"
-	return setupControllerSettings(t, filename, values, ds, options...)
+	return ds
 }
 
 type reconcilerOption func(r *deckhouseReleaseReconciler)
@@ -88,12 +94,24 @@ func setupControllerSettings(
 		WithObjects(initObjects...).
 		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
 		Build()
-	dc := dependency.NewDependencyContainer()
+
+	return newDeckhouseReleaseReconciler(cl, ds, options...), cl
+}
+
+// newDeckhouseReleaseReconciler builds the reconciler under test against an
+// already-seeded client. It is shared by the package-level setup helpers (which
+// build their own client) and by ControllerTestSuite (which uses the reconciler
+// test framework's client), so the wiring stays in one place.
+func newDeckhouseReleaseReconciler(
+	cl client.Client,
+	ds *helpers.DeckhouseSettings,
+	options ...reconcilerOption,
+) *deckhouseReleaseReconciler {
 	metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
 	rec := &deckhouseReleaseReconciler{
 		client:           cl,
 		deckhouseVersion: testDeckhouseVersion,
-		dc:               dc,
+		dc:               dependency.NewDependencyContainer(),
 		logger:           log.NewNop(),
 		moduleManager:    stubModulesManager{},
 		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds, metricStorage),
@@ -107,7 +125,7 @@ func setupControllerSettings(
 		option(rec)
 	}
 
-	return rec, cl
+	return rec
 }
 
 func fetchTestFileData(t *testing.T, filename, valuesJSON string) string {

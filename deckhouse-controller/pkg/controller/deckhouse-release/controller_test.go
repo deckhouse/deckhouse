@@ -20,11 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -88,18 +86,24 @@ func TestControllerTestSuite(t *testing.T) {
 }
 
 type ControllerTestSuite struct {
-	suite.Suite
+	reconcilertest.Suite
 
-	kubeClient client.Client
-	ctr        *deckhouseReleaseReconciler
+	ctr *deckhouseReleaseReconciler
 
-	testDataFileName string
-	backupTZ         *time.Location
+	backupTZ *time.Location
 }
 
 func (suite *ControllerTestSuite) SetupSuite() {
-	flag.Parse()
-	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+	suite.Init(reconcilertest.Config{
+		StatusSubresources: []client.Object{&v1alpha1.DeckhouseRelease{}},
+		SnapshotKinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind(v1alpha1.DeckhouseReleaseKind),
+			corev1.SchemeGroupVersion.WithKind("Pod"),
+			appsv1.SchemeGroupVersion.WithKind("Deployment"),
+			corev1.SchemeGroupVersion.WithKind("ConfigMap"),
+		},
+		GoldenMode: reconcilertest.PerDocument,
+	})
 	suite.backupTZ = time.Local
 	time.Local = dependency.TestTimeZone
 }
@@ -119,13 +123,7 @@ func (suite *ControllerTestSuite) TearDownSuite() {
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
-	if suite.T().Skipped() {
-		return
-	}
-
-	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	gotB := suite.fetchResults()
-	reconcilertest.CompareOrUpdate(suite.T(), goldenFile, gotB, reconcilertest.PerDocument)
+	suite.AssertGolden()
 }
 
 func (suite *ControllerTestSuite) setupController(
@@ -134,17 +132,17 @@ func (suite *ControllerTestSuite) setupController(
 	mup *v1alpha2.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
 ) {
-	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup, options...)
+	suite.setupControllerSettings(filename, initValues, newDeckhouseSettings(mup), options...)
 }
 
 func (suite *ControllerTestSuite) setupControllerSettings(
 	filename string,
 	initValues string,
 	ds *helpers.DeckhouseSettings,
+	options ...reconcilerOption,
 ) {
-	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupControllerSettings(suite.T(), filename, initValues, ds)
+	suite.SeedRaw(filename, []byte(fetchTestFileData(suite.T(), filename, initValues)))
+	suite.ctr = newDeckhouseReleaseReconciler(suite.Client(), ds, options...)
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
@@ -1042,23 +1040,9 @@ func newDependencyContainer(t *testing.T) *dependency.MockedContainer {
 	return dc
 }
 
-func (suite *ControllerTestSuite) fetchResults() []byte {
-	got, err := reconcilertest.Snapshot(context.TODO(), suite.kubeClient, suite.kubeClient.Scheme(), reconcilertest.SnapshotSpec{
-		Kinds: []schema.GroupVersionKind{
-			v1alpha1.SchemeGroupVersion.WithKind(v1alpha1.DeckhouseReleaseKind),
-			corev1.SchemeGroupVersion.WithKind("Pod"),
-			appsv1.SchemeGroupVersion.WithKind("Deployment"),
-			corev1.SchemeGroupVersion.WithKind("ConfigMap"),
-		},
-	})
-	require.NoError(suite.T(), err)
-
-	return got
-}
-
 func (suite *ControllerTestSuite) getDeckhouseRelease(name string) *v1alpha1.DeckhouseRelease {
 	var release v1alpha1.DeckhouseRelease
-	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &release)
+	err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, &release)
 	require.NoError(suite.T(), err)
 
 	return &release
