@@ -3,7 +3,7 @@
 > Статус: **черновик / обсуждение.** Как проект Deckhouse эволюционирует от «проект == один
 > namespace» к проекту, который его администратор может делить на несколько namespace — *опционально*,
 > потому что self-service нужен не всем. Соседний документ —
-> [Гранты на кластерные объекты](./CLUSTER_OBJECT_GRANTS_DESIGN_RU.md) (per-project гранты/квоты).
+> [Гранты на кластерные ресурсы](./CLUSTER_OBJECT_GRANTS_DESIGN_RU.md) (per-project гранты/квоты).
 
 ## Проблема
 
@@ -371,7 +371,7 @@ floor*, который можно только ужесточить). Механ
 
 **Ссылочные, author-defined (не наши)** — метки на granted-объектах, которые матчат селекторы гранта:
 например `shared: "true"` (`allowedSelector`), `rbac.deckhouse.io/tenant-bindable`,
-`storageclass.deckhouse.io/system` (`excluded`). Живут на кластерных объектах, ставятся их авторами, не
+`storageclass.deckhouse.io/system` (`excluded`). Живут на кластерных ресурсах, ставятся их авторами, не
 этим модулем.
 
 Проброс — это **allowlist** ключей меток `Project` (конфигурируемый), не «все метки», чтобы метка не
@@ -492,7 +492,7 @@ status:
 Compute-`ResourceQuota` заставляет Kubernetes требовать `requests`/`limits` на подах; дефолты даёт
 `LimitRange`, который `ProjectTemplate` и так рендерит — это штатный механизм куба, ничего нового.
 
-## Гранты на кластерные объекты навешиваются по лейблу
+## Гранты на кластерные ресурсы навешиваются по лейблу
 
 Квота живёт на `Project` (compute) и `ClusterResourceGrant` (objects); **доступность** — *какие* кластерные
 объекты можно проекту и per-project дефолт — задаётся отдельно как `ClusterResourceGrantPolicy` и
@@ -527,7 +527,7 @@ spec:
 ## Сквозной пример
 
 Продакшн multi-namespace проект: сложная compute/storage квота, owners, два рабочих namespace со
-слайсами квоты, self-service биндинг разработчиков и гранты на кластерные объекты (storage + LB) —
+слайсами квоты, self-service биндинг разработчиков и гранты на кластерные ресурсы (storage + LB) —
 сетевая изоляция и PSS приходят из шаблона/политик выше.
 
 ```yaml
@@ -582,7 +582,7 @@ spec:
       internal:
         services: -1
 ---
-# 2b. Cluster-admin выдаёт, какие кластерные объекты можно проекту (storage / LB-классы и дефолты).
+# 2b. Cluster-admin выдаёт, какие кластерные ресурсы можно проекту (storage / LB-классы и дефолты).
 #     Грант делает только allow-list + default; per-class лимиты живут в ClusterResourceGrant выше.
 #     (Домен дизайна грантов; матчится projectSelector'ом по меткам Project.)
 apiVersion: multitenancy.deckhouse.io/v1alpha1

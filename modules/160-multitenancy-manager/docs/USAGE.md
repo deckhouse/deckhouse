@@ -305,36 +305,47 @@ To implement validation for resources with a different label (for example, `heri
        heritage: my-custom-label
    ```
 
-## Granting cluster-scoped objects to projects
+## Granting cluster-scoped resources to projects
 
-The `cluster-objects-controller` lets cluster operators control which cluster-scoped
-objects (for example `StorageClass`) may be referenced from within project namespaces.
+The multitenancy-manager lets cluster operators control which cluster-scoped resources
+(for example `StorageClass`) may be referenced from within project namespaces.
 
-Two resources drive it:
+Four resources are involved:
 
-- `ClusterResourceGrantPolicyPolicy` — declares which resource is governed and where references
-  to it must be validated (`usageReferences`), plus how its default is discovered.
-- `ClusterResourceGrantPolicy` — selects projects (by namespace labels via `projectSelector`) and,
-  per policy, the granted names (`allowed`, `allowedSelector`) and the per-project `default`.
+- `GrantableClusterResourceDefinition` (cluster-scoped) — registers a cluster resource that can be
+  granted: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
+  the baseline availability (`defaultAvailability`), and how the per-project default is discovered
+  (`defaultFrom`).
+- `ClusterResourceGrantPolicy` (cluster-scoped) — selects projects (by namespace labels via
+  `projectSelector`) and, per resource (`resourceName`), the granted names (`allowed`,
+  `allowedSelector`) and the per-project `default`. An allow-list restricts the resource to it.
+- `AvailableClusterResource` (namespaced, read-only, short name `available`) — the controller-rendered
+  catalog of what a project may use; tenants read it to discover the available names.
+- `ClusterResourceGrant` (namespaced) — the per-project object-quota pool (limits on object count and
+  on measured quantities such as requested storage); its status reports current usage.
 
 {% raw %}
 
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterResourceGrantPolicyPolicy
+kind: GrantableClusterResourceDefinition
 metadata:
   name: storageclasses
 spec:
   grantedResource:
     apiVersion: storage.k8s.io/v1
     kind: StorageClass
-    defaults:
-      annotationKey: storageclass.kubernetes.io/is-default-class
+  enforcement: Managed
+  defaultAvailability: All
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
   usageReferences:
-  - apiVersion: v1
-    resource: persistentvolumeclaims
-    fieldPath: $.spec.storageClassName
+    - rule:
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["persistentvolumeclaims"]
+      fieldPath: $.spec.storageClassName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -344,13 +355,13 @@ spec:
   projectSelector:
     matchLabels:
       environment: production
-  clusterObjectGrantPolicies:
-  - name: storageclasses
-    default: fast-ssd          # overrides the annotation-based default
-    allowed: ["fast-ssd", "standard"]
-    allowedSelector:           # plus any StorageClass with label shared=true
-      matchLabels:
-        shared: "true"
+  resources:
+    - resourceName: storageclasses
+      default: fast-ssd          # overrides the annotation-based default
+      allowed: ["fast-ssd", "standard"]
+      allowedSelector:           # plus any StorageClass with label shared=true
+        matchLabels:
+          shared: "true"
 ```
 
 {% endraw %}

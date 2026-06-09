@@ -306,37 +306,48 @@ data:
        heritage: my-custom-label
    ```
 
-## Выдача кластерных объектов проектам
+## Выдача кластерных ресурсов проектам
 
-Контроллер `cluster-objects-controller` позволяет операторам кластера управлять тем,
-какие кластерные объекты (например, `StorageClass`) можно использовать из namespace’ов
-проектов.
+multitenancy-manager позволяет операторам кластера управлять тем, какие кластерные ресурсы
+(например, `StorageClass`) можно использовать из namespace’ов проектов.
 
-Используются два ресурса:
+Участвуют четыре ресурса:
 
-- `ClusterResourceGrantPolicyPolicy` — описывает контролируемый ресурс и места, где ссылки на него
-  должны проверяться (`usageReferences`), а также способ определения значения по умолчанию.
-- `ClusterResourceGrantPolicy` — выбирает проекты (по меткам namespace через `projectSelector`) и для
-  каждой политики задаёт разрешённые имена (`allowed`, `allowedSelector`) и `default` для проекта.
+- `GrantableClusterResourceDefinition` (cluster-scoped) — регистрирует кластерный ресурс, который
+  можно выдавать: какой это ресурс (`grantedResource`), где проверяются ссылки на него
+  (`usageReferences`), базовая доступность (`defaultAvailability`) и как определяется дефолт проекта
+  (`defaultFrom`).
+- `ClusterResourceGrantPolicy` (cluster-scoped) — выбирает проекты (по меткам namespace через
+  `projectSelector`) и для каждого ресурса (`resourceName`) задаёт разрешённые имена (`allowed`,
+  `allowedSelector`) и `default`. Allow-лист ограничивает ресурс этим списком.
+- `AvailableClusterResource` (namespaced, read-only, короткое имя `available`) — каталог доступного
+  для проекта, который формирует контроллер; пользователи проекта читают его, чтобы узнать
+  доступные имена.
+- `ClusterResourceGrant` (namespaced) — пул объектной квоты проекта (лимиты на количество объектов и
+  на измеряемые величины, например запрошенный объём хранилища); в статусе — текущее потребление.
 
 {% raw %}
 
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterResourceGrantPolicyPolicy
+kind: GrantableClusterResourceDefinition
 metadata:
   name: storageclasses
 spec:
   grantedResource:
     apiVersion: storage.k8s.io/v1
     kind: StorageClass
-    defaults:
-      annotationKey: storageclass.kubernetes.io/is-default-class
+  enforcement: Managed
+  defaultAvailability: All
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
   usageReferences:
-  - apiVersion: v1
-    resource: persistentvolumeclaims
-    fieldPath: $.spec.storageClassName
+    - rule:
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["persistentvolumeclaims"]
+      fieldPath: $.spec.storageClassName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -346,13 +357,13 @@ spec:
   projectSelector:
     matchLabels:
       environment: production
-  clusterObjectGrantPolicies:
-  - name: storageclasses
-    default: fast-ssd          # перекрывает дефолт по аннотации
-    allowed: ["fast-ssd", "standard"]
-    allowedSelector:           # плюс любой StorageClass с меткой shared=true
-      matchLabels:
-        shared: "true"
+  resources:
+    - resourceName: storageclasses
+      default: fast-ssd          # перекрывает дефолт по аннотации
+      allowed: ["fast-ssd", "standard"]
+      allowedSelector:           # плюс любой StorageClass с меткой shared=true
+        matchLabels:
+          shared: "true"
 ```
 
 {% endraw %}

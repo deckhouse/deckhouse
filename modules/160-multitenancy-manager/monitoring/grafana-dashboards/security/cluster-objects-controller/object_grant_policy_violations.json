@@ -247,7 +247,7 @@
     "hidden": true
   },
   "timezone": "browser",
-  "title": "Cluster Object Grant Violations",
+  "title": "Cluster Resource Grant Violations",
   "uid": "fffu79id9lse8b",
   "version": 2,
   "weekStart": ""

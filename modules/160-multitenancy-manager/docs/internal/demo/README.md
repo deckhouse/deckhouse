@@ -1,4 +1,4 @@
-# Cluster object grants — demo
+# Cluster resource grants — demo
 
 Demonstrates the multitenancy-manager grants feature: per-project availability (allow-list),
 object quotas, default injection / coercion, and the read-only catalog.

@@ -12,4 +12,4 @@
       description: |
           One or more resources that are not allowed by ClusterResourceGrantPolicy are in use within this cluster's projects.
 
-          Check the "Security > Cluster Object Grant Violations" dashboard for detailed overview of violating objects.
+          Check the "Security > Cluster Resource Grant Violations" dashboard for detailed overview of violating objects.

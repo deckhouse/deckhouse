@@ -3,7 +3,7 @@
 > Status: **draft / discussion.** How a Deckhouse project evolves from "project == one namespace"
 > to a project that its administrator can split into several namespaces — *optionally*, because not
 > every project needs self-service. Sibling of
-> [Cluster object grants](./CLUSTER_OBJECT_GRANTS_DESIGN.md) (per-project resource grants/quotas).
+> [Cluster resource grants](./CLUSTER_OBJECT_GRANTS_DESIGN.md) (per-project resource grants/quotas).
 
 ## Problem
 
@@ -376,9 +376,9 @@ and GC):
 | `projects.deckhouse.io/namespace-claim` | the created workload `Namespace` | the `ProjectNamespace` that claimed it (delete claim ⇒ delete namespace) |
 | `projects.deckhouse.io/project-role-binding` | each rendered `RoleBinding` | the `ProjectRoleBinding` it came from |
 
-**Referenced, author-defined (not ours)** — labels on granted cluster objects that grant selectors
+**Referenced, author-defined (not ours)** — labels on granted cluster resources that grant selectors
 match: e.g. `shared: "true"` (`allowedSelector`), `rbac.deckhouse.io/tenant-bindable`,
-`storageclass.deckhouse.io/system` (`excluded`). These live on the cluster objects, set by their
+`storageclass.deckhouse.io/system` (`excluded`). These live on the cluster resources, set by their
 authors, not by this module.
 
 Propagation is an **allowlist** of `Project` label keys (configured), not "all labels", so a label can
@@ -395,7 +395,7 @@ A project has a **total budget** distributed across its namespaces, in two parts
   (or `*`) → measure** (storage per StorageClass, count per LoadBalancerClass/IngressClass, …). The
   pool is a `ClusterResourceGrant` in the control namespace; the controller renders a read-only `ClusterResourceGrant` into
   each workload namespace with usage. Full model in the
-  [cluster object grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md#clusterresourcegrant).
+  [cluster resource grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md#clusterresourcegrant).
 
 ```yaml
 # compute pool — on the Project
@@ -502,14 +502,14 @@ A compute `ResourceQuota` makes Kubernetes require `requests`/`limits` on pods; 
 the `LimitRange` the `ProjectTemplate` already renders — that is the standard Kubernetes mechanism,
 nothing new here.
 
-## Cluster object grants attach by label
+## Cluster resource grants attach by label
 
 Quota lives on the `Project` (compute) and `ClusterResourceGrant` (objects); **availability** — *which* cluster
 objects a project may use and the per-project default — is authored separately as a `ClusterResourceGrantPolicy`
 and **attaches to a project by label**. A grant's `projectSelector` matches the **Project's labels**; the controller expands the
 matched Projects to their namespaces and materializes availability there. This is the same
 "author once, match by label" model used for `SecurityPolicy` ([above](#security-policies--pre-created-by-the-admin-matched-by-label));
-the full grant model is in the [cluster object grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md).
+the full grant model is in the [cluster resource grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md).
 
 ```yaml
 # A reusable preset: attaches to every Project labelled environment=production.
@@ -592,8 +592,8 @@ spec:
       internal:
         services: -1
 ---
-# 2b. Which cluster objects this project may use (storage / load-balancer classes and defaults) are
-#     authored SEPARATELY — see the cluster object grants design (CLUSTER_OBJECT_GRANTS_DESIGN.md).
+# 2b. Which cluster resources this project may use (storage / load-balancer classes and defaults) are
+#     authored SEPARATELY — see the cluster resource grants design (CLUSTER_OBJECT_GRANTS_DESIGN.md).
 #     The grant does allow-list + default only; the per-class limits live on the ClusterResourceGrant above.
 #     A grant attaches to this project by matching its labels:
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -604,7 +604,7 @@ spec:
   projectSelector:
     matchLabels:
       environment: production
-  # resources / allow-list / default — see the cluster object grants design.
+  # resources / allow-list / default — see the cluster resource grants design.
 ---
 # 3. Project admin orders two workload namespaces, each claiming a quota slice (Σ ≤ project total).
 apiVersion: deckhouse.io/v1alpha2

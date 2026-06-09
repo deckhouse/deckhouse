@@ -1,4 +1,4 @@
-# Cluster object grants — design
+# Cluster resource grants — design
 
 > Status: **draft / discussion.** Problem, user stories, the resource model, how it works, and the
 > decisions taken so far. Implementation lives inside the existing `multitenancy-manager`
@@ -1024,7 +1024,7 @@ Candidates intentionally left out:
 - **Not referenced by tenant objects** (admin/cluster/node config): `NodeGroup`, `NodeUser`,
   `ClusterAuthorizationRule`, `GrafanaDashboardDefinition`, `IngressNginxController`,
   `ClusterLoggingConfig`, `Group`/`User`, … — nothing is "used" by name inside a project.
-- **Inverse selection — the cluster object selects namespaced objects** (so there is no name to
+- **Inverse selection — the cluster resource selects namespaced objects** (so there is no name to
   grant): `CiliumLoadBalancerIPPool` (its `spec.serviceSelector` picks Services by label, like our
   own selectors), `SecurityPolicy` / `OperationPolicy` (they select namespaces themselves). These
   are already an admin-side selector; there is nothing for a tenant to reference by name.

@@ -117,7 +117,7 @@ func main() {
 		namespacewebhook.Register(runtimeManager, allowedServiceAccounts)
 	}
 
-	// register cluster object grants: catalog/quota reconciler and the grant webhooks.
+	// register cluster resource grants: catalog/quota reconciler and the grant webhooks.
 	jsonpathFactory := jsonpath.NewWithCache()
 	if err = (&grantcontrollers.ProjectReconciler{
 		Client:  runtimeManager.GetClient(),
