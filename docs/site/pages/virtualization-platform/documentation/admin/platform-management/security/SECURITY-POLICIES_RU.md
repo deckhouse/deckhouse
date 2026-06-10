@@ -47,7 +47,7 @@ Deckhouse Virtualization Platform (DVP) позволяет управлять б
 
 Допустимые режимы применения политик:
 
-- `deny` — запрещает выполнений действий.
+- `deny` — запрещает выполнение действий.
 - `dryrun` — не влияет на выполнение действий и используется для отладки.
   Информацию о событиях можно посмотреть в Grafana или в консоли с помощью команды `kubectl`.
 - `warn` — работает как `dryrun`, но дополнительно выводит предупреждение с указанием причины,
@@ -74,7 +74,7 @@ Deckhouse Virtualization Platform (DVP) позволяет управлять б
 
 Чтобы расширить политику, выполните следующее:
 
-1. Создайте шаблон проверки с помощью ресурса ConstraintTemplate.
+1. Создайте шаблон проверки с помощью ресурса `ConstraintTemplate`.
 1. Примените созданный шаблон к политике `baseline` или `restricted`.
 
 Пример шаблона для проверки адреса репозитория с образом контейнера:
@@ -212,6 +212,7 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 - Проверка применяется только к неймспейсу, где установлен лейбл `security.deckhouse.io/trivy-provider: ""` (см. документацию модуля [`operator-trivy`](/modules/operator-trivy)).
 
 ### Как настроить проверку
+
 Требуется:
 1. Включить механизм проверки уязвимостей через параметр [`settings.denyVulnerableImages.enabled`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-enabled)
 
@@ -237,6 +238,7 @@ spec:
         - LOW
         - MEDIUM
 ```
+
 Проверьте что модуль `operator-trivy` включен и имеет статус `Ready`:
 
 ```shell
@@ -248,7 +250,6 @@ d8 k get modules operator-trivy
 ```shell
 d8 k label ns <NAMESPACE> security.deckhouse.io/trivy-provider=
 ```
-
 
 ## Политики безопасности
 

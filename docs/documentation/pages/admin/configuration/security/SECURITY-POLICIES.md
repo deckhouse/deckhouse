@@ -73,7 +73,7 @@ by adding extra checks to the existing ones.
 
 To extend a policy:
 
-1. Create a validation template using a ConstraintTemplate resource.
+1. Create a validation template using a `ConstraintTemplate` resource.
 1. Apply the template to the `baseline` or `restricted` policy.
 
 Example template for validating the container image repository address:
@@ -199,6 +199,7 @@ To assign this operational policy, add the `operation-policy.deckhouse.io/enable
 ```shell
 d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 ```
+
 ## Blocking vulnerable images
 
 ### How it Works
@@ -211,6 +212,7 @@ Important clarifications:
 - The check only applies to the namespace where the `security.deckhouse.io/trivy-provider: ""` label is set (see the [`operator-trivy`](/modules/operator-trivy) module documentation ).
 
 ### How to configure the check
+
 Required:
 1. Enable the vulnerability checking mechanism using the [`settings.denyVulnerableImages.enabled`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-enabled) parameter
 
@@ -236,6 +238,7 @@ spec:
         - LOW
         - MEDIUM
 ```
+
 Check that the `operator-trivy` module is enabled and has a `Ready` status:
 
 ```shell
