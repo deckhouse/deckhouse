@@ -4,7 +4,7 @@ permalink: en/admin/configuration/security/
 description: "Configure security features in Deckhouse Kubernetes Platform including certificates, audit logging, runtime security, scanning, and security policies. Complete security hardening guide."
 ---
 
-The "Security" section covers security features in Deckhouse Kubernetes Platform.
+The "Security" section provides information about the protection mechanisms implemented in Deckhouse Kubernetes Platform.
 
 {% alert level="info" %}
 A detailed overview of the platform's capabilities in this area is covered in the ["Security Tools in Deckhouse Kubernetes Platform"](https://deckhouse.ru/courses/security-tools-in-dkp/) course at [Deckhouse Academy](https://deckhouse.ru/academy/).
