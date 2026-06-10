@@ -16,20 +16,26 @@ machineClassKind: {{ b64enc "OpenStackMachineClass" | quote }}
 {{- else }}
   {{ cat "No key authURL in deckhouse configmap" $internal.connection.authURL | fail }}
 {{- end }}
-{{- if and (hasKey $internal.connection "username") ($internal.connection.username)}}
+{{- if hasKey $internal.connection "username" }}
   {{- $_ := set $openstackValues.connection "username" $internal.connection.username }}
-{{- else }}
-  {{ cat "No key username in deckhouse configmap" $internal.connection.username | fail }}
 {{- end }}
-{{- if and (hasKey $internal.connection "password") ($internal.connection.password) }}
+{{- if hasKey $internal.connection "password" }}
   {{- $_ := set $openstackValues.connection "password" $internal.connection.password }}
-{{- else }}
-  {{ cat "No key password in deckhouse configmap" $internal.connection.password | fail }}
 {{- end }}
-{{- if and (hasKey $internal.connection "domainName") ($internal.connection.domainName) }}
+{{- if hasKey $internal.connection "applicationCredentialId" }}
+  {{- $_ := set $openstackValues.connection "applicationCredentialId" $internal.connection.applicationCredentialId }}
+{{- end }}
+{{- if hasKey $internal.connection "applicationCredentialName" }}
+  {{- $_ := set $openstackValues.connection "applicationCredentialName" $internal.connection.applicationCredentialName }}
+{{- end }}
+{{- if hasKey $internal.connection "applicationCredentialSecret" }}
+  {{- $_ := set $openstackValues.connection "applicationCredentialSecret" $internal.connection.applicationCredentialSecret }}
+{{- end }}
+{{- if hasKey $internal.connection "token" }}
+  {{- $_ := set $openstackValues.connection "token" $internal.connection.token }}
+{{- end }}
+{{- if hasKey $internal.connection "domainName" }}
   {{- $_ := set $openstackValues.connection "domainName" $internal.connection.domainName }}
-{{- else }}
-  {{ cat "No key domainName in deckhouse configmap" $internal.connection.domainName | fail }}
 {{- end }}
 {{- if and (hasKey $internal.connection "tenantName") (hasKey $internal.connection "tenantID") }}
   {{ fail "Parameters tenantName and tenantID can't be used simultaneously" }}

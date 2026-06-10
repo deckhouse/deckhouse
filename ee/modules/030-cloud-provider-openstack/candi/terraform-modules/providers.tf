@@ -10,4 +10,8 @@ provider "openstack" {
   user_name   = var.providerClusterConfiguration.provider.username
   password    = var.providerClusterConfiguration.provider.password
   region      = var.providerClusterConfiguration.provider.region
+  application_credential_id = lookup(var.providerClusterConfiguration.provider, "applicationCredentialId", "")
+  application_credential_name = lookup(var.providerClusterConfiguration.provider, "applicationCredentialName", "")
+  application_credential_secret = lookup(var.providerClusterConfiguration.provider, "applicationCredentialSecret", "")
+  token = lookup(var.providerClusterConfiguration.provider, "token", "")
 }

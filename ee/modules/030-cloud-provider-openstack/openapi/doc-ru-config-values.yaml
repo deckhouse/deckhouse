@@ -32,6 +32,28 @@ properties:
       region:
         description: |
           Регион OpenStack, где будет развернут кластер.
+      applicationCredentialId:
+        description: |
+          ID приложения.
+
+          Не может использоваться вместе с `applicationCredentialName`.
+          Не может использоваться вместе с `username`/`password` или `token`.
+      applicationCredentialName:
+        description: |
+          Имя приложения.
+
+          Не может использоваться вместе с `applicationCredentialId`.
+          Не может использоваться вместе с `password` или `token`.
+      applicationCredentialSecret:
+        description: |
+          Секрет приложения.
+
+          Не может использоваться вместе с `username`/`password` или `token`.
+      token:
+        description: |
+          Токен.
+
+          Не может использоваться вместе с `username`/`password` или `applicationCredentialSecret`.
   internalNetworkNames:
     description: |
       Имена сетей, подключенные к виртуальной машине и используемые `cloud-controller-manager` для проставления InternalIP в `.status.addresses` в Node API объект.
