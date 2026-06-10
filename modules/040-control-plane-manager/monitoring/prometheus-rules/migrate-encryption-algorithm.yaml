@@ -1,9 +1,9 @@
 - name: d8.control-plane-manager.encryption-algorithm-migration
   rules:
-    - alert: D8EncryptionAlgorithmDeprecatedInClusterConfiguration
+    - alert: D8EncryptionAlgorithmIsObsoleteInClusterConfiguration
       for: 5m
       expr: |
-        d8_encryption_algorithm_deprecated_in_cluster_configuration == 1
+        d8_encryption_algorithm_is_obsolete_in_cluster_configuration == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager
@@ -12,9 +12,9 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_encryption_algorithm_deprecated_in_cluster_configuration: "D8EncryptionAlgorithmDeprecatedInClusterConfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__d8_encryption_algorithm_deprecated_in_cluster_configuration: "D8EncryptionAlgorithmDeprecatedInClusterConfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        summary: "`encryptionAlgorithm` in `ClusterConfiguration` is deprecated and must be migrated to `control-plane-manager` ModuleConfig."
+        plk_create_group_if_not_exists__d8_encryption_algorithm_is_obsolete_in_cluster_configuration: "D8EncryptionAlgorithmIsObsoleteInClusterConfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_encryption_algorithm_is_obsolete_in_cluster_configuration: "D8EncryptionAlgorithmIsObsoleteInClusterConfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: "`encryptionAlgorithm` in `ClusterConfiguration` is obsolete and must be migrated to `control-plane-manager` ModuleConfig."
         description: |-
           The `encryptionAlgorithm` field is set to a non-default value in `ClusterConfiguration` but has not been migrated to `ModuleConfig control-plane-manager` yet.
 
@@ -22,17 +22,19 @@
 
           **To resolve this alert, migrate the setting:**
 
-          1. Check the current value in `ClusterConfiguration`:
+          1. If `moduleconfig control-plane-manager` does not exist, create it first:
 
              ```bash
-             d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep encryptionAlgorithm
+             d8 s module enable control-plane-manager
              ```
 
-          2. Set the same value in `ModuleConfig control-plane-manager`:
+          2. Migrate the value from `ClusterConfiguration` to `ModuleConfig` in one command:
 
              ```bash
-             d8 k patch moduleconfig control-plane-manager --type merge \
-               -p '{"spec":{"settings":{"encryptionAlgorithm":"<value-from-step-1>"}}}'
+             d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
+             {"spec": {"version": 3, "settings": {"encryptionAlgorithm": "$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep encryptionAlgorithm | awk '{print $2}')"}}}
+             EOF
+             )"
              ```
 
           Once `ModuleConfig` is updated, this alert will be resolved automatically.
