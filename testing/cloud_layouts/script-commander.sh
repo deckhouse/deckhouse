@@ -987,6 +987,7 @@ function wait_alerts_resolve() {
   "D8ObsoletePublishAPIinUserAuthn" # Temporary while publish api is migrated between MCs
   "D8SignatureErrorsDetected" # by default signatures not enabled for etcd keys
   "CertmanagerCertificateChallengeStuck" # This is normal for e2e tests
+  "D8NodeLocalDNSKubeforwardRequestLatencyP95High" # Doesn't work with closed clusters
   )
 
   # Alerts
