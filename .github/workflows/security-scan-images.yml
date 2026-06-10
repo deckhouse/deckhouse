@@ -691,7 +691,7 @@ jobs:
   # <template: set_security_scan_requirement_status>
   set_security_scan_requirement_status:
     name: Set commit status after security scan run
-    runs-on: "self-slim"
+    runs-on: "ubuntu-slim"
     needs: test_cve_report_main
     if: ${{ always() }}
     permissions:
@@ -853,7 +853,7 @@ jobs:
   # <template: set_security_rootless_requirement_status>
   set_security_rootless_requirement_status:
     name: Set commit status after security rootless scan run
-    runs-on: "self-slim"
+    runs-on: "ubuntu-slim"
     needs:
       - pull_request_info
       - security_scan_images
@@ -1203,7 +1203,7 @@ jobs:
   # <template: set_security_antivirus_requirement_status>
   set_security_antivirus_requirement_status:
     name: Set commit status after antivirus scan run
-    runs-on: "self-slim"
+    runs-on: "ubuntu-slim"
     needs: [drweb-scan, kaspersky-scan]
     if: ${{ always() }}
     permissions:

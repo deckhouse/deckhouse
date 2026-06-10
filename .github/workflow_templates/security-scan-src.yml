@@ -65,7 +65,7 @@ jobs:
 
   set_security_gitleaks_requirement_status:
     name: Set commit status after gitleaks scan run
-    runs-on: "self-slim"
+    runs-on: "ubuntu-slim"
     needs: gitleaks_scan
     if: ${{ always() }}
     permissions:

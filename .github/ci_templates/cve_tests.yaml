@@ -3,7 +3,7 @@
 # <template: set_security_scan_requirement_status>
 set_security_scan_requirement_status:
   name: Set commit status after security scan run
-  runs-on: "self-slim"
+  runs-on: "ubuntu-slim"
   needs: test_cve_report_main
   if: ${{ always() }}
   permissions:

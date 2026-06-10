@@ -205,7 +205,7 @@ kaspersky-scan:
 # <template: set_security_antivirus_requirement_status>
 set_security_antivirus_requirement_status:
   name: Set commit status after antivirus scan run
-  runs-on: "self-slim"
+  runs-on: "ubuntu-slim"
   needs: [drweb-scan, kaspersky-scan]
   if: ${{ always() }}
   permissions:
