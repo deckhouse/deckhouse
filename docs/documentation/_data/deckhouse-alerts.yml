@@ -7327,19 +7327,19 @@ alerts:
       edition: ce
       description: |
         There are `{{ $value }}` VerticalPodAutoscaler object(s) in the cluster
-        with the deprecated `spec.updatePolicy.updateMode: Auto`.
+        configured with the deprecated update mode (`spec.updatePolicy.updateMode: Auto`).
 
         The `Auto` update mode is deprecated. It currently behaves like `Recreate`
         (the VPA updater evicts pods to apply new resource requests) and its semantics
         are reserved to change in future versions, which makes cluster behavior
         ambiguous and potentially disruptive.
 
-        Set an explicit `spec.updatePolicy.updateMode` instead:
+        Set the affected VPA object(s) to one of the supported update modes ([`spec.updatePolicy.updateMode`](https://deckhouse.io/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode)):
 
-        - `InPlaceOrRecreate` — apply recommendations in place when possible, fall back to recreation (recommended);
-        - `Recreate` — evict and recreate pods to apply recommendations;
-        - `Initial` — apply only when pods are (re)created;
-        - `Off` — recommendations only, no changes to running pods.
+        - `InPlaceOrRecreate`: Apply recommendations in place when possible, fall back to recreation (recommended).
+        - `Recreate`: Evict and recreate pods to apply recommendations.
+        - `Initial`: Apply only when pods are (re)created.
+        - `Off`: Recommendations only, no changes to running pods.
 
         To list the affected objects, open the **VPA Deprecated Update Mode** Grafana
         dashboard, or run:
