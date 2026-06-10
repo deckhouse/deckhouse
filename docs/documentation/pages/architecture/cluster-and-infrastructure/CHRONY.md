@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`chrony`](/modules/chrony/) module its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
+The Level 2 C4 architecture of the [`chrony`](/modules/chrony/) module its interactions with other DKP components are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Chrony module architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.png)

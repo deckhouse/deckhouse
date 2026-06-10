@@ -19,7 +19,7 @@ description: Архитектура модуля chrony в Deckhouse Kubernetes 
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`chrony`](/modules/chrony/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`chrony`](/modules/chrony/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля chrony](../../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.ru.png)
@@ -41,7 +41,7 @@ description: Архитектура модуля chrony в Deckhouse Kubernetes 
    Состоит из следующих контейнеров:
 
    - **chrony** — основной контейнер;
-   - **chrony-exporter** — сайдкар-контейнер, собирающий метрики контейнера chrony и предоставляющий их в Prometheus формате;
+   - **chrony-exporter** — сайдкар-контейнер, собирающий метрики контейнера chrony и предоставляющий их в формате Prometheus;
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера chrony-exporter.
 
 ## Взаимодействия модуля
