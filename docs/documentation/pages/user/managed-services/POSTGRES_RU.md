@@ -91,7 +91,7 @@ d8 k get postgres test -n postgres -o wide -w
 
 Для проверки работоспособности сервиса убедитесь, что все значения в `status.conditions` имеют статус `True`.
 
-В результате DKP создаст сервис PostgreSQL, логическую базу данных `appdb` внутри этого сервиса и пользователя `app-rw` с ролью `rw`.
+В результате DKP создаст сервис PostgreSQL, логическую базу данных `testdb` внутри этого сервиса и пользователя `test-rw` с ролью `rw`.
 
 ## Создание логических баз данных
 
@@ -156,10 +156,10 @@ spec:
 
 Для базового сценария используйте `psql` и Service, соответствующий имени ресурса Postgres и типу endpoint.
 
-Пример подключения к ресурсу Postgres `app-postgres` в неймспейсе `postgres` из пода в том же кластере:
+Пример подключения к ресурсу Postgres `test` в неймспейсе `postgres` из пода в том же кластере:
 
 ```shell
-psql -U app-rw -d appdb -h d8ms-pg-app-postgres-rw.postgres.svc -p 5432
+psql -U test-rw -d testdb -h d8ms-pg-test-rw.postgres.svc -p 5432
 ```
 
 Для подключения к базе данных доступны следующие Services:
@@ -168,7 +168,7 @@ psql -U app-rw -d appdb -h d8ms-pg-app-postgres-rw.postgres.svc -p 5432
 - `d8ms-pg-<postgres-name>-ro`: указывает на реплики (в режиме `Cluster`) и позволяет выполнять операции только для чтения;
 - `d8ms-pg-<postgres-name>-r`: указывает на primary-экземпляр или реплики (в режиме `Cluster`) и позволяет выполнять операции только для чтения со случайно выбранного экземпляра.
 
-В имени Service значение `<postgres-name>` соответствует имени ресурса Postgres, а суффикс `rw`, `ro` или `r` указывает тип endpoint и не связан с именем пользователя. В DNS-имени `d8ms-pg-app-postgres-rw.postgres.svc` часть `postgres` — это неймспейс, в котором создан ресурс Postgres.
+В имени Service значение `<postgres-name>` соответствует имени ресурса Postgres, а суффикс `rw`, `ro` или `r` указывает тип endpoint и не связан с именем пользователя. В DNS-имени `d8ms-pg-test-rw.postgres.svc` часть `test` — это имя ресурса Postgres, а часть `postgres` — неймспейс, в котором создан ресурс.
 
 Если для пользователя задано поле `storeCredsToSecret`, строка подключения сохраняется в указанном Secret в поле `<database-name>-dsn`.
 
