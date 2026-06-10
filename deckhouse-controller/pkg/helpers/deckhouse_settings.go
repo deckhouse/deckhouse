@@ -36,8 +36,9 @@ type DeckhouseSettings struct {
 		Windows                update.Windows                    `json:"windows"`
 		NotificationConfig     releaseUpdater.NotificationConfig `json:"notification"`
 	} `json:"update"`
-	ReleaseChannel           string `json:"releaseChannel"`
-	AllowExperimentalModules bool   `json:"allowExperimentalModules"`
+	ReleaseChannel             string   `json:"releaseChannel"`
+	AllowExperimentalModules   bool     `json:"allowExperimentalModules"`
+	AllowedExperimentalModules []string `json:"allowedExperimentalModules"`
 }
 
 func DefaultDeckhouseSettings() *DeckhouseSettings {
@@ -79,6 +80,7 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 
 	c.settings.ReleaseChannel = settings.ReleaseChannel
 	c.settings.AllowExperimentalModules = settings.AllowExperimentalModules
+	c.settings.AllowedExperimentalModules = settings.AllowedExperimentalModules
 	c.settings.Update.Mode = settings.Update.Mode
 	c.settings.Update.Windows = settings.Update.Windows
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode

@@ -298,6 +298,17 @@ properties:
       Allows the use of experimental modules (modules in the `Experimental` lifecycle stage).
 
       Experimental modules can be unstable and are not supported under the Deckhouse SLA. Use them with caution.
+  allowedExperimentalModules:
+    type: array
+    default: []
+    items:
+      type: string
+    x-examples:
+    - ["sds-replicated-volume"]
+    description: |
+      A list of experimental module names allowed to be enabled even when `allowExperimentalModules` is `false`.
+
+      Lets you opt into specific experimental modules without allowing all of them.
 
   license:
     type: object
