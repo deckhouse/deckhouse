@@ -47,7 +47,7 @@ func (PythonCheck) RetryPolicy() preflight.RetryPolicy {
 func (c PythonCheck) Run(ctx context.Context) error {
 	pythonBinary, err := detectPythonBinary(ctx, c.NodeInterface)
 	if err != nil {
-		return fmt.Errorf("Detect Python binary name: %w", err)
+		return fmt.Errorf("detecting Python binary name: %w", err)
 	}
 
 	requiredPythonModules := [][]string{
@@ -96,7 +96,7 @@ func detectPythonBinary(ctx context.Context, nodeInterface libcon.Interface) (st
 	}
 
 	return "", fmt.Errorf(
-		"Python was not found under any of expected names (%s), please install Python 2 or 3 on the node",
+		"Python was not found under any of the expected names (%s), please install Python 2 or 3 on the node",
 		strings.Join(possibleBinaries, ", "),
 	)
 }

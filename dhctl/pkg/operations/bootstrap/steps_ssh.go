@@ -76,7 +76,7 @@ func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on Master become Ready", func(ctx context.Context) error {
+	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on master to become ready", func(ctx context.Context) error {
 		availabilityCheck := sshClient.Check()
 		_ = log.ProcessCtx(ctx, "default", "Connection string", func(ctx context.Context) error {
 			log.InfoLn(availabilityCheck.String())

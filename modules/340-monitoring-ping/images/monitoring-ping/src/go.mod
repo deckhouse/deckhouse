@@ -1,6 +1,6 @@
 module ping
 
-go 1.25
+go 1.25.10
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.1.0

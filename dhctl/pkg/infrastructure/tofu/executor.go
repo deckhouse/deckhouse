@@ -257,7 +257,7 @@ func (e *Executor) SetExecutorLogger(logger log.Logger) {
 }
 
 func (e *Executor) Stop() {
-	log.DebugF("Interrupt tofu process by pid: %d\n", e.cmd.Process.Pid)
+	log.DebugF("Interrupting tofu process with pid: %d\n", e.cmd.Process.Pid)
 
 	// 1. Tofu exits immediately on SIGTERM, so SIGINT is used here
 	//    to interrupt it gracefully even when main process caught the SIGTERM.

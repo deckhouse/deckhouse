@@ -38,7 +38,7 @@ Prometheus operator does not save TLS assets for alertmanager Webhook and Email 
 Fixes several CVEs.
 
 ``` sh
-go mod edit -go 1.23
+go mod edit -go=1.25.10
 go get golang.org/x/net@v0.33.0
 go get github.com/golang-jwt/jwt/v4@v4.5.1
 go get google.golang.org/protobuf@v1.33.0

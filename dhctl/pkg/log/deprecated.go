@@ -307,7 +307,7 @@ func extractExternalLogger(l Logger) *ExternalLogger {
 	case *DummyLogger:
 		ext = newExternalLogger(newExternalDummyLoggerWrapper(typedLogger))
 	default:
-		panic(fmt.Errorf("Incorrect type %T for extract ExternalLogger", l))
+		panic(fmt.Errorf("Incorrect type %T for extracting ExternalLogger", l))
 	}
 
 	return ext

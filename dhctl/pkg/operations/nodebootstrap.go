@@ -235,7 +235,7 @@ func ParallelBootstrapAdditionalNodes(
 	}
 
 	if err := nodesCheckErrors.ErrorOrNil(); err != nil {
-		return nil, fmt.Errorf("Check existing nodes in cluster error: %w", err)
+		return nil, fmt.Errorf("error checking existing nodes in cluster: %w", err)
 	}
 
 	if len(nodesIndexToCreate) > 1 && !saveLogToBuffer {
@@ -501,7 +501,7 @@ func checkNodeResourceExistsInClusterDuringBootstrap(ctx context.Context, params
 
 	hasState, err := infrastructurestate.HasNodeStateInCluster(ctx, kubeCl, params.node)
 	if err != nil {
-		return fmt.Errorf("Cannot check that state in cluster for %s: %w", nodeName, err)
+		return fmt.Errorf("Cannot check state in cluster for %s: %w", nodeName, err)
 	}
 
 	if hasState {
@@ -516,13 +516,13 @@ func checkNodeResourceExistsInClusterDuringBootstrap(ctx context.Context, params
 		// - client fix cloud issue (like extend quota)
 		// - vm started and registered
 		// - client restart bootstrap
-		logger.LogDebugF("Has node state in cluster for '%s'. Skip checking node resource in cluster\n", nodeName)
+		logger.LogDebugF("Has node state in cluster for '%s'. Skipping node resource check in cluster\n", nodeName)
 		return nil
 	}
 
 	nodeExists, err := entity.IsNodeExistsInCluster(ctx, kubeCl, nodeName, logger)
 	if err != nil {
-		return fmt.Errorf("Cannot check that node resource exists for %s: %w", nodeName, err)
+		return fmt.Errorf("Cannot check whether node resource exists for %s: %w", nodeName, err)
 	}
 
 	if nodeExists {

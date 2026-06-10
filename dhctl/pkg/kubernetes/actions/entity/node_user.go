@@ -184,7 +184,7 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 
 			if len(nodesForClient.Items) == 0 {
 				return fmt.Errorf(
-					"NodeUser '%s' is not present on nodes yet. No any node found for selector '%s'",
+					"NodeUser '%s' is not present on nodes yet. No node found for selector '%s'",
 					nodeUserName,
 					listOpts.LabelSelector,
 				)
