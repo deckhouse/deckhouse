@@ -21,6 +21,7 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestMigrationStatusFromState(t *testing.T) {
@@ -80,15 +81,15 @@ func migrationBaseState(t *testing.T) *cpval.State {
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
-				Enabled: new(true),
+				Enabled: ptr.To(true),
 				Version: 2,
 				Settings: cpapi.ModuleConfigSpecSettings{
 					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Enabled:    new(true),
+						Enabled:    ptr.To(true),
 						Parameters: map[string]any{},
 					},
 					Nodes: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Enabled: new(false),
+						Enabled: ptr.To(false),
 					},
 				},
 			},

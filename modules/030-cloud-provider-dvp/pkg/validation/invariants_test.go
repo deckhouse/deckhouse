@@ -23,6 +23,7 @@ import (
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestValidateInvariantsRejectsUnattachedEtcdDisk(t *testing.T) {
@@ -53,11 +54,11 @@ func TestValidateInvariantsSkipsPendingMigration(t *testing.T) {
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
-				Enabled: new(true),
+				Enabled: ptr.To(true),
 				Version: 2,
 				Settings: cpapi.ModuleConfigSpecSettings{
-					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: new(false)},
-					Nodes:   &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: new(false)},
+					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)},
+					Nodes:   &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)},
 				},
 			},
 		},
@@ -94,9 +95,9 @@ func TestValidateInvariantsIgnoresNodeParameterFields(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
-	state.ModuleConfig.Spec.Settings.Storage = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: new(false)}
+	state.ModuleConfig.Spec.Settings.Storage = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)}
 	state.ModuleConfig.Spec.Settings.Nodes = &cpapi.ModuleConfigSpecSubsystemSettings{
-		Enabled: new(true),
+		Enabled: ptr.To(true),
 		Parameters: map[string]any{
 			"layout":       "UnsupportedLayout",
 			"sshPublicKey": "",
@@ -116,8 +117,8 @@ func TestValidateModuleConfigAllowsDisabledSubsystems(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
-	state.ModuleConfig.Spec.Settings.Storage = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: new(false)}
-	state.ModuleConfig.Spec.Settings.Nodes = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: new(false)}
+	state.ModuleConfig.Spec.Settings.Storage = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)}
+	state.ModuleConfig.Spec.Settings.Nodes = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)}
 
 	result := ValidateModuleConfig(state)
 	if result.HasErrors() {
@@ -301,15 +302,15 @@ func validState(t *testing.T) *cpval.State {
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
-				Enabled: new(true),
+				Enabled: ptr.To(true),
 				Version: 2,
 				Settings: cpapi.ModuleConfigSpecSettings{
 					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Enabled:    new(true),
+						Enabled:    ptr.To(true),
 						Parameters: map[string]any{},
 					},
 					Nodes: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Enabled: new(false),
+						Enabled: ptr.To(false),
 					},
 				},
 			},

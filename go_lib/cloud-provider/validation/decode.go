@@ -22,6 +22,7 @@ import (
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 // BuildStateFromProtocolInput decodes dhctl provider input into a validation State.
@@ -144,7 +145,7 @@ func DecodeModuleConfig(moduleName string, raw map[string]any) (*cpapi.ModuleCon
 	}
 
 	spec := cpapi.ModuleConfigSpec{
-		Enabled:  new(true),
+		Enabled:  ptr.To(true),
 		Version:  2,
 		Settings: settings,
 	}

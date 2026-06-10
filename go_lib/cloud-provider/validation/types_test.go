@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"k8s.io/utils/ptr"
 )
 
 func TestStateModuleEnabled(t *testing.T) {
@@ -32,8 +33,8 @@ func TestStateModuleEnabled(t *testing.T) {
 		{name: "nil state", state: nil, want: true},
 		{name: "nil module config", state: &State{}, want: true},
 		{name: "enabled nil", state: &State{ModuleConfig: &cpapi.ModuleConfig{}}, want: true},
-		{name: "enabled true", state: &State{ModuleConfig: &cpapi.ModuleConfig{Spec: cpapi.ModuleConfigSpec{Enabled: new(true)}}}, want: true},
-		{name: "enabled false", state: &State{ModuleConfig: &cpapi.ModuleConfig{Spec: cpapi.ModuleConfigSpec{Enabled: new(false)}}}, want: false},
+		{name: "enabled true", state: &State{ModuleConfig: &cpapi.ModuleConfig{Spec: cpapi.ModuleConfigSpec{Enabled: ptr.To(true)}}}, want: true},
+		{name: "enabled false", state: &State{ModuleConfig: &cpapi.ModuleConfig{Spec: cpapi.ModuleConfigSpec{Enabled: ptr.To(false)}}}, want: false},
 	}
 
 	for _, tt := range tests {
