@@ -6,7 +6,7 @@ index bd81e19..bab1ddb 100644
  module github.com/prometheus/node_exporter
  
 -go 1.23.0
-+go 1.24.0
++go 1.25.10
  
  require (
  	github.com/alecthomas/kingpin/v2 v2.4.0
