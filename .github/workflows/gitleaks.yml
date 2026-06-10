@@ -23,7 +23,7 @@ on:
 
 jobs:
   gitleaks_full_scan:
-    runs-on: self-slim
+    runs-on: ubuntu-slim
     permissions:
       contents: read
       id-token: write
