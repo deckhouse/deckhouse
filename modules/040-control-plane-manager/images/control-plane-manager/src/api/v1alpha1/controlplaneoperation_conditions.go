@@ -31,6 +31,7 @@ const (
 	CPOConditionKubeconfigsRenewed   = "KubeconfigsRenewed"
 	CPOConditionManifestsSynced      = "ManifestsSynced"
 	CPOConditionEtcdClusterJoined    = "EtcdClusterJoined"
+	CPOConditionEtcdDefragmented     = "EtcdDefragmented"
 	CPOConditionPodReady             = "PodReady"
 	CPOConditionCertificatesObserved = "CertificatesObserved"
 	CPOConditionSignatureRenewed     = "SignatureRenewed"
@@ -76,6 +77,8 @@ func StepConditionType(step StepName) string {
 		return CPOConditionManifestsSynced
 	case StepJoinEtcdCluster:
 		return CPOConditionEtcdClusterJoined
+	case StepDefragEtcd:
+		return CPOConditionEtcdDefragmented
 	case StepWaitPodReady:
 		return CPOConditionPodReady
 	case StepCertObserve:
