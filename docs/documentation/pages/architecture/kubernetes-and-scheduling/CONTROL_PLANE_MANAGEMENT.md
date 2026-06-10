@@ -9,6 +9,16 @@ description: Architecture and functions of the control-plane-manager module in D
 
 Cluster control plane components are managed by the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all master nodes (nodes labeled with `node-role.kubernetes.io/control-plane: ""`).
 
+The module operates with the following custom resources:
+
+- [ControlPlaneNode](/modules/control-plane-manager/cr.html#controlplanenode): Describes the parameters and state of control plane nodes (master nodes) in the cluster. It's used for managing the lifecycle and configuration of each control plane component.
+- [ControlPlaneOperation](/modules/control-plane-manager/cr.html#controlplaneoperation): Defines operations on control plane components (upgrade, downgrade, addition, or removal of components), and allows tracking and managing the execution of these operations at the cluster level.
+- [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration): Describes the parameters and logic for connecting external webhooks to the `kube-scheduler` component to extend its functionality.
+
+{% alert level="warning" %}
+The ControlPlaneNode and ControlPlaneOperation custom resources are available to users in read-only mode. Full lifecycle management of these resources is performed exclusively by the `control-plane-manager` module.
+{% endalert %}
+
 Control plane management functions:
 
 * **Certificate management**: Issuing, renewing, and rotating certificates required for control plane operation. Ensures automatic and secure control plane configuration and allows additional Subject Alternative Names (SAN) to be added for secure access to the Kubernetes API.
@@ -42,7 +52,21 @@ The Level 2 C4 architecture of the [`control-plane-manager`](/modules/control-pl
 
 The module consists of the following components:
 
-1. **d8-control-plane-manager** (DaemonSet): Manages cluster control plane components and runs on all master nodes. It includes the following containers:
+1. **d8-control-plane-manager** (DaemonSet): Manages cluster control plane components and runs on all master nodes.
+
+   The **d8-control-plane-manager** controller performs the following actions:
+
+   - Monitors the `d8-control-plane-manager-config` and `d8-pki` Secrets and, based on their information, creates or updates the ControlPlaneNode custom resource for each master node.
+
+   - If the required node configuration differs from the current one, creates a ControlPlaneOperation resource to perform operations to update the node's configuration.
+
+   - Determines the order in which to execute the requested ControlPlaneOperation operations to maintain the required cluster fault tolerance during updates.
+
+   - Monitors the execution of operations specified in the ControlPlaneOperation resource.
+
+   - After the requested operations are completed, updates the current state of the master node in the ControlPlaneNode resource.
+
+   It consists of the following containers:
 
    * **control-plane-manager**: Main container. Developed by Flant.
 
@@ -70,6 +94,8 @@ The module interacts with the following components:
 1. **kube-apiserver**:
 
    * Manages cluster control plane components.
+   * Reconciles ControlPlaneNode and ControlPlaneOperation custom resources.
+   * Watches `d8-control-plane-manager-config` and `d8-pki` Secrets.
    * Proxies and load-balances requests to **kube-apiserver** sent to `localhost`.
 
 2. **etcd**:
@@ -106,7 +132,7 @@ Control-plane-proxy interacts with the following components:
 
 1. **kube-apiserver**: Authorizes requests for metrics.
 
-2. Control plane components: **control-plane-proxy** forwards authorized metric requests to:
+2. Control plane components: **control-plane-proxy** forwards authorized metric requests to the following components:
 
    * **kube-controller-manager**
    * **kube-scheduler**

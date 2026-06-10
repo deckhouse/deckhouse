@@ -1383,6 +1383,10 @@ entries:
                 ru: Инфраструктурные компоненты
               folders:
                 - title:
+                    en: Chrony module
+                    ru: Модуль chrony
+                  url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
