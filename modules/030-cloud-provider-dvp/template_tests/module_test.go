@@ -78,6 +78,10 @@ storage:
   enabled: true
   parameters: {}
 internal:
+  validationWebhookCert:
+    crt: test
+    key: test
+    ca: test
   credentialSecrets:
     d8-credentials:
       authScheme: Kubeconfig
@@ -121,6 +125,10 @@ storage:
   enabled: false
   parameters: {}
 internal:
+  validationWebhookCert:
+    crt: test
+    key: test
+    ca: test
   credentialSecrets:
     d8-credentials:
       authScheme: Kubeconfig
@@ -164,6 +172,10 @@ storage:
   enabled: true
   parameters: {}
 internal:
+  validationWebhookCert:
+    crt: test
+    key: test
+    ca: test
   credentialSecrets:
     d8-credentials:
       authScheme: Kubeconfig
@@ -193,6 +205,10 @@ storage:
   enabled: false
   parameters: {}
 internal:
+  validationWebhookCert:
+    crt: test
+    key: test
+    ca: test
   credentialSecrets:
     d8-credentials:
       authScheme: Kubeconfig
@@ -287,6 +303,84 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 
 			cddVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 			Expect(cddVPA.Exists()).To(BeTrue())
+
+			validationWebhookDeployment := f.KubernetesResource("Deployment", moduleNamespace, "validation-webhook")
+			Expect(validationWebhookDeployment.Exists()).To(BeTrue())
+			Expect(validationWebhookDeployment.Field("spec.revisionHistoryLimit").String()).To(Equal("2"))
+
+			validationWebhookVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "validation-webhook")
+			Expect(validationWebhookVPA.Exists()).To(BeTrue())
+
+			validationWebhookPDB := f.KubernetesResource("PodDisruptionBudget", moduleNamespace, "validation-webhook")
+			Expect(validationWebhookPDB.Exists()).To(BeTrue())
+
+			validationWebhookService := f.KubernetesResource("Service", moduleNamespace, "validation-webhook")
+			Expect(validationWebhookService.Exists()).To(BeTrue())
+
+			validationWebhookTLS := f.KubernetesResource("Secret", moduleNamespace, "validation-webhook-tls")
+			Expect(validationWebhookTLS.Exists()).To(BeTrue())
+
+			validationWebhookSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "validation-webhook")
+			Expect(validationWebhookSA.Exists()).To(BeTrue())
+
+			validationWebhookCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-dvp:validation-webhook")
+			Expect(validationWebhookCR.Exists()).To(BeTrue())
+			Expect(validationWebhookCR.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dvpinstanceclasses
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list`))
+
+			validationWebhookConfiguration := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-cloud-provider-dvp-validation-webhook")
+			Expect(validationWebhookConfiguration.Exists()).To(BeTrue())
+			Expect(validationWebhookConfiguration.Field("webhooks.0.clientConfig.service.path").String()).
+				To(Equal("/validate-deckhouse-io-v1alpha1-moduleconfig"))
+			Expect(validationWebhookConfiguration.Field("webhooks.0.timeoutSeconds").String()).To(Equal("30"))
+			Expect(validationWebhookConfiguration.Field("webhooks.0.matchConditions").String()).To(MatchYAML(`
+- expression: object.metadata.name == 'cloud-provider-dvp'
+  name: cloud-provider-dvp-module-config`))
+			Expect(validationWebhookConfiguration.Field("webhooks.1.clientConfig.service.path").String()).
+				To(Equal("/validate--v1-secret"))
+			Expect(validationWebhookConfiguration.Field("webhooks.1.timeoutSeconds").String()).To(Equal("30"))
+			Expect(validationWebhookConfiguration.Field("webhooks.1.matchConditions").String()).To(MatchYAML(`
+- expression: object.metadata.name == 'd8-credentials' || object.metadata.name.startsWith('d8-credentials-') || (oldObject != null && (oldObject.metadata.name == 'd8-credentials' || oldObject.metadata.name.startsWith('d8-credentials-')))
+  name: credential-secret-name
+- expression: object.type == 'cloud-provider.deckhouse.io/credentials' || (oldObject != null && oldObject.type == 'cloud-provider.deckhouse.io/credentials')
+  name: credential-secret-type`))
+			Expect(validationWebhookConfiguration.Field("webhooks.2.clientConfig.service.path").String()).
+				To(Equal("/validate-deckhouse-io-v1-nodegroup"))
+			Expect(validationWebhookConfiguration.Field("webhooks.2.timeoutSeconds").String()).To(Equal("30"))
+			Expect(validationWebhookConfiguration.Field("webhooks.2.matchConditions").String()).To(MatchYAML(`
+- expression: object.spec.nodeType == 'CloudPermanent' || (oldObject != null && oldObject.spec.nodeType == 'CloudPermanent') || (has(object.spec.cloudInstances) && has(object.spec.cloudInstances.classReference) && object.spec.cloudInstances.classReference.kind == 'DVPInstanceClass') || (oldObject != null && has(oldObject.spec.cloudInstances) && has(oldObject.spec.cloudInstances.classReference) && oldObject.spec.cloudInstances.classReference.kind == 'DVPInstanceClass')
+  name: dvp-node-group-involved`))
+			Expect(validationWebhookConfiguration.Field("webhooks.3.clientConfig.service.path").String()).
+				To(Equal("/validate-deckhouse-io-v1alpha1-dvpinstanceclass"))
+			Expect(validationWebhookConfiguration.Field("webhooks.3.timeoutSeconds").String()).To(Equal("30"))
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-dvp:user")
 			Expect(userAuthzUser.Exists()).To(BeTrue())

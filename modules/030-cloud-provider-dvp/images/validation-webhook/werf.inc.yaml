@@ -1,18 +1,21 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: common/distroless
+fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /dhctl-provider-dvp
-  to: /dhctl-provider-dvp
+  add: /validation-webhook
+  to: /validation-webhook
   before: setup
+imageSpec:
+  config:
+    entrypoint: ["/validation-webhook"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to: /src/validator/src
+  to: /src/validation-webhook/src
   excludePaths:
   - "**/*.md"
   - "**/*.yaml"
@@ -22,7 +25,7 @@ git:
     - go.sum
     - "**/*.go"
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/pkg
-  to: /src/validator/pkg
+  to: /src/validation-webhook/pkg
   excludePaths:
   - "**/*.md"
   - "**/*.yaml"
@@ -52,11 +55,11 @@ git:
     - "**/*.go"
 shell:
   install:
-  - cd /src/validator/pkg
+  - cd /src/validation-webhook/pkg
   - sed -i -e 's# ../../../go_lib/cloud-provider# /src/go_lib/cloud-provider#g' go.mod
   - sed -i -e 's# ../../../go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
-  - cd /src/validator/src
-  - sed -i -e 's# ../../../pkg# /src/validator/pkg#g' go.mod
+  - cd /src/validation-webhook/src
+  - sed -i -e 's# ../../../pkg# /src/validation-webhook/pkg#g' go.mod
   - sed -i -e 's# ../../../../../go_lib/cloud-provider# /src/go_lib/cloud-provider#g' go.mod
   - sed -i -e 's# ../../../../../go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
   - cd /src/go_lib/cloud-provider
@@ -67,7 +70,7 @@ final: false
 from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/validator/src
+  add: /src/validation-webhook/src
   to: /src
   before: install
 mount:
@@ -77,6 +80,8 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
   - go mod download
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /dhctl-provider-dvp .
-  - chown 64535:64535 /dhctl-provider-dvp
-  - chmod 0755 /dhctl-provider-dvp
+  setup:
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /validation-webhook .
+  - chown 64535:64535 /validation-webhook
+  - chmod 0755 /validation-webhook

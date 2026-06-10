@@ -11,13 +11,36 @@ Diagnostics go to stderr.
 
 ### validate
 
-Checks that the provider configuration is usable before bootstrap:
+Runs validation in `images/validator/src` using shared libraries:
 
-1. **kubeconfigDataBase64** — decodes and parses the kubeconfig, connects to the cluster,
-   runs a `SelfSubjectReview` to confirm the service account identity. Only runs on
-   `operation: bootstrap` and only when `providerClusterConfig` is non-empty.
-2. **credential Secret** — checks that `resourcesYAML` contains at least one `Secret`
-   with `type: cloud-provider.deckhouse.io/credentials`.
+- generic checks from `go_lib/cloud-provider/validation`;
+- DVP-specific rules from `modules/030-cloud-provider-dvp/pkg/validation`.
+
+The validator checks:
+
+1. **ModuleConfig** — resource is present and named `cloud-provider-dvp`.
+2. **CredentialSecret** — `d8-credentials` must have
+   `type: cloud-provider.deckhouse.io/credentials`, `authScheme: kubeconfig`, and a
+   valid kubeconfig in `secret` (stored as base64).
+3. **etcdDisk attachment** — `DVPInstanceClass.spec.etcdDisk` is allowed only for the
+   class attached to `NodeGroup/master`.
+4. **Preflight (`bootstrap` + `converge`)** — requires:
+   `Secret/d8-credentials`, `NodeGroup/master` with `DVPInstanceClass` reference,
+   and `spec.etcdDisk` in that referenced class.
+
+Migration from ProviderClusterConfiguration is skipped while legacy resources are
+incomplete (`MigrationStatus` / `d8-module-is-migrating` ConfigMap).
+
+**Preflight policy:** The admission webhook runs preflight on every admission request
+so the live cluster cannot drift into an invalid topology. The dhctl validator runs
+the same checks only for `bootstrap` and `converge` operations; other operations still
+validate ModuleConfig, credentials, and etcdDisk rules via `ValidateInvariants`.
+
+| Path | ModuleConfig | Credentials | etcdDisk | Preflight | Migration skip |
+|------|-------------|-------------|----------|-----------|----------------|
+| dhctl bootstrap/converge | yes | yes | yes | yes | PCC / migration status |
+| dhctl other operations | yes | yes | yes | no | PCC / migration status |
+| admission webhook | yes | yes | yes | yes (every request) | ConfigMap |
 
 On success writes `{}` to stdout and exits 0.
 On validation error writes `{"error":"..."}` to stdout and exits 0.
@@ -45,27 +68,7 @@ go build -o /tmp/dvp-validator .
 
 ## Manual testing
 
-### validate — missing Secret (expected error)
-
-```bash
-cat > /tmp/req.json << 'EOF'
-{
-  "version": "1",
-  "input": {
-    "providerName": "dvp",
-    "clusterPrefix": "test",
-    "layout": "standard",
-    "operation": "bootstrap",
-    "providerClusterConfiguration": {},
-    "resourcesYAML": ""
-  }
-}
-EOF
-/tmp/dvp-validator validate < /tmp/req.json
-# {"error":"DVP cloud provider config validation error: no credential Secret found..."}
-```
-
-### validate — skip kubeconfig check on non-bootstrap operation
+### validate — preflight requirements for converge
 
 ```bash
 cat > /tmp/req.json << 'EOF'
@@ -76,13 +79,18 @@ cat > /tmp/req.json << 'EOF'
     "clusterPrefix": "test",
     "layout": "standard",
     "operation": "converge",
-    "providerClusterConfiguration": {"provider": {"kubeconfigDataBase64": "invalid"}},
-    "resourcesYAML": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: creds\ntype: cloud-provider.deckhouse.io/credentials\n"
+    "providerClusterConfiguration": {},
+    "moduleConfig": {
+      "provider": {"parameters": {"namespace": "default"}},
+      "storage": {"enabled": true, "parameters": {}},
+      "nodes": {"enabled": false}
+    },
+    "resourcesYAML": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: d8-credentials\n  namespace: d8-cloud-provider-dvp\ntype: cloud-provider.deckhouse.io/credentials\nstringData:\n  authScheme: kubeconfig\n  secret: YXBpVmV=\n"
   }
 }
 EOF
 /tmp/dvp-validator validate < /tmp/req.json
-# {}
+# {"error":"NodeGroup/master: NodeGroup \"master\" is required"}
 ```
 
 ### prepare — full vars
