@@ -1,5 +1,4 @@
-2630
-2633
+2634
 Автообновление
 Агрегирующий
 Актуализируйте
@@ -1209,6 +1208,7 @@ clusterlocal
 ClusterLogDestination
 ClusterLoggingConfig
 ClusterName
+ClusterObservabilityAlert
 ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
