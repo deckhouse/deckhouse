@@ -75,12 +75,8 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger) confi
 		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
 			return external.NewBinaryPreparator(binaryPath)
 		}
-		// External providers (DVP and any future plugin) ship a validator
-		// binary inside their OCI bundle. Falling back to a prefix-only
-		// validator here would silently skip every provider-specific check
-		// — registry credentials, kubeconfig, layout, NodeGroup sizing —
-		// and let a broken configuration reach terraform apply. Refuse to
-		// proceed with a precise diagnostic instead.
+		// A silent fallback would skip every provider-specific check;
+		// refuse with a precise diagnostic instead.
 		searched := ""
 		if downloadRootDir != "" {
 			searched = filepath.Join(downloadRootDir, provider, externalPreparatorBinaryName)
@@ -106,11 +102,8 @@ func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	return path
 }
 
-// missingExternalValidatorPreparator is the preparator returned when an
-// external provider declares itself but its validator binary is absent from
-// the unpacked OCI bundle. Both Validate and Prepare hard-fail so the caller
-// surfaces a clear configuration error rather than a downstream
-// "terraform plan diverged" or "external API rejected the request" mystery.
+// missingExternalValidatorPreparator hard-fails Validate and Prepare when an
+// external provider's validator binary is absent from the unpacked OCI bundle.
 type missingExternalValidatorPreparator struct {
 	provider     string
 	searchedPath string

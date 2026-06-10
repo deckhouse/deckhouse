@@ -111,14 +111,9 @@ func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.Kubernete
 }
 
 // moduleConfigFromUnstructured deserialises a ModuleConfig fetched from the
-// cluster and validates it against its registered schema. Validation matches
-// the legacy PCC path (parseLegacyProviderClusterConfig also calls
-// schemaStore.Validate) so a kubectl-patched invalid ModuleConfig fails fast
-// here instead of surfacing as a confusing downstream error from the
-// external preparator. When no schema is registered for the module (e.g.
-// the module-config schemas weren't loaded into this SchemaStore) we accept
-// the document — Validate-without-schema is what HasSchemaForModuleConfig
-// guards us from in higher-level paths.
+// cluster and validates it against its registered schema, so a kubectl-patched
+// invalid ModuleConfig fails fast here instead of as a confusing downstream
+// preparator error. A module without a registered schema is accepted.
 func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	raw, err := json.Marshal(obj.Object)
 	if err != nil {

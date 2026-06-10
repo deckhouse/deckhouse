@@ -46,12 +46,6 @@ type SchemaStore struct {
 	conversionsStore   *conversion.ConversionsStore
 }
 
-// TODO(dhctl-server): SchemaStore is currently a process-wide sync.Once
-// singleton. This works for the dhctl CLI but is unsafe in the dhctl-server
-// where concurrent requests may need different DownloadDir/CandiDir layouts —
-// the first request's schemas leak to all subsequent requests. A path-keyed
-// cache would be correct, but several tests rely on the existing singleton
-// behavior. Switching them is a separate task.
 var (
 	once  sync.Once
 	store *SchemaStore
