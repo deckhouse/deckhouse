@@ -286,7 +286,7 @@ func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) erro
 			return false, fmt.Errorf("expected a VirtualMachineDisk but got a %T", obj)
 		}
 
-		if vmd.Status.Phase == v1alpha2.DiskReady {
+		if vmd.Status.Phase == v1alpha2.DiskReady || vmd.Status.Phase == v1alpha2.DiskWaitForFirstConsumer {
 			return true, nil
 		}
 
