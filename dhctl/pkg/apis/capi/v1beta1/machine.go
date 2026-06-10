@@ -27,13 +27,11 @@ const (
 	group        = "cluster.x-k8s.io"
 	groupVersion = "v1beta1"
 
-	clustersName    = "clusters"
 	machinesName    = "machines"
 	deploymentsName = "machinedeployments"
 )
 
 var (
-	ClusterGVR           = schema.GroupVersionResource{Group: group, Version: groupVersion, Resource: clustersName}
 	MachineDeploymentGVR = schema.GroupVersionResource{Group: group, Version: groupVersion, Resource: deploymentsName}
 	MachineGVR           = schema.GroupVersionResource{Group: group, Version: groupVersion, Resource: machinesName}
 
@@ -48,14 +46,6 @@ var (
 		Version: groupVersion,
 	}
 
-	ClusterAPIResource = metav1.APIResource{
-		Kind:       "Cluster",
-		Name:       clustersName,
-		Verbs:      metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
-		Group:      group,
-		Version:    groupVersion,
-		Namespaced: true,
-	}
 	MachineDeploymentAPIResource = metav1.APIResource{
 		Kind:       "MachineDeployment",
 		Name:       deploymentsName,
