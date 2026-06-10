@@ -48,7 +48,8 @@ metadata:
   name: capi-controller-manager
   namespace: d8-cloud-instance-manager
   annotations:
-    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback  
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}

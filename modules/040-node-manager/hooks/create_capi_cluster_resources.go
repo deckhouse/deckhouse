@@ -17,6 +17,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -26,20 +27,8 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-// Cluster / MachineHealthCheck (cluster.x-k8s.io/v1beta1) go through a
-// conversion webhook served by capi-webhook-service → capi-controller-manager.
-// Rendering them via the node-manager helm release races the very first install
-// of that Deployment: apiserver calls the webhook during SSA, gets connection-
-// refused, helm retries with 45s backoff (~4 retries = ~3 minutes lost on the
-// main queue).
-//
-// Owning them in a hook on a dedicated queue removes them from helm's apply
-// list — helm install of node-manager succeeds on the first try, and the hook
-// retries the create until the webhook backend is up. The objects are not on
-// the bootstrap critical path: nothing helm-rendered references them during
-// initial install (MachineDeployment is only emitted for Cloud/CloudEphemeral
-// NodeGroups, and master NG is CloudPermanent).
-//
+// Cluster and MachineHealthCheck are created via this hook (not helm) on a
+// dedicated queue so that transient failures don't block the main queue.
 // Hook is idempotent (CreateIfNotExists), so retries are safe.
 
 const (
@@ -52,6 +41,15 @@ type capiClusterInfo struct {
 	ClusterName       string
 	ClusterKind       string
 	ClusterAPIVersion string
+}
+
+type capiClusterCRDConversion struct {
+	Strategy string
+}
+
+func filterCapiClusterCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	strategy, _, _ := unstructured.NestedString(obj.Object, "spec", "conversion", "strategy")
+	return capiClusterCRDConversion{Strategy: strategy}, nil
 }
 
 func filterCapiClusterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -90,10 +88,31 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{MatchNames: []string{"d8-node-manager-cloud-provider"}},
 			FilterFunc:   filterCapiClusterSecret,
 		},
+		{
+			Name:       "cluster_crd",
+			ApiVersion: "apiextensions.k8s.io/v1",
+			Kind:       "CustomResourceDefinition",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"clusters.cluster.x-k8s.io"},
+			},
+			FilterFunc: filterCapiClusterCRD,
+		},
 	},
 }, createCapiClusterResources)
 
 func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) error {
+	crdSnaps := input.Snapshots.Get("cluster_crd")
+	if len(crdSnaps) == 0 {
+		return fmt.Errorf("CRD clusters.cluster.x-k8s.io not found yet, will retry")
+	}
+	var crdConv capiClusterCRDConversion
+	if err := crdSnaps[0].UnmarshalTo(&crdConv); err != nil {
+		return fmt.Errorf("unmarshal cluster_crd snapshot: %w", err)
+	}
+	if crdConv.Strategy != "Webhook" {
+		return fmt.Errorf("CRD clusters.cluster.x-k8s.io conversion webhook not ready (strategy=%q), will retry", crdConv.Strategy)
+	}
+
 	snaps, err := sdkobjectpatch.UnmarshalToStruct[capiClusterInfo](input.Snapshots, "cloud_provider_secret")
 	if err != nil {
 		return fmt.Errorf("unmarshal cloud_provider_secret snapshot: %w", err)
@@ -109,6 +128,11 @@ func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) err
 	if infraAPIVersion == "" {
 		infraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
 	}
+	// v1beta2 uses apiGroup (e.g. "infrastructure.cluster.x-k8s.io") instead of apiVersion
+	infraAPIGroup := infraAPIVersion
+	if idx := strings.LastIndex(infraAPIGroup, "/"); idx >= 0 {
+		infraAPIGroup = infraAPIGroup[:idx]
+	}
 
 	podCIDR := input.Values.Get("global.clusterConfiguration.podSubnetCIDR").String()
 	serviceCIDR := input.Values.Get("global.clusterConfiguration.serviceSubnetCIDR").String()
@@ -121,7 +145,7 @@ func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) err
 	}
 
 	cluster := map[string]interface{}{
-		"apiVersion": "cluster.x-k8s.io/v1beta1",
+		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "Cluster",
 		"metadata": map[string]interface{}{
 			"name":      info.ClusterName,
@@ -138,22 +162,20 @@ func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) err
 				"serviceDomain": serviceDomain,
 			},
 			"infrastructureRef": map[string]interface{}{
-				"apiVersion": infraAPIVersion,
-				"kind":       info.ClusterKind,
-				"namespace":  capiNamespace,
-				"name":       info.ClusterName,
+				"apiGroup": infraAPIGroup,
+				"kind":     info.ClusterKind,
+				"name":     info.ClusterName,
 			},
 			"controlPlaneRef": map[string]interface{}{
-				"apiVersion": "infrastructure.cluster.x-k8s.io/v1alpha1",
-				"kind":       "DeckhouseControlPlane",
-				"namespace":  capiNamespace,
-				"name":       info.ClusterName + "-control-plane",
+				"apiGroup": "infrastructure.cluster.x-k8s.io",
+				"kind":     "DeckhouseControlPlane",
+				"name":     info.ClusterName + "-control-plane",
 			},
 		},
 	}
 
 	mhc := map[string]interface{}{
-		"apiVersion": "cluster.x-k8s.io/v1beta1",
+		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "MachineHealthCheck",
 		"metadata": map[string]interface{}{
 			"name":      info.ClusterName + "-machine-health-check",
@@ -161,16 +183,18 @@ func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) err
 			"labels":    commonLabels,
 		},
 		"spec": map[string]interface{}{
-			"clusterName":        info.ClusterName,
-			"nodeStartupTimeout": "20m",
+			"clusterName": info.ClusterName,
 			"selector": map[string]interface{}{
 				"matchLabels": map[string]interface{}{
 					"cluster.x-k8s.io/cluster-name": info.ClusterName,
 				},
 			},
-			"unhealthyConditions": []interface{}{
-				map[string]interface{}{"type": "Ready", "status": "Unknown", "timeout": "5m"},
-				map[string]interface{}{"type": "Ready", "status": "False", "timeout": "5m"},
+			"checks": map[string]interface{}{
+				"nodeStartupTimeoutSeconds": int64(1200),
+				"unhealthyNodeConditions": []interface{}{
+					map[string]interface{}{"type": "Ready", "status": "Unknown", "timeoutSeconds": int64(300)},
+					map[string]interface{}{"type": "Ready", "status": "False", "timeoutSeconds": int64(300)},
+				},
 			},
 		},
 	}
