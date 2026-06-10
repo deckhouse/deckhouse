@@ -1,0 +1,140 @@
+{{- /*
+  Example, module-shipped GrantableClusterResourceDefinition registrations so the feature works out of the box.
+  Both use defaultAvailability: All, so nothing is restricted until a cluster admin creates a
+  ClusterResourceGrantPolicy (to narrow availability) and/or a ClusterResourceGrant (to cap usage).
+*/}}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: storageclasses
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+  enforcement: Managed
+  defaultAvailability: All
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
+  # The built-in DefaultStorageClass admission injects the cluster-default StorageClass into PVCs that
+  # omit spec.storageClassName, before this module's webhook runs. Coerce such a value to the project
+  # default when the cluster default is not available to the project, instead of rejecting the PVC.
+  coerceToDefault: true
+  usageReferences:
+  - rule:
+      apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      resources:
+      - persistentvolumeclaims
+    fieldPath: $.spec.storageClassName
+    default: true
+    countable: true
+    quantities:
+    - name: requests.storage
+      fieldPath: $.spec.resources.requests.storage
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: loadbalancerclasses
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  # value-backed: no grantedResource — the names are values of spec.loadBalancerClass, not objects.
+  enforcement: Managed
+  defaultAvailability: All
+  usageReferences:
+  - rule:
+      apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      resources:
+      - services
+    fieldPath: $.spec.loadBalancerClass
+    match:
+      fieldPath: $.spec.type
+      equals: LoadBalancer
+    default: true
+    countable: true
+{{- if .Values.global.enabledModules | has "cert-manager" }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: clusterissuers
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+  enforcement: Managed
+  defaultAvailability: All
+  usageReferences:
+  # Certificates that reference a ClusterIssuer by name.
+  - rule:
+      apiGroups:
+      - cert-manager.io
+      apiVersions:
+      - v1
+      resources:
+      - certificates
+    fieldPath: $.spec.issuerRef.name
+    match:
+      fieldPath: $.spec.issuerRef.kind
+      equals: ClusterIssuer
+    default: true
+    countable: true
+  # Ingresses that request a certificate via the cert-manager cluster-issuer annotation. This is an
+  # opt-in toggle (its absence means "no cert-manager"), so it is validated and counted but never
+  # defaulted — no `default: true`.
+  - rule:
+      apiGroups:
+      - networking.k8s.io
+      apiVersions:
+      - v1
+      resources:
+      - ingresses
+    fieldPath: $.metadata.annotations['cert-manager.io/cluster-issuer']
+    countable: true
+{{- end }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: clusterroles
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+  enforcement: Managed
+  # Available by default to every project, but only the cluster roles explicitly marked delegatable
+  # with the rbac.deckhouse.io/delegatable label — the namespace-level access roles: d8:use:role:*
+  # (the "use" role aggregates) and user-authz:{user,privileged-user,editor,admin}. Everything else
+  # (use capabilities, cluster-scoped roles like cluster-admin/super-admin, the d8:manage:* permission
+  # roles, the admin-kubeconfig roles, raw component roles) lacks the label and is excluded, so binding
+  # it from a project RoleBinding is rejected.
+  defaultAvailability: All
+  excluded:
+  - matchExpressions:
+    - key: rbac.deckhouse.io/delegatable
+      operator: DoesNotExist
+  usageReferences:
+  # RoleBindings in project namespaces that reference a ClusterRole by name. Allow-list only — NOT
+  # countable: capping the number of RoleBindings per ClusterRole is meaningless, and counting them
+  # would also pick up the platform-managed access-control bindings (the d8:user-authz:* roles bound in
+  # every namespace), which are not tenant grants. Availability is still enforced on these RoleBindings.
+  - rule:
+      apiGroups:
+      - rbac.authorization.k8s.io
+      apiVersions:
+      - v1
+      resources:
+      - rolebindings
+    fieldPath: $.roleRef.name
+    match:
+      fieldPath: $.roleRef.kind
+      equals: ClusterRole

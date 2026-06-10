@@ -29,6 +29,7 @@ require (
 	github.com/spaolacci/murmur3 v1.1.0
 	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
 	github.com/stretchr/testify v1.11.1
+	github.com/theory/jsonpath v0.11.0
 	github.com/tidwall/gjson v1.19.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/vmware/govmomi v0.51.0 // indirect
@@ -101,6 +102,7 @@ require (
 	cel.dev/expr v0.25.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/090809/oteljsonl v0.0.2 // indirect
+	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
