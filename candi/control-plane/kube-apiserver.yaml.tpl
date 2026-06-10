@@ -224,7 +224,7 @@ spec:
       failureThreshold: 8
       httpGet:
 {{- if hasKey . "nodeIP" }}
-        host: {{ .nodeIP | quote }}
+        host: {{ .nodeIP }}
 {{- end }}
         path: /livez
         port: 6443
@@ -237,7 +237,7 @@ spec:
       failureThreshold: 3
       httpGet:
 {{- if hasKey . "nodeIP" }}
-        host: {{ .nodeIP | quote }}
+        host: {{ .nodeIP }}
 {{- end }}
         path: /healthz
         port: 6443
@@ -249,20 +249,20 @@ spec:
         cpu: "{{ div (mul $millicpu 33) 100 }}m"
         memory: "{{ div (mul $memory 33) 100 }}"
     securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
-      runAsGroup: 0
       capabilities:
         drop:
         - ALL
       readOnlyRootFilesystem: true
+      runAsNonRoot: false
+      runAsUser: 0
+      runAsGroup: 0
       seccompProfile:
         type: RuntimeDefault
     startupProbe:
       failureThreshold: 24
       httpGet:
 {{- if hasKey . "nodeIP" }}
-        host: {{ .nodeIP | quote }}
+        host: {{ .nodeIP }}
 {{- end }}
         path: /livez
         port: 6443
