@@ -1427,7 +1427,7 @@ The integrity control of the data stored in etcd is available only in the EE edi
 
 To verify the format of data stored in etcd, create a test object and retrieve its contents using `etcdctl`.
 
-The following commands should be executed from a control-plane node of the cluster.
+The following commands should be executed from a master node of the cluster.
 
 1. Create a test object:
 
@@ -1476,9 +1476,9 @@ The following commands should be executed from a control-plane node of the clust
 
 ### Verifying the prohibition of processing data with an invalid signature
 
-To verify the mechanism that rejects processing of data with an invalid signature, intentionally modify the value of the `signature` field.
+To verify the mechanism that rejects processing of data with an invalid signature, modify the value of the `signature` field.
 
-The following commands should be executed from a control-plane node of the cluster.
+The following commands should be executed from a master node of the cluster.
 
 1. Create a test object:
 
@@ -1497,7 +1497,7 @@ The following commands should be executed from a control-plane node of the clust
      --endpoints https://127.0.0.1:2379/
    ```
 
-1. Intentionally change the `signature` field in the secret:
+1. Change the `signature` field in the secret:
 
    ```bash
    etcdctl put /registry/secrets/default/test-secret \
@@ -1514,13 +1514,13 @@ The following commands should be executed from a control-plane node of the clust
    d8 k get secret test-secret 
    ```
 
-   Example output (only in the [`Enforce`](configuration.html#parameters-apiserver-signature) integrity control mode):
+   Example output (only in the [`Enforce`](configuration.html#parameters-apiserver-signature) integrity control mode, which allows working only with records that have a valid signature):
 
    ```console
    Error from server (InternalError): Internal error occurred: bad signature, record rejected
    ```
 
-### Verifying audit log event recording
+#### Verifying audit log event recording
 
 When an invalid or missing signature is detected, information about it is recorded in the Kubernetes audit log regardless of the selected integrity control mode.
 
