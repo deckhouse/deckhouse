@@ -590,9 +590,33 @@ entries:
                         ru: Федерация
                       url: /admin/configuration/network/alliance/federation.html
                 - title:
-                     en: Network policy configuration
-                     ru: Настройка сетевых политик
-                  url: /admin/configuration/network/policy/configuration.html
+                    en: Network policies
+                    ru: Сетевые политики
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/network/policy/configuration.html
+                    - title:
+                        en: Kubernetes NetworkPolicy
+                        ru: Kubernetes NetworkPolicy
+                      url: /admin/configuration/network/policy/kubernetes_networkpolicy.html
+                    - title:
+                        en: CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy
+                        ru: CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy
+                      url: /admin/configuration/network/policy/cilium_networkpolicy.html
+                    - title:
+                        en: Host firewall on nodes
+                        ru: Host firewall на узлах
+                      url: /admin/configuration/network/policy/host_firewall.html
+                    - title:
+                        en: Common policy examples
+                        ru: Типовые примеры политик
+                      url: /admin/configuration/network/policy/examples.html
+                    - title:
+                        en: Diagnostics and observability
+                        ru: Диагностика и наблюдаемость политик
+                      url: /admin/configuration/network/policy/troubleshooting.html
                 - title:
                     en: SDN
                     ru: SDN
