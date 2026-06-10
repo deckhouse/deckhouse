@@ -32,28 +32,40 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
   В prometheus-main может использоваться оригинальный («vanilla») Prometheus или [Deckhouse Prom++](https://github.com/deckhouse/prompp) — высокопроизводительный форк Prometheus с открытым исходным кодом, разработанный для значительного сокращения потребления памяти при сохранении полной совместимости с оригинальным проектом. В модуле по умолчанию используется Deckhouse Prom++. Есть возможность переключиться с Deckhouse Prom++ на оригинальный Prometheus. В этом случае потребуется миграция данных журнала упреждающей записи (WAL или write-ahead log), поскольку в Deckhouse Prom++ используется свой формат журнала WAL. Миграция осуществляется автоматически при помощи init-контейнера prompptool.
 
-  Prometheus-main обрабатывает настроенные правила, отправляет алерты и является основным источником данных. Подробнее с описанием работы компонента prometheus-main можно ознакомиться в разделе [Архитектура мониторинга](monitoring.html#prometheus).
+  Prometheus-main является основным источником данных. Он сообирает метрики, обрабатывает настроенные правила и отправляет алерты в соответствии с его конфигурацией. Инсталляцию Prometheus, а также его конфигурацию создает [Prometheus Operator](/modules/operator-prometheus/) на основании кастомных ресурсов:
 
-  Состоит из следующих контейнеров:
+  * [Prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheus) — описывает инсталляцию (кластер) Prometheus;
+  * [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitor) — задаёт, как собирать метрики с набора сервисов;
+  * [PrometheusRule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusrule) — содержит набор правил Prometheus.
 
-  - **init-config-reloader** — init-контейнер, выполняющий однократный запуск config-reloader для загрузки конфигурации Prometheus;
-  - **prompptool** — init-контейнер, выполняющий автоматическую миграцию данных журнала WAL в случае переключения с Deckhouse Prom++ на оригинальный Prometheus и наоборот;
-  - **config-reloader** — сайдкар-контейнер, который следит за изменениями в файле конфигурации `prometheus.yaml` и, при необходимости, вызывает перезагрузку конфигурации Prometheus (HTTP-запросом на специальный эндпойнт `/-/reload`). Config-reloader является [утилитой](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) из Open Source-проекта [Prometheus Operator](https://github.com/coreos/prometheus-operator/).
+  Prometheus Operator отслеживает ресурсы Prometheus и для каждого генерирует:
 
-  - **prometheus** — основной контейнер;
-   
-  - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к серверу Prometheus. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+  * StatefulSet с самим Prometheus;
+  * секрет `prometheus-main` с `prometheus.yaml` (основной конфигурационный файл) и `configmaps.json` (конфигурационный файл для контейнера config-reloader, описанного ниже). Секрет `prometheus-main` монтируется в под prometheus-main и используется контейнером config-reloader.
+  
+  Prometheus Operator отслеживает ресурсы ServiceMonitor и PrometheusRule и на их основании обновляет конфигурацию (prometheus.yaml и configmaps.json) в указанном выше секрете.
+
+  Подробнее с описанием работы Prometheus Operator можно ознакомиться [в разделе документации модуля](/modules/operator-prometheus/).
+
+  Подробнее с описанием работы компонента prometheus-main можно ознакомиться в разделе [Архитектура мониторинга](monitoring.html#prometheus).
+
+  Prometheus-main состоит из следующих контейнеров:
+
+  * **init-config-reloader** — init-контейнер, выполняющий однократный запуск config-reloader для загрузки конфигурации Prometheus.
+  * **prompptool** — init-контейнер, выполняющий автоматическую миграцию данных журнала WAL в случае переключения с Deckhouse Prom++ на оригинальный Prometheus и наоборот;
+  * **config-reloader** — сайдкар-контейнер, который следит за изменениями в файле конфигурации `prometheus.yaml` и, при необходимости, вызывает перезагрузку конфигурации Prometheus (HTTP-запросом на специальный эндпойнт `/-/reload`). Config-reloader является [утилитой](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) из Open Source-проекта [Prometheus Operator](https://github.com/coreos/prometheus-operator/).
+  * **prometheus** — основной контейнер;
+  * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к серверу Prometheus. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 2. **Prometheus-longterm** (StatefulSet) — дополнительный Prometheus, хранящий выборку разреженных метрик из основного prometheus-main. Это позволяет пользователям просматривать и анализировать исторические тренды за длительный период времени. Prometheus-longterm получает данные благодаря настроенной федерации с основным Prometheus. 
 
-   В prometheus-longterm также может использоваться оригинальный Prometheus или Deckhouse Prom++. Состав контейнеров у prometheus-longterm такой же, как и у prometheus-main. 
+   В prometheus-longterm также может использоваться оригинальный Prometheus или Deckhouse Prom++. Состав контейнеров и принцип их работы у prometheus-longterm такой же, как и у prometheus-main. 
 
 {% alert level="info" %}
-1. Для отображения дашбордов мониторинга в веб-интерфейсе DKP используется другая инсталляция Grafana, входящая в модуль [observability](/modules/observability/).
-2. Grafana-v10 в ближайшее время будет отключена, для просмотра дашбордов мониторинга нужно будет использовать веб-интерфейс DKP.
+Grafana-v10 в ближайшее время будет отключена, для просмотра дашбордов мониторинга нужно будет использовать веб-интерфейс DKP.
 {% endalert %}
 
-3. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana включает подготовленные дашборды для всех модулей DKP и некоторых популярных приложений. Grafana умеет работать в режиме высокой доступности, не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Grafana по умолчанию включена, но ее можно удалить из модуля при помощи [следующего параметра модуля](/modules/prometheus/configuration.html#parameters-grafana-enabled).
+3. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana отображает дашборды, поставляемые вместе с модулями DKP. Grafana умеет работать в режиме высокой доступности, не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Grafana по умолчанию включена, но её можно отключить при помощи [следующего параметра модуля](/modules/prometheus/configuration.html#parameters-grafana-enabled).
 
    Состоит из следующих контейнеров:
 
@@ -84,7 +96,11 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
    * **trickster** — основной контейнер. Является [Open Source-проектом](https://github.com/trickstercache/trickster);
    * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к прокси-серверу и его метрикам. Подробно описан выше.
 
-7. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создает на их основе кастомные ресурсы [ClusterAlerts](https://deckhouse.ru/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlerts используется для информирования пользователей DKP об активных алертах и отображаются в веб-интерфейсе платформы. Является разработкой компании «Флант». Состоит из одного контейнера.
+{% alert level="info" %}
+Alerts-receiver в ближайшее время будет удален из модуля [`prometheus`](/modules/prometheus/), для приема всех алертов будет использоваться Alertmanager из модуля [`observability`](/modules/observability/).
+{% endalert %}
+
+7. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создает на их основе кастомные ресурсы [ClusterAlerts](https://deckhouse.ru/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlerts используется для информирования пользователей DKP об активных алертах и отображаются в веб-интерфейсе платформы. Является разработкой компании «Флант». Состоит из одного контейнера. В ближайшее время будет deprecated, для приема всех алертов будет использоваться Alertmanager из модуля [`observability`](/modules/observability/).
 
 ## Взаимодействия модуля
 
