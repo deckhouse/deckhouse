@@ -307,13 +307,12 @@ To implement validation for resources with a different label (for example, `heri
 
 ## Granting cluster-scoped resources to projects
 
-The multitenancy-manager lets cluster operators control which cluster-scoped resources
-(for example `StorageClass`) may be referenced from within project namespaces.
+The `multitenancy-manager` lets cluster administrators control which cluster-scoped resources (for example StorageClass) may be referenced from within project namespaces.
 
-Four resources are involved:
+To do this, custom resources are used:
 
 - `GrantableClusterResourceDefinition` (cluster-scoped) — registers a cluster resource that can be
-  granted: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
+  granted to projects: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
   the baseline availability (`defaultAvailability`), and how the per-project default is discovered
   (`defaultFrom`). Each reference opts into defaulting individually with `default: true` — set it only
   for a field whose value the resource always needs (such as a `PersistentVolumeClaim`'s
@@ -364,11 +363,11 @@ spec:
       environment: production
   resources:
     - resourceName: storageclasses
-      default: fast-ssd          # overrides the annotation-based default
+      default: fast-ssd          # Overrides the annotation-based default.
       allowed:
         - fast-ssd
         - standard
-      allowedSelector:           # plus any StorageClass with label shared=true
+      allowedSelector:           # Plus any StorageClass with label shared=true.
         matchLabels:
           shared: "true"
 ```
