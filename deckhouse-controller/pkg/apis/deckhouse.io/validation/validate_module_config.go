@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/values/validation"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -38,6 +39,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/cel"
+	"github.com/go-openapi/spec"
 )
 
 const (
@@ -120,6 +124,8 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 
 	allowExperimental := v.settings.Get().AllowExperimentalModules
 
+	var oldSettings map[string]interface{}
+
 	switch review.Operation {
 	case kwhmodel.OperationDelete:
 		return v.validateDelete(ctx, cfg)
@@ -133,12 +139,18 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		}
 
 	case kwhmodel.OperationUpdate:
+		var extractErr error
+		oldSettings, extractErr = v.extractOldSettings(review.OldObjectRaw)
+		if extractErr != nil {
+			oldSettings = nil
+		}
+
 		if res, err := v.validateUpdate(ctx, review, cfg, allowExperimental); res != nil || err != nil {
 			return res, err
 		}
 	}
 
-	return v.validateCommon(ctx, cfg)
+	return v.validateCommon(ctx, cfg, oldSettings)
 }
 
 // validateDelete guards deletion: a confirmation-required module that is still
@@ -275,7 +287,7 @@ func (v *moduleConfigValidator) checkExperimentalFromModuleCR(ctx context.Contex
 // resolution, update policy existence, settings validation and the
 // exclusive-group conflict check. It returns an allow result with any
 // accumulated warnings when nothing rejects the request.
-func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha1.ModuleConfig) (*kwhvalidating.ValidatorResult, error) {
+func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha1.ModuleConfig, oldSettings map[string]interface{}) (*kwhvalidating.ValidatorResult, error) {
 	if cfg.Spec.Source == v1alpha1.ModuleSourceEmbedded {
 		return rejectResult("'Embedded' is a forbidden source")
 	}
@@ -293,19 +305,110 @@ func (v *moduleConfigValidator) validateCommon(ctx context.Context, cfg *v1alpha
 	}
 
 	// check if spec.version value is valid and the version is the latest
-	if result := v.configValidator.Validate(cfg); result.HasError() {
+	result := v.configValidator.Validate(cfg)
+	if result.HasError() {
 		return rejectResult(result.Error)
-	} else if result.Warning != "" {
+	}
+	if result.Warning != "" {
 		warnings = append(warnings, result.Warning)
 	}
 
 	v.setAllowedToDisableMetric(cfg, allowedToDisableMetricValue(cfg))
+
+	// CEL transition rules (x-deckhouse-validations with oldSelf).
+	// Executed only on UPDATE (oldSettings != nil).
+	// On CREATE oldSettings == nil → this block is skipped.
+	if oldSettings != nil {
+		if res, err := v.validateCELTransition(cfg, result.Settings, oldSettings); res != nil || err != nil {
+			return res, err
+		}
+	}
 
 	if res, err := v.validateExclusiveGroup(cfg); res != nil || err != nil {
 		return res, err
 	}
 
 	return allowResult(warnings)
+}
+
+// extractOldSettings parses the OldObjectRaw from the AdmissionReview and returns the settings in the latest-version form.
+// Returns nil, nil if the old object has no settings or version.
+// If an error occurs, the transition rules are simply skipped.
+func (v *moduleConfigValidator) extractOldSettings(oldObjectRaw []byte) (map[string]interface{}, error) {
+	if len(oldObjectRaw) == 0 {
+		return nil, nil
+	}
+
+	oldConfig := new(v1alpha1.ModuleConfig)
+	if err := json.Unmarshal(oldObjectRaw, oldConfig); err != nil {
+		return nil, fmt.Errorf("unmarshal old ModuleConfig: %w", err)
+	}
+
+	if oldConfig.Spec.Version == 0 || oldConfig.Spec.Settings == nil {
+		return nil, nil
+	}
+
+	settings, err := v.configValidator.ExtractLatestSettings(oldConfig)
+	if err != nil {
+		return nil, fmt.Errorf("extract old settings: %w", err)
+	}
+
+	return settings, nil
+}
+
+// validateCELTransition runs x-deckhouse-validations CEL transition rules—those that reference oldSelf. Called only on UPDATE (oldSettings != nil).
+// Uses cel.ValidateTransition from the internal deckhouse-controller package.
+func (v *moduleConfigValidator) validateCELTransition(cfg *v1alpha1.ModuleConfig, newSettings, oldSettings map[string]interface{}) (*kwhvalidating.ValidatorResult, error) {
+	if newSettings == nil {
+		return nil, nil
+	}
+
+	// Get spec.Schema from addon-operator SchemaStorage.
+	addonSchema, err := v.getConfigSchema(cfg.GetName())
+	if err != nil || addonSchema == nil {
+		return nil, nil
+	}
+
+	errs, celErr := cel.ValidateTransition(addonSchema, newSettings, oldSettings)
+	if celErr != nil {
+		return rejectResult(fmt.Sprintf("cel transition validation: %v", celErr))
+	}
+	if len(errs) > 0 {
+		msgs := make([]string, len(errs))
+		for i, e := range errs {
+			msgs[i] = e.Error()
+		}
+		return rejectResult(fmt.Sprintf(
+			"spec.settings are not valid (version %d): %s",
+			cfg.Spec.Version,
+			strings.Join(msgs, "; "),
+		))
+	}
+	return nil, nil
+}
+
+// getConfigSchema returns the spec.Schema for the module's config values.
+// Chain: v.moduleStorage.GetModuleByName → GetBasicModule → GetSchemaStorage → Schemas[ConfigValuesSchema]
+// The addon-operator uses the same schema in alidateConfigValues().
+func (v *moduleConfigValidator) getConfigSchema(moduleName string) (*spec.Schema, error) {
+	mod, err := v.moduleStorage.GetModuleByName(moduleName)
+	if err != nil {
+		return nil, nil
+	}
+
+	basic := mod.GetBasicModule()
+	if basic == nil {
+		return nil, nil
+	}
+
+	ss := basic.GetSchemaStorage()
+	if ss == nil {
+		return nil, nil
+	}
+
+	// validation.ConfigValuesSchema - constant from addon-operator pkg/values/validation
+	schema := ss.Schemas[validation.ConfigValuesSchema]
+	return schema, nil
 }
 
 // resolveModuleSource fetches the Module CR and validates the configured source.
