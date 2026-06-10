@@ -603,8 +603,12 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 	if provider == "" {
 		return true
 	}
+	candiDir := globalOptions.CandiDir
+	if candiDir == "" {
+		candiDir = options.DefaultCandiDir
+	}
 	schemaPresent := false
-	systemPath := filepath.Join(globalOptions.CandiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
+	systemPath := filepath.Join(candiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
 	if _, err := os.Stat(systemPath); err == nil {
 		schemaPresent = true
 	}
