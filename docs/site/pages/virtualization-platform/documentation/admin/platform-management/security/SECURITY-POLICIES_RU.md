@@ -202,15 +202,18 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 
 ## Запрет запуска уязвимых образов
 
-Для запрета запуска подов с уязвимыми образами используется Trivy-провайдер модуля `admission-policy-engine`.
+Проверка уязвимостей образов при создании объектов (`Pod`/`Deployment`/`StatefulSet`/`DaemonSet`) выполняется модулем `operator-trivy`.
+Запрос AdmissionReview обрабатывается Gatekeeper (модуль `admission-policy-engine`), после чего политика вызывает Trivy-провайдер через механизм `external_data`.
+Trivy-провайдер получает данные об уязвимостях через `operator-trivy` и возвращает результат проверки в Gatekeeper; на основании этого результата policy в `admission-policy-engine` разрешает или отклоняет запрос.
 
 Важные условия:
 
 - Проверка применяется только к неймспейсу, где установлен лейбл `security.deckhouse.io/trivy-provider: ""`.
-- Параметр `settings.denyVulnerableImages.enabled` включает Trivy-провайдер, но не подменяет выбор неймспейса через лейбл.
-- Параметр `settings.denyVulnerableImages.allowedSeverityLevels` задает уровни уязвимостей, которые допускаются к запуску.
-  Если параметр пустой или не задан, разрешенных уровней нет, и запуск будет запрещен при наличии уязвимостей любого уровня.
-  Это allowlist, а не denylist: чтобы блокировать `HIGH` и `CRITICAL`, не добавляйте их в `allowedSeverityLevels`.
+- Для работы механизма должен быть включен и работоспособен модуль `operator-trivy`.
+- Параметр `settings.denyVulnerableImages.enabled` включает проверку уязвимостей при создании объектов.
+- Параметр `settings.denyVulnerableImages.allowedSeverityLevels` - белый список (allowlist) допустимых уровней уязвимостей:
+  `["UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"]`.
+  Если параметр пустой или не задан, объект будет отклонен при наличии уязвимостей любого уровня.
 
 Для сценариев, соответствующих требованиям ФСТЭК по блокировке критических и высоких уязвимостей, укажите:
 
