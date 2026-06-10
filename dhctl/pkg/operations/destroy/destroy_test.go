@@ -361,6 +361,10 @@ func testCreateMetaConfigForInitLoaderTestInCluster(t *testing.T, tst *testInitS
 
 	testCreateClusterConfigSecret(t, client, cloudClusterGenericConfigYAML)
 
+	// Cloud-cluster parseConfigFromCluster fetches d8-system/deckhouse-registry
+	// unconditionally; seed it so the retry-loop doesn't trip the test timeout.
+	testCreateDeckhouseRegistrySecret(t, client)
+
 	testCreateClusterUUIDCM(t, client, tst.clusterUUID)
 
 	testCreateSystemSecret(t, client, manifests.InfrastructureClusterStateName, map[string][]byte{

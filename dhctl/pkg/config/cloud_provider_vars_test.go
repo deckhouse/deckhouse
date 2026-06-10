@@ -26,10 +26,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
-func TestFetchCredentialSecretsFromCluster_DistinctNamespaces(t *testing.T) {
+func TestFetchCredentialSecretsFromCluster_ScopedToProviderNamespace(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClient()
 
-	for _, ns := range []string{"d8-cloud-provider-aws", "d8-cloud-provider-dvp"} {
+	// Seed credential Secrets in two different provider namespaces plus an
+	// unrelated namespace with the same Secret type. The fetcher must
+	// return only the Secrets from the requested provider's namespace.
+	for _, ns := range []string{"d8-cloud-provider-aws", "d8-cloud-provider-dvp", "kube-system"} {
 		s := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: "cloud-credentials", Namespace: ns},
 			Type:       CloudProviderCredentialsSecretType,
@@ -39,11 +42,19 @@ func TestFetchCredentialSecretsFromCluster_DistinctNamespaces(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	got, err := fetchCredentialSecretsFromCluster(context.Background(), kubeCl)
+	got, err := fetchCredentialSecretsFromCluster(context.Background(), kubeCl, "dvp")
 	require.NoError(t, err)
-	require.Len(t, got, 2)
-	require.Contains(t, got, "d8-cloud-provider-aws/cloud-credentials")
+	require.Len(t, got, 1)
 	require.Contains(t, got, "d8-cloud-provider-dvp/cloud-credentials")
+	require.NotContains(t, got, "d8-cloud-provider-aws/cloud-credentials")
+	require.NotContains(t, got, "kube-system/cloud-credentials")
+}
+
+func TestFetchCredentialSecretsFromCluster_EmptyProviderReturnsNil(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+	got, err := fetchCredentialSecretsFromCluster(context.Background(), kubeCl, "")
+	require.NoError(t, err)
+	require.Nil(t, got)
 }
 
 func TestSecretToMap_StringDataForUTF8(t *testing.T) {

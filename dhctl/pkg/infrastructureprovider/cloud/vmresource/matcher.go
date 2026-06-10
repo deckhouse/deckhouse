@@ -17,9 +17,18 @@ package vmresource
 import (
 	"strings"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 )
 
+// Match reports whether rc matches rule.
+//
+// Three outcomes are folded into the bool return for callers that only need
+// a yes/no answer (IsVMChange). lookupFieldString below preserves the
+// distinction internally — a missing field and a present-but-non-string
+// field both fail the match, but a non-string field also returns an error
+// that the caller can surface separately when needed.
 func Match(rc plan.ResourceChange, rule *Rule) bool {
 	if rule == nil {
 		return false
@@ -30,27 +39,24 @@ func Match(rc plan.ResourceChange, rule *Rule) bool {
 	if rule.FieldEquals == nil {
 		return true
 	}
-	return lookupString(rc.Change.After, rule.FieldEquals.Path) == rule.FieldEquals.Value
+	value, _, err := lookupFieldString(rc.Change.After, rule.FieldEquals.Path)
+	if err != nil {
+		return false
+	}
+	return value == rule.FieldEquals.Value
 }
 
-func lookupString(state map[string]interface{}, dottedPath string) string {
+// lookupFieldString resolves a dotted path against an unstructured object.
+// It mirrors unstructured.NestedString semantics so callers can distinguish:
+//
+//   - ("value", true, nil)  — found, string
+//   - ("", false, nil)       — not found at any segment along the path
+//   - ("", false, err)       — found, but the leaf is not a string (typed
+//     mismatch — most likely an authoring bug in plan_rules.yml)
+func lookupFieldString(state map[string]interface{}, dottedPath string) (string, bool, error) {
 	if state == nil || dottedPath == "" {
-		return ""
+		return "", false, nil
 	}
-	var current interface{} = state
-	for _, segment := range strings.Split(dottedPath, ".") {
-		m, ok := current.(map[string]interface{})
-		if !ok {
-			return ""
-		}
-		current, ok = m[segment]
-		if !ok {
-			return ""
-		}
-	}
-	s, ok := current.(string)
-	if !ok {
-		return ""
-	}
-	return s
+	segments := strings.Split(dottedPath, ".")
+	return unstructured.NestedString(state, segments...)
 }
