@@ -199,23 +199,26 @@ To assign this operational policy, add the `operation-policy.deckhouse.io/enable
 ```shell
 d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 ```
-
 ## Blocking vulnerable images
 
-Vulnerability checks for object creation (`Pod`/`Deployment`/`StatefulSet`/`DaemonSet`) are performed by the `operator-trivy` module.
-AdmissionReview requests are handled by Gatekeeper (`admission-policy-engine`), and then the policy calls the Trivy provider via the `external_data` mechanism.
-The Trivy provider gets vulnerability data from `operator-trivy` and returns the validation result to Gatekeeper; based on this result, policy in `admission-policy-engine` allows or denies the request.
+### How it Works
 
-Important conditions:
+The module has a built-in vulnerability check for images and prevents them from launching if they contain vulnerabilities with a severity higher than the permitted level.
+Vulnerability checking is performed using the [`operator-trivy`] module (/modules/operator-trivy). When a pod is created, a special hook is called to the `operator-trivy` module with information about the image being used. A list of image vulnerabilities is returned in response. If these vulnerabilities include vulnerabilities with a severity higher than the permitted level, the object is prevented from being created.
 
-- Validation is applied only to namespaces labeled `security.deckhouse.io/trivy-provider: ""`.
-- The `operator-trivy` module must be enabled and healthy.
-- The `settings.denyVulnerableImages.enabled` parameter enables vulnerability checks for object creation.
-- The `settings.denyVulnerableImages.allowedSeverityLevels` parameter is an allowlist of vulnerability levels:
-  `["UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"]`.
-  If this parameter is empty or not set, an object is denied when vulnerabilities of any severity are found.
+Important clarifications:
+- For this mechanism to work, the `operator-trivy` module must be enabled and operational.
+- The check only applies to the namespace where the `security.deckhouse.io/trivy-provider: ""` label is set (see the [`operator-trivy`](/modules/operator-trivy) module documentation ).
 
-Example:
+### How to configure the check
+Required:
+1. Enable the vulnerability checking mechanism using the [`settings.denyVulnerableImages.enabled`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-enabled) parameter
+
+2. Configure the allowed severity levels for vulnerabilities found in containers using the [`settings.denyVulnerableImages.allowedSeverityLevels`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-allowedseveritylevels) parameter. This parameter is a whitelist, meaning it only specifies allowed severity levels. Available values ​​are `"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"`. If the parameter is empty or not specified, the object will be rejected if it contains vulnerabilities of any level.
+
+### Example
+
+For scenarios that blocking critical and high vulnerabilities, specify:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -227,14 +230,19 @@ spec:
   settings:
     denyVulnerableImages:
       enabled: true
-      # Allow only UNKNOWN/LOW/MEDIUM; HIGH and CRITICAL are blocked.
+      # Only UNKNOWN/LOW/MEDIUM severity levels are allowed; HIGH and CRITICAL will be blocked.
       allowedSeverityLevels:
         - UNKNOWN
         - LOW
         - MEDIUM
 ```
+Check that the `operator-trivy` module is enabled and has a `Ready` status:
 
-Then add the label to each namespace where this check must be enforced:
+```shell
+d8 k get modules operator-trivy
+```
+
+And add a label to the namespace where the check should be applied:
 
 ```shell
 d8 k label ns <NAMESPACE> security.deckhouse.io/trivy-provider=
