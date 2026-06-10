@@ -35,8 +35,8 @@ on:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: 'Git commit SHA to verify reproducibility for'
-        required: true
+        description: 'PR commit SHA that already has a successful build-and-test_dev.yml run (empty = newest main commit with a successful build)'
+        required: false
         type: string
 
 env:
@@ -75,23 +75,56 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // Trigger fully determines which build workflow holds the baseline:
-            //   schedule          -> 'main' commit, baseline in build-and-test_main.yml
-            //   workflow_dispatch -> arbitrary commit (treated as dev/PR), baseline in build-and-test_dev.yml
+            if (eventName !== 'schedule' && eventName !== 'workflow_dispatch') {
+              return core.setFailed(`Unsupported event: ${eventName}`);
+            }
+
+            const inputSha = ((context.payload.inputs || {}).commit_sha || '').trim();
+
+            // Baseline selection:
+            //   schedule, or manual run WITHOUT a commit -> newest 'main' commit that
+            //     HAS a successful build (baseline in build-and-test_main.yml)
+            //   manual run WITH a commit                 -> that exact commit, treated
+            //     as a dev/PR build (baseline in build-and-test_dev.yml)
+            const useMainBaseline = (eventName === 'schedule') || !inputSha;
+
             let sha = '';
             let baselineKind = '';
             let baselineWorkflowId = '';
-            if (eventName === 'schedule') {
-              const r = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
-              sha = r.data.commit.sha;
+            let baseline = null;
+            if (useMainBaseline) {
               baselineKind = 'main';
               baselineWorkflowId = 'build-and-test_main.yml';
-              core.notice(`Schedule run: using latest 'main' commit ${sha}, baseline workflow=${baselineWorkflowId}`);
-            } else if (eventName === 'workflow_dispatch') {
-              sha = ((context.payload.inputs || {}).commit_sha || '').trim();
-              if (!sha) {
-                return core.setFailed(`'commit_sha' input is required for manual runs`);
+              if (eventName === 'workflow_dispatch') {
+                core.notice(`Manual run without commit_sha: falling back to newest successful 'main' build.`);
               }
+              // Do NOT pin to HEAD of 'main': the latest commit's build may still
+              // be running, may have failed, or may not be queued yet. Instead pick
+              // the most recent SUCCESSFUL build-and-test_main.yml run on 'main' and
+              // use its head commit. listWorkflowRuns returns runs newest-first, so
+              // the first success is the freshest 'main' commit with a usable
+              // build_report_FE artifact.
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo,
+                workflow_id: baselineWorkflowId,
+                branch: 'main',
+                status: 'success',
+                per_page: 30,
+              });
+              baseline = (runs.data.workflow_runs || [])[0];
+              if (!baseline) {
+                return core.setFailed(
+                  `No successful '${baselineWorkflowId}' run found on 'main'. ` +
+                  `Reproducibility check requires an existing baseline build_report_FE artifact.`
+                );
+              }
+              sha = baseline.head_sha;
+              core.notice(
+                `Using newest successful 'main' build for commit ${sha} ` +
+                `(run ${baseline.id}, ${baseline.html_url})`
+              );
+            } else {
+              sha = inputSha;
               try {
                 const r = await github.rest.repos.getCommit({ owner, repo, ref: sha });
                 sha = r.data.sha;
@@ -101,27 +134,25 @@ jobs:
               baselineKind = 'dev';
               baselineWorkflowId = 'build-and-test_dev.yml';
               core.notice(`Manual run: using commit ${sha}, baseline workflow=${baselineWorkflowId}`);
-            } else {
-              return core.setFailed(`Unsupported event: ${eventName}`);
-            }
 
-            // Locate the latest successful baseline run for this SHA in the chosen workflow.
-            // API supports a server-side head_sha filter, so we only fetch matching runs.
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner, repo,
-              workflow_id: baselineWorkflowId,
-              head_sha: sha,
-              status: 'success',
-              per_page: 10,
-            });
-            // Runs are returned newest-first; pick the most recent success.
-            const baseline = (runs.data.workflow_runs || [])[0];
-            if (!baseline) {
-              return core.setFailed(
-                `No successful '${baselineWorkflowId}' run found for SHA ${sha}. ` +
-                `Reproducibility check requires an existing baseline build_report_FE artifact. ` +
-                `Ensure the regular build pipeline has completed for this commit first.`
-              );
+              // Locate the latest successful baseline run for this exact SHA.
+              // API supports a server-side head_sha filter, so we only fetch matching runs.
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo,
+                workflow_id: baselineWorkflowId,
+                head_sha: sha,
+                status: 'success',
+                per_page: 10,
+              });
+              // Runs are returned newest-first; pick the most recent success.
+              baseline = (runs.data.workflow_runs || [])[0];
+              if (!baseline) {
+                return core.setFailed(
+                  `No successful '${baselineWorkflowId}' run found for SHA ${sha}. ` +
+                  `Reproducibility check requires an existing baseline build_report_FE artifact. ` +
+                  `Ensure the regular build pipeline has completed for this commit first.`
+                );
+              }
             }
 
             // For dev mode we need the PR number to reconstruct CI_COMMIT_REF_SLUG = prN.
