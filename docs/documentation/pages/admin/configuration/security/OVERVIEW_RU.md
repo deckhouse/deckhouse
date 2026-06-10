@@ -7,7 +7,11 @@ search: security overview, security configuration, security management, platform
 ---
 
 Раздел «Безопасность» посвящён вопросам обеспечения безопасности в Deckhouse Kubernetes Platform.
+
+{% alert level="info" %}
 Обзор возможностей платформы в этой области подробно разобран в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+{% endalert %}
+
 Здесь собраны рекомендации, инструкции и примеры настройки встроенных механизмов защиты,
 а также интеграции с внешними системами.
 
