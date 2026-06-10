@@ -83,6 +83,7 @@ func TestSplitResources_BeforeAnnotationStillRespected(t *testing.T) {
 
 	require.Empty(t, after)
 	// Namespace stub for kube-system is added even though kube-system always exists; harmless.
+	require.Len(t, before, 2)
 	require.Equal(t, "Namespace", before[0].Object.GetKind())
 	require.Equal(t, "ConfigMap", before[1].Object.GetKind())
 }

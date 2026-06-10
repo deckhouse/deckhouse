@@ -750,8 +750,7 @@ func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.R
 	sectionName := "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
 	providerImage, err := digests.GetImage(sectionName, "terraformManager")
 	if err != nil {
-		log.DebugF("No image digest for provider %s, skipping: %v\n", provider, err)
-		return nil
+		return fmt.Errorf("get terraform-manager image digest for provider %s: %w", provider, err)
 	}
 
 	imgName := conf.GetRegistry() + "@" + providerImage

@@ -241,7 +241,7 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 
 	r.variablesPath = tmpFile.Name()
 
-	log.DebugF("tfvars path: %s\n%s\n", r.variablesPath, variablesData)
+	log.DebugF("tfvars path: %s\n", r.variablesPath)
 	r.variablesData = variablesData
 	return r
 }

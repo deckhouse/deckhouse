@@ -33,6 +33,8 @@ import (
 
 const legacyProviderClusterConfigSecretName = "d8-provider-cluster-configuration"
 
+// nilType instantiates ByClusterType[T] for fillers that produce no value,
+// keeping `return nil, err` valid in every branch.
 type nilType *struct{}
 
 type fromClusterMetaConfigFiller struct {
@@ -123,14 +125,12 @@ func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *S
 		return nil, fmt.Errorf("marshal ModuleConfig: %w", err)
 	}
 
-	if schemaStore != nil {
-		yamlDoc, err := yaml.JSONToYAML(raw)
-		if err != nil {
-			return nil, fmt.Errorf("convert ModuleConfig to YAML: %w", err)
-		}
-		if _, err := schemaStore.Validate(&yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
-			return nil, fmt.Errorf("validate ModuleConfig %q: %w", obj.GetName(), err)
-		}
+	yamlDoc, err := yaml.JSONToYAML(raw)
+	if err != nil {
+		return nil, fmt.Errorf("convert ModuleConfig to YAML: %w", err)
+	}
+	if _, err := schemaStore.Validate(&yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
+		return nil, fmt.Errorf("validate ModuleConfig %q: %w", obj.GetName(), err)
 	}
 
 	mc := &ModuleConfig{}
@@ -157,50 +157,37 @@ func parseLegacyProviderClusterConfig(secret *corev1.Secret, schemaStore *Schema
 		return nil, fmt.Errorf("cloud-provider-cluster-configuration.yaml not found in Secret or empty")
 	}
 	if _, err := schemaStore.Validate(&data); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validate provider cluster configuration: %w", err)
 	}
 	var parsed map[string]json.RawMessage
 	if err := yaml.Unmarshal(data, &parsed); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal provider cluster configuration: %w", err)
 	}
 	return parsed, nil
 }
 
 func (f *fromClusterMetaConfigFiller) Static(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
-	fillEmptyStaticConfigAndReturn := func(cfg *MetaConfig) (nilType, error) {
-		cfg.StaticClusterConfig = nil
+	// The configuration may be absent entirely: auto-discovery covers it.
+	staticClusterConfig, err := f.kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-static-cluster-configuration", metav1.GetOptions{})
+	if k8serrors.IsNotFound(err) {
 		return nil, nil
 	}
-
-	staticClusterConfig, err := f.kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-static-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
-		// configuration can be not set because we have auto-discovery
-		if k8serrors.IsNotFound(err) {
-			return fillEmptyStaticConfigAndReturn(metaConfig)
-		}
-
 		return nil, err
-	}
-
-	// configuration can be not set because we have auto-discovery
-	if len(staticClusterConfig.Data) == 0 {
-		return fillEmptyStaticConfigAndReturn(metaConfig)
 	}
 
 	staticClusterConfigData, ok := staticClusterConfig.Data["static-cluster-configuration.yaml"]
 	if !ok || len(staticClusterConfigData) == 0 {
-		// configuration can be not set because we have auto-discovery
-		return fillEmptyStaticConfigAndReturn(metaConfig)
+		return nil, nil
 	}
 
-	_, err = f.schemaStore.Validate(&staticClusterConfigData)
-	if err != nil {
-		return nil, err
+	if _, err := f.schemaStore.Validate(&staticClusterConfigData); err != nil {
+		return nil, fmt.Errorf("validate static cluster configuration: %w", err)
 	}
 
 	var parsedStaticClusterConfig map[string]json.RawMessage
 	if err := yaml.Unmarshal(staticClusterConfigData, &parsedStaticClusterConfig); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal static cluster configuration: %w", err)
 	}
 
 	metaConfig.StaticClusterConfig = parsedStaticClusterConfig

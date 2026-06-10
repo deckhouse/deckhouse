@@ -105,10 +105,9 @@ func TestCloudFiller_McFlowOnly_NoLegacy(t *testing.T) {
 	mustSeedCloudProviderMC(t, kubeCl, "yandex")
 
 	mc := mustMetaConfigForProvider(t, "yandex")
-	// schemaStore=nil disables validation: moduleConfigFromUnstructured
-	// accepts the document, which is what we want when isolating the
-	// preference logic from schema availability.
-	filler := newFromClusterMetaConfigFiller(kubeCl, nil)
+	// An empty store isolates the preference logic from schema availability:
+	// ModuleConfig validation tolerates ErrSchemaNotFound.
+	filler := newFromClusterMetaConfigFiller(kubeCl, newSchemaStore(nil, nil))
 
 	_, err := filler.Cloud(context.Background(), mc)
 	require.NoError(t, err)
@@ -138,7 +137,7 @@ func TestCloudFiller_McFlowAndLegacy_BothLoaded(t *testing.T) {
 	// limit ourselves to mc+pcc coexistence sans schema validation by
 	// deferring the legacy-load assertion to the existing CI harness.
 	t.Skip("requires SchemaStore for legacy Secret validation — covered by TestParseConfigFromCluster on CI")
-	filler := newFromClusterMetaConfigFiller(kubeCl, nil)
+	filler := newFromClusterMetaConfigFiller(kubeCl, newSchemaStore(nil, nil))
 	_, err := filler.Cloud(context.Background(), mc)
 	require.NoError(t, err)
 	require.NotEmpty(t, mc.ProviderClusterConfig, "PCC must be loaded alongside the stub MC")
@@ -156,7 +155,7 @@ func TestCloudFiller_LegacyOnly_NoMC(t *testing.T) {
 func TestCloudFiller_NeitherMarker(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClient()
 	mc := mustMetaConfigForProvider(t, "yandex")
-	filler := newFromClusterMetaConfigFiller(kubeCl, nil)
+	filler := newFromClusterMetaConfigFiller(kubeCl, newSchemaStore(nil, nil))
 
 	_, err := filler.Cloud(context.Background(), mc)
 	require.Error(t, err)

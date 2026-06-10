@@ -101,9 +101,9 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	}
 
 	kubeCl := kube.NewKubernetesClient(c.baseProviderSettings).WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient, c.baseProviderSettings))
-	// initParams is optional — none of the in-tree callers wire WithInitParams,
-	// so dereferencing c.initParams unguarded panics. Default to an empty
-	// kube.Config (InitContext uses the SSH proxy/NodeInterface in that case).
+	// initParams is optional — the converge controlplane path does not wire
+	// WithInitParams, so dereferencing c.initParams unguarded panics. Default to
+	// an empty kube.Config (InitContext uses the SSH proxy/NodeInterface then).
 	params := &kube.Config{}
 	if c.initParams != nil {
 		params.KubeConfig = c.initParams.KubeConfig
