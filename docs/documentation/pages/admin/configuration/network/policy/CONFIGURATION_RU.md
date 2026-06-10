@@ -37,7 +37,7 @@ search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, Ci
 
 Если на уровне инфраструктуры есть требования по ограничению сетевого взаимодействия между серверами, при настройке кластера выполните следующие условия:
 
-- Включите режим туннелирования трафика подов: [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) для CNI Cilium, [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) для CNI Flannel.
+- Включите режим туннелирования трафика подов: [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) для CNI Cilium, [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) для CNI Flannel. И разрешите взаимодействие между узлами по порту VXLAN (ссылка на список портов платформы)
 - Разрешите передачу трафика между подсетями подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)), инкапсулированного в VXLAN, если в сети выполняется инспектирование трафика.
 - Разрешите взаимодействие с внешними системами, с которыми интегрируется кластер (LDAP, SMTP, внешние API).
 - Разрешите локальное сетевое взаимодействие в рамках каждого узла.
