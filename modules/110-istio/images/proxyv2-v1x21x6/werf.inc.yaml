@@ -234,7 +234,7 @@ shell:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/golang-artifact
-from: {{ index $.Images "builder/golang" }}
+from: {{ index $.Images "builder/golang-bookworm" }}
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
