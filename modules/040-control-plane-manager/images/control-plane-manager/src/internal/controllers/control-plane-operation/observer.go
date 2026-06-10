@@ -82,11 +82,12 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 	return state, true, errors.Join(readErrs...)
 }
 
-func observeSignatureExpiration(pkiDir string, logger *log.Logger) (metav1.Time, bool) {
+// observeSignatureExpiration reads the active signature keys expiry from disk.
+// Returns an error when the key files are missing or unreadable
+func observeSignatureExpiration(pkiDir string) (metav1.Time, error) {
 	exp, err := signature.ActiveKeyExpiration(pkiDir)
 	if err != nil {
-		logger.Info("no active signature key to observe", "error", err)
-		return metav1.Time{}, false
+		return metav1.Time{}, err
 	}
-	return metav1.NewTime(exp), true
+	return metav1.NewTime(exp), nil
 }

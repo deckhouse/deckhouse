@@ -18,6 +18,7 @@ package controlplaneoperation
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -297,7 +298,10 @@ func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.L
 	}
 
 	if constants.SignatureEnabled() && component == controlplanev1alpha1.OperationComponentKubeAPIServer {
-		if signatureExpiry, ok := observeSignatureExpiration(constants.KubernetesPkiPath, logger); ok {
+		signatureExpiry, sigErr := observeSignatureExpiration(constants.KubernetesPkiPath)
+		if sigErr != nil {
+			err = errors.Join(err, fmt.Errorf("signature key: %w", sigErr))
+		} else {
 			if observedState.CertificatesExpirationTime == nil {
 				observedState.CertificatesExpirationTime = map[string]metav1.Time{}
 			}
