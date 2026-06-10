@@ -123,56 +123,41 @@ func (c *ControllerService) CreateVolume(
 	if len(disks.Items) == 1 {
 		disk := disks.Items[0]
 
-		capacityStr := disk.Status.Capacity
-		if capacityStr == "" {
-			if requiredSize <= 0 {
+		if disk.Status.Phase == v1alpha2.DiskReady {
+			diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
+			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
-					"disk %q exists but capacity is not reported yet (phase=%s) and requested size is %d",
-					disk.Name, disk.Status.Phase, requiredSize,
+					"failed to parse existing disk capacity for %q (capacity=%q): %v",
+					disk.Name, disk.Status.Capacity, err,
 				)
 			}
-
-			if err := c.dvpCloudAPI.DiskService.WaitDiskCreation(ctx, disk.Name); err != nil {
-				if errors.Is(err, dvpapi.ErrQuotaExceeded) {
-					return nil, status.Errorf(codes.ResourceExhausted, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
-				}
-				return nil, status.Errorf(codes.Internal, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
+			if requiredSize > 0 && diskCapacity > 0 && requiredSize > diskCapacity {
+				return nil, status.Errorf(
+					codes.AlreadyExists,
+					"disk %q already exists with capacity %d bytes, which is smaller than requested %d bytes",
+					disk.Name, diskCapacity, requiredSize,
+				)
 			}
-
-			readyDisk, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, disk.Name)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "error fetching disk %s after provisioning: %v", diskName, err)
-			}
-			actualCapacity, err := utils.ConvertStringQuantityToInt64(readyDisk.Status.Capacity)
-			if err != nil || actualCapacity <= 0 {
-				actualCapacity = requiredSize
-			}
-
 			result.Volume.VolumeId = disk.Name
-			result.Volume.CapacityBytes = actualCapacity
+			result.Volume.CapacityBytes = diskCapacity
 			return result, nil
 		}
 
-		diskCapacity, err := utils.ConvertStringQuantityToInt64(capacityStr)
-		if err != nil {
+		if requiredSize <= 0 {
 			return nil, status.Errorf(
 				codes.Internal,
-				"failed to parse existing disk capacity for %q (capacity=%q): %v",
-				disk.Name, capacityStr, err,
+				"disk %q exists but is not ready yet (phase=%s) and requested size is %d",
+				disk.Name, disk.Status.Phase, requiredSize,
 			)
 		}
 
-		if requiredSize > 0 && diskCapacity > 0 && requiredSize > diskCapacity {
-			return nil, status.Errorf(
-				codes.AlreadyExists,
-				"disk %q already exists with capacity %d bytes, which is smaller than requested %d bytes",
-				disk.Name, diskCapacity, requiredSize,
-			)
+		actualCapacity, err := c.waitDiskReadyAndGetCapacity(ctx, disk.Name, requiredSize)
+		if err != nil {
+			return nil, err
 		}
-
 		result.Volume.VolumeId = disk.Name
-		result.Volume.CapacityBytes = diskCapacity
+		result.Volume.CapacityBytes = actualCapacity
 		return result, nil
 	}
 
@@ -189,25 +174,34 @@ func (c *ControllerService) CreateVolume(
 		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while creating disk %s: %v", diskName, err)
 	}
 
-	if err := c.dvpCloudAPI.DiskService.WaitDiskCreation(ctx, disk.Name); err != nil {
-		if errors.Is(err, dvpapi.ErrQuotaExceeded) {
-			return nil, status.Errorf(codes.ResourceExhausted, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
-		}
-		return nil, status.Errorf(codes.Internal, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
-	}
-
-	readyDisk, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, disk.Name)
+	actualCapacity, err := c.waitDiskReadyAndGetCapacity(ctx, disk.Name, requiredSize)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "error fetching disk %s after provisioning: %v", diskName, err)
-	}
-	actualCapacity, err := utils.ConvertStringQuantityToInt64(readyDisk.Status.Capacity)
-	if err != nil || actualCapacity <= 0 {
-		actualCapacity = requiredSize
+		return nil, err
 	}
 
 	result.Volume.VolumeId = disk.Name
 	result.Volume.CapacityBytes = actualCapacity
 	return result, nil
+}
+
+func (c *ControllerService) waitDiskReadyAndGetCapacity(ctx context.Context, diskName string, fallbackSize int64) (int64, error) {
+	if err := c.dvpCloudAPI.DiskService.WaitDiskCreation(ctx, diskName); err != nil {
+		if errors.Is(err, dvpapi.ErrQuotaExceeded) {
+			return 0, status.Errorf(codes.ResourceExhausted, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
+		}
+		return 0, status.Errorf(codes.Internal, "disk %s failed to provision in parent DVP cluster: %v", diskName, err)
+	}
+
+	readyDisk, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, diskName)
+	if err != nil {
+		return 0, status.Errorf(codes.Internal, "error fetching disk %s after provisioning: %v", diskName, err)
+	}
+
+	capacity, err := utils.ConvertStringQuantityToInt64(readyDisk.Status.Capacity)
+	if err != nil || capacity <= 0 {
+		return fallbackSize, nil
+	}
+	return capacity, nil
 }
 
 func (c *ControllerService) DeleteVolume(
