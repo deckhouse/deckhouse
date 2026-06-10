@@ -32,16 +32,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 const defaultEncryptionAlgorithm = "RSA-2048"
 
 func checkEncryptionAlgorithmMigration(_ context.Context, input *go_hook.HookInput) error {
-	input.MetricsCollector.Expire("D8EncryptionAlgorithmIsObsoleteInClusterConfiguration")
+	input.MetricsCollector.Expire("D8ObsoleteEncryptionAlgorithmInClusterConfiguration")
 
 	ccAlgo := input.Values.Get("global.clusterConfiguration.encryptionAlgorithm").String()
 	mcAlgo := input.Values.Get("controlPlaneManager.encryptionAlgorithm").String()
 
 	if ccAlgo != "" && ccAlgo != defaultEncryptionAlgorithm && (mcAlgo == "" || mcAlgo == defaultEncryptionAlgorithm) {
 		input.MetricsCollector.Set(
-			"d8_encryption_algorithm_is_obsolete_in_cluster_configuration", 1,
+			"d8_obsolete_encryption_algorithm_in_cluster_configuration", 1,
 			map[string]string{},
-			metrics.WithGroup("D8EncryptionAlgorithmIsObsoleteInClusterConfiguration"),
+			metrics.WithGroup("D8ObsoleteEncryptionAlgorithmInClusterConfiguration"),
 		)
 	}
 
