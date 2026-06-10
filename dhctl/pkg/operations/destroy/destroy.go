@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -378,7 +377,6 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 		file := sshClient.File()
 		bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 		if err != nil {
-
 			return err
 		}
 		hostToExclude = strings.TrimSpace(string(bytes))
@@ -421,7 +419,6 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 			err = d.processStaticHost(ctx, sshClient, host, stdOutErrHandler, cmd)
 			if err != nil {
-
 				return err
 			}
 
@@ -448,7 +445,6 @@ func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove
 
 		err := d.processStaticHost(ctx, sshClient, host, stdOutErrHandler, cmd)
 		if err != nil {
-
 			return err
 		}
 	}
@@ -461,24 +457,10 @@ func (d *StaticMastersDestroyer) processStaticHost(ctx context.Context, sshClien
 	err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 30*time.Second).Run(func() error {
 		c := sshClient.Command(cmd)
 		c.Sudo(ctx)
-		c.WithTimeout(30 * time.Second)
+		c.WithTimeout(5 * time.Second)
 		c.WithStdoutHandler(stdOutErrHandler)
 		c.WithStderrHandler(stdOutErrHandler)
-		err := c.Run(ctx)
-
-		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				// script reboot node
-				if ee.ExitCode() == 255 {
-					return nil
-				}
-			}
-
-			return err
-		}
-
-		return err
+		return c.Run(ctx)
 	})
 
 	return err
@@ -502,7 +484,6 @@ func (d *ClusterDestroyer) GetMasterNodesIPs(ctx context.Context) ([]NodeIP, err
 		}
 		return nil
 	})
-
 	if err != nil {
 		log.DebugF("Cannot get nodes after 5 attemts")
 		return []NodeIP{}, err

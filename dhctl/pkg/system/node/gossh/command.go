@@ -239,8 +239,15 @@ func (c *SSHCommand) ProcessWait() {
 	}()
 
 	go func() {
-		if c.timeout > 0 {
-			time.Sleep(c.timeout)
+		if c.timeout <= 0 {
+			return
+		}
+		select {
+		case <-c.waitCh:
+		case <-time.After(c.timeout):
+			// Set the error before signaling stop: the stop path discards the
+			// process wait error, and without this Run() would return nil on timeout.
+			c.setWaitError(fmt.Errorf("command timed out after %s", c.timeout))
 			if c.stopCh != nil {
 				c.stopCh <- struct{}{}
 			}
