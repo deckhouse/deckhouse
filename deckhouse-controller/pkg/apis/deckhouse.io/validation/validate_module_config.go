@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/go-openapi/spec"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -33,15 +34,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/cel"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/cel"
-	"github.com/go-openapi/spec"
 )
 
 const (
@@ -364,8 +363,8 @@ func (v *moduleConfigValidator) validateCELTransition(cfg *v1alpha1.ModuleConfig
 	}
 
 	// Get spec.Schema from addon-operator SchemaStorage.
-	addonSchema, err := v.getConfigSchema(cfg.GetName())
-	if err != nil || addonSchema == nil {
+	addonSchema := v.getConfigSchema(cfg.GetName())
+	if addonSchema == nil {
 		return nil, nil
 	}
 
@@ -389,26 +388,25 @@ func (v *moduleConfigValidator) validateCELTransition(cfg *v1alpha1.ModuleConfig
 
 // getConfigSchema returns the spec.Schema for the module's config values.
 // Chain: v.moduleStorage.GetModuleByName → GetBasicModule → GetSchemaStorage → Schemas[ConfigValuesSchema]
-// The addon-operator uses the same schema in alidateConfigValues().
-func (v *moduleConfigValidator) getConfigSchema(moduleName string) (*spec.Schema, error) {
+// The addon-operator uses the same schema in ValidateConfigValues().
+func (v *moduleConfigValidator) getConfigSchema(moduleName string) *spec.Schema {
 	mod, err := v.moduleStorage.GetModuleByName(moduleName)
 	if err != nil {
-		return nil, nil
+		return nil
 	}
 
 	basic := mod.GetBasicModule()
 	if basic == nil {
-		return nil, nil
+		return nil
 	}
 
 	ss := basic.GetSchemaStorage()
 	if ss == nil {
-		return nil, nil
+		return nil
 	}
 
 	// validation.ConfigValuesSchema - constant from addon-operator pkg/values/validation
-	schema := ss.Schemas[validation.ConfigValuesSchema]
-	return schema, nil
+	return ss.Schemas[validation.ConfigValuesSchema]
 }
 
 // resolveModuleSource fetches the Module CR and validates the configured source.
