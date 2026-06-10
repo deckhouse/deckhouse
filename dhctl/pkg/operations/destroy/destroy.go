@@ -457,7 +457,7 @@ func (d *StaticMastersDestroyer) processStaticHost(ctx context.Context, sshClien
 	err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 30*time.Second).Run(func() error {
 		c := sshClient.Command(cmd)
 		c.Sudo(ctx)
-		c.WithTimeout(5 * time.Second)
+		c.WithTimeout(5 * time.Minute)
 		c.WithStdoutHandler(stdOutErrHandler)
 		c.WithStderrHandler(stdOutErrHandler)
 		return c.Run(ctx)
