@@ -801,7 +801,14 @@ provider:
 			require.Equal(t, "cloud-provider-yandex", metaConfig.ModuleConfigs[0].GetName())
 		})
 
-		t.Run("mc-flow wins over legacy: both markers present", func(t *testing.T) {
+		t.Run("mc-flow and legacy: both markers loaded, PCC kept for typed fields", func(t *testing.T) {
+			// A cluster mid-migration carries both markers. The ModuleConfig
+			// is often a stub without settings while the legacy PCC still
+			// holds the real layout/master sizing, so Cloud() loads both:
+			// extractProviderClusterFields gives PCC priority for typed
+			// fields, with the ModuleConfig filling whatever is left. Ignoring
+			// the PCC here would zero out Layout on such clusters
+			// (the "Empty Layout" converge regression).
 			tst := createTestParseConfigFromCluster(t, testParams)
 			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
 			createCloudConfigSecret(t, tst, pointer.String(`
@@ -826,8 +833,9 @@ provider:
 
 			metaConfig := doParseFromClusterNoError(t, tst)
 
-			require.Empty(t, metaConfig.ProviderClusterConfig, "legacy PCC must be ignored when MC is present")
+			require.NotEmpty(t, metaConfig.ProviderClusterConfig, "legacy PCC must be loaded alongside the MC")
 			require.Len(t, metaConfig.ModuleConfigs, 1)
+			require.Equal(t, "without-nat", metaConfig.Layout, "Layout must come from PCC, not the stub MC")
 		})
 
 		t.Run("neither marker present", func(t *testing.T) {
