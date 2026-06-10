@@ -52,7 +52,7 @@ variable "hostname" {
 }
 
 variable "timeouts" {
-  default = { "create" = "30m", "update" = "30m", "delete" = "1m" }
+  default = { "create" = "30m", "update" = "1m", "delete" = "1m" }
   type = object({
     create = string
     update = string
