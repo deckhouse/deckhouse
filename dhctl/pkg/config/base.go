@@ -35,6 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -612,7 +613,7 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 	if _, err := os.Stat(systemPath); err == nil {
 		schemaPresent = true
 	}
-	downloadPath := filepath.Join(globalOptions.DownloadDir, provider, "openapi", "cluster_configuration.yaml")
+	downloadPath := filepath.Join(providerdata.ProviderDir(globalOptions.DownloadDir, provider), "openapi", "cluster_configuration.yaml")
 	if _, err := os.Stat(downloadPath); err == nil {
 		schemaPresent = true
 	}
@@ -628,7 +629,7 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 	// typically do NOT carry their openapi schemas — the terraform-manager
 	// download is what brings the validator. So the binary alone is enough
 	// to consider provider-candi present.
-	validatorPath := filepath.Join(globalOptions.DownloadDir, provider, "validator")
+	validatorPath := providerdata.ValidatorPath(globalOptions.DownloadDir, provider)
 	if _, err := os.Stat(validatorPath); err == nil {
 		return true
 	}
@@ -755,7 +756,7 @@ func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.R
 
 	imgName := conf.GetRegistry() + "@" + providerImage
 	log.DebugF("Downloading provider schemas for %s\n", provider)
-	return image.DownloadAndUnpackImage(ctx, imgName, filepath.Join(globalOptions.DownloadDir, provider), globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress)
+	return image.DownloadAndUnpackImage(ctx, imgName, providerdata.ProviderDir(globalOptions.DownloadDir, provider), globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress)
 }
 
 // prepare CandiDir if not exists

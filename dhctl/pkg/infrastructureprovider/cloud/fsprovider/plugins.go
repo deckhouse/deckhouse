@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -63,7 +64,7 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	// (e.g. preserved across `wipe-state` or pre-injected for dev iteration), skip the
 	// terraform-manager image download entirely. Saves ~10-15s per bootstrap and lets
 	// us iterate with a custom-patched provider binary without dhctl clobbering it.
-	terraformManagerDir := filepath.Join(conf.DownloadRootDir, cloudName, "terraform-manager")
+	terraformManagerDir := filepath.Join(providerdata.ProviderDir(conf.DownloadRootDir, cloudName), "terraform-manager")
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if _, statErr := os.Stat(source); statErr == nil {
 		if err := copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
@@ -79,7 +80,7 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 	}
 
-	providerPath := filepath.Join(conf.DownloadRootDir, cloudName, "terraform-manager", params.Settings.DestinationBinary())
+	providerPath := filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if _, err := os.Stat(providerPath); err == nil {
 		source = providerPath
 	} else {

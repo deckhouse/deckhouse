@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/name212/govalue"
 
@@ -79,14 +78,12 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger) confi
 		// refuse with a precise diagnostic instead.
 		searched := ""
 		if downloadRootDir != "" {
-			searched = filepath.Join(downloadRootDir, provider, externalPreparatorBinaryName)
+			searched = providerdata.ValidatorPath(downloadRootDir, provider)
 		}
 		logger.LogErrorF("external validator for provider %q not found at %q\n", provider, searched)
 		return &missingExternalValidatorPreparator{provider: provider, searchedPath: searched}
 	}
 }
-
-const externalPreparatorBinaryName = "validator"
 
 // findExternalPreparatorBinary looks for a validator binary in pluginsDir/<providerName>/.
 // Returns the full path if found and is a regular file, empty string otherwise.
@@ -94,7 +91,7 @@ func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	if pluginsDir == "" {
 		return ""
 	}
-	path := filepath.Join(pluginsDir, providerName, externalPreparatorBinaryName)
+	path := providerdata.ValidatorPath(pluginsDir, providerName)
 	info, err := os.Stat(path)
 	if err != nil || info.IsDir() {
 		return ""
