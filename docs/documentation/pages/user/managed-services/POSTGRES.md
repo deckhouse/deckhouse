@@ -45,7 +45,7 @@ Make sure that:
 
 Create a Postgres resource in the application namespace. In a single manifest, specify the instance size, deployment type, logical database, and connection user.
 
-The following example shows a basic PostgreSQL cluster with one logical database, `appdb`, and the `app-rw` user:
+The following example shows a basic PostgreSQL cluster with one logical database, `testdb`, and the `test-rw` user:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
@@ -53,14 +53,14 @@ kind: Postgres
 metadata:
   labels:
     app.kubernetes.io/name: managed-psql-operator
-  name: app-postgres
+  name: test
 spec:
   users:
-    - name: app-rw
+    - name: test-rw
       password: '123'
       role: rw
   databases:
-    - name: "appdb"
+    - name: "testdb"
   postgresClassName: default
   instance:
     memory:
@@ -85,12 +85,12 @@ d8 k apply -f managed-services_v1alpha1_postgres.yaml -n postgres
 Check the resource status:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide -w
+d8 k get postgres test -n postgres -o wide -w
 ```
 
 To verify that the service works correctly, make sure all values in `status.conditions` have the `True` status.
 
-As a result, DKP creates a PostgreSQL service, the `appdb` logical database inside this service, and the `app-rw` user with the `rw` role.
+As a result, DKP creates a PostgreSQL service, the `testdb` logical database inside this service, and the `test-rw` user with the `rw` role.
 
 ## Create logical databases
 
@@ -155,10 +155,10 @@ spec:
 
 For a basic scenario, use `psql` and the Service that matches the Postgres resource name and endpoint type.
 
-Example of connecting to the `app-postgres` Postgres resource in the `postgres` namespace from a pod in the same cluster:
+Example of connecting to the `test` Postgres resource in the `postgres` namespace from a pod in the same cluster:
 
 ```shell
-psql -U app-rw -d appdb -h d8ms-pg-app-postgres-rw.postgres.svc -p 5432
+psql -U test-rw -d testdb -h d8ms-pg-test-rw.postgres.svc -p 5432
 ```
 
 The following Services are available for database connections:
@@ -167,7 +167,7 @@ The following Services are available for database connections:
 - `d8ms-pg-<postgres-name>-ro`: points to replicas (in `Cluster` mode) and allows read-only operations;
 - `d8ms-pg-<postgres-name>-r`: points to the primary instance or replicas (in `Cluster` mode) and allows read-only operations against a randomly selected instance.
 
-In the Service name, `<postgres-name>` matches the name of the Postgres resource, and the `rw`, `ro`, or `r` suffix indicates the endpoint type and is not related to the user name. In the `d8ms-pg-app-postgres-rw.postgres.svc` DNS name, the `postgres` part is the namespace where the Postgres resource is created.
+In the Service name, `<postgres-name>` matches the name of the Postgres resource, and the `rw`, `ro`, or `r` suffix indicates the endpoint type and is not related to the user name. In the `d8ms-pg-test-rw.postgres.svc` DNS name, the `test` part is the name of the Postgres resource, and the `postgres` part is the namespace where the resource is created.
 
 If the user has the `storeCredsToSecret` field set, the connection string is stored in the specified Secret in the `<database-name>-dsn` field.
 
