@@ -24,10 +24,10 @@ import (
 )
 
 type masterNode struct {
-	cpu      string
-	memory   string
-	capCPU   string // optional; falls back to cpu (kubelet not yet settled)
-	capMem   string // optional; falls back to memory
+	cpu    string
+	memory string
+	capCPU string // optional; falls back to cpu (kubelet not yet settled)
+	capMem string // optional; falls back to memory
 }
 
 func generateMasterNodesConfig(nodes []masterNode) string {
@@ -62,9 +62,9 @@ status:
 	return state
 }
 
-var _ = Describe("Global hooks :: calculate_resources_requests", func() {
+var _ = Describe("Module hooks :: control-plane-manager :: calculate_resources_requests", func() {
 
-	f := HookExecutionConfigInit(`{"global": {"internal": {"modules": {"resourcesRequests": {}}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"controlPlaneManager": {"internal": {"resourcesRequests": {}}}}`, `{}`)
 
 	Context("Cluster without master nodes (unmanaged)", func() {
 		BeforeEach(func() {
@@ -74,8 +74,8 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
 		It("Hook should run, control-plane resource values should be equal 0, because we do not admin control plane resources in unmanaged clusters (GKE for example)", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(0)))
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(0)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(0)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(0)))
 		})
 	})
 
@@ -91,8 +91,8 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectCPU := int64((4000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
 			expectMem := int64((8*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
 		})
 	})
 
@@ -112,8 +112,8 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 			// effectiveMem = 8 GiB - max(1 GiB, 900 MiB) = 7 GiB
 			expectCPU := int64((3800-configEveryNodeMilliCPU)*controlPlanePercent) / 100
 			expectMem := int64((7*1024*1024*1024-configEveryNodeMemory)*controlPlanePercent) / 100
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
 		})
 	})
 
@@ -133,12 +133,43 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectCPU := int64((4000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
 			expectMem := int64((8*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
 		})
 	})
 
-	Context("Cluster with master node, with set global modules resourcesRequests for control-plane", func() {
+	Context("Cluster with master node and both CPM and global resourcesRequests set", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
+			f.ValuesSet("global.modules.resourcesRequests.controlPlane.cpu", "2000m")
+			f.ValuesSet("global.modules.resourcesRequests.controlPlane.memory", "2Gi")
+			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
+			f.ValuesSet("controlPlaneManager.resourcesRequests.memory", "1Gi")
+			f.RunHook()
+		})
+
+		It("Hook should prefer control-plane-manager resourcesRequests", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(1500)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(1024 * 1024 * 1024)))
+		})
+
+		It("Hook should not raise the obsolete global resources metric when CPM config takes priority over global fallback", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			metrics := f.MetricsCollector.CollectedMetrics()
+			found := false
+			for _, m := range metrics {
+				if m.Name == obsoleteGlobalResourcesRequestsMetricName {
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeFalse())
+		})
+	})
+
+	Context("Cluster with master node, with only global resourcesRequests set", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
 			f.ValuesSet("global.modules.resourcesRequests.controlPlane.cpu", "2000m")
@@ -146,10 +177,49 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 			f.RunHook()
 		})
 
-		It("Hook should run, control-plane resource values should be equal global modules resourcesRequests for control-plane", func() {
+		It("Hook should run, control-plane resource values should be equal global modules resourcesRequests for control-plane as a fallback path", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(2000)))
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(2 * 1024 * 1024 * 1024)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(2000)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(2 * 1024 * 1024 * 1024)))
+		})
+
+		It("Hook should raise the obsolete global resources metric when global fallback is used", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			metrics := f.MetricsCollector.CollectedMetrics()
+			found := false
+			value := 0.0
+			for _, m := range metrics {
+				if m.Name == obsoleteGlobalResourcesRequestsMetricName {
+					found = true
+					value = *m.Value
+					break
+				}
+			}
+			Expect(found).To(BeTrue())
+			Expect(value).To(Equal(1.0))
+		})
+	})
+
+	Context("Cluster with master node and only CPM resourcesRequests set (post-migration state)", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
+			f.ValuesSet("controlPlaneManager.resourcesRequests.cpu", "1500m")
+			f.ValuesSet("controlPlaneManager.resourcesRequests.memory", "1Gi")
+			f.RunHook()
+		})
+		It("Hook uses CPM values and does not emit the obsolete metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(1500)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(1024 * 1024 * 1024)))
+			found := false
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == obsoleteGlobalResourcesRequestsMetricName {
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeFalse())
 		})
 	})
 
@@ -164,8 +234,8 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 			// Smaller master: Capacity=Allocatable=2000m/4 GiB → floor applies.
 			expectCPU := int64((2000-kubeletResourceReservationCPUFloor-configEveryNodeMilliCPU)*controlPlanePercent) / 100
 			expectMem := int64((4*1024*1024*1024-kubeletResourceReservationMemoryFloor-configEveryNodeMemory)*controlPlanePercent) / 100
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
-			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(expectCPU))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(expectMem))
 		})
 
 	})
@@ -190,3 +260,11 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 		})
 	})
 })
+
+func absDiff(a, b int64) int64 {
+	d := a - b
+	if d > 0 {
+		return d
+	}
+	return b - a
+}

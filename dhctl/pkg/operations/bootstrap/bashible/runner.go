@@ -95,7 +95,7 @@ func (r *Runner) Prepare(ctx context.Context) error {
 func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.AlreadyRun, alreadyRunDefaultOpts...).
 		Clone(
-			retry.WithName("Checking bashible already ran"),
+			retry.WithName("Checking whether Bashible already ran"),
 			retry.WithLogger(r.loggerProvider()),
 		)
 
@@ -207,13 +207,13 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 			// we do not need to restart tunnel because we have HealthMonitor
 			logger := r.loggerProvider()
 
-			logger.DebugF("Stop bashible if need")
+			logger.DebugF("Stopping Bashible if needed")
 
 			if err := r.cleanupPreviousBashibleIfNeed(ctx); err != nil {
 				return err
 			}
 
-			logger.DebugF("Start execute bashible bundle routine")
+			logger.DebugF("Starting Bashible bundle execution routine")
 
 			return r.attemptExecuteBundle(ctx, params, relaySpanUpdater)
 		})
@@ -251,16 +251,16 @@ func (r *Runner) attemptExecuteBundle(
 func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
 	logger := r.loggerProvider()
 
-	return logger.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
-		logger.DebugF("Gettting bashible pids")
+	return logger.Process("bootstrap", "Clean up previous Bashible run if needed", func() error {
+		logger.DebugF("Getting Bashible PIDs")
 		pids, err := r.getBashiblePIDs(ctx)
 		if err != nil {
 			return err
 		}
 
-		logger.DebugLn("Got bashible pids: %v", pids)
+		logger.DebugLn("Got Bashible PIDs: %v", pids)
 		if len(pids) == 0 {
-			logger.InfoF("Bashible instance not found. Start it!")
+			logger.InfoF("Bashible instance not found. Starting it!")
 			return nil
 		}
 
@@ -293,7 +293,7 @@ func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
 
 		parts := strings.SplitN(l, "|", 2)
 		if len(parts) < 2 {
-			logger.DebugLn("Skip ps string without pid")
+			logger.DebugLn("Skipping ps line without PID")
 			continue
 		}
 

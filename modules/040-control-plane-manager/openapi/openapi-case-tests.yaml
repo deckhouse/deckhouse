@@ -13,6 +13,9 @@ positive:
         backup:
           cronSchedule: "0 0 * * *"
           hostPath: "/var/backup/etcd"
+    - resourcesRequests:
+        cpu: "1000m"
+        memory: "500Mi"
   values:
     - internal:
         effectiveKubernetesVersion: "1.32"

@@ -445,6 +445,7 @@ read:
     - deckhouse.io/istiomulticlusters
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
     - install.istio.io/istiooperators
+    - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - sailoperator.io/istiocnis
@@ -459,6 +460,7 @@ read-write:
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - deckhouse.io/upmeterremotewrites
+    - multitenancy.deckhouse.io/clusterresourcegrantpolicies
 write:
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -496,6 +498,7 @@ write:
     - extensions.istio.io/wasmplugins
     - extensions/daemonsets
     - gateway.networking.k8s.io/gatewayclasses
+    - multitenancy.deckhouse.io/clusterresourcegrants
     - network.deckhouse.io/egressgatewaypolicies
     - network.deckhouse.io/egressgateways
     - storage.k8s.io/storageclasses
@@ -567,8 +570,6 @@ read-write:
     - deckhouse.io/useroperations
     - deckhouse.io/users
     - infrastructure.cluster.x-k8s.io/staticmachinetemplates
-    - multitenancy.deckhouse.io/clusterresourcegrantpolicies
-    - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
     - nodes/configz
     - nodes/healthz
     - nodes/log
@@ -607,7 +608,6 @@ write:
     - externaldata.gatekeeper.sh/providers
     - install.istio.io/istiooperators
     - limitranges
-    - multitenancy.deckhouse.io/clusterresourcegrants
     - mutations.gatekeeper.sh/assign
     - mutations.gatekeeper.sh/assignimage
     - mutations.gatekeeper.sh/assignmetadata
