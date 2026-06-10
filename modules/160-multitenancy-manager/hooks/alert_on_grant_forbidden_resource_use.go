@@ -106,7 +106,7 @@ type clusterGrantableResource struct {
 		} `json:"grantedResource"`
 		Enforcement         string           `json:"enforcement"`
 		DefaultAvailability string           `json:"defaultAvailability"`
-		Excluded            *resourceFilter  `json:"excluded"`
+		Excluded            []resourceFilter `json:"excluded"`
 		UsageReferences     []usageReference `json:"usageReferences"`
 	} `json:"spec"`
 }
@@ -243,14 +243,18 @@ func matchingNamespaces(ctx context.Context, kube k8s.Client, sel *v1.LabelSelec
 }
 
 // decisionSets holds the resolved allow/deny/excluded names for a registration in one grant entry.
+// It mirrors the controller's resolve.Resolved so the alert matches what the webhook enforces.
 type decisionSets struct {
 	allowed             map[string]struct{}
 	denied              map[string]struct{}
 	excluded            map[string]struct{}
-	availabilityDefault string
+	anyAll              bool
+	anyNone             bool
 	registrationDefault string
 }
 
+// violates is the negation of the controller's resolve.Resolved.Decide: precedence
+// excluded → denied → allowed → grant baseline (anyAll/anyNone) → registration defaultAvailability.
 func (d decisionSets) violates(name string) bool {
 	if _, ok := d.excluded[name]; ok {
 		return true
@@ -261,10 +265,10 @@ func (d decisionSets) violates(name string) bool {
 	if _, ok := d.allowed[name]; ok {
 		return false
 	}
-	if d.availabilityDefault == "All" {
+	if d.anyAll {
 		return false
 	}
-	if d.availabilityDefault == "None" {
+	if d.anyNone {
 		return true
 	}
 	return d.registrationDefault == "None"
@@ -275,8 +279,19 @@ func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource
 		allowed:             map[string]struct{}{},
 		denied:              map[string]struct{}{},
 		excluded:            map[string]struct{}{},
-		availabilityDefault: entry.AvailabilityDefault,
 		registrationDefault: reg.Spec.DefaultAvailability,
+	}
+	switch entry.AvailabilityDefault {
+	case "All":
+		d.anyAll = true
+	case "None":
+		d.anyNone = true
+	default:
+		// No explicit baseline: an allow-list (names or selector) means "restrict to it", so the
+		// baseline for everything else is None — mirroring resolve.Resolve in the controller.
+		if len(entry.Allowed) > 0 || entry.AllowedSelector != nil {
+			d.anyNone = true
+		}
 	}
 	for _, n := range entry.Allowed {
 		d.allowed[n] = struct{}{}
@@ -287,8 +302,9 @@ func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource
 	for _, n := range entry.Denied {
 		d.denied[n] = struct{}{}
 	}
-	if reg.Spec.Excluded != nil {
-		for _, n := range reg.Spec.Excluded.Names {
+	// Registration excluded literal names (union across all excluded filters).
+	for i := range reg.Spec.Excluded {
+		for _, n := range reg.Spec.Excluded[i].Names {
 			d.excluded[n] = struct{}{}
 		}
 	}
@@ -302,14 +318,22 @@ func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource
 		if err != nil {
 			return d, fmt.Errorf("list granted resource %s: %w", reg.Spec.GrantedResource.Kind, err)
 		}
-		excludedSel := filterToSelector(reg.Spec.Excluded)
+		excludedSels := make([]labels.Selector, 0, len(reg.Spec.Excluded))
+		for i := range reg.Spec.Excluded {
+			if sel := filterToSelector(&reg.Spec.Excluded[i]); sel != nil {
+				excludedSels = append(excludedSels, sel)
+			}
+		}
 		allowedSel := labelSelector(entry.AllowedSelector)
 		deniedSel := labelSelector(entry.DeniedSelector)
 		for i := range list.Items {
 			name := list.Items[i].GetName()
 			set := labels.Set(list.Items[i].GetLabels())
-			if excludedSel != nil && excludedSel.Matches(set) {
-				d.excluded[name] = struct{}{}
+			for _, excludedSel := range excludedSels {
+				if excludedSel.Matches(set) {
+					d.excluded[name] = struct{}{}
+					break
+				}
 			}
 			if deniedSel != nil && deniedSel.Matches(set) {
 				d.denied[name] = struct{}{}

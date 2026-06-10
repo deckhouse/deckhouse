@@ -26,8 +26,6 @@ import (
 	"strconv"
 
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 
 	"controller/api/v1alpha1"
 	"controller/internal/jsonpath"
@@ -141,114 +139,10 @@ func EvalMatch(factory jsonpath.Factory, pred *v1alpha1.MatchPredicate, obj map[
 	return false, nil
 }
 
-// filterMatches reports whether a ResourceFilter matches an object by name or labels. For
-// value-backed resources objLabels is nil, so only Names are consulted.
-func filterMatches(f *v1alpha1.ResourceFilter, name string, objLabels labels.Set) (bool, error) {
-	if f == nil {
-		return false, nil
-	}
-	if slices.Contains(f.Names, name) {
-		return true, nil
-	}
-	if objLabels == nil || (len(f.MatchLabels) == 0 && len(f.MatchExpressions) == 0) {
-		return false, nil
-	}
-	sel, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels:      f.MatchLabels,
-		MatchExpressions: f.MatchExpressions,
-	})
-	if err != nil {
-		return false, fmt.Errorf("invalid excluded selector: %w", err)
-	}
-	return sel.Matches(objLabels), nil
-}
-
-// selectorMatches reports whether a label selector matches the object labels. A nil selector or
-// nil labels never matches.
-func selectorMatches(ls *metav1.LabelSelector, objLabels labels.Set) (bool, error) {
-	if ls == nil || objLabels == nil {
-		return false, nil
-	}
-	sel, err := metav1.LabelSelectorAsSelector(ls)
-	if err != nil {
-		return false, fmt.Errorf("invalid selector: %w", err)
-	}
-	return sel.Matches(objLabels), nil
-}
-
-// Available decides whether a project may use a given granted object, applying the precedence:
-// excluded → denied → allowed → grant availabilityDefault → registration defaultAvailability.
-// grantEntries are the applicable grant resource entries (already filtered to this resource name).
-// objLabels are the granted object's labels (nil for value-backed resources).
-func Available(
-	reg *v1alpha1.GrantableClusterResourceDefinition,
-	grantEntries []v1alpha1.GrantResource,
-	name string,
-	objLabels labels.Set,
-) (bool, error) {
-	// 1. registration excluded — hard deny if any filter matches.
-	for i := range reg.Spec.Excluded {
-		if excluded, err := filterMatches(&reg.Spec.Excluded[i], name, objLabels); err != nil {
-			return false, err
-		} else if excluded {
-			return false, nil
-		}
-	}
-
-	// 2. grant denied / deniedSelector — admin exclusion.
-	for i := range grantEntries {
-		e := &grantEntries[i]
-		if slices.Contains(e.Denied, name) {
-			return false, nil
-		}
-		if matched, err := selectorMatches(e.DeniedSelector, objLabels); err != nil {
-			return false, err
-		} else if matched {
-			return false, nil
-		}
-	}
-
-	// 3. grant allowed / allowedSelector — allow.
-	for i := range grantEntries {
-		e := &grantEntries[i]
-		if slices.Contains(e.Allowed, name) {
-			return true, nil
-		}
-		if matched, err := selectorMatches(e.AllowedSelector, objLabels); err != nil {
-			return false, err
-		} else if matched {
-			return true, nil
-		}
-	}
-
-	// 4. grant availabilityDefault override (most permissive wins among entries that set it).
-	sawNone := false
-	for i := range grantEntries {
-		switch grantEntries[i].AvailabilityDefault {
-		case v1alpha1.AvailabilityAll:
-			return true, nil
-		case v1alpha1.AvailabilityNone:
-			sawNone = true
-		}
-	}
-	if sawNone {
-		return false, nil
-	}
-
-	// 5. registration defaultAvailability (default All).
-	return reg.Spec.DefaultAvailability != v1alpha1.AvailabilityNone, nil
-}
-
-// EffectiveDefault returns the per-project default granted name: the first grant entry that sets
-// default wins. Empty means "use the registration's defaultFrom annotation".
-func EffectiveDefault(grantEntries []v1alpha1.GrantResource) string {
-	for i := range grantEntries {
-		if grantEntries[i].Default != "" {
-			return grantEntries[i].Default
-		}
-	}
-	return ""
-}
+// Availability decision logic (excluded → denied → allowed → baseline) and the per-project default
+// live in a single place — internal/resolve (resolve.Resolved.Decide / .Default). They are not
+// duplicated here; this package only provides the stateless matching/measure helpers used by both
+// the webhooks and the reconciler.
 
 // Measure is a quota measure key declared by a registration.
 type Measure struct {

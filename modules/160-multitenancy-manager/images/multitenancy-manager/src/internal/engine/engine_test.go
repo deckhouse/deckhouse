@@ -20,8 +20,6 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 
 	"controller/api/v1alpha1"
 	"controller/internal/jsonpath"
@@ -87,107 +85,6 @@ func TestEvalMatch(t *testing.T) {
 	predIn := &v1alpha1.MatchPredicate{FieldPath: "$.spec.type", In: []string{"NodePort", "LoadBalancer"}}
 	if ok, _ := EvalMatch(factory(), predIn, obj); !ok {
 		t.Fatal("expected in[] match")
-	}
-}
-
-func reg(defAvail v1alpha1.AvailabilityDefault, excluded []v1alpha1.ResourceFilter) *v1alpha1.GrantableClusterResourceDefinition {
-	return &v1alpha1.GrantableClusterResourceDefinition{
-		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{DefaultAvailability: defAvail, Excluded: excluded},
-	}
-}
-
-func TestAvailabilityPrecedence(t *testing.T) {
-	// excluded beats allowed.
-	r := reg(v1alpha1.AvailabilityAll, []v1alpha1.ResourceFilter{{Names: []string{"sys"}}})
-	grants := []v1alpha1.GrantResource{{Allowed: []string{"sys", "standard"}}}
-	if ok, _ := Available(r, grants, "sys", nil); ok {
-		t.Fatal("excluded must deny even when allowed")
-	}
-	if ok, _ := Available(r, grants, "standard", nil); !ok {
-		t.Fatal("standard must be allowed")
-	}
-
-	// denied beats allowed.
-	r2 := reg(v1alpha1.AvailabilityAll, nil)
-	g2 := []v1alpha1.GrantResource{{Allowed: []string{"x"}, Denied: []string{"x"}}}
-	if ok, _ := Available(r2, g2, "x", nil); ok {
-		t.Fatal("denied must beat allowed")
-	}
-
-	// defaultAvailability None with no grant decision → deny.
-	rNone := reg(v1alpha1.AvailabilityNone, nil)
-	if ok, _ := Available(rNone, nil, "anything", nil); ok {
-		t.Fatal("None default must deny ungranted")
-	}
-	// defaultAvailability All with no grant → allow.
-	rAll := reg(v1alpha1.AvailabilityAll, nil)
-	if ok, _ := Available(rAll, nil, "anything", nil); !ok {
-		t.Fatal("All default must allow ungranted")
-	}
-	// empty default treated as All.
-	rEmpty := reg("", nil)
-	if ok, _ := Available(rEmpty, nil, "anything", nil); !ok {
-		t.Fatal("empty default must behave as All")
-	}
-
-	// grant availabilityDefault None overrides registration All.
-	rAll2 := reg(v1alpha1.AvailabilityAll, nil)
-	gNone := []v1alpha1.GrantResource{{AvailabilityDefault: v1alpha1.AvailabilityNone}}
-	if ok, _ := Available(rAll2, gNone, "z", nil); ok {
-		t.Fatal("grant availabilityDefault None must override registration All")
-	}
-}
-
-func TestExcludedUnion(t *testing.T) {
-	// clusterroles pattern: available by default, but keep only the delegatable roles —
-	// (kind=use) OR (module=user-authz with no kind) — by unioning two excluded filters.
-	excluded := []v1alpha1.ResourceFilter{
-		{MatchExpressions: []metav1.LabelSelectorRequirement{
-			{Key: "rbac.deckhouse.io/kind", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"use"}},
-			{Key: "module", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"user-authz"}},
-		}},
-		{MatchExpressions: []metav1.LabelSelectorRequirement{
-			{Key: "rbac.deckhouse.io/kind", Operator: metav1.LabelSelectorOpIn, Values: []string{"manage"}},
-		}},
-	}
-	r := reg(v1alpha1.AvailabilityAll, excluded)
-	cases := []struct {
-		name string
-		lbls labels.Set
-		want bool
-	}{
-		{"use-role", labels.Set{"rbac.deckhouse.io/kind": "use", "module": "user-authz"}, true},
-		{"use-cap-other-module", labels.Set{"rbac.deckhouse.io/kind": "use", "module": "deckhouse"}, true},
-		{"userauthz-access-level", labels.Set{"module": "user-authz"}, true},
-		{"manage-role", labels.Set{"rbac.deckhouse.io/kind": "manage", "module": "user-authz"}, false},
-		{"generic-role", labels.Set{}, false},
-		{"cluster-admin-like", labels.Set{"kubernetes.io/bootstrapping": "rbac-defaults"}, false},
-	}
-	for _, c := range cases {
-		got, err := Available(r, nil, c.name, c.lbls)
-		if err != nil {
-			t.Fatalf("%s: %v", c.name, err)
-		}
-		if got != c.want {
-			t.Fatalf("%s: got available=%v want %v", c.name, got, c.want)
-		}
-	}
-}
-
-func TestAvailabilitySelectors(t *testing.T) {
-	r := reg(v1alpha1.AvailabilityNone, nil)
-	grants := []v1alpha1.GrantResource{{
-		AllowedSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"shared": "true"}},
-	}}
-	if ok, _ := Available(r, grants, "ssd", labels.Set{"shared": "true"}); !ok {
-		t.Fatal("allowedSelector must allow labelled object")
-	}
-	if ok, _ := Available(r, grants, "ssd", labels.Set{"shared": "false"}); ok {
-		t.Fatal("allowedSelector must not allow non-labelled object")
-	}
-	// value-backed (nil labels) ignores selectors → falls to None.
-	if ok, _ := Available(r, grants, "ssd", nil); ok {
-		t.Fatal("value-backed must ignore selector and deny under None")
 	}
 }
 
