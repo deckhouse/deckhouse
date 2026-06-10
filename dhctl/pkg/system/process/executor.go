@@ -483,8 +483,15 @@ func (e *Executor) ProcessWait() {
 	}()
 
 	go func() {
-		if e.timeout > 0 {
-			time.Sleep(e.timeout)
+		if e.timeout <= 0 {
+			return
+		}
+		select {
+		case <-e.waitCh:
+		case <-time.After(e.timeout):
+			// Set the error before signaling stop: the stop path discards the
+			// process wait error, and without this Run() would return nil on timeout.
+			e.setWaitError(fmt.Errorf("command timed out after %s", e.timeout))
 			if e.stopCh != nil {
 				e.stopCh <- struct{}{}
 			}
