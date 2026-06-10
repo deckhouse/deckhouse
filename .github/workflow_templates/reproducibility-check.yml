@@ -64,6 +64,7 @@ jobs:
       baseline_run_url: ${{ steps.resolve.outputs.baseline_run_url }}
       baseline_workflow: ${{ steps.resolve.outputs.baseline_workflow }}
       pr_number: ${{ steps.resolve.outputs.pr_number }}
+      ci_commit_ref_name: ${{ steps.resolve.outputs.ci_commit_ref_name }}
     steps:
       - name: Resolve target SHA and locate baseline
         id: resolve
@@ -155,11 +156,20 @@ jobs:
               }
             }
 
-            // For dev mode we need the PR number to reconstruct CI_COMMIT_REF_SLUG = prN.
-            // Prefer the PR attached to the baseline run itself: it is always the exact PR
-            // on which this SHA was built. Fall back to commit-associated PRs only if the
-            // run object has no pull_requests payload (e.g. older runs, edge cases).
+            // For dev mode we reconstruct the exact CI_COMMIT_* context the baseline
+            // build-and-test_dev.yml run used, so the rerun produces identical digests:
+            //   CI_COMMIT_REF_SLUG = prN  (always)
+            //   CI_COMMIT_REF_NAME = PR head branch name for internal PRs, prN for forks
+            // (this mirrors git_info_job in ci_templates/helper_jobs.yml).
+            // CI_COMMIT_REF_NAME is baked into release-channel-version(-prebuild) via
+            // .werf/werf-release-channel.yaml, so an incorrect value makes those images
+            // look non-reproducible even on the same commit.
+            //
+            // We need the PR number first. Prefer the PR attached to the baseline run
+            // itself: it is always the exact PR this SHA was built on. Fall back to
+            // commit-associated PRs only if the run object has no pull_requests payload.
             let prNumber = '';
+            let ciCommitRefName = '';
             if (baselineKind === 'dev') {
               const runPr = (baseline.pull_requests || [])[0];
               if (runPr && runPr.number) {
@@ -179,6 +189,26 @@ jobs:
                   );
                 }
               }
+
+              // Reconstruct CI_COMMIT_REF_NAME exactly like git_info_job:
+              //   refName = (prRepo === targetRepo) ? pr.head.ref : `pr${number}`
+              const targetRepo = `${owner}/${repo}`;
+              try {
+                const pr = (await github.rest.pulls.get({
+                  owner, repo, pull_number: Number(prNumber),
+                })).data;
+                const prRepo = (pr.head && pr.head.repo) ? pr.head.repo.full_name : '';
+                const prRef  = (pr.head && pr.head.ref)  ? pr.head.ref            : '';
+                ciCommitRefName = (prRepo === targetRepo && prRef) ? prRef : `pr${prNumber}`;
+                core.notice(
+                  `dev baseline: CI_COMMIT_REF_NAME='${ciCommitRefName}' ` +
+                  `(PR head '${prRepo}:${prRef}', target '${targetRepo}')`
+                );
+              } catch (e) {
+                return core.setFailed(
+                  `Failed to fetch PR #${prNumber} to reconstruct CI_COMMIT_REF_NAME: ${e.message}`
+                );
+              }
             }
 
             core.notice(`Baseline run: ${baseline.html_url} (workflow=${baselineKind}, id=${baseline.id})`);
@@ -187,6 +217,7 @@ jobs:
             core.setOutput('baseline_run_url', baseline.html_url);
             core.setOutput('baseline_workflow', baselineKind);
             core.setOutput('pr_number', prNumber);
+            core.setOutput('ci_commit_ref_name', ciCommitRefName);
 
   # Synthetic git_info: build_template reads needs.git_info.outputs.*. We
   # construct the values from the resolved target SHA and baseline workflow kind
@@ -208,20 +239,31 @@ jobs:
           SHA: ${{ needs.resolve_target.outputs.sha }}
           WF: ${{ needs.resolve_target.outputs.baseline_workflow }}
           PR_NUMBER: ${{ needs.resolve_target.outputs.pr_number }}
+          REF_NAME: ${{ needs.resolve_target.outputs.ci_commit_ref_name }}
         run: |
+          # Reproduce the baseline build's CI_COMMIT_* context. In the real builds
+          # (git_info_job, ci_templates/helper_jobs.yml):
+          #   main: ref_slug = ref_name = branch = "main"
+          #   dev:  ref_slug = "prN"; ref_name = branch = PR head branch (internal)
+          #         or "prN" (fork). ref_name is resolved upstream in resolve_target.
           if [[ "$WF" == "main" ]]; then
-            REF="main"
+            REF_SLUG="main"
+            REF_NAME="main"
           elif [[ "$WF" == "dev" ]]; then
-            REF="pr${PR_NUMBER}"
+            REF_SLUG="pr${PR_NUMBER}"
+            if [[ -z "$REF_NAME" ]]; then
+              echo "::error::ci_commit_ref_name is empty in dev mode"
+              exit 1
+            fi
           else
             echo "::error::Unknown baseline_workflow: '$WF'"
             exit 1
           fi
           {
             echo "ci_commit_tag="
-            echo "ci_commit_branch=${REF}"
-            echo "ci_commit_ref_name=${REF}"
-            echo "ci_commit_ref_slug=${REF}"
+            echo "ci_commit_branch=${REF_NAME}"
+            echo "ci_commit_ref_name=${REF_NAME}"
+            echo "ci_commit_ref_slug=${REF_SLUG}"
             echo "github_sha=${SHA}"
           } >> $GITHUB_OUTPUT
 
