@@ -54,6 +54,221 @@ Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true
 d8 k edit mc global
 ```
 
+## Resizing a PVC
+
+You can increase the size of an existing PVC without stopping or recreating the pod that uses it.
+
+After the value of `spec.resources.requests.storage` is changed, the CSI driver performs the following operations:
+
+- increases the size of the disk in Yandex Cloud;
+- updates the size of the associated PersistentVolume;
+- expands the file system on the node to which the volume is attached.
+
+During the operation, the pod continues running, and the mounted volume remains available to the application. After the resize operation is complete, the new file system size becomes available inside the container without restarting the pod.
+
+{% alert level="info" %}
+Decreasing the size of a PVC is not supported.
+{% endalert %}
+
+To increase the size of a PVC, follow these steps:
+
+1. Get the name of the StorageClass used by the PVC:
+
+   ```shell
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
+     -o jsonpath='{.spec.storageClassName}{"\n"}'
+   ```
+
+   Where:
+
+   - `<NAMESPACE>` — the namespace containing the PVC;
+   - `<PVC_NAME>` — the name of the PVC to resize.
+
+   For example:
+
+   ```shell
+   d8 k -n production get pvc application-data \
+     -o jsonpath='{.spec.storageClassName}{"\n"}'
+   ```
+
+   Example output:
+
+   ```console
+   network-ssd
+   ```
+
+   In this example, the `application-data` PVC uses the `network-ssd` StorageClass.
+
+1. Make sure that the StorageClass allows volume expansion:
+
+   ```shell
+   d8 k get storageclass <STORAGECLASS_NAME> \
+     -o jsonpath='{.allowVolumeExpansion}{"\n"}'
+   ```
+
+   Where `<STORAGECLASS_NAME>` is the name of the StorageClass obtained in the previous step.
+
+   For example:
+
+   ```shell
+   d8 k get storageclass network-ssd \
+     -o jsonpath='{.allowVolumeExpansion}{"\n"}'
+   ```
+
+   Example output:
+
+   ```console
+   true
+   ```
+
+1. Check the current status and size of the PVC:
+
+   ```shell
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME>
+   ```
+
+   For example:
+
+   ```shell
+   d8 k -n production get pvc application-data
+   ```
+
+   Example output:
+
+   ```console
+   NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
+   application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   20Gi       RWO            network-ssd
+   ```
+
+   Make sure that:
+
+   - the PVC is in the `Bound` state;
+   - the `CAPACITY` field shows the current PVC size;
+   - the `STORAGECLASS` field shows the StorageClass checked in the previous step.
+
+1. Increase the PVC size:
+
+   ```shell
+   d8 k -n <NAMESPACE> edit pvc <PVC_NAME>
+   ```
+
+   For example:
+
+   ```shell
+   d8 k -n production edit pvc application-data
+   ```
+
+   Specify the new PVC size in the `spec.resources.requests.storage` field:
+
+   ```yaml
+   spec:
+     resources:
+       requests:
+         storage: 30Gi
+   ```
+
+   In this example, the PVC size is increased to `30Gi`.
+
+   Save the changes and close the editor.
+
+   {% alert level="warning" %}
+   For the `network-ssd-nonreplicated` and `network-ssd-io-m3` StorageClasses, the [size must be a multiple of 93Gi](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-disktype).
+   {% endalert %}
+
+1. Wait for the PVC resize operation to complete:
+
+   ```shell
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME> --watch
+   ```
+
+   Where:
+
+   - `<NAMESPACE>` — the namespace containing the PVC;
+   - `<PVC_NAME>` — the name of the PVC being resized.
+
+   For example:
+
+   ```shell
+   d8 k -n production get pvc application-data --watch
+   ```
+
+   During the resize operation, the `CAPACITY` field may continue to show the previous size:
+
+   ```console
+   NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
+   application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   20Gi       RWO            network-ssd
+   ```
+
+   The operation is complete when the `CAPACITY` field shows the new PVC size:
+
+   ```console
+   NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
+   application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   30Gi       RWO            network-ssd
+   ```
+
+1. Check the PVC events:
+
+   ```shell
+   d8 k -n <NAMESPACE> describe pvc <PVC_NAME>
+   ```
+
+   For example:
+
+   ```shell
+   d8 k -n production describe pvc application-data
+   ```
+
+   The following events may appear during the resize operation:
+
+   ```console
+   ExternalExpanding
+   Resizing
+   FileSystemResizeRequired
+   ```
+
+   The following event indicates that the file system was successfully expanded:
+
+   ```console
+   FileSystemResizeSuccessful
+   ```
+
+   For example:
+
+   ```console
+   Normal  FileSystemResizeSuccessful  kubelet  MountVolume.NodeExpandVolume succeeded for volume "pvc-65e92674-077c-4b4f-b65d-19e92f04e103"
+   ```
+
+1. Check the file system size inside the pod:
+
+   ```shell
+   d8 k -n <NAMESPACE> exec <POD_NAME> -- \
+     df -hT <MOUNT_PATH>
+   ```
+
+   Where:
+
+   - `<NAMESPACE>` — the namespace containing the pod;
+   - `<POD_NAME>` — the name of the pod using the PVC;
+   - `<MOUNT_PATH>` — the path inside the container where the PVC is mounted.
+
+   For example:
+
+   ```shell
+   d8 k -n production exec application-0 -- \
+     df -hT /data
+   ```
+
+   Example output:
+
+   ```console
+   Filesystem   Type   Size    Used   Avail   Use%   Mounted on
+   /dev/vde     ext4   29.4G   22M    29.4G    1%    /data
+   ```
+
+   {% alert level="info" %}
+   The actual file system size may be slightly smaller than the PVC size due to file system metadata.
+   {% endalert %}
+
 ## Adding CloudStatic nodes to a cluster
 
 For VMs that you want to add to the cluster as nodes, add the `node-network-cidr` key to the metadata (Edit VM -> Metadata) with a value equal to the cluster's `nodeNetworkCIDR`.

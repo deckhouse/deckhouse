@@ -61,6 +61,221 @@ d8 k edit mc global
 - Первый StorageClass по алфавиту среди тех, что автоматически создаются облачным провайдером.
 - По умолчанию значение параметра `defaultClusterStorageClass` — пустая строка (`""`).
 
+### Изменение размера PVC
+
+Размер существующего PVC можно увеличить без остановки и пересоздания использующего его пода.
+
+После изменения значения `spec.resources.requests.storage` CSI-драйвер последовательно:
+
+- увеличивает размер диска в Yandex Cloud;
+- обновляет размер связанного PersistentVolume;
+- выполняет расширение файловой системы на узле, к которому подключён том.
+
+Во время операции под продолжает работать, а смонтированный том остаётся доступным приложению. После завершения увеличения новый размер файловой системы становится доступен внутри контейнера без перезапуска пода.
+
+{% alert level="info" %}
+Уменьшение размера PVC не поддерживается.
+{% endalert %}
+
+Чтобы увеличить PVC, выполните следующие действия:
+
+1. Получите имя StorageClass, используемого PVC:
+
+   ```shell
+   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC> \
+     -o jsonpath='{.spec.storageClassName}{"\n"}'
+   ```
+
+   Где:
+
+   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится PVC;
+   - `<ИМЯ_PVC>` — имя PVC, размер которого необходимо увеличить.
+
+   Например:
+
+   ```shell
+   d8 k -n production get pvc application-data \
+     -o jsonpath='{.spec.storageClassName}{"\n"}'
+   ```
+
+   Пример вывода команды:
+
+   ```console
+   network-ssd
+   ```
+
+   В этом примере PVC `application-data` использует StorageClass `network-ssd`.
+
+1. Убедитесь, что StorageClass разрешает увеличение томов:
+
+   ```shell
+   d8 k get storageclass <ИМЯ_STORAGECLASS> \
+     -o jsonpath='{.allowVolumeExpansion}{"\n"}'
+   ```
+
+   Где `<ИМЯ_STORAGECLASS>` — имя StorageClass, полученное на предыдущем шаге.
+
+   Например:
+
+   ```shell
+   d8 k get storageclass network-ssd \
+     -o jsonpath='{.allowVolumeExpansion}{"\n"}'
+   ```
+
+   Пример вывода команды:
+
+   ```console
+   true
+   ```
+
+1. Проверьте текущее состояние и размер PVC:
+
+   ```shell
+   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC>
+   ```
+
+   Например:
+
+   ```shell
+   d8 k -n production get pvc application-data
+   ```
+
+   Пример вывода:
+
+   ```console
+   NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
+   application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   20Gi       RWO            network-ssd
+   ```
+
+   Убедитесь, что:
+
+   - PVC находится в состоянии `Bound`;
+   - в поле `CAPACITY` указан текущий размер PVC;
+   - в поле `STORAGECLASS` указан StorageClass, проверенный на предыдущем шаге.
+
+1. Увеличьте размер PVC:
+
+   ```shell
+   d8 k -n <НЕЙМСПЕЙС> edit pvc <ИМЯ_PVC>
+   ```
+
+   Например:
+
+   ```shell
+   d8 k -n production edit pvc application-data
+   ```
+
+   В поле `spec.resources.requests.storage` укажите новый размер PVC:
+
+   ```yaml
+   spec:
+     resources:
+       requests:
+         storage: 30Gi
+   ```
+
+   В этом примере размер PVC увеличивается до 30Gi.
+
+   Сохраните изменения и закройте редактор.
+
+   {% alert level="warning" %}
+   Для StorageClass `network-ssd-nonreplicated` и `network-ssd-io-m3` [размер должен быть кратен 93Gi](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-disktype).
+   {% endalert %}
+
+1. Дождитесь увеличения PVC:
+
+   ```shell
+   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC> --watch
+   ```
+
+   Где:
+
+   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится PVC;
+   - `<ИМЯ_PVC>` — имя PVC, размер которого увеличивается.
+
+   Например:
+
+   ```shell
+   d8 k -n production get pvc application-data --watch
+   ```
+
+   Во время увеличения в поле `CAPACITY` может отображаться прежний размер:
+
+   ```console
+   NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
+   application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   20Gi       RWO            network-ssd
+   ```
+
+   Операция завершена, когда в поле `CAPACITY` отображается новый размер PVC:
+
+   ```console
+   NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
+   application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   30Gi       RWO            network-ssd
+   ```
+
+1. Проверьте события PVC:
+
+   ```shell
+   d8 k -n <НЕЙМСПЕЙС> describe pvc <ИМЯ_PVC>
+   ```
+
+   Например:
+
+   ```shell
+   d8 k -n production describe pvc application-data
+   ```
+
+   Во время увеличения могут появиться следующие события:
+
+   ```console
+   ExternalExpanding
+   Resizing
+   FileSystemResizeRequired
+   ```
+
+   Об успешном увеличении файловой системы свидетельствует событие:
+
+   ```console
+   FileSystemResizeSuccessful
+   ```
+
+   Например:
+
+   ```console
+   Normal  FileSystemResizeSuccessful  kubelet  MountVolume.NodeExpandVolume succeeded for volume "pvc-65e92674-077c-4b4f-b65d-19e92f04e103"
+   ```
+
+1. Проверьте размер файловой системы внутри пода:
+
+   ```shell
+   d8 k -n <НЕЙМСПЕЙС> exec <ИМЯ_ПОДА> -- \
+     df -hT <ТОЧКА_МОНТИРОВАНИЯ>
+   ```
+
+   Где:
+
+   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится под;
+   - `<ИМЯ_ПОДА>` — имя пода, использующего PVC;
+   - `<ТОЧКА_МОНТИРОВАНИЯ>` — путь внутри контейнера, в который смонтирован PVC.
+
+   Например:
+
+   ```shell
+   d8 k -n production exec application-0 -- \
+     df -hT /data
+   ```
+
+   Пример вывода:
+
+   ```console
+   Filesystem   Type   Size    Used   Avail   Use%   Mounted on
+   /dev/vde     ext4   29.4G   22M    29.4G    1%    /data
+   ```
+
+   {% alert level="info" %}
+   Фактический размер файловой системы может быть немного меньше размера PVC из-за служебных данных файловой системы.
+   {% endalert %}
+
 ## Балансировка нагрузки
 
 ### Внешний LoadBalancer
