@@ -94,11 +94,13 @@ metadata:
   namespace: kube-system
 spec:
 {{- if eq .runType "ClusterBootstrap" }}
+{{- /*
   # Bootstrap-only: cpm rewrites this manifest once during initial install and
   # the default 30s grace would burn most of a minute waiting for the old
   # kube-apiserver to drain (no real in-flight work on a fresh master anyway).
   # Runtime restarts keep the static-pod default 30s so production drains
   # in-flight requests gracefully.
+*/}}
   terminationGracePeriodSeconds: 1
 {{- end }}
 {{- if .apiserver.oidcIssuerAddress }}
@@ -253,9 +255,9 @@ spec:
         drop:
         - ALL
       readOnlyRootFilesystem: true
+      runAsGroup: 0
       runAsNonRoot: false
       runAsUser: 0
-      runAsGroup: 0
       seccompProfile:
         type: RuntimeDefault
     startupProbe:
