@@ -175,7 +175,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"simpleBridge":        "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
-		"candi":                     "imageHash-common-candi",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"cniMigrationController":    "imageHash-common-cniMigrationController",
 		"cniMigrationInitChecker":   "imageHash-common-cniMigrationInitChecker",
@@ -217,14 +216,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiVsphereSyncer135":       "imageHash-common-csiVsphereSyncer135",
 		"csiVsphereSyncer136":       "imageHash-common-csiVsphereSyncer136",
 		"debugContainer":            "imageHash-common-debugContainer",
-		"distroless":                "imageHash-common-distroless",
 		"init":                      "imageHash-common-init",
-		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
-		"nginxStatic":               "imageHash-common-nginxStatic",
 		"pause":                     "imageHash-common-pause",
 		"redisStatic":               "imageHash-common-redisStatic",
-		"shellOperator":             "imageHash-common-shellOperator",
 		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
 	},
 	"controlPlaneManager": map[string]interface{}{
