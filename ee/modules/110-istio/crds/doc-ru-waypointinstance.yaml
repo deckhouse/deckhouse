@@ -72,13 +72,13 @@ spec:
                           properties:
                             max:
                               description: |
-                                Максимальное значение CPU requests, которое может установить VPA.
+                                Максимальное значение запроса CPU, которое может установить VPA.
                             min:
                               description: |
-                                Минимальное значение CPU requests, которое может установить VPA.
+                                Минимальное значение запроса CPU, которое может установить VPA.
                             limitRatio:
                               description: |
-                                Соотношение limits/requests для CPU.
+                                Соотношение лимитов/запросов для CPU.
 
                                 Если задано, лимиты рассчитываются на основе запросов и указанного соотношения.
                         memory:
@@ -87,39 +87,39 @@ spec:
                           properties:
                             max:
                               description: |
-                                Максимальное значение memory requests, которое может установить VPA.
+                                Максимальное значение запроса памяти, которое может установить VPA.
                             min:
                               description: |
-                                Минимальное значение memory requests, которое может установить VPA.
+                                Минимальное значение запроса памяти, которое может установить VPA.
                             limitRatio:
                               description: |
-                                Соотношение limits/requests для памяти.
+                                Соотношение лимитов/запросов для памяти.
 
-                                Если задано, лимиты рассчитываются на основе запросов и указанного соотношения.
+                                Если задано, лимиты рассчитываются на основе запросов и указанного коэффициента.
                     static:
                       description: |
                         Настройки статического режима управления ресурсами.
                       properties:
                         requests:
                           description: |
-                            Resource requests.
+                            Запрашиваемые ресурсы.
                           properties:
                             cpu:
                               description: |
-                                CPU requests.
+                                Запрос CPU.
                             memory:
                               description: |
-                                Memory requests.
+                                Запрос памяти.
                         limits:
                           description: |
-                            Resource limits.
+                            Лимиты ресурсов.
                           properties:
                             cpu:
                               description: |
-                                CPU limits.
+                                Лимит CPU.
                             memory:
                               description: |
-                                Memory limits.
+                                Лимит памяти.
                 allowedRoutes:
                   description: |
                     Конфигурация ограничения того, какие Routes могут прикрепляться к Gateway.
