@@ -8,11 +8,17 @@ description: "Configuring GCP for Deckhouse cloud provider operation."
 You need to create a service account so that Deckhouse Kubernetes Platform can manage resources in the Google Cloud. Below is a brief sequence of steps to create a service account. If you need detailed instructions, you can find them in the [provider's documentation](https://cloud.google.com/iam/docs/service-accounts).
 
 {% alert level="warning" %}
-**Note!** The created `service account key` cannot be restored, you can only delete and create a new one.
+The created `service account key` cannot be restored, you can only delete and create a new one.
 {% endalert %}
 
 {% alert level="warning" %}
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
+{% alert level="warning" %}
+Starting with DKP version 1.77, GCP uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
+
+New clusters require Linux kernel version `5.8` or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
 {% endalert %}
 
 ## Setup using Google Cloud Console
