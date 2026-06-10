@@ -34,8 +34,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
 type UserOperation struct {
