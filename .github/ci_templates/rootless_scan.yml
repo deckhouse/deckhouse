@@ -75,7 +75,7 @@ steps:
 # <template: set_security_rootless_requirement_status>
 set_security_rootless_requirement_status:
   name: Set commit status after security rootless scan run
-  runs-on: "ubuntu-slim"
+  runs-on: "self-slim"
   needs:
     - pull_request_info
     - security_scan_images

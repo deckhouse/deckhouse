@@ -82,7 +82,7 @@ jobs:
   # <template: check_e2e_labels_job>
   check_e2e_labels:
     name: Check e2e labels
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     permissions:
       contents: read
       issues: write

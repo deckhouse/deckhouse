@@ -54,7 +54,7 @@ permissions:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -66,7 +66,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     needs:
     - skip_tests_repos
     outputs:

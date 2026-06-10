@@ -20,7 +20,7 @@ on:
 
 jobs:
   test:
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
