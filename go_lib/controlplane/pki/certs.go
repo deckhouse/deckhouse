@@ -59,7 +59,7 @@ func createRootCertIfNotExists(cfg config, spec rootCertSpec, rep *PKIApplyRepor
 	oldCert, oldKey, err := readCertAndKey(cfg.pkiDir, spec.BaseName)
 	newCertCfg := spec.BuildConfig(cfg)
 	if err == nil {
-		if err := validateCert(oldCert, newCertCfg); err != nil {
+		if err := validateRootCert(oldCert, newCertCfg); err != nil {
 			return nil, nil, &CertValidationError{
 				BaseName: spec.BaseName,
 				Reason:   err.Error(),
