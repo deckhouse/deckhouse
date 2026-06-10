@@ -37,7 +37,7 @@ func ValidateInstanceClassEtcdDiskAttachment(
 		path := namedResourcePath(instanceClassKind, class.Name)
 		classConsumers := consumers[class.Name]
 		hasMasterConsumer := false
-		
+
 		for _, nodeGroupName := range classConsumers {
 			if nodeGroupName == "master" {
 				hasMasterConsumer = true

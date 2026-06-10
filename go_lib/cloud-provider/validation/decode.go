@@ -18,11 +18,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 // BuildStateFromProtocolInput decodes dhctl provider input into a validation State.

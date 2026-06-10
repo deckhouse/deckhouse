@@ -343,7 +343,7 @@ func (b *RuntimeStateBuilder) listCloudPermanentNodeGroups(ctx context.Context) 
 func (b *RuntimeStateBuilder) listInstanceClasses(ctx context.Context) ([]cpapi.InstanceClass, error) {
 	list := newUnstructuredList(b.config.instanceClassListGVK())
 	if err := b.client.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list %s: %w", b.config.InstanceClassKind + "List", err)
+		return nil, fmt.Errorf("list %s: %w", b.config.InstanceClassKind+"List", err)
 	}
 
 	result := make([]cpapi.InstanceClass, 0, len(list.Items))

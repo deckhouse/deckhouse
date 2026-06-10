@@ -21,7 +21,6 @@ const (
 	MigrationSecretName = "d8-migration-resources"
 )
 
-
 // MigrationStatus describes whether validation should follow the legacy or new resource model.
 type MigrationStatus struct {
 	// LegacyPCCPresent reports whether providerClusterConfiguration is still present.

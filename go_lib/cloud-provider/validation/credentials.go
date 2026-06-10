@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"strings"
 
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"k8s.io/client-go/tools/clientcmd"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 // ValidateCredentialSecrets checks managed credential Secrets against allowed auth schemes.

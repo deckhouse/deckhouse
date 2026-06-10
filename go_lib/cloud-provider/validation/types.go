@@ -71,7 +71,7 @@ type Result struct {
 }
 
 // AddError appends a blocking validation violation.
-func (r Result) AddError(path, code, message string) {
+func (r *Result) AddError(path, code, message string) {
 	r.Errors = append(r.Errors, Violation{
 		Path:     path,
 		Code:     code,
@@ -81,7 +81,7 @@ func (r Result) AddError(path, code, message string) {
 }
 
 // AddWarning appends a non-blocking validation violation.
-func (r Result) AddWarning(path, code, message string) {
+func (r *Result) AddWarning(path, code, message string) {
 	r.Warnings = append(r.Warnings, Violation{
 		Path:     path,
 		Code:     code,
@@ -91,7 +91,7 @@ func (r Result) AddWarning(path, code, message string) {
 }
 
 // Merge appends errors and warnings from another result.
-func (r Result) Merge(other Result) {
+func (r *Result) Merge(other Result) {
 	r.Errors = append(r.Errors, other.Errors...)
 	r.Warnings = append(r.Warnings, other.Warnings...)
 }
