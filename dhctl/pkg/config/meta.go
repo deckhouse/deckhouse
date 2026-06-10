@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -160,6 +161,12 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 		m.ProviderClusterConfig[k] = raw
 	}
 
+	if len(result.ProviderClusterConfig) > 0 {
+		if err := m.validateMutatedProviderClusterConfig(); err != nil {
+			return nil, err
+		}
+	}
+
 	// A preparator may mutate ProviderClusterConfig (the protocol explicitly
 	// permits this). Re-extract typed fields so any new layout/masterNodeGroup/
 	// nodeGroups produced by the preparator land in m.Layout / etc.
@@ -168,6 +175,27 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	}
 
 	return m, nil
+}
+
+// validateMutatedProviderClusterConfig re-validates ProviderClusterConfig
+// against the provider schema after a preparator mutated it, so a buggy
+// provider binary cannot inject an invalid configuration into tfvars.
+func (m *MetaConfig) validateMutatedProviderClusterConfig() error {
+	var index SchemaIndex
+	_ = json.Unmarshal(m.ProviderClusterConfig["kind"], &index.Kind)
+	_ = json.Unmarshal(m.ProviderClusterConfig["apiVersion"], &index.Version)
+	if !index.IsValid() {
+		return nil
+	}
+
+	doc, err := json.Marshal(m.ProviderClusterConfig)
+	if err != nil {
+		return fmt.Errorf("marshal mutated provider cluster configuration: %w", err)
+	}
+	if err := NewSchemaStore(nil).ValidateWithIndex(&index, &doc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
+		return fmt.Errorf("provider %s preparator mutated provider cluster configuration into an invalid state: %w", m.ProviderName, err)
+	}
+	return nil
 }
 
 var deprecatedClusterConfigFields = []struct {
