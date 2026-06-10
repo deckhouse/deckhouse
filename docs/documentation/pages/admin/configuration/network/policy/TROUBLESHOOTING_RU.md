@@ -42,13 +42,15 @@ Hubble отображает вердикты политик в реальном 
 
 В Hubble UI видны соединения между подами и сервисами с пометками `forwarded`, `dropped` и `audit`. Drop-события показывают, какая политика отклонила трафик и какое поле правила сработало.
 
-Через `hubble observe` можно фильтровать события по типу:
+Через `hubble observe` можно фильтровать события по типу. В DKP клиент `hubble` поставляется вместе с агентом, поэтому команды удобно запускать через `d8 k exec` в под cilium-agent:
 
 ```bash
-hubble observe --type policy-verdict --verdict DROPPED
-hubble observe --type policy-verdict --verdict AUDITED
-hubble observe --from-pod my-app/client --to-pod my-app/api
+d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --verdict DROPPED
+d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --verdict AUDITED
+d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --from-pod my-app/client --to-pod my-app/api
 ```
+
+Каждый агент видит события только своего узла. Для общего сбора событий по кластеру используйте Hubble UI или экспорт через [`HubbleMonitoringConfig`](/modules/cni-cilium/cr.html#hubblemonitoringconfig).
 
 В выводе указаны идентификаторы политик, селекторов и сами поля ingress/egress, которые сработали. Это позволяет быстро понять, какое именно правило блокирует или пропускает соединение.
 
@@ -75,7 +77,7 @@ d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg fqdn cache list
 Дополнительно посмотрите вердикты политик для DNS-запросов:
 
 ```bash
-hubble observe --type policy-verdict --port 53
+d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --port 53
 ```
 
 ## Типовые ошибки

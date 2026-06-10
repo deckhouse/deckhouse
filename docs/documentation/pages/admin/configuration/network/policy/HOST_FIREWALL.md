@@ -31,7 +31,7 @@ If something breaks after enforcement, the fastest recovery path is to re-enable
 
 ## Mandatory rules
 
-A host policy set must include at least:
+The host firewall policy set you maintain must explicitly configure the following permissions; otherwise, after audit mode is turned off, parts of the cluster will stop working:
 
 - access from kube-apiserver to kubelet and webhook endpoints (ports 10250, 10255, and component webhook ports);
 - inter-node access on etcd ports (2379, 2380), only between control plane nodes;
@@ -42,6 +42,8 @@ A host policy set must include at least:
 - ICMP echo (optional, useful for diagnostics);
 - DNS egress to kube-dns or an external resolver;
 - access from monitoring to node-exporter and cilium-agent.
+
+Tested policies for the most common cases are shown below: [control plane connectivity](#example-api-server-access-for-the-control-plane), [administrative SSH](#example-ssh-from-administrative-networks), and [worker nodes](#example-baseline-for-worker-nodes). Use them as a starting set.
 
 Use entities to describe peers:
 

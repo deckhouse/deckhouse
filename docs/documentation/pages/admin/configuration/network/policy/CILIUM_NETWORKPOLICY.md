@@ -22,7 +22,7 @@ When evaluating a connection, Cilium follows these principles:
 
 - deny rules take priority over allow rules;
 - allow rules from `NetworkPolicy`, `CiliumNetworkPolicy`, and `CiliumClusterwideNetworkPolicy` are merged;
-- if at least one policy selects an endpoint, the default-deny model applies for the corresponding traffic direction;
+- if at least one policy applies to an endpoint (pod), the default-deny model takes effect for the corresponding traffic direction;
 - L7 rules are evaluated only after L3/L4 checks pass.
 
 ## What CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy add
@@ -77,7 +77,7 @@ Two special labels are useful in selectors. Cilium attaches them to every pod en
 
 ### Egress to a Kubernetes service
 
-The `toServices` field describes egress to a Kubernetes service without knowing its CIDR. Match the service by name and namespace (`k8sService`) or by labels (`k8sServiceSelector`):
+The `toServices` field describes egress to a Kubernetes service rather than to a pod set. Match the service by name and namespace (`k8sService`) or by labels (`k8sServiceSelector`):
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -96,7 +96,7 @@ spec:
             namespace: data
 ```
 
-Unlike `toEndpoints`, the policy automatically tracks changes to the service backends and recomputes the corresponding rules.
+The policy automatically tracks changes to the service backends and applies the corresponding rules to them.
 
 ## Entities
 
@@ -165,7 +165,7 @@ Without an explicit `icmps` rule, ICMP traffic is blocked together with TCP and 
 
 ### TLS Server Name Indication (SNI)
 
-Egress can be restricted by SNI — the name a client sends in the TLS ClientHello. This filters access to external HTTPS services without a MITM:
+Egress can be restricted by SNI — the name a client sends in the TLS ClientHello. This filters access to external HTTPS services:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -194,6 +194,10 @@ When `serverNames` is set, only TLS connections with the listed names are allowe
 ## L7 rules
 
 `CiliumNetworkPolicy` and `CiliumClusterwideNetworkPolicy` can describe allowed application-level operations. L7 rules go inside `toPorts[].rules`:
+
+{% alert level="warning" %}
+L7 inspection is performed by the Envoy proxy embedded in the Cilium agent on each node. It adds per-connection latency and node CPU load. Avoid L7 rules on hot paths unless they are required — basic L3/L4 rules are sufficient for the common case.
+{% endalert %}
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -256,6 +260,10 @@ Pods labeled `app: producer` may only publish (`role: produce`) to the `orders` 
 ### DNS Policy and IP Discovery
 
 When `toFQDNs` is in use, Cilium intercepts DNS responses allowed by `rules.dns` and updates an internal cache that maps DNS names to IP addresses. This cache is what `toFQDNs` rules check when allowing traffic. Therefore:
+
+{% alert level="warning" %}
+When `toFQDNs` is combined with DNS inspection (`rules.dns`), the application's DNS request goes through the Cilium proxy on the node — effectively doubling the resolve path. On high DNS traffic volumes this adds noticeable latency and `cilium-agent` load. Narrow `matchPattern` in `rules.dns` to the minimum required.
+{% endalert %}
 
 - DNS egress must be in the same policy as the FQDN rule, or in any other policy selecting the same pods;
 - if a pod is not allowed to make DNS requests, its FQDN rules will not work;
@@ -332,7 +340,28 @@ spec:
   egress: []
 ```
 
-If the pods use DNS, also allow egress to kube-dns over UDP/53 and TCP/53.
+DNS is also subject to network policies, so egress to kube-dns over UDP/53 and TCP/53 must be allowed explicitly:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: secure
+spec:
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+```
 
 ## Audit mode (`policyAuditMode`)
 

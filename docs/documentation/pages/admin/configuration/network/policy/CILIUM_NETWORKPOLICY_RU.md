@@ -196,6 +196,10 @@ spec:
 
 `CiliumNetworkPolicy` и `CiliumClusterwideNetworkPolicy` позволяют описать разрешённые операции уровня приложения. L7-правила указывают внутри `toPorts[].rules`:
 
+{% alert level="warning" %}
+L7-инспекция выполняется через прокси Envoy в составе агента Cilium на каждом узле. Это добавляет задержку на каждое обрабатываемое соединение и увеличивает нагрузку на CPU узла. Не используйте L7-правила на горячих путях, если в этом нет необходимости — для базовой фильтрации достаточно правил уровней L3 и L4.
+{% endalert %}
+
 ```yaml
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -257,6 +261,10 @@ spec:
 ### DNS Policy и IP Discovery
 
 При использовании `toFQDNs` Cilium перехватывает DNS-ответы, разрешённые правилом `rules.dns`, и обновляет внутренний кеш сопоставлений DNS-имя → IP-адрес. Этот кеш и используется при принятии решений по `toFQDNs`-правилам. Поэтому:
+
+{% alert level="warning" %}
+Когда `toFQDNs` сочетается с DNS-инспекцией через `rules.dns`, DNS-запрос приложения проходит через прокси Cilium на узле — фактически удваивается путь резолва. На больших объёмах DNS-трафика это заметно увеличивает задержку и нагрузку на cilium-agent. Сужайте `matchPattern` в `rules.dns` до необходимого минимума.
+{% endalert %}
 
 - DNS-egress должен идти в той же политике, что и FQDN-правило, или в любой другой политике, выбирающей те же поды;
 - если поду запрещены DNS-запросы, его FQDN-правила работать не будут;
@@ -333,7 +341,28 @@ spec:
   egress: []
 ```
 
-DNS тоже попадает под действие политик, необходимо явно разрешить egress-запросы до kube-dns через UDP/53 и TCP/53.
+DNS тоже попадает под действие политик, необходимо явно разрешить egress-запросы до kube-dns через UDP/53 и TCP/53:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: secure
+spec:
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+```
 
 ## Режим аудита (`policyAuditMode`)
 

@@ -41,13 +41,15 @@ Hubble shows policy verdicts in real time and is the primary diagnostic tool in 
 
 In Hubble UI, connections between pods and services are tagged as `forwarded`, `dropped`, or `audit`. Drop events show which policy blocked the traffic and which rule field matched.
 
-`hubble observe` can filter events by type:
+`hubble observe` can filter events by type. In DKP, the `hubble` client ships with the agent, so it is convenient to run commands via `d8 k exec` against a cilium-agent pod:
 
 ```bash
-hubble observe --type policy-verdict --verdict DROPPED
-hubble observe --type policy-verdict --verdict AUDITED
-hubble observe --from-pod my-app/client --to-pod my-app/api
+d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --verdict DROPPED
+d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --verdict AUDITED
+d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --from-pod my-app/client --to-pod my-app/api
 ```
+
+Each agent sees events only for its own node. For cluster-wide event collection, use Hubble UI or export via [`HubbleMonitoringConfig`](/modules/cni-cilium/cr.html#hubblemonitoringconfig).
 
 The output includes policy and selector identifiers and the specific ingress/egress fields that matched, which makes it easy to find the rule that blocked or allowed the connection.
 
@@ -74,7 +76,7 @@ The output shows entries with the source, DNS name, resolved IPs, and TTL. If th
 Also check policy verdicts for DNS traffic:
 
 ```bash
-hubble observe --type policy-verdict --port 53
+d8 k -n d8-cni-cilium exec ds/agent -- hubble observe --type policy-verdict --port 53
 ```
 
 ## Common mistakes
