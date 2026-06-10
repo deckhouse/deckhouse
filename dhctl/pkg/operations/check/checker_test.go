@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
@@ -565,7 +566,15 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	require.NotEmpty(t, p.expectedSyncStatus, p.testName)
 	require.NotEmpty(t, p.clusterType, p.testName)
 
-	kubeCl := client.NewFakeKubernetesClient()
+	// Cloud-cluster parseConfigFromCluster lists NodeGroups / InstanceClasses
+	// via the dynamic client (CloudProviderVarsFromCluster). The fake dynamic
+	// client panics on LIST for any GVR whose list kind is not registered, so
+	// register the ones the Yandex cloud path touches.
+	kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}:            "NodeGroupList",
+		{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+		config.ModuleConfigGVR: "ModuleConfigList",
+	})
 	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
 
 	// Cloud-cluster parseConfigFromCluster fetches d8-system/deckhouse-registry
@@ -615,7 +624,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 			CommanderMode: true,
 			IsDebug:       false,
 			CommanderUUID: commanderUUID,
-			Options: opts,
+			Options:       opts,
 		}),
 	}
 }
