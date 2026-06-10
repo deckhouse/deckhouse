@@ -117,6 +117,7 @@ spec:
                   - `RenewKubeconfigs`: Re-issues kubeconfig files used by the component to authenticate against the API.
                   - `SyncManifests`: Updates the static pod manifest and accompanying files (`/etc/kubernetes/manifests`, associated configuration files) and records changes in `/etc/kubernetes/deckhouse/diffs`.
                   - `JoinEtcdCluster`: Joins a new member to the etcd cluster.
+                  - `DefragEtcd`: Defragments the etcd data store on the target node to reclaim disk space.
                   - `WaitPodReady`: Waits for the component static pod to become `Ready` after a restart.
                   - `CertObserve`: Collects the current certificate expiration dates for the component and publishes them to `status.observedState`.
                 items:
@@ -129,6 +130,7 @@ spec:
                   - RenewKubeconfigs
                   - SyncManifests
                   - JoinEtcdCluster
+                  - DefragEtcd
                   - WaitPodReady
                   - CertObserve
                   type: string
