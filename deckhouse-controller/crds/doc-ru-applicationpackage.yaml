@@ -13,7 +13,7 @@ spec:
                 Больше информации [в документации Kubernetes](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             kind:
               description: |-
-                Значение представляет REST-ресурс, который описывает данный объект. Серверы могут определить его из конечной точки, к которой клиент отправляет запросы. Не может быть изменено. Используется в CamelCase.
+                Значение представляет REST-ресурс, который описывает данный объект. Серверы могут определить его по эндпоинту, к которому клиент отправляет запросы. Не может быть изменено. Используется в CamelCase.
 
                 Больше информации [в документации Kubernetes](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             status:
@@ -33,7 +33,7 @@ spec:
                           Название экземпляра приложения.
                       namespace:
                         description: |
-                          Пространство имён, в котором установлено приложение.
+                          Неймспейс, в котором установлено приложение.
                       version:
                         description: |
                           Версия пакета, используемая этим приложением.
