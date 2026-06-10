@@ -23,13 +23,17 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-// Cluster and MachineHealthCheck are created via this hook (not helm) on a
-// dedicated queue so that transient failures don't block the main queue.
-// Hook is idempotent (CreateIfNotExists), so retries are safe.
+// Cluster and MachineHealthCheck are created via this hook (not helm).
+// Runs OnBeforeHelm at Order 20 — after generate_capi_webhook_certs (5) and
+// capi_crds_cabundle_injection (10) — so the conversion webhook is wired up
+// before we touch CAPI objects. Synchronization is disabled so the hook never
+// runs before the injection at startup; the Secret watch only feeds the
+// snapshot. Hook is idempotent (CreateIfNotExists), so re-runs are safe.
 
 const (
 	capiNamespace = "d8-cloud-instance-manager"
@@ -62,17 +66,19 @@ func filterCapiClusterSecret(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	// Own queue so a transient failure to create Cluster/MHC (capi conversion
-	// webhook still warming up on first install) doesn't block the main queue.
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+	// Own queue so a transient failure on a Secret event doesn't block the main queue.
 	Queue: "/modules/node-manager/create-capi-cluster-resources",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			// Trigger when the cloud-provider registration secret appears or
-			// changes — that's also the moment `nodeManager.internal.cloudProvider`
-			// becomes meaningful for downstream hooks.
-			Name:       "cloud_provider_secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
+			// Watch the cloud-provider registration secret to feed the snapshot.
+			// Synchronization is disabled: the hook must not run before the
+			// OnBeforeHelm injection at startup. Events still trigger re-runs on
+			// the dedicated queue when the secret appears or changes.
+			Name:                         "cloud_provider_secret",
+			ApiVersion:                   "v1",
+			Kind:                         "Secret",
+			ExecuteHookOnSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}},
 			},
