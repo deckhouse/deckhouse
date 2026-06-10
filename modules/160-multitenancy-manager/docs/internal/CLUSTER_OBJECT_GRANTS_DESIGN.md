@@ -144,6 +144,7 @@ spec:
       resources:
       - persistentvolumeclaims
     fieldPath: $.spec.storageClassName              # default path to the granted object's NAME
+    default: true                                   # /defaults may inject the project default here (opt-in)
     countable: true                                 # measure: PVC count (measure key: persistentvolumeclaims)
     quantities:                                     # measure: summable quantity fields
     - name: requests.storage                        # measure key
@@ -169,6 +170,7 @@ status:
 | `usageReferences[].fieldPath` | JSONPath | yes | **default** path to the **name** of the granted resource (string), for all matched group/versions. May target an annotation, e.g. `$.metadata.annotations['ipam.cilium.io/ip-pool']` |
 | `usageReferences[].paths[]` | `{apiGroups?, apiVersions?, fieldPath}` | no | per-group/version **overrides** of `fieldPath` (the field moved between versions). The entry whose `apiGroups`/`apiVersions` match the request's GVK wins; otherwise the top-level `fieldPath` is used |
 | `usageReferences[].match` | `{fieldPath, equals\|in}` | no | guard: this reference applies only when the predicate holds on the object (e.g. `objectRef.kind == ClusterVirtualImage`); absent ⇒ always applies |
+| `usageReferences[].default` | bool | no | opt-in: if true, `/defaults` may inject the per-project default into this field when empty (and coerce it when `coerceToDefault`). Set it only for a field the resource always needs (e.g. `storageClassName`). Leave it off for a reference whose absence is meaningful — e.g. a feature-toggling annotation like `cert-manager.io/cluster-issuer`, which must be validated and counted but **never** filled in (filling it would force the feature on objects that did not request it) |
 | `usageReferences[].countable` | bool | no | if true, this usage object can be counted in quota; the **measure key is the resource plural** (e.g. `persistentvolumeclaims`) — an integer measure. The plural is shared across the matched groups/versions; if `rule.resources` lists several plurals, each counts under its own key |
 | `usageReferences[].quantities[].name` / `.fieldPath` | string / JSONPath | no | summable quantity fields; each `name` is a **measure key** — a `resource.Quantity` measure. The `fieldPath` may also be version-scoped via `paths[]` if it moved |
 
@@ -713,6 +715,7 @@ spec:
       resources:
       - persistentvolumeclaims
     fieldPath: $.spec.storageClassName
+    default: true                    # required field — inject the project default when empty
     countable: true                  # measure: persistentvolumeclaims (count)
     quantities:
     - name: requests.storage         # measure: summed PVC requests
@@ -812,6 +815,7 @@ spec:
     match:
       fieldPath: $.spec.type
       equals: LoadBalancer                # only LoadBalancer Services count
+    default: true                         # inject the project default when the class is omitted
     countable: true                       # measure: number of such Services, keyed by the value
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -961,6 +965,12 @@ Only the **Certificate** path is `countable`: an annotated `Ingress` makes cert-
 `Certificate`, so counting both paths would double-count one logical use. The Ingress path is
 allow-list only.
 
+`default: true` is likewise only on the **Certificate** path: `issuerRef.name` is a required field, so
+filling its empty value with the project default is sensible. The `cert-manager.io/cluster-issuer`
+annotation is a toggle — its absence means "no cert-manager", so injecting a default there is wrong (it
+would silently turn a plain `Ingress` into a cert-manager-managed one). The Ingress path is validated
+but never defaulted.
+
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceDefinition
@@ -982,6 +992,7 @@ spec:
     match:
       fieldPath: $.spec.issuerRef.kind
       equals: ClusterIssuer
+    default: true                                # required field — the project default may be injected
     countable: true
   - rule:                                        # path 2: Ingress annotation (name via annotation)
       apiGroups:
@@ -991,6 +1002,7 @@ spec:
       resources:
       - ingresses
     fieldPath: $.metadata.annotations['cert-manager.io/cluster-issuer']
+    # not default — a toggle annotation: its absence is meaningful, so it must not be filled in
     # not countable — the Certificate cert-manager generates is already counted by path 1
 ```
 

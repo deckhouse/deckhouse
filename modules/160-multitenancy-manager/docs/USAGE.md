@@ -315,7 +315,10 @@ Four resources are involved:
 - `GrantableClusterResourceDefinition` (cluster-scoped) — registers a cluster resource that can be
   granted: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
   the baseline availability (`defaultAvailability`), and how the per-project default is discovered
-  (`defaultFrom`).
+  (`defaultFrom`). Each reference opts into defaulting individually with `default: true` — set it only
+  for a field whose value the resource always needs (such as a `PersistentVolumeClaim`'s
+  `storageClassName`). Leave it off for a reference whose absence is meaningful, such as an annotation
+  that merely toggles a feature; that reference is still validated and counted, just never filled in.
 - `ClusterResourceGrantPolicy` (cluster-scoped) — selects projects (by namespace labels via
   `projectSelector`) and, per resource (`resourceName`), the granted names (`allowed`,
   `allowedSelector`) and the per-project `default`. An allow-list restricts the resource to it.
@@ -342,10 +345,14 @@ spec:
     annotationKey: storageclass.kubernetes.io/is-default-class
   usageReferences:
     - rule:
-        apiGroups: [""]
-        apiVersions: ["v1"]
-        resources: ["persistentvolumeclaims"]
+        apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - persistentvolumeclaims
       fieldPath: $.spec.storageClassName
+      default: true
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -358,7 +365,9 @@ spec:
   resources:
     - resourceName: storageclasses
       default: fast-ssd          # overrides the annotation-based default
-      allowed: ["fast-ssd", "standard"]
+      allowed:
+        - fast-ssd
+        - standard
       allowedSelector:           # plus any StorageClass with label shared=true
         matchLabels:
           shared: "true"
@@ -371,6 +380,8 @@ Enforcement notes:
 - The validating webhook denies creating/updating objects in matched projects whose
   referenced value is not granted. On update, values already present in the object are
   grandfathered in, so pre-existing objects are not broken.
-- The defaulting webhook fills in the granted default on creation only.
+- The defaulting webhook fills in the granted default on creation only, and only into references
+  marked `default: true`. References left without it (such as feature-toggling annotations) are never
+  filled in.
 - A grant that matches no project, or a project with no matching grant, imposes no
   restriction.

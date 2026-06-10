@@ -130,6 +130,12 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		}
 		for i := range reg.Spec.UsageReferences {
 			ref := &reg.Spec.UsageReferences[i]
+			// Defaulting is opt-in per reference: only inject into fields the registration marks
+			// defaultable. An opt-in reference (e.g. a feature-toggling annotation) is left untouched
+			// so its absence keeps its meaning; it is still validated and counted by /is-granted.
+			if !ref.Default {
+				continue
+			}
 			if !engine.RuleMatches(ref.Rule, group, version, resourcePlural) {
 				continue
 			}

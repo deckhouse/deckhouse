@@ -30,6 +30,7 @@ spec:
       resources:
       - persistentvolumeclaims
     fieldPath: $.spec.storageClassName
+    default: true
     countable: true
     quantities:
     - name: requests.storage
@@ -56,6 +57,7 @@ spec:
     match:
       fieldPath: $.spec.type
       equals: LoadBalancer
+    default: true
     countable: true
 {{- if .Values.global.enabledModules | has "cert-manager" }}
 ---
@@ -83,8 +85,11 @@ spec:
     match:
       fieldPath: $.spec.issuerRef.kind
       equals: ClusterIssuer
+    default: true
     countable: true
-  # Ingresses that request a certificate via the cert-manager cluster-issuer annotation.
+  # Ingresses that request a certificate via the cert-manager cluster-issuer annotation. This is an
+  # opt-in toggle (its absence means "no cert-manager"), so it is validated and counted but never
+  # defaulted — no `default: true`.
   - rule:
       apiGroups:
       - networking.k8s.io

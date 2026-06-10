@@ -316,7 +316,11 @@ multitenancy-manager позволяет операторам кластера у
 - `GrantableClusterResourceDefinition` (cluster-scoped) — регистрирует кластерный ресурс, который
   можно выдавать: какой это ресурс (`grantedResource`), где проверяются ссылки на него
   (`usageReferences`), базовая доступность (`defaultAvailability`) и как определяется дефолт проекта
-  (`defaultFrom`).
+  (`defaultFrom`). Каждая ссылка отдельно включает подстановку дефолта через `default: true` —
+  ставьте его только для поля, значение которого ресурсу всегда нужно (например, `storageClassName`
+  у `PersistentVolumeClaim`). Для ссылки, отсутствие которой осмысленно (например, аннотация-
+  переключатель функции), не ставьте: такая ссылка по-прежнему проверяется и учитывается в квоте,
+  но никогда не заполняется.
 - `ClusterResourceGrantPolicy` (cluster-scoped) — выбирает проекты (по меткам namespace через
   `projectSelector`) и для каждого ресурса (`resourceName`) задаёт разрешённые имена (`allowed`,
   `allowedSelector`) и `default`. Allow-лист ограничивает ресурс этим списком.
@@ -344,10 +348,14 @@ spec:
     annotationKey: storageclass.kubernetes.io/is-default-class
   usageReferences:
     - rule:
-        apiGroups: [""]
-        apiVersions: ["v1"]
-        resources: ["persistentvolumeclaims"]
+        apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - persistentvolumeclaims
       fieldPath: $.spec.storageClassName
+      default: true
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -360,7 +368,9 @@ spec:
   resources:
     - resourceName: storageclasses
       default: fast-ssd          # перекрывает дефолт по аннотации
-      allowed: ["fast-ssd", "standard"]
+      allowed:
+        - fast-ssd
+        - standard
       allowedSelector:           # плюс любой StorageClass с меткой shared=true
         matchLabels:
           shared: "true"
@@ -373,5 +383,7 @@ spec:
 - Проверяющий (validating) вебхук запрещает создание/обновление объектов в подходящих проектах, если
   используемое значение не разрешено. При обновлении значения, уже присутствующие в объекте,
   не блокируются — существующие объекты не ломаются.
-- Мутирующий (mutating) вебхук подставляет значение по умолчанию только при создании.
+- Мутирующий (mutating) вебхук подставляет значение по умолчанию только при создании и только в
+  ссылки, помеченные `default: true`. Ссылки без неё (например, аннотации-переключатели) никогда
+  не заполняются.
 - Grant без совпавших проектов (или проект без совпавших grant’ов) ничего не ограничивает.

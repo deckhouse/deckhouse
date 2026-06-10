@@ -143,6 +143,7 @@ spec:
       resources:
       - persistentvolumeclaims
     fieldPath: $.spec.storageClassName              # дефолтный путь до ИМЕНИ granted-объекта
+    default: true                                   # /defaults может подставить сюда дефолт проекта (opt-in)
     countable: true                                 # мера: число PVC (ключ меры: persistentvolumeclaims)
     quantities:                                     # мера: суммируемые величины
     - name: requests.storage                        # ключ меры
@@ -168,6 +169,7 @@ status:
 | `usageReferences[].fieldPath` | JSONPath | да | **дефолтный** путь до **имени** granted-ресурса (строка), для всех совпавших group/version. Может указывать в аннотацию, например `$.metadata.annotations['ipam.cilium.io/ip-pool']` |
 | `usageReferences[].paths[]` | `{apiGroups?, apiVersions?, fieldPath}` | нет | **переопределения** `fieldPath` по группе/версии (поле переехало между версиями). Выигрывает запись, чьи `apiGroups`/`apiVersions` совпали с GVK запроса; иначе берётся верхнеуровневый `fieldPath` |
 | `usageReferences[].match` | `{fieldPath, equals\|in}` | нет | условие: ссылка применяется только когда предикат истинен на объекте (например `objectRef.kind == ClusterVirtualImage`); без него — применяется всегда |
+| `usageReferences[].default` | bool | нет | opt-in: если true — `/defaults` может подставить дефолт проекта в это поле, когда оно пустое (и привести к дефолту при `coerceToDefault`). Ставьте только для поля, значение которого ресурсу всегда нужно (например `storageClassName`). Не ставьте для ссылки, отсутствие которой осмысленно — например аннотации-переключателя `cert-manager.io/cluster-issuer`: она проверяется и учитывается в квоте, но **никогда** не заполняется (иначе функция включится на объектах, которые её не просили) |
 | `usageReferences[].countable` | bool | нет | если true — этот usage-объект можно считать в квоте; **ключ меры = plural ресурса** (например `persistentvolumeclaims`) — целочисленная мера. Plural общий для совпавших групп/версий; если `rule.resources` содержит несколько plural, каждый считается под своим ключом |
 | `usageReferences[].quantities[].name` / `.fieldPath` | string / JSONPath | нет | суммируемые величины; каждое `name` — **ключ меры**, мера `resource.Quantity`. `fieldPath` тоже можно сделать version-scoped через `paths[]`, если он переехал |
 
@@ -705,6 +707,7 @@ spec:
       resources:
       - persistentvolumeclaims
     fieldPath: $.spec.storageClassName
+    default: true                    # обязательное поле — подставить дефолт проекта, если пусто
     countable: true                  # мера: persistentvolumeclaims (число)
     quantities:
     - name: requests.storage         # мера: суммарные requests PVC
@@ -803,6 +806,7 @@ spec:
     match:
       fieldPath: $.spec.type
       equals: LoadBalancer                # считаем только LoadBalancer-сервисы
+    default: true                         # подставить дефолт проекта, если класс не указан
     countable: true                       # мера: число таких Service, по значению
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -952,6 +956,11 @@ cert-manager позволяет тенанту дотянуться до `Cluste
 `Certificate`, так что счёт по обоим путям дважды посчитал бы одно использование. Путь Ingress — только
 allow-list.
 
+`default: true` тоже только у пути **Certificate**: `issuerRef.name` — обязательное поле, его пустоту
+осмысленно заполнить дефолтом проекта. Аннотация `cert-manager.io/cluster-issuer` — переключатель: её
+отсутствие означает «cert-manager не нужен», поэтому подставлять туда дефолт нельзя (иначе обычный
+`Ingress` молча станет управляемым cert-manager). Путь Ingress проверяется, но не дефолтится.
+
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceDefinition
@@ -973,6 +982,7 @@ spec:
     match:
       fieldPath: $.spec.issuerRef.kind
       equals: ClusterIssuer
+    default: true                                # обязательное поле — можно подставить дефолт проекта
     countable: true
   - rule:                                        # путь 2: аннотация Ingress (имя через аннотацию)
       apiGroups:
@@ -982,6 +992,7 @@ spec:
       resources:
       - ingresses
     fieldPath: $.metadata.annotations['cert-manager.io/cluster-issuer']
+    # не default — аннотация-переключатель: её отсутствие осмысленно, дефолт подставлять нельзя
     # не countable — Certificate, который создаёт cert-manager, уже считается путём 1
 ```
 

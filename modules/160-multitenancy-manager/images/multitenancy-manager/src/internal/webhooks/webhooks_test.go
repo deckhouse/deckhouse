@@ -116,6 +116,7 @@ func lbRegistration(defAvail v1alpha1.AvailabilityDefault) *v1alpha1.GrantableCl
 				Rule:      v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"services"}},
 				FieldPath: "$.spec.loadBalancerClass",
 				Match:     &v1alpha1.MatchPredicate{FieldPath: "$.spec.type", Equals: "LoadBalancer"},
+				Default:   true,
 				Countable: true,
 			}},
 		},
@@ -315,6 +316,24 @@ func TestDefaults_NoCoerceWithoutOptIn(t *testing.T) {
 	}
 }
 
+func TestDefaults_OptInReferenceNotDefaulted(t *testing.T) {
+	// A reference without Default (e.g. a feature-toggling annotation) must never be filled in, even
+	// when the field is empty and a project default exists — its absence is meaningful. It is still
+	// left for /is-granted to validate and count.
+	reg := lbRegistration(v1alpha1.AvailabilityAll)
+	reg.Spec.UsageReferences[0].Default = false
+	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), reg, lbGrant())
+	m := NewDefaultsMutator(logr.Discard(), cl, jsonpath.NewWithCache())
+	svc := raw(t, map[string]any{
+		"apiVersion": "v1", "kind": "Service",
+		"metadata": map[string]any{"name": "s", "namespace": "proj"},
+		"spec":     map[string]any{"type": "LoadBalancer"},
+	})
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", svc, nil)); len(resp.Patch) != 0 {
+		t.Fatalf("opt-in reference must not be defaulted, got patch %s", resp.Patch)
+	}
+}
+
 func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 	// storageclasses with defaultFrom annotation; the cluster default (replicated) is NOT allowed in
 	// this project (allowed: local only). The annotation-derived default must be dropped, so a PVC
@@ -328,6 +347,7 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 			UsageReferences: []v1alpha1.UsageReference{{
 				Rule:      v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
 				FieldPath: "$.spec.storageClassName",
+				Default:   true,
 			}},
 		},
 	}

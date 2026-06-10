@@ -155,6 +155,15 @@ type UsageReference struct {
 	// +optional
 	Match *MatchPredicate `json:"match,omitempty"`
 
+	// Default, if true, lets the /defaults webhook inject the per-project default into this field when
+	// it is empty (and coerce it when the registration sets coerceToDefault). Enable it only for a
+	// field whose value the resource always needs (e.g. a PVC storageClassName or a Certificate
+	// issuerRef.name). Leave it off for an opt-in reference such as an annotation that merely toggles
+	// a feature — there the field's absence is meaningful and must not be filled in; the reference is
+	// still validated and counted, just never defaulted.
+	// +optional
+	Default bool `json:"default,omitempty"`
+
 	// Countable, if true, lets the count of these usage objects be limited; the measure key is the
 	// resource plural.
 	// +optional
