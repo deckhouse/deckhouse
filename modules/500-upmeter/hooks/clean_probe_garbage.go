@@ -56,6 +56,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			&deployRepo{k},
 			&podRepo{k},
 			&namespaceRepo{k},
+			&virtualMachineRepo{k},
+			&virtualDiskRepo{k},
 			&upmeterHookProbeRepo{k},
 		}
 
@@ -206,6 +208,90 @@ func (r *namespaceRepo) List(ctx context.Context) ([]metav1.Object, error) {
 
 func (r *namespaceRepo) Delete(ctx context.Context, name string) error {
 	return r.k.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+var virtualMachineGVR = schema.GroupVersionResource{
+	Group:    "virtualization.deckhouse.io",
+	Version:  "v1alpha2",
+	Resource: "virtualmachines",
+}
+
+var virtualDiskGVR = schema.GroupVersionResource{
+	Group:    "virtualization.deckhouse.io",
+	Version:  "v1alpha2",
+	Resource: "virtualdisks",
+}
+
+type virtualMachineRepo struct {
+	k k8s.Client
+}
+
+func (r *virtualMachineRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(virtualMachineGVR).
+		Namespace(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
+	}
+	return qualifiedGarbageObjects(list.Items), nil
+}
+
+func (r *virtualMachineRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.Dynamic().
+		Resource(virtualMachineGVR).
+		Namespace(namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type virtualDiskRepo struct {
+	k k8s.Client
+}
+
+func (r *virtualDiskRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(virtualDiskGVR).
+		Namespace(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
+	}
+	return qualifiedGarbageObjects(list.Items), nil
+}
+
+func (r *virtualDiskRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.Dynamic().
+		Resource(virtualDiskGVR).
+		Namespace(namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+func qualifiedGarbageObjects(items []unstructured.Unstructured) []metav1.Object {
+	objects := make([]metav1.Object, 0, len(items))
+	for i := range items {
+		item := items[i].DeepCopy()
+		item.SetName(item.GetNamespace() + "/" + item.GetName())
+		objects = append(objects, item)
+	}
+	return objects
+}
+
+func splitQualifiedName(qualifiedName string) (namespace, name string, err error) {
+	parts := strings.SplitN(qualifiedName, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", fmt.Errorf("invalid qualified name %q", qualifiedName)
+	}
+	return parts[0], parts[1], nil
 }
 
 type podRepo struct {

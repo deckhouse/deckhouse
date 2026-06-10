@@ -402,6 +402,18 @@ const langPack: LangPack = {
           "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
+      virtualization: {
+        title: "Virtualization",
+        description:
+          "Virtualization module health: controller pods and optional VM create-start-delete lifecycle check",
+        reasonUp:
+          "virtualization-controller is ready and VM lifecycle check succeeded when configured",
+        reasonDown:
+          "virtualization-controller is not ready or VM lifecycle check failed",
+        reasonUnknown:
+          "error occurred during check, kube-apiserver is not available, or previous probe run has not finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
     },
     "load-balancing": {
       "load-balancer-configuration": {

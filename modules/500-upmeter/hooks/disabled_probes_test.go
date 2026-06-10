@@ -198,6 +198,32 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/observability-recording"))
 			})
 		})
+
+		Context("with virtualization module", func() {
+			f := HookExecutionConfigInit(initValues, `{}`)
+
+			It("virtualization probe is disabled when virtualization module is disabled", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Delete("virtualization").Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("extensions/virtualization"))
+			})
+
+			It("virtualization probe is enabled when virtualization module is enabled", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("extensions/virtualization"))
+			})
+		})
 	})
 
 	Context("load-balancing probes depending on deployed apps", func() {
@@ -295,6 +321,7 @@ func allModules() set.Set {
 		"prometheus",
 		"prometheus-metrics-adapter",
 		"vertical-pod-autoscaler",
+		"virtualization",
 	)
 }
 
@@ -609,6 +636,19 @@ func Test_calcDisabledProbes(t *testing.T) {
 				"extensions/label-enforcer",
 				"extensions/observability-webhook",
 			),
+		},
+
+		// virtualization -> extensions/virtualization
+		{
+			name:           "extensions/virtualization off",
+			expectDisabled: set.New("extensions/virtualization"),
+		},
+		{
+			name: "extensions/virtualization on",
+			args: args{
+				enabledModules: set.New("virtualization"),
+			},
+			expectNotDisabled: set.New("extensions/virtualization"),
 		},
 
 		// prometheus-longterm -> extensions/prometheus-longterm

@@ -115,6 +115,17 @@ spec:
           - --dynamic-probe-nodegroup={{ $name }}
             {{- end }}
           {{- end }}
+          {{- with .Values.upmeter.virtualizationProbe }}
+          {{- if .clusterImageName }}
+          - --virtualization-probe-cluster-image={{ .clusterImageName }}
+          {{- if .clusterImageURL }}
+          - --virtualization-probe-cluster-image-url={{ .clusterImageURL }}
+          {{- end }}
+          {{- if .vmClassName }}
+          - --virtualization-probe-vm-class={{ .vmClassName }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
         env:
           - name: UPMETER_DB_PATH
             value: "/db/downtime.db.sqlite"

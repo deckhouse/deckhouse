@@ -51,6 +51,10 @@ rules:
   - apiGroups: ["alerts.observability.deckhouse.io"]
     resources: ["observabilityalerts"]
     verbs: ["get", "list"]
+  # Virtualization check: VM lifecycle probe
+  - apiGroups: ["virtualization.deckhouse.io"]
+    resources: ["clustervirtualimages", "virtualdisks", "virtualmachines"]
+    verbs: ["create", "delete", "get", "list", "watch"]
   # Metrics Adapter API
   - apiGroups: ["custom.metrics.k8s.io"]
     resources: ["metrics"]

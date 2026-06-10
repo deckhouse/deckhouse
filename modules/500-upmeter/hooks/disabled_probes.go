@@ -191,6 +191,10 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 		disabledProbes.Add("extensions/label-enforcer")
 		disabledProbes.Add("extensions/observability-webhook")
 	}
+
+	if !enabledModules.Has("virtualization") {
+		disabledProbes.Add("extensions/virtualization")
+	}
 }
 
 func disableMonitoringAndAutoscalingProbes(enabledModules, disabledProbes set.Set) {
