@@ -6,11 +6,11 @@ The `waypoint-controller` provides a Deckhouse-managed abstraction for Istio Amb
 
 ## Goals
 
-Istio's built-in waypoint provisioning (via `istioctl waypoint apply` or the Istio Gateway controller) is limited. Replica count requires manual Deployment patching or a separately managed HPA. Node selectors, tolerations, and affinity can only be set globally, not per waypoint. There is no built-in VPA integration. Scaling modes cannot be changed declaratively.
+Istio's built-in waypoint provisioning (via `istioctl waypoint apply` or the Istio Gateway controller) is limited. Replica count requires manual Deployment patching or a separately managed Horizontal Pod Autoscaler (HPA). Node selectors, tolerations, and affinity can only be set globally, not per waypoint. There is no built-in Vertical Pod Autoscaler (VPA) integration. Scaling modes cannot be changed declaratively.
 
 This controller exists to solve these limitations:
 
-- **Rich workload management.** Provide per-instance control over replicas (`Static` / `HPA`), resource requests and limits (`Static` / `VPA`), node placement (selectors, tolerations, anti-affinity), and disruption budgets -- all declaratively through a single CRD.
+- **Rich workload management.** Provide per-instance control over replicas (`Static` / `HPA`), resource requests and limits (`Static` / `VPA`), node placement (selectors, tolerations, anti-affinity), and disruption budgets — all declaratively through a single CRD.
 - **Simple user interface.** Users should not need to know internal details like HBONE port numbers, Istio identity labels, or Gateway API address tricks. Creating a `WaypointInstance` with a replica mode and resource mode should be enough.
 - **Consistent Deckhouse operational model.** Waypoints should be managed the same way as other Deckhouse-controlled workloads — via a Deckhouse CRD with status reporting, owner-reference-based cleanup, and module lifecycle integration.
 - **Per-instance configuration.** Each waypoint instance in a namespace can have its own replica count, resource profile, and scaling strategy, rather than relying on a single global configuration.
