@@ -57,7 +57,7 @@ permissions:
 jobs:
   resolve_target:
     name: Resolve target commit and baseline
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
       baseline_run_id: ${{ steps.resolve.outputs.baseline_run_id }}
@@ -164,7 +164,7 @@ jobs:
     name: Get git info (synthetic)
     needs:
       - resolve_target
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       ci_commit_tag: ${{ steps.set.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.set.outputs.ci_commit_branch }}
@@ -201,7 +201,7 @@ jobs:
     needs:
       - resolve_target
     if: needs.resolve_target.outputs.baseline_workflow == 'dev'
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       ref_slug: ${{ steps.set.outputs.ref_slug }}
     steps:
@@ -238,7 +238,7 @@ jobs:
 
   compare_reports:
     name: Compare build reports
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     needs:
       - resolve_target
       - build_fe_main

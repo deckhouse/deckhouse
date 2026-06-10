@@ -162,7 +162,7 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     needs:
       - discover
       - pull_request_info

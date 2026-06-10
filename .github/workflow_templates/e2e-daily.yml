@@ -37,7 +37,7 @@ permissions:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
