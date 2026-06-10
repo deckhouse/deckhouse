@@ -25,7 +25,7 @@ import (
 func getEtcdKeySignatureRenewer() signature.Renewer {
 	if constants.SignatureEnabled() {
 		return signature.NewRegularSignatureRenewer(constants.KubernetesPkiPath).
-			WithLeftDaysToRenew(signature.SignatureRenewalDays)
+			WithLeftDaysToRenew(constants.SignatureRenewalDays)
 	}
 
 	return signature.NewNoSignatureRenewer()
