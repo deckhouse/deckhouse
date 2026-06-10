@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
@@ -234,7 +235,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents: ptr.To(false),
 		},
 	},
-}, getUserOperations)
+}, dependency.WithExternalDependencies(getUserOperations))
 
 func applyOfflineSessionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	snap := &OfflineSessionSnapshot{
@@ -382,7 +383,14 @@ func userOperationLogFields(op UserOperation) []any {
 	return fields
 }
 
-func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
+func getUserOperations(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	// Single "now" for the whole reconciliation: every time-derived field
+	// (lockedUntil, status.completedAt) and the retention cut-off share one
+	// instant. Sourced from the dependency container's clock so production uses
+	// the real clock while tests drive a deterministic FakeClock — no wall-clock
+	// jitter, no dependence on how busy the CI runner is.
+	now := dc.GetClock().Now()
+
 	operationsToExecute := make([]UserOperation, 0)
 	operationsToCleanUp := make([]UserOperation, 0)
 	for userOperation, err := range sdkobjectpatch.SnapshotIter[UserOperation](input.Snapshots.Get("useroperations")) {
@@ -395,7 +403,7 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		if time.Since(userOperation.GetObjectMeta().GetCreationTimestamp().Time) >= userOperationRetentionPeriod {
+		if now.Sub(userOperation.GetObjectMeta().GetCreationTimestamp().Time) >= userOperationRetentionPeriod {
 			operationsToCleanUp = append(operationsToCleanUp, userOperation)
 		}
 	}
@@ -410,7 +418,7 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 	for _, operation := range operationsToExecute {
 		logFields := userOperationLogFields(operation)
 		input.Logger.Info("Executing UserOperation", logFields...)
-		err := executeUserOperation(input, operation)
+		err := executeUserOperation(input, operation, now)
 		if err != nil {
 			input.Logger.Error("Failed to execute UserOperation", append(logFields, "error", err.Error())...)
 			operation.Status.Phase = UserOperationStatusPhaseFailed
@@ -420,7 +428,7 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 			operation.Status.Phase = UserOperationStatusPhaseSucceeded
 			operation.Status.Message = ""
 		}
-		operation.Status.CompletedAt = ptr.To(metav1.Now())
+		operation.Status.CompletedAt = ptr.To(metav1.NewTime(now))
 
 		// UserOperation is cluster-scoped; namespace is always empty.
 		input.PatchCollector.PatchWithMerge(
@@ -466,7 +474,7 @@ func findLocalPassword(input *go_hook.HookInput, username string) (*Password, er
 	return nil, fmt.Errorf("cannot find password for user: %s", username)
 }
 
-func executeUserOperation(input *go_hook.HookInput, operation UserOperation) error {
+func executeUserOperation(input *go_hook.HookInput, operation UserOperation, now time.Time) error {
 	// The object could not be decoded by applyUserOperationFilter (a returned
 	// error there would have locked the queue). Surface the exact conversion
 	// error now so the operation ends up Failed with a precise status.message.
@@ -480,7 +488,7 @@ func executeUserOperation(input *go_hook.HookInput, operation UserOperation) err
 	case UserOperationTypeReset2FA:
 		return executeReset2FA(input, operation)
 	case UserOperationTypeLock:
-		return executeLock(input, operation)
+		return executeLock(input, operation, now)
 	case UserOperationTypeUnlock:
 		return executeUnlock(input, operation)
 	default:
@@ -488,13 +496,13 @@ func executeUserOperation(input *go_hook.HookInput, operation UserOperation) err
 	}
 }
 
-func executeLock(input *go_hook.HookInput, operation UserOperation) error {
+func executeLock(input *go_hook.HookInput, operation UserOperation, now time.Time) error {
 	if operation.Spec.Lock == nil {
 		input.Logger.Error("Lock spec is nil", userOperationLogFields(operation)...)
 		return errors.New("lock spec is nil")
 	}
 
-	lockedUntil, err := resolveLockUntil(operation.Spec.Lock.For, time.Now())
+	lockedUntil, err := resolveLockUntil(operation.Spec.Lock.For, now)
 	if err != nil {
 		return err
 	}

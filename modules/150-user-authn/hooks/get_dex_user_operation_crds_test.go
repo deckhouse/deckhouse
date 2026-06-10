@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -36,6 +37,16 @@ var _ = Describe("User Authn hooks :: handle UserOperation creation ::", func() 
 	f.RegisterCRD("dex.coreos.com", "v1", "Password", true)
 	f.RegisterCRD("dex.coreos.com", "v1", "OfflineSessions", true)
 	f.RegisterCRD("dex.coreos.com", "v1", "RefreshToken", true)
+
+	// Assertions read the very same FakeClock the hook reads (through the
+	// dependency container), so time-derived fields (lockedUntil,
+	// status.completedAt) are deterministic and independent of CI runner load:
+	// the instant the hook stamps equals the instant asserted here. The clock is
+	// never advanced in these specs, so reading it per-spec is stable.
+	var now time.Time
+	BeforeEach(func() {
+		now = dependency.TestDC.GetClock().Now()
+	})
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	const (
@@ -315,12 +326,12 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 
 			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
-			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("~", time.Now().Add(1*time.Hour), 5*time.Second))
+			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("==", now.Add(1*time.Hour)))
 			Expect(pw.Field("metadata.annotations").Map()).To(HaveKey("deckhouse.io/locked-by-administrator"))
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Lock local user permanently", func() {
@@ -340,7 +351,7 @@ status:
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Lock local user for 7 days (d unit is expanded to hours)", func() {
@@ -353,14 +364,14 @@ status:
 
 			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
 			// 7 days expansion happens in the hook (Go's time.ParseDuration knows
-			// no "d" unit). Verify lockedUntil sits ~7 days from now (±1 minute
-			// to absorb scheduling jitter without making the check vacuous).
-			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("~", time.Now().Add(7*24*time.Hour), time.Minute))
+			// no "d" unit). With a fake clock we assert the exact instant 7 days
+			// out, which also pins down the day→hours expansion.
+			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("==", now.Add(7*24*time.Hour)))
 			Expect(pw.Field("metadata.annotations").Map()).To(HaveKey("deckhouse.io/locked-by-administrator"))
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset user's password wipes the hash from spec on success", func() {
@@ -393,7 +404,7 @@ status:
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset user's password", func() {
@@ -411,7 +422,7 @@ status:
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Lock local user terminates active sessions", func() {
@@ -426,7 +437,7 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 
 			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
-			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("~", time.Now().Add(1*time.Hour), 5*time.Second))
+			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("==", now.Add(1*time.Hour)))
 			Expect(pw.Field("metadata.annotations").Map()).To(HaveKey("deckhouse.io/locked-by-administrator"))
 
 			for _, name := range []string{"offsess-1", "offsess-2"} {
@@ -440,7 +451,7 @@ status:
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset user's password terminates active sessions", func() {
@@ -469,7 +480,7 @@ status:
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset user's 2FA", func() {
@@ -487,7 +498,7 @@ status:
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset user's 2FA when OfflineSessions has no userID (match via RefreshToken claims)", func() {
@@ -508,7 +519,7 @@ status:
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset user's 2FA is idempotent (no objects to delete)", func() {
@@ -521,11 +532,13 @@ status:
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Clean up old userOperations", func() {
-			dayAgoStr := time.Now().Add(-25 * time.Hour).UTC().Format(time.RFC3339)
+			// Anchored to the fake clock so "older than the 24h retention window"
+			// is a deterministic fact rather than a wall-clock race.
+			dayAgoStr := now.Add(-25 * time.Hour).UTC().Format(time.RFC3339)
 
 			f.BindingContexts.Set(f.KubeStateSet(
 				fmt.Sprintf(oldUserOperations, dayAgoStr, dayAgoStr),
@@ -551,7 +564,7 @@ status:
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
 			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Lock local user w/o password entity", func() {
@@ -563,7 +576,7 @@ status:
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
 			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Unlock local user w/o password entity", func() {
@@ -575,7 +588,7 @@ status:
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
 			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset user's password with insuffisent userOperation's fields", func() {
@@ -587,7 +600,7 @@ status:
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
 			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset user's password w/o password entity", func() {
@@ -599,7 +612,7 @@ status:
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
 			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("==", now))
 		})
 
 		It("Reset2FA against an external target fails (local-only operation)", func() {
@@ -633,9 +646,10 @@ status:
 	})
 })
 
-// Anchored time so success cases can assert exact instants rather than
-// "now ± epsilon"; this is the whole reason resolveLockUntil takes `now`
-// as a parameter.
+// fixedNow is the anchored "now" passed directly into resolveLockUntil's unit
+// table below, letting it assert exact instants instead of "now ± epsilon" —
+// the whole reason resolveLockUntil takes `now` as an explicit parameter. The
+// ginkgo specs instead read the hook's FakeClock (see the BeforeEach above).
 var fixedNow = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 func TestResolveLockUntil(t *testing.T) {
@@ -780,7 +794,9 @@ func TestApplyUserOperationFilterNeverErrors(t *testing.T) {
 // into the Failed phase with a precise status.message.
 func TestExecuteUserOperationFailsOnFilterError(t *testing.T) {
 	op := UserOperation{FilterError: `time: unknown unit "d" in duration "456789d"`}
-	err := executeUserOperation(nil, op)
+	// now is irrelevant here: the FilterError short-circuits before any
+	// time-derived field is computed.
+	err := executeUserOperation(nil, op, time.Time{})
 	if err == nil {
 		t.Fatal("executeUserOperation must return an error when FilterError is set")
 	}
