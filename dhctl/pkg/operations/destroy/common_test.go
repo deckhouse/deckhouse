@@ -668,6 +668,13 @@ func testYAMLToUnstructured(t *testing.T, r string) *unstructured.Unstructured {
 func testCreateFakeKubeClient() *client.KubernetesClient {
 	kinds := map[schema.GroupVersionResource]string{
 		v1.NodeUserGVR: v1.NodeUserList,
+		// Cloud-cluster parseConfigFromCluster lists NodeGroups /
+		// InstanceClasses / ModuleConfigs via the dynamic client
+		// (CloudProviderVarsFromCluster). The fake dynamic client panics
+		// on LIST for any GVR whose list kind is not registered.
+		{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}:            "NodeGroupList",
+		{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "moduleconfigs"}:   "ModuleConfigList",
 	}
 
 	apisToAdd := []apis.ListKindToGVR{
