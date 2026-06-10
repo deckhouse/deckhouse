@@ -24,7 +24,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger) (*config.MetaConfig, error) {
+// ParseMetaConfig is the entry point used by every server-mode RPC handler
+// (converge / check / destroy / detach). The operation argument flows down
+// to the provider preparator so that external validators can distinguish
+// bootstrap from converge / destroy and skip the checks that only make sense
+// on a fresh cluster (NAT layout validation, kubeconfig probing, etc.).
+// Pass infrastructureprovider.DhctlOperation* — an empty string disables
+// operation-conditional logic on the preparator side.
+func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger, operation infrastructureprovider.DhctlOperation) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 	if err != nil {
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
@@ -34,22 +41,25 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: uuid is empty")
 	}
 
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
+	preparatorParams.WithOperation(operation)
+
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		configData,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(logger),
-		),
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		nil,
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),
 		config.ValidateOptionValidateExtensions(true),
+		config.ValidateOptionOperation(operation),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse config: %w", err)
 	}
 	metaConfig.UUID = clusterUUID
+	metaConfig.Operation = operation
 
 	return metaConfig, nil
 }

@@ -17,6 +17,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/name212/govalue"
@@ -64,6 +65,16 @@ type Context struct {
 
 	logger log.Logger
 	opts   *options.GlobalOptions
+
+	// metaConfig is memoised for the lifetime of a single converge run.
+	// Each MetaConfig() call would otherwise re-fetch NodeGroups /
+	// InstanceClasses / Secrets from the apiserver and re-invoke the
+	// external provider validator (one Validate + one Prepare round-trip
+	// each), adding ~500 ms per call. Across a converge that touches 7+
+	// pipeline steps this adds 3.5+ s of redundant work.
+	metaConfigOnce sync.Once
+	metaConfig     *config.MetaConfig
+	metaConfigErr  error
 }
 
 type Params struct {
@@ -197,13 +208,22 @@ func (c *Context) CompleteExecutionPhase(ctx context.Context, data any) error {
 	return c.phaseContext.CompletePhase(ctx, c.stateCache, data)
 }
 
+// MetaConfig returns the converge-time MetaConfig, memoised so that repeat
+// pipeline steps reuse the same parsed/validated config instead of
+// re-running the external provider validator.
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
+	c.metaConfigOnce.Do(func() {
+		c.metaConfig, c.metaConfigErr = c.loadMetaConfig()
+	})
+	return c.metaConfig, c.metaConfigErr
+}
+
+func (c *Context) loadMetaConfig() (*config.MetaConfig, error) {
 	if c.CommanderMode() {
-		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger)
+		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger, infrastructureprovider.DhctlOperationConverge)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
-
 		return metaConfig, nil
 	}
 
@@ -216,7 +236,6 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return metaConfig, nil
 }
 
