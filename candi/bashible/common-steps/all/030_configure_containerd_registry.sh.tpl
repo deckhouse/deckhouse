@@ -86,10 +86,10 @@ bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
     {{- with $mirror.auth }}
       {{- if or .auth .username }}
     [host.{{ $mirror_host_with_scheme | quote }}.auth]
-        {{- if .auth }}
-      auth = {{ .auth | quote }}
-        {{- else }}
+        {{- if .username }}
       auth = {{ printf "%s:%s" .username ( .password | default "" ) | b64enc | quote }}
+        {{- else }}
+      auth = {{ .auth | quote }}
         {{- end }}
       {{- end }}
     {{- end }}
