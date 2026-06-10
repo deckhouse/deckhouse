@@ -56,9 +56,11 @@ spec:
                   description: |
                     Current phase of the check. Possible values:
 
+                    * `Pending`: The check has been picked up and is awaiting or in progress.
                     * `Succeeded`: Connectivity check completed successfully.
                     * `Failed`: Connectivity check failed.
                   enum:
+                    - "Pending"
                     - "Succeeded"
                     - "Failed"
                 message:

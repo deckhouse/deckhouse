@@ -84,9 +84,18 @@ type DexProviderCheckStatus struct {
 type DexProviderCheckPhase string
 
 const (
+	// DexProviderCheckPhasePending is written the moment the hook picks a check
+	// up, before the (potentially slow) connectivity probes run. It lets the
+	// console distinguish "the operator created a check and the controller has
+	// acknowledged it, work is in progress" from "nothing has touched it yet".
+	DexProviderCheckPhasePending   = DexProviderCheckPhase("Pending")
 	DexProviderCheckPhaseSucceeded = DexProviderCheckPhase("Succeeded")
 	DexProviderCheckPhaseFailed    = DexProviderCheckPhase("Failed")
 )
+
+// dexProviderCheckPendingMessage is the status message shown while a check is
+// queued/in progress (phase Pending).
+const dexProviderCheckPendingMessage = "connectivity check is queued"
 
 type DexProviderCheckStepStatus struct {
 	Name    string `json:"name"`
@@ -236,24 +245,98 @@ func getDexProviderChecks(ctx context.Context, input *go_hook.HookInput, dc depe
 			continue
 		}
 
-		// Keep a completed result as-is while it still matches the provider's
-		// current configuration and stays fresh; otherwise (re-)run the check.
-		if dexProviderCheckCompleted(check) && dexProviderCheckUpToDate(check, provider) {
+		switch decideDexProviderCheckAction(check, provider) {
+		case dexProviderCheckActionKeep:
+			// A completed result still matches the provider's configuration and
+			// is fresh: leave it untouched (and emit no status patch, so the
+			// hook is not re-triggered by its own write).
 			continue
-		}
 
-		status := executeDexProviderCheck(ctx, input, dc, check, provider)
-		input.PatchCollector.PatchWithMerge(
-			map[string]any{"status": status},
-			dexProviderAPIVersion,
-			dexProviderCheckKind,
-			"",
-			check.Name,
-			object_patch.WithSubresource("status"),
-		)
+		case dexProviderCheckActionExecute:
+			// The check was already marked Pending for this exact generation, so
+			// the console has seen the in-progress state. Run the probes now and
+			// write the terminal result.
+			status := executeDexProviderCheck(ctx, input, dc, check, provider)
+			patchDexProviderCheckStatus(input, check.Name, status)
+
+		case dexProviderCheckActionMarkPending:
+			// Brand-new, stale, or a Pending left over from an older generation:
+			// acknowledge it by writing Pending now and let the resulting status
+			// event (or the next cron tick) run the probes on the next pass.
+			//
+			// This is the self-trigger guard: a Pending write always changes the
+			// stored state (phase and/or observedDexProviderGeneration), so it
+			// triggers the hook exactly once more, where the Execute branch takes
+			// over. It never re-writes an identical Pending, so there is no loop.
+			patchDexProviderCheckStatus(input, check.Name, pendingDexProviderCheckStatus(provider.Generation))
+		}
 	}
 
 	return nil
+}
+
+// dexProviderCheckAction is the decision for a single check that belongs to an
+// existing, canonical provider: keep the current result, run the probes now, or
+// just acknowledge the check by marking it Pending.
+type dexProviderCheckAction int
+
+const (
+	dexProviderCheckActionKeep dexProviderCheckAction = iota
+	dexProviderCheckActionExecute
+	dexProviderCheckActionMarkPending
+)
+
+// decideDexProviderCheckAction implements the two-phase pickup that keeps the
+// console informed without re-triggering the hook in a loop:
+//
+//   - a fresh, generation-matching terminal result is kept as-is;
+//   - a check already marked Pending for the current generation is executed
+//     (so the slow probes run on a second pass, after the in-progress state has
+//     been published);
+//   - everything else (a brand-new check, a stale/expired result, or a Pending
+//     carried over from a previous generation) is (re-)acknowledged with a
+//     Pending write.
+//
+// The Execute branch is gated on the observed generation so that a config
+// change mid-flight re-acknowledges (MarkPending) instead of running against a
+// stale snapshot.
+func decideDexProviderCheckAction(check DexProviderCheck, provider DexProviderForCheck) dexProviderCheckAction {
+	if dexProviderCheckCompleted(check) && dexProviderCheckUpToDate(check, provider) {
+		return dexProviderCheckActionKeep
+	}
+	if check.Status.Phase == DexProviderCheckPhasePending &&
+		check.Status.ObservedDexProviderGeneration == provider.Generation {
+		return dexProviderCheckActionExecute
+	}
+	return dexProviderCheckActionMarkPending
+}
+
+// pendingDexProviderCheckStatus is the status written when a check is picked up.
+// It is a map (not the typed struct) so the JSON merge patch can clear a
+// previous run's checks/completedAt with explicit nulls, leaving a clean
+// in-progress status rather than a Pending phase next to stale step results.
+func pendingDexProviderCheckStatus(generation int64) map[string]any {
+	return map[string]any{
+		"phase":                         string(DexProviderCheckPhasePending),
+		"message":                       dexProviderCheckPendingMessage,
+		"observedDexProviderGeneration": generation,
+		"checks":                        nil,
+		"completedAt":                   nil,
+	}
+}
+
+// patchDexProviderCheckStatus merges the given status into a DexProviderCheck's
+// status subresource. status is either the typed terminal DexProviderCheckStatus
+// or the pending status map.
+func patchDexProviderCheckStatus(input *go_hook.HookInput, name string, status any) {
+	input.PatchCollector.PatchWithMerge(
+		map[string]any{"status": status},
+		dexProviderAPIVersion,
+		dexProviderCheckKind,
+		"",
+		name,
+		object_patch.WithSubresource("status"),
+	)
 }
 
 // canonicalDexProviderCheckName is the deterministic name of the single
