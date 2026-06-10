@@ -81,7 +81,7 @@ imageSpec:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-from: {{ index $.Images "builder/golang" }}
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
@@ -95,7 +95,8 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - pm install git binutils
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache bash git binutils
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
@@ -209,11 +210,14 @@ shell:
   - rm -rf /opt/libcxx/include
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-from: {{ index $.Images "builder/distroless" }}
+fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
-  - pm install ca-certificates
+  - apt-get update && apt-get install -y ca-certificates
+  - update-ca-trust
+  - apt-get clean
+  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
   install:
   - mkdir -p /relocate/sbin
   - |
@@ -234,7 +238,7 @@ shell:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/golang-artifact
-from: {{ index $.Images "builder/golang-bookworm" }}
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
