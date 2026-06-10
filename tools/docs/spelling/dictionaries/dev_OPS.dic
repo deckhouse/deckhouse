@@ -152,6 +152,7 @@ BPF
 bpfLBMode
 Buildah
 bunble
+builtin
 Burstable
 BusyBox
 BypassFwMark
@@ -480,6 +481,7 @@ enableMultiTenancy
 endofftopic
 enum
 env
+entrypoint
 EnvoyFilter
 EOF
 erlier
@@ -1233,6 +1235,7 @@ regexes
 regexp
 RegExp
 RegionOne
+Rego
 regionTagCategory
 registryDockerCfg
 registryImagesRepo
@@ -1250,6 +1253,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+repos
 reprovisioning
 repurposed
 RequestAuthentication
@@ -1308,6 +1312,7 @@ SecretStore
 securityGroups
 SecurityGroups
 SecurityPolicy
+SPE
 sed
 selectel
 Selectel
@@ -1425,6 +1430,7 @@ subUID
 subUIDs
 subvolume
 subvolumes
+subdomain
 sudo
 sudoers
 SuperAdmin
@@ -1683,6 +1689,7 @@ ZvirtInstanceClass
 автоскейлерам
 автоскейлинг
 автосогласования
+автоподменой
 агрегатор
 агрегатора
 агрегаторе
@@ -2193,6 +2200,7 @@ ZvirtInstanceClass
 паттерн
 паттерна
 паттернов
+паттерны
 паттерну
 патч
 патча
@@ -2200,9 +2208,12 @@ ZvirtInstanceClass
 патчи
 патчится
 патчить
+патчах
+патчей
 Перебалансировке
 перебалансировки
 Перевыкат
+Перегенерируйте
 перевыписывает
 перевыпуск
 перевыпуска
@@ -2285,6 +2296,8 @@ ZvirtInstanceClass
 подсетях
 покоммитное
 помотрим
+побайтово
+Пошагово
 превью
 предзагрузки
 преднастроенного
@@ -2430,6 +2443,7 @@ ZvirtInstanceClass
 сгенерировать
 сгенерируем
 сгенерируйте
+сгенерированном
 Сгенерируйте
 сегментировать
 семплов
@@ -2545,6 +2559,11 @@ ZvirtInstanceClass
 фич
 фичах
 фичи
+фикстура
+фикстур
+фикстуру
+фикстурой
+фикстуры
 Флант
 Фланта
 флаппинга
