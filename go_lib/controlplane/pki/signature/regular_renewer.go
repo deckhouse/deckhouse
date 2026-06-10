@@ -56,9 +56,6 @@ const (
 	TLSCertificateOUField = "apiserver"
 	// DefaultCertificateTTL is the number of days generated certificates will be considered valid.
 	DefaultCertificateTTL = 365
-	// SignatureRenewalDays is the number of days before expiry at which the signature cert is renewed.
-	SignatureRenewalDays      = 60
-	SignatureRenewalThreshold = SignatureRenewalDays * 24 * time.Hour
 )
 
 type RegularRenewer struct {
@@ -69,7 +66,7 @@ type RegularRenewer struct {
 func NewRegularSignatureRenewer(kubernetesPkiPath string) *RegularRenewer {
 	return &RegularRenewer{
 		kubernetesPkiPath: kubernetesPkiPath,
-		leftDaysToRenew:   SignatureRenewalDays,
+		leftDaysToRenew:   60,
 	}
 }
 

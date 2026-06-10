@@ -84,7 +84,8 @@ const (
 	KubeconfigRenewalIDAnnotationKey = "control-plane.deckhouse.io/kubeconfig-renewal-id"
 	SignatureRenewalIDAnnotationKey  = "control-plane.deckhouse.io/signature-renewal-id"
 	SignatureExpirationKey           = "signature"
-	SignatureRenewalThreshold        = 60 * 24 * time.Hour
+	SignatureRenewalDays             = 60
+	SignatureRenewalThreshold        = SignatureRenewalDays * 24 * time.Hour
 	CertRenewalThreshold             = 30 * 24 * time.Hour
 )
 
