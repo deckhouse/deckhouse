@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"slices"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
@@ -39,6 +40,13 @@ type DeckhouseSettings struct {
 	ReleaseChannel             string   `json:"releaseChannel"`
 	AllowExperimentalModules   bool     `json:"allowExperimentalModules"`
 	AllowedExperimentalModules []string `json:"allowedExperimentalModules"`
+}
+
+// ExperimentalModuleAllowed reports whether the named module may be enabled
+// despite being experimental: either all experimental modules are allowed, or
+// the module is named in the allowlist.
+func (s *DeckhouseSettings) ExperimentalModuleAllowed(name string) bool {
+	return s.AllowExperimentalModules || slices.Contains(s.AllowedExperimentalModules, name)
 }
 
 func DefaultDeckhouseSettings() *DeckhouseSettings {

@@ -118,9 +118,7 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 		return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 	}
 
-	settings := v.settings.Get()
-	allowExperimental := settings.AllowExperimentalModules ||
-		slices.Contains(settings.AllowedExperimentalModules, cfg.Name)
+	allowExperimental := v.settings.Get().ExperimentalModuleAllowed(cfg.Name)
 
 	switch review.Operation {
 	case kwhmodel.OperationDelete:

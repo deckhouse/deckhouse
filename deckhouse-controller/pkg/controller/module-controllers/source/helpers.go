@@ -177,7 +177,7 @@ func (r *reconciler) needToEnsureRelease(
 	meta *downloader.ModuleDownloadResult,
 	releaseExists bool) bool {
 	// skip experimental modules when deckhouse does not allow them
-	if module.IsExperimental() && !r.deckhouseSettings.Get().AllowExperimentalModules {
+	if module.IsExperimental() && !r.deckhouseSettings.Get().ExperimentalModuleAllowed(module.Name) {
 		r.logger.Debug("experimental module not allowed, skip release ensure",
 			slog.String("source_name", source.Name),
 			slog.String("name", module.Name))
