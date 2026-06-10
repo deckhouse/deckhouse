@@ -42,6 +42,14 @@ const (
 	instanceClassAPIGroup = "deckhouse.io"
 )
 
+// cloudProviderNamespace returns the canonical d8-cloud-provider-<name>
+// namespace that hosts the provider's ModuleConfig, credential Secret and
+// other module-owned resources. All Deckhouse cloud-provider modules follow
+// this naming, so the helper is the single source of truth.
+func cloudProviderNamespace(providerName string) string {
+	return "d8-" + providerdata.CloudProviderModuleName(providerName)
+}
+
 // CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and credential
 // Secrets from the cluster. Settings is intentionally left empty here — it is
 // later populated by metaConfig.applyCloudProviderModuleSettings from the
@@ -63,7 +71,7 @@ func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.Kubernetes
 		return nil, err
 	}
 
-	secrets, err := fetchCredentialSecretsFromCluster(ctx, kubeCl)
+	secrets, err := fetchCredentialSecretsFromCluster(ctx, kubeCl, providerName)
 	if err != nil {
 		return nil, err
 	}
@@ -131,19 +139,28 @@ func fetchInstanceClassesFromCluster(ctx context.Context, kubeCl *client.Kuberne
 	return nil, nil
 }
 
-func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
-	list, err := kubeCl.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
+// fetchCredentialSecretsFromCluster lists provider credential Secrets from
+// the provider's canonical d8-cloud-provider-<name> namespace. Both the
+// namespace scoping and the apiserver-side FieldSelector on Secret.type
+// (an indexed field) keep the query narrow, so least-privilege RBAC granting
+// only namespace-scoped list over this Secret type still works.
+func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (map[string]map[string]interface{}, error) {
+	if providerName == "" {
+		return nil, nil
+	}
+	ns := cloudProviderNamespace(providerName)
+	list, err := kubeCl.CoreV1().Secrets(ns).List(ctx, metav1.ListOptions{
+		FieldSelector: "type=" + string(CloudProviderCredentialsSecretType),
+	})
 	if err != nil {
-		return nil, fmt.Errorf("list secrets: %w", err)
+		return nil, fmt.Errorf("list credential secrets in %s: %w", ns, err)
 	}
 
-	result := make(map[string]map[string]interface{})
-	for _, secret := range list.Items {
-		if secret.Type != CloudProviderCredentialsSecretType {
-			continue
-		}
+	result := make(map[string]map[string]interface{}, len(list.Items))
+	for i := range list.Items {
+		secret := &list.Items[i]
 		key := secret.Namespace + "/" + secret.Name
-		result[key] = secretToMap(&secret)
+		result[key] = secretToMap(secret)
 	}
 	return result, nil
 }
