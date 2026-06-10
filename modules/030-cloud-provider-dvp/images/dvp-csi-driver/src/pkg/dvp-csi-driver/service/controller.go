@@ -123,7 +123,7 @@ func (c *ControllerService) CreateVolume(
 	if len(disks.Items) == 1 {
 		disk := disks.Items[0]
 
-		if disk.Status.Phase == v1alpha2.DiskReady {
+		if disk.Status.Phase == v1alpha2.DiskReady || disk.Status.Phase == v1alpha2.DiskWaitForFirstConsumer {
 			diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
 			if err != nil {
 				return nil, status.Errorf(
