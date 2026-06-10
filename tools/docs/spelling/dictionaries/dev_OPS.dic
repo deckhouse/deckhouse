@@ -1,4 +1,4 @@
-2712
+2717
 1GB
 2GB
 5XX
@@ -35,6 +35,7 @@ AllowedAddressPairs
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
+allowlist
 allowVolumeExpansion
 amd
 AMD
@@ -172,6 +173,7 @@ cdi
 cdi-uploadproxy
 ce
 CEF
+CEL
 centiseconds
 centos
 Centos
@@ -291,6 +293,8 @@ ContainerResourcePolicy
 contraire
 controlPlaneConfigurator
 controlPlaneManager
+ControlPlaneNode
+ControlPlaneOperation
 cooldown
 CoreDNS
 CPM
@@ -1098,6 +1102,7 @@ outlierDetection
 overprovisioned
 overprovisioning
 overprovisioningRate
+overridable
 overriden
 overutilized
 OVF
@@ -1154,8 +1159,11 @@ podSubnetCIDR
 Poly
 portForwarding
 POSIX
+Postgres
+PostgresClass
 postgresql
 PostgreSQL
+PostgresSnapshot
 postStart
 PowerShell
 Praefect
@@ -1715,6 +1723,7 @@ ZvirtInstanceClass
 автоподменой
 авторизовывать
 авторизовываться
+авторизующий
 автоскейлерам
 автоскейлинг
 автосогласования
@@ -2142,6 +2151,7 @@ ZvirtInstanceClass
 мультимастерной
 мультимастерном
 мультимастерный
+мультимастерными
 мультиплатформенной
 мультитенантности
 мультитенантность
@@ -2212,6 +2222,7 @@ ZvirtInstanceClass
 оверпровижининг
 оверселлинг
 оверселлинга
+одномастерными
 одностраничных
 однострочник
 одноузлового
@@ -2281,6 +2292,7 @@ ZvirtInstanceClass
 перезапускается
 перезапускать
 перезапускаться
+перезапускающий
 перезапустились
 перезапустился
 перезапустится
@@ -2348,7 +2360,6 @@ ZvirtInstanceClass
 Подсеть
 подсетью
 подсетям
-подсетями
 подсетях
 покоммитное
 помотрим
@@ -2415,7 +2426,6 @@ ZvirtInstanceClass
 Ревью
 регистри
 редиректить
-резолверы
 резолвинга
 резолвится
 реквест
@@ -2438,6 +2448,7 @@ ZvirtInstanceClass
 реплицированного
 реплицированные
 реплицированных
+реплицироваться
 реплицируемого
 реплицируемое
 реплицируемые
@@ -2705,9 +2716,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-ControlPlaneNode
-ControlPlaneOperation
-авторизующий
-мультимастерными
-одномастерными
-перезапускающий
