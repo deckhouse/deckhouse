@@ -1,6 +1,10 @@
 authURL: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.authURL | b64enc }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "username" }}
 username: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.username | b64enc }}
+{{- end }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "password" }}
 password: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.password | b64enc }}
+{{- end }}
 {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "applicationCredentialId" }}
 applicationCredentialId: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.applicationCredentialId | b64enc }}
 {{- end }}
@@ -13,10 +17,13 @@ applicationCredentialSecret: {{ .Values.nodeManager.internal.cloudProvider.opens
 {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "token" }}
 token: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.token | b64enc }}
 {{- end }}
+{{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "domainName" }}
 domainName: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.domainName | b64enc }}
+{{- end }}
 {{- if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "tenantID" }}
   {{- if .Values.nodeManager.internal.cloudProvider.openstack.connection.tenantID }}
-ç  {{- end }}
+tenantID: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.tenantID | b64enc }}
+  {{- end }}
 {{- else if hasKey .Values.nodeManager.internal.cloudProvider.openstack.connection "tenantName" }}
   {{- if .Values.nodeManager.internal.cloudProvider.openstack.connection.tenantName }}
 tenantName: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.tenantName | b64enc }}
