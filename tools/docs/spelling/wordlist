@@ -34,6 +34,7 @@ AllowedAddressPairs
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
+allowlist
 allowVolumeExpansion
 amd
 AMD
@@ -168,6 +169,7 @@ cdi
 cdi-uploadproxy
 ce
 CEF
+CEL
 centiseconds
 centos
 Centos
@@ -1083,6 +1085,7 @@ outlierDetection
 overprovisioned
 overprovisioning
 overprovisioningRate
+overridable
 overriden
 overutilized
 OVF
@@ -1139,8 +1142,11 @@ podSubnetCIDR
 Poly
 portForwarding
 POSIX
+Postgres
+PostgresClass
 postgresql
 PostgreSQL
+PostgresSnapshot
 postStart
 PowerShell
 Praefect
@@ -2350,6 +2356,7 @@ ZvirtInstanceClass
 реплицированного
 реплицированные
 реплицированных
+реплицироваться
 реплицируемого
 реплицируемое
 реплицируемые
