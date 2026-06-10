@@ -1,10 +1,24 @@
 ---
-title: "managed-postgres"
+title: "Managed PostgreSQL"
 permalink: en/admin/configuration/managed-services/postgres.html
 description: "Administering the managed PostgreSQL service in Deckhouse Kubernetes Platform"
 ---
 
-The managed PostgreSQL service provides PostgreSQL clusters in Deckhouse Kubernetes Platform. The service is in the [`Preview` stage](/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle). Before you enable [`managed-postgres`](/modules/managed-postgres/), meet the [installation requirements](/modules/managed-postgres/configuration.html#requirements). The main administrator cluster-wide resource is PostgresClass. It defines limits and default values for related Postgres resources. For instructions on creating and using PostgreSQL services, see [Using managed PostgreSQL](../../../user/managed-services/postgres.html).
+Managed PostgreSQL in Deckhouse Kubernetes Platform adds an API for creating and maintaining PostgreSQL instances in the cluster. The administrator enables the [`managed-postgres`](/modules/managed-postgres/) module and configures PostgresClass resources that define allowed configurations for user Postgres resources.
+
+A Postgres resource can describe a highly available PostgreSQL cluster or a single instance. Through PostgresClass, the administrator defines which topologies, CPU and memory ranges, PostgreSQL configuration values, and validation rules are available to users.
+
+The service is in the [`Preview` stage](/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle). Before you enable [`managed-postgres`](/modules/managed-postgres/), meet the [installation requirements](/modules/managed-postgres/configuration.html#requirements). The main administrator cluster-wide resource is PostgresClass. It defines which Postgres configurations are available to users and which values are applied by default. For user operations with PostgreSQL services, see [Using Managed PostgreSQL](../../../user/managed-services/postgres.html).
+
+## Available PostgreSQL configurations
+
+Configure one or more PostgresClass resources to define the PostgreSQL configuration options available to users:
+
+- topologies and zones are available to users;
+- CPU and memory ranges are allowed;
+- PostgreSQL parameters are applied by default;
+- parameters a user can override in their Postgres resource;
+- validation rules must pass before service creation.
 
 ## Before you begin
 
@@ -14,9 +28,9 @@ Make sure that:
 - The [installation requirements](/modules/managed-postgres/configuration.html#requirements) are met.
 - You have permission to create cluster-wide resources.
 
-## Enable managed-postgres
+## Enable Managed PostgreSQL
 
-To enable the managed PostgreSQL service, apply the ModuleConfig resource:
+To enable Managed PostgreSQL, apply the ModuleConfig resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -34,10 +48,10 @@ The controller is also deployed in the `d8-managed-postgres` system namespace. I
 
 ## PostgresClass resource
 
-The PostgresClass resource is a cluster-wide resource. It is used to:
+The PostgresClass resource is a cluster-wide resource that describes a managed PostgreSQL service class for user Postgres resources. Use it to:
 
 - define allowed PostgreSQL topologies;
-- define CPU and memory limits;
+- limit CPU and memory;
 - configure default configuration values;
 - define which parameters users can override;
 - add validation rules.
