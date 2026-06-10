@@ -288,6 +288,100 @@ func TestDexProviderCheckUpToDate(t *testing.T) {
 	})
 }
 
+func TestDecideDexProviderCheckAction(t *testing.T) {
+	provider := DexProviderForCheck{ObjectMeta: metav1.ObjectMeta{Name: "p", Generation: 5}}
+
+	completed := func(phase DexProviderCheckPhase, generation int64, completedAt metav1.Time) DexProviderCheck {
+		return DexProviderCheck{Status: DexProviderCheckStatus{
+			Phase:                         phase,
+			ObservedDexProviderGeneration: generation,
+			CompletedAt:                   ptr.To(completedAt),
+		}}
+	}
+	pending := func(generation int64) DexProviderCheck {
+		return DexProviderCheck{Status: DexProviderCheckStatus{
+			Phase:                         DexProviderCheckPhasePending,
+			ObservedDexProviderGeneration: generation,
+		}}
+	}
+
+	tests := []struct {
+		name  string
+		check DexProviderCheck
+		want  dexProviderCheckAction
+	}{
+		{name: "brand-new check is acknowledged as Pending", check: DexProviderCheck{}, want: dexProviderCheckActionMarkPending},
+		{name: "Pending for the current generation is executed", check: pending(provider.Generation), want: dexProviderCheckActionExecute},
+		{name: "Pending from an older generation is re-acknowledged", check: pending(provider.Generation - 1), want: dexProviderCheckActionMarkPending},
+		{name: "fresh Succeeded for the current generation is kept", check: completed(DexProviderCheckPhaseSucceeded, provider.Generation, metav1.Now()), want: dexProviderCheckActionKeep},
+		{name: "fresh Failed for the current generation is kept", check: completed(DexProviderCheckPhaseFailed, provider.Generation, metav1.Now()), want: dexProviderCheckActionKeep},
+		{name: "result from a previous generation is re-run via Pending", check: completed(DexProviderCheckPhaseSucceeded, provider.Generation-1, metav1.Now()), want: dexProviderCheckActionMarkPending},
+		{name: "expired result is re-run via Pending", check: completed(DexProviderCheckPhaseSucceeded, provider.Generation, metav1.NewTime(time.Now().Add(-2*dexProviderCheckRecheckInterval))), want: dexProviderCheckActionMarkPending},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := decideDexProviderCheckAction(tt.check, provider); got != tt.want {
+				t.Fatalf("decideDexProviderCheckAction = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestDexProviderCheckLifecycleTerminates walks a check through the two-phase
+// pickup to prove it converges and never re-marks an identical Pending (which
+// would make the status write self-trigger the hook forever).
+func TestDexProviderCheckLifecycleTerminates(t *testing.T) {
+	provider := DexProviderForCheck{ObjectMeta: metav1.ObjectMeta{Name: "p", Generation: 7}}
+	check := DexProviderCheck{}
+
+	// 1. Brand-new → acknowledge as Pending.
+	if got := decideDexProviderCheckAction(check, provider); got != dexProviderCheckActionMarkPending {
+		t.Fatalf("new check: got %d, want MarkPending", got)
+	}
+
+	// 2. After the Pending write the next pass must Execute (not MarkPending
+	//    again), so the status write triggers the hook exactly once more.
+	pendingStatus := pendingDexProviderCheckStatus(provider.Generation)
+	check.Status.Phase = DexProviderCheckPhase(pendingStatus["phase"].(string))
+	check.Status.ObservedDexProviderGeneration = pendingStatus["observedDexProviderGeneration"].(int64)
+	check.Status.Checks = nil
+	check.Status.CompletedAt = nil
+	if got := decideDexProviderCheckAction(check, provider); got != dexProviderCheckActionExecute {
+		t.Fatalf("after Pending write: got %d, want Execute", got)
+	}
+
+	// 3. After the terminal write the next pass must Keep, so the result is not
+	//    re-run and the loop terminates.
+	check.Status = DexProviderCheckStatus{
+		Phase:                         DexProviderCheckPhaseSucceeded,
+		ObservedDexProviderGeneration: provider.Generation,
+		CompletedAt:                   ptr.To(metav1.Now()),
+	}
+	if got := decideDexProviderCheckAction(check, provider); got != dexProviderCheckActionKeep {
+		t.Fatalf("after terminal write: got %d, want Keep", got)
+	}
+}
+
+func TestPendingDexProviderCheckStatus(t *testing.T) {
+	status := pendingDexProviderCheckStatus(9)
+
+	if status["phase"] != string(DexProviderCheckPhasePending) {
+		t.Fatalf("phase = %v, want Pending", status["phase"])
+	}
+	if status["observedDexProviderGeneration"] != int64(9) {
+		t.Fatalf("observedDexProviderGeneration = %v, want 9", status["observedDexProviderGeneration"])
+	}
+	// Explicit nils clear a previous run's results through the JSON merge patch,
+	// so a Pending status never shows stale step results or completedAt.
+	if v, ok := status["checks"]; !ok || v != nil {
+		t.Fatalf("checks = %v (present=%v), want explicit nil", v, ok)
+	}
+	if v, ok := status["completedAt"]; !ok || v != nil {
+		t.Fatalf("completedAt = %v (present=%v), want explicit nil", v, ok)
+	}
+}
+
 func TestCanonicalDexProviderCheckName(t *testing.T) {
 	if got := canonicalDexProviderCheckName("my-oidc"); got != "my-oidc" {
 		t.Fatalf("expected canonical name to equal provider name, got %q", got)
