@@ -51,11 +51,13 @@ var once sync.Once
 var store *SchemaStore
 
 type validateOptions struct {
-	omitDocInError     bool
-	commanderMode      bool
-	strictUnmarshal    bool
-	validateExtensions bool
-	requiredSSHHost    bool
+	omitDocInError       bool
+	commanderMode        bool
+	strictUnmarshal      bool
+	validateExtensions   bool
+	requiredSSHHost      bool
+	collectAllErrors     bool
+	skipSchemaValidation bool
 }
 
 type ValidateOption func(o *validateOptions)
@@ -90,6 +92,27 @@ func ValidateOptionValidateExtensions(v bool) ValidateOption {
 func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	return func(o *validateOptions) {
 		o.requiredSSHHost = v
+	}
+}
+
+// ValidateOptionCollectAllErrors makes ParseConfigFromData accumulate per-doc
+// errors into a *ValidationError instead of returning on the first one. Off
+// by default — bootstrap CLI keeps its fail-fast semantics. Validators that
+// want multi-error UX enable this.
+func ValidateOptionCollectAllErrors(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.collectAllErrors = v
+	}
+}
+
+// ValidateOptionSkipSchemaValidation makes parseDocument skip schemaStore
+// OpenAPI checks and just categorize a document by its kind. Use it for
+// "intent extraction" passes — domain analyzers (e.g. CNI mismatch) that
+// must read the user's cluster intent without re-running schema checks the
+// schema-validator pass has already done.
+func ValidateOptionSkipSchemaValidation(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.skipSchemaValidation = v
 	}
 }
 

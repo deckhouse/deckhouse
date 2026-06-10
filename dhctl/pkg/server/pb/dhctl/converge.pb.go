@@ -21,12 +21,11 @@
 package dhctl
 
 import (
-	reflect "reflect"
-	sync "sync"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
@@ -808,26 +807,23 @@ func file_converge_proto_rawDescGZIP() []byte {
 	return file_converge_proto_rawDescData
 }
 
-var (
-	file_converge_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-	file_converge_proto_goTypes  = []interface{}{
-		(*ConvergeRequest)(nil),      // 0: dhctl.ConvergeRequest
-		(*ConvergeResponse)(nil),     // 1: dhctl.ConvergeResponse
-		(*ConvergeStart)(nil),        // 2: dhctl.ConvergeStart
-		(*ConvergePhaseEnd)(nil),     // 3: dhctl.ConvergePhaseEnd
-		(*ConvergeContinue)(nil),     // 4: dhctl.ConvergeContinue
-		(*ConvergeCancel)(nil),       // 5: dhctl.ConvergeCancel
-		(*ConvergeStartOptions)(nil), // 6: dhctl.ConvergeStartOptions
-		(*ConvergeResult)(nil),       // 7: dhctl.ConvergeResult
-		nil,                          // 8: dhctl.ConvergePhaseEnd.CompletedPhaseStateEntry
-		(*Logs)(nil),                 // 9: dhctl.Logs
-		(*Progress)(nil),             // 10: dhctl.Progress
-		(Continue)(0),                // 11: dhctl.Continue
-		(*durationpb.Duration)(nil),  // 12: google.protobuf.Duration
-		(*OperationOptions)(nil),     // 13: dhctl.OperationOptions
-	}
-)
-
+var file_converge_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_converge_proto_goTypes = []interface{}{
+	(*ConvergeRequest)(nil),      // 0: dhctl.ConvergeRequest
+	(*ConvergeResponse)(nil),     // 1: dhctl.ConvergeResponse
+	(*ConvergeStart)(nil),        // 2: dhctl.ConvergeStart
+	(*ConvergePhaseEnd)(nil),     // 3: dhctl.ConvergePhaseEnd
+	(*ConvergeContinue)(nil),     // 4: dhctl.ConvergeContinue
+	(*ConvergeCancel)(nil),       // 5: dhctl.ConvergeCancel
+	(*ConvergeStartOptions)(nil), // 6: dhctl.ConvergeStartOptions
+	(*ConvergeResult)(nil),       // 7: dhctl.ConvergeResult
+	nil,                          // 8: dhctl.ConvergePhaseEnd.CompletedPhaseStateEntry
+	(*Logs)(nil),                 // 9: dhctl.Logs
+	(*Progress)(nil),             // 10: dhctl.Progress
+	(Continue)(0),                // 11: dhctl.Continue
+	(*durationpb.Duration)(nil),  // 12: google.protobuf.Duration
+	(*OperationOptions)(nil),     // 13: dhctl.OperationOptions
+}
 var file_converge_proto_depIdxs = []int32{
 	2,  // 0: dhctl.ConvergeRequest.start:type_name -> dhctl.ConvergeStart
 	4,  // 1: dhctl.ConvergeRequest.continue:type_name -> dhctl.ConvergeContinue

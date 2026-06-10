@@ -649,6 +649,8 @@ const (
 	ErrKindChangesValidationFailed ErrorKind = iota + 1
 	ErrKindValidationFailed
 	ErrKindInvalidYAML
+	ErrKindCNIMismatch
+	ErrKindCNISettingsMismatch
 )
 
 func (k ErrorKind) String() string {
@@ -659,6 +661,10 @@ func (k ErrorKind) String() string {
 		return "ValidationFailed"
 	case ErrKindInvalidYAML:
 		return "InvalidYAML"
+	case ErrKindCNIMismatch:
+		return "CNIMismatch"
+	case ErrKindCNISettingsMismatch:
+		return "CNISettingsMismatch"
 	default:
 		return "unknown"
 	}
@@ -669,11 +675,29 @@ type ValidationError struct {
 	Errors []Error
 }
 
-func (v *ValidationError) Append(kind ErrorKind, e Error) {
-	if v.Kind < kind {
-		v.Kind = kind
+func (v *ValidationError) Append(reason ErrorKind, e Error) {
+	e.Reason = reason
+	// Top-level Kind stays in the pre-existing set {Changes, ValidationFailed,
+	// InvalidYAML}. Domain-specific reasons (CNI* and any future ones) are
+	// semantically a kind of validation failure and bucket to ValidationFailed
+	// at the top level. Per-Error Reason retains the precise kind.
+	top := reason
+	if top > ErrKindInvalidYAML {
+		top = ErrKindValidationFailed
+	}
+	if v.Kind < top {
+		v.Kind = top
 	}
 	v.Errors = append(v.Errors, e)
+}
+
+func (v *ValidationError) Merge(other *ValidationError) {
+	if other == nil {
+		return
+	}
+	for _, e := range other.Errors {
+		v.Append(e.Reason, e)
+	}
 }
 
 func (v *ValidationError) Error() string {
@@ -719,13 +743,17 @@ func (v *ValidationError) ErrorOrNil() error {
 	return v
 }
 
+// All fields are omitempty so domain-specific errors (e.g. CNI mismatch)
+// that lack a resource identity don't carry null/empty noise on the wire.
+// Consumers decode missing field == empty value (Go json, TS optional fields).
 type Error struct {
-	Index    *int
-	Group    string
-	Version  string
-	Kind     string
-	Name     string
-	Messages []string
+	Reason   ErrorKind `json:"Reason,omitempty"`
+	Index    *int      `json:"Index,omitempty"`
+	Group    string    `json:"Group,omitempty"`
+	Version  string    `json:"Version,omitempty"`
+	Kind     string    `json:"Kind,omitempty"`
+	Name     string    `json:"Name,omitempty"`
+	Messages []string  `json:"Messages,omitempty"`
 }
 
 type namedIndex struct {
