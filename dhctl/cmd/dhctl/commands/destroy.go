@@ -16,6 +16,7 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -106,18 +107,34 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
-			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
+			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger, phases.DestroyPhases())
 			if err != nil {
-				return err
-			}
+				if strings.Contains(err.Error(), "Terminal screen has not enouth height") {
+					// fallback to plain logger
+					log.SwitchToNonInteractive()
+					logger = log.GetDefaultLogger()
+					sshProviderInitializer.Reinitialize(ctx, logger, sshProviderInitializer.GetSettings(), sshProviderInitializer.GetConfig())
+					sshProvider, err2 := sshProviderInitializer.GetSSHProvider(ctx)
+					if err2 != nil {
+						return err
+					}
 
-			onUpdateFunc := func(progress phases.Progress) error {
-				phasesChan <- progress
-				return nil
-			}
-			destroyerParams.OnProgressFunc = onUpdateFunc
+					defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
-			defer onComplete()
+					destroyerParams.SSHProvider = sshProvider
+					opts.Global.ShowProgress = true
+				} else {
+					return err
+				}
+			} else {
+				onUpdateFunc := func(progress phases.Progress) error {
+					phasesChan <- progress
+					return nil
+				}
+				destroyerParams.OnProgressFunc = onUpdateFunc
+
+				defer onComplete()
+			}
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(ctx, destroyerParams)

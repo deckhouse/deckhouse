@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -357,27 +358,35 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	printBanner(interactive)
 
 	if interactive {
-		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Bootstrap cluster", b.logger)
+		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Bootstrap cluster", b.logger, phases.BootstrapPhases())
 		if err != nil {
-			return err
-		}
+			if strings.Contains(err.Error(), "Terminal screen has not enouth height") {
+				// fallback to plain logger
+				log.SwitchToNonInteractive()
+				b.logger = log.GetDefaultLogger()
+				b.SSHProviderInitializer.Reinitialize(ctx, b.logger, b.SSHProviderInitializer.GetSettings(), b.SSHProviderInitializer.GetConfig())
+				b.Options.Global.ShowProgress = true
+			} else {
+				return err
+			}
+		} else {
+			onUpdateFunc := func(progress phases.Progress) error {
+				phasesChan <- progress
+				return nil
+			}
 
-		onUpdateFunc := func(progress phases.Progress) error {
-			phasesChan <- progress
-			return nil
-		}
+			b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
 
-		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
-
-		pb := progressbar.GetDefaultPb()
-		if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
-			pb.WithEmptyAdditionalMasters()
-		}
-		if len(metaConfig.GetTerraNodeGroups()) == 0 {
-			pb.WithEmptyAdditionalNGs()
-		}
-		if b.Options.Bootstrap.PostBootstrapScriptPath == "" {
-			pb.WithEmptyBostBootstrapScript()
+			pb := progressbar.GetDefaultPb()
+			if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
+				pb.WithEmptyAdditionalMasters()
+			}
+			if len(metaConfig.GetTerraNodeGroups()) == 0 {
+				pb.WithEmptyAdditionalNGs()
+			}
+			if b.Options.Bootstrap.PostBootstrapScriptPath == "" {
+				pb.WithEmptyBostBootstrapScript()
+			}
 		}
 	}
 

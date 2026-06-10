@@ -33,20 +33,22 @@ func GetDefaultPb() *Pb {
 }
 
 type PbParam struct {
-	startMsg   string
-	size       int
-	labelChan  chan string
-	phasesChan chan phases.Progress
-	logChan    chan string
+	startMsg     string
+	size         int
+	labelChan    chan string
+	phasesChan   chan phases.Progress
+	logChan      chan string
+	phasesNumber int
 }
 
-func NewPbParams(size int, startMsg string, labelChan chan string, phasesChan chan phases.Progress, logChan chan string) *PbParam {
+func NewPbParams(size int, startMsg string, labelChan chan string, phasesChan chan phases.Progress, logChan chan string, phasesNumber int) *PbParam {
 	return &PbParam{
-		size:       size,
-		startMsg:   startMsg,
-		labelChan:  labelChan,
-		phasesChan: phasesChan,
-		logChan:    logChan,
+		size:         size,
+		startMsg:     startMsg,
+		labelChan:    labelChan,
+		phasesChan:   phasesChan,
+		logChan:      logChan,
+		phasesNumber: phasesNumber,
 	}
 }
 
@@ -57,6 +59,9 @@ type Pb struct {
 	StopCh             chan struct{}
 	LogBox             *LogBox
 	WriterFabric       *WriterFabric
+	availableHeight    int
+	needSupressSuccess bool
+	successedPhases    []holdedMessage
 
 	// pbOpts are using for control of appearance of LogBox
 	pbOpts *pbOpts
@@ -122,15 +127,81 @@ func (p *Pb) CheckPhase(phase string, subphase ...string) bool {
 		return p.pbOpts.postBootstrapScripts
 	case string(phases.FinalizationPhase):
 		return p.pbOpts.finalizationResources
-	case string(phases.CreateResourcesPhase):
-		log.DebugF("create rasources loop")
-		return false
 	default:
 		return true
 	}
 }
 
-func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), chan phases.Progress, error) {
+func (p *Pb) PrintSupressedSuccess(msg string) {
+	p.successedPhases = append(p.successedPhases, holdedMessage{mType: successMsgType, message: msg})
+	if len(p.successedPhases) < 4 {
+		pterm.Success.WithWriter(p.WriterFabric.GetWriter()).Println(msg)
+	} else {
+		last := p.successedPhases[(len(p.successedPhases) - 4):]
+		for i, m := range last {
+			oldWriter := p.MultiPrinter.Writer
+			pterm.SetDefaultOutput(p.WriterFabric.allWriters[i+2])
+			fmt.Print("\033[2K")
+			pterm.Success.WithWriter(p.WriterFabric.allWriters[i+2]).Println(m.message)
+			pterm.SetDefaultOutput(oldWriter)
+		}
+	}
+}
+
+func (p *Pb) FinalizeSuccess() {
+	if p == nil {
+		return
+	}
+
+	if !p.needSupressSuccess || len(p.successedPhases) == 0 {
+		return
+	}
+
+	for i, m := range p.successedPhases {
+		oldWriter := p.MultiPrinter.Writer
+		var writer io.Writer
+		if len(p.WriterFabric.allWriters) > i+2 {
+			writer = p.WriterFabric.allWriters[i+2]
+		} else {
+			writer = p.WriterFabric.GetWriter()
+		}
+		pterm.SetDefaultOutput(writer)
+		fmt.Print("\033[2K")
+		if m.mType == successMsgType {
+			pterm.Success.WithWriter(writer).Println(m.message)
+		} else {
+			pterm.Info.WithWriter(writer).Print(m.message)
+		}
+
+		pterm.SetDefaultOutput(oldWriter)
+	}
+	p.needSupressSuccess = false
+	p.successedPhases = nil
+}
+
+type msgType string
+
+const (
+	successMsgType msgType = "success"
+	infoMsgType    msgType = "info"
+)
+
+type holdedMessage struct {
+	mType   msgType
+	message string
+}
+
+func countPhases(phases []phases.PhaseWithSubPhases) int {
+	count := 0
+	for _, p := range phases {
+		count++
+		count += len(p.SubPhases)
+	}
+
+	return count
+}
+
+func InitProgressBarWithDeferredFunc(name string, logger log.Logger, phasesWithSubphases []phases.PhaseWithSubPhases) (func(), chan phases.Progress, error) {
 	intLogger, ok := logger.(*log.InteractiveLogger)
 	if !ok {
 		return nil, nil, fmt.Errorf("logger is not interactive")
@@ -139,7 +210,7 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 	phasesChan := make(chan phases.Progress, 5)
 	logChan := intLogger.GetLogChan()
 
-	pbParam := NewPbParams(100, name, labelChan, phasesChan, logChan)
+	pbParam := NewPbParams(100, name, labelChan, phasesChan, logChan, countPhases(phasesWithSubphases))
 
 	if err := InitProgressBar(pbParam); err != nil {
 		return nil, phasesChan, err
@@ -164,6 +235,23 @@ func InitProgressBar(param *PbParam) error {
 	if width < 160 {
 		effectiveWidth = 120
 	}
+
+	// estimating height
+	height := pterm.GetTerminalHeight()
+	log.DebugF("estimated terminal width: %d, height: %d, effective height: %d\n", width, height, height-13)
+
+	if param.phasesNumber > 10 {
+		// bootstrap, at leaste 2 additional rows is needed, for info of master nodes IP
+		param.phasesNumber += 2
+	}
+
+	supressSuccess := height-13-param.phasesNumber <= 0
+
+	if height-param.phasesNumber <= 0 {
+		// terminal screen is smaller then MultiPrinter output w/o LogBox, returning an error
+		return fmt.Errorf("Terminal screen has not enouth height")
+	}
+
 	p := pterm.DefaultProgressbar.
 		WithTotal(param.size).
 		WithMaxWidth(effectiveWidth).
@@ -176,7 +264,7 @@ func InitProgressBar(param *PbParam) error {
 		WithDelay(time.Hour).
 		WithWriter(writerFabric.GetWriter())
 
-	logBox := newLogBox(&writerFabric, param.logChan)
+	logBox := newLogBox(&writerFabric, param.logChan, 10)
 
 	_, startErr := multi.Start()
 	if startErr != nil {
@@ -207,6 +295,8 @@ func InitProgressBar(param *PbParam) error {
 		StopCh:             stopChan,
 		LogBox:             logBox,
 		WriterFabric:       &writerFabric,
+		availableHeight:    height - 13, // 1 for pb, 1 for staticSpinner, 11 for logbox
+		needSupressSuccess: supressSuccess,
 		pbOpts: &pbOpts{
 			aditionalMasters:      true,
 			staticNodes:           true,
@@ -282,7 +372,13 @@ func updateProgress(
 					return
 				}
 
-				pterm.Success.WithWriter(writerFabric.GetWriter()).Println(completed)
+				// check out if suppress success is needed
+				if defaultpb.needSupressSuccess {
+					defaultpb.PrintSupressedSuccess(completed)
+				} else {
+					pterm.Success.WithWriter(writerFabric.GetWriter()).Println(completed)
+				}
+
 				increment := int(math.Round(msg.Progress*100) - float64(p.Current))
 
 				if increment == 0 {
@@ -294,21 +390,39 @@ func updateProgress(
 				}
 
 				p.Add(increment)
+
+				if !p.IsActive {
+					// need to finilize pb
+					if defaultpb.needSupressSuccess {
+						if err := defaultpb.LogBox.Stop(); err != nil {
+							return
+						}
+						defaultpb.FinalizeSuccess()
+						return
+					}
+				}
+
 				lastCompleted = completed
 				p.UpdateTitle(phaseToString(msg, false))
 
 				if defaultpb.CheckPhase(string(msg.CurrentPhase), string(msg.CurrentSubPhase)) {
-					log.DebugF("Starting logbox: %s\n", phaseToString(msg, false))
-					logBox := newLogBox(writerFabric, defaultpb.LogBox.logChan).WithStatusString(defaultpb.LogBox.getStatusString())
-					if err := logBox.Start(); err != nil {
-						return
+					estimatedHeight := defaultpb.availableHeight
+					if estimatedHeight > 10 {
+						estimatedHeight = 10
 					}
-					defaultpb.LogBox = logBox
-					go logBox.Update()
+					if estimatedHeight <= 0 {
+						continue
+					} else {
+						logBox := newLogBox(writerFabric, defaultpb.LogBox.logChan, estimatedHeight).WithStatusString(defaultpb.LogBox.getStatusString())
+						if err := logBox.Start(); err != nil {
+							return
+						}
+						defaultpb.LogBox = logBox
+						go logBox.Update()
+					}
 				}
 			}
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 }
 
@@ -322,6 +436,9 @@ func InfoF(format string, a ...any) {
 	}
 
 	pterm.Info.WithWriter(writer).Printf(format, a...)
+	if defaultpb.needSupressSuccess {
+		defaultpb.successedPhases = append(defaultpb.successedPhases, holdedMessage{mType: infoMsgType, message: fmt.Sprintf(format, a...)})
+	}
 }
 
 func WarnF(format string, a ...any) {

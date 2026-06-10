@@ -33,16 +33,17 @@ type LogBox struct {
 	writerFabric        *WriterFabric
 	SpinnerPrinterArray [2]*pterm.SpinnerPrinter
 	writerArray         [2]io.Writer
-	text                [10]string
+	text                []string
 	logChan             chan string
 	stopChan            chan struct{}
 	mu                  sync.Mutex
 	lastFilledString    int
 	started             bool
 	status              string
+	linesNumber         int
 }
 
-func newLogBox(writerFabric *WriterFabric, logChan chan string) *LogBox {
+func newLogBox(writerFabric *WriterFabric, logChan chan string, linesNumber int) *LogBox {
 	spinnerArray := [2]*pterm.SpinnerPrinter{}
 	writerArray := [2]io.Writer{}
 	spinnerStyle := pterm.NewStyle(pterm.FgDarkGray)
@@ -64,6 +65,7 @@ func newLogBox(writerFabric *WriterFabric, logChan chan string) *LogBox {
 	}
 
 	stopCh := make(chan struct{})
+	text := make([]string, linesNumber)
 
 	return &LogBox{
 		writerFabric:        writerFabric,
@@ -72,7 +74,8 @@ func newLogBox(writerFabric *WriterFabric, logChan chan string) *LogBox {
 		stopChan:            stopCh,
 		writerArray:         writerArray,
 		lastFilledString:    0,
-		text:                [10]string{"", "", "", "", "", "", "", "", "", ""},
+		text:                text,
+		linesNumber:         linesNumber,
 	}
 }
 
@@ -89,6 +92,12 @@ func (b *LogBox) Start() error {
 	}
 
 	log.WithLogSending(true)
+
+	// if defaultpb is not initialized yet, availableHeight must be set by yourself
+	if defaultpb != nil {
+		// LogBox should consume 11 lines total. 2 by calling writerFabric.GetWriter() and 9 additional lines here
+		defaultpb.availableHeight = defaultpb.availableHeight + 1 - b.linesNumber
+	}
 
 	return nil
 }
@@ -115,7 +124,8 @@ func (b *LogBox) Stop() error {
 		}
 	}
 
-	b.text = [10]string{"", "", "", "", "", "", "", "", "", ""}
+	b.text = make([]string, b.linesNumber)
+	defaultpb.availableHeight += (b.linesNumber - 1)
 
 	return nil
 }
@@ -124,7 +134,7 @@ func (b *LogBox) Cleanup() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	b.text = [10]string{"", "", "", "", "", "", "", "", "", ""}
+	b.text = make([]string, b.linesNumber)
 	b.SpinnerPrinterArray[1].UpdateText("")
 }
 
@@ -132,16 +142,16 @@ func (b *LogBox) putMsg(msg string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if b.lastFilledString != 9 {
+	if b.lastFilledString != b.linesNumber-1 {
 		b.text[b.lastFilledString+1] = msg
 		b.lastFilledString++
 	} else {
-		for i := range 9 {
+		for i := range b.linesNumber - 1 {
 			b.text[i] = b.text[i+1]
 		}
-		b.text[9] = msg
+		b.text[b.linesNumber-1] = msg
 	}
-	resText := strings.Join(b.text[:], "\n")
+	resText := strings.Join(b.text, "\n")
 	b.SpinnerPrinterArray[1].UpdateText(resText)
 }
 
@@ -227,15 +237,17 @@ func (b *LogBox) ShiftUp(w io.Writer) {
 }
 
 type WriterFabric struct {
-	mp      *pterm.MultiPrinter
-	writers []io.Writer
-	mu      sync.Mutex
+	mp         *pterm.MultiPrinter
+	writers    []io.Writer
+	allWriters []io.Writer
+	mu         sync.Mutex
 }
 
 func newWriterFabric(mp *pterm.MultiPrinter) WriterFabric {
 	return WriterFabric{
-		mp:      mp,
-		writers: make([]io.Writer, 0),
+		mp:         mp,
+		writers:    make([]io.Writer, 0),
+		allWriters: make([]io.Writer, 0),
 	}
 }
 
@@ -250,7 +262,14 @@ func (w *WriterFabric) GetWriter() io.Writer {
 		return writer
 	}
 
-	return w.mp.NewWriter()
+	// if defaultpb is not initialized yet, availableHeight must be set by yourself
+	if defaultpb != nil {
+		defaultpb.availableHeight--
+	}
+
+	wr := w.mp.NewWriter()
+	w.allWriters = append(w.allWriters, wr)
+	return wr
 }
 
 func (w *WriterFabric) PutWriter(writer io.Writer) {

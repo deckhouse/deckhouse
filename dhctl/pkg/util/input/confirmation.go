@@ -64,9 +64,6 @@ func (c *Confirmation) Ask() bool {
 		pterm.SetDefaultOutput(confirmWriter)
 		result, _ := pterm.DefaultInteractiveConfirm.Show(c.message)
 		pterm.SetDefaultOutput(oldWriter)
-		if pb.LogBox != nil {
-			pb.LogBox.ShiftUp(confirmWriter)
-		}
 
 		return result
 	} else {

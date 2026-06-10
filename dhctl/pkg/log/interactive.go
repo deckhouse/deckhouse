@@ -604,3 +604,13 @@ func WithLogSending(b bool) {
 		l.sendLogs = b
 	}
 }
+
+func SwitchToNonInteractive() {
+	logger, ok := defaultLogger.(*InteractiveLogger)
+	if !ok {
+		// it's not interactive logger, just exit
+		return
+	}
+	extLogger := ExternalLogger{logger: logger.logger}
+	defaultLogger = &extLogger
+}

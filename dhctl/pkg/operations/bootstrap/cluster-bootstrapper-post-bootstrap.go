@@ -57,7 +57,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		}
 		labelChan := intLogger.GetPhaseChan()
 		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Executing post-bootstrap script", labelChan, phasesChan, intLogger.GetLogChan())
+		pbParam := progressbar.NewPbParams(100, "Executing post-bootstrap script", labelChan, phasesChan, intLogger.GetLogChan(), 2)
 
 		if err := progressbar.InitProgressBar(pbParam); err != nil {
 			return err
