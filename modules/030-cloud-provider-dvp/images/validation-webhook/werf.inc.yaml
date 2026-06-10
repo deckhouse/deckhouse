@@ -70,7 +70,7 @@ final: false
 from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/validation-webhook/src
+  add: /src
   to: /src
   before: install
 mount:
@@ -78,10 +78,10 @@ mount:
 shell:
   install:
   - export GOPROXY={{ $.GOPROXY }}
-  - cd /src
+  - cd /src/validation-webhook/src
   - go mod download
   setup:
-  - cd /src
+  - cd /src/validation-webhook/src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /validation-webhook .
   - chown 64535:64535 /validation-webhook
   - chmod 0755 /validation-webhook
