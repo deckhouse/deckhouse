@@ -38,6 +38,8 @@ positive:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
+    - telemetryAPI:
+        enabled: true
   values:
     - {}
 negative:

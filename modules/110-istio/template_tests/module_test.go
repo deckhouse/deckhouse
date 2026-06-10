@@ -114,7 +114,10 @@ const istioValues = `
       ingressGateway:
         inlet: LoadBalancer
         nodePort: {}
-    tracing: {}
+    tracing:
+      collector:
+        opentelemetry: {}
+        zipkin: {}
     controlPlane:
       replicasManagement:
         mode: Standard
@@ -236,6 +239,136 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Secret", "d8-istio", "d8-remote-clusters-public-metadata").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Telemetry API default CRs toggling", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+		})
+
+		It("always creates access log Telemetry and omits metrics when Telemetry API mode is disabled", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			al := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(al.Exists()).To(BeTrue())
+			Expect(al.Field("spec.accessLogging.0.providers.0.name").String()).To(Equal("d8-main"))
+			Expect(al.Field("spec.metrics").Exists()).To(BeFalse())
+			Expect(al.Field("spec.tracing").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Telemetry", "d8-ingress-nginx", "ingress-nginx-disable-span-reporting").Exists()).To(BeFalse())
+		})
+
+		It("extends d8-main Telemetry with metrics when Telemetry API mode is enabled", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(mesh.Exists()).To(BeTrue())
+			Expect(mesh.Field("spec.accessLogging.0.providers.0.name").String()).To(Equal("d8-main"))
+			Expect(mesh.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
+		})
+
+		It("adds tracing to d8-main Telemetry and Zipkin extension provider when tracing uses collector.zipkin", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.ValuesSet("istio.tracing.enabled", true)
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc:9411")
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(mesh.Exists()).To(BeTrue())
+			Expect(mesh.Field("spec.tracing.0.providers.0.name").String()).To(Equal("deckhouse-tracing"))
+			Expect(mesh.Field("spec.tracing.0.randomSamplingPercentage").Num).To(Equal(float64(1)))
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders").Exists()).To(BeTrue())
+			foundZipkinEP := false
+			for _, ep := range istioV25.Field("spec.values.meshConfig.extensionProviders").Array() {
+				if ep.Get("name").String() == "deckhouse-tracing" {
+					Expect(ep.Get("zipkin.address").String()).To(Equal("jaeger-collector.tracing.svc:9411"))
+					foundZipkinEP = true
+				}
+			}
+			Expect(foundZipkinEP).To(BeTrue())
+			Expect(istioV25.Field("spec.values.meshConfig.defaultConfig.tracing").Exists()).To(BeFalse())
+
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+			Expect(iopV21.Field("spec.meshConfig.defaultConfig.tracing").Exists()).To(BeFalse())
+			foundZipkinIOP := false
+			for _, ep := range iopV21.Field("spec.meshConfig.extensionProviders").Array() {
+				if ep.Get("name").String() == "deckhouse-tracing" {
+					Expect(ep.Get("zipkin.address").String()).To(Equal("jaeger-collector.tracing.svc:9411"))
+					foundZipkinIOP = true
+				}
+			}
+			Expect(foundZipkinIOP).To(BeTrue())
+		})
+
+		It("adds OpenTelemetry tracing to d8-main and deckhouse-tracing extension provider when collector.opentelemetry is set", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.ValuesSet("istio.tracing.enabled", true)
+			f.ValuesSet("istio.tracing.collector.opentelemetry.service", "opentelemetry-collector.observability.svc.cluster.local")
+			f.ValuesSet("istio.tracing.collector.opentelemetry.port", 4317)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(mesh.Field("spec.tracing.0.providers.0.name").String()).To(Equal("deckhouse-tracing"))
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			foundOtelEP := false
+			for _, ep := range istioV25.Field("spec.values.meshConfig.extensionProviders").Array() {
+				if ep.Get("name").String() == "deckhouse-tracing" {
+					Expect(ep.Get("opentelemetry.service").String()).To(Equal("opentelemetry-collector.observability.svc.cluster.local"))
+					Expect(ep.Get("opentelemetry.port").Int()).To(Equal(int64(4317)))
+					foundOtelEP = true
+				}
+			}
+			Expect(foundOtelEP).To(BeTrue())
+		})
+
+		It("creates ingress-nginx span-disable Telemetry when ingress-nginx module is enabled", func() {
+			f.ValuesSet("global.enabledModules", []string{"operator-prometheus", "cert-manager", "vertical-pod-autoscaler", "cni-cilium", "ingress-nginx"})
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingressNg := f.KubernetesResource("Telemetry", "d8-ingress-nginx", "ingress-nginx-disable-span-reporting")
+			Expect(ingressNg.Exists()).To(BeTrue())
+			Expect(ingressNg.Field("spec.tracing.0.disableSpanReporting").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Telemetry API mesh defaults for control plane revisions", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.HelmRender()
+		})
+
+		It("adds default Prometheus provider and disables telemetry v2 filters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istioV25.Field("spec.values.meshConfig.defaultProviders.metrics.0").String()).To(Equal("prometheus"))
+			Expect(istioV25.Field("spec.values.telemetry.enabled").String()).To(Equal("true"))
+			Expect(istioV25.Field("spec.values.telemetry.v2.enabled").String()).To(Equal("false"))
+
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+			Expect(iopV21.Field("spec.meshConfig.defaultProviders.metrics.0").String()).To(Equal("prometheus"))
+			Expect(iopV21.Field("spec.values.telemetry.enabled").String()).To(Equal("true"))
+			Expect(iopV21.Field("spec.values.telemetry.v2.enabled").String()).To(Equal("false"))
 		})
 	})
 

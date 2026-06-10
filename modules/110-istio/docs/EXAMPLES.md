@@ -1,5 +1,6 @@
 ---
 title: "The istio module: examples"
+description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, and control plane upgrades."
 ---
 
 ## Circuit Breaker
@@ -293,7 +294,7 @@ spec:
 
 To use Ingress, you need to:
 
-* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/ingress-nginx/) module's [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.
+* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](/modules/ingress-nginx/) module's [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the Ingress controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress controller's sidecar is only catching traffic directed to Service CIDR.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar container can identify the application service that serves requests.
@@ -576,7 +577,7 @@ spec:
 
 ## Setting up federation for two clusters using the IstioFederation CR
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 Cluster A:
 
@@ -604,7 +605,7 @@ spec:
 
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 Cluster A:
 
@@ -641,6 +642,194 @@ annotations:
   inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
 ```
 
+<span id="telemetry-api-mesh-observability"></span>
+
+## Telemetry API for mesh metrics and access logs
+
+[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) is the recommended way to configure the collection of data on the operation of services (metrics, access logs, tracing providers) together with `meshConfig`.
+
+The module can run in two modes, controlled by [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled):
+
+| Mode | Behaviour |
+|------|-----------|
+| `false` (default) | Classic path: full `telemetry.v2` in the Istio Operator / `Istio` resource (including Sail’s `telemetry.v2.prometheus`). The module always deploys `Telemetry` `d8-main` in `d8-istio` for stdout access logs only; there is no `spec.metrics` / `spec.tracing` on that object and no `defaultProviders.metrics` |
+| `true` | Telemetry API path: `meshConfig.defaultProviders.metrics` selects the built-in Prometheus provider; `telemetry.v2` integrations are toggled off; the same `Telemetry` `d8-main` gains `spec.metrics` (and optional `spec.tracing` via `deckhouse-tracing` when [`tracing.collector`](configuration.html#parameters-tracing-collector) is configured). Access log format comes from [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) |
+
+### Enabling Telemetry API mode
+
+Apply a `ModuleConfig` for the Istio module (or the same structure in the cluster config):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    telemetryAPI:
+      enabled: true
+```
+
+Wait until the `Istio` / `IstioOperator` resource in `d8-istio` reconciles and workloads have picked up the new config (restart application pods if dashboards stay empty after traffic was sent).
+
+### Verifying metrics and logs
+
+Generate traffic between meshed pods, then on a pod with `istio-proxy`:
+
+```shell
+# Prometheus text from the sidecar admin API (istio-proxy has pilot-agent, not curl).
+istio_proxy_pod="$(
+  d8 k -n my-namespace get pods -l app=my-app -o jsonpath='{.items[0].metadata.name}'
+)"
+d8 k exec -n my-namespace "${istio_proxy_pod}" -c istio-proxy -- \
+  /usr/local/bin/pilot-agent request GET stats/prometheus | head
+```
+
+You should see series such as `istio_requests_total` if metrics are wired correctly.
+
+### Prometheus scraping and Grafana
+
+The module creates a [`PodMonitor`](/modules/prometheus/) for sidecar metrics when the [`operator-prometheus`](/modules/operator-prometheus/) module is enabled. Monitored namespaces are derived automatically from mesh membership (istio-injected workloads); you can exclude a namespace from scraping with label `istio.deckhouse.io/discard-metrics: "true"` on the `Namespace`.
+
+If workload dashboards stay empty while control plane dashboards work, confirm that:
+
+- workloads run with the Istio sidecar and label `service.istio.io/canonical-name` is present on pods;
+- the namespace is not marked with `istio.deckhouse.io/discard-metrics: "true"`.
+
+### Extra `Telemetry` policies (optional)
+
+Prefer additional `Telemetry` objects that use a workload selector (or `targetRef`) to pin policies to matching pods. Two or more selector‑less `Telemetry` resources in the same namespace are invalid—Istio reports [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/) because the effective policy becomes ambiguous rather than cleanly “merged”. The module already ships `d8-main` in `d8-istio` as the single mesh‑wide defaults object; avoid placing another selector‑less `Telemetry` there unless you are intentionally replacing chart output.
+
+Beyond that, scoped policies—for example metrics per namespace—look like:
+
+```yaml
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: team-a-prometheus-defaults
+  namespace: team-a
+spec:
+  metrics:
+  - providers:
+    - name: prometheus
+```
+
+For tag removal, disabling specific metrics or modes, follow [Customizing Istio metrics with Telemetry API](https://istio.io/latest/docs/tasks/observability/metrics/telemetry-api/).
+
+### Tracing with Telemetry API
+
+[`tracing.collector`](configuration.html#parameters-tracing-collector) is the single ModuleConfig entry for mesh-wide trace export (Zipkin or OpenTelemetry).
+
+- `telemetryAPI.enabled: false` plus [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — legacy only: `meshConfig.defaultConfig.tracing.zipkin` from [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (`host:port`, Jaeger Zipkin port `9411`). OpenTelemetry needs Telemetry API mode.
+- `telemetryAPI.enabled: true` plus `tracing.enabled: true` — the module registers `deckhouse-tracing` when [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) has `service` and `port`, or when [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) is set (OpenTelemetry wins if both are configured). Legacy `defaultConfig.tracing` is omitted; mesh-wide `Telemetry` `d8-main` gets `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, default `1.0`).
+
+Exporters the module does not model (SkyWalking, custom TLS stacks, extra provider names) still need namespace-scoped `Telemetry` with `selector`—not a second selector-less CR in `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). See [Distributed tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+
+#### Example — Telemetry API bundle + bundled Zipkin/Jaeger collector
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    telemetryAPI:
+      enabled: true
+    tracing:
+      enabled: true
+      sampling: 25
+      collector:
+        zipkin:
+          address: "jaeger-collector.observability.svc.cluster.local:9411"
+```
+
+Roll out the Istio/`IstioOperator` manifests in `d8-istio`; confirm workloads pick up telemetry before blaming dashboards.
+
+#### Kiali
+
+To see traces inside Kiali UI, configure [`tracing.kiali`](configuration.html#parameters-tracing-kiali) (Jaeger URL + cluster‑internal gRPC endpoint) whenever Kiali is enabled.
+
+#### Example — mesh-wide OTLP via ModuleConfig
+
+{% alert level="info" %}OpenTelemetry export in the chart follows [Distributed tracing with OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) on Istio 1.25+. On Istio 1.21 use Zipkin/Jaeger via [`tracing.collector.zipkin`](configuration.html#parameters-tracing-collector) or upgrade the control-plane revision.{% endalert %}
+
+Deploy a Collector reachable from the mesh, then enable Telemetry API mode and point [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) at it. The module adds extension provider `deckhouse-tracing` and `spec.tracing` on `d8-main`—do not patch the generated `Istio` / `IstioOperator` `meshConfig` for mesh-wide OTLP.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    telemetryAPI:
+      enabled: true
+    tracing:
+      enabled: true
+      sampling: 10
+      collector:
+        opentelemetry:
+          service: opentelemetry-collector.observability.svc.cluster.local
+          port: 4317
+```
+
+For HTTP OTLP, add `collector.opentelemetry.http.path` (and optional `timeout`) per [`tracing.collector.opentelemetry.http`](configuration.html#parameters-tracing-collector-opentelemetry).
+
+Per-workload overrides still use namespaced `Telemetry` with `selector` referencing `deckhouse-tracing` (or another provider you define yourself outside `d8-istio`). Do not add a second selector-less `Telemetry` in `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)).
+
+#### Example — tracing only for selected workloads
+
+Use `selector` (or `targetRef`) so Telemetry targets only matching pods—the pattern below is IST0160-safe. Within a single namespace, `Telemetry` without selectors can still exist at most once; do not pile multiple selector-less manifests there.
+
+```yaml
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: checkout-tracing
+  namespace: shop
+spec:
+  selector:
+    matchLabels:
+      app: checkout
+  tracing:
+  - providers:
+    - name: jaeger-zipkin
+    randomSamplingPercentage: 100.0
+```
+
+#### Example — disable span export for ingress-only namespaces
+
+In Deckhouse, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in `d8-ingress-nginx` with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
+
+```yaml
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: no-tracing-example
+  namespace: my-namespace
+spec:
+  tracing:
+  - disableSpanReporting: true
+```
+
+### Rolling back to the legacy telemetry stack
+
+```yaml
+spec:
+  settings:
+    telemetryAPI:
+      enabled: false
+```
+
+The module-managed `Telemetry` objects for this mode disappear on the next sync; Istio restores the full `telemetry.v2` configuration.
+
 ## `CNIPlugin` application traffic redirection mode restrictions
 
 Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
@@ -664,7 +853,7 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 * Upgrade algorithm (i.e. from `1.21` to `1.25`):
   * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.25"]`).
 * Wait for the corresponding pod `istiod-v1x25-xxx-yyy` to appear in `d8-istio` namespace.
-* For every application namespase with istio enabled:
+* For every application namespace with istio enabled:
   * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
   * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
 * Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
@@ -683,7 +872,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 ### Auto upgrading istio data-plane
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
 

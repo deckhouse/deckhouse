@@ -39,3 +39,25 @@
     true
   {{- end -}}
 {{- end -}}
+
+{{- define "istioTracingProvider" -}}
+  {{- $otel := $.Values.istio.tracing.collector.opentelemetry | default dict -}}
+  {{- $zipkin := $.Values.istio.tracing.collector.zipkin | default dict -}}
+  {{- if and $otel.service $otel.port -}}
+- name: deckhouse-tracing
+  opentelemetry:
+    service: {{ $otel.service | quote }}
+    port: {{ $otel.port }}
+    {{- if $otel.http }}
+    http:
+      path: {{ default "/v1/traces" $otel.http.path | quote }}
+      {{- if $otel.http.timeout }}
+      timeout: {{ $otel.http.timeout | quote }}
+      {{- end }}
+    {{- end }}
+  {{- else if $zipkin.address }}
+- name: deckhouse-tracing
+  zipkin:
+    address: {{ $zipkin.address | quote }}
+  {{- end }}
+{{- end -}}

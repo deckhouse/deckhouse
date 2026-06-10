@@ -1,5 +1,6 @@
 ---
 title: "The istio module: Custom Resources (by istio.io)"
+description: "Reference for upstream Istio Custom Resources used by the module: routing (DestinationRule, VirtualService, ServiceEntry), authentication (PeerAuthentication, RequestAuthentication), authorization (AuthorizationPolicy), and Sidecar."
 ---
 
 ## Routing

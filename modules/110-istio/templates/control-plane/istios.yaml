@@ -15,6 +15,7 @@
   {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
   {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
+    {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict }}
     {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -109,6 +110,11 @@ spec:
     meshConfig:
       rootNamespace: d8-{{ $.Chart.Name }}
       trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+      {{- if $telemetryAPI.enabled }}
+      defaultProviders:
+        metrics:
+        - prometheus
+      {{- end }}
 
       extensionProviders:
       - envoyFileAccessLog:
@@ -122,7 +128,10 @@ spec:
               {{ $key }}: {{ $value | toJson }}
             {{- end }}
           {{- end }}
-        name: main-access-log-format
+        name: d8-main
+      {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
+      {{- include "istioTracingProvider" $ | nindent 6 }}
+      {{- end }}
 
       # The rules below exclude upmeter-related namespaces from istiod's point of view.
       # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
@@ -145,12 +154,16 @@ spec:
           ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
           PROXY_CONFIG_XDS_AGENT: "true"
         holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
-    {{- if $.Values.istio.tracing.enabled }}
+        {{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
+        {{- with $.Values.istio.tracing.collector.zipkin }}
+        {{- with .address }}
         tracing:
           sampling: {{ $.Values.istio.tracing.sampling }}
           zipkin:
-            address: {{ $.Values.istio.tracing.collector.zipkin.address }}
-    {{- end }}
+            address: {{ . | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
 
     {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
       caCertificates:
@@ -210,6 +223,11 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
   {{- end }}
     telemetry:
+  {{- if $telemetryAPI.enabled }}
+      enabled: true
+      v2:
+        enabled: false
+  {{- else }}
       enabled: true
       v2:
         enabled: true
@@ -217,6 +235,7 @@ spec:
           enabled: true
         stackdriver:
           enabled: false
+  {{- end }}
     sidecarInjectorWebhook:
       injectedAnnotations:
         istio.deckhouse.io/full-version: "{{ $fullVersion }}"
