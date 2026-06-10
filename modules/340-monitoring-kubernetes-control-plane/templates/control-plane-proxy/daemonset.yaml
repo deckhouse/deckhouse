@@ -2,6 +2,7 @@
 cpu: 10m
 memory: 15Mi
 {{- end }}
+{{- $securityPolicyExceptionEnabled := and (.Values.global.enabledModules | has "admission-policy-engine-crd") (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -42,6 +43,9 @@ spec:
     metadata:
       labels:
         app: control-plane-proxy
+        {{- if $securityPolicyExceptionEnabled }}
+        security.deckhouse.io/security-policy-exception: control-plane-proxy
+        {{- end }}
     spec:
       serviceAccountName: control-plane-proxy
       automountServiceAccountToken: true

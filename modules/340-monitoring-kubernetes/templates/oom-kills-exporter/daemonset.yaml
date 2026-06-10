@@ -2,6 +2,7 @@
 cpu: 1m
 memory: 20Mi
 {{- end }}
+{{- $securityPolicyExceptionEnabled := and (.Values.global.enabledModules | has "admission-policy-engine-crd") (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) }}
 {{- if .Values.monitoringKubernetes.oomKillsExporterEnabled }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -47,17 +48,25 @@ spec:
     metadata:
       labels:
         app: oom-kills-exporter
+        {{- if $securityPolicyExceptionEnabled }}
+        security.deckhouse.io/security-policy-exception: oom-kills-exporter
+        {{- end }}
       name: oom-kills-exporter
     spec:
       serviceAccountName: oom-kills-exporter
       automountServiceAccountToken: true
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root_runtime_default" . | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "oomKillsExporter") }}
         name: oom-kills-exporter
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        securityContext:
+          privileged: true
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
         args:
           - -logtostderr
           - -v=2
@@ -96,7 +105,7 @@ spec:
             {{- include "oom_kills_exporter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"

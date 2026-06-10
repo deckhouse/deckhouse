@@ -1,0 +1,55 @@
+{{- if and (.Values.global.enabledModules | has "admission-policy-engine-crd") (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: monitoring-ping
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          The cleanup init container runs as root to remove stale host textfile metrics.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Root execution is required for the cleanup init container.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_RAW
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_RAW capability is required by the monitoring-ping container for ICMP probe operations.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          monitoring-ping uses host network namespace for node-to-node ICMP probing.
+    hostPorts:
+      - port: 4289
+        protocol: TCP
+        metadata:
+          description: HTTPS endpoint exposed via kube-rbac-proxy.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          monitoring-ping requires hostPath mount for node-exporter textfile cleanup.
+    hostPath:
+      allowedValues:
+        - path: /var/run/node-exporter-textfile
+          readOnly: false
+          metadata:
+            description: Shared textfile directory with node-exporter.
+{{- end }}
