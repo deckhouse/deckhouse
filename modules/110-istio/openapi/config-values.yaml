@@ -386,7 +386,7 @@ properties:
       root:
         type: string
         description: The root certificate in PEM format if `cert` is an intermediate certificate.
-  jwksResolverExtraRootCA:
+  jwksResolverAdditionalRootCA:
     type: string
     description: |
       An additional root certificate in PEM format. It is used by istiod when resolving JWKS URIs over HTTPS.

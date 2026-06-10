@@ -38,7 +38,7 @@ positive:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
-    - jwksResolverExtraRootCA: |
+    - jwksResolverAdditionalRootCA: |
         -----BEGIN CERTIFICATE-----
         MIIDXTCCAkWgAwIBAgIJAN...
         -----END CERTIFICATE-----

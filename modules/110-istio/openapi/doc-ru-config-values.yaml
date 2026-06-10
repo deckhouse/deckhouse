@@ -177,7 +177,7 @@ properties:
         description: Цепочка сертификатов в формате PEM на случай, если `cert` — промежуточный сертификат.
       root:
         description: Корневой сертификат в формате PEM на случай, если `cert` — промежуточный сертификат.
-  jwksResolverExtraRootCA:
+  jwksResolverAdditionalRootCA:
     description: |
       Дополнительный корневой сертификат в формате PEM. Используется компонентом istiod при получении JWKS URI по HTTPS.
   controlPlane:

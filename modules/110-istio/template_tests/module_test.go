@@ -155,7 +155,7 @@ const istioValues = `
       enabled: false
 `
 
-const jwksResolverExtraRootCA = `-----BEGIN CERTIFICATE-----
+const jwksResolverAdditionalRootCA = `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAN...
 -----END CERTIFICATE-----`
 
@@ -350,7 +350,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.25.2","1.27.9"]`)
-			f.ValuesSet("istio.jwksResolverExtraRootCA", jwksResolverExtraRootCA)
+			f.ValuesSet("istio.jwksResolverAdditionalRootCA", jwksResolverAdditionalRootCA)
 			f.HelmRender()
 		})
 
@@ -365,9 +365,9 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(istioV25.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV27.Exists()).To(BeTrue())
 
-			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverExtraRootCA))
-			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverExtraRootCA))
-			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverExtraRootCA))
+			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 		})
 	})
 

@@ -173,7 +173,7 @@ spec:
       cni:
         enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
       enabled: true
-  {{- with $.Values.istio.jwksResolverExtraRootCA }}
+  {{- with $.Values.istio.jwksResolverAdditionalRootCA }}
       jwksResolverExtraRootCA: |-
 {{ . | indent 8 }}
   {{- end }}
