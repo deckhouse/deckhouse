@@ -34,6 +34,7 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"time"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 	"sigs.k8s.io/yaml"
@@ -226,7 +227,14 @@ func marshalSortedYAMLDocs(group map[string]map[string]interface{}) ([]string, e
 	return docs, nil
 }
 
+// runTimeout caps a single validator invocation so a hung binary cannot hang
+// the calling RPC or CLI command.
+const runTimeout = 30 * time.Second
+
 func (p *Preparator) run(ctx context.Context, subcommand string, stdin []byte) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, runTimeout)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, p.binaryPath, subcommand)
 	cmd.Stdin = bytes.NewReader(stdin)
 

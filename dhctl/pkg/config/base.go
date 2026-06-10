@@ -77,7 +77,7 @@ func LoadConfigFromFile(
 		}
 	}
 
-	if err := EnsureProviderSchemas(ctx, docs, globalOptions); err != nil {
+	if err := EnsureProviderSchemas(ctx, "", docs, globalOptions); err != nil {
 		return nil, err
 	}
 
@@ -747,22 +747,28 @@ var (
 	downloadProviderBundle = image.DownloadAndUnpackImage
 )
 
-// EnsureProviderSchemas makes the cloud provider referenced by docs validatable
-// in this process. For an external provider it downloads the provider bundle
-// into <DownloadDir>/<provider>@<digest>/, points the <DownloadDir>/<provider>
-// symlink at it and loads the bundle schemas into the schema store. It is a
-// no-op for static clusters and for providers whose candi is already present
-// (in-tree or previously unpacked). Concurrent calls for the same
-// provider@digest share one download.
-func EnsureProviderSchemas(ctx context.Context, docs []string, globalOptions *options.GlobalOptions) error {
+// EnsureProviderSchemas makes provider (empty means "extract it from docs")
+// validatable in this process. For an external provider it downloads the
+// provider bundle into <DownloadDir>/<provider>@<digest>/, points the
+// <DownloadDir>/<provider> symlink at it and loads the bundle schemas into the
+// schema store. docs supply the registry access (InitConfiguration or the
+// deckhouse ModuleConfig); without registry data the default public registry
+// is used. It is a no-op for static clusters and for providers whose candi is
+// already present (in-tree or previously unpacked). Concurrent calls for the
+// same provider@digest share one download.
+func EnsureProviderSchemas(ctx context.Context, provider string, docs []string, globalOptions *options.GlobalOptions) error {
 	if globalOptions == nil {
 		globalOptions = &options.GlobalOptions{}
 	}
 
-	provider, err := fetchCloudProvider(docs)
-	if err != nil {
-		return err
+	if provider == "" {
+		fetched, err := fetchCloudProvider(docs)
+		if err != nil {
+			return err
+		}
+		provider = fetched
 	}
+	provider = strings.ToLower(provider)
 	if provider == "" || providerCandiPresent(provider, globalOptions) {
 		return nil
 	}
