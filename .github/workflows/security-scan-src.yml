@@ -273,7 +273,7 @@ jobs:
   # ============================================================================
   gitleaks_scan:
     name: Gitleaks scan
-    runs-on: self-slim
+    runs-on: ubuntu-slim
     needs: pull_request_info
     permissions:
       contents: read
@@ -357,7 +357,7 @@ jobs:
   # ============================================================================
   security_scan_src_required:
     name: Security scan src required
-    runs-on: self-slim
+    runs-on: ubuntu-slim
     if: ${{ always() && needs.pull_request_info.result == 'success' }}
     needs:
       - pull_request_info
