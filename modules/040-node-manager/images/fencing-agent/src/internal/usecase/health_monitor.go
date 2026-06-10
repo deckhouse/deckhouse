@@ -87,9 +87,15 @@ func NewHealthMonitor(
 
 func (h *HealthMonitor) Start(ctx context.Context, watchdogTimeout int) error {
 	timeout := time.Duration(watchdogTimeout/2-1) * time.Second
-	if err := h.startWatchdogBackoff(ctx); err != nil {
-		return err
+
+	if !h.watcher.IsMaintenanceMode() {
+		if err := h.startWatchdogBackoff(ctx); err != nil {
+			return err
+		}
+	} else {
+		h.logger.Info("node is in maintenance mode at startup, skipping initial watchdog arming")
 	}
+
 	go func() {
 		ticker := time.NewTicker(timeout)
 		defer ticker.Stop()
