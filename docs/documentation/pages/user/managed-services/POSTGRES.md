@@ -1,10 +1,12 @@
 ---
-title: "managed-postgres"
+title: "Managed PostgreSQL"
 permalink: en/user/managed-services/postgres.html
 description: "Using the managed PostgreSQL service in Deckhouse Kubernetes Platform"
 ---
 
-Use the namespaced resource Postgres to manage a PostgreSQL service. It describes the desired state of the managed PostgreSQL service, including the following:
+Managed PostgreSQL in Deckhouse Kubernetes Platform uses the namespaced Postgres resource to create a managed PostgreSQL service in a user namespace. The Postgres resource references a [PostgresClass](../../../admin/configuration/managed-services/postgres.html) configured by the cluster administrator and describes the required PostgreSQL configuration.
+
+In the Postgres resource, you can specify the following:
 
 - compute resources;
 - storage size;
@@ -14,19 +16,36 @@ Use the namespaced resource Postgres to manage a PostgreSQL service. It describe
 - logical databases;
 - data source for recovery.
 
-The Postgres resource must reference an existing [PostgresClass](../../../admin/configuration/managed-services/postgres.html) through the `spec.postgresClassName` parameter. PostgresClass is configured by the cluster administrator.
+The Postgres resource must reference an existing [PostgresClass](../../../admin/configuration/managed-services/postgres.html) through the `spec.postgresClassName` parameter. The `managed-postgres` controller uses this reference to check limits and apply default values.
+
+Use this page to create a PostgreSQL service, select a deployment type, define logical databases and users, connect to the service, and configure snapshot-based recovery.
+
+## What the Postgres resource creates
+
+The Postgres resource describes a PostgreSQL service: a single instance or a highly available cluster. Inside this service, DKP can create logical databases and PostgreSQL users.
+
+In a typical user scenario, you need to:
+
+- create a PostgreSQL service with the required CPU, memory, and storage size;
+- select a deployment option: `Standalone` or `Cluster`;
+- create one or more logical databases in `spec.databases`;
+- create users and access roles in `spec.users`;
+- connect to a database through a Service created by the controller;
+- if needed, create a PostgresSnapshot and restore a new service from the snapshot.
 
 ## Before you begin
 
 Make sure that:
 
 - [`managed-postgres`](/modules/managed-postgres/) is enabled;
-- a suitable [PostgresClass](../../../admin/configuration/managed-services/postgres.html) resource exists in the cluster;
+- the administrator has provided the name of a suitable [PostgresClass](../../../admin/configuration/managed-services/postgres.html#postgresclass-resource), allowed sizes, and available topology options;
 - you have permission to create resources in the target namespace.
 
-## Create a PostgreSQL service
+## Create a service with a database and a user
 
-The following example shows a basic Postgres resource:
+Create a Postgres resource in the application namespace. In a single manifest, specify the instance size, deployment type, logical database, and connection user.
+
+The following example shows a basic PostgreSQL cluster with one logical database, `appdb`, and the `app-rw` user:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
@@ -34,14 +53,14 @@ kind: Postgres
 metadata:
   labels:
     app.kubernetes.io/name: managed-psql-operator
-  name: test
+  name: app-postgres
 spec:
   users:
-    - name: test-rw
+    - name: app-rw
       password: '123'
       role: rw
   databases:
-    - name: "testdb"
+    - name: "appdb"
   postgresClassName: default
   instance:
     memory:
@@ -66,10 +85,91 @@ d8 k apply -f managed-services_v1alpha1_postgres.yaml -n postgres
 Check the resource status:
 
 ```shell
-d8 k get postgres test -n postgres -o wide -w
+d8 k get postgres app-postgres -n postgres -o wide -w
 ```
 
 To verify that the service works correctly, make sure all values in `status.conditions` have the `True` status.
+
+As a result, DKP creates a PostgreSQL service, the `appdb` logical database inside this service, and the `app-rw` user with the `rw` role.
+
+## Create logical databases
+
+The `spec.databases` parameter defines the list of logical databases inside the PostgreSQL service. This is not a separate service or a separate PostgreSQL instance: DKP creates the listed databases in the service described by the same Postgres resource.
+
+Define logical databases together with users in a single manifest. DKP reconciles PostgreSQL to the specified state: it creates missing databases and users, synchronizes access roles, and deletes items that were removed from the `spec.databases` or `spec.users` lists.
+
+Example:
+
+```yaml
+spec:
+  databases:
+    - name: "testdb"
+```
+
+To add a database to an existing service, add it to the `spec.databases` list and apply the updated Postgres resource manifest.
+
+## Create users
+
+The `spec.users` parameter defines PostgreSQL users for the service. Define users declaratively in the manifest instead of manually running `CREATE USER`, `GRANT`, and configuring access inside each PostgreSQL instance.
+
+You can define the following fields for a user:
+
+- `name`;
+- `password`;
+- `hashedPassword`;
+- `role`;
+- `storeCredsToSecret`.
+
+The following roles are supported:
+
+- `ro`;
+- `rw`;
+- `monitoring`.
+
+Example:
+
+```yaml
+spec:
+  users:
+    - name: test-rw
+      password: '123'
+      role: rw
+```
+
+If you specify `password`, the operator automatically converts it to `hashedPassword` and removes `password` from `.spec`.
+
+If you need to store the password in plain text in a Kubernetes Secret, use `storeCredsToSecret`.
+
+Example:
+
+```yaml
+spec:
+  users:
+    - name: test-rw
+      password: '123'
+      storeCredsToSecret: test-rw-creds
+      role: rw
+```
+
+## Connect to the database
+
+For a basic scenario, use `psql` and the Service that matches the Postgres resource name and endpoint type.
+
+Example of connecting to the `app-postgres` Postgres resource in the `postgres` namespace from a pod in the same cluster:
+
+```shell
+psql -U app-rw -d appdb -h d8ms-pg-app-postgres-rw.postgres.svc -p 5432
+```
+
+The following Services are available for database connections:
+
+- `d8ms-pg-<postgres-name>-rw`: points to the primary instance and allows read and write operations;
+- `d8ms-pg-<postgres-name>-ro`: points to replicas (in `Cluster` mode) and allows read-only operations;
+- `d8ms-pg-<postgres-name>-r`: points to the primary instance or replicas (in `Cluster` mode) and allows read-only operations against a randomly selected instance.
+
+In the Service name, `<postgres-name>` matches the name of the Postgres resource, and the `rw`, `ro`, or `r` suffix indicates the endpoint type and is not related to the user name. In the `d8ms-pg-app-postgres-rw.postgres.svc` DNS name, the `postgres` part is the namespace where the Postgres resource is created.
+
+If the user has the `storeCredsToSecret` field set, the connection string is stored in the specified Secret in the `<database-name>-dsn` field.
 
 ## Required parameters of the Postgres resource
 
@@ -112,7 +212,8 @@ The `spec.instance.persistentVolumeClaim.storageClassName` parameter is supporte
 
 ## Configure PostgreSQL settings
 
-Use `spec.configuration` to define PostgreSQL settings.
+Use `spec.configuration` in the Postgres manifest to override PostgreSQL settings for a specific service.
+
 The following parameters are supported:
 
 - `maxConnections`;
@@ -129,21 +230,20 @@ spec:
     sharedBuffers: 128Mi
 ```
 
-Whether these parameters can be overridden depends on the settings of the related [PostgresClass](../../../admin/configuration/managed-services/postgres.html).
+Whether these parameters can be overridden depends on the settings of the related [PostgresClass](../../../admin/configuration/managed-services/postgres.html#postgresclass-resource). If the administrator has not allowed overriding a parameter in PostgresClass, the Postgres resource fails validation.
 
-## Deployment types
+## Select a deployment option
 
-The `spec.type` parameter defines the PostgreSQL service type. The following values are supported:
+Managed PostgreSQL supports two deployment types:
 
-- `Cluster`;
-- `Standalone`.
+- `Cluster`: a highly available deployment with multiple PostgreSQL instances. Use it for production workloads and services that require availability or durability of committed transactions;
+- `Standalone`: a single PostgreSQL instance. Use it for development environments, test environments, and small workloads.
 
-The default value is `Cluster`.
+To select a deployment type, set `spec.type` to `Cluster` or `Standalone`. The default value is `Cluster`.
 
 ### Deploy in Cluster mode
 
-For a cluster deployment, use `spec.type: Cluster`
-and specify parameters in the `spec.cluster` section.
+For a cluster deployment, set `spec.type: Cluster` and configure topology and replication mode in the `spec.cluster` section.
 
 The following `spec.cluster.topology` values are supported:
 
@@ -213,77 +313,6 @@ Use the `d8ms-pg-standalone-rw` Service to connect:
 
 ```shell
 psql -U test-rw -d testdb -h d8ms-pg-standalone-rw.postgres.svc -p 5432
-```
-
-## Connect to the database
-
-For a basic scenario, use `psql` and the Service that matches the Postgres resource name and access role.
-
-Example of connecting to the cluster from the basic scenario:
-
-```shell
-psql -U test-rw -d testdb -h d8ms-pg-test-rw.postgres.svc -p 5432
-```
-
-The following Services are available for database connections:
-
-- `d8ms-pg-<name>-rw`: points to the primary instance and allows read and write operations;
-- `d8ms-pg-<name>-ro`: points to replicas (in `Cluster` mode) and allows read-only operations;
-- `d8ms-pg-<name>-r`: points to the primary instance or replicas (in `Cluster` mode) and allows read-only operations against a randomly selected instance.
-
-If the user has the `storeCredsToSecret` field set, the connection string is stored in the specified Secret in the `<database-name>-dsn` field.
-
-## Configure users
-
-The `spec.users` parameter defines PostgreSQL users. You can define the following fields for a user:
-
-- `name`;
-- `password`;
-- `hashedPassword`;
-- `role`;
-- `storeCredsToSecret`.
-
-The following roles are supported:
-
-- `ro`;
-- `rw`;
-- `monitoring`.
-
-Example:
-
-```yaml
-spec:
-  users:
-    - name: test-rw
-      password: '123'
-      role: rw
-```
-
-If you specify `password`, the operator automatically converts it to `hashedPassword` and removes `password` from `.spec`.
-
-If you need to store the password in plain text in a Kubernetes Secret, use `storeCredsToSecret`.
-
-Example:
-
-```yaml
-spec:
-  users:
-    - name: test-rw
-      password: '123'
-      storeCredsToSecret: test-rw-creds
-      role: rw
-```
-
-## Configure logical databases
-
-The `spec.databases` parameter defines the list of PostgreSQL logical databases.
-
-Example:
-
-```yaml
-spec:
-  databases:
-    - name: "testdb"
 ```
 
 ## Create a snapshot
