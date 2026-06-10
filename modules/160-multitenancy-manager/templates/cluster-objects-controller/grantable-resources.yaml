@@ -123,7 +123,10 @@ spec:
     - key: rbac.deckhouse.io/delegatable
       operator: DoesNotExist
   usageReferences:
-  # RoleBindings in project namespaces that reference a ClusterRole by name.
+  # RoleBindings in project namespaces that reference a ClusterRole by name. Allow-list only — NOT
+  # countable: capping the number of RoleBindings per ClusterRole is meaningless, and counting them
+  # would also pick up the platform-managed access-control bindings (the d8:user-authz:* roles bound in
+  # every namespace), which are not tenant grants. Availability is still enforced on these RoleBindings.
   - rule:
       apiGroups:
       - rbac.authorization.k8s.io
@@ -135,4 +138,3 @@ spec:
     match:
       fieldPath: $.roleRef.kind
       equals: ClusterRole
-    countable: true
