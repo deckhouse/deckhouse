@@ -878,8 +878,8 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/managed-services/
                 - title:
-                    en: Managed-postgres
-                    ru: Managed-postgres
+                    en: Managed PostgreSQL
+                    ru: Managed PostgreSQL
                   url: /admin/configuration/managed-services/postgres.html                  
             - title:
                 en: Backup and restore
@@ -1112,8 +1112,8 @@ entries:
                 ru: Обзор
               url: /user/managed-services/
             - title:
-                en: Managed-postgres
-                ru: Managed-postgres
+                en: Managed PostgreSQL
+                ru: Managed PostgreSQL
               url: /user/managed-services/postgres.html
         - title:
             en: Monitoring
