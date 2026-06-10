@@ -44,6 +44,7 @@ const (
 	Watchdog             = "Watchdog"
 	fencingNodeLabel     = "node-manager.deckhouse.io/fencing-enabled"
 	fencingNodeLabelMode = "node-manager.deckhouse.io/fencing-mode"
+	version              = "0.1.1"
 )
 
 func main() {
@@ -51,6 +52,8 @@ func main() {
 	cfg.MustLoad()
 
 	log := logger.NewLogger(cfg.LogLevel)
+
+	log.Info("Starting fencing-agent", version)
 
 	err := AppRun(cfg, log)
 	if err != nil {
@@ -118,9 +121,7 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 		defer kubeClient.StopInformer()
 
 		softdog := watchdog.New(cfg.Watchdog.Device)
-
 		fallback := usecase.NewFallback(log, kubeClient)
-
 		fencingAgent := usecase.NewHealthMonitor(
 			kubeClient,
 			mblist,
@@ -134,13 +135,13 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 		if err != nil {
 			return fmt.Errorf("failed to start health monitor: %w", err)
 		}
+
 		defer fencingAgent.Stop()
 	} else {
 		log.Info("Notify mode enabled, no fencing will be performed")
 	}
 
 	nodesGetter := usecase.NewGetNodes(mblist)
-
 	grpcSrv := grpc.NewServer(log, eventBus, nodesGetter)
 
 	grpcSrvRunner, err := grpc.NewRunner(cfg.GRPC, log, grpcSrv)
