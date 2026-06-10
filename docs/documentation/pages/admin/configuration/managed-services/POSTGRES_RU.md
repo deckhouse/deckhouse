@@ -1,11 +1,25 @@
 ---
-title: "managed-postgres"
+title: "Managed PostgreSQL"
 permalink: ru/admin/configuration/managed-services/postgres.html
 description: "Администрирование managed-сервиса PostgreSQL в Deckhouse Kubernetes Platform"
 lang: ru
 ---
 
-Managed-сервис PostgreSQL предоставляет кластеры PostgreSQL в Deckhouse Kubernetes Platform. Сервис находится на [стадии `Preview`](/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля). Перед включением [`managed-postgres`](/modules/managed-postgres/) выполните [требования для установки](/modules/managed-postgres/configuration.html#требования). Основной cluster-wide-ресурс администратора — PostgresClass. Он определяет ограничения и значения по умолчанию для связанных ресурсов Postgres. Инструкции по созданию и использованию сервисов PostgreSQL — в разделе [«Использование managed PostgreSQL»](../../../user/managed-services/postgres.html).
+Managed PostgreSQL в Deckhouse Kubernetes Platform добавляет в кластер API для создания и сопровождения экземпляров PostgreSQL. Администратор включает модуль [`managed-postgres`](/modules/managed-postgres/) и настраивает ресурсы PostgresClass, которые определяют допустимые конфигурации пользовательских ресурсов Postgres.
+
+Ресурс Postgres может описывать отказоустойчивый кластер PostgreSQL или одиночный экземпляр. Через PostgresClass администратор задаёт, какие топологии, диапазоны CPU и памяти, значения конфигурации PostgreSQL и правила валидации доступны пользователям.
+
+Сервис находится на [стадии `Preview`](/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля). Перед включением [`managed-postgres`](/modules/managed-postgres/) выполните [требования для установки](/modules/managed-postgres/configuration.html#требования). Основной cluster-wide-ресурс администратора — PostgresClass. Он определяет, какие конфигурации Postgres доступны пользователям и какие значения применяются по умолчанию. Пользовательские операции с сервисами PostgreSQL описаны в разделе [«Использование Managed PostgreSQL»](../../../user/managed-services/postgres.html).
+
+## Доступные конфигурации PostgreSQL
+
+Настройте один или несколько ресурсов PostgresClass, чтобы определить доступные пользователям варианты конфигурации PostgreSQL:
+
+- топологии и зоны доступны пользователям;
+- диапазоны CPU и памяти разрешены;
+- параметры PostgreSQL применяются по умолчанию;
+- параметры пользователь может переопределить в своём ресурсе Postgres;
+- правила валидации должны выполняться перед созданием сервиса.
 
 ## Перед началом работы
 
@@ -15,9 +29,9 @@ Managed-сервис PostgreSQL предоставляет кластеры Post
 - выполнены [требования для установки](/modules/managed-postgres/configuration.html#требования);
 - у вас есть права на создание cluster-wide-ресурсов.
 
-## Включение managed-postgres
+## Включение Managed PostgreSQL
 
-Чтобы включить managed-сервис PostgreSQL, примените ресурс ModuleConfig:
+Чтобы включить Managed PostgreSQL, примените ресурс ModuleConfig:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -35,13 +49,13 @@ spec:
 
 ## Ресурс PostgresClass
 
-Ресурс PostgresClass — это cluster-wide-ресурс. Он используется для:
+Ресурс PostgresClass — это cluster-wide-ресурс, который описывает класс managed-сервиса PostgreSQL для пользовательских ресурсов Postgres. Используйте его, чтобы:
 
-- задания допустимой топологии PostgreSQL;
-- задания ограничений на CPU и память;
-- настройки значений конфигурации по умолчанию;
-- определения параметров, которые пользователь может переопределить;
-- добавления правил валидации.
+- задать допустимую топологию PostgreSQL;
+- ограничить CPU и память;
+- настроить значения конфигурации по умолчанию;
+- определить параметры, которые пользователь может переопределить;
+- добавить правила валидации.
 
 Каждый ресурс Postgres должен ссылаться на существующий PostgresClass через параметр `spec.postgresClassName`.
 

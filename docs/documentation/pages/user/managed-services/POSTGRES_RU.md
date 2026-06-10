@@ -1,11 +1,13 @@
 ---
-title: "managed-postgres"
+title: "Managed PostgreSQL"
 permalink: ru/user/managed-services/postgres.html
 description: "Использование managed-сервиса PostgreSQL в Deckhouse Kubernetes Platform"
 lang: ru
 ---
 
-Для работы с managed-сервисом PostgreSQL используется namespaced-ресурс Postgres. Он описывает желаемое состояние сервиса PostgreSQL, включая:
+Managed PostgreSQL в Deckhouse Kubernetes Platform использует namespaced-ресурс Postgres для создания managed-сервиса PostgreSQL в пользовательском неймспейсе. Ресурс Postgres ссылается на [PostgresClass](../../../admin/configuration/managed-services/postgres.html), который настроил администратор кластера, и описывает требуемую конфигурацию PostgreSQL.
+
+В ресурсе Postgres можно указать:
 
 - вычислительные ресурсы;
 - размер хранилища;
@@ -15,19 +17,36 @@ lang: ru
 - логические базы данных;
 - источник данных для восстановления.
 
-Ресурс Postgres должен ссылаться на существующий [PostgresClass](../../../admin/configuration/managed-services/postgres.html) через параметр `spec.postgresClassName`. Настройка PostgresClass выполняется администратором кластера.
+Ресурс Postgres должен ссылаться на существующий [PostgresClass](../../../admin/configuration/managed-services/postgres.html) через параметр `spec.postgresClassName`. Контроллер `managed-postgres` использует эту ссылку для проверки ограничений и применения значений по умолчанию.
+
+Используйте эту страницу, чтобы создать сервис PostgreSQL, выбрать тип развёртывания, описать логические базы данных и пользователей, подключиться к сервису и настроить восстановление из снимка.
+
+## Что создаёт ресурс Postgres
+
+Ресурс Postgres описывает сервис PostgreSQL: одиночный экземпляр или отказоустойчивый кластер. Внутри этого сервиса DKP может создать логические базы данных и пользователей PostgreSQL.
+
+В пользовательском сценарии обычно нужно:
+
+- создать сервис PostgreSQL с заданными CPU, памятью и размером хранилища;
+- выбрать вариант развёртывания: `Standalone` или `Cluster`;
+- создать одну или несколько логических баз данных в `spec.databases`;
+- создать пользователей и роли доступа в `spec.users`;
+- подключиться к базе данных через Service, созданный контроллером;
+- при необходимости создать PostgresSnapshot и восстановить новый сервис из снимка.
 
 ## Перед началом работы
 
 Убедитесь, что:
 
 - [`managed-postgres`](/modules/managed-postgres/) включён;
-- в кластере существует подходящий ресурс [PostgresClass](../../../admin/configuration/managed-services/postgres.html);
+- администратор сообщил имя подходящего [PostgresClass](../../../admin/configuration/managed-services/postgres.html#ресурс-postgresclass), допустимые размеры и доступные варианты топологии;
 - у вас есть права на создание ресурсов в целевом неймспейсе.
 
-## Создание сервиса PostgreSQL
+## Создание сервиса с базой и пользователем
 
-Ниже приведён базовый пример создания ресурса Postgres:
+Создайте ресурс Postgres в неймспейсе приложения. В одном манифесте укажите размер экземпляров, тип развёртывания, логическую базу данных и пользователя для подключения.
+
+Ниже приведён базовый пример кластера PostgreSQL с одной логической базой данных `testdb` и пользователем `test-rw`:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
@@ -72,6 +91,87 @@ d8 k get postgres test -n postgres -o wide -w
 
 Для проверки работоспособности сервиса убедитесь, что все значения в `status.conditions` имеют статус `True`.
 
+В результате DKP создаст сервис PostgreSQL, логическую базу данных `appdb` внутри этого сервиса и пользователя `app-rw` с ролью `rw`.
+
+## Создание логических баз данных
+
+Параметр `spec.databases` определяет список логических баз данных внутри сервиса PostgreSQL. Это не отдельный сервис и не отдельный экземпляр PostgreSQL: DKP создаёт перечисленные базы данных в сервисе, описанном тем же ресурсом Postgres.
+
+Описывайте логические базы данных вместе с пользователями в одном манифесте. DKP приводит PostgreSQL к указанному состоянию: создаёт недостающие базы данных и пользователей, синхронизирует роли доступа и удаляет элементы, которые были удалены из списков `spec.databases` или `spec.users`.
+
+Пример:
+
+```yaml
+spec:
+  databases:
+    - name: "testdb"
+```
+
+Чтобы добавить базу данных в уже созданный сервис, добавьте её в список `spec.databases` и примените обновлённый манифест ресурса Postgres.
+
+## Создание пользователей
+
+Параметр `spec.users` определяет пользователей PostgreSQL для сервиса. Описывайте пользователей декларативно в манифесте, вместо того чтобы вручную выполнять `CREATE USER`, `GRANT` и настраивать доступ внутри каждого экземпляра PostgreSQL.
+
+Для пользователя можно задать:
+
+- `name`;
+- `password`;
+- `hashedPassword`;
+- `role`;
+- `storeCredsToSecret`.
+
+Поддерживаются следующие роли:
+
+- `ro`;
+- `rw`;
+- `monitoring`.
+
+Пример:
+
+```yaml
+spec:
+  users:
+    - name: test-rw
+      password: '123'
+      role: rw
+```
+
+Если указать `password`, оператор автоматически преобразует его в `hashedPassword` и удалит `password` из `.spec`.
+
+Если нужно сохранить пароль в открытом виде в Secret Kubernetes, используйте `storeCredsToSecret`.
+
+Пример:
+
+```yaml
+spec:
+  users:
+    - name: test-rw
+      password: '123'
+      storeCredsToSecret: test-rw-creds
+      role: rw
+```
+
+## Подключение к базе данных
+
+Для базового сценария используйте `psql` и Service, соответствующий имени ресурса Postgres и типу endpoint.
+
+Пример подключения к ресурсу Postgres `app-postgres` в неймспейсе `postgres` из пода в том же кластере:
+
+```shell
+psql -U app-rw -d appdb -h d8ms-pg-app-postgres-rw.postgres.svc -p 5432
+```
+
+Для подключения к базе данных доступны следующие Services:
+
+- `d8ms-pg-<postgres-name>-rw`: указывает на primary-экземпляр и позволяет выполнять операции чтения и записи;
+- `d8ms-pg-<postgres-name>-ro`: указывает на реплики (в режиме `Cluster`) и позволяет выполнять операции только для чтения;
+- `d8ms-pg-<postgres-name>-r`: указывает на primary-экземпляр или реплики (в режиме `Cluster`) и позволяет выполнять операции только для чтения со случайно выбранного экземпляра.
+
+В имени Service значение `<postgres-name>` соответствует имени ресурса Postgres, а суффикс `rw`, `ro` или `r` указывает тип endpoint и не связан с именем пользователя. В DNS-имени `d8ms-pg-app-postgres-rw.postgres.svc` часть `postgres` — это неймспейс, в котором создан ресурс Postgres.
+
+Если для пользователя задано поле `storeCredsToSecret`, строка подключения сохраняется в указанном Secret в поле `<database-name>-dsn`.
+
 ## Обязательные параметры ресурса Postgres
 
 Для ресурса Postgres обязательны как минимум следующие параметры:
@@ -113,7 +213,7 @@ spec:
 
 ## Настройка конфигурации PostgreSQL
 
-В `spec.configuration` можно задать параметры PostgreSQL.
+Используйте `spec.configuration` в манифесте Postgres, чтобы переопределить параметры PostgreSQL для конкретного сервиса.
 
 Поддерживаются следующие параметры:
 
@@ -131,22 +231,20 @@ spec:
     sharedBuffers: 128Mi
 ```
 
-Доступность переопределения этих параметров зависит от настроек связанного [PostgresClass](../../../admin/configuration/managed-services/postgres.html).
+Доступность переопределения этих параметров зависит от настроек связанного [PostgresClass](../../../admin/configuration/managed-services/postgres.html#ресурс-postgresclass). Если администратор не разрешил переопределять параметр в PostgresClass, ресурс Postgres не пройдёт валидацию.
 
-## Типы развёртывания
+## Выбор варианта развёртывания
 
-Параметр `spec.type` определяет тип сервиса PostgreSQL.
+В Managed PostgreSQL доступны два типа развёртывания:
 
-Поддерживаются следующие значения:
+- `Cluster`: отказоустойчивое развёртывание из нескольких экземпляров PostgreSQL. Используйте его для production-нагрузок и сервисов, которым важны доступность или сохранность подтверждённых транзакций;
+- `Standalone`: одиночный экземпляр PostgreSQL. Используйте его для dev-сред, тестовых контуров и небольших задач.
 
-- `Cluster`;
-- `Standalone`.
-
-По умолчанию используется значение `Cluster`.
+Чтобы выбрать тип развёртывания, укажите значение `Cluster` или `Standalone` в параметре `spec.type`. По умолчанию используется значение `Cluster`.
 
 ### Развёртывание в режиме Cluster
 
-Для кластера используйте `spec.type: Cluster` и укажите параметры в секции `spec.cluster`.
+Для кластера укажите `spec.type: Cluster` и настройте топологию и режим репликации в секции `spec.cluster`.
 
 Поддерживаются следующие значения `spec.cluster.topology`:
 
@@ -216,79 +314,6 @@ d8 k get postgres standalone -n postgres -o wide -w
 
 ```shell
 psql -U test-rw -d testdb -h d8ms-pg-standalone-rw.postgres.svc -p 5432
-```
-
-## Подключение к базе данных
-
-Для базового сценария используйте `psql` и Service, соответствующий имени ресурса Postgres и роли доступа.
-
-Пример подключения к кластеру из базового сценария:
-
-```shell
-psql -U test-rw -d testdb -h d8ms-pg-test-rw.postgres.svc -p 5432
-```
-
-Для подключения к базе данных доступны следующие Services:
-
-- `d8ms-pg-<name>-rw`: указывает на primary-экземпляр и позволяет выполнять операции чтения и записи;
-- `d8ms-pg-<name>-ro`: указывает на реплики (в режиме `Cluster`) и позволяет выполнять операции только для чтения;
-- `d8ms-pg-<name>-r`: указывает на primary-экземпляр или реплики (в режиме `Cluster`) и позволяет выполнять операции только для чтения со случайно выбранного экземпляра.
-
-Если для пользователя задано поле `storeCredsToSecret`, строка подключения сохраняется в указанном Secret в поле `<database-name>-dsn`.
-
-## Настройка пользователей
-
-Параметр `spec.users` определяет пользователей PostgreSQL.
-
-Для пользователя можно задать:
-
-- `name`;
-- `password`;
-- `hashedPassword`;
-- `role`;
-- `storeCredsToSecret`.
-
-Поддерживаются следующие роли:
-
-- `ro`;
-- `rw`;
-- `monitoring`.
-
-Пример:
-
-```yaml
-spec:
-  users:
-    - name: test-rw
-      password: '123'
-      role: rw
-```
-
-Если указать `password`, оператор автоматически преобразует его в `hashedPassword` и удалит `password` из `.spec`.
-
-Если нужно сохранить пароль в открытом виде в Secret Kubernetes, используйте `storeCredsToSecret`.
-
-Пример:
-
-```yaml
-spec:
-  users:
-    - name: test-rw
-      password: '123'
-      storeCredsToSecret: test-rw-creds
-      role: rw
-```
-
-## Настройка логических баз данных
-
-Параметр `spec.databases` определяет список логических баз данных PostgreSQL.
-
-Пример:
-
-```yaml
-spec:
-  databases:
-    - name: "testdb"
 ```
 
 ## Создание снимка
