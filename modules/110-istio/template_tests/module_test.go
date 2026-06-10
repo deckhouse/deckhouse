@@ -166,7 +166,7 @@ const istioValues = `
               min: "64Mi"
 `
 
-const jwksResolverExtraRootCA = `-----BEGIN CERTIFICATE-----
+const jwksResolverAdditionalRootCA = `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAN...
 -----END CERTIFICATE-----`
 

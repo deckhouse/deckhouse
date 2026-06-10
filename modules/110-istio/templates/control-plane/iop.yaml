@@ -204,7 +204,7 @@ spec:
 
     pilot:
       autoscaleEnabled: false
-  {{- with $.Values.istio.jwksResolverExtraRootCA }}
+  {{- with $.Values.istio.jwksResolverAdditionalRootCA }}
       jwksResolverExtraRootCA: |-
 {{ . | indent 8 }}
   {{- end }}
