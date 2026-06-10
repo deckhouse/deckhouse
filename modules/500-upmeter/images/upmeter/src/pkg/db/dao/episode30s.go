@@ -172,6 +172,40 @@ func (d *EpisodeDao30s) ListEpisodesBySlot(slot time.Time) ([]check.Episode, err
 	return parseEpisodesFromEntities(rows)
 }
 
+// ListEpisodesUpToNSlots returns all episodes that belong to the N earliest distinct time slots,
+// sorted by time slot ascending. It is used to drain the WAL in batches: a single request carries
+// several consecutive slots instead of one, so that a backlog accumulated during a server downtime
+// is sent quickly. If the table is empty, it returns an empty slice without error.
+func (d *EpisodeDao30s) ListEpisodesUpToNSlots(n int) ([]check.Episode, error) {
+	if n < 1 {
+		n = 1
+	}
+
+	// The subquery picks the N earliest distinct slots and takes the latest of them as the upper
+	// bound. Selecting `timeslot <= bound` then yields exactly the episodes of those N slots,
+	// because there are no other slots below the bound.
+	const query = selectEntityStmt + `
+	FROM    episodes_30s
+	WHERE   timeslot <= (
+		SELECT MAX(ts) FROM (
+			SELECT DISTINCT timeslot AS ts
+			FROM episodes_30s
+			ORDER BY ts ASC
+			LIMIT ?
+		)
+	)
+	ORDER BY timeslot ASC
+	`
+
+	rows, err := d.DbCtx.StmtRunner().Query(query, n)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query SELECT: %v", err)
+	}
+	defer rows.Close()
+
+	return parseEpisodesFromEntities(rows)
+}
+
 func (d *EpisodeDao30s) DeleteUpTo(slot time.Time) error {
 	const query = `
 	DELETE FROM episodes_30s
@@ -179,6 +213,76 @@ func (d *EpisodeDao30s) DeleteUpTo(slot time.Time) error {
 	`
 	_, err := d.DbCtx.StmtRunner().Exec(query, slot.Unix())
 	return err
+}
+
+// ListEntitiesBySlotRange returns all stored episodes whose time slot is within [fromUnix, toUnix]
+// (inclusive). It is used to load the current state of a whole batch of slots in a single query.
+func (d *EpisodeDao30s) ListEntitiesBySlotRange(fromUnix, toUnix int64) ([]Entity, error) {
+	const query = selectEntityStmt + `
+	FROM    episodes_30s
+	WHERE   timeslot >= ? AND timeslot <= ?
+	`
+
+	rows, err := d.DbCtx.StmtRunner().Query(query, fromUnix, toUnix)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query SELECT: %v", err)
+	}
+	defer rows.Close()
+
+	return parseEpisodeEntities(rows)
+}
+
+// UpsertEpisodes inserts or overwrites the given 30s episodes in batched multi-row statements.
+func (d *EpisodeDao30s) UpsertEpisodes(episodes []check.Episode) error {
+	return upsert30sEpisodes(d.DbCtx, episodes)
+}
+
+// Sum30sGroupedBy5m sums 30s episode timers grouped by their parent 5m slot and probe, over all 30s
+// episodes within [fromUnix, toUnix). The returned episodes have TimeSlot set to the 5m slot. It
+// replaces a per-(slot, probe) summation with a single grouped query.
+func (d *EpisodeDao30s) Sum30sGroupedBy5m(fromUnix, toUnix int64) ([]check.Episode, error) {
+	const query = `
+	SELECT
+		timeslot - (timeslot % 300) AS slot5m,
+		group_name,
+		probe_name,
+		SUM(nano_up),
+		SUM(nano_down),
+		SUM(nano_unknown),
+		SUM(nano_unmeasured)
+	FROM episodes_30s
+	WHERE timeslot >= ? AND timeslot < ?
+	GROUP BY slot5m, group_name, probe_name
+	`
+
+	rows, err := d.DbCtx.StmtRunner().Query(query, fromUnix, toUnix)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query grouped SUM: %v", err)
+	}
+	defer rows.Close()
+
+	res := make([]check.Episode, 0)
+	for rows.Next() {
+		var (
+			ep     check.Episode
+			slot5m int64
+		)
+		err := rows.Scan(
+			&slot5m,
+			&ep.ProbeRef.Group,
+			&ep.ProbeRef.Probe,
+			&ep.Up,
+			&ep.Down,
+			&ep.Unknown,
+			&ep.NoData,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan grouped sum row: %w", err)
+		}
+		ep.TimeSlot = time.Unix(slot5m, 0)
+		res = append(res, ep)
+	}
+	return res, nil
 }
 
 func (d *EpisodeDao30s) Stats() ([]string, error) {
@@ -215,6 +319,29 @@ func (d *EpisodeDao30s) SaveBatch(episodes []check.Episode) error {
 		}
 	}
 	return nil
+}
+
+// CountDistinctTimeSlots returns how many distinct time slots are currently stored. It is used to
+// log the remaining backlog size while draining the WAL, so the catch-up speed can be measured.
+func (d *EpisodeDao30s) CountDistinctTimeSlots() (int, error) {
+	const query = `
+	SELECT COUNT(DISTINCT timeslot)
+	FROM episodes_30s
+	`
+
+	rows, err := d.DbCtx.StmtRunner().Query(query)
+	if err != nil {
+		return 0, fmt.Errorf("counting distinct timeslots: %v", err)
+	}
+	defer rows.Close()
+
+	var count int
+	if rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return 0, fmt.Errorf("scan count: %w", err)
+		}
+	}
+	return count, nil
 }
 
 func (d *EpisodeDao30s) GetEarliestTimeSlot() (time.Time, error) {

@@ -32,11 +32,17 @@ import (
 	"d8.io/upmeter/pkg/monitor/remotewrite"
 )
 
+// defaultMaxSampleAge matches Mimir's base acceptance window when out-of-order ingestion is
+// disabled: samples older than ~1h relative to TSDB head-block max time are rejected.
+// See https://grafana.com/docs/mimir/latest/configure/configure-out-of-order-samples-ingestion/
+const defaultMaxSampleAge = time.Hour
+
 // syncer links puller and exporter via channel in exporter
 type syncer struct {
-	syncID   SyncIdentifier
-	slotSize time.Duration
-	labels   []*prompb.Label
+	syncID       SyncIdentifier
+	slotSize     time.Duration
+	maxSampleAge time.Duration
+	labels       []*prompb.Label
 
 	storage  *storage // adds and gets episodes
 	exporter *exporter
@@ -54,9 +60,10 @@ func newSyncer(cfg exportingConfig, period time.Duration, storage *storage, logg
 	syncID := cfg.ID()
 
 	syncer := &syncer{
-		syncID:   syncID,
-		slotSize: cfg.slotSize,
-		labels:   cfg.labels,
+		syncID:       syncID,
+		slotSize:     cfg.slotSize,
+		maxSampleAge: cfg.maxSampleAge,
+		labels:       cfg.labels,
 
 		storage:  storage,
 		exporter: exporter,
@@ -145,6 +152,7 @@ func (s *syncer) export(ctx context.Context) error {
 	}
 
 	// Send to the remote storage
+	pushStart := time.Now()
 	if err = s.exporter.Export(ctx, timeseries); err != nil {
 		switch {
 		case errors.Is(err, ErrNotAcceptedByStorage):
@@ -162,9 +170,13 @@ func (s *syncer) export(ctx context.Context) error {
 			return fmt.Errorf("exporting timeseries (%s): %w", slot.Format("15:04:05"), err)
 		}
 	}
+	pushDur := time.Since(pushStart)
 
-	s.logger.Infof("exported timeseries %s", slot.Format("15:04:05"))
-	return s.clean(slot)
+	cleanStart := time.Now()
+	cleanErr := s.clean(slot)
+	s.logger.Infof("exported timeseries to remote storage: slot=%s series=%d pushDur=%s cleanDur=%s",
+		slot.Format("15:04:05"), len(timeseries), pushDur, time.Since(cleanStart))
+	return cleanErr
 }
 
 func (s *syncer) clean(slot time.Time) error {
@@ -187,11 +199,26 @@ func (s *syncer) getTimeseries() ([]*prompb.TimeSeries, time.Time, error) {
 		return nil, slot, err
 	}
 
+	slot = episodes[0].TimeSlot
+
+	// Drop stale tail in bulk: if the earliest slot is older than the remote storage's
+	// acceptance window, there is no point hammering the backend with guaranteed-400 requests
+	// one slot at a time. DeleteUpTo wipes the whole stale prefix in a single SQL statement.
+	if s.maxSampleAge > 0 {
+		ageDeadline := time.Now().Add(-s.maxSampleAge)
+		if slot.Before(ageDeadline) {
+			s.logger.Warnf("dropping stale slots up to %s (older than %s)", ageDeadline.Format(time.RFC3339), s.maxSampleAge)
+			if err := s.storage.Delete(s.syncID, ageDeadline); err != nil {
+				return nil, slot, fmt.Errorf("dropping stale slots: %w", err)
+			}
+			return nil, slot, ErrNoCompleteEpisodes
+		}
+	}
+
 	// Skip incomplete slots. Send only data from two slots ago and earlier.
 	//  - Current timestamp is incomplete.
 	//  - One timestamp ago is also incomplete, because the last 30s are sent after it finishes.
 	//  - Two slots ago should be complete. When exporting 5m episodes, it causes 10m delay in timeseries.
-	slot = episodes[0].TimeSlot
 	twoSlotsAgo := time.Now().Truncate(s.slotSize).Add(-2 * s.slotSize)
 	if slot.After(twoSlotsAgo) {
 		return nil, slot, ErrNoCompleteEpisodes
@@ -212,6 +239,7 @@ type exportingConfig struct {
 	exporterConfig *Config
 	labels         []*prompb.Label
 	slotSize       time.Duration
+	maxSampleAge   time.Duration
 }
 
 func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exportingConfig {
@@ -234,6 +262,11 @@ func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exp
 		headers[k] = v
 	}
 
+	maxSampleAge := defaultMaxSampleAge
+	if rw.Spec.MaxSampleAgeSeconds > 0 {
+		maxSampleAge = time.Duration(rw.Spec.MaxSampleAgeSeconds) * time.Second
+	}
+
 	return exportingConfig{
 		exporterConfig: &Config{
 			Name:        rw.Name,
@@ -243,8 +276,9 @@ func newExportConfig(rw *remotewrite.RemoteWrite, headers map[string]string) exp
 			Headers:     headers,
 			TLSConfig:   tlsConfig,
 		},
-		slotSize: time.Duration(rw.Spec.IntervalSeconds) * time.Second,
-		labels:   labels,
+		slotSize:     time.Duration(rw.Spec.IntervalSeconds) * time.Second,
+		maxSampleAge: maxSampleAge,
+		labels:       labels,
 	}
 }
 
@@ -352,10 +386,15 @@ func (sc *syncers) AddEpisodes(origin string, episodes []*check.Episode, slotSiz
 		if syncer.slotSize != slotSize {
 			continue
 		}
+		start := time.Now()
 		err := syncer.Add(origin, episodes)
 		if err != nil {
+			sc.logger.Errorf("remote_write queue failed: syncID=%s origin=%s episodes=%d slotSize=%s queueDur=%s: %v",
+				syncer.syncID, origin, len(episodes), slotSize, time.Since(start), err)
 			return err
 		}
+		sc.logger.Infof("remote_write queued to export table: syncID=%s origin=%s episodes=%d slotSize=%s queueDur=%s",
+			syncer.syncID, origin, len(episodes), slotSize, time.Since(start))
 	}
 
 	return nil
