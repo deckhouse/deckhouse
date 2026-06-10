@@ -22,7 +22,7 @@ spec:
     bb-event-on 'nodegroup-watchdog-service-changed' '_nodegroup_watchdog_service'
     function _nodegroup_watchdog_service() {
       systemctl daemon-reload
-      systemctl restart nodegroup-watchdog.service
+      systemctl reload-or-restart nodegroup-watchdog.service
       systemctl enable --now nodegroup-watchdog.service
     }
 
@@ -36,6 +36,7 @@ spec:
     RemainAfterExit=yes
     ExecStart=/opt/deckhouse/bin/nodegroup-watchdog.sh start
     ExecStop=/opt/deckhouse/bin/nodegroup-watchdog.sh stop
+    ExecReload=/opt/deckhouse/bin/nodegroup-watchdog.sh start
 
     [Install]
     WantedBy=multi-user.target

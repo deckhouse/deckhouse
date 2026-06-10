@@ -44,20 +44,19 @@ const (
 	Watchdog             = "Watchdog"
 	fencingNodeLabel     = "node-manager.deckhouse.io/fencing-enabled"
 	fencingNodeLabelMode = "node-manager.deckhouse.io/fencing-mode"
-	version              = "0.1.1"
 )
 
 func main() {
 	var cfg config.Config
 	cfg.MustLoad()
 
-	log := logger.NewLogger(cfg.LogLevel)
+	l := logger.NewLogger(cfg.LogLevel)
 
-	log.Info("Starting fencing-agent", version)
+	l.Info("Starting fencing-agent")
 
-	err := AppRun(cfg, log)
+	err := AppRun(cfg, l)
 	if err != nil {
-		log.Error("failed to run application", sl.Err(err))
+		l.Error("failed to run application", sl.Err(err))
 		os.Exit(1)
 	}
 }
