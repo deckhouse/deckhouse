@@ -417,7 +417,6 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiSSDSCNonReplicated.Exists()).To(BeTrue())
 
 			Expect(csiHDDSC.Field("metadata.annotations").String()).To(MatchYAML(`
-storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 
@@ -456,7 +455,6 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			Expect(csiHDDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(csiSSDSC.Field("metadata.annotations").String()).To(MatchYAML(`
-storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 		})
@@ -485,7 +483,6 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			Expect(csiHDDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(csiSSDSC.Field("metadata.annotations").String()).To(MatchYAML(`
-storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 		})
@@ -511,7 +508,6 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(csiSSDSCNonReplicated.Exists()).To(BeTrue())
 
 			Expect(csiHDDSC.Field("metadata.annotations").String()).To(MatchYAML(`
-storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 			Expect(csiSSDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
