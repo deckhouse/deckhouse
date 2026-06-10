@@ -1551,6 +1551,31 @@ alerts:
         The ModuleConfig annotation for allowing module disabling is set.
       severity: "4"
       markupFormat: markdown
+    - name: D8HuaweiCloudMachineStuckInDeleting
+      sourceFile: ee/modules/030-cloud-provider-huaweicloud/monitoring/prometheus-rules/caphc-controller-manager.tpl
+      moduleUrl: 030-cloud-provider-huaweicloud
+      module: cloud-provider-huaweicloud
+      edition: ee
+      description: |
+        The HuaweiCloudMachine `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` has been stuck in Deleting state for more than 24 hours.
+
+        This usually means the deletion job in HuaweiCloud is failing or the API is unavailable.
+
+        To inspect the machine status, run:
+
+        ```shell
+        d8 k get huaweicloudmachine -n {{ $labels.namespace }} {{ $labels.name }} -o yaml
+        ```
+
+        Check the controller logs for errors:
+
+        ```shell
+        d8 k logs -n d8-cloud-provider-huaweicloud -l app=caphc-controller-manager
+        ```
+      summary: |
+        HuaweiCloudMachine {{ $labels.name }} is stuck in Deleting for more than 24h.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ImageAvailabilityExporterMalfunctioning
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -2580,7 +2605,7 @@ alerts:
       edition: ce
       description: |
         Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support containerd v2.
-        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Starting from Kubernetes 1.37, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
         Please check the requirements for containerd v2 and schedule your migration plan.
       summary: |
         Node {{ $labels.node }} is using deprecated containerd v1 – migration to v2 required.
@@ -2844,8 +2869,92 @@ alerts:
         Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
       markupFormat: markdown
+    - name: D8ObsoleteGlobalControlPlaneResourcesRequests
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane resource requests are being migrated from global settings to `moduleconfig control-plane-manager`.
+
+        The obsolete settings are still used as a fallback, but they should be moved to the `control-plane-manager` module settings.
+        The migration does not change the meaning of the values: `cpu` and `memory` remain the total resource requests for control-plane components on each master node.
+
+        **To complete the migration, follow the steps below:**
+
+        1. Review the current obsolete settings in `moduleconfig global`:
+
+           ```bash
+           d8 k get mc global -o jsonpath='{.spec.settings.modules.resourcesRequests.controlPlane}'; echo
+           ```
+
+           Example of obsolete settings:
+
+           ```yaml
+           spec:
+             settings:
+               modules:
+                 resourcesRequests:
+                   controlPlane:
+                     cpu: 1000m
+                     memory: 500Mi
+           ```
+
+        2. Make sure the `moduleconfig control-plane-manager` resource exists and uses settings version `3`.
+
+           If the resource does not exist, create it:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+           Set the settings version:
+
+           ```bash
+           d8 k patch mc control-plane-manager --type merge \
+             -p '{"spec":{"version":3}}'
+           ```
+
+        3. Copy the obsolete values from `moduleconfig global` to `moduleconfig control-plane-manager`.
+
+           The following command preserves the original JSON value types, including numeric CPU values:
+
+           ```bash
+           d8 k patch mc control-plane-manager --type merge -p "$(
+             d8 k get mc global -o json | jq -c \
+               '{"spec":{"version":3,"settings":{"resourcesRequests": .spec.settings.modules.resourcesRequests.controlPlane}}}'
+           )"
+           ```
+
+           After migration, the `moduleconfig control-plane-manager` resource should contain:
+
+           ```yaml
+           spec:
+             version: 3
+             settings:
+               resourcesRequests:
+                 cpu: 1000m
+                 memory: 500Mi
+           ```
+
+        4. Check that the values were applied:
+
+           ```bash
+           d8 k get mc control-plane-manager -o jsonpath='{.spec.settings.resourcesRequests}'; echo
+           ```
+
+        5. Remove the obsolete settings from `moduleconfig global`:
+
+           ```bash
+           d8 k patch mc global --type merge \
+             -p '{"spec":{"settings":{"modules":{"resourcesRequests":null}}}}'
+           ```
+      summary: |
+        Obsolete global control-plane resource requests need to be migrated.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoletePublishAPIinUserAuthn
-      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/migrate-publish-api.yaml
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
       module: control-plane-manager
       edition: ce
@@ -3867,6 +3976,24 @@ alerts:
       summary: |
         Too many UpmeterHookProbe objects in the cluster.
       severity: "9"
+      markupFormat: markdown
+    - name: D8UserAuthzPermissionBrowserUnavailable
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Deckhouse has detected unavailable replicas in the `permission-browser-apiserver` deployment in the `d8-user-authz` namespace.
+        Permission Browser requests can fail while this alert is active.
+
+        Check deployment and pod states:
+        ```bash
+        d8 k -n d8-user-authz get deploy permission-browser-apiserver
+        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver
+        ```
+      summary: |
+        Permission Browser API server has unavailable replicas.
+      severity: "6"
       markupFormat: markdown
     - name: D8UsingFeatureGateWillBeDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
@@ -7281,6 +7408,7 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
+    - cloud-provider-huaweicloud
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager
@@ -7308,3 +7436,4 @@ modules-having-alerts:
     - terraform-manager
     - upmeter
     - user-authn
+    - user-authz

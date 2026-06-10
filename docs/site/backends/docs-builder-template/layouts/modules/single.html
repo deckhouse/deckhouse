@@ -1,9 +1,9 @@
 {{- define "main" }}
 {{- $currentPage := $.Page }}
 
-{{- $modulesList := .Site.Data.modules.channels }}
-{{- $channelsInfo := .Site.Data.channels.info }}
-{{- $lang := .Site.Language.Lang }}
+{{- $modulesList := hugo.Data.modules.channels }}
+{{- $channelsInfo := hugo.Data.channels.info }}
+{{- $lang := site.Language.Lang }}
 {{- $sidebarRootMenu := slice }}
 {{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{- $ctx := $ }}
@@ -109,7 +109,7 @@
           {{- $moduleName := index $_pathElements 1 }}
           {{- $moduleChannel := index $_pathElements 2 }}
           {{- if and $moduleName $moduleChannel }}
-            {{- $moduleData := index .Site.Data.modules $moduleName }}
+            {{- $moduleData := index hugo.Data.modules $moduleName }}
 
             {{- if and ( reflect.IsMap $moduleData ) (index $moduleData $moduleChannel) }}
               {{- $type := "" }}

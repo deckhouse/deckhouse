@@ -7,7 +7,7 @@ lang: ru
 
 #### Обновление Deckhouse Kubernetes Platform не проходит, один или несколько подов Deckhouse в нерабочем состоянии
 
-Если обновление Deckhouse Kubernetes Platform не проходит, один или несколько подов Deckhouse в пространстве имен `d8-system` находятся в нерабочем состоянии, выполните следующие действия:
+Если обновление Deckhouse Kubernetes Platform не проходит, один или несколько подов Deckhouse в неймспейсе `d8-system` находятся в нерабочем состоянии, выполните следующие действия:
 
 1. Проверьте логи Deckhouse с помощью команды:
 
@@ -44,11 +44,14 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    Type     Reason     Age                      From     Message
    ----     ------     ----                     ----     -------
    Warning  Unhealthy  4m44s (x1918 over 154m)  kubelet  Readiness probe failed: HTTP probe failed with statuscode: 500
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 #### Обновление DKP находится в статусе Release is suspended
 
@@ -62,7 +65,8 @@ d8 k get deckhousereleases.deckhouse.io
 
 Пример вывода:
 
-```console
+<!-- markdownlint-disable MD031 -->
+ ```console
 NAME       PHASE        TRANSITIONTIME   MESSAGE
 v1.69.13   Skipped      3h46m
 v1.69.14   Skipped      3h46m
@@ -76,3 +80,5 @@ v1.70.16   Skipped      19d
 v1.70.17   Deployed     160m
 v1.71.3    Suspended    14d              Release is suspended
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

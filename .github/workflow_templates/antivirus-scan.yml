@@ -24,20 +24,15 @@ on:
         type: string
         default: main
 
-env:
-  SCAN_RESULTS_DIR: 'scans'
-
-
-{!{- define "if_not_test_repo" }!}
-if: github.repository == 'deckhouse/deckhouse'
-{!{- end }!}
-{!{- define "semver_regexp" }!}^v?[0-9]+.[0-9]+.[0-9]+${!{ end }!}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   get-tags:
     name: Get tags for scanning
     runs-on: [self-hosted, regular]
-    {!{ tmpl.Exec "if_not_test_repo" . | strings.Indent 4 }!}
+    if: github.repository == 'deckhouse/deckhouse'
     outputs:
       tags: ${{ steps.set-manual-tag.outputs.tags || steps.get-tags.outputs.tags || steps.set-default.outputs.tags }}
     steps:
@@ -50,7 +45,7 @@ jobs:
             echo "is_manual=true" >> $GITHUB_OUTPUT
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           else
-            echo "Scheduled run or manual without specific branch"
+            echo "Scheduled run"
             echo "is_manual=false" >> $GITHUB_OUTPUT
           fi
 
@@ -90,7 +85,7 @@ jobs:
         run: |
           ref=${{ github.event.inputs.branch }}
           TAGS=""
-          if [[ "${ref}" =~ {!{ tmpl.Exec "semver_regexp" . }!} ]]; then
+          if [[ "${ref}" =~ {!{ tmpl.Exec "av_semver_regexp" . }!} ]]; then
             for edition in fe ee se se-plus be ce cse
             do
               TAGS+=$'\n'"$edition:$ref"
@@ -110,151 +105,8 @@ jobs:
             echo "tags=[\"main\"]" >> $GITHUB_OUTPUT
           fi
 
-{!{ define "av_scan_step" }!}
-- name: Run {!{ .container_name }!} scan
-  id: scan
-  run: |
-    registry_image_path=/sys/deckhouse-oss
-    ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
-    if [ -z "${ref}" ]; then
-      ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
-    fi
-    ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
-    SCAN_TIME=$(date '+%s')
-    SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
-    if [[ "${ref}" =~ {!{ tmpl.Exec "semver_regexp" . }!} ]]; then
-      echo "registry read"
-      edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
-      SCAN_ID+="-${edition}"
-      registry_image_path="/deckhouse/${edition}"
-      registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-    elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
-      echo "registry stage"
-      registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
-    else
-      echo "registry dev"
-      registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-    fi
-    CONTAINER_NAME=registry_{!{ .container_name }!}
-    SCAN_ID+="-$CONTAINER_NAME"
-    echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
-    echo $CONTAINER_NAME
-    docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
+{!{ tmpl.Exec "drweb_scan_job" . | strings.Indent 2 }!}
 
-    mkdir -p scans/${SCAN_ID}
-    docker cp ${CONTAINER_NAME}:/{!{ .scan_path }!}/scans/${SCAN_ID}/scan_results_clean.md ./scans/${SCAN_ID}/scan_results_clean.md
-    docker cp ${CONTAINER_NAME}:/{!{ .scan_path }!}/scans/${SCAN_ID}/scan_results_threats.md ./scans/${SCAN_ID}/scan_results_threats.md
+{!{ tmpl.Exec "kaspersky_scan_job" . | strings.Indent 2 }!}
 
-    if [ -f scans/${SCAN_ID}/scan_results_threats.md ]; then
-      THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' scans/${SCAN_ID}/scan_results_threats.md | head -1)
-      ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' scans/${SCAN_ID}/scan_results_threats.md | head -1)
-      if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
-        echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
-        exit 1
-      elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
-        echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
-        exit 1
-      else
-        echo "✅ No threats detected ($THREAT_COUNT)"
-      fi
-    else
-      echo "⚠️ The scan results file was not found"
-      exit 1
-    fi
-
-    echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
-
-- name: Upload scan artifacts
-  if: github.repository == 'deckhouse/deckhouse' && always()
-  uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
-  with:    
-    name: {!{ .container_name }!}-scan-results-${{ steps.scan.outputs.scan_id }}
-    path: scans/${{ steps.scan.outputs.scan_id }}
-    retention-days: 5
-{!{ end }!}
-
-
-  drweb-scan:
-    name: Dr.Web Scan ${{ matrix.branch }}
-    runs-on: [self-hosted, antivirus]
-    {!{ tmpl.Exec "if_not_test_repo" . | strings.Indent 4 }!}
-    needs: get-tags
-    strategy:
-      matrix:
-        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
-      fail-fast: false
-    permissions:
-      id-token: write
-    outputs:
-      scan_id: ${{ steps.scan.outputs.scan_id }}
-    steps:
-      {!{- $secrets := slice -}!}
-      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
-      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_STAGE_REGISTRY_HOST" ) $secrets -}!}
-      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
-
-      {!{- $args := dict "container_name" "drweb" "scan_path" "drweb" -}!}
-      {!{ tmpl.Exec "av_scan_step" $args | strings.Indent 6 }!}
-
-
-  kaspersky-scan:
-    name: Kaspersky Scan ${{ matrix.branch }}
-    runs-on: [self-hosted, antivirus]
-    {!{ tmpl.Exec "if_not_test_repo" . | strings.Indent 4 }!}
-    needs: get-tags
-    strategy:
-      matrix:
-        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
-      fail-fast: false
-    permissions:
-      id-token: write
-    outputs:
-      scan_id: ${{ steps.scan.outputs.scan_id }}
-    steps:
-      {!{- $secrets := slice -}!}
-      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
-      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_STAGE_REGISTRY_HOST" ) $secrets -}!}
-      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
-      
-      {!{- $args := dict "container_name" "kaspersky" "scan_path" "antivirus" -}!}
-      {!{ tmpl.Exec "av_scan_step" $args | strings.Indent 6 }!}
-
-  notify-failure:
-    name: Send failure notification
-    runs-on: [self-hosted, regular]
-    needs: [drweb-scan, kaspersky-scan]
-    if: always() && (needs.drweb-scan.result == 'failure' || needs.kaspersky-scan.result == 'failure')
-    permissions:
-      id-token: write
-    steps:
-      {!{- $secrets := slice -}!}
-      {!{- $secrets = append ( slice "projects/data/b050f3bd-733f-4746-9640-9df80d484074/n8n_jobs_fails_url" "N8N_LOOP_NOTIFIER_URL" "N8N_LOOP_NOTIFIER_URL" ) $secrets -}!}
-      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
-      
-      - name: Check which jobs failed
-        id: check-failures
-        run: |
-          FAILED_JOBS=""
-          if [[ "${{ needs.drweb-scan.result }}" == "failure" ]]; then
-            FAILED_JOBS="$FAILED_JOBS• Dr.Web Scan\n"
-          fi
-          if [[ "${{ needs.kaspersky-scan.result }}" == "failure" ]]; then
-            FAILED_JOBS="$FAILED_JOBS• Kaspersky Scan\n"
-          fi
-          
-          echo "failed_jobs=${FAILED_JOBS}" >> $GITHUB_OUTPUT
-          echo "Failed jobs:"
-          echo "${FAILED_JOBS}"
-      
-      - name: Send notification
-        run: |
-          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
-          MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
-          MESSAGE+="**Failed jobs:**\n"
-          MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
-          MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
-          
-          curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
-            -H "Content-Type: application/json" \
-            --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"
+{!{ tmpl.Exec "antivirus_notify_failure_job" . | strings.Indent 2 }!}

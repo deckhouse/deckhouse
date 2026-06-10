@@ -75,11 +75,13 @@ const istioValues = `
           fullVersion: "1.25.2"
           imageSuffix: "V1x25x2"
           supportsAmbient: true
+          supportsOperator: true
         "1.21.6":
           revision: "v1x21x6"
           fullVersion: "1.21.6"
           imageSuffix: "V1x21x6"
           supportsAmbient: false
+          supportsOperator: true
       kialiSigningKey: "kiali"
       operatorVersionsToInstall: []
       versionsToInstall: []

@@ -3,63 +3,297 @@ title: "Модуль admission-policy-engine"
 description: Модуль admission-policy-engine Deckhouse позволяет использовать в кластере Kubernetes политики безопасности согласно Kubernetes Pod Security Standards.
 ---
 
-Позволяет использовать в кластере политики безопасности согласно [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) Kubernetes. Модуль для работы использует [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
+Модуль `admission-policy-engine` реализует поддержку admission-политик безопасности в кластере Kubernetes.
 
-Pod Security Standards определяют три политики, охватывающие весь спектр безопасности. Эти политики являются кумулятивными, то есть состоящими из набора политик, и варьируются по уровню ограничений от «неограничивающего» до «ограничивающего значительно».
+Admission-политики — это правила, которые применяются к объектам (например Pod и Service) в момент их создания и изменения в кластере (но не в процессе их работы), на основе информации, представленной в их манифесте. Эти политики направлены на формализацию параметров которые разрешены или запрещены в манифестах объектов.
+
+В DKP политики разделены на три категории:
+
+- [Pod Security Standards](#pod-security-standards) — политики, реализующие соответствующие [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+- [Операционные политики](#операционные-политики) — политики для создания дополнительных требований к объектам, с помощью валидации значений параметров **не связанных напрямую** с безопасностью (например, список допустимых префиксов для образов контейнеров, политика скачивания образов, список необходимых проб для контейнеров и т.д.).
+- [Политики безопасности](#политики-безопасности) — политики для создания дополнительных требований к объектам, с помощью валидации значений параметров, связанных с безопасностью (например, доступ контейнеров к IPC- или PID-пространству имен хоста, список привилегий для контейнеров и т.д.).
 
 {% alert level="info" %}
-Модуль не применяет политики к системным пространствам имен.
+Эти политики дополняют друг друга. Если для одного неймспейса применены несколько политик, выполняется валидация объектов по каждой из них. Если хоть одна политика будет нарушена, объект создан не будет.
 {% endalert %}
+
+## Особенности отображения сообщений о неудачной валидации объектов
+
+В зависимости от способа создания подов есть особенности формирования сообщений от API о неудачной валидации (нарушении установленных политик):
+
+- Если под создается напрямую, ошибка валидации возвращается в ответе от API о неудачной валидации (нарушении политики).
+- Если поды создаются через Deployment, создаётся требуемое количество ReplicaSet, которые, в свою очередь, пытаются создать поды. В этом случае ошибка валидации не возвращается в ответе API, а отображается в событиях неймспейса или соответствующего ReplicaSet.
+
+## Валидация подов при изменении политики или добавлении новой
+
+Для всех трех категорий политик (Pod Security Standards, операционные и политики безопасности) не предусмотрено автоматическое пересоздание существующих подов при изменении действующих или добавлении новых политик. Поды, существовавшие до момента внесения изменений в используемую политику или до добавления новой, продолжат работать до перезапуска. А при перезапуске они будут валидироваться по новым правилам.
+
+В модуле `admission-policy-engine` для таких случаев предусмотрены алерты (`kind: ClusterObservabilityAlert`), информирующие о наличии в неймспейсе подов с нарушениями после изменения существующей политики или добавления новой.
+
+Для получения списка алертов используйте команду:
+
+```bash
+d8 k get clusterobservabilityalerts
+```
+
+Пример ответа:
+
+<!-- markdownlint-disable MD031 -->
+```console
+NAME                                                  SEVERITY   STATUS   DURATION   SUMMARY                          AGE
+SecurityPolicyViolation-f3a77d1dd2175402-1777370195   1          Firing   5h         Alerting PrometheusUnavailable   5h1m
+OperationPolicyViolation-9b21d0c871796913-1777370435  1          Firing   6h         Alerting PrometheusUnavailable   6h1m
+```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
+
+Для просмотра информации о конкретном алерте используйте команду:
+
+```bash
+d8 k get clusterobservabilityalert OperationPolicyViolation-9b21d0c871796913-1777370435 -oyaml
+```
+
+{% offtopic title="Пример алерта при нарушении политики Pod Security Standards..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: PodSecurityStandardsViolation-91e71759e048a397-1777369535
+  resourceVersion: "7454828154578800069"
+  creationTimestamp: 2026-04-28T09:45:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: PodSecurityStandardsViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: |-
+      You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
+
+      To identify violating pods:
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            violating_namespace=~".*",
+            violating_kind="Pod",
+            source_type="PSS"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one pod violates the configured cluster pod security standards.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="PSS",violating_kind="Pod",violating_namespace=~".*",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T09:45:35Z
+  resolvedAt: null
+  duration: 20h40m1.015261771s
+```
+
+{% endofftopic %}
+
+{% offtopic title="Пример алерта при нарушении операционной политики..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: OperationPolicyViolation-9b21d0c871796913-1777370435
+  resourceVersion: "7454831929456594373"
+  creationTimestamp: 2026-04-28T10:00:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: OperationPolicyViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: >-
+      You have configured operation policies for the cluster, and one or more
+      existing objects are violating these policies.
+
+
+      To identify violating objects:
+
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            source_type="OperationPolicy"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one object violates the configured cluster operation policies.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="OperationPolicy",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T10:00:35Z
+  resolvedAt: null
+  duration: 20h23m41.023025059s
+```
+
+{% endofftopic %}
+
+{% offtopic title="Пример алерта при нарушении политики безопасности..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: SecurityPolicyViolation-f3a77d1dd2175402-1777370195
+  resourceVersion: "7454830922622307781"
+  creationTimestamp: 2026-04-28T09:56:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: SecurityPolicyViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: >-
+      You have configured security policies for the cluster, and one or more
+      existing objects are violating these policies.
+
+
+      To identify violating objects:
+
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            source_type="SecurityPolicy"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one object violates the configured cluster security policies.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="SecurityPolicy",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T09:56:35Z
+  resolvedAt: null
+  duration: 20h29m21.015479019s
+```
+
+{% endofftopic %}
+
+## Pod Security Standards
+
+[Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) (`PSS`) — это официальный стандарт Kubernetes, который определяет три уровня безопасности для подов, ограничивая их привилегии. Ограничение происходит с помощью запрета установки определенных параметров в манифесте пода.
+
+Используется многослойная структура — каждый более высокий уровень защиты использует все правила предыдущего уровня и добавляет свои.
+
+В `PSS` регламентированы следующие уровни защиты (политики):
+
+- `Privileged` — неограничивающая политика с максимально широким уровнем разрешений (отсутствие ограничений).
+- `Baseline` — минимально ограничивающая политика, которая предотвращает наиболее известные и популярные способы повышения привилегий. Позволяет использовать стандартную (минимально заданную) конфигурацию пода.
+- `Restricted` — политика со значительными ограничениями. Предъявляет самые жёсткие требования к подам.
 
 {% alert level="info" %}
-При включении [модуль `multitenancy-manager`](/modules/multitenancy-manager/) создает свои объекты OperationPolicy (например, в неймспейсе `default`). На них не влияют [настройки `podSecurityStandards`](configuration.html#parameters-podsecuritystandards).
+В Deckhouse Kubernetes Platform эти политики реализуются средствами Gatekeeper и контролируются admission-контроллерами модуля `admission-policy-engine`, а не контролером [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) от Kubernetes. Из Kubernetes взяты только описания политик.
 {% endalert %}
-
-Список политик, доступных для использования:
-- `Privileged` — неограничивающая политика с максимально широким уровнем разрешений;
-- `Baseline` — минимально ограничивающая политика, которая предотвращает наиболее известные и популярные способы повышения привилегий. Позволяет использовать стандартную (минимально заданную) конфигурацию пода;
-- `Restricted` — политика со значительными ограничениями. Предъявляет самые жесткие требования к подам.
 
 Подробнее про каждый набор политик и их ограничения можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/security/pod-security-standards/#profile-details).
 
-Политика кластера используемая по умолчанию определяется следующим образом:
-- При установке Deckhouse версии **ниже v1.55**, для всех несистемных пространств имен используется политика по умолчанию `Privileged`;
-- При установке Deckhouse версии **v1.55 и выше**, для всех несистемных пространств имен используется политика по умолчанию `Baseline`;
+Политика PSS для неймспейса включается через добавление на него специального лейбла `security.deckhouse.io/pod-policy=<POLICY_NAME>`.
+Политику по умолчанию можно переопределить глобально ([в настройках модуля](configuration.html#parameters-podsecuritystandards-defaultpolicy)).
 
-**Обратите внимание,** что обновление Deckhouse в кластере на версию v1.55 не вызывает автоматической смены политики по умолчанию.
+{% alert level="info" %}
+Модуль не применяет политики к системным неймспейсам.
+{% endalert %}
 
-Политику по умолчанию можно переопределить как глобально ([в настройках модуля](configuration.html#parameters-podsecuritystandards-defaultpolicy)), так и для каждого пространства имен отдельно (лейбл `security.deckhouse.io/pod-policy=<POLICY_NAME>` на соответствующем пространстве имен).
+{% alert level="info" %}
+При включении [модуля `multitenancy-manager`](/modules/multitenancy-manager/) он создаёт свои объекты OperationPolicy (например, в неймспейсе `default`). На них не влияют [настройки `podSecurityStandards`](configuration.html#parameters-podsecuritystandards).
+{% endalert %}
 
-Пример установки политики `Restricted` для всех подов в пространстве имен `my-namespace`:
+Пример установки политики `Restricted` для всех подов в неймспейсе `my-namespace`:
 
 ```bash
 d8 k label ns my-namespace security.deckhouse.io/pod-policy=restricted
 ```
 
-По умолчанию политики Pod Security Standards применяются в режиме "Deny" и поды приложений, не удовлетворяющие данным политикам, не смогут быть запущены. Режим работы политик может быть задан как глобально для кластера, так и для каждого неймспейса отдельно. Чтобы задать режим работы политик глобально, используйте [configuration](configuration.html#parameters-podsecuritystandards-enforcementaction). В случае если необходимо переопределить глобальный режим политик для определённого неймспейса, допускается использовать лейбл `security.deckhouse.io/pod-policy-action =<POLICY_ACTION>` на соответствующем неймспейсе. Список допустимых режимов политик состоит из: "dryrun", "warn", "deny".
+Дополнительно возможна настройка режима работы политики.
+Поддерживаются следующие режимы:
 
-Пример установки "warn" режима политик PSS для всех подов в пространстве имен `my-namespace`:
+- `deny` — запретить запуск подов, не удовлетворяющих политике;
+- `warn` — запускать поды, не удовлетворяющие политике, но выдавать предупреждение.
+- `dryrun` — запускать поды не удовлетворяющие политике, не выдавать предупреждение пользователю, но фиксировать нарушения в отчетах безопасности;
+
+Настройка режима работы политики производится путем установки лейбла `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>` на соответствующем неймспейсе.
+Чтобы задать режим работы политик глобально, используйте параметр [`enforcementaction`](configuration.html#parameters-podsecuritystandards-enforcementaction).
+
+Пример установки "warn" режима политик PSS для всех подов в неймспейсе `my-namespace`:
 
 ```bash
 d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
 ```
 
-Предлагаемые модулем политики могут быть расширены. Примеры расширения политик можно найти в [FAQ](faq.html).
-
 ## Операционные политики
 
-Модуль предоставляет набор операционных политик и лучших практик для безопасной работы ваших приложений.
-Операционные политики описываются с помощью кастомного ресурса [`OperationPolicy`](/modules/admission-policy-engine/cr.html#operationpolicy).
+Операционные политики — это правила, направленные на достижение лучших практик безопасности приложений, но **не относящиеся** напрямую к валидации классических параметров, связанных с безопасностью (например, список допустимых префиксов для образов контейнеров, политика скачивания образов, список необходимых проб для контейнеров и т.д.).
 
-Мы рекомендуем устанавливать следующий минимальный набор операционных политик:
+Операционные политики описываются с помощью кастомного ресурса [`OperationPolicy`](/modules/admission-policy-engine/cr.html#operationpolicy).
+В нём каждый параметр отвечает за отдельную проверку, применяемую к ресурсам.
+Использование кастомного ресурса OperationPolicy позволяет создавать дополнительные требования к создаваемым ресурсам (высокоуровневые декларативные операционные политики) без явной работы с Gatekeeper.
+
+Рекомендуется устанавливать следующий минимальный набор операционных политик:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: OperationPolicy
 metadata:
   name: common
 spec:
+  enforcementAction: Deny
   policies:
     allowedRepos:
       - myrepo.example.com
@@ -86,19 +320,48 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          operation-policy.deckhouse.io/enabled: "true"
+          custom-operation-policy/enabled: "true"
 ```
 
-Для применения приведённой политики достаточно навесить лейбл `operation-policy.deckhouse.io/enabled: "true"` на желаемый неймспейс. Политика, приведённая в примере, рекомендована для использования командой Deckhouse. Аналогичным образом вы можете создать собственную политику с необходимыми настройками.
+Применение политики реализовано через настройки, расположенные в параметре `spec.match`.
+
+При указании:
+
+```yaml
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          custom-operation-policy/enabled: "true"
+```
+
+Для применения приведённой политики достаточно добавить лейбл `custom-operation-policy/enabled: "true"` на желаемый неймспейс.  
+В отличие от `PSS`, название лейбла может быть любым. Требуется лишь совпадение лейбла в селекторе политик и соответствующего неймспейса.
+
+Более подробную информацию об использовании селекторов вы можете прочитать в [описании настройки селекторов](/modules/admission-policy-engine/docs/faq.html#как-настроить-селекторы-политик).
+
+Для политики также возможно указание применяемого действия.
+Для этого используется параметр `spec.enforcementAction`.
+Поддерживаются следующие режимы:
+
+- `Deny` — запретить запуск подов не удовлетворяющих политике;
+- `Warn` — запускать поды не удовлетворяющие политике, но выдавать предупреждение.
+- `Dryrun` — запускать поды не удовлетворяющие политике, не выдавать предупреждение пользователю, но фиксировать нарушения в отчетах безопасности;
+
+Основываясь на этом примере, вы можете создать собственную политику с необходимыми настройками.
 
 ## Политики безопасности
 
-Модуль предоставляет возможность определять политики безопасности применимо к приложениям (контейнерам), запущенным в кластере.
+Политики безопасности — это правила, направленные на достижение лучших практик безопасности приложений с помощью валидации значений параметров, связанных с безопасностью (например, доступ контейнеров к IPC- или PID-пространству имен хоста, список привилегий для контейнеров и т.д.).
+
+Политики безопасности описываются с помощью кастомного ресурса [`SecurityPolicy`](/modules/admission-policy-engine/cr.html#securitypolicy).
+В нём каждый параметр отвечает за отдельную проверку применяемую к ресурсам.
+С помощью этого ресурса возможно сконструировать политику безопасности аналогичную политике PSS любого уровня.
+Использование кастомного ресурса SecurityPolicy позволяет создавать дополнительные требования к создаваемым ресурсам (высокоуровневые декларативные политики безопасности) без явной работы с Gatekeeper.
 
 Пример политики безопасности:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -156,18 +419,42 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          enforce: mypolicy
+          security-policy: mypolicy
 ```
-
-Для применения приведенной политики достаточно навесить лейбл `enforce: "mypolicy"` на желаемое пространство имён.
 
 {% alert level="warning" %}
 Параметры `allowPrivilegeEscalation` и `allowPrivileged` по умолчанию имеют значение `false` — даже если не указаны явно. Это означает, что контейнеры не смогут запускаться в привилегированном режиме или повышать привилегии. Чтобы разрешить такое поведение, задайте параметр в `true`.
 {% endalert %}
 
+Применение политики реализовано через настройки расположенные в параметре `spec.match`.
+
+При указании:
+
+```yaml
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy: mypolicy
+```
+
+Для применения приведённой политики достаточно добавить лейбл `security-policy: mypolicy` на желаемый неймспейс.  
+В отличие от `PSS`, название лейбла может быть любым. Требуется лишь совпадение лейбла в селекторе политик и соответствующего неймспейса.
+
+Более подробную информацию о использовании селекторов вы можете прочитать в [описании настройки селекторов](/modules/admission-policy-engine/docs/faq.html#как-настроить-селекторы-политик).
+
+Для политики также возможно указание применяемого действия.
+Для этого используется параметр `spec.enforcementAction`.
+Поддерживаются следующие режимы:
+
+- `Deny` — запретить запуск подов, не удовлетворяющих политике;
+- `Warn` — запускать поды, не удовлетворяющие политике, но выдавать предупреждение.
+- `Dryrun` — запускать поды не удовлетворяющие политике, не выдавать предупреждение пользователю, но фиксировать нарушения в отчетах безопасности;
+
 ## Изменение ресурсов Kubernetes
 
 Модуль позволяет использовать [кастомные ресурсы Gatekeeper](gatekeeper-cr.html) для модификации объектов в кластере, такие как:
+
 - [AssignMetadata](gatekeeper-cr.html#assignmetadata) — для изменения секции `metadata` в ресурсе;
 - [Assign](gatekeeper-cr.html#assign) — для изменения других полей, кроме `metadata`;
 - [ModifySet](gatekeeper-cr.html#modifyset) — для добавления или удаления значений из списка, например аргументов для запуска контейнера.

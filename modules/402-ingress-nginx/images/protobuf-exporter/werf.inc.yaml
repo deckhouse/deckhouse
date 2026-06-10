@@ -40,13 +40,16 @@ import:
   add: /src/protobuf_exporter
   to: /protobuf_exporter
   before: setup
+{{- include "image mount points" $ }}
 git:
 - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs/
   to: /
   stageDependencies:
     install:
       - '**/*.yaml'
-{{- include "image mount points" $ }}
+shell:
+  install:
+  - set -e
 imageSpec:
   config:
     entrypoint: ["/protobuf_exporter", "-server.telemetry-address", "127.0.0.1:9090", "-server.exporter-address", "127.0.0.1:9091" , "-mappings", "/etc/protobuf_exporter/mappings.yaml"]

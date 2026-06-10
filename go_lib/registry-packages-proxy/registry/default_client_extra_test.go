@@ -15,7 +15,11 @@
 package registry
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
+	"io"
 	"net/http/httptest"
 	"sort"
 	"strings"
@@ -25,7 +29,11 @@ import (
 	v1remote "github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -73,6 +81,111 @@ func TestDefaultClient_ResolveTag(t *testing.T) {
 
 	_, err = c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "missing-tag")
 	require.ErrorIs(t, err, ErrPackageNotFound)
+}
+
+func tarLayerWithFile(t *testing.T, fileName, content string) v1.Layer {
+	t.Helper()
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Name: fileName,
+		Mode: 0o644,
+		Size: int64(len(content)),
+	}))
+	_, err := tw.Write([]byte(content))
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+
+	layer, err := tarball.LayerFromReader(&buf)
+	require.NoError(t, err)
+	return layer
+}
+
+func pushImage(t *testing.T, host string, img v1.Image, repo, tag string) string {
+	t.Helper()
+	ref, err := name.NewTag(host+"/"+repo+":"+tag, name.WeakValidation)
+	require.NoError(t, err)
+	require.NoError(t, v1remote.Write(ref, img))
+	d, err := img.Digest()
+	require.NoError(t, err)
+	return d.String()
+}
+
+func readGzipTarFile(t *testing.T, reader io.Reader, fileName string) string {
+	t.Helper()
+
+	gzipReader, err := gzip.NewReader(reader)
+	require.NoError(t, err)
+	defer gzipReader.Close()
+
+	tarReader := tar.NewReader(gzipReader)
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			t.Fatalf("file %q not found in archive", fileName)
+		}
+		require.NoError(t, err)
+		if header.Name != fileName {
+			continue
+		}
+		data, err := io.ReadAll(tarReader)
+		require.NoError(t, err)
+		return string(data)
+	}
+}
+
+// TestDefaultClient_GetPackage_lastLayerOnly_byDefault pins down the
+// historical contract: without FlattenLayers, callers see only the bytes of
+// the LAST layer. The icon (in the earlier layer) must NOT be visible.
+func TestDefaultClient_GetPackage_lastLayerOnly_byDefault(t *testing.T) {
+	host := newTestRegistry(t)
+
+	iconLayer := tarLayerWithFile(t, "docs/icon.svg", "<svg>icon</svg>")
+	topLayer := tarLayerWithFile(t, "meta/version", "v1.0.0")
+	img, err := mutate.AppendLayers(empty.Image, iconLayer, topLayer)
+	require.NoError(t, err)
+
+	digest := pushImage(t, host, img, "deckhouse/test-package", "v1.0.0")
+
+	c := &DefaultClient{}
+	cfg := &ClientConfig{
+		Repository: host + "/deckhouse",
+		Scheme:     "http",
+	}
+
+	_, _, reader, err := c.GetPackage(context.Background(), testLogger{}, cfg, digest, "test-package")
+	require.NoError(t, err)
+	defer reader.Close()
+
+	assert.Equal(t, "v1.0.0", readGzipTarFile(t, reader, "meta/version"))
+}
+
+// TestDefaultClient_GetPackage_returnsFlattenedLayers exercises the opt-in
+// flatten path used by the icon handler: every file from every layer must be
+// reachable in the returned tar.
+func TestDefaultClient_GetPackage_returnsFlattenedLayers(t *testing.T) {
+	host := newTestRegistry(t)
+
+	iconLayer := tarLayerWithFile(t, "docs/icon.svg", "<svg>icon</svg>")
+	topLayer := tarLayerWithFile(t, "meta/version", "v1.0.0")
+	img, err := mutate.AppendLayers(empty.Image, iconLayer, topLayer)
+	require.NoError(t, err)
+
+	digest := pushImage(t, host, img, "deckhouse/test-package", "v1.0.0")
+
+	c := &DefaultClient{}
+	cfg := &ClientConfig{
+		Repository:    host + "/deckhouse",
+		Scheme:        "http",
+		FlattenLayers: true,
+	}
+
+	_, _, reader, err := c.GetPackage(context.Background(), testLogger{}, cfg, digest, "test-package")
+	require.NoError(t, err)
+	defer reader.Close()
+
+	assert.Equal(t, "<svg>icon</svg>", readGzipTarFile(t, reader, "docs/icon.svg"))
 }
 
 func TestDefaultClient_ListTags(t *testing.T) {

@@ -1,0 +1,4 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: worker

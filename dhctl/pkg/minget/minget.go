@@ -41,21 +41,21 @@ func Bytes() ([]byte, error) {
 	stat, err := os.Stat(binaryPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.InfoF("%s not exists. Fallback to embedded minget\n", binaryPath)
+			log.InfoF("%s does not exist. Falling back to embedded minget\n", binaryPath)
 		} else {
-			log.WarnF("Failed to stat %s: %v. Fallback to embedded minget", binaryPath, err)
+			log.WarnF("Failed to stat %s: %v. Falling back to embedded minget", binaryPath, err)
 		}
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 
 	if stat.IsDir() {
-		log.WarnF("%s stats as directory. Fallback to embedded minget", binaryPath)
+		log.WarnF("%s is a directory. Falling back to embedded minget", binaryPath)
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 
 	file, err := os.ReadFile(binaryPath)
 	if err != nil {
-		log.WarnF("Failed to open %s: %v. Fallback to embedded minget", binaryPath, err)
+		log.WarnF("Failed to open %s: %v. Falling back to embedded minget", binaryPath, err)
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 

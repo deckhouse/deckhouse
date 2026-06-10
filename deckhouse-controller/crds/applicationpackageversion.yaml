@@ -38,15 +38,14 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ApplicationPackageVersion represents a version of an application
-          package.
+        description: ApplicationPackageVersion represents a version of an application package.
         properties:
           apiVersion:
             description: |-
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)
             type: string
           kind:
             description: |-
@@ -54,31 +53,30 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
             type: string
           metadata:
             type: object
           spec:
+            description: Defines the application package version parameters.
             properties:
               packageName:
                 description: Name of the application package.
                 type: string
               packageRepositoryName:
-                description: The name of the repository containing the package.
+                description: Name of the package repository containing the package.
                 type: string
               packageVersion:
                 description: Version of the application package.
                 type: string
             type: object
           status:
-            description: Status of an ApplicationPackageVersion.
+            description: Application package version status.
             properties:
               conditions:
-                description: Conditions represent the latest available observations
-                  of the package version's state.
+                description: Conditions reflecting the latest observations of the package version state.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition describing one aspect of the current package version state.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -135,8 +133,7 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               packageMetadata:
-                description: Metadata about the package such as description, requirements,
-                  etc.
+                description: Metadata about the package such as description, requirements, etc.
                 properties:
                   category:
                     description: The category this package belongs to.
@@ -182,27 +179,153 @@ spec:
                     description: The system requirements for this package.
                     properties:
                       deckhouse:
-                        description: Required Deckhouse version.
-                        type: string
+                        description: Required Deckhouse Kubernetes Platform version.
+                        properties:
+                          constraint:
+                            description: Semver constraint expression.
+                            type: string
+                        type: object
                       kubernetes:
                         description: Required Kubernetes version.
-                        type: string
+                        properties:
+                          constraint:
+                            description: Semver constraint expression.
+                            type: string
+                        type: object
                       modules:
-                        additionalProperties:
-                          type: string
-                        description: Required versions of other modules.
+                        description: Required modules, partitioned into mandatory, conditional, and anyOf dependencies.
+                        properties:
+                          anyOf:
+                            description: |-
+                              AnyOf groups of alternative dependencies — at least one member of each group
+                              must be installed (and satisfy its constraint, if any) for the package to
+                              start. Groups are checker-only and add no edges to the dependency graph.
+                            items:
+                              description: |-
+                                PackageModuleGroup is a group of alternative module dependencies. At least one
+                                member must be installed (and satisfy its constraint, if any) for the package
+                                to start. The Name is required and surfaces in scheduler diagnostics; the
+                                Description is optional human-facing documentation.
+                              properties:
+                                description:
+                                  description: Human-readable description of the group's purpose.
+                                  type: string
+                                modules:
+                                  description: Alternative module dependencies in this group.
+                                  items:
+                                    description: |-
+                                      PackageModuleDependency is a single named module dependency with an optional
+                                      semver constraint. An empty constraint means "any version".
+                                    properties:
+                                      constraint:
+                                        description: Semver constraint expression.
+                                        type: string
+                                      name:
+                                        description: Module name.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                                name:
+                                  description: Stable identifier used by the scheduler in diagnostics.
+                                  type: string
+                              required:
+                              - modules
+                              - name
+                              type: object
+                            type: array
+                          conditional:
+                            description: |-
+                              Conditional dependencies — not required to be present, but if installed must
+                              satisfy the constraint for the package to function correctly. Replaces the
+                              legacy "!optional" suffix from the v1 requirements format.
+                            items:
+                              description: |-
+                                PackageModuleDependency is a single named module dependency with an optional
+                                semver constraint. An empty constraint means "any version".
+                              properties:
+                                constraint:
+                                  description: Semver constraint expression.
+                                  type: string
+                                name:
+                                  description: Module name.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          mandatory:
+                            description: |-
+                              Mandatory dependencies — must be present (and satisfy the constraint, if any)
+                              for the package to start.
+                            items:
+                              description: |-
+                                PackageModuleDependency is a single named module dependency with an optional
+                                semver constraint. An empty constraint means "any version".
+                              properties:
+                                constraint:
+                                  description: Semver constraint expression.
+                                  type: string
+                                name:
+                                  description: Module name.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          noneOf:
+                            description: |-
+                              NoneOf groups of forbidden dependencies — no member of any group may be
+                              installed for the package to start. A member with no constraint is forbidden
+                              at any version; a member with a constraint is forbidden only at versions
+                              matching that constraint. Groups are checker-only and add no edges to the
+                              dependency graph.
+                            items:
+                              description: |-
+                                PackageModuleGroup is a group of alternative module dependencies. At least one
+                                member must be installed (and satisfy its constraint, if any) for the package
+                                to start. The Name is required and surfaces in scheduler diagnostics; the
+                                Description is optional human-facing documentation.
+                              properties:
+                                description:
+                                  description: Human-readable description of the group's purpose.
+                                  type: string
+                                modules:
+                                  description: Alternative module dependencies in this group.
+                                  items:
+                                    description: |-
+                                      PackageModuleDependency is a single named module dependency with an optional
+                                      semver constraint. An empty constraint means "any version".
+                                    properties:
+                                      constraint:
+                                        description: Semver constraint expression.
+                                        type: string
+                                      name:
+                                        description: Module name.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                                name:
+                                  description: Stable identifier used by the scheduler in diagnostics.
+                                  type: string
+                              required:
+                              - modules
+                              - name
+                              type: object
+                            type: array
                         type: object
                     type: object
                   stage:
-                    description: The development stage of the package (e.g., alpha,
-                      beta, stable).
+                    description: The development stage of the package (e.g., alpha, beta, stable).
                     type: string
                   versionCompatibilityRules:
                     description: Version compatibility rules for upgrades and downgrades.
                     properties:
                       downgrade:
-                        description: Compatibility rules for downgrading from this
-                          version.
+                        description: Compatibility rules for downgrading from this version.
                         properties:
                           allowSkipMajor:
                             description: How many major versions can be skipped.
@@ -217,8 +340,7 @@ spec:
                             description: Starting version range for compatibility.
                             type: string
                           maxRollback:
-                            description: Maximum number of versions that can be rolled
-                              back.
+                            description: Maximum number of versions that can be rolled back.
                             type: integer
                           to:
                             description: Ending version range for compatibility.
@@ -240,8 +362,7 @@ spec:
                             description: Starting version range for compatibility.
                             type: string
                           maxRollback:
-                            description: Maximum number of versions that can be rolled
-                              back.
+                            description: Maximum number of versions that can be rolled back.
                             type: integer
                           to:
                             description: Ending version range for compatibility.
@@ -250,8 +371,7 @@ spec:
                     type: object
                 type: object
               packageSchemas:
-                description: Schemas for validating settings and values passed to
-                  the package.
+                description: Schemas for validating settings and values passed to the package.
                 properties:
                   settingsSchema:
                     description: |-
@@ -273,8 +393,7 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                 type: object
               usedBy:
-                description: Information about applications that are using this package
-                  version.
+                description: Information about applications that are using this package version.
                 items:
                   properties:
                     name:

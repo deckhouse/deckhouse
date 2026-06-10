@@ -38,6 +38,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
 		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
@@ -51,7 +52,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 			return fmt.Errorf("SSH credentials not provided")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -88,6 +89,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
 		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
@@ -101,7 +103,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return fmt.Errorf("SSH credentials not provided")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -167,6 +169,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
 		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
@@ -180,7 +183,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 			return fmt.Errorf("SSH credentials not provided")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -201,7 +204,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
-				return fmt.Errorf("script '%s' error: %w stderr: %s", ScriptPath, err, string(ee.Stderr))
+				return fmt.Errorf("script '%s' error: %w\nstderr: %s", ScriptPath, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
 		}
@@ -229,6 +232,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
 		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
@@ -242,7 +246,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 			return fmt.Errorf("SSH credentials not provided")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {

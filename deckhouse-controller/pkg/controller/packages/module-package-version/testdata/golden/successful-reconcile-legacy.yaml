@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
   finalizers:
   - modulepackageversion.deckhouse.io/used-by-module
   labels:
@@ -30,14 +29,15 @@ status:
     description:
       en: Legacy test module
     requirements:
-      deckhouse: '>= 1.60'
-      kubernetes: '>= 1.27'
+      deckhouse:
+        constraint: '>= 1.60'
+      kubernetes:
+        constraint: '>= 1.27'
     stage: Sandbox
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -47,5 +47,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
+  lastNewVersions: 0
   partialScanAvailable: false
-  syncTime: null

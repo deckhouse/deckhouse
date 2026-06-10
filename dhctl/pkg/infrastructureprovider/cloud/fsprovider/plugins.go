@@ -74,7 +74,7 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 	}
 
-	if err = downloadImage(ctx, conf, "terraformManager", sectionName); err != nil {
+	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
 		return err
 	}
 	if err = copyTFVersionFile(conf.DownloadRootDir); err != nil {

@@ -29,9 +29,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -78,7 +77,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:
@@ -221,12 +220,8 @@ func generateOldDockerCfg(host string, username, password *string) string {
 
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
 
-	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), dc)
+	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), &options.New().Global)
 	f := require.NoError
 	if hasErr {
 		f = require.Error

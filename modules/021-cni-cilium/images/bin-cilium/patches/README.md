@@ -84,3 +84,15 @@ Add import/export conntrack http endpoints. See usage example here modules/021-c
 ## 017-bpf-lb-generate-icmp-reply.patch
 
 An ICMP echo reply feature has been added to reply on LoadBalancer's service IP
+
+## 018-bugtool-remove-sensitive-files.patch
+
+Verbatim cherry-pick of the upstream fix for **CVE-2026-41520** (GHSA-gj49-89wh-h4gj): `cilium-bugtool` was archiving the entire state directory, which on nodes with WireGuard Transparent Encryption enabled included `cilium_wg0.key` — leaking the node's WireGuard private key in any bugtool / `cilium sysdump` archive.
+
+The patch removes `*.key` files from the state directory copy before archiving.
+
+- Advisory: <https://github.com/cilium/cilium/security/advisories/GHSA-gj49-89wh-h4gj>
+- Upstream backport into release-1.17 branch: <https://github.com/cilium/cilium/commit/3e26bef96e1ec6ea1b5034fee3f0bc6ddfabcae6>
+- Released in cilium v1.17.15 / v1.18.9 / v1.19.3.
+
+**Remove this patch when the base cilium version in `modules/021-cni-cilium/oss.yaml` is bumped to v1.17.15 or newer** — the fix is then already in the upstream sources and this patch will fail to apply.

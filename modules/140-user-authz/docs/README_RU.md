@@ -90,7 +90,10 @@ Manage-роль определяет права на доступ:
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-Подсистема роли ограничивает её действие всеми системными (начинающимися с `d8-` или `kube-`) пространствами имён кластера (подсистема `all`) или теми пространствами имён, в которых работают модули подсистемы (см. таблицу состава подсистем).
+Область действия роли зависит от того, к какой подсистеме она принадлежит:
+
+- Область действия ролей из подсистемы `all` — все системные (начинающиеся с `d8-` или `kube-`) неймспейсы кластера.
+- Область действия ролей из других подсистем — неймспейсы, в которых работают модули подсистемы (подробнее — в таблице состава подсистем), а также все cluster-wide объекты модулей подсистемы.
 
 Таблица состава подсистем ролевой модели.
 
@@ -128,6 +131,19 @@ Manage-роль определяет права на доступ:
 
 ### Список доступа для каждой роли модуля по умолчанию
 
+Каждая следующая роль наследует права предыдущих ролей. В блоке роли показаны только права, которые она добавляет.
+
+Список ниже включает:
+
+- стандартные права текущей ролевой модели (права k8s);
+- права, создаваемые встроенными модулями Deckhouse.
+
+В нем отсутствуют права [модулей из источника](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей).
+
+Модули из источника при включении в кластере создают права на предоставляемые ими ресурсы. При выключении модуля из источника созданные им права удаляются.
+
+Для просмотра прав, созданных модулями из источника, используйте [команду](#get_rules).
+
 Сокращения для `verbs`:
 <!-- start user-authz roles placeholder -->
 * read - `get`, `list`, `watch`
@@ -138,25 +154,90 @@ Manage-роль определяет права на доступ:
 
 ```text
 read:
+    - acme.cert-manager.io/orders
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
     - apps/deployments
     - apps/replicasets
     - apps/statefulsets
+    - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - autoscaling.k8s.io/verticalpodautoscalers
     - autoscaling/horizontalpodautoscalers
     - batch/cronjobs
     - batch/jobs
+    - cert-manager.io/certificaterequests
+    - cert-manager.io/certificates
+    - cert-manager.io/challenges
+    - cert-manager.io/clusterissuers
+    - cert-manager.io/issuers
+    - cilium.io/ciliumclusterwidenetworkpolicies
+    - cilium.io/ciliumnetworkpolicies
+    - config.gatekeeper.sh/configs
     - configmaps
+    - connection.gatekeeper.sh/connections
+    - constraints.gatekeeper.sh/*
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
+    - deckhouse.io/applications
+    - deckhouse.io/awsinstanceclasses
+    - deckhouse.io/azureinstanceclasses
+    - deckhouse.io/clusterdaemonsetmetrics
+    - deckhouse.io/clusterdeploymentmetrics
+    - deckhouse.io/clusteringressmetrics
+    - deckhouse.io/clusterpodmetrics
+    - deckhouse.io/clusterservicemetrics
+    - deckhouse.io/clusterstatefulsetmetrics
+    - deckhouse.io/daemonsetmetrics
+    - deckhouse.io/deckhousereleases
+    - deckhouse.io/deploymentmetrics
+    - deckhouse.io/deschedulers
+    - deckhouse.io/dexauthenticators
+    - deckhouse.io/dexclients
+    - deckhouse.io/dvpinstanceclasses
+    - deckhouse.io/dynamixinstanceclasses
+    - deckhouse.io/gcpinstanceclasses
+    - deckhouse.io/huaweicloudinstanceclasses
+    - deckhouse.io/hubblemonitoringconfigs
+    - deckhouse.io/ingressmetrics
+    - deckhouse.io/instances
+    - deckhouse.io/keepalivedinstances
+    - deckhouse.io/localpathprovisioners
+    - deckhouse.io/moduledocumentations
+    - deckhouse.io/modulepulloverrides
+    - deckhouse.io/modulereleases
+    - deckhouse.io/modules
+    - deckhouse.io/modulesources
+    - deckhouse.io/moduleupdatepolicies
+    - deckhouse.io/namespacemetrics
+    - deckhouse.io/nodegroups
+    - deckhouse.io/openstackinstanceclasses
+    - deckhouse.io/operationpolicies
+    - deckhouse.io/packagerepositories
+    - deckhouse.io/packagerepositoryoperations
+    - deckhouse.io/podmetrics
+    - deckhouse.io/projects
+    - deckhouse.io/projecttemplates
+    - deckhouse.io/securitypolicies
+    - deckhouse.io/securitypolicyexceptions
+    - deckhouse.io/servicemetrics
+    - deckhouse.io/statefulsetmetrics
+    - deckhouse.io/vcdaffinityrules
+    - deckhouse.io/vcdinstanceclasses
+    - deckhouse.io/vsphereinstanceclasses
+    - deckhouse.io/yandexinstanceclasses
+    - deckhouse.io/zvirtinstanceclasses
     - discovery.k8s.io/endpointslices
     - endpoints
     - events
     - events.k8s.io/events
+    - expansion.gatekeeper.sh/expansiontemplate
+    - extensions.istio.io/wasmplugins
     - extensions/daemonsets
     - extensions/deployments
     - extensions/ingresses
     - extensions/replicasets
     - extensions/replicationcontrollers
+    - externaldata.gatekeeper.sh/providers
     - gateway.networking.k8s.io/backendtlspolicies
     - gateway.networking.k8s.io/gatewayclasses
     - gateway.networking.k8s.io/gateways
@@ -167,10 +248,41 @@ read:
     - gateway.networking.k8s.io/tcproutes
     - gateway.networking.k8s.io/tlsroutes
     - gateway.networking.k8s.io/udproutes
+    - infrastructure.cluster.x-k8s.io/deckhouseclusters
+    - infrastructure.cluster.x-k8s.io/deckhousemachines
+    - infrastructure.cluster.x-k8s.io/deckhousemachinetemplates
+    - infrastructure.cluster.x-k8s.io/dynamixclusters
+    - infrastructure.cluster.x-k8s.io/dynamixmachines
+    - infrastructure.cluster.x-k8s.io/dynamixmachinetemplates
+    - infrastructure.cluster.x-k8s.io/huaweicloudclusters
+    - infrastructure.cluster.x-k8s.io/huaweicloudmachines
+    - infrastructure.cluster.x-k8s.io/huaweicloudmachinetemplates
+    - infrastructure.cluster.x-k8s.io/vcdclusters
+    - infrastructure.cluster.x-k8s.io/vcdclustertemplates
+    - infrastructure.cluster.x-k8s.io/vcdmachines
+    - infrastructure.cluster.x-k8s.io/vcdmachinetemplates
+    - infrastructure.cluster.x-k8s.io/zvirtclusters
+    - infrastructure.cluster.x-k8s.io/zvirtmachines
+    - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
     - limitranges
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
+    - mutations.gatekeeper.sh/assign
+    - mutations.gatekeeper.sh/assignimage
+    - mutations.gatekeeper.sh/assignmetadata
+    - mutations.gatekeeper.sh/modifyset
     - namespaces
+    - network.deckhouse.io/egressgatewaypolicies
+    - network.deckhouse.io/egressgateways
+    - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/servicewithhealthchecks
+    - networking.istio.io/destinationrules
+    - networking.istio.io/gateways
+    - networking.istio.io/serviceentries
+    - networking.istio.io/sidecars
+    - networking.istio.io/virtualservices
+    - networking.istio.io/workloadentries
+    - networking.istio.io/workloadgroups
     - networking.k8s.io/ingresses
     - networking.k8s.io/networkpolicies
     - nodes
@@ -183,9 +295,22 @@ read:
     - rbac.authorization.k8s.io/roles
     - replicationcontrollers
     - resourcequotas
+    - security.istio.io/authorizationpolicies
+    - security.istio.io/peerauthentications
+    - security.istio.io/requestauthentications
     - serviceaccounts
     - services
+    - status.gatekeeper.sh/configpodstatuses
+    - status.gatekeeper.sh/connectionpodstatuses
+    - status.gatekeeper.sh/constraintpodstatuses
+    - status.gatekeeper.sh/constrainttemplatepodstatuses
+    - status.gatekeeper.sh/expansiontemplatepodstatuses
+    - status.gatekeeper.sh/mutatorpodstatuses
+    - status.gatekeeper.sh/providerpodstatuses
     - storage.k8s.io/storageclasses
+    - syncset.gatekeeper.sh/syncsets
+    - telemetry.istio.io/telemetries
+    - templates.gatekeeper.sh/constrainttemplates
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `PrivilegedUser` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`):
@@ -205,14 +330,33 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+read:
+    - deckhouse.io/clusterlogdestinations
+    - deckhouse.io/clusterloggingconfigs
+    - deckhouse.io/customprometheusrules
+    - deckhouse.io/grafanaadditionaldatasources
+    - deckhouse.io/grafanadashboarddefinitions
 read-write:
+    - deckhouse.io/podloggingconfigs
+write:
     - apps/deployments
     - apps/statefulsets
     - autoscaling.k8s.io/verticalpodautoscalers
     - autoscaling/horizontalpodautoscalers
     - batch/cronjobs
     - batch/jobs
+    - cert-manager.io/certificates
+    - cert-manager.io/issuers
     - configmaps
+    - deckhouse.io/daemonsetmetrics
+    - deckhouse.io/deploymentmetrics
+    - deckhouse.io/dexauthenticators
+    - deckhouse.io/dexclients
+    - deckhouse.io/ingressmetrics
+    - deckhouse.io/namespacemetrics
+    - deckhouse.io/podmetrics
+    - deckhouse.io/servicemetrics
+    - deckhouse.io/statefulsetmetrics
     - discovery.k8s.io/endpointslices
     - endpoints
     - extensions/deployments
@@ -226,13 +370,24 @@ read-write:
     - gateway.networking.k8s.io/tcproutes
     - gateway.networking.k8s.io/tlsroutes
     - gateway.networking.k8s.io/udproutes
+    - network.deckhouse.io/servicewithhealthchecks
+    - networking.istio.io/destinationrules
+    - networking.istio.io/gateways
+    - networking.istio.io/serviceentries
+    - networking.istio.io/sidecars
+    - networking.istio.io/virtualservices
+    - networking.istio.io/workloadentries
+    - networking.istio.io/workloadgroups
     - networking.k8s.io/ingresses
+    - networking.k8s.io/networkpolicies
     - persistentvolumeclaims
     - policy/poddisruptionbudgets
+    - secrets
+    - security.istio.io/authorizationpolicies
+    - security.istio.io/peerauthentications
+    - security.istio.io/requestauthentications
     - serviceaccounts
     - services
-write:
-    - secrets
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
@@ -241,36 +396,175 @@ write:
 create,patch,update:
     - pods
 delete,deletecollection:
+    - acme.cert-manager.io/orders
     - apps/replicasets
+    - cert-manager.io/certificaterequests
+    - cert-manager.io/challenges
     - extensions/replicasets
+read:
+    - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
 read-write:
     - deckhouse.io/authorizationrules
+write:
+    - autoscaling.k8s.io/verticalpodautoscalercheckpoints
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
+    - deckhouse.io/applications
+    - deckhouse.io/deckhousereleases
+    - deckhouse.io/moduleconfigs
+    - deckhouse.io/moduledocumentations
+    - deckhouse.io/modulepulloverrides
+    - deckhouse.io/modulereleases
+    - deckhouse.io/modules
+    - deckhouse.io/modulesources
+    - deckhouse.io/moduleupdatepolicies
+    - deckhouse.io/packagerepositories
+    - deckhouse.io/packagerepositoryoperations
+    - deckhouse.io/securitypolicyexceptions
+    - extensions.istio.io/wasmplugins
     - rbac.authorization.k8s.io/rolebindings
     - rbac.authorization.k8s.io/roles
+    - telemetry.istio.io/telemetries
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+delete,deletecollection:
+    - acme.cert-manager.io/orders
+    - cert-manager.io/certificaterequests
+    - cert-manager.io/challenges
+patch,update:
+    - nodes
 read:
+    - deckhouse.io/ingressistiocontrollers
+    - deckhouse.io/ingressnginxcontrollers/status
+    - deckhouse.io/istiofederations
+    - deckhouse.io/istiomulticlusters
+    - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
+    - install.istio.io/istiooperators
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
+    - sailoperator.io/istiocnis
+    - sailoperator.io/istiorevisions
+    - sailoperator.io/istiorevisiontags
+    - sailoperator.io/istios
+    - sailoperator.io/ztunnels
+read-write:
+    - apps.kruise.io/daemonsets
+    - deckhouse.io/downtimes
+    - deckhouse.io/ingressnginxcontrollers
+    - deckhouse.io/nodegroupconfigurations
+    - deckhouse.io/staticinstances
+    - deckhouse.io/upmeterremotewrites
 write:
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
+    - autoscaling.k8s.io/verticalpodautoscalercheckpoints
+    - cert-manager.io/clusterissuers
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
+    - deckhouse.io/applications
+    - deckhouse.io/clusterdaemonsetmetrics
+    - deckhouse.io/clusterdeploymentmetrics
+    - deckhouse.io/clusteringressmetrics
+    - deckhouse.io/clusterlogdestinations
+    - deckhouse.io/clusterloggingconfigs
+    - deckhouse.io/clusterpodmetrics
+    - deckhouse.io/clusterservicemetrics
+    - deckhouse.io/clusterstatefulsetmetrics
+    - deckhouse.io/customprometheusrules
+    - deckhouse.io/deckhousereleases
+    - deckhouse.io/grafanaadditionaldatasources
+    - deckhouse.io/grafanadashboarddefinitions
+    - deckhouse.io/hubblemonitoringconfigs
+    - deckhouse.io/instances
+    - deckhouse.io/keepalivedinstances
+    - deckhouse.io/moduleconfigs
+    - deckhouse.io/moduledocumentations
+    - deckhouse.io/modulepulloverrides
+    - deckhouse.io/modulereleases
+    - deckhouse.io/modules
+    - deckhouse.io/modulesources
+    - deckhouse.io/moduleupdatepolicies
+    - deckhouse.io/nodegroups
+    - deckhouse.io/packagerepositories
+    - deckhouse.io/packagerepositoryoperations
+    - deckhouse.io/securitypolicyexceptions
+    - extensions.istio.io/wasmplugins
     - extensions/daemonsets
     - gateway.networking.k8s.io/gatewayclasses
+    - network.deckhouse.io/egressgatewaypolicies
+    - network.deckhouse.io/egressgateways
     - storage.k8s.io/storageclasses
+    - telemetry.istio.io/telemetries
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
+delete,deletecollection,get,list,patch,update,watch:
+    - machine.sapcloud.io/alicloudmachineclasses
+    - machine.sapcloud.io/awsmachineclasses
+    - machine.sapcloud.io/azuremachineclasses
+    - machine.sapcloud.io/gcpmachineclasses
+    - machine.sapcloud.io/machinedeployments
+    - machine.sapcloud.io/machines
+    - machine.sapcloud.io/machinesets
+    - machine.sapcloud.io/openstackmachineclasses
+    - machine.sapcloud.io/packetmachineclasses
+    - machine.sapcloud.io/vspheremachineclasses
+    - machine.sapcloud.io/yandexmachineclasses
+get,list,patch,update,watch:
+    - control-plane.deckhouse.io/controlplanenodes
+list:
+    - dex.coreos.com/offlinesessionses
+    - dex.coreos.com/passwords
+patch,update:
+    - deckhouse.io/vcdaffinityrules
+    - infrastructure.cluster.x-k8s.io/deckhouseclusters
+    - infrastructure.cluster.x-k8s.io/deckhousemachines
+    - infrastructure.cluster.x-k8s.io/deckhousemachinetemplates
+    - infrastructure.cluster.x-k8s.io/dynamixclusters
+    - infrastructure.cluster.x-k8s.io/dynamixmachines
+    - infrastructure.cluster.x-k8s.io/dynamixmachinetemplates
+    - infrastructure.cluster.x-k8s.io/huaweicloudclusters
+    - infrastructure.cluster.x-k8s.io/huaweicloudmachines
+    - infrastructure.cluster.x-k8s.io/huaweicloudmachinetemplates
+    - infrastructure.cluster.x-k8s.io/vcdclusters
+    - infrastructure.cluster.x-k8s.io/vcdclustertemplates
+    - infrastructure.cluster.x-k8s.io/vcdmachines
+    - infrastructure.cluster.x-k8s.io/vcdmachinetemplates
+    - infrastructure.cluster.x-k8s.io/zvirtclusters
+    - infrastructure.cluster.x-k8s.io/zvirtmachines
+    - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
+    - machine.sapcloud.io/machinedeployments/scale
 proxy:
     - nodes
+read:
+    - cluster.x-k8s.io/machinedrainrules
+    - control-plane.deckhouse.io/controlplaneoperations
+    - infrastructure.cluster.x-k8s.io/deckhousecontrolplanes
+    - infrastructure.cluster.x-k8s.io/staticclusters
+    - infrastructure.cluster.x-k8s.io/staticmachines
+    - nfd.k8s-sigs.io/nodefeaturegroups
+    - nfd.k8s-sigs.io/nodefeaturerules
+    - nfd.k8s-sigs.io/nodefeatures
 read-write:
+    - cluster.x-k8s.io/clusters
+    - cluster.x-k8s.io/machinedeployments
+    - cluster.x-k8s.io/machinehealthchecks
+    - cluster.x-k8s.io/machinepools
+    - cluster.x-k8s.io/machines
+    - cluster.x-k8s.io/machinesets
     - deckhouse.io/clusterauthorizationrules
-    - namespaces
+    - deckhouse.io/dexproviders
+    - deckhouse.io/groups
+    - deckhouse.io/nodeusers
+    - deckhouse.io/sshcredentials
+    - deckhouse.io/useroperations
+    - deckhouse.io/users
+    - infrastructure.cluster.x-k8s.io/staticmachinetemplates
     - nodes/configz
     - nodes/healthz
     - nodes/log
@@ -279,15 +573,63 @@ read-write:
     - nodes/proxy
     - nodes/stats
 write:
+    - cilium.io/ciliumclusterwidenetworkpolicies
+    - cilium.io/ciliumnetworkpolicies
+    - cluster.x-k8s.io/machinedeployments/scale
+    - config.gatekeeper.sh/configs
+    - connection.gatekeeper.sh/connections
+    - constraints.gatekeeper.sh/*
+    - deckhouse.io/awsinstanceclasses
+    - deckhouse.io/azureinstanceclasses
+    - deckhouse.io/deschedulers
+    - deckhouse.io/dvpinstanceclasses
+    - deckhouse.io/dynamixinstanceclasses
+    - deckhouse.io/gcpinstanceclasses
+    - deckhouse.io/huaweicloudinstanceclasses
+    - deckhouse.io/ingressistiocontrollers
+    - deckhouse.io/istiofederations
+    - deckhouse.io/istiomulticlusters
+    - deckhouse.io/localpathprovisioners
+    - deckhouse.io/openstackinstanceclasses
+    - deckhouse.io/operationpolicies
+    - deckhouse.io/projects
+    - deckhouse.io/projecttemplates
+    - deckhouse.io/securitypolicies
+    - deckhouse.io/vcdinstanceclasses
+    - deckhouse.io/vsphereinstanceclasses
+    - deckhouse.io/yandexinstanceclasses
+    - deckhouse.io/zvirtinstanceclasses
+    - expansion.gatekeeper.sh/expansiontemplate
+    - externaldata.gatekeeper.sh/providers
+    - install.istio.io/istiooperators
     - limitranges
-    - networking.k8s.io/networkpolicies
+    - mutations.gatekeeper.sh/assign
+    - mutations.gatekeeper.sh/assignimage
+    - mutations.gatekeeper.sh/assignmetadata
+    - mutations.gatekeeper.sh/modifyset
+    - namespaces
+    - network.deckhouse.io/metalloadbalancerclasses
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
-    - rbac.authorization.k8s.io/rolebindings
-    - rbac.authorization.k8s.io/roles
     - resourcequotas
+    - sailoperator.io/istiocnis
+    - sailoperator.io/istiorevisions
+    - sailoperator.io/istiorevisiontags
+    - sailoperator.io/istios
+    - sailoperator.io/ztunnels
+    - status.gatekeeper.sh/configpodstatuses
+    - status.gatekeeper.sh/connectionpodstatuses
+    - status.gatekeeper.sh/constraintpodstatuses
+    - status.gatekeeper.sh/constrainttemplatepodstatuses
+    - status.gatekeeper.sh/expansiontemplatepodstatuses
+    - status.gatekeeper.sh/mutatorpodstatuses
+    - status.gatekeeper.sh/providerpodstatuses
+    - syncset.gatekeeper.sh/syncsets
+    - templates.gatekeeper.sh/constrainttemplates
 ```
 <!-- end user-authz roles placeholder -->
+
+{: #get_rules .anchored}
 
 Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](usage.html#настройка-прав-высокоуровневых-ролей) и нестандартные правила из других модулей Deckhouse):
 

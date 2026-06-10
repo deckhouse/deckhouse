@@ -1,0 +1,1361 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Security Scan Images
+
+# Image-based scans (CVE / rootless / antivirus). Invoked as a reusable
+# workflow from the Build workflow once `Build FE` succeeds — see the
+# `security_scan_images` job in build-and-test_dev. Because this workflow is
+# called via `uses:`, its jobs run as part of the parent's workflow run and
+# automatically appear on the PR's "Checks" tab (no commit-status plumbing
+# needed). The pull-request event context (head SHA, PR number, run_id) is
+# inherited from the calling workflow, so we read it straight from
+# `github.event.pull_request.*` / `github.run_id`.
+#
+# Re-run semantics: there is no "Re-run all jobs" entry-point on this workflow
+# alone — it is part of the parent. To re-execute the image scans, re-run the
+# Build workflow ("Build and test for dev branches"). The parent's
+# `concurrency.cancel-in-progress` automatically cancels any in-flight nested
+# scan when a new build for the same PR starts, so this workflow intentionally
+# does NOT declare its own `concurrency:` block: under workflow_call,
+# `github.workflow` is inherited from the parent, which would resolve into the
+# same group as the parent and produce a self-deadlock (GitHub then cancels
+# both runs with: "deadlock was detected for concurrency group … between a top
+# level workflow and 'Security scan images'").
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
+    runs-on: "self-slim"
+    outputs:
+      ref: ${{ steps.pr_props.outputs.ref }}
+      ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
+      pr_title: ${{ steps.pr_props.outputs.pr_title }}
+      pr_description: ${{ steps.pr_props.outputs.pr_description }}
+      diff_url: ${{ steps.pr_props.outputs.diff_url }}
+      labels: ${{ steps.pr_props.outputs.labels }}
+      changes_docs: ${{ steps.changes.outputs.docs }}
+      changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+
+      build_CE: ${{ steps.pr_props.outputs.build_CE }}
+      build_EE: ${{ steps.pr_props.outputs.build_EE }}
+      build_BE: ${{ steps.pr_props.outputs.build_BE }}
+      build_SE: ${{ steps.pr_props.outputs.build_SE }}
+      build_SE-plus: ${{ steps.pr_props.outputs.build_SE-plus }}
+      build_CSE: ${{ steps.pr_props.outputs.build_CSE }}
+
+    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
+    steps:
+      - name: Get PR info for push trigger
+        id: push_info
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            // Support for 'push' trigger: find PR by commit SHA and pass response to pr_props step.
+            const { GITHUB_REF_NAME } = process.env
+            core.startGroup(`Fetching PR info for commit ${context.sha} in ${context.repo.name}:${GITHUB_REF_NAME} ...`)
+            try {
+              const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: context.sha
+              });
+              if (response.status !== 200 || !response.data || response.data.length === 0) {
+                return core.setFailed(`Bad response on listing PRs for commit ${context.sha}: ${JSON.stringify(response)}`);
+              }
+              // Get first associated pr.
+              let pr = response.data[0];
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.notice(`Found PR#{pr.number} for commit ${context.sha}`);
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Error listing pull requests for commit ${context.sha}: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Get PR info for pull_request trigger
+        id: pr_info
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            // Support for 'pull_request' and 'pull_request_target' triggers:
+            // find PR by its number to get current labels.
+            // Why? Workflow rerun of 'opened' pull request contains outdated labels.
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            core.startGroup(`Fetching info for PR#${prNumber} ...`);
+            try {
+              const response = await github.rest.pulls.get({owner, repo, pull_number: prNumber})
+              if (response.status != 200 || !response.data) {
+                return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
+              }
+              // Only labels are needed.
+              let pr = response.data;
+              core.info(`Labels from context: ${JSON.stringify(context.payload.pull_request.labels)}`);
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Fetch PR#${prNumber} error: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Check PR properties
+        id: pr_props
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_INFO: ${{ steps.push_info.outputs.pr_info || steps.pr_info.outputs.pr_info }}
+        with:
+          script: |
+            if (process.env.PR_INFO == '') {
+                return core.setFailed(`No pull request info: event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+            }
+            // Parse Pr info from environment variable.
+            const pr = JSON.parse(process.env.PR_INFO);
+
+            core.startGroup(`Detect PR properties`)
+            const pr_repo = pr.head.repo.full_name;
+            const target_repo = context.payload.repository.full_name;
+            const isInternal = pr_repo === target_repo;
+            const isDependabot = (context.actor === 'dependabot[bot]');
+            const isChangelog = pr.head.ref.startsWith('changelog/v');
+            const okToTest = pr.labels.some((l) => l.name === 'status/ok-to-test');
+            core.info(`PR head repo          ${pr_repo}`)
+            core.info(`PR commit SHA         ${pr.head.sha}`)
+            core.info(`PR head label         ${pr.head.label}`)
+            core.info(`Target repo           ${target_repo}`)
+            core.info(`PR internal?          ${isInternal}`)
+            core.info(`PR from dependabot?   ${isDependabot}`)
+            core.info(`PR changelog?         ${isChangelog}`)
+            core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+            core.endGroup()
+
+            // Detect if PR can be ignored or should be checked for dangerous changes.
+            let shouldCheckFiles = false;
+            if (isInternal && !isDependabot) {
+              // Ignore changelog pull requests.
+              if (isChangelog) {
+                return core.setFailed(`PR#${pr.number} for changelog is ignored.`);
+              }
+            } else {
+              // External and dependabot pull requests should be labeled with 'status/ok-to-test'.
+              if (!okToTest) {
+                core.notice(`PR#${pr.number} requires label 'status/ok-to-test' to run tests and validations`)
+                return core.setFailed(`PR#${pr.number} without label 'status/ok-to-test' is ignored.`);
+              }
+              shouldCheckFiles = true;
+            }
+            if (shouldCheckFiles) {
+              core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
+            }
+
+            // Set editions from current labels to build_ce, build_ee and so on.
+            const build_editions = pr.labels.map(l => l.name).filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
+
+            // Construct head commit ref using pr number.
+            const ref = `refs/pull/${ pr.number }/head`;
+            core.notice(`Use ref: '${ref}'`)
+
+            // Pass pr.diff_url to download diff via regular request.
+            // Pass pr.url to get diff via API request.
+            let diff_url = pr.diff_url;
+            if (!!context.payload.repository.private) {
+              core.notice(`Detect private repo. Pass PR url to download diff via Github API.`);
+              diff_url = pr.url;
+            }
+
+            // Set outputs.
+            core.setCommandEcho(true)
+            core.setOutput('should_check', shouldCheckFiles.toString());
+            core.setOutput('ref', ref);
+            core.setOutput('ref_slug', `pr${pr.number}`);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_description', pr.body);
+            core.setOutput('diff_url', diff_url);
+            core.setOutput('labels', JSON.stringify(pr.labels));
+            core.startGroup('Set build editions based on pr labels')
+            for (build_edition of build_editions) {
+              core.setOutput(`${build_edition}`, 'true');
+              core.info(`${build_edition}`)
+            }
+            core.endGroup()
+            core.setCommandEcho(false);
+
+      # Checkhout the head commit of the PR branch.
+      - name: Checkout PR head commit
+        if: steps.pr_props.outputs.should_check == 'true'
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ steps.pr_props.outputs.ref }}
+
+      # Get info about other changes.
+      - name: Get info about PR changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          # dangerous - detect if changes not allowed to test for external PRs
+          # docs - detect changes in files that belong to the documentation scope
+          # not_markdown - detect changes not in markdown files
+          filters: |
+            dangerous:
+              - './.github/**'
+              - './tools/**'
+              - './testing/**'
+              - './docs/**/js/**'
+              - './docs/**/css/**'
+              - './docs/**/images/**'
+              - './docs/**/assets/**'
+            docs:
+              - './**/*.md'
+              - './docs/**'
+              - './**/crds/*'
+              - './**/openapi/*config-values.yaml'
+              - './candi/**/openapi/*'
+              - './ee/candi/**/openapi/*'
+            not_markdown:
+              - '!./**/*.md'
+
+      # Stop workflow if external PR contains dangerous changes.
+      - name: Fail workflow on dangerous changes
+        if: ${{ steps.pr_props.outputs.should_check == 'true' && steps.changes.outputs.dangerous == 'true' }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            core.setFailed('External PR contains dangerous changes.')
+
+  # </template: pull_request_info>
+
+  # ============================================================================
+  # Compute the set of module images that actually changed in this PR.
+  #
+  # Baseline source: the FIRST `Build and test for dev branches` run of THIS
+  # PR whose `Build FE` job finished with conclusion=success — discovered via
+  # GitHub API, see the "Find baseline ..." step below. On the very first PR
+  # build werf's cache could only contain main-published layers, so
+  # `Rebuilt: false` in that report reliably means "identical to main". On
+  # any *later* build `Rebuilt: false` can also mean "identical to a layer
+  # this PR itself built earlier", which would silently mask images already
+  # modified by the PR. Anchoring the baseline to the first successful Build
+  # FE run sidesteps that.
+  #
+  # First PR build is naturally covered: the "first successful Build FE" is
+  # the current run itself, so digests_old_main is derived from this run's
+  # report. Images with `Rebuilt: true` are absent from digests_old_main and
+  # therefore correctly surface as "changed" in the diff against the current
+  # PR image.
+  #
+  # If the baseline run's `build_report_FE` artifact is no longer available
+  # (retention window elapsed), the download step stays soft and
+  # changed_images.py emits an empty filter (`changed_compact=[]`); downstream
+  # CVE / rootless / antivirus scans then fall back to full-scan mode (every
+  # image scanned), with an explicit log line stating the reason.
+  #
+  # Flow:
+  #   1. Resolve baseline run_id (first PR run with Build FE success).
+  #   2. Download `build_report_FE` from that run (soft; missing = full-scan).
+  #   3. Keep only Final=true && Rebuilt=false entries -> digests_old_main.json
+  #      (.github/scripts/python/changed_images.py).
+  #   4. Extract images_digests.json from the current PR image and diff its
+  #      digests against digests_old_main by content (digest), not by name.
+  #
+  # Outputs (changed_count / matrix / changed_compact) drive subsequent
+  # CVE / rootless / antivirus scans.
+  # ============================================================================
+  changed_images:
+    name: Compute changed images
+    runs-on: [self-hosted, regular]
+    needs:
+      - pull_request_info
+    # Runs in main repo and test mirrors (deckhouse/deckhouse-*). All required
+    # secrets (dev-registry creds) are the same ones Build FE already uses, so
+    # any repo where Build FE works can run this job too.
+    if: startsWith(github.repository, 'deckhouse/deckhouse')
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    outputs:
+      changed_count:    ${{ steps.diff.outputs.changed_count }}
+      matrix:           ${{ steps.diff.outputs.matrix }}
+      changed_compact:  ${{ steps.diff.outputs.changed_compact }}
+      baseline_run_id:  ${{ steps.baseline.outputs.run_id }}
+    steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+
+      - name: Set PR tag
+        id: tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # Resolve the baseline: the first build-and-test_dev run of this PR
+      # whose `Build FE` job finished with conclusion=success.
+      #
+      # API strategy (important for main `deckhouse/deckhouse` scale, where
+      # build-and-test_dev has ~40k total runs):
+      #   * Filter at the API layer by the PR's head branch + status=success.
+      #     `listWorkflowRunsForRepo?branch=<head>&workflow_id=...&status=success`
+      #     normally returns a single-digit list — usually 1..20 runs.
+      #   * A run with conclusion=success means every required top-level job
+      #     succeeded, so `Build FE` (which is required) is implicitly success.
+      #     This avoids the N+1 `listJobsForWorkflowRun` calls we used to do.
+      #
+      # Soft degrade: if for any reason we cannot resolve a baseline (API rate
+      # limit, branch came from a fork without success runs yet, etc.) — emit
+      # an empty `run_id` and let the download step / changed_images.py
+      # fall back to full-scan with a clear warning. We intentionally do NOT
+      # `setFailed` here, because changed_images is plumbing, not a scanner.
+      - name: Find baseline Build FE run for this PR
+        id: baseline
+        timeout-minutes: 3
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const prNumber = pr.number;
+            const headRef  = pr.head.ref;
+            core.info(`PR #${prNumber} head ref: ${headRef}`);
+
+            try {
+              const runs = await github.paginate(
+                github.rest.actions.listWorkflowRunsForRepo,
+                {
+                  owner: context.repo.owner,
+                  repo:  context.repo.repo,
+                  workflow_id: 'build-and-test_dev.yml',
+                  branch: headRef,
+                  status: 'success',
+                  per_page: 100,
+                },
+              );
+              core.info(`Found ${runs.length} successful build-and-test_dev run(s) on '${headRef}'`);
+
+              if (runs.length === 0) {
+                core.warning(
+                  `No successful build-and-test_dev run on '${headRef}' yet. ` +
+                  `Emitting empty baseline -> downstream scanners run in full-scan mode.`,
+                );
+                core.setOutput('run_id', '');
+                return;
+              }
+
+              runs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+              const chosen = runs[0];
+              core.info(`Baseline run: id=${chosen.id} created_at=${chosen.created_at}`);
+              core.setOutput('run_id', String(chosen.id));
+            } catch (err) {
+              core.warning(
+                `Failed to resolve baseline run (${err.message}). ` +
+                `Emitting empty baseline -> downstream scanners run in full-scan mode.`,
+              );
+              core.setOutput('run_id', '');
+            }
+
+      # Skipped when the baseline step could not find a successful Build FE
+      # run on this branch (empty run_id). In that case no build_report
+      # is fetched and changed_images.py degrades to full-scan with a
+      # warning logged from the "Compute changed images" step.
+      - name: Download build_report_FE from baseline run
+        if: ${{ steps.baseline.outputs.run_id != '' }}
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          run_id: ${{ steps.baseline.outputs.run_id }}
+          name: build_report_FE
+          path: ./build_report
+          # Soft on missing/expired: changed_images.py detects the absent
+          # report and falls back to full-scan (empty filter) with a clear
+          # log line, instead of failing the whole image-scan workflow.
+          if_no_artifact_found: warn
+
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+
+      - name: Extract images_digests.json from dev:${{ steps.tag.outputs.TAG }}
+        env:
+          DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          TAG: ${{ steps.tag.outputs.TAG }}
+        run: |
+          set -euo pipefail
+          regctl image get-file "${DEV_REGISTRY}/sys/deckhouse-oss:${TAG}" \
+            /deckhouse/modules/images_digests.json > images_digests.json
+          modules=$(jq 'keys | length' images_digests.json)
+          images=$(jq '[.[] | to_entries[]] | length' images_digests.json)
+          echo "images_digests.json: ${modules} modules, ${images} module images."
+
+      - name: Compute changed images
+        id: diff
+        env:
+          # Baseline (first successful PR build) for digests_old_main:
+          BUILD_REPORT_PATH:   ./build_report/images_tags_werf.json
+          # Current PR image (this run):
+          IMAGES_DIGESTS_PATH: ./images_digests.json
+          OUTPUT_OLD_DIGESTS:  ./digests_old_main.json
+          OUTPUT_CHANGED:      ./changed_images.json
+          BASELINE_RUN_ID:     ${{ steps.baseline.outputs.run_id }}
+        run: |
+          echo "Baseline build_report_FE source: run_id=${BASELINE_RUN_ID}"
+          python3 .github/scripts/python/changed_images.py
+
+      - name: Upload diff artifacts
+        if: ${{ always() && steps.diff.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: changed-images-pr${{ github.event.pull_request.number }}
+          path: |
+            digests_old_main.json
+            changed_images.json
+          retention-days: 14
+      # NOTE: no `send_fail_report` here. Loop notifications on this workflow
+      # are reserved for actual scanner findings (rootless / antivirus) and
+      # for the gitleaks workflow. `changed_images` is plumbing — its
+      # failures (GitHub API unavailable, baseline build_report_FE expired,
+      # regctl pull failed, etc.) surface in Actions UI and indirectly via
+      # downstream scan jobs that will skip and turn the `security/*` PR
+      # labels red. Adding a Loop ping here would only create noise.
+
+  # ============================================================================
+  # CVE — Trivy scan on PR images.
+  # TEMPORARILY DISABLED: PR-mode CVE scan currently misbehaves (false-positive
+  # noise / wrong PR-diff filter). Re-enable by removing the `if: false` guard
+  # once the underlying script is fixed. While disabled, the aggregator below
+  # explicitly allows `cve: skipped`, so it does not block PR merges.
+  # ============================================================================
+  test_cve_report_main:
+    name: Trivy scan dev images
+    if: ${{ false }}
+    # External/fork PRs gated by 'status/ok-to-test' via pull_request_info (setFailed → this job is skipped).
+    needs:
+      - pull_request_info
+      - changed_images
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: [self-hosted, large]
+    env:
+      WORKDIR: "cve-scan"
+    steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+
+      # <template: link_bin_step>
+      - name: Link binary cache
+        id: link_bin_step
+        run: |
+          ln -s ~/deckhouse-bin-cache bin
+      # </template: link_bin_step>
+
+      - name: Set scan target type
+        id: scan_type
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "PR_NUMBER=${PR_NUMBER}"
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+          echo "SCAN_SEVERAL_LATEST_RELEASES=False" >> $GITHUB_OUTPUT
+          echo "LATEST_RELEASES_AMOUNT=0" >> $GITHUB_OUTPUT
+      # <template: cve_scan_deckhouse_images>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host DECKHOUSE_READ_REGISTRY_HOST | PROD_READ_REGISTRY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token login | PROD_READ_REGISTRY_USER ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token password | PROD_READ_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
+      - name: Set up cosign
+        uses: sigstore/cosign-installer@main
+        with:
+          cosign-release: "v3.0.4"
+
+      # PR-mode CVE: announce the changed-images filter that we forward to cve_scan.sh.
+      # `changed_compact` is the same JSON allow-list used by rootless / drweb scans;
+      # an empty "[]" (no PR-vs-main delta, or baseline build_report_FE missing) is
+      # treated by cve_scan.sh as "scan every image" — matching the script's legacy
+      # behaviour and our policy of preferring over-scan to under-scan.
+      - name: Announce CVE delta-scan filter
+        env:
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+        run: |
+          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+            echo "🎯 CVE delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to cve_scan.sh"
+            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+          else
+            echo "📋 CVE full-scan: ONLY_IMAGES is empty (no delta or baseline missing)"
+          fi
+
+      - name: Run Deckhouse images CVE tests on "${{ steps.scan_type.outputs.tag }}"
+        uses: deckhouse/modules-actions/cve_scan@main
+        env:
+          # Forward the changed-images allow-list to cve_scan.sh. GitHub Actions
+          # propagates step-level env into the composite action's inner steps, so
+          # `cve_scan.sh` reads ${ONLY_IMAGES} directly from the environment (see
+          # the ONLY_IMAGES_SET block in /home/nikmor/Flant/GitLab/SSDLC-tools/cve-scan/cve_scan.sh).
+          # Empty "[]" makes the script fall back to full scan — no extra glue.
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+        with:
+          prod_registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          prod_registry_user: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          prod_registry_password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          dev_registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          dev_registry_user: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER}}"
+          dev_registry_password: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}"
+          source_tag: "${{ steps.scan_type.outputs.tag }}"
+          case: "deckhouse"
+          trivy_reports_log_output: 2
+          scan_several_latest_releases: "${{ steps.scan_type.outputs.scan_several_latest_releases }}"
+          latest_releases_amount: "${{ steps.scan_type.outputs.latest_releases_amount }}"
+          role_name: "${{ steps.split.outputs.name }}"
+      # </template: cve_scan_deckhouse_images>
+
+      # <template: cve_tests_upload_reports_artifacts>
+      - name: Archive report artifacts
+        if: success()
+        run: |
+          tar -zcvf ${{ env.WORKDIR }}/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
+      - name: Create fail artifact
+        if: failure()
+        run: |
+          echo "Trivy tests for ${{ steps.scan_type.outputs.tag }} have failed." > "${{ env.WORKDIR }}/${{ steps.scan_type.outputs.tag }}_test-failed.txt"
+          tar -zcvf ${{ env.WORKDIR }}/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
+      - name: Upload report artifacts
+        if: success()
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: cve-reports
+          path: |
+            ${{ env.WORKDIR }}/trivy_json_reports.tar.gz
+      - name: Upload fail artifact
+        if: failure()
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: cve-reports
+          path: |
+            ${{ env.WORKDIR }}/${{ steps.scan_type.outputs.tag }}_test-failed.txt
+            ${{ env.WORKDIR }}/trivy_json_reports.tar.gz
+      - name: Remove workdir
+        run: |
+          rm -r ${{ env.WORKDIR }}
+      # </template: cve_tests_upload_reports_artifacts>
+
+      # <template: unlink_bin_step>
+      - name: Unlink binary cache
+        id: unlink_bin_step
+        if: always()
+        run: |
+          rm bin
+      # </template: unlink_bin_step>
+      # NOTE: no `send_fail_report` here. PR-time CVE notifications are
+      # intentionally silent — Loop pings on this workflow are reserved for
+      # rootless / antivirus findings (and gitleaks lives in security-scan-src).
+      # CVE-found vs technical-fail aren't distinguishable from the current
+      # cve_scan.sh exit code, so a blanket failure() ping would be noisy.
+      # Weekly CVE (`cve-weekly`) keeps its own `send_fail_report` independent
+      # of this template — that behaviour is unchanged.
+      # The shared `cve_scan_deckhouse_images` step still imports
+      # LOOP_SERVICE_NOTIFICATIONS because that secret block is reused by
+      # cve-weekly; leaving it as-is here is intentional and harmless.
+
+
+
+  # <template: set_security_scan_requirement_status>
+  set_security_scan_requirement_status:
+    name: Set commit status after security scan run
+    runs-on: "self-slim"
+    needs: test_cve_report_main
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.test_cve_report_main.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/cve/success" --remove-label "security/cve/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/cve/success" --remove-label "security/cve/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/cve/failed" --remove-label "security/cve/success"
+          fi
+  # </template: set_security_scan_requirement_status>
+
+  # ============================================================================
+  # Rootless — default-user validation on PR images.
+  # ============================================================================
+  security_scan_images:
+    name: Security scan images
+    runs-on: [self-hosted, large]
+    needs:
+      - pull_request_info
+      - changed_images
+    # <template: security_scan_template>
+    steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: link_bin_step>
+      - name: Link binary cache
+        id: link_bin_step
+        run: |
+          ln -s ~/deckhouse-bin-cache bin
+      # </template: link_bin_step>
+      - name: Set PR scan tag
+        id: scan_tag
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+      - name: Running default user validation on ${{env.TAG}}
+        env:
+          TAG: ${{ steps.scan_tag.outputs.TAG }}
+          IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+          DECKHOUSE_PRIVATE_REPO: ${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}
+          # PR mode: restrict scanning to the images that actually changed in this
+          # PR (computed by the `changed_images` job upstream). Empty list ("[]")
+          # makes check-non-root.sh fall back to the full scan (see the script).
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+        run: |
+          echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+          echo "----------------------------------------------"
+          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+            echo "🎯 Delta-scan mode: ONLY_IMAGES filter active (${keys_count} image key(s))."
+            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+            echo "    ⚠️  If check-non-root.sh below still iterates every image, the"
+            echo "        script is an outdated revision without ONLY_IMAGES support."
+          else
+            echo "📋 Full-scan mode: ONLY_IMAGES is unset or empty."
+          fi
+          echo "----------------------------------------------"
+          make cve-base-images-check-default-user
+
+      # <template: unlink_bin_step>
+      - name: Unlink binary cache
+        id: unlink_bin_step
+        if: always()
+        run: |
+          rm bin
+      # </template: unlink_bin_step>
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>
+    # </template: security_scan_template>
+
+
+
+  # <template: set_security_rootless_requirement_status>
+  set_security_rootless_requirement_status:
+    name: Set commit status after security rootless scan run
+    runs-on: "self-slim"
+    needs:
+      - pull_request_info
+      - security_scan_images
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.security_scan_images.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/rootless/success" --remove-label "security/rootless/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/rootless/success" --remove-label "security/rootless/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/rootless/failed" --remove-label "security/rootless/success"
+          fi
+  # </template: set_security_rootless_requirement_status>
+
+  # ============================================================================
+  # Antivirus — Dr.Web and Kaspersky scans on PR images.
+  # ============================================================================
+  get-tags:
+    name: Get PR tag for scanning
+    runs-on: self-slim
+    needs:
+      - pull_request_info
+    # No secrets needed, just composes the PR tag — runs in main and test mirrors.
+    if: startsWith(github.repository, 'deckhouse/deckhouse')
+    outputs:
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
+    steps:
+      - name: Set PR tag
+        id: set-pr-tag
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
+
+
+  # <template: drweb_scan_job>
+  drweb-scan:
+    name: Dr.Web Scan ${{ matrix.branch }}
+    runs-on: [self-hosted, antivirus]
+    if: github.repository == 'deckhouse/deckhouse'
+    # PR mode: filter scanned images by the changed_images diff (delta-only scan).
+    needs: [get-tags, changed_images]
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+      fail-fast: false
+    permissions:
+      id-token: write
+    outputs:
+      scan_id: ${{ steps.scan.outputs.scan_id }}
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
+
+      # </template: import_secrets>
+
+      - name: Run drweb scan
+        id: scan
+        env:
+          # `ONLY_IMAGES` comes from needs.changed_images.outputs.changed_compact
+          # (JSON array of "<module>.<image>" keys). Wired here for PR runs of both
+          # drweb-scan and kaspersky-scan when their templates are called with
+          # `withChangedImages: true` (see security-scan-images.yml). In weekly /
+          # release runs the templates pass empty `only_images_expr`, so this env
+          # block is omitted and the Go scanner falls back to full-scan.
+          # Empty value / "[]" is treated by the Go scanner as full-scan, so the
+          # bash side does not need to branch on it.
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+        run: |
+          registry_image_path=/sys/deckhouse-oss
+          ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
+          if [ -z "${ref}" ]; then
+            ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
+          fi
+          ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
+          SCAN_TIME=$(date '+%s')
+          SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
+          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            echo "registry read"
+            edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
+            SCAN_ID+="-${edition}"
+            registry_image_path="/deckhouse/${edition}"
+            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+            echo "registry stage"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
+          else
+            echo "registry dev"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          fi
+          CONTAINER_NAME=registry_drweb
+          GID=$(id -g)
+          SCAN_ID+="-$CONTAINER_NAME"
+          SCAN_DIR=/opt/actions-runners/scans/drweb
+          echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
+          echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
+          echo $CONTAINER_NAME
+          echo "----------------------------------------------"
+          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+            echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the drweb scanner."
+            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+          else
+            echo "📋 Full-scan: ONLY_IMAGES is empty (no delta in this PR)."
+          fi
+          echo "----------------------------------------------"
+          docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
+            scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          # Drop container-uid ownership so the host-side Upload/Cleanup steps below
+          # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
+          # touch the bind-mounted scan artifacts under the runner's UID (this step
+          # came from main's runner-side refactor that removed `docker cp`).
+          docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
+
+          if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+            ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              exit 1
+            elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
+              echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            exit 1
+          fi
+
+          echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
+
+      - name: Upload scan artifacts
+        if: github.repository == 'deckhouse/deckhouse' && always()
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: drweb-scan-results-${{ steps.scan.outputs.scan_id }}
+          path: ${{ steps.scan.outputs.scan_dir }}/${{ steps.scan.outputs.scan_id }}
+          retention-days: 5
+
+      - name: Cleanup scan results on runner
+        if: always()
+        env:
+          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+          SCAN_DIR: ${{ steps.scan.outputs.scan_dir }}
+        run: |
+          if [ -z "${SCAN_ID}" ]; then
+            echo "scan_id is empty, nothing to clean up"
+            exit 0
+          fi
+          if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
+            rm -rf ${SCAN_DIR}/${SCAN_ID} || true
+          fi
+
+  # </template: drweb_scan_job>
+
+
+
+  # <template: kaspersky_scan_job>
+  kaspersky-scan:
+    name: Kaspersky Scan ${{ matrix.branch }}
+    runs-on: [self-hosted, antivirus]
+    if: github.repository == 'deckhouse/deckhouse'
+    # PR mode: filter scanned images by the changed_images diff (delta-only scan).
+    needs: [get-tags, changed_images]
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+      fail-fast: false
+    permissions:
+      id-token: write
+    outputs:
+      scan_id: ${{ steps.scan.outputs.scan_id }}
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
+
+      # </template: import_secrets>
+
+      - name: Run kaspersky scan
+        id: scan
+        env:
+          # `ONLY_IMAGES` comes from needs.changed_images.outputs.changed_compact
+          # (JSON array of "<module>.<image>" keys). Wired here for PR runs of both
+          # drweb-scan and kaspersky-scan when their templates are called with
+          # `withChangedImages: true` (see security-scan-images.yml). In weekly /
+          # release runs the templates pass empty `only_images_expr`, so this env
+          # block is omitted and the Go scanner falls back to full-scan.
+          # Empty value / "[]" is treated by the Go scanner as full-scan, so the
+          # bash side does not need to branch on it.
+          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+        run: |
+          registry_image_path=/sys/deckhouse-oss
+          ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
+          if [ -z "${ref}" ]; then
+            ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
+          fi
+          ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
+          SCAN_TIME=$(date '+%s')
+          SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
+          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            echo "registry read"
+            edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
+            SCAN_ID+="-${edition}"
+            registry_image_path="/deckhouse/${edition}"
+            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+            echo "registry stage"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
+          else
+            echo "registry dev"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          fi
+          CONTAINER_NAME=registry_kaspersky
+          GID=$(id -g)
+          SCAN_ID+="-$CONTAINER_NAME"
+          SCAN_DIR=/opt/actions-runners/scans/kaspersky
+          echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
+          echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
+          echo $CONTAINER_NAME
+          echo "----------------------------------------------"
+          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+            echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the kaspersky scanner."
+            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+          else
+            echo "📋 Full-scan: ONLY_IMAGES is empty (no delta in this PR)."
+          fi
+          echo "----------------------------------------------"
+          docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
+            scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+          # Drop container-uid ownership so the host-side Upload/Cleanup steps below
+          # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
+          # touch the bind-mounted scan artifacts under the runner's UID (this step
+          # came from main's runner-side refactor that removed `docker cp`).
+          docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
+
+          if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+            ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              exit 1
+            elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
+              echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            exit 1
+          fi
+
+          echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
+
+      - name: Upload scan artifacts
+        if: github.repository == 'deckhouse/deckhouse' && always()
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: kaspersky-scan-results-${{ steps.scan.outputs.scan_id }}
+          path: ${{ steps.scan.outputs.scan_dir }}/${{ steps.scan.outputs.scan_id }}
+          retention-days: 5
+
+      - name: Cleanup scan results on runner
+        if: always()
+        env:
+          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+          SCAN_DIR: ${{ steps.scan.outputs.scan_dir }}
+        run: |
+          if [ -z "${SCAN_ID}" ]; then
+            echo "scan_id is empty, nothing to clean up"
+            exit 0
+          fi
+          if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
+            rm -rf ${SCAN_DIR}/${SCAN_ID} || true
+          fi
+
+  # </template: kaspersky_scan_job>
+
+
+
+  # <template: set_security_antivirus_requirement_status>
+  set_security_antivirus_requirement_status:
+    name: Set commit status after antivirus scan run
+    runs-on: "self-slim"
+    needs: [drweb-scan, kaspersky-scan]
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          DRWEB: ${{ needs.drweb-scan.result }}
+          KASPERSKY: ${{ needs.kaspersky-scan.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Dr.Web: $DRWEB | Kaspersky: $KASPERSKY"
+          if [ "$DRWEB" == "success" ] && [ "$KASPERSKY" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+          elif [ "$DRWEB" == "skipped" ] && [ "$KASPERSKY" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/antivirus/failed" --remove-label "security/antivirus/success"
+          fi
+  # </template: set_security_antivirus_requirement_status>
+
+
+  # <template: antivirus_notify_failure_job>
+  notify-failure:
+    name: Send failure notification
+    runs-on: [self-hosted, regular]
+    needs: [drweb-scan, kaspersky-scan]
+    if: always() && (needs.drweb-scan.result == 'failure' || needs.kaspersky-scan.result == 'failure')
+    permissions:
+      id-token: write
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/b050f3bd-733f-4746-9640-9df80d484074/n8n_jobs_fails_url N8N_LOOP_NOTIFIER_URL | N8N_LOOP_NOTIFIER_URL ;
+
+      # </template: import_secrets>
+
+      - name: Check which jobs failed
+        id: check-failures
+        run: |
+          FAILED_JOBS=""
+          if [[ "${{ needs.drweb-scan.result }}" == "failure" ]]; then
+            FAILED_JOBS="$FAILED_JOBS• Dr.Web Scan\n"
+          fi
+          if [[ "${{ needs.kaspersky-scan.result }}" == "failure" ]]; then
+            FAILED_JOBS="$FAILED_JOBS• Kaspersky Scan\n"
+          fi
+
+          echo "failed_jobs=${FAILED_JOBS}" >> $GITHUB_OUTPUT
+          echo "Failed jobs:"
+          echo "${FAILED_JOBS}"
+
+      - name: Send notification
+        run: |
+          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
+          MESSAGE+="**Failed jobs:**\n"
+          MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if [ -n "$PR_NUMBER" ]; then
+            pr_url="https://github.com/${{ github.repository }}/pull/${PR_NUMBER}"
+            MESSAGE+="**PR:** [#${PR_NUMBER}]($pr_url)\n"
+          fi
+          MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
+
+          curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"
+  # </template: antivirus_notify_failure_job>
+
+
+  # ============================================================================
+  # Aggregator — single required check for branch protection.
+  # Fails if any image scan did not finish with success
+  # (covers blocker failure, scan failure, and skipped due to upstream issues).
+  # Because this workflow is invoked via `uses:` from the build workflow, this
+  # job appears on the PR's Checks tab natively — no extra commit-status
+  # plumbing is required for it to be require-able by branch protection.
+  # ============================================================================
+  security_scan_images_required:
+    name: Security scan images required
+    runs-on: self-slim
+    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    needs:
+      - pull_request_info
+      - changed_images
+      - test_cve_report_main
+      - security_scan_images
+      - drweb-scan
+      - kaspersky-scan
+    steps:
+      - name: Aggregate scan results
+        run: |
+          declare -A results=(
+            [changed_images]="${{ needs.changed_images.result }}"
+            [cve]="${{ needs.test_cve_report_main.result }}"
+            [rootless]="${{ needs.security_scan_images.result }}"
+            [drweb]="${{ needs.drweb-scan.result }}"
+            [kaspersky]="${{ needs.kaspersky-scan.result }}"
+          )
+          # Antivirus jobs intentionally skip in test repositories
+          # (self-hosted antivirus runners are only in the main repo). All
+          # other image scans (changed_images, rootless) are expected to run
+          # in both main and test repos.
+          IS_MAIN_REPO=false
+          if [[ "${{ github.repository }}" == "deckhouse/deckhouse" ]]; then
+            IS_MAIN_REPO=true
+          fi
+
+          failed=0
+          for name in "${!results[@]}"; do
+            r="${results[$name]}"
+            if [[ "$r" == "success" ]]; then
+              echo "✅ $name: $r"
+              continue
+            fi
+            # CVE PR-mode is temporarily disabled (test_cve_report_main has `if: false`); allow skipped until re-enabled.
+            if [[ "$name" == "cve" && "$r" == "skipped" ]]; then
+              echo "ℹ️  $name: $r (temporarily disabled)"
+              continue
+            fi
+            if [[ "$IS_MAIN_REPO" == "false" && ( "$name" == "drweb" || "$name" == "kaspersky" ) && "$r" == "skipped" ]]; then
+              echo "ℹ️  $name: $r (allowed in test repository)"
+              continue
+            fi
+            echo "::error::Scan '$name' result: $r"
+            failed=1
+          done
+          exit $failed

@@ -123,6 +123,7 @@ Bashible
 BashibleTemplateData
 basicAuditPolicyEnabled
 BasicAuth
+Basis Dynamix
 baz
 bcrypt
 BDU
@@ -250,6 +251,7 @@ ClusterLoggingConfig
 ClusterName
 ClusterPodLoggingConfig
 ClusterRole
+ClusterRoleBinding
 clusterType
 ClusterVirtualImage
 cmctl
@@ -602,7 +604,6 @@ Habr
 hardcoded
 HardPodAntiAffinity
 HashiCorp
-HashiCorp
 hasn
 hdd
 healthcheck
@@ -610,6 +611,7 @@ healthchecks
 HEC
 helmignore
 helthcheck
+HH
 HighAvailability
 HighLoad
 HighNodeUtilization
@@ -1021,6 +1023,7 @@ NotManaged
 Noto
 NotReady
 NotRegex
+nowrap
 npm
 NSX
 NTP
@@ -1033,6 +1036,7 @@ objectmeta
 OCI
 offline
 OFFLINE
+OfflineSessions
 offtopic
 OICD
 OIDC
@@ -1227,6 +1231,7 @@ redis
 Redis
 Redoc
 redos
+RefreshToken
 regex
 Regex
 regexes
@@ -1265,6 +1270,7 @@ RESTful
 Restic
 RHEL
 RockSolid
+RoleBinding
 roleRef
 RollingUpdate
 rollout
@@ -1399,6 +1405,7 @@ StaticInstanceSpec
 StaticMachine
 status
 stderr
+stdin
 stdout
 storageclass
 storageClass
@@ -1440,7 +1447,6 @@ syscalls
 sysctl
 sysctls
 syslog
-syslog
 Syslog
 SysLog
 Sysprep
@@ -1473,7 +1479,6 @@ Thymeleaf
 TiB
 timeframe
 timelines
-timelines
 TimeSlicing
 timeslot
 timestamp
@@ -1485,11 +1490,13 @@ TODO
 TolerationSeconds
 toolchain
 Tooltip
+TOTP
 Tproger
 trdl
 trivy
 Trivy
 TrustDomain
+tuf
 tunnelMode
 txt
 Ubuntu
@@ -1502,6 +1509,7 @@ UIs
 un
 uncordoned
 uninstall
+uninstalled
 uninstalling
 Unlabel
 UNPACKEDSIZE
@@ -1658,6 +1666,7 @@ YC
 YCloud
 yml
 YouTube
+YYYY
 zabbix
 Zabbix
 ZFS
@@ -1712,6 +1721,7 @@ ZvirtInstanceClass
 аттрибутов
 Аудиофайлы
 аутентификатора
+аутентификаторе
 аутентификаторов
 аутентификаторы
 аутентификациии
@@ -1774,11 +1784,13 @@ ZvirtInstanceClass
 валидации
 валидацию
 валидация
+валиден
 валидирования
 валидировать
 валидирует
 валидируется
 валидируются
+валидными
 вебхук
 вебхука
 вебхуки
@@ -1811,6 +1823,7 @@ ZvirtInstanceClass
 внутрикластерной
 внутрикластерным
 воркеров
+выгрузок
 выдаватель
 высокогранулярной
 высокодоступном
@@ -1821,7 +1834,6 @@ ZvirtInstanceClass
 высокоуровневыми
 высокоуровневых
 г
-гайде
 гайде
 Гб
 Гбит
@@ -1896,6 +1908,8 @@ ZvirtInstanceClass
 запустившемся
 запушить
 засчет
+захеширован
+захешированном
 иcпользовать
 ИБ
 иммутабельный
@@ -1991,6 +2005,7 @@ ZvirtInstanceClass
 контейнеризации
 контейнеризация
 контейнеризированных
+контейнеризованного
 контролллер
 контролллера
 конфиг
@@ -2042,7 +2057,6 @@ ZvirtInstanceClass
 масштабируемость
 масштабируется
 Мб
-Мб
 МБ
 медиафайлов
 медиафайлы
@@ -2083,6 +2097,7 @@ ZvirtInstanceClass
 мультикластером
 мультимастер
 мультимастерного
+мультимастерной
 мультимастерном
 мультимастерный
 мультиплатформенной
@@ -2125,10 +2140,10 @@ ZvirtInstanceClass
 неподдерживаемые
 неподдерживаемых
 неподнимающийся
+неподписанным
 непринадлежности
 непубличного
 непубличный
-неразмеченным
 неразмеченным
 нерелевантного
 нереляционные
@@ -2198,6 +2213,7 @@ ZvirtInstanceClass
 перевыпуск
 перевыпуска
 перевыпускаются
+Перевыпустите
 перевыпустить
 перегенерации
 перегенерация
@@ -2320,6 +2336,7 @@ ZvirtInstanceClass
 псевдоселектор
 пуллинга
 Р
+разблокировка
 раннера
 рантайма
 рантайме
@@ -2467,7 +2484,6 @@ ZvirtInstanceClass
 сокеты
 соотвествущая
 соответствующий
-соответствующий
 Сохраняеем
 спецзаголовки
 спринты
@@ -2477,6 +2493,7 @@ ZvirtInstanceClass
 стекирования
 Столярова
 Стрибог
+субресурс
 сущностей
 сущностям
 сущностями
@@ -2527,6 +2544,7 @@ ZvirtInstanceClass
 трудозатраты
 туториала
 увереным
+УЦ
 уязвимостей
 уязвимостям
 уязвимостями
@@ -2556,11 +2574,11 @@ ZvirtInstanceClass
 хейтеры
 хелпер
 хеш
-хеш
 Хеш
 хеша
 хешам
 хешей
+хешем
 хеши
 хеширование
 Хеширование
@@ -2568,7 +2586,6 @@ ZvirtInstanceClass
 хеширования
 хешированные
 хешированный
-хешированных
 хешированных
 хешировано
 хост

@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
   finalizers:
   - modulepackageversion.deckhouse.io/used-by-module
   labels:
@@ -32,7 +31,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -42,5 +40,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
+  lastNewVersions: 0
   partialScanAvailable: false
-  syncTime: null

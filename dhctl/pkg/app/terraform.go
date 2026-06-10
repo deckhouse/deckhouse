@@ -29,7 +29,7 @@ func DefineCacheFlags(cmd *kingpin.CmdClause, o *options.CacheOptions) {
 		StringVar(&o.Dir)
 
 	cmd.Flag("use-cache", fmt.Sprintf(`Behaviour for using infrastructure state cache. May be:
-	%s - ask user about it (Default)
+	%s - ask the user (Default)
    	%s - use cache
 	%s  - don't use cache
 	`, options.UseStateCacheAsk, options.UseStateCacheYes, options.UseStateCacheNo)).
@@ -37,22 +37,22 @@ func DefineCacheFlags(cmd *kingpin.CmdClause, o *options.CacheOptions) {
 		Default(options.UseStateCacheAsk).
 		EnumVar(&o.UseTfCache, options.UseStateCacheAsk, options.UseStateCacheYes, options.UseStateCacheNo)
 
-	cmd.Flag("kube-cache-store-kubeconfig", "Path to kubernetes config file for storing cache in kubernetes secret").
+	cmd.Flag("kube-cache-store-kubeconfig", "Path to the kubernetes config file for storing the cache in a kubernetes secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_CONFIG")).
 		StringVar(&o.KubeConfig)
-	cmd.Flag("kube-cachestore-kubeconfig-context", "Context from kubernetes config to connect to Kubernetes API. for storing cache in kubernetes secret").
+	cmd.Flag("kube-cachestore-kubeconfig-context", "Context from the kubernetes config to connect to the Kubernetes API, for storing the cache in a kubernetes secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_CONFIG_CONTEXT")).
 		StringVar(&o.KubeConfigContext)
-	cmd.Flag("kube-cachestore-kube-client-from-cluster", "Use in-cluster Kubernetes API access. for storing cache in kubernetes secret").
+	cmd.Flag("kube-cachestore-kube-client-from-cluster", "Use in-cluster Kubernetes API access, for storing the cache in a kubernetes secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_CLIENT_FROM_CLUSTER")).
 		BoolVar(&o.KubeConfigInCluster)
-	cmd.Flag("kube-cachestore-namespace", "Use in-cluster Kubernetes API access. for storing cache in kubernetes secret").
+	cmd.Flag("kube-cachestore-namespace", "Namespace for storing the cache in a kubernetes secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_NAMESPACE")).
 		StringVar(&o.KubeNamespace)
-	cmd.Flag("kube-cachestore-labels", "List labels for cache secrets").
+	cmd.Flag("kube-cachestore-labels", "List of labels for cache secrets").
 		Envar(configEnvName("CACHE_STORE_KUBE_LABELS")).
 		StringMapVar(&o.KubeLabels)
-	cmd.Flag("kube-cachestore-name", "Name for cache secret").
+	cmd.Flag("kube-cachestore-name", "Name of the cache secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_NAME")).
 		StringVar(&o.KubeName)
 }

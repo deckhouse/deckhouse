@@ -1,0 +1,121 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . }!}
+
+name: Security Scan Src
+
+# Source-code scans that do not require built images. Triggers on every PR
+# event the same way the umbrella security workflow used to — image-based
+# scans now live in `Security Scan Images` and are dispatched from the build.
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+# Cancel in-progress src scans for the same PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+{!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
+
+  # ============================================================================
+  # Gitleaks — secret scanning on PR diff.
+  # ============================================================================
+  gitleaks_scan:
+    name: Gitleaks scan
+    runs-on: self-slim
+    needs: pull_request_info
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
+      # The action checks out refs/pull/<num>/merge itself,
+      # so the PR branch is scanned (not the base branch).
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        with:
+          scan_mode: diff
+          gitleaks_version: v8.28.0
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  set_security_gitleaks_requirement_status:
+    name: Set commit status after gitleaks scan run
+    runs-on: "self-slim"
+    needs: gitleaks_scan
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.gitleaks_scan.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/failed" --remove-label "security/gitleaks/success"
+          fi
+
+  # ============================================================================
+  # Aggregator — single required check for branch protection.
+  # Fails if the src scan did not finish with success.
+  # ============================================================================
+  security_scan_src_required:
+    name: Security scan src required
+    runs-on: self-slim
+    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    needs:
+      - pull_request_info
+      - gitleaks_scan
+    steps:
+      - name: Aggregate scan results
+        run: |
+          declare -A results=(
+            [gitleaks]="${{ needs.gitleaks_scan.result }}"
+          )
+          failed=0
+          for name in "${!results[@]}"; do
+            r="${results[$name]}"
+            if [[ "$r" == "success" ]]; then
+              echo "✅ $name: $r"
+              continue
+            fi
+            echo "::error::Scan '$name' result: $r"
+            failed=1
+          done
+          exit $failed

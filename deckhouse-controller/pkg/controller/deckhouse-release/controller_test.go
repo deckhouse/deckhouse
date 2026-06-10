@@ -17,32 +17,27 @@ limitations under the License.
 package deckhouse_release
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/tidwall/sjson"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -53,17 +48,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
-
-var (
-	golden     bool
-	mDelimiter *regexp.Regexp
-)
-
-func init() {
-	flag.BoolVar(&golden, "golden", false, "generate golden files")
-	mDelimiter = regexp.MustCompile("(?m)^---$")
-}
 
 var embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
 	Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
@@ -76,7 +62,7 @@ var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
 		"clusterConfiguration": {
-			"kubernetesVersion": "1.31"
+			"kubernetesVersion": "1.35"
 		},
 		"modulesImages": {
 			"registry": {
@@ -100,18 +86,24 @@ func TestControllerTestSuite(t *testing.T) {
 }
 
 type ControllerTestSuite struct {
-	suite.Suite
+	reconcilertest.Suite
 
-	kubeClient client.Client
-	ctr        *deckhouseReleaseReconciler
+	ctr *deckhouseReleaseReconciler
 
-	testDataFileName string
-	backupTZ         *time.Location
+	backupTZ *time.Location
 }
 
 func (suite *ControllerTestSuite) SetupSuite() {
-	flag.Parse()
-	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+	suite.Init(reconcilertest.Config{
+		StatusSubresources: []client.Object{&v1alpha1.DeckhouseRelease{}},
+		SnapshotKinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind(v1alpha1.DeckhouseReleaseKind),
+			corev1.SchemeGroupVersion.WithKind("Pod"),
+			appsv1.SchemeGroupVersion.WithKind("Deployment"),
+			corev1.SchemeGroupVersion.WithKind("ConfigMap"),
+		},
+		GoldenMode: reconcilertest.PerDocument,
+	})
 	suite.backupTZ = time.Local
 	time.Local = dependency.TestTimeZone
 }
@@ -131,26 +123,7 @@ func (suite *ControllerTestSuite) TearDownSuite() {
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
-	if suite.T().Skipped() {
-		return
-	}
-
-	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	gotB := suite.fetchResults()
-
-	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0o666)
-		require.NoError(suite.T(), err)
-	} else {
-		got := singleDocToManifests(gotB)
-		expB, err := os.ReadFile(goldenFile)
-		require.NoError(suite.T(), err)
-		exp := singleDocToManifests(expB)
-		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
-		for i := range got {
-			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
-		}
-	}
+	suite.AssertGolden()
 }
 
 func (suite *ControllerTestSuite) setupController(
@@ -159,17 +132,17 @@ func (suite *ControllerTestSuite) setupController(
 	mup *v1alpha2.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
 ) {
-	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup, options...)
+	suite.setupControllerSettings(filename, initValues, newDeckhouseSettings(mup), options...)
 }
 
 func (suite *ControllerTestSuite) setupControllerSettings(
 	filename string,
 	initValues string,
 	ds *helpers.DeckhouseSettings,
+	options ...reconcilerOption,
 ) {
-	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupControllerSettings(suite.T(), filename, initValues, ds)
+	suite.SeedRaw(filename, []byte(fetchTestFileData(suite.T(), filename, initValues)))
+	suite.ctr = newDeckhouseReleaseReconciler(suite.Client(), ds, options...)
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
@@ -1067,68 +1040,9 @@ func newDependencyContainer(t *testing.T) *dependency.MockedContainer {
 	return dc
 }
 
-func (suite *ControllerTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
-
-	var releaseList v1alpha1.DeckhouseReleaseList
-	err := suite.kubeClient.List(context.TODO(), &releaseList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range releaseList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var podsList corev1.PodList
-	err = suite.kubeClient.List(context.TODO(), &podsList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range podsList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var deploymentList appsv1.DeploymentList
-	err = suite.kubeClient.List(context.TODO(), &deploymentList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range deploymentList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	var cmList corev1.ConfigMapList
-	err = suite.kubeClient.List(context.TODO(), &cmList)
-	require.NoError(suite.T(), err)
-
-	for _, item := range cmList.Items {
-		got, _ := yaml.Marshal(item)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	return result.Bytes()
-}
-
-func singleDocToManifests(doc []byte) []string {
-	split := mDelimiter.Split(string(doc), -1)
-
-	result := make([]string, 0, len(split))
-	for i := range split {
-		if split[i] != "" {
-			result = append(result, split[i])
-		}
-	}
-
-	return result
-}
-
 func (suite *ControllerTestSuite) getDeckhouseRelease(name string) *v1alpha1.DeckhouseRelease {
 	var release v1alpha1.DeckhouseRelease
-	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &release)
+	err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, &release)
 	require.NoError(suite.T(), err)
 
 	return &release

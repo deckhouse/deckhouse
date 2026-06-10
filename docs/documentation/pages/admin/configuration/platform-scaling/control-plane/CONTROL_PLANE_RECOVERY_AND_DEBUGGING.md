@@ -184,6 +184,7 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 
 Output example (the size of the etcd database on the node is specified in the `DB SIZE` column):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -195,6 +196,8 @@ Output example (the size of the etcd database on the node is specified in the `D
 | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### How to defragment an etcd node in a single-master cluster
 
@@ -233,12 +236,15 @@ To defragment etcd in a cluster with multiple master nodes:
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
    etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
    etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
    etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Identify the leader master node. To do this, contact any etcd pod and get a list of nodes participating in the etcd cluster using the command (where `NODE_NAME` is the name of the master node):
 
@@ -252,6 +258,7 @@ To defragment etcd in a cluster with multiple master nodes:
 
    Output example (the leader in the `IS LEADER` column will have the value `true`):
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -263,6 +270,8 @@ To defragment etcd in a cluster with multiple master nodes:
    | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Defragment the etcd nodes that are members of the etcd cluster one by one. Use the following command to defragment (where `NODE_NAME` is the name of the master node):
 

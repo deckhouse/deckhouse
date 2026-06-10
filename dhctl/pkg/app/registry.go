@@ -21,7 +21,7 @@ import (
 )
 
 func DefineImgBundleFlags(cmd *kingpin.CmdClause, o *options.RegistryOptions) {
-	cmd.Flag("img-bundle-path", `Path to the directory with tar or chunk.tar image bundles created by 'd8 mirror pull' command for Local registry mode.`).
+	cmd.Flag("img-bundle-path", `Path to the directory with tar or chunk.tar image bundles created by the 'd8 mirror pull' command for Local registry mode.`).
 		Envar(configEnvName("IMG_BUNDLE_PATH")).
 		StringVar(&o.ImgBundlePath)
 }

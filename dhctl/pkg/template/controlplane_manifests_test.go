@@ -26,7 +26,6 @@ import (
 )
 
 func TestControlplaneRendering(t *testing.T) {
-	InitGlobalVars("/deckhouse")
 
 	t.Run("Version Selection", testVersionSelection)
 	t.Run("Feature Gates", testFeatureGates)
@@ -50,14 +49,14 @@ func testVersionSelection(t *testing.T) {
 		expectedKind string
 	}{
 		{
-			name:         "Kubernetes 1.31 should generate pod manifests",
-			k8sVersion:   "1.31",
+			name:         "Kubernetes 1.32 should generate pod manifests",
+			k8sVersion:   "1.32",
 			expectedAPI:  "apiVersion: v1",
 			expectedKind: "kind: Pod",
 		},
 		{
-			name:         "Kubernetes 1.32 should generate pod manifests",
-			k8sVersion:   "1.32",
+			name:         "Kubernetes 1.33 should generate pod manifests",
+			k8sVersion:   "1.33",
 			expectedAPI:  "apiVersion: v1",
 			expectedKind: "kind: Pod",
 		},
@@ -86,7 +85,7 @@ func testVersionSelection(t *testing.T) {
 
 func testManifestsRendering(t *testing.T) {
 	t.Run("All Control Plane Pod Manifests Render Successfully", func(t *testing.T) {
-		versions := []string{"1.31", "1.32"}
+		versions := []string{"1.32", "1.33"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
@@ -111,8 +110,12 @@ func testManifestsRendering(t *testing.T) {
 					"address": "registry.example.com",
 					"path":    "/deckhouse",
 				}
-				data["resourcesRequestsMilliCpuControlPlane"] = 1000
-				data["resourcesRequestsMemoryControlPlane"] = 1073741824
+				data["settings"] = map[string]interface{}{
+					"resourcesRequests": map[string]interface{}{
+						"milliCPU":    int64(1000),
+						"memoryBytes": int64(1073741824),
+					},
+				}
 
 				manifests, err := renderFullManifests(data)
 				if err != nil {
@@ -143,8 +146,8 @@ func testFeatureGates(t *testing.T) {
 		expectedFeatures []string
 	}{
 		{
-			name:       "Kubernetes 1.31 should not include legacy feature gates",
-			k8sVersion: "1.31",
+			name:       "Kubernetes 1.32 should not include legacy feature gates",
+			k8sVersion: "1.32",
 			expectedFeatures: []string{
 				"TopologyAwareHints=true",
 				"RotateKubeletServerCertificate=true",
@@ -207,7 +210,7 @@ func testAPIServerConfiguration(t *testing.T) {
 	}{
 		{
 			name:       "authentication configuration",
-			k8sVersion: "1.31",
+			k8sVersion: "1.32",
 		},
 	}
 
@@ -477,7 +480,7 @@ func testClusterTypes(t *testing.T) {
 		},
 	}
 
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		for _, tt := range tests {
@@ -527,7 +530,7 @@ func testRunTypes(t *testing.T) {
 		},
 	}
 
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		for _, tt := range tests {
@@ -573,7 +576,7 @@ func testRunTypes(t *testing.T) {
 }
 
 func testServiceAccountConfiguration(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Default Service Account (v%s)", version), func(t *testing.T) {
@@ -691,7 +694,7 @@ func testServiceAccountConfiguration(t *testing.T) {
 }
 
 func testETCDConfiguration(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("No ETCD Configuration (v%s)", version), func(t *testing.T) {
@@ -756,7 +759,7 @@ func testETCDConfiguration(t *testing.T) {
 }
 
 func testOptionalArguments(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Node Monitor Arguments (v%s)", version), func(t *testing.T) {
@@ -807,7 +810,7 @@ func testOptionalArguments(t *testing.T) {
 
 func testPatchesRendering(t *testing.T) {
 	t.Run("All Patches Render Successfully", func(t *testing.T) {
-		versions := []string{"1.31", "1.32"}
+		versions := []string{"1.32", "1.33"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
@@ -829,8 +832,12 @@ func testPatchesRendering(t *testing.T) {
 					"address": "registry.example.com",
 					"path":    "/deckhouse",
 				}
-				data["resourcesRequestsMilliCpuControlPlane"] = 1000
-				data["resourcesRequestsMemoryControlPlane"] = 1073741824
+				data["settings"] = map[string]interface{}{
+					"resourcesRequests": map[string]interface{}{
+						"milliCPU":    int64(1000),
+						"memoryBytes": int64(1073741824),
+					},
+				}
 
 				manifests, err := renderFullManifests(data)
 				if err != nil {
@@ -855,7 +862,7 @@ func testPatchesRendering(t *testing.T) {
 }
 
 func testEdgeCases(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Complex Configuration Combination (v%s)", version), func(t *testing.T) {
@@ -1049,7 +1056,7 @@ func renderFullManifests(data map[string]interface{}, requestedManifests ...stri
 }
 
 func testMissingCoverage(t *testing.T) {
-	versions := []string{"1.31", "1.32"}
+	versions := []string{"1.32", "1.33"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Runtime Config Version Condition (v%s)", version), func(t *testing.T) {
@@ -1189,8 +1196,8 @@ func testMissingCoverage(t *testing.T) {
 	}
 
 	t.Run("Feature Gates Version Boundaries", func(t *testing.T) {
-		// Test exactly version 1.31 boundary
-		data := getBaseTemplateData("1.31")
+		// Test exactly version 1.32 boundary
+		data := getBaseTemplateData("1.32")
 		result, err := renderFullManifests(data, "kube-apiserver", "kube-controller-manager", "kube-scheduler")
 		if err != nil {
 			t.Fatalf("Failed to render control-plane config: %v", err)
@@ -1202,13 +1209,13 @@ func testMissingCoverage(t *testing.T) {
 			if len(matches) >= 2 {
 				featureGates := matches[1]
 				if strings.Contains(featureGates, "ValidatingAdmissionPolicy=true") {
-					t.Errorf("Unexpected legacy feature gate found for Kubernetes 1.31 in %s", name)
+					t.Errorf("Unexpected legacy feature gate found for Kubernetes 1.32 in %s", name)
 				}
-				if !strings.Contains(featureGates, "AnonymousAuthConfigurableEndpoints=true") {
-					t.Errorf("Expected feature gate not found for Kubernetes 1.31 in %s", name)
+				if !strings.Contains(featureGates, "DynamicResourceAllocation=true") {
+					t.Errorf("Expected feature gate not found for Kubernetes 1.32 in %s", name)
 				}
 				if name == "kube-apiserver.yaml" && !strings.Contains(featureGates, "CRDSensitiveData=true") {
-					t.Errorf("Expected CRDSensitiveData=true for Kubernetes 1.31 in %s", name)
+					t.Errorf("Expected CRDSensitiveData=true for Kubernetes 1.32 in %s", name)
 				}
 			}
 		}

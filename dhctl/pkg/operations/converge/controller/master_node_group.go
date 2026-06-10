@@ -144,7 +144,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 			return fmt.Errorf("failed to converge with 3 replicas: %w", err)
 		}
 
-		log.DebugF("to multi master scaled. saving state...\n")
+		log.DebugF("scaled to multi-master, saving state...\n")
 
 		c.convergeState.Phase = phases.ScaleToSingleMasterPhase
 
@@ -170,7 +170,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 
 		c.convergeState.Phase = ""
 
-		log.DebugF("to single master scaled. saving state...\n")
+		log.DebugF("scaled to single-master, saving state...\n")
 
 		err = ctx.SetConvergeState(c.convergeState)
 		if err != nil {
@@ -188,7 +188,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 func (c *MasterNodeGroupController) switchClientToNotFirstMaster(ctx *context.Context) error {
 	clientSwitcher := ctx.ClientSwitcher()
 	if govalue.IsNil(clientSwitcher) {
-		log.DebugF("Skip switch client to not first master. Got empty client switcher")
+		log.DebugF("Skipping switch of client to not-first master. Got empty client switcher")
 		return nil
 	}
 
@@ -203,7 +203,7 @@ func (c *MasterNodeGroupController) switchClientToNotFirstMaster(ctx *context.Co
 func (c *MasterNodeGroupController) switchClientToFirstMaster(ctx *context.Context) error {
 	clientSwitcher := ctx.ClientSwitcher()
 	if govalue.IsNil(clientSwitcher) {
-		log.DebugF("Skip switch client to first master. Got empty client switcher")
+		log.DebugF("Skipping switch of client to first master. Got empty client switcher")
 		return nil
 	}
 
@@ -255,6 +255,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 				index,
 				c.cloudConfig,
 				ctx.InfrastructureContext(metaConfig),
+				c.globalOptions,
 			)
 			if err != nil {
 				return err
@@ -370,7 +371,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, nodeName)
+		log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, nodeName)
 		return nil
 	}
 
@@ -396,7 +397,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, infrastructure.GetMasterNodeResult)
+	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, c.globalOptions, infrastructure.GetMasterNodeResult)
 	if err != nil {
 		if errors.Is(err, controlplane.ErrSingleMasterClusterInfrastructurePlanHasDestructiveChanges) {
 			confirmation := input.NewConfirmation().WithMessage("A single-master cluster has disruptive changes in the infrastructure plan. Trying to migrate to a multi-master cluster and back to a single-master cluster. Do you want to continue?")
@@ -507,16 +508,16 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 
 func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	if c.desiredReplicas < 1 {
-		return fmt.Errorf(`Cannot delete ALL master nodes. If you want to remove cluster use 'dhctl destroy' command`)
+		return fmt.Errorf(`Cannot delete ALL master nodes. If you want to remove the cluster, use the 'dhctl destroy' command`)
 	}
 
 	needToQuorum := c.totalReplicas()/2 + 1
 
 	noQuorum := c.desiredReplicas < needToQuorum
-	msg := fmt.Sprintf("Desired master replicas count (%d) can break cluster. Need minimum replicas (%d). Do you want to continue?", c.desiredReplicas, needToQuorum)
+	msg := fmt.Sprintf("Desired master replica count (%d) can break the cluster. The minimum number of replicas required is (%d). Do you want to continue?", c.desiredReplicas, needToQuorum)
 	confirm := input.NewConfirmation().WithMessage(msg)
 	if noQuorum && !confirm.Ask() {
-		return fmt.Errorf("Skip delete master nodes")
+		return fmt.Errorf("Skipping deletion of master nodes")
 	}
 
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", global.MasterNodeGroupName, c.desiredReplicas)

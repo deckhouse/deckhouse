@@ -1,0 +1,289 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Weekly build reproducibility check.
+#
+# Trigger: schedule (Saturday 01:00 MSK = Friday 22:00 UTC) or workflow_dispatch.
+# On schedule the latest 'main' commit is taken; on manual run the commit SHA
+# is provided as an input.
+#
+# The baseline build_report_FE artifact is fetched from the matching
+# 'build-and-test_main.yml' (main commits) or 'build-and-test_dev.yml' (PR commits)
+# successful run. If no such run exists for the target SHA the workflow fails.
+#
+# Then the FE build is repeated for the same SHA in the same style as the
+# baseline (main-style or dev-style), and the two build_report_FE JSONs are
+# diffed by DockerImageDigest. Both reports are saved as workflow artifacts.
+
+name: 'Build reproducibility check'
+
+on:
+  # Saturday 01:00 MSK (UTC+3, no DST) == Friday 22:00 UTC.
+  schedule:
+    - cron: '0 22 * * 5'
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Git commit SHA to verify reproducibility for'
+        required: true
+        type: string
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+  WERF_LOG_DEBUG: true
+
+# Serialize runs for the same target SHA. cancel-in-progress is false because
+# rebuilds are expensive and we don't want a queued run to abort an in-flight one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.commit_sha || 'scheduled' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+jobs:
+  resolve_target:
+    name: Resolve target commit and baseline
+    runs-on: "self-slim"
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      baseline_run_id: ${{ steps.resolve.outputs.baseline_run_id }}
+      baseline_run_url: ${{ steps.resolve.outputs.baseline_run_url }}
+      baseline_workflow: ${{ steps.resolve.outputs.baseline_workflow }}
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+    steps:
+      - name: Resolve target SHA and locate baseline
+        id: resolve
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            const eventName = context.eventName;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Trigger fully determines which build workflow holds the baseline:
+            //   schedule          -> 'main' commit, baseline in build-and-test_main.yml
+            //   workflow_dispatch -> arbitrary commit (treated as dev/PR), baseline in build-and-test_dev.yml
+            let sha = '';
+            let baselineKind = '';
+            let baselineWorkflowId = '';
+            if (eventName === 'schedule') {
+              const r = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
+              sha = r.data.commit.sha;
+              baselineKind = 'main';
+              baselineWorkflowId = 'build-and-test_main.yml';
+              core.notice(`Schedule run: using latest 'main' commit ${sha}, baseline workflow=${baselineWorkflowId}`);
+            } else if (eventName === 'workflow_dispatch') {
+              sha = ((context.payload.inputs || {}).commit_sha || '').trim();
+              if (!sha) {
+                return core.setFailed(`'commit_sha' input is required for manual runs`);
+              }
+              try {
+                const r = await github.rest.repos.getCommit({ owner, repo, ref: sha });
+                sha = r.data.sha;
+              } catch (e) {
+                return core.setFailed(`Commit ${sha} not found in ${owner}/${repo}: ${e.message}`);
+              }
+              baselineKind = 'dev';
+              baselineWorkflowId = 'build-and-test_dev.yml';
+              core.notice(`Manual run: using commit ${sha}, baseline workflow=${baselineWorkflowId}`);
+            } else {
+              return core.setFailed(`Unsupported event: ${eventName}`);
+            }
+
+            // Locate the latest successful baseline run for this SHA in the chosen workflow.
+            // API supports a server-side head_sha filter, so we only fetch matching runs.
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner, repo,
+              workflow_id: baselineWorkflowId,
+              head_sha: sha,
+              status: 'success',
+              per_page: 10,
+            });
+            // Runs are returned newest-first; pick the most recent success.
+            const baseline = (runs.data.workflow_runs || [])[0];
+            if (!baseline) {
+              return core.setFailed(
+                `No successful '${baselineWorkflowId}' run found for SHA ${sha}. ` +
+                `Reproducibility check requires an existing baseline build_report_FE artifact. ` +
+                `Ensure the regular build pipeline has completed for this commit first.`
+              );
+            }
+
+            // For dev mode we need the PR number to reconstruct CI_COMMIT_REF_SLUG = prN.
+            // Prefer the PR attached to the baseline run itself: it is always the exact PR
+            // on which this SHA was built. Fall back to commit-associated PRs only if the
+            // run object has no pull_requests payload (e.g. older runs, edge cases).
+            let prNumber = '';
+            if (baselineKind === 'dev') {
+              const runPr = (baseline.pull_requests || [])[0];
+              if (runPr && runPr.number) {
+                prNumber = runPr.number.toString();
+                core.notice(`dev baseline: PR #${prNumber} (from baseline run)`);
+              } else {
+                const prs = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner, repo, commit_sha: sha,
+                });
+                if (prs.data.length > 0) {
+                  prNumber = prs.data[0].number.toString();
+                  core.notice(`dev baseline: PR #${prNumber} (from commit association)`);
+                } else {
+                  return core.setFailed(
+                    `dev-style baseline found for SHA ${sha}, but no associated PR. ` +
+                    `Cannot reconstruct dev build context (PR number is required for ref_slug).`
+                  );
+                }
+              }
+            }
+
+            core.notice(`Baseline run: ${baseline.html_url} (workflow=${baselineKind}, id=${baseline.id})`);
+            core.setOutput('sha', sha);
+            core.setOutput('baseline_run_id', baseline.id.toString());
+            core.setOutput('baseline_run_url', baseline.html_url);
+            core.setOutput('baseline_workflow', baselineKind);
+            core.setOutput('pr_number', prNumber);
+
+  # Synthetic git_info: build_template reads needs.git_info.outputs.*. We
+  # construct the values from the resolved target SHA and baseline workflow kind
+  # so the rerun build mirrors the original build context as closely as possible.
+  git_info:
+    name: Get git info (synthetic)
+    needs:
+      - resolve_target
+    runs-on: "self-slim"
+    outputs:
+      ci_commit_tag: ${{ steps.set.outputs.ci_commit_tag }}
+      ci_commit_branch: ${{ steps.set.outputs.ci_commit_branch }}
+      ci_commit_ref_name: ${{ steps.set.outputs.ci_commit_ref_name }}
+      ci_commit_ref_slug: ${{ steps.set.outputs.ci_commit_ref_slug }}
+      github_sha: ${{ steps.set.outputs.github_sha }}
+    steps:
+      - id: set
+        env:
+          SHA: ${{ needs.resolve_target.outputs.sha }}
+          WF: ${{ needs.resolve_target.outputs.baseline_workflow }}
+          PR_NUMBER: ${{ needs.resolve_target.outputs.pr_number }}
+        run: |
+          if [[ "$WF" == "main" ]]; then
+            REF="main"
+          elif [[ "$WF" == "dev" ]]; then
+            REF="pr${PR_NUMBER}"
+          else
+            echo "::error::Unknown baseline_workflow: '$WF'"
+            exit 1
+          fi
+          {
+            echo "ci_commit_tag="
+            echo "ci_commit_branch=${REF}"
+            echo "ci_commit_ref_name=${REF}"
+            echo "ci_commit_ref_slug=${REF}"
+            echo "github_sha=${SHA}"
+          } >> $GITHUB_OUTPUT
+
+  # Synthetic pull_request_info: build_template in dev mode reads
+  # needs.pull_request_info.outputs.ref_slug. Only created for dev baselines.
+  pull_request_info:
+    name: Pull request info (synthetic, dev mode only)
+    needs:
+      - resolve_target
+    if: needs.resolve_target.outputs.baseline_workflow == 'dev'
+    runs-on: "self-slim"
+    outputs:
+      ref_slug: ${{ steps.set.outputs.ref_slug }}
+    steps:
+      - id: set
+        env:
+          PR_NUMBER: ${{ needs.resolve_target.outputs.pr_number }}
+        run: |
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "::error::pr_number is empty in dev mode"
+            exit 1
+          fi
+          echo "ref_slug=pr${PR_NUMBER}" >> $GITHUB_OUTPUT
+
+  build_fe_main:
+    name: Build FE (main-style)
+    needs:
+      - resolve_target
+      - git_info
+    if: needs.resolve_target.outputs.baseline_workflow == 'main'
+    env:
+      WERF_ENV: "FE"
+{!{ tmpl.Exec "build_template" (slice (coll.Merge (coll.Dict "pullRequestRefField" "needs.resolve_target.outputs.sha" "printGitContext" true) .) "main" "FE") | strings.Indent 4 }!}
+
+  build_fe_dev:
+    name: Build FE (dev-style)
+    needs:
+      - resolve_target
+      - git_info
+      - pull_request_info
+    if: needs.resolve_target.outputs.baseline_workflow == 'dev'
+    env:
+      WERF_ENV: "FE"
+{!{ tmpl.Exec "build_template" (slice (coll.Merge (coll.Dict "pullRequestRefField" "needs.resolve_target.outputs.sha" "printGitContext" true) .) "dev" "FE") | strings.Indent 4 }!}
+
+  compare_reports:
+    name: Compare build reports
+    runs-on: "self-slim"
+    needs:
+      - resolve_target
+      - build_fe_main
+      - build_fe_dev
+    if: ${{ always() && (needs.build_fe_main.result == 'success' || needs.build_fe_dev.result == 'success') }}
+    steps:
+      # Plain checkout (no ref override): we need the reproducibility_check.py
+      # from the workflow's branch (main), NOT from the historical target SHA.
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+
+      - name: Download baseline build_report_FE
+        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+        with:
+          name: build_report_FE
+          path: baseline/build_report_FE
+          run-id: ${{ needs.resolve_target.outputs.baseline_run_id }}
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+
+      - name: Download rerun build_report_FE
+        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+        with:
+          name: build_report_FE
+          path: rerun/build_report_FE
+
+      - name: Upload baseline build_report as workflow artifact
+        uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+        with:
+          name: baseline_build_report_FE
+          path: baseline/build_report_FE/images_tags_werf.json
+
+      - name: Upload rerun build_report as workflow artifact
+        uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+        with:
+          name: rerun_build_report_FE
+          path: rerun/build_report_FE/images_tags_werf.json
+
+      - name: Print resolved context
+        run: |
+          echo "Target SHA:        ${{ needs.resolve_target.outputs.sha }}"
+          echo "Baseline workflow: ${{ needs.resolve_target.outputs.baseline_workflow }}"
+          echo "Baseline run:      ${{ needs.resolve_target.outputs.baseline_run_url }}"
+          echo "PR number (dev):   ${{ needs.resolve_target.outputs.pr_number }}"
+
+      - name: Compare digests
+        run: |
+          python3 .github/scripts/python/reproducibility_check.py \
+            baseline/build_report_FE/images_tags_werf.json \
+            rerun/build_report_FE/images_tags_werf.json
