@@ -87,7 +87,7 @@ On validation failure:
 
 ## Subcommand: prepare
 
-Parses provider resources and returns structured variables for Terraform/OpenTofu.
+Transforms provider data and returns structured variables for Terraform/OpenTofu.
 
 **stdin:** same structure as validate.
 
@@ -113,6 +113,17 @@ On failure:
 
 **Exit code:** always `0`.
 
+### Result semantics
+
+- `result.vars`, when non-null, replaces the caller's provider vars wholesale.
+- `result.providerClusterConfiguration` is merged shallowly: every returned
+  top-level key replaces the caller's value for that key wholesale; keys the
+  binary does not return stay untouched. To amend a nested field, return the
+  whole top-level key containing it. There is no key deletion.
+- Mutation is ephemeral: dhctl never writes the mutated configuration back to
+  the cluster and re-runs `prepare` on every operation. `prepare` MUST be
+  idempotent: `prepare(prepare(x)) == prepare(x)`.
+
 ## Input fields
 
 | Field | Type | Description |
@@ -122,8 +133,9 @@ On failure:
 | `clusterPrefix` | string | Prefix for cloud resource names |
 | `layout` | string | Provider layout name |
 | `providerClusterConfiguration` | object | Parsed `providerClusterConfiguration` section |
-| `resourcesYAML` | string | Raw multi-document YAML with provider resources |
-| `moduleConfig` | object | Cloud-provider module configuration values |
+| `vars` | object | Structured provider data collected by dhctl (node groups, instance classes, credential secrets, module settings). Always populated on both subcommands; use it instead of re-parsing `resourcesYAML` |
+| `resourcesYAML` | string | Raw multi-document YAML the user passed on bootstrap (extra manifests beyond `vars`). Supplementary and bootstrap-only: empty on cluster-loaded operations |
+| `moduleConfig` | object | Cloud-provider module configuration values (same data as `vars.settings`) |
 
 ## Exit codes
 
@@ -162,10 +174,9 @@ func myValidate(ctx context.Context, input proto.PrepareInput) error {
 }
 
 func myPrepare(ctx context.Context, input proto.PrepareInput) (*proto.PrepareResult, error) {
+    // input.Vars carries the structured provider data; transform as needed.
     return &proto.PrepareResult{
-        Vars: &proto.CloudProviderVars{
-            // fill from input.ResourcesYAML / input.ModuleConfig
-        },
+        Vars: input.Vars,
     }, nil
 }
 ```

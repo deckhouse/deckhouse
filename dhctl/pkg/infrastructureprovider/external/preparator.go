@@ -32,12 +32,10 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"sort"
 	"strings"
 	"time"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
-	"sigs.k8s.io/yaml"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
@@ -145,9 +143,9 @@ func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (p
 	return providerdata.PrepareResult{}, nil
 }
 
-// toWireInput converts ProviderInput to the JSON wire format for external binaries.
-// ProviderClusterConfig is converted from json.RawMessage to interface{} and
-// CloudProviderVars is serialized back to ResourcesYAML.
+// toWireInput converts ProviderInput to the JSON wire format for external
+// binaries. ProviderClusterConfig is converted from json.RawMessage to
+// interface{}; CloudProviderVars travel structurally as Vars.
 func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) {
 	pcc := make(map[string]interface{}, len(input.ProviderClusterConfig))
 	for k, v := range input.ProviderClusterConfig {
@@ -157,12 +155,6 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 		}
 		pcc[k] = val
 	}
-
-	encoded, err := encodeResourcesYAML(input.CloudProviderVars)
-	if err != nil {
-		return providerdata.PrepareInput{}, fmt.Errorf("encode resources yaml: %w", err)
-	}
-	resourcesYAML := mergeResourcesYAML(input.ResourcesYAML, encoded)
 
 	var moduleConfig map[string]interface{}
 	if input.CloudProviderVars != nil {
@@ -175,56 +167,10 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 		Layout:                input.Layout,
 		Operation:             input.Operation,
 		ProviderClusterConfig: pcc,
-		ResourcesYAML:         resourcesYAML,
+		Vars:                  input.CloudProviderVars,
+		ResourcesYAML:         strings.TrimSpace(input.ResourcesYAML),
 		ModuleConfig:          moduleConfig,
 	}, nil
-}
-
-// mergeResourcesYAML prefers user-supplied YAML when present (bootstrap-from-
-// file: CloudProviderVars were parsed from this same YAML, so re-emitting
-// encoded would duplicate every resource). On cluster-loaded paths
-// (converge/check/destroy) user is empty and we fall back to encoded.
-func mergeResourcesYAML(user, encoded string) string {
-	if user = strings.TrimSpace(user); user != "" {
-		return user
-	}
-	return strings.TrimSpace(encoded)
-}
-
-func encodeResourcesYAML(cv *providerdata.CloudProviderVars) (string, error) {
-	if cv == nil {
-		return "", nil
-	}
-
-	var docs []string
-	for _, group := range []map[string]map[string]interface{}{cv.NodeGroups, cv.InstanceClasses, cv.Secrets} {
-		groupDocs, err := marshalSortedYAMLDocs(group)
-		if err != nil {
-			return "", err
-		}
-		docs = append(docs, groupDocs...)
-	}
-	return strings.Join(docs, "\n---\n"), nil
-}
-
-func marshalSortedYAMLDocs(group map[string]map[string]interface{}) ([]string, error) {
-	if len(group) == 0 {
-		return nil, nil
-	}
-	keys := make([]string, 0, len(group))
-	for k := range group {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	docs := make([]string, 0, len(group))
-	for _, k := range keys {
-		doc, err := yaml.Marshal(group[k])
-		if err != nil {
-			return nil, err
-		}
-		docs = append(docs, string(doc))
-	}
-	return docs, nil
 }
 
 // runTimeout caps a single validator invocation so a hung binary cannot hang

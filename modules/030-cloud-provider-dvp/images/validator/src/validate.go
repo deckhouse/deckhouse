@@ -33,11 +33,13 @@ func validate(ctx context.Context, input proto.PrepareInput) error {
 }
 
 func prepare(_ context.Context, input proto.PrepareInput) (*proto.PrepareResult, error) {
-	cv, err := proto.ParseResourcesYAML(input.ResourcesYAML)
-	if err != nil {
-		return nil, fmt.Errorf("parse resources: %w", err)
+	cv := input.Vars
+	if cv == nil {
+		cv = &proto.CloudProviderVars{}
 	}
-	cv.Settings = input.ModuleConfig
+	if cv.Settings == nil {
+		cv.Settings = input.ModuleConfig
+	}
 	return &proto.PrepareResult{
 		Vars:                  cv,
 		ProviderClusterConfig: input.ProviderClusterConfig,
