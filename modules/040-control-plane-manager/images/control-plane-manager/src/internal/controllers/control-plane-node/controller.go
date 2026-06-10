@@ -869,9 +869,9 @@ func (r *Reconciler) ensureSignatureRenewalExists(
 		}
 
 		if existing := findActiveOperation(ops, func(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-			return op.Spec.Component == state.component
+			return op.Spec.Component == state.component && op.HasStep(controlplanev1alpha1.StepRenewSignature)
 		}); existing != nil {
-			logger.Debug("active operation exists for component, skip signature renewal operation creation",
+			logger.Debug("active signature renewal operation exists for component, skip signature renewal operation creation",
 				slog.String("operation", existing.Name),
 				slog.String("component", string(state.component)))
 			continue
@@ -937,9 +937,9 @@ func (r *Reconciler) ensureCertRenewalExists(
 		}
 
 		if existing := findActiveOperation(ops, func(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-			return op.Spec.Component == state.component
+			return op.Spec.Component == state.component && op.HasStep(controlplanev1alpha1.StepRenewPKICerts)
 		}); existing != nil {
-			logger.Debug("active operation exists for component, skip cert renewal creation",
+			logger.Debug("active cert renewal operation exists for component, skip cert renewal creation",
 				slog.String("operation", existing.Name),
 				slog.String("component", string(state.component)))
 			continue

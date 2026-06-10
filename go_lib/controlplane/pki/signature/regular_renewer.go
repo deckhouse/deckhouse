@@ -56,6 +56,9 @@ const (
 	TLSCertificateOUField = "apiserver"
 	// DefaultCertificateTTL is the number of days generated certificates will be considered valid.
 	DefaultCertificateTTL = 365
+	// SignatureRenewalDays is the number of days before expiry at which the signature cert is renewed.
+	SignatureRenewalDays      = 60
+	SignatureRenewalThreshold = SignatureRenewalDays * 24 * time.Hour
 )
 
 type RegularRenewer struct {
@@ -66,7 +69,7 @@ type RegularRenewer struct {
 func NewRegularSignatureRenewer(kubernetesPkiPath string) *RegularRenewer {
 	return &RegularRenewer{
 		kubernetesPkiPath: kubernetesPkiPath,
-		leftDaysToRenew:   60,
+		leftDaysToRenew:   SignatureRenewalDays,
 	}
 }
 
@@ -266,10 +269,10 @@ func generateNewSignatureCerts(filePath string, k8sInterface kubernetes.Interfac
 
 func replaceSignatureFiles(filePath string, jwkData, jwksData []byte) error {
 	logger.Info("replace signature files on disk")
-	if err := os.WriteFile(filepath.Join(filePath, SignaturePublicJWKS), jwksData, 0o600); err != nil {
+	if err := pkiutil.WriteFileAtomically(filepath.Join(filePath, SignaturePublicJWKS), jwksData, 0o600); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(filePath, SignaturePrivateJWK), jwkData, 0o600); err != nil {
+	if err := pkiutil.WriteFileAtomically(filepath.Join(filePath, SignaturePrivateJWK), jwkData, 0o600); err != nil {
 		return err
 	}
 	return nil
