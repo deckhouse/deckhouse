@@ -42,7 +42,6 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	}
 
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
-	preparatorParams.WithOperation(operation)
 
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
 	metaConfig, err := config.ParseConfigFromData(
@@ -59,7 +58,6 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("unable to parse config: %w", err)
 	}
 	metaConfig.UUID = clusterUUID
-	metaConfig.Operation = operation
 
 	return metaConfig, nil
 }

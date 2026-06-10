@@ -39,20 +39,7 @@ const (
 )
 
 type PreparatorProviderParams struct {
-	logger    log.Logger
-	Operation DhctlOperation
-}
-
-func (p *PreparatorProviderParams) WithOperation(op DhctlOperation) {
-	p.Operation = op
-}
-
-func (p *PreparatorProviderParams) WithOperationBootstrap() {
-	p.WithOperation(DhctlOperationBootstrap)
-}
-
-func (p *PreparatorProviderParams) WithOperationConverge() {
-	p.WithOperation(DhctlOperationConverge)
+	logger log.Logger
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -68,13 +55,12 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 	if govalue.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
-	operation := params.Operation
 	return func(provider, downloadRootDir string) config.MetaConfigPreparator {
-		return selectPreparator(provider, downloadRootDir, logger, operation)
+		return selectPreparator(provider, downloadRootDir, logger)
 	}
 }
 
-func selectPreparator(provider, downloadRootDir string, logger log.Logger, operation DhctlOperation) config.MetaConfigPreparator {
+func selectPreparator(provider, downloadRootDir string, logger log.Logger) config.MetaConfigPreparator {
 	switch provider {
 	case "":
 		// static cluster
@@ -82,7 +68,7 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger, opera
 	case yandex.ProviderName:
 		// Top-level dhctl path (bootstrap/converge/check): validate cluster
 		// prefix. The hook-side caller passes false.
-		return yandex.NewMetaConfigPreparator(true, logger, operation)
+		return yandex.NewMetaConfigPreparator(true, logger)
 	case vcd.ProviderName:
 		return vcd.NewMetaConfigPreparator(logger)
 	default:

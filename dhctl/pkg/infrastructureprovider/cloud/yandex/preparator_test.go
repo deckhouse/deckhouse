@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -96,9 +97,12 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 		getTestNodeGroupsSpec(t, 1, []string{"1.1.1.1"}),
 	)
 
+	// WithNAT layout validation fires only on bootstrap; any other operation
+	// (converge here) skips it even for otherwise-invalid settings.
 	assertSkipValidationWithNATInstance := func(t *testing.T, settings string, nodeGroups json.RawMessage) {
 		input := getInput(t, settings, nodeGroups)
-		preparator := NewMetaConfigPreparator(true, log.NewSilentLogger(), "")
+		input.Operation = providerdata.OperationConverge
+		preparator := NewMetaConfigPreparator(true, log.NewSilentLogger())
 
 		err := preparator.Validate(context.TODO(), input)
 		require.NoError(t, err)
@@ -117,7 +121,7 @@ func TestNilLoggerDoesNotPanic(t *testing.T) {
 	input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
 
 	do := func() {
-		preparator := NewMetaConfigPreparator(true, nil, "")
+		preparator := NewMetaConfigPreparator(true, nil)
 		_ = preparator.Validate(context.TODO(), input)
 	}
 
@@ -177,7 +181,8 @@ func fillTestWithNatInstanceLayout(t *testing.T, input *config.ProviderInput, se
 }
 
 func assertValidation(t *testing.T, _ bool, input config.ProviderInput, hasError bool) {
-	preparator := NewMetaConfigPreparator(true, log.NewSilentLogger(), "bootstrap")
+	input.Operation = providerdata.OperationBootstrap
+	preparator := NewMetaConfigPreparator(true, log.NewSilentLogger())
 
 	err := preparator.Validate(context.TODO(), input)
 	if hasError {
