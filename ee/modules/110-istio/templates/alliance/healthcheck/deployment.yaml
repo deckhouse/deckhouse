@@ -48,7 +48,7 @@ spec:
       labels:
         app: alliance-healthcheck
         sidecar.istio.io/inject: "true"
-        istio.io/rev: default
+        istio.io/rev: {{ $revision }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
