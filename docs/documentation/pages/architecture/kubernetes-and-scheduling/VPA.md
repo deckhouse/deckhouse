@@ -18,7 +18,7 @@ VPA can operate in two modes:
 
 - Automatic resource adjustment:
 
-  - **InPlaceOrRecreate** (the default, GA mode, available in Kubernetes 1.33 and later): VPA attempts to update resources without recreating Pods. If in-place resource updates are not possible, VPA falls back to behavior similar to the **Recreate** mode: the Pod for which the resources cannot be updated is evicted, and the controller creates a new Pod with updated resources.
+  - **InPlaceOrRecreate** (the default, available in Kubernetes 1.33 and later): VPA attempts to update resources without recreating Pods. If in-place resource updates are not possible, VPA falls back to behavior similar to the **Recreate** mode: the Pod for which the resources cannot be updated is evicted, and the controller creates a new Pod with updated resources.
 
     > To use the **InPlaceOrRecreate** mode in Kubernetes versions earlier than 1.33, enable the `InPlacePodVerticalScaling` feature gate in the [`control-plane-manager` configuration](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
 
