@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -44,6 +45,23 @@ const (
 	cniBootstrapSourcePCC  = "providerClusterConfiguration"
 	cniBootstrapSupportedV = 1
 )
+
+// cniBootstrapPath prefers the bundled candi tree and falls back to the
+// unpacked provider bundle (external providers ship the file there).
+func cniBootstrapPath(m *MetaConfig, globalOptions *options.GlobalOptions) string {
+	path := filepath.Join(resolveCandiDir(globalOptions), "cloud-providers", m.ProviderName, cniBootstrapFileName)
+	if _, err := os.Stat(path); err == nil {
+		return path
+	}
+	downloadRoot := m.DownloadRootDir
+	if downloadRoot == "" && globalOptions != nil {
+		downloadRoot = globalOptions.DownloadDir
+	}
+	if downloadRoot == "" {
+		return path
+	}
+	return filepath.Join(providerdata.ProviderDir(downloadRoot, m.ProviderName), cniBootstrapFileName)
+}
 
 // sigs.k8s.io/yaml parses by converting YAML to JSON and unmarshalling with
 // encoding/json, so these structs use json tags, not yaml tags.
@@ -130,7 +148,7 @@ func analyzeCNIBootstrap(ctx context.Context, m *MetaConfig, globalOptions *opti
 		raw = []byte(contentOverride)
 		path = "<injected>"
 	} else {
-		path = filepath.Join(resolveCandiDir(globalOptions), "cloud-providers", m.ProviderName, cniBootstrapFileName)
+		path = cniBootstrapPath(m, globalOptions)
 		var err error
 		raw, err = os.ReadFile(path)
 		if err != nil {
