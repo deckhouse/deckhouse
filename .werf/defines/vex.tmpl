@@ -92,6 +92,7 @@ shell:
   - export VAULT_ROLE="$(cat /run/secrets/VAULT_ROLE)"
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/TRANSIT_SECRET_ENGINE_PATH)"
   - export VAULT_KEY="hashivault://$(cat /run/secrets/VAULT_KEY | sed 's|hashivault://||')"
+  - echo $VAULT_KEY
 {{- if ne $actionsIdToken "" }}
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
   - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
