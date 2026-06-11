@@ -28,6 +28,12 @@ properties:
           Default registry to use when an image name is not fully qualified.
           
           If not set, index.docker.io is used by default.
+      awsRegion:
+        type: string
+        x-examples:
+        - eu-central-1
+        description: |
+          AWS region for ECR authentication.
       ignoredImages:
         type: array
         x-examples:
