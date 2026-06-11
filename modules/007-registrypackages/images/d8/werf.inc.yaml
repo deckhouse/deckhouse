@@ -65,7 +65,8 @@ shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
   - |
-    apt-get update && apt-get install -y \
+    DEBIAN_FRONTEND=noninteractive \
+    apt update && apt install -y \
     libbtrfs-dev \
     apt-utils \
     libbtrfs-dev \
