@@ -42,13 +42,6 @@ type DeckhouseSettings struct {
 	AllowedExperimentalModules []string `json:"allowedExperimentalModules"`
 }
 
-// ExperimentalModuleAllowed reports whether the named module may be enabled
-// despite being experimental: either all experimental modules are allowed, or
-// the module is named in the allowlist.
-func (s *DeckhouseSettings) ExperimentalModuleAllowed(name string) bool {
-	return s.AllowExperimentalModules || slices.Contains(s.AllowedExperimentalModules, name)
-}
-
 func DefaultDeckhouseSettings() *DeckhouseSettings {
 	settings := &DeckhouseSettings{
 		ReleaseChannel:           "",
@@ -114,6 +107,21 @@ func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {
 	}
 
 	return c.settings
+}
+
+// ExperimentalModuleAllowed reports whether the named module may be enabled
+// despite being experimental: either all experimental modules are allowed, or
+// the module is named in the allowlist. It reads the settings under the lock.
+func (c *DeckhouseSettingsContainer) ExperimentalModuleAllowed(name string) bool {
+	c.lock.Lock()
+	if c.settings == nil {
+		c.lock.Unlock()
+		<-c.inited
+		c.lock.Lock()
+	}
+	defer c.lock.Unlock()
+
+	return c.settings.AllowExperimentalModules || slices.Contains(c.settings.AllowedExperimentalModules, name)
 }
 
 func NewModuleUpdatePolicySpecContainer(spec *v1alpha2.ModuleUpdatePolicySpec) *ModuleUpdatePolicySpecContainer {

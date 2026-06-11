@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDeckhouseSettings_ExperimentalModuleAllowed(t *testing.T) {
+func TestDeckhouseSettingsContainer_ExperimentalModuleAllowed(t *testing.T) {
 	tests := []struct {
 		name     string
 		allowAll bool
@@ -57,12 +57,12 @@ func TestDeckhouseSettings_ExperimentalModuleAllowed(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settings := &DeckhouseSettings{
+			container := NewDeckhouseSettingsContainer(&DeckhouseSettings{
 				AllowExperimentalModules:   tt.allowAll,
 				AllowedExperimentalModules: tt.allowed,
-			}
+			}, nil)
 
-			assert.Equal(t, tt.want, settings.ExperimentalModuleAllowed(tt.module))
+			assert.Equal(t, tt.want, container.ExperimentalModuleAllowed(tt.module))
 		})
 	}
 }
