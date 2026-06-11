@@ -166,18 +166,6 @@ func (d *DiskService) CreateDiskFromDataSource(
 		return nil, err
 	}
 
-	sc, err := d.GetStorageClass(ctx, diskStorageClass)
-	if err != nil {
-		return nil, err
-	}
-
-	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode != storagev1.VolumeBindingWaitForFirstConsumer {
-		err = d.WaitDiskCreation(ctx, diskName)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return newDisk, nil
 }
 
@@ -320,6 +308,25 @@ func isTerminalDiskErrorReason(reason vdcondition.ReadyReason) bool {
 		return true
 	}
 	return false
+}
+
+// TerminalDiskError returns a non-nil error if the VirtualDisk is in a terminal failure state,
+// nil if the disk is healthy or still provisioning.
+func TerminalDiskError(vmd *v1alpha2.VirtualDisk) error {
+	for _, cond := range vmd.Status.Conditions {
+		if cond.Type == vdcondition.ReadyType.String() && cond.Status == metav1.ConditionFalse {
+			if isTerminalDiskErrorReason(vdcondition.ReadyReason(cond.Reason)) {
+				if cond.Reason == vdcondition.QuotaExceeded.String() {
+					return fmt.Errorf("%w: %s", ErrQuotaExceeded, cond.Message)
+				}
+				return errors.New(cond.Message)
+			}
+		}
+	}
+	if vmd.Status.Phase == v1alpha2.DiskFailed {
+		return fmt.Errorf("disk %q is in Failed phase", vmd.Name)
+	}
+	return nil
 }
 
 func (d *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) error {
