@@ -59,11 +59,14 @@ description: Мультитенантность и проекты в Kubernetes.
 
 При создании ресурса [Project](./cr.html#project) из определенного [ProjectTemplate](./cr.html#projecttemplate) происходит следующее:
 
-1. Переданные [параметры](./cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [`parametersSchema.openAPIV3Schema`
+1. Переданные [параметры](./cr.html#project-v1alpha3-spec-parameters) валидируются по OpenAPI-спецификации (параметр [`parametersSchema.openAPIV3Schema`
 ](./cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса [ProjectTemplate](./cr.html#projecttemplate));
-1. Выполняется рендеринг [шаблона для ресурсов](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [`parameters`](./cr.html#project-v1alpha2-spec-parameters) ресурса [Project](./cr.html#project);
+1. Выполняется рендеринг [шаблона для ресурсов](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [`parameters`](./cr.html#project-v1alpha3-spec-parameters) ресурса [Project](./cr.html#project);
 1. Cоздается `Namespace` с именем, которое совпадает c именем [Project](./cr.html#project);
 1. По очереди создаются все ресурсы, описанные в шаблоне.
+1. Стандартные поля проекта применяются независимо от шаблона: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) преобразуется в `ResourceQuota`, а [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) — в автоматически управляемый [ProjectRoleBinding](./cr.html#projectrolebinding).
+
+API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Webhook конвертации сохраняет работоспособность старых манифестов `v1alpha1`/`v1alpha2`, перенося `parameters.administrators` и `parameters.resourceQuota` в стандартные поля. Поле `projectTemplateName` необязательно: проект без шаблона управляет только своим пространством имён и стандартными полями.
 
 > **Внимание.** При изменении шаблона проекта, все созданные проекты будут обновлены в соответствии с новым шаблоном.
 

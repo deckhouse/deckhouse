@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
 )
 
@@ -109,15 +109,15 @@ func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.Proj
 	})
 }
 
-func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha1.ProjectTemplate) ([]*v1alpha2.Project, error) {
-	projects := new(v1alpha2.ProjectList)
-	if err := m.client.List(ctx, projects, client.MatchingLabels{v1alpha2.ResourceLabelTemplate: template.Name}); err != nil {
+func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha1.ProjectTemplate) ([]*v1alpha3.Project, error) {
+	projects := new(v1alpha3.ProjectList)
+	if err := m.client.List(ctx, projects, client.MatchingLabels{v1alpha3.ResourceLabelTemplate: template.Name}); err != nil {
 		return nil, fmt.Errorf("list projects by template: %w", err)
 	}
 	if len(projects.Items) == 0 {
 		return nil, nil
 	}
-	var result []*v1alpha2.Project
+	var result []*v1alpha3.Project
 	for _, project := range projects.Items {
 		result = append(result, project.DeepCopy())
 	}

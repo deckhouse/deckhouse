@@ -1,0 +1,13 @@
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    owner: platform
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: simple
+    team: backend
+  name: test

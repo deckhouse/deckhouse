@@ -182,6 +182,49 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.HelmRender()
 		})
 
+		It("Should render the RBACv2 role and capability framework", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			systemRole := f.KubernetesGlobalResource("ClusterRole", "d8:system:manager")
+			Expect(systemRole.Exists()).To(BeTrue())
+			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("role"))
+			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).String()).To(Equal("system"))
+			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/use-role`).String()).To(Equal("admin"))
+			Expect(systemRole.Field("aggregationRule.clusterRoleSelectors").Array()).ToNot(BeEmpty())
+
+			subsystemRole := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:networking:viewer")
+			Expect(subsystemRole.Exists()).To(BeTrue())
+			Expect(subsystemRole.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).String()).To(Equal("subsystem"))
+			Expect(subsystemRole.Field(`metadata.labels.rbac\.deckhouse\.io/subsystem`).String()).To(Equal("networking"))
+
+			for _, name := range []string{
+				"d8:namespace:viewer", "d8:namespace:user", "d8:namespace:manager", "d8:namespace:admin", "d8:namespace:superadmin",
+			} {
+				namespaceRole := f.KubernetesGlobalResource("ClusterRole", name)
+				Expect(namespaceRole.Exists()).To(BeTrue(), "expected ClusterRole %s to be rendered", name)
+				Expect(namespaceRole.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("role"))
+				Expect(namespaceRole.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).String()).To(Equal("namespace"))
+				Expect(namespaceRole.Field(`metadata.labels.rbac\.deckhouse\.io/delegatable`).String()).To(Equal("true"))
+				Expect(namespaceRole.Field("rules").Array()).To(BeEmpty())
+			}
+
+			capability := f.KubernetesGlobalResource("ClusterRole", "d8:namespace-capability:kubernetes:view_resources")
+			Expect(capability.Exists()).To(BeTrue())
+			Expect(capability.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("capability"))
+			Expect(capability.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-namespace-as`).String()).To(Equal("viewer"))
+			Expect(capability.Field("rules").Array()).ToNot(BeEmpty())
+			Expect(capability.Field(`metadata.annotations.en\.meta\.deckhouse\.io/title`).String()).ToNot(BeEmpty())
+			Expect(capability.Field(`metadata.annotations.ru\.meta\.deckhouse\.io/title`).String()).ToNot(BeEmpty())
+
+			dict := f.KubernetesGlobalResource("ClusterRole", "d8:dict")
+			Expect(dict.Exists()).To(BeTrue())
+
+			// The legacy names must be gone after the hard rename.
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:manager").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:dict").Exists()).To(BeFalse())
+		})
+
 		It("Should create a ClusterRoleBinding for each additionalRole", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

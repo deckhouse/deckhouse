@@ -19,7 +19,25 @@ rules:
     resources:
       - projectrolebindings
     verbs:
+      - get
+      - list
+      - watch
       - create
       - update
       - patch
       - delete
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterroles
+    verbs:
+      - bind
+    resourceNames:
+      - d8:project:viewer
+      - d8:project:user
+      - d8:project:manager
+      - d8:project:admin
+      - d8:namespace:viewer
+      - d8:namespace:user
+      - d8:namespace:manager
+      - d8:namespace:admin
