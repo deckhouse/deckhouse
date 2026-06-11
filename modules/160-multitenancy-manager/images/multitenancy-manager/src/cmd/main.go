@@ -117,17 +117,22 @@ func main() {
 		namespacewebhook.Register(runtimeManager, allowedServiceAccounts)
 	}
 
-	// register cluster resource grants: catalog/quota reconciler and the grant webhooks.
+	// register cluster resource grants: catalog reconciler, binding-status reconcilers and webhooks.
 	jsonpathFactory := jsonpath.NewWithCache()
 	if err = (&grantcontrollers.ProjectReconciler{
-		Client:  runtimeManager.GetClient(),
-		Mapper:  runtimeManager.GetRESTMapper(),
-		Factory: jsonpathFactory,
+		Client: runtimeManager.GetClient(),
+		Mapper: runtimeManager.GetRESTMapper(),
 	}).SetupWithManager(runtimeManager); err != nil {
 		panic(err)
 	}
-	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetClient(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
-	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetClient(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	if err = (&grantcontrollers.ReferenceReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		panic(err)
+	}
+	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		panic(err)
+	}
+	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetClient(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetClient(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
 
 	// start runtime manager

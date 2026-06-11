@@ -14,18 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package engine holds the pure decision logic shared by the webhooks and the reconciler:
-// rule matching, per-version path selection, match-guard evaluation, effective availability
-// precedence and quota measures. It has no Kubernetes client dependency so it is trivially
-// unit-testable.
+// Package engine holds the pure decision helpers shared by the webhooks and the reconciler: rule
+// matching, version-scoped field-path selection and match-guard evaluation. The availability decision
+// (excluded → denied → allowed → baseline) and the per-project default live in internal/resolve.
 package engine
 
 import (
 	"fmt"
 	"slices"
-	"strconv"
-
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	"controller/api/v1alpha1"
 	"controller/internal/jsonpath"
@@ -49,18 +45,29 @@ func RuleMatches(rule v1alpha1.UsageRule, group, version, resource string) bool 
 		listMatches(rule.Resources, resource)
 }
 
-// SelectFieldPath returns the JSONPath to the granted name for the given group/version: the first
-// matching paths[] override, else the default fieldPath. An override with empty apiGroups/apiVersions
-// matches any matched group/version.
-func SelectFieldPath(ref v1alpha1.UsageReference, group, version string) string {
-	for _, p := range ref.Paths {
-		groupOK := len(p.APIGroups) == 0 || listMatches(p.APIGroups, group)
-		versionOK := len(p.APIVersions) == 0 || listMatches(p.APIVersions, version)
-		if groupOK && versionOK {
-			return p.FieldPath
+// SelectFieldPath returns the FieldPath entry that applies to the given group/version: a scoped entry
+// (apiGroups/apiVersions set) wins over an unscoped one; the unscoped entry is the fallback. The bool
+// is false when no entry matches.
+func SelectFieldPath(fieldPaths []v1alpha1.FieldPath, group, version string) (v1alpha1.FieldPath, bool) {
+	var fallback *v1alpha1.FieldPath
+	for i := range fieldPaths {
+		fp := &fieldPaths[i]
+		groupOK := len(fp.APIGroups) == 0 || listMatches(fp.APIGroups, group)
+		versionOK := len(fp.APIVersions) == 0 || listMatches(fp.APIVersions, version)
+		if !groupOK || !versionOK {
+			continue
+		}
+		if len(fp.APIGroups) > 0 || len(fp.APIVersions) > 0 {
+			return *fp, true // scoped entry wins
+		}
+		if fallback == nil {
+			fallback = fp
 		}
 	}
-	return ref.FieldPath
+	if fallback != nil {
+		return *fallback, true
+	}
+	return v1alpha1.FieldPath{}, false
 }
 
 // StringValuesAt returns the string-typed values selected by the JSONPath expression.
@@ -79,44 +86,8 @@ func StringValuesAt(factory jsonpath.Factory, obj map[string]any, path string) (
 	return out, nil
 }
 
-// QuantityValuesAt returns the resource.Quantity values selected by the JSONPath expression.
-// Values may be strings ("10Gi") or numbers (5); other types are skipped.
-func QuantityValuesAt(factory jsonpath.Factory, obj map[string]any, path string) ([]resource.Quantity, error) {
-	parsed, err := factory.Path(path)
-	if err != nil {
-		return nil, fmt.Errorf("parse jsonpath %q: %w", path, err)
-	}
-	nodes := parsed.Select(obj)
-	out := make([]resource.Quantity, 0, len(nodes))
-	for _, n := range nodes {
-		q, ok := toQuantity(n)
-		if ok {
-			out = append(out, q)
-		}
-	}
-	return out, nil
-}
-
-func toQuantity(v any) (resource.Quantity, bool) {
-	switch t := v.(type) {
-	case string:
-		q, err := resource.ParseQuantity(t)
-		if err != nil {
-			return resource.Quantity{}, false
-		}
-		return q, true
-	case int64:
-		return *resource.NewQuantity(t, resource.DecimalSI), true
-	case float64:
-		// JSON numbers decode to float64; integer-valued counts are common.
-		return resource.MustParse(strconv.FormatFloat(t, 'f', -1, 64)), true
-	default:
-		return resource.Quantity{}, false
-	}
-}
-
-// EvalMatch reports whether a usage reference's match guard holds for the object. A nil predicate
-// always holds. A predicate with neither equals nor in holds when the field is present.
+// EvalMatch reports whether a field path's match guard holds for the object. A nil predicate always
+// holds. A predicate with neither equals nor in holds when the field is present.
 func EvalMatch(factory jsonpath.Factory, pred *v1alpha1.MatchPredicate, obj map[string]any) (bool, error) {
 	if pred == nil {
 		return true, nil
@@ -137,150 +108,4 @@ func EvalMatch(factory jsonpath.Factory, pred *v1alpha1.MatchPredicate, obj map[
 		}
 	}
 	return false, nil
-}
-
-// Availability decision logic (excluded → denied → allowed → baseline) and the per-project default
-// live in a single place — internal/resolve (resolve.Resolved.Decide / .Default). They are not
-// duplicated here; this package only provides the stateless matching/measure helpers used by both
-// the webhooks and the reconciler.
-
-// Measure is a quota measure key declared by a registration.
-type Measure struct {
-	// Key is the measure key (resource plural for counts, quantities[].name for quantities).
-	Key string
-	// Count is true for countable measures (integer), false for quantity measures.
-	Count bool
-}
-
-// Measures returns the deduplicated set of quota measures declared by a registration: the resource
-// plural of every countable usage reference, plus every quantities[].name.
-func Measures(reg *v1alpha1.GrantableClusterResourceDefinition) []Measure {
-	seen := map[string]bool{}
-	out := make([]Measure, 0)
-	add := func(key string, count bool) {
-		if key == "" || seen[key] {
-			return
-		}
-		seen[key] = true
-		out = append(out, Measure{Key: key, Count: count})
-	}
-	for i := range reg.Spec.UsageReferences {
-		ref := &reg.Spec.UsageReferences[i]
-		if ref.Countable {
-			for _, r := range ref.Rule.Resources {
-				add(r, true)
-			}
-		}
-		for _, q := range ref.Quantities {
-			add(q.Name, false)
-		}
-	}
-	return out
-}
-
-// Contribution is the quota a single usage object adds for one granted name.
-type Contribution struct {
-	// Name is the granted name referenced by the object.
-	Name string
-	// Increments maps a measure key to the amount added (1 for counts, the summed quantity otherwise).
-	Increments map[string]resource.Quantity
-}
-
-// Contributions computes, for a usage object of the given (group, version, resource), the quota it
-// adds per referenced granted name. It evaluates the rule match, the match guard and the per-version
-// path. Objects that do not match any rule, or whose guard is false, contribute nothing.
-func Contributions(
-	factory jsonpath.Factory,
-	reg *v1alpha1.GrantableClusterResourceDefinition,
-	obj map[string]any,
-	group, version, resourcePlural string,
-) ([]Contribution, error) {
-	byName := map[string]map[string]resource.Quantity{}
-	for i := range reg.Spec.UsageReferences {
-		ref := &reg.Spec.UsageReferences[i]
-		if !RuleMatches(ref.Rule, group, version, resourcePlural) {
-			continue
-		}
-		ok, err := EvalMatch(factory, ref.Match, obj)
-		if err != nil {
-			return nil, err
-		}
-		if !ok {
-			continue
-		}
-		path := SelectFieldPath(*ref, group, version)
-		names, err := StringValuesAt(factory, obj, path)
-		if err != nil {
-			return nil, err
-		}
-		for _, name := range names {
-			if name == "" {
-				continue
-			}
-			incr := byName[name]
-			if incr == nil {
-				incr = map[string]resource.Quantity{}
-				byName[name] = incr
-			}
-			if ref.Countable {
-				q := incr[resourcePlural]
-				q.Add(*resource.NewQuantity(1, resource.DecimalSI))
-				incr[resourcePlural] = q
-			}
-			for _, qm := range ref.Quantities {
-				qvals, err := QuantityValuesAt(factory, obj, qm.FieldPath)
-				if err != nil {
-					return nil, err
-				}
-				sum := incr[qm.Name]
-				for _, qv := range qvals {
-					sum.Add(qv)
-				}
-				incr[qm.Name] = sum
-			}
-		}
-	}
-	out := make([]Contribution, 0, len(byName))
-	for name, incr := range byName {
-		out = append(out, Contribution{Name: name, Increments: incr})
-	}
-	return out, nil
-}
-
-// IsUnlimited reports whether a quota limit means "unlimited" (negative, e.g. -1).
-func IsUnlimited(limit resource.Quantity) bool {
-	return limit.Sign() < 0
-}
-
-// LimitFor returns the most restrictive limit for a granted name from an objects map
-// (grantedName→measure→limit): the named entry and the "*" entry both apply; the smaller wins.
-// The bool is false when neither sets the measure (unlimited).
-func LimitFor(objects map[string]map[string]resource.Quantity, name, measure string) (resource.Quantity, bool) {
-	var best resource.Quantity
-	found := false
-	consider := func(key string) {
-		m, ok := objects[key]
-		if !ok {
-			return
-		}
-		lim, ok := m[measure]
-		if !ok {
-			return
-		}
-		if IsUnlimited(lim) {
-			// Unlimited never tightens; only record if nothing else found.
-			if !found {
-				best = lim
-				found = true
-			}
-			return
-		}
-		if !found || (best.Sign() >= 0 && lim.Cmp(best) < 0) {
-			best = lim
-			found = true
-		}
-	}
-	consider("*")
-	consider(name)
-	return best, found
 }

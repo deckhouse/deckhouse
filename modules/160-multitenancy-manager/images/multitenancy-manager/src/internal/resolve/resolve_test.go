@@ -22,13 +22,25 @@ import (
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"controller/api/v1alpha1"
 )
+
+func testMapper() meta.RESTMapper {
+	m := meta.NewDefaultRESTMapper([]schema.GroupVersion{
+		{Group: "storage.k8s.io", Version: "v1"},
+		{Group: "rbac.authorization.k8s.io", Version: "v1"},
+	})
+	m.Add(schema.GroupVersionKind{Group: "storage.k8s.io", Version: "v1", Kind: "StorageClass"}, meta.RESTScopeRoot)
+	m.Add(schema.GroupVersionKind{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}, meta.RESTScopeRoot)
+	return m
+}
 
 func newClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
@@ -54,7 +66,7 @@ func valueReg(defAvail v1alpha1.AvailabilityDefault, excluded []v1alpha1.Resourc
 func decide(t *testing.T, reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1alpha1.GrantResource, name string, objs ...client.Object) bool {
 	t.Helper()
 	cl := newClient(t, objs...)
-	resolved, err := Resolve(context.Background(), cl, reg, entries)
+	resolved, err := Resolve(context.Background(), cl, testMapper(), reg, entries)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
@@ -120,7 +132,7 @@ func roleReg(excluded []v1alpha1.ResourceFilter) *v1alpha1.GrantableClusterResou
 	return &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "clusterroles"},
 		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
-			GrantedResource:     &v1alpha1.GrantedResource{APIVersion: "rbac.authorization.k8s.io/v1", Kind: "ClusterRole"},
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole"},
 			DefaultAvailability: v1alpha1.AvailabilityAll,
 			Excluded:            excluded,
 		},
@@ -157,7 +169,7 @@ func TestDecideExcludedUnion(t *testing.T) {
 		objs = append(objs, clusterRole(c.name, c.lbls))
 	}
 	cl := newClient(t, objs...)
-	resolved, err := Resolve(context.Background(), cl, reg, nil)
+	resolved, err := Resolve(context.Background(), cl, testMapper(), reg, nil)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
@@ -172,7 +184,7 @@ func TestDecideAllowedSelector(t *testing.T) {
 	reg := &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
 		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
-			GrantedResource:     &v1alpha1.GrantedResource{APIVersion: "storage.k8s.io/v1", Kind: "StorageClass"},
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: "storage.k8s.io", Kind: "StorageClass"},
 			DefaultAvailability: v1alpha1.AvailabilityNone,
 		},
 	}
