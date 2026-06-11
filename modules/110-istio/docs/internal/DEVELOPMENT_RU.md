@@ -21,8 +21,8 @@ searchable: false
 * Добавить injection data templates  в `files/{{revision}}/templates/sidecar-injection-config.yaml|sidecar-injection-values.yaml`, используя предыдущую версию конфигов, исправив согласно изменениям новой версии.
   * sidecar-injection-config.yaml должен содержать `data.config` для ConfigMap `sidecar-injector-{{ $revision }}`, соответствующей версии.
   * sidecar-injection-values.yaml должен содержать `data.values` для ConfigMap `sidecar-injector-{{ $revision }}`, соответствующей версии.
-* Добавить injection шаблоны из upstream в `files/{{revision}}/static/gateway-injection-template.yaml|sidecar-injection-template.yaml`.    
-  * Скопировать файл из upsteam `charts/istiod/files/injection-template.yaml` в `files/{{revision}}/static/sidecar-injection-template.yaml`. 
+* Добавить injection шаблоны из upstream в `files/{{revision}}/static/gateway-injection-template.yaml|sidecar-injection-template.yaml`.
+  * Скопировать файл из upsteam `charts/istiod/files/injection-template.yaml` в `files/{{revision}}/static/sidecar-injection-template.yaml`.
   * Скопировать файл из upsteam `charts/istiod/files/gateway-injection-template.yaml` в `files/{{revision}}/static/gateway-injection-template.yaml`
 * Чтобы обновить istio-дашборды необходимо выполнить скрипт `istio-grafana-dashboard.sh` и сложить в полученные json-ки в `monitoring/grafana-dashboards/istio/`. Что делает скрипт:
   * Клонирует репозиторий istio с необходимой версией.
