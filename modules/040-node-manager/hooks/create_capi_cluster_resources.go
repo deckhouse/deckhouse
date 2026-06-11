@@ -23,17 +23,15 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // Cluster and MachineHealthCheck are created via this hook (not helm).
-// Runs OnBeforeHelm at Order 20 — after generate_capi_webhook_certs (5) and
-// capi_crds_cabundle_injection (10) — so the conversion webhook is wired up
-// before we touch CAPI objects. Synchronization is disabled so the hook never
-// runs before the injection at startup; the Secret watch only feeds the
-// snapshot. Hook is idempotent (CreateIfNotExists), so re-runs are safe.
+// Objects are created directly in the v1beta2 storage version, so the
+// conversion webhook is never involved (CREATE writes the storage version,
+// CreateIfNotExists on an existing object short-circuits on AlreadyExists at
+// the etcd level without decoding it). Hook is idempotent, so re-runs are safe.
 
 const (
 	capiNamespace = "d8-cloud-instance-manager"
@@ -66,19 +64,14 @@ func filterCapiClusterSecret(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	// Own queue so a transient failure on a Secret event doesn't block the main queue.
 	Queue: "/modules/node-manager/create-capi-cluster-resources",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			// Watch the cloud-provider registration secret to feed the snapshot.
-			// Synchronization is disabled: the hook must not run before the
-			// OnBeforeHelm injection at startup. Events still trigger re-runs on
-			// the dedicated queue when the secret appears or changes.
-			Name:                         "cloud_provider_secret",
-			ApiVersion:                   "v1",
-			Kind:                         "Secret",
-			ExecuteHookOnSynchronization: ptr.To(false),
+			Name:       "cloud_provider_secret",
+			ApiVersion: "v1",
+			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}},
 			},

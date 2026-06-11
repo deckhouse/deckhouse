@@ -71,7 +71,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "capi_cluster",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
+			ApiVersion: "cluster.x-k8s.io/v1beta2",
 			Kind:       "Cluster",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{capiNamespace}},
@@ -80,7 +80,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "capi_machine_health_check",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
+			ApiVersion: "cluster.x-k8s.io/v1beta2",
 			Kind:       "MachineHealthCheck",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{capiNamespace}},
