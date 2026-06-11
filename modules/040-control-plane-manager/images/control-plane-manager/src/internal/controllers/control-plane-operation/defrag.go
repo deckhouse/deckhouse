@@ -1,0 +1,130 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controlplaneoperation
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net"
+	"path/filepath"
+	"strconv"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	etcdclient "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
+	etcdconstants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
+)
+
+const (
+	// etcdDefragFragRatioThreshold is the minimum fragmentation ratio (fragmented/total)
+	// that triggers defragmentation. 0.20 means defrag when ≥20% of the DB is fragmented.
+	etcdDefragFragRatioThreshold = 0.20
+
+	etcdDefragTimeout       = 2 * time.Minute
+	etcdDefragStatusTimeout = 10 * time.Second
+)
+
+// defragEtcdIfNeeded connects to the local etcd endpoint, checks fragmentation,
+// and runs defragmentation if the fragmented ratio exceeds etcdDefragFragRatioThreshold.
+// Returns true if defragmentation was performed, false if it was skipped.
+func defragEtcdIfNeeded(ctx context.Context, advertiseIP, pkiDir, kubeconfigDir string, logger *log.Logger) (bool, error) {
+	adminConfPath := filepath.Join(kubeconfigDir, "admin.conf")
+	kubeClient, err := etcdclient.ClientSetFromFile(adminConfPath)
+	if err != nil {
+		return false, fmt.Errorf("create k8s client from admin.conf: %w", err)
+	}
+
+	etcdCli, err := etcdclient.New(kubeClient, pkiDir)
+	if err != nil {
+		return false, fmt.Errorf("create etcd client: %w", err)
+	}
+	defer etcdCli.Close()
+
+	localEndpoint := "https://" + net.JoinHostPort(advertiseIP, strconv.Itoa(etcdconstants.EtcdListenClientPort))
+
+	statusCtx, cancel := context.WithTimeout(ctx, etcdDefragStatusTimeout)
+	defer cancel()
+
+	resp, err := etcdCli.Status(statusCtx, localEndpoint)
+	if err != nil {
+		return false, fmt.Errorf("get etcd status at %s: %w", localEndpoint, err)
+	}
+
+	if resp.DbSize == 0 {
+		logger.Info("etcd defrag skipped: db size is zero")
+		return false, nil
+	}
+
+	fragmented := resp.DbSize - resp.DbSizeInUse
+	fragRatio := float64(fragmented) / float64(resp.DbSize)
+
+	logger.Info("etcd defrag: fragmentation check",
+		slog.String("endpoint", localEndpoint),
+		slog.Int64("dbSizeBytes", resp.DbSize),
+		slog.Int64("dbSizeInUseBytes", resp.DbSizeInUse),
+		slog.Int64("fragmentedBytes", fragmented),
+		slog.Float64("fragRatio", fragRatio),
+		slog.Float64("threshold", etcdDefragFragRatioThreshold))
+
+	if fragRatio < etcdDefragFragRatioThreshold {
+		logger.Info("etcd defrag skipped: fragmentation below threshold")
+		return false, nil
+	}
+
+	logger.Info("etcd defrag: starting", slog.String("endpoint", localEndpoint))
+
+	defragCtx, defragCancel := context.WithTimeout(ctx, etcdDefragTimeout)
+	defer defragCancel()
+
+	if _, err = etcdCli.Raw().Defragment(defragCtx, localEndpoint); err != nil {
+		return false, fmt.Errorf("defragment etcd at %s: %w", localEndpoint, err)
+	}
+
+	logger.Info("etcd defrag: completed successfully", slog.String("endpoint", localEndpoint))
+	return true, nil
+}
+
+// isEtcdPodReady checks whether the local etcd static pod has the Ready condition.
+func (r *Reconciler) isEtcdPodReady(ctx context.Context) (bool, error) {
+	podName := fmt.Sprintf("%s-%s",
+		controlplanev1alpha1.OperationComponentEtcd.PodComponentName(),
+		r.node.Name)
+	pod := &corev1.Pod{}
+	if err := r.client.Get(ctx, client.ObjectKey{
+		Name:      podName,
+		Namespace: constants.KubeSystemNamespace,
+	}, pod); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get pod %s: %w", podName, err)
+	}
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true, nil
+		}
+	}
+	return false, nil
+}

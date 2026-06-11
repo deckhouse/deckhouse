@@ -83,6 +83,7 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	}
 	// Inject Reconciler-level deps into steps that need them.
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
+	r.steps[controlplanev1alpha1.StepDefragEtcd].(*defragEtcdStep).isEtcdPodReady = r.isEtcdPodReady
 
 	// harden admin kubeconfig perms and align root kubeconfig symlink during controller startup.
 	r.enforceNodePolicy(r.log)
