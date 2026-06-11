@@ -36,6 +36,10 @@ image: {{ $imageName }}-vex-artifact
 fromImage: base/vex
 final: true
 secrets:
+- id: REGISTRY_USER
+  env: REGISTRY_USER
+- id: REGISTRY_PASSWORD
+  env: REGISTRY_PASSWORD
 {{- if ne $werfSignKey "" }}
 - id: VAULT_ADDR
   env: VAULT_ADDR
@@ -125,6 +129,8 @@ shell:
   - |
     cosign attest \
       --replace \
+      --registry-username="${REGISTRY_USER}" \
+      --registry-password="${REGISTRY_PASSWORD}" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
       --key ${VAULT_KEY} \
