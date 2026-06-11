@@ -49,6 +49,12 @@ func main() {
 	kpApp.Action(func(_ *kingpin.ParseContext) error {
 		scheme := clientgoscheme.Scheme
 		utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+		utilruntime.Must(cpwebhook.RegisterUnstructuredGVKs(
+			scheme,
+			moduleConfigGVK,
+			nodeGroupGVK,
+			instanceClassGVK,
+		))
 
 		cfg := ctrl.GetConfigOrDie()
 
