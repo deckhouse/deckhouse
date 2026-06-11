@@ -9,7 +9,7 @@ Managed PostgreSQL в Deckhouse Kubernetes Platform добавляет в кла
 
 Ресурс Postgres может описывать отказоустойчивый кластер PostgreSQL или одиночный экземпляр. Через PostgresClass администратор задаёт, какие топологии, диапазоны CPU и памяти, значения конфигурации PostgreSQL и правила валидации доступны пользователям.
 
-Сервис находится на [стадии `Preview`](/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля). Перед включением [`managed-postgres`](/modules/managed-postgres/) выполните [требования для установки](/modules/managed-postgres/configuration.html#требования). Основной cluster-wide-ресурс администратора — PostgresClass. Он определяет, какие конфигурации Postgres доступны пользователям и какие значения применяются по умолчанию. Пользовательские операции с сервисами PostgreSQL описаны в разделе [«Использование Managed PostgreSQL»](../../../user/managed-services/postgres.html).
+Перед включением [`managed-postgres`](/modules/managed-postgres/) выполните [требования для установки](/modules/managed-postgres/configuration.html#требования). Основной cluster-wide-ресурс администратора — PostgresClass. Он определяет, какие конфигурации Postgres доступны пользователям и какие значения применяются по умолчанию. Пользовательские операции с сервисами PostgreSQL описаны в разделе [«Использование Managed PostgreSQL»](../../../user/managed-services/postgres.html).
 
 ## Доступные конфигурации PostgreSQL
 
@@ -25,7 +25,7 @@ Managed PostgreSQL в Deckhouse Kubernetes Platform добавляет в кла
 
 Убедитесь, что:
 
-- [`managed-postgres`](/modules/managed-postgres/) доступен в используемой инсталляции;
+- модуль [`managed-postgres`](/modules/managed-postgres/) доступен в используемой редакции DKP;
 - выполнены [требования для установки](/modules/managed-postgres/configuration.html#требования);
 - у вас есть права на создание cluster-wide-ресурсов.
 
