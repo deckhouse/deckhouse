@@ -65,8 +65,6 @@ type PrepareInput struct {
 	// credential secrets, module settings) collected by dhctl. Always
 	// populated on both subcommands.
 	Vars *CloudProviderVars `json:"vars,omitempty"`
-	// ModuleConfig holds the cloud-provider module configuration values.
-	ModuleConfig map[string]interface{} `json:"moduleConfig,omitempty"`
 }
 
 // PrepareResult is returned by the prepare subcommand on success.

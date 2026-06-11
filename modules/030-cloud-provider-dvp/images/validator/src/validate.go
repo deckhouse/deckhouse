@@ -37,9 +37,6 @@ func prepare(_ context.Context, input proto.PrepareInput) (*proto.PrepareResult,
 	if cv == nil {
 		cv = &proto.CloudProviderVars{}
 	}
-	if cv.Settings == nil {
-		cv.Settings = input.ModuleConfig
-	}
 	return &proto.PrepareResult{
 		Vars:                  cv,
 		ProviderClusterConfig: input.ProviderClusterConfig,

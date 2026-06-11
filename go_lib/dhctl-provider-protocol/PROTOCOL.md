@@ -72,8 +72,7 @@ Validates provider credentials and configuration before the operation begins.
       "nodeGroups": { "worker": { ... } },
       "instanceClasses": { "worker": { ... } },
       "secrets": { "credentials": { ... } }
-    },
-    "moduleConfig": { ... }
+    }
   }
 }
 ```
@@ -139,7 +138,6 @@ On failure:
 | `layout` | string | Provider layout name |
 | `providerClusterConfiguration` | object | Parsed `providerClusterConfiguration` section |
 | `vars` | object | Structured provider data collected by dhctl (node groups, instance classes, credential secrets, module settings). Always populated on both subcommands — the only channel for provider resources |
-| `moduleConfig` | object | Cloud-provider module configuration values (same data as `vars.settings`) |
 
 ## Exit codes
 

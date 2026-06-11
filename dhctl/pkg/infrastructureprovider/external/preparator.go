@@ -128,11 +128,6 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 		pcc[k] = val
 	}
 
-	var moduleConfig map[string]interface{}
-	if input.CloudProviderVars != nil {
-		moduleConfig = input.CloudProviderVars.Settings
-	}
-
 	return providerdata.PrepareInput{
 		ProviderName:          input.ProviderName,
 		ClusterPrefix:         input.ClusterPrefix,
@@ -140,7 +135,6 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 		Operation:             input.Operation,
 		ProviderClusterConfig: pcc,
 		Vars:                  input.CloudProviderVars,
-		ModuleConfig:          moduleConfig,
 	}, nil
 }
 

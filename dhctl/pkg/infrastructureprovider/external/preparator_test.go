@@ -46,7 +46,6 @@ func TestToWireInput_VarsTravelStructurally(t *testing.T) {
 	wire, err := toWireInput(input)
 	require.NoError(t, err)
 	require.Same(t, cv, wire.Vars, "vars must be passed through, not re-encoded")
-	require.Equal(t, cv.Settings, wire.ModuleConfig)
 }
 
 func TestToWireInput_ProviderClusterConfigJSONConverted(t *testing.T) {
