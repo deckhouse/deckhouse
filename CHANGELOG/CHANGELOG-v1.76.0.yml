@@ -780,6 +780,8 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20451
     - summary: Add chrony module architecture section
       pull_request: https://github.com/deckhouse/deckhouse/pull/20603
+    - summary: Fix URL links to diagrams
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20629
   fixes:
     - summary: Changing module descriptions
       pull_request: https://github.com/deckhouse/deckhouse/pull/18148
