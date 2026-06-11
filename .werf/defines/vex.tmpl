@@ -91,6 +91,7 @@ shell:
   - export VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)"
   - export VAULT_ROLE="$(cat /run/secrets/VAULT_ROLE)"
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/TRANSIT_SECRET_ENGINE_PATH)"
+  - echo $VAULT_KEY
   - export VAULT_KEY="hashivault://$(cat /run/secrets/VAULT_KEY | sed 's|hashivault://||')"
   - ls -lah /run/secrets
   - echo $VAULT_KEY
