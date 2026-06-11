@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"strings"
 	"time"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
@@ -141,7 +140,6 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 		Operation:             input.Operation,
 		ProviderClusterConfig: pcc,
 		Vars:                  input.CloudProviderVars,
-		ResourcesYAML:         strings.TrimSpace(input.ResourcesYAML),
 		ModuleConfig:          moduleConfig,
 	}, nil
 }

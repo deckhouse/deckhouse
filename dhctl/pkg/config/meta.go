@@ -526,7 +526,6 @@ func (m *MetaConfig) buildProviderInput() ProviderInput {
 		Operation:             m.Operation,
 		ProviderClusterConfig: m.ProviderClusterConfig,
 		CloudProviderVars:     m.CloudProviderVars,
-		ResourcesYAML:         m.ResourcesYAML,
 	}
 }
 

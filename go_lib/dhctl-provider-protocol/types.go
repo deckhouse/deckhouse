@@ -63,13 +63,8 @@ type PrepareInput struct {
 	ProviderClusterConfig map[string]interface{} `json:"providerClusterConfiguration,omitempty"`
 	// Vars is the structured provider data (node groups, instance classes,
 	// credential secrets, module settings) collected by dhctl. Always
-	// populated on both subcommands; binaries must use it instead of
-	// re-deriving resources from ResourcesYAML.
+	// populated on both subcommands.
 	Vars *CloudProviderVars `json:"vars,omitempty"`
-	// ResourcesYAML is the raw multi-document YAML the user passed on
-	// bootstrap (extra manifests beyond what Vars captures). Supplementary,
-	// bootstrap-only: empty on cluster-loaded operations.
-	ResourcesYAML string `json:"resourcesYAML,omitempty"`
 	// ModuleConfig holds the cloud-provider module configuration values.
 	ModuleConfig map[string]interface{} `json:"moduleConfig,omitempty"`
 }

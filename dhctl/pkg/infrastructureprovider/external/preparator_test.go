@@ -47,22 +47,6 @@ func TestToWireInput_VarsTravelStructurally(t *testing.T) {
 	require.NoError(t, err)
 	require.Same(t, cv, wire.Vars, "vars must be passed through, not re-encoded")
 	require.Equal(t, cv.Settings, wire.ModuleConfig)
-	require.Empty(t, wire.ResourcesYAML, "cluster-loaded paths carry no user YAML")
-}
-
-func TestToWireInput_PreservesUserResourcesYAML(t *testing.T) {
-	user := "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: extra\n"
-	input := config.ProviderInput{
-		ProviderName:      "dvp",
-		Operation:         "bootstrap",
-		ResourcesYAML:     user,
-		CloudProviderVars: &providerdata.CloudProviderVars{},
-	}
-
-	wire, err := toWireInput(input)
-	require.NoError(t, err)
-	require.Contains(t, wire.ResourcesYAML, "kind: ConfigMap")
-	require.Contains(t, wire.ResourcesYAML, "name: extra")
 }
 
 func TestToWireInput_ProviderClusterConfigJSONConverted(t *testing.T) {

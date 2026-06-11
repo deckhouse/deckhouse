@@ -67,7 +67,12 @@ Validates provider credentials and configuration before the operation begins.
     "clusterPrefix": "my-cluster",
     "layout": "Standard",
     "providerClusterConfiguration": { ... },
-    "resourcesYAML": "---\napiVersion: ...",
+    "vars": {
+      "settings": { ... },
+      "nodeGroups": { "worker": { ... } },
+      "instanceClasses": { "worker": { ... } },
+      "secrets": { "credentials": { ... } }
+    },
     "moduleConfig": { ... }
   }
 }
@@ -133,8 +138,7 @@ On failure:
 | `clusterPrefix` | string | Prefix for cloud resource names |
 | `layout` | string | Provider layout name |
 | `providerClusterConfiguration` | object | Parsed `providerClusterConfiguration` section |
-| `vars` | object | Structured provider data collected by dhctl (node groups, instance classes, credential secrets, module settings). Always populated on both subcommands; use it instead of re-parsing `resourcesYAML` |
-| `resourcesYAML` | string | Raw multi-document YAML the user passed on bootstrap (extra manifests beyond `vars`). Supplementary and bootstrap-only: empty on cluster-loaded operations |
+| `vars` | object | Structured provider data collected by dhctl (node groups, instance classes, credential secrets, module settings). Always populated on both subcommands — the only channel for provider resources |
 | `moduleConfig` | object | Cloud-provider module configuration values (same data as `vars.settings`) |
 
 ## Exit codes
