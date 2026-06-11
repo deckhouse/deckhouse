@@ -26,7 +26,7 @@ import (
 	"github.com/go-openapi/validate"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 )
 
 func ProjectTemplate(template *v1alpha1.ProjectTemplate) error {
@@ -37,7 +37,7 @@ func ProjectTemplate(template *v1alpha1.ProjectTemplate) error {
 	return nil
 }
 
-func Project(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+func Project(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) error {
 	templateOpenAPI, err := LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
 	if err != nil {
 		return fmt.Errorf("load open api schema from the '%s' project template spec: %w", template.Name, err)

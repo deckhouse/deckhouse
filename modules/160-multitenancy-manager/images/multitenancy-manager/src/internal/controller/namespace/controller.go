@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	namespacemanager "controller/internal/manager/namespace"
 )
 
@@ -133,7 +133,7 @@ func (p customPredicate[T]) Create(e event.TypedCreateEvent[T]) bool {
 	}
 
 	// skip namespace that does not require to be adopted
-	_, ok := e.Object.GetAnnotations()[v1alpha2.NamespaceAnnotationAdopt]
+	_, ok := e.Object.GetAnnotations()[v1alpha3.NamespaceAnnotationAdopt]
 	return ok
 }
 
@@ -148,7 +148,7 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	}
 
 	// skip namespace that does not require to be adopted
-	_, ok := e.ObjectNew.GetAnnotations()[v1alpha2.NamespaceAnnotationAdopt]
+	_, ok := e.ObjectNew.GetAnnotations()[v1alpha3.NamespaceAnnotationAdopt]
 	return ok
 }
 

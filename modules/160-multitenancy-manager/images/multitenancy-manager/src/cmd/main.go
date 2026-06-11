@@ -24,7 +24,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,15 +39,19 @@ import (
 
 	grantsv1alpha1 "controller/api/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
+	clusterprojectrolebindingcontroller "controller/internal/controllers/clusterprojectrolebinding"
+	projectrolebindingcontroller "controller/internal/controllers/projectrolebinding"
 	namespacecontroller "controller/internal/controller/namespace"
 	projectcontroller "controller/internal/controller/project"
 	templatecontroller "controller/internal/controller/template"
 	grantcontrollers "controller/internal/controllers"
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
+	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
 	namespacewebhook "controller/internal/webhook/namespace"
 	projectwebhook "controller/internal/webhook/project"
+	projectrolebindingwebhook "controller/internal/webhook/projectrolebinding"
 	templatewebhook "controller/internal/webhook/template"
 	grantwebhooks "controller/internal/webhooks"
 )
@@ -138,6 +144,18 @@ func main() {
 	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
 
+	// register the project role binding reconcilers
+	if err = (&projectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		panic(err)
+	}
+	if err = (&clusterprojectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		panic(err)
+	}
+
+	// register the project role binding webhooks
+	projectrolebindingwebhook.Register(runtimeManager)
+	clusterprojectrolebindingwebhook.Register(runtimeManager)
+
 	// start runtime manager
 	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)
@@ -147,9 +165,11 @@ func main() {
 func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
-		v1alpha2.AddToScheme,
+		v1alpha3.AddToScheme,
 		grantsv1alpha1.AddToScheme,
 		corev1.AddToScheme,
+		rbacv1.AddToScheme,
+		authorizationv1.AddToScheme,
 	}
 
 	scheme := runtime.NewScheme()
