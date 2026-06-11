@@ -2882,6 +2882,46 @@ alerts:
         Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
       markupFormat: markdown
+    - name: D8ObsoleteEncryptionAlgorithmInClusterConfiguration
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `encryptionAlgorithm` field is set to a non-default value in `ClusterConfiguration` but has not been migrated to `ModuleConfig control-plane-manager` yet.
+
+        Until the migration is complete, the value from `ClusterConfiguration` is used to avoid unintended certificate rotation.
+
+        **To resolve this alert, migrate the setting:**
+
+        1. If `moduleconfig control-plane-manager` does not exist, create it first:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Migrate the value from `ClusterConfiguration` to `ModuleConfig` in one command:
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
+           {"spec": {"version": 3, "settings": {"encryptionAlgorithm": "$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep encryptionAlgorithm | awk '{print $2}')"}}}
+           EOF
+           )"
+           ```
+
+        Once `ModuleConfig` is updated, this alert will be resolved automatically.
+
+        3. Remove `encryptionAlgorithm` from `ClusterConfiguration`:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete the `encryptionAlgorithm` field and save.
+      summary: |
+        Obsolete encryptionAlgorithm in ClusterConfiguration needs to be migrated to control-plane-manager ModuleConfig.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoleteGlobalControlPlaneResourcesRequests
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
