@@ -33,6 +33,8 @@ import (
 
 const legacyProviderClusterConfigSecretName = "d8-provider-cluster-configuration"
 
+// nilType instantiates ByClusterType[T] for fillers that produce no value,
+// keeping `return nil, err` valid in every branch.
 type nilType *struct{}
 
 type fromClusterMetaConfigFiller struct {
@@ -47,22 +49,11 @@ func newFromClusterMetaConfigFiller(kubeCl *client.KubernetesClient, schemaStore
 	}
 }
 
-// Cloud loads cloud-provider configuration from the running cluster. The
-// cluster carries one of two mutually understood "markers":
-//
-//   - mc-flow:     ModuleConfig cloud-provider-<name> exists.
-//   - legacy:      Secret d8-provider-cluster-configuration exists.
-//
-// Both are loaded when present — a cluster mid-migration carries both, and
-// the ModuleConfig in that case is typically a stub without settings. The
-// downstream split is done by extractProviderClusterFields /
-// applyCloudProviderModuleSettings: PCC populates the typed fields first
-// (Layout, MasterNodeGroupSpec, TerraNodeGroupSpecs), and the ModuleConfig
-// only fills the gaps left over. That preserves legacy correctness during
-// migration; the post-migration state (PCC absent, MC carries real
-// settings) falls out automatically.
-//
-// If neither marker is present we return a descriptive error.
+// Cloud loads cloud-provider configuration from the running cluster. Two
+// markers exist — the cloud-provider-<name> ModuleConfig (mc-flow) and the
+// legacy d8-provider-cluster-configuration Secret — and both are loaded when
+// present: a cluster mid-migration carries both, with PCC staying the source
+// of truth for the typed fields. Neither present is an error.
 func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
 	if err := metaConfig.prepareProviderName(); err != nil {
 		return nil, err
@@ -109,28 +100,21 @@ func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.Kubernete
 }
 
 // moduleConfigFromUnstructured deserialises a ModuleConfig fetched from the
-// cluster and validates it against its registered schema. Validation matches
-// the legacy PCC path (parseLegacyProviderClusterConfig also calls
-// schemaStore.Validate) so a kubectl-patched invalid ModuleConfig fails fast
-// here instead of surfacing as a confusing downstream error from the
-// external preparator. When no schema is registered for the module (e.g.
-// the module-config schemas weren't loaded into this SchemaStore) we accept
-// the document — Validate-without-schema is what HasSchemaForModuleConfig
-// guards us from in higher-level paths.
+// cluster and validates it against its registered schema, so a kubectl-patched
+// invalid ModuleConfig fails fast here instead of as a confusing downstream
+// preparator error. A module without a registered schema is accepted.
 func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	raw, err := json.Marshal(obj.Object)
 	if err != nil {
 		return nil, fmt.Errorf("marshal ModuleConfig: %w", err)
 	}
 
-	if schemaStore != nil {
-		yamlDoc, err := yaml.JSONToYAML(raw)
-		if err != nil {
-			return nil, fmt.Errorf("convert ModuleConfig to YAML: %w", err)
-		}
-		if _, err := schemaStore.Validate(&yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
-			return nil, fmt.Errorf("validate ModuleConfig %q: %w", obj.GetName(), err)
-		}
+	yamlDoc, err := yaml.JSONToYAML(raw)
+	if err != nil {
+		return nil, fmt.Errorf("convert ModuleConfig to YAML: %w", err)
+	}
+	if _, err := schemaStore.Validate(&yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
+		return nil, fmt.Errorf("validate ModuleConfig %q: %w", obj.GetName(), err)
 	}
 
 	mc := &ModuleConfig{}
@@ -157,50 +141,37 @@ func parseLegacyProviderClusterConfig(secret *corev1.Secret, schemaStore *Schema
 		return nil, fmt.Errorf("cloud-provider-cluster-configuration.yaml not found in Secret or empty")
 	}
 	if _, err := schemaStore.Validate(&data); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("validate provider cluster configuration: %w", err)
 	}
 	var parsed map[string]json.RawMessage
 	if err := yaml.Unmarshal(data, &parsed); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal provider cluster configuration: %w", err)
 	}
 	return parsed, nil
 }
 
 func (f *fromClusterMetaConfigFiller) Static(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
-	fillEmptyStaticConfigAndReturn := func(cfg *MetaConfig) (nilType, error) {
-		cfg.StaticClusterConfig = nil
+	// The configuration may be absent entirely: auto-discovery covers it.
+	staticClusterConfig, err := f.kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-static-cluster-configuration", metav1.GetOptions{})
+	if k8serrors.IsNotFound(err) {
 		return nil, nil
 	}
-
-	staticClusterConfig, err := f.kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-static-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
-		// configuration can be not set because we have auto-discovery
-		if k8serrors.IsNotFound(err) {
-			return fillEmptyStaticConfigAndReturn(metaConfig)
-		}
-
 		return nil, err
-	}
-
-	// configuration can be not set because we have auto-discovery
-	if len(staticClusterConfig.Data) == 0 {
-		return fillEmptyStaticConfigAndReturn(metaConfig)
 	}
 
 	staticClusterConfigData, ok := staticClusterConfig.Data["static-cluster-configuration.yaml"]
 	if !ok || len(staticClusterConfigData) == 0 {
-		// configuration can be not set because we have auto-discovery
-		return fillEmptyStaticConfigAndReturn(metaConfig)
+		return nil, nil
 	}
 
-	_, err = f.schemaStore.Validate(&staticClusterConfigData)
-	if err != nil {
-		return nil, err
+	if _, err := f.schemaStore.Validate(&staticClusterConfigData); err != nil {
+		return nil, fmt.Errorf("validate static cluster configuration: %w", err)
 	}
 
 	var parsedStaticClusterConfig map[string]json.RawMessage
 	if err := yaml.Unmarshal(staticClusterConfigData, &parsedStaticClusterConfig); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal static cluster configuration: %w", err)
 	}
 
 	metaConfig.StaticClusterConfig = parsedStaticClusterConfig

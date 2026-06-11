@@ -16,7 +16,6 @@ package external
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,78 +24,28 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 )
 
-func TestEncodeResourcesYAML_Deterministic(t *testing.T) {
+func TestToWireInput_VarsTravelStructurally(t *testing.T) {
 	cv := &providerdata.CloudProviderVars{
+		Settings: map[string]interface{}{"zone": "a"},
 		NodeGroups: map[string]map[string]interface{}{
-			"b": {"apiVersion": "deckhouse.io/v1", "kind": "NodeGroup", "metadata": map[string]interface{}{"name": "b"}, "spec": map[string]interface{}{"replicas": 1}},
-			"a": {"apiVersion": "deckhouse.io/v1", "kind": "NodeGroup", "metadata": map[string]interface{}{"name": "a"}, "spec": map[string]interface{}{"replicas": 2}},
+			"worker": {"apiVersion": "deckhouse.io/v1", "kind": "NodeGroup", "metadata": map[string]interface{}{"name": "worker"}},
 		},
 		InstanceClasses: map[string]map[string]interface{}{
-			"z": {"apiVersion": "deckhouse.io/v1", "kind": "DVPInstanceClass", "metadata": map[string]interface{}{"name": "z"}},
 			"m": {"apiVersion": "deckhouse.io/v1", "kind": "DVPInstanceClass", "metadata": map[string]interface{}{"name": "m"}},
 		},
 		Secrets: map[string]map[string]interface{}{
-			"d8-x/cloud-credentials": {"apiVersion": "v1", "kind": "Secret", "metadata": map[string]interface{}{"name": "cloud-credentials", "namespace": "d8-x"}, "type": "cloud-provider.deckhouse.io/credentials"},
-			"d8-y/cloud-credentials": {"apiVersion": "v1", "kind": "Secret", "metadata": map[string]interface{}{"name": "cloud-credentials", "namespace": "d8-y"}, "type": "cloud-provider.deckhouse.io/credentials"},
+			"d8-x/cloud-credentials": {"apiVersion": "v1", "kind": "Secret", "type": "cloud-provider.deckhouse.io/credentials"},
 		},
 	}
-
-	first, err := encodeResourcesYAML(cv)
-	require.NoError(t, err)
-
-	for i := 0; i < 10; i++ {
-		next, err := encodeResourcesYAML(cv)
-		require.NoError(t, err)
-		require.Equal(t, first, next, "encodeResourcesYAML must be deterministic")
-	}
-}
-
-func TestToWireInput_PreservesUserResourcesYAML(t *testing.T) {
-	user := "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: extra\n"
 	input := config.ProviderInput{
 		ProviderName:      "dvp",
-		Operation:         "bootstrap",
-		ResourcesYAML:     user,
-		CloudProviderVars: &providerdata.CloudProviderVars{},
+		Operation:         "converge",
+		CloudProviderVars: cv,
 	}
 
 	wire, err := toWireInput(input)
 	require.NoError(t, err)
-	require.Contains(t, wire.ResourcesYAML, "kind: ConfigMap")
-	require.Contains(t, wire.ResourcesYAML, "name: extra")
-}
-
-func TestToWireInput_PrefersUserResourcesYAMLOverEncoded(t *testing.T) {
-	user := "apiVersion: deckhouse.io/v1\nkind: NodeGroup\nmetadata:\n  name: worker\n"
-	input := config.ProviderInput{
-		ProviderName:  "dvp",
-		ResourcesYAML: user,
-		CloudProviderVars: &providerdata.CloudProviderVars{
-			NodeGroups: map[string]map[string]interface{}{
-				"worker": {"apiVersion": "deckhouse.io/v1", "kind": "NodeGroup", "metadata": map[string]interface{}{"name": "worker"}},
-			},
-		},
-	}
-
-	wire, err := toWireInput(input)
-	require.NoError(t, err)
-	require.Equal(t, 1, strings.Count(wire.ResourcesYAML, "kind: NodeGroup"), "user YAML must not be duplicated by encoded CloudProviderVars")
-}
-
-func TestToWireInput_EncodesCloudProviderVarsWhenNoUserYAML(t *testing.T) {
-	input := config.ProviderInput{
-		ProviderName: "dvp",
-		CloudProviderVars: &providerdata.CloudProviderVars{
-			NodeGroups: map[string]map[string]interface{}{
-				"worker": {"apiVersion": "deckhouse.io/v1", "kind": "NodeGroup", "metadata": map[string]interface{}{"name": "worker"}},
-			},
-		},
-	}
-
-	wire, err := toWireInput(input)
-	require.NoError(t, err)
-	require.Contains(t, wire.ResourcesYAML, "kind: NodeGroup")
-	require.Contains(t, wire.ResourcesYAML, "name: worker")
+	require.Same(t, cv, wire.Vars, "vars must be passed through, not re-encoded")
 }
 
 func TestToWireInput_ProviderClusterConfigJSONConverted(t *testing.T) {

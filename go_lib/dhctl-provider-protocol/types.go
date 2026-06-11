@@ -61,11 +61,10 @@ type PrepareInput struct {
 	Operation string `json:"operation,omitempty"`
 	// ProviderClusterConfig holds the parsed providerClusterConfiguration section.
 	ProviderClusterConfig map[string]interface{} `json:"providerClusterConfiguration,omitempty"`
-	// ResourcesYAML is the raw multi-document YAML with provider resources
-	// (NodeGroups, InstanceClasses, credential Secrets, etc.).
-	ResourcesYAML string `json:"resourcesYAML,omitempty"`
-	// ModuleConfig holds the cloud-provider module configuration values.
-	ModuleConfig map[string]interface{} `json:"moduleConfig,omitempty"`
+	// Vars is the structured provider data (node groups, instance classes,
+	// credential secrets, module settings) collected by dhctl. Always
+	// populated on both subcommands.
+	Vars *CloudProviderVars `json:"vars,omitempty"`
 }
 
 // PrepareResult is returned by the prepare subcommand on success.

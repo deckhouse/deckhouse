@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -94,7 +95,7 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 		// Fall back to OCI-unpacked provider tree (external provider images
 		// extract into <downloadRootDir>/<provider>/{layouts,terraform-modules}).
 		if p.downloadRootDir != "" {
-			fallback := path.Join(p.downloadRootDir, cloudName, dir)
+			fallback := path.Join(providerdata.ProviderDir(p.downloadRootDir, cloudName), dir)
 			if fbStat, fbErr := os.Stat(fallback); fbErr == nil {
 				sourceDir = fallback
 				stat = fbStat

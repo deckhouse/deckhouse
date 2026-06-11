@@ -39,19 +39,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+// SchemaStore is safe for concurrent use: provider schemas can be loaded with
+// LoadProviderDir while other goroutines validate. mu guards cache,
+// moduleConfigsCache, modulesCache, providerDigests and providerIndexes.
 type SchemaStore struct {
+	mu                 sync.RWMutex
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
 	modulesCache       map[string]struct{}
 	conversionsStore   *conversion.ConversionsStore
+	providerDigests    map[string]string
+	providerIndexes    map[string][]SchemaIndex
 }
 
-// TODO(dhctl-server): SchemaStore is currently a process-wide sync.Once
-// singleton. This works for the dhctl CLI but is unsafe in the dhctl-server
-// where concurrent requests may need different DownloadDir/CandiDir layouts —
-// the first request's schemas leak to all subsequent requests. A path-keyed
-// cache would be correct, but several tests rely on the existing singleton
-// behavior. Switching them is a separate task.
 var (
 	once  sync.Once
 	store *SchemaStore
@@ -145,15 +145,17 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 	}
 	paths = append([]string{candiDir}, paths...)
 
-	// External provider images unpack into <DownloadDir>/<provider>/.
-	// Add each provider subdir so its schemas (openapi/, etc.) are picked up.
+	// External provider images unpack into <DownloadDir>/<provider>@<digest>/
+	// with a <DownloadDir>/<provider> symlink pointing at the current digest.
+	// Scan only the real digest dirs: symlinks are skipped (their targets are
+	// listed directly), as are the bundled "deckhouse" tree and the image cache.
 	if globalOptions != nil && globalOptions.DownloadDir != "" {
 		entries, err := os.ReadDir(globalOptions.DownloadDir)
 		if err != nil && !os.IsNotExist(err) {
 			log.WarnF("read download dir %s: %v\n", globalOptions.DownloadDir, err)
 		}
 		for _, e := range entries {
-			if !e.IsDir() {
+			if !e.IsDir() || e.Type()&os.ModeSymlink != 0 {
 				continue
 			}
 			if e.Name() == "deckhouse" || e.Name() == "cache" {
@@ -186,6 +188,8 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
 		modulesCache:       make(map[string]struct{}),
+		providerDigests:    make(map[string]string),
+		providerIndexes:    make(map[string][]SchemaIndex),
 	}
 
 	st.conversionsStore = conversion.NewConversionsStore()
@@ -195,16 +199,8 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 			return nil
 		}
 
-		switch info.Name() {
-		case "init_configuration.yaml",
-			"cluster_configuration.yaml",
-			"static_cluster_configuration.yaml",
-			"cloud_discovery_data.yaml",
-			"cloud_provider_discovery_data.yaml",
-			"ssh_configuration.yaml",
-			"ssh_host_configuration.yaml":
-			uploadError := st.UploadByPath(path)
-			if uploadError != nil {
+		if _, ok := schemaFileNames[info.Name()]; ok {
+			if uploadError := st.UploadByPath(path); uploadError != nil {
 				return uploadError
 			}
 		}
@@ -311,15 +307,21 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 }
 
 func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.cache[*index]
 }
 
 func (s *SchemaStore) HasSchemaForModuleConfig(name string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	_, ok := s.moduleConfigsCache[name]
 	return ok
 }
 
 func (s *SchemaStore) GetModuleConfigSchema(name string) (*spec.Schema, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	res, ok := s.moduleConfigsCache[name]
 	if !ok {
 		return nil, fmt.Errorf("schema for %s not found", name)
@@ -329,6 +331,8 @@ func (s *SchemaStore) GetModuleConfigSchema(name string) (*spec.Schema, error) {
 }
 
 func (s *SchemaStore) GetModuleConfigVersion(name string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	schema, ok := s.moduleConfigsCache[name]
 	if ok {
 		if len(schema.VendorExtensible.Extensions) > 0 {
@@ -397,7 +401,10 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return fmt.Errorf("Enabled field for module config %s should be set to true or false", mcName)
 		}
 
-		if _, ok := s.modulesCache[mcName]; !ok && mcName != "global" {
+		s.mu.RLock()
+		_, moduleKnown := s.modulesCache[mcName]
+		s.mu.RUnlock()
+		if !moduleKnown && mcName != "global" {
 			log.DebugF("Module %s wasn't found. It is probably a module from modulesources. Skipping it\n", mc.GetName())
 			return ErrSchemaNotFound
 		}
@@ -406,8 +413,10 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return nil
 		}
 
+		s.mu.RLock()
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
+		s.mu.RUnlock()
 		if !ok {
 			log.DebugF("Schema for module config %s wasn't found. It is probably a module from modulesources. Skipping it\n", mc.GetName())
 			return fmt.Errorf("Schema for module config %s not found", mcName)
@@ -457,26 +466,41 @@ func (s *SchemaStore) UploadByPath(path string) error {
 }
 
 func (s *SchemaStore) upload(fileContent []byte) error {
-	openAPISchema := new(OpenAPISchema)
-	if err := yaml.UnmarshalStrict(fileContent, openAPISchema); err != nil {
-		return fmt.Errorf("json unmarshal: %v", err)
+	parsed, err := parseOpenAPISchemas(fileContent)
+	if err != nil {
+		return err
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index, schema := range parsed {
+		s.cache[index] = schema
+	}
+
+	return nil
+}
+
+func parseOpenAPISchemas(fileContent []byte) (map[SchemaIndex]*spec.Schema, error) {
+	openAPISchema := new(OpenAPISchema)
+	if err := yaml.UnmarshalStrict(fileContent, openAPISchema); err != nil {
+		return nil, fmt.Errorf("json unmarshal: %v", err)
+	}
+
+	result := make(map[SchemaIndex]*spec.Schema, len(openAPISchema.Versions))
 	for _, parsedSchema := range openAPISchema.Versions {
 		schema := new(spec.Schema)
 
 		d, err := json.Marshal(parsedSchema.Schema)
 		if err != nil {
-			return fmt.Errorf("expand the schema: %v", err)
+			return nil, fmt.Errorf("expand the schema: %v", err)
 		}
 
 		if err := json.Unmarshal(d, schema); err != nil {
-			return fmt.Errorf("json marshal: %v", err)
+			return nil, fmt.Errorf("json marshal: %v", err)
 		}
 
-		err = spec.ExpandSchema(schema, schema, nil)
-		if err != nil {
-			return fmt.Errorf("expand the schema: %v", err)
+		if err := spec.ExpandSchema(schema, schema, nil); err != nil {
+			return nil, fmt.Errorf("expand the schema: %v", err)
 		}
 
 		schema = transformer.TransformSchema(
@@ -484,9 +508,83 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 			&transformer.AdditionalPropertiesTransformer{},
 		)
 
-		s.cache[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
+		result[SchemaIndex{Kind: openAPISchema.Kind, Version: parsedSchema.Version}] = schema
 	}
 
+	return result, nil
+}
+
+// schemaFileNames lists the OpenAPI schema files dhctl loads from candi trees
+// and unpacked provider bundles.
+var schemaFileNames = map[string]struct{}{
+	"init_configuration.yaml":            {},
+	"cluster_configuration.yaml":         {},
+	"static_cluster_configuration.yaml":  {},
+	"cloud_discovery_data.yaml":          {},
+	"cloud_provider_discovery_data.yaml": {},
+	"ssh_configuration.yaml":             {},
+	"ssh_host_configuration.yaml":        {},
+}
+
+// ProviderSchemasLoaded reports whether LoadProviderDir already loaded this
+// provider at this digest.
+func (s *SchemaStore) ProviderSchemasLoaded(provider, digest string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return digest != "" && s.providerDigests[provider] == digest
+}
+
+// LoadProviderDir loads provider schemas from dir (an unpacked bundle root)
+// into the store, replacing schemas previously loaded for this provider. A
+// repeated call with the same digest is a no-op.
+func (s *SchemaStore) LoadProviderDir(provider, digest, dir string) error {
+	if s.ProviderSchemasLoaded(provider, digest) {
+		return nil
+	}
+
+	parsed := make(map[SchemaIndex]*spec.Schema)
+	walkFunc := func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil {
+			return err
+		}
+		if _, ok := schemaFileNames[info.Name()]; !ok {
+			return nil
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read schema file: %w", err)
+		}
+		schemas, err := parseOpenAPISchemas(content)
+		if err != nil {
+			return fmt.Errorf("parse schema file %s: %w", path, err)
+		}
+		for index, schema := range schemas {
+			parsed[index] = schema
+		}
+		return nil
+	}
+	if err := filepath.Walk(dir, walkFunc); err != nil {
+		return fmt.Errorf("walk provider schemas dir %s: %w", dir, err)
+	}
+
+	indexes := make([]SchemaIndex, 0, len(parsed))
+	for index := range parsed {
+		indexes = append(indexes, index)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if digest != "" && s.providerDigests[provider] == digest {
+		return nil
+	}
+	for _, index := range s.providerIndexes[provider] {
+		delete(s.cache, index)
+	}
+	for index, schema := range parsed {
+		s.cache[index] = schema
+	}
+	s.providerIndexes[provider] = indexes
+	s.providerDigests[provider] = digest
 	return nil
 }
 
