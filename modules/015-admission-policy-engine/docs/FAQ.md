@@ -14,172 +14,175 @@ For DKP to work correctly, extended privileges are required to run and operate s
 
 In `OperationPolicy` and `SecurityPolicy`, the `spec.match` field determines which specific objects (pods) in the cluster the policy will apply to. It must be present in the configuration. Filtering is performed by combining two main criteria: a pod selector (`labelSelector`) and a namespace selector (`namespaceSelector`).
 
-If both selectors are specified, the policy is applied only to those pods that **simultaneously**:
+If both selectors are specified, the policy is applied only to those pods that simultaneously:
 - satisfy the pod selection conditions.
-- located in namespaces that passed the filtering.
+- are located in namespaces that passed the filtering.
 
 If either selector is omitted, the corresponding check is not performed (all pods or namespaces will be used).
 
-### `spec.match.labelSelector` – pod selection
+- `spec.match.labelSelector` – pod selection
 
-The `labelSelector` is used to set criteria for selecting pods by their labels. Two mutually exclusive methods are supported:
+    The `labelSelector` is used to set criteria for selecting pods by their labels. Two mutually exclusive methods are supported:
 
-* **`matchLabels`** – a simple check for an exact label match (key-value). The pod must have all the specified labels.
-* **`matchExpressions`** – flexible expressions with operators. Each expression is defined by an object with the following fields:
-  * `key` (string, required) – the label name.
-  * `operator` (string, required) – one of the values: `In`, `NotIn`, `Exists`, `DoesNotExist`.
-  * `values` (array of strings) – a list of values for the `In` / `NotIn` operators; not specified for `Exists` / `DoesNotExist`.
+    - `matchLabels` – a simple check for an exact label match (key-value). The pod must have all the specified labels.
+    - `matchExpressions` – flexible expressions with operators. Each expression is defined by an object with the following fields:
+        - `key` (string, required) – the label name.
+        - `operator` (string, required) – one of the values: `In`, `NotIn`, `Exists`, `DoesNotExist`.
+        - `values` (array of strings) – a list of values for the `In` / `NotIn` operators; not specified for `Exists` / `DoesNotExist`.
 
-All elements in the `matchExpressions` list are combined with a logical **AND** – the pod must satisfy every expression.
+    All elements in the `matchExpressions` list are combined with a logical AND – the pod must satisfy every expression.
 
-Examples:
+    Examples:
 
-```yaml
-spec:
-  match:
-    labelSelector:
-      matchLabels:
-        app: nginx
-        role: frontend
-```
+    ```yaml
+    spec:
+      match:
+        labelSelector:
+          matchLabels:
+            app: nginx
+            role: frontend
+    ```
 
-```yaml
-spec:
-  match:
-    labelSelector:
-      matchExpressions:
-        - key: tier
-          operator: In
-          values:
+    ```yaml
+    spec:
+      match:
+        labelSelector:
+          matchExpressions:
+            - key: tier
+              operator: In
+              values:
+                - production
+                - staging
+            - key: monitoring
+              operator: Exists
+    ```
+
+- `spec.match.namespaceSelector` – namespace selection
+
+    Allows limiting the namespaces in which the policy is active. You can use a combination of three filters:
+
+    - `matchNames` – an explicit list of allowed namespaces. If specified, the policy only applies to the listed namespaces.
+    - `excludeNames` – a list of excluded namespaces. The policy will apply to all namespaces except those specified.
+    - `labelSelector` – a selector based on the labels of the Namespace object itself.
+
+    If multiple fields are set, they are combined with logical AND:
+
+    1. Start with the set from `matchNames` (or all namespaces if `matchNames` is omitted).
+    1. Apply `labelSelector` (if set).
+    1. Subtract `excludeNames`.
+
+    Formula:
+
+    `result = (base_from_matchNames ∩ selected_by_labelSelector) \ excludeNames`
+
+    It is recommended not to mix `matchNames`, `excludeNames`, and `labelSelector` without a clear need.
+
+### When to use `labelSelector`
+
+    Use `labelSelector` when the policy should automatically apply to a group of namespaces by attribute rather than by fixed names.
+
+    For example:
+
+    - “all namespaces with label `env=prod`”;
+    - “all `team=backend` namespaces” (with the corresponding label);
+    - “all namespaces with `security.deckhouse.io/pod-policy=restricted`”.
+
+    `labelSelector` is especially useful when namespaces are created/deleted dynamically: it is enough to automatically set a label on the namespace when it is created, and the policy will apply without editing the policy.
+
+    `labelSelector` is not required if you have a small static list of namespaces — in that case, using `matchNames` is simpler and easier to read.
+
+### Can `matchNames` and `labelSelector` be used together?
+
+    Yes, technically they are not mutually exclusive: you can specify both, and then their intersection applies.
+
+    But in practice this often hurts readability and complicates maintenance. Therefore, it is recommended to choose one primary selection method:
+
+    - either `matchNames + excludeNames`;
+    - or `labelSelector + excludeNames`.
+
+    This makes it easier to understand why a particular namespace is included in or excluded from the policy.
+
+### Typical scenarios
+
+    1. Static environments list → `matchNames + excludeNames`.
+    1. Dynamic environments/teams → `labelSelector + excludeNames`.
+    1. `matchNames + labelSelector` combination — only when you really need the intersection of two independent conditions.
+
+    Examples:
+
+    1. Static namespace list (`matchNames + excludeNames`)
+
+    ```yaml
+    spec:
+      match:
+        namespaceSelector:
+          matchNames:
             - production
             - staging
-        - key: monitoring
-          operator: Exists
-```
+          excludeNames:
+            - staging
+    ```
 
-### `spec.match.namespaceSelector` – namespace selection
+    Result: the policy applies only in the `production` namespace.
 
-Allows limiting the namespaces in which the policy is active. You can use a combination of three filters:
+    1. Dynamic label-based selection (`labelSelector + excludeNames`)
 
-* **`matchNames`** – an explicit list of allowed namespaces. If specified, the policy only applies to the listed namespaces.
-* **`excludeNames`** – a list of excluded namespaces. The policy will apply to all namespaces **except** those specified.
-* **`labelSelector`** – a selector based on the labels of the Namespace object itself.
+    ```yaml
+    spec:
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              team: backend
+              environment: production
+          excludeNames:
+            - backend-sandbox
+    ```
 
-#### How the final namespace set is calculated
+    Result: all namespaces with labels `team=backend` and `environment=production`, except `backend-sandbox`.
 
-If multiple fields are set, they are combined with logical **AND**:
+    1. Flexible filtering with expressions (`labelSelector.matchExpressions`)
 
-1. Start with the set from `matchNames` (or all namespaces if `matchNames` is omitted).
-2. Apply `labelSelector` (if set).
-3. Subtract `excludeNames`.
+    ```yaml
+    spec:
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchExpressions:
+              - key: compliance
+                operator: In
+                values:
+                  - pci
+                  - sox
+              - key: lifecycle
+                operator: NotIn
+                values:
+                  - deprecated
+    ```
 
-Formula:
+    Result: only namespaces with labels `compliance=pci` or `compliance=sox` and without label `lifecycle=deprecated`.
 
-`result = (base_from_matchNames ∩ selected_by_labelSelector) \ excludeNames`
+    1. `matchNames` and `labelSelector` combination (intersection, use carefully)
 
-#### When do you need `namespaceSelector.labelSelector`?
+    ```yaml
+    spec:
+      match:
+        namespaceSelector:
+          matchNames:
+            - production
+            - staging
+            - qa
+          labelSelector:
+            matchLabels:
+              team: backend
+    ```
 
-Use **`labelSelector`** when the policy should follow namespace attributes rather than a fixed list of names:
+    Result: applies only to namespaces that simultaneously:
 
-- “all namespaces with `env=prod`”;
-- “all namespaces owned by `team=backend`”;
-- “all namespaces with `security.deckhouse.io/pod-policy=restricted`”.
+    - are in the list `production|staging|qa`;
+    - have label `team=backend`.
 
-`labelSelector` is especially useful in dynamic environments where namespaces are created/removed often: adding/removing a label is enough, and no policy edits are needed.
-
-You **do not need** `labelSelector` for a small, static list of namespaces. In that case, `matchNames` is usually simpler and more readable.
-
-#### Are `matchNames` and `labelSelector` mutually exclusive?
-
-No, technically they are **not mutually exclusive**. You can define both, and then the policy uses their intersection.
-
-However, in practice this often hurts readability and troubleshooting. A recommended approach is to choose one primary selection strategy:
-
-- either **`matchNames + excludeNames`**;
-- or **`labelSelector + excludeNames`**.
-
-This makes it much easier to understand why a namespace is in or out of scope.
-
-#### Typical patterns
-
-1. **Static environments list** → `matchNames + excludeNames`.
-2. **Dynamic team/environment targeting** → `labelSelector + excludeNames`.
-3. **`matchNames + labelSelector` together** → use only when you really need strict intersection of two independent conditions.
-
-Examples:
-
-**1) Static list (`matchNames + excludeNames`)**
-
-```yaml
-spec:
-  match:
-    namespaceSelector:
-      matchNames:
-        - production
-        - staging
-      excludeNames:
-        - staging
-```
-
-Result: the policy applies only in `production`.
-
-**2) Dynamic label-based targeting (`labelSelector + excludeNames`)**
-
-```yaml
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          team: backend
-          environment: production
-      excludeNames:
-        - backend-sandbox
-```
-
-Result: all namespaces with `team=backend` and `environment=production`, except `backend-sandbox`.
-
-**3) Flexible filtering with expressions (`labelSelector.matchExpressions`)**
-
-```yaml
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchExpressions:
-          - key: compliance
-            operator: In
-            values:
-              - pci
-              - sox
-          - key: lifecycle
-            operator: NotIn
-            values:
-              - deprecated
-```
-
-Result: only namespaces with `compliance in (pci, sox)` and without `lifecycle=deprecated`.
-
-**4) `matchNames` + `labelSelector` together (intersection, use carefully)**
-
-```yaml
-spec:
-  match:
-    namespaceSelector:
-      matchNames:
-        - production
-        - staging
-        - qa
-      labelSelector:
-        matchLabels:
-          team: backend
-```
-
-Result: applies only to namespaces that both:
-- are in `production|staging|qa`;
-- have label `team=backend`.
-
-For example, if `qa` does not have `team=backend`, it will not be matched.
+    For example, if `qa` does not have `team=backend`, it will not be matched.
 
 ## How do I extend Pod Security Standards policies?
 
@@ -188,8 +191,9 @@ Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restric
 {% endalert %}
 
 To extend the Pod Security Standards policy by adding your checks to existing checks, you need to:
-- Create a constraint template for the check (`ConstraintTemplate`).
-- Bind it to the `restricted` or `baseline` policy.
+
+- create a constraint template for the check (`ConstraintTemplate`);
+- bind it to the `restricted` or `baseline` policy.
 
 Example of the `ConstraintTemplate` for checking a  repository URL of a container image:
 
@@ -251,11 +255,11 @@ spec:
       - "mycompany.registry.com"
 ```
 
-The example demonstrates the configuration of checking the repository address in the `image` field for all Pods created in the namespace having the `security.deckhouse.io/pod-policy : restricted`  label. A Pod will not be created if the address in the `image` field of the Pod does not start with `mycompany.registry.com`.
+The example demonstrates the configuration of checking the repository address in the `image` field for all Pods created in the namespace having the `security.deckhouse.io/pod-policy: restricted` label. A Pod will not be created if the address in the `image` field of the Pod does not start with `mycompany.registry.com`.
 
-The [Gatekeeper documentation](https://open-policy-agent.github.io/gatekeeper/website/docs/howto) may find more info about templates and policy language.
+For more information about templates and the policy language, see the [Gatekeeper documentation](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/).
 
-Find more examples of checks for policy extension in the [Gatekeeper Library](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
+More examples of checks for policy extension are available in the [Gatekeeper Library](https://github.com/open-policy-agent/gatekeeper-library/tree/master/src/general).
 
 ## How to allow some Pod Security Standards policies without disabling whole list?
 
@@ -265,7 +269,7 @@ To apply only the required security policies without turning off the entire buil
 1. Create a SecurityPolicy that matches the [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) or [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) policy while also editing the list of `policies` elements as you see fit.
 1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy. In the examples below, the label is `security-policy.deckhouse.io/baseline-enabled: "true"` or `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
-SecurityPolicy that matches baseline standard:
+SecurityPolicy that matches baseline:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -334,7 +338,7 @@ spec:
           security-policy.deckhouse.io/baseline-enabled: "true"
 ```
 
-`SecurityPolicy` that matches restricted standard:
+SecurityPolicy that matches restricted:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -404,7 +408,7 @@ spec:
 
 ## What if there are multiple policies (operational or security) that are applied to the same object?
 
-In that case the object's specification have to fulfil all the requirements imposed by the policies.
+In that case the object's specification has to fulfill all the requirements imposed by the policies.
 
 For example, consider the following two security policies:
 
@@ -455,7 +459,7 @@ Then, in order to fulfill the requirements of the above security policies, the f
 ## Verification of image signatures
 
 {% alert level="warning" %}
-Available in the following DKP editions: SE+, EE.
+Available in the following DKP editions: SE+, EE, CSE Lite, CSE Pro.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
@@ -527,7 +531,7 @@ spec:
 
 ## How to deny kubectl exec and kubectl attach to specific Pods?
 
-> The `admission-policy-engine` module's webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` through Gatekeeper. This allows custom policies to allow or deny `kubectl exec` and `kubectl attach` operations.
+The `admission-policy-engine` module webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` through Gatekeeper. This allows creating custom policies to allow or deny `kubectl exec` and `kubectl attach` operations.
 
 ### Built-in policy for heritage: deckhouse Pods
 
@@ -541,7 +545,7 @@ This policy doesn't apply to the following users who are allowed to run `kubectl
 
 ### Custom policy example
 
-You can create your own Gatekeeper policy to deny `kubectl exec` and `kubectl attach` operations in specific namespaces. In the following example,  `input.review.operation` and `input.review.resource.resource` are used to check for `CONNECT` operations:
+You can create your own Gatekeeper policy to deny `kubectl exec` and `kubectl attach` operations in specific namespaces. The example below uses `input.review.operation` and `input.review.resource.resource` to check for `CONNECT` operations:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
@@ -615,7 +619,7 @@ spec:
       - staging
 ```
 
-Key data and checks for CONNECT validation:
+Key data and checks available when validating `CONNECT` operations:
 
 - Use `input.review.operation == "CONNECT"` to check for `CONNECT` operations.
 - User information is available in `input.review.userInfo.username` and `input.review.userInfo.groups`.
