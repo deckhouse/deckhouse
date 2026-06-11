@@ -6,11 +6,11 @@ search: гибрид с Yandex Cloud
 description: Подготовка к гибридной интеграции с Yandex Cloud в Deckhouse Kubernetes Platform.
 ---
 
-Далее описан процесс добавления worker-узлов из Yandex Cloud в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
+Далее описан процесс добавления узлов из Yandex Cloud в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
 
 Для интеграции с Yandex Cloud используется модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Он обеспечивает взаимодействие DKP с API Yandex Cloud, получение информации об облачной инфраструктуре, создание виртуальных машин, работу с сетевыми параметрами и подключение узлов к существующему кластеру.
 
-В разделе описаны два способа добавления worker-узлов:
+В разделе описаны два способа добавления узлов:
 
 - **Автоматическое создание узлов в Yandex Cloud**. DKP создаёт виртуальные машины через API Yandex Cloud. Параметры ВМ задаются ресурсом [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudEphemeral`.
 - **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DKP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudStatic`.
@@ -20,19 +20,17 @@ description: Подготовка к гибридной интеграции с 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов и VPC Yandex Cloud настроена [сетевая связность](./overview.html#общие-сетевые-требования).
-- Узлы Yandex Cloud, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
+- Между сетью статических узлов и VPC Yandex Cloud настроена [сетевая связность](./overview.html#общие-сетевые-требования). Добавляемые узлы Yandex Cloud должны иметь доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов должен быть выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 - Выполнены требования из раздела [«Подключение и авторизация в Yandex Cloud»](../public/yandex/authorization.html):
   - подготовлен сервисный аккаунт;
   - выбран каталог, в котором будут создаваться ресурсы;
   - настроены необходимые роли и доступ к используемой VPC.
-- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
 ## Добавление автоматически создаваемых узлов
 
 Для выполнения подготовительных команд нужен [Yandex Cloud CLI](https://yandex.cloud/ru/docs/cli/) (`yc`). Его можно использовать на рабочей машине администратора. На master-узле кластера `yc` не требуется: в кластере нужно применить только подготовленные манифесты.
 
-1. Получите идентификаторы облака и каталога, в котором будут создаваться worker-узлы:
+1. Получите идентификаторы облака и каталога, в котором будут создаваться узлы:
 
    ```shell
    yc resource-manager cloud list
@@ -51,7 +49,7 @@ description: Подготовка к гибридной интеграции с 
    - `CLOUD_ID` — ID облака Yandex Cloud;
    - `FOLDER_ID` — ID каталога, в котором будут создаваться ресурсы.
 
-1. Получите идентификаторы сети, подсети и зоны, где будут создаваться worker-узлы:
+1. Получите идентификаторы сети, подсети и зоны, где будут создаваться узлы:
 
    ```shell
    yc vpc network list --folder-id "$FOLDER_ID"
@@ -70,7 +68,7 @@ description: Подготовка к гибридной интеграции с 
    Где:
 
    - `NETWORK_ID` — ID VPC-сети;
-   - `SUBNET_ID` — ID подсети, в которой будут создаваться worker-узлы;
+   - `SUBNET_ID` — ID подсети, в которой будут создаваться узлы;
    - `ZONE` — зона доступности, соответствующая выбранной подсети, например `ru-central1-a`.
 
    Подробнее в разделе [«Подключение и авторизация в Yandex Cloud»](../public/yandex/authorization.html).
@@ -121,7 +119,7 @@ description: Подготовка к гибридной интеграции с 
    Если используется другой ключ, укажите путь к нему вместо `~/.ssh/id_rsa.pub`.
 
    {% alert level="warning" %}
-   В переменную `SSH_PUBLIC_KEY` нужно сохранить публичный SSH-ключ администратора, который будет использоваться для доступа к создаваемым worker-узлам. Не используйте публичный ключ из JSON-файла сервисного аккаунта.
+   В переменную `SSH_PUBLIC_KEY` нужно сохранить публичный SSH-ключ администратора, который будет использоваться для доступа к создаваемым узлам. Не используйте публичный ключ из JSON-файла сервисного аккаунта.
    {% endalert %}
 
 1. Получите ID образа операционной системы, из которого будут создаваться виртуальные машины, и сохраните его в переменную окружения `IMAGE_ID`:
@@ -142,7 +140,7 @@ description: Подготовка к гибридной интеграции с 
    export NODE_NETWORK_CIDR="<NODE_NETWORK_CIDR>"
    ```
 
-   `NODE_NETWORK_CIDR` — CIDR, включающий внутренние IP-адреса узлов Yandex Cloud. Для одной зоны обычно совпадает с CIDR выбранной подсети. Например, если worker-узлы создаются в подсети `10.128.0.0/24`, укажите `10.128.0.0/24`. Узнать CIDR подсети можно командой:
+   `NODE_NETWORK_CIDR` — CIDR, включающий внутренние IP-адреса узлов Yandex Cloud. Для одной зоны обычно совпадает с CIDR выбранной подсети. Например, если узлы создаются в подсети `10.128.0.0/24`, укажите `10.128.0.0/24`. Узнать CIDR подсети можно командой:
 
    ```shell
    yc vpc subnet list --folder-id "$FOLDER_ID"
@@ -208,7 +206,7 @@ description: Подготовка к гибридной интеграции с 
 
    В файл автоматически подставляются значения переменных окружения, заданных на предыдущих шагах: `NETWORK_ID`, `SUBNET_ID` и `ZONE`.
 
-   Параметр `shouldAssignPublicIPAddress` управляет назначением публичных IP-адресов создаваемым worker-узлам. В примере указано значение `false`, поэтому создаваемые узлы будут получать только внутренние IP-адреса.
+   Параметр `shouldAssignPublicIPAddress` управляет назначением публичных IP-адресов создаваемым узлам. В примере указано значение `false`, поэтому создаваемые узлы будут получать только внутренние IP-адреса.
 
    {% alert level="warning" %}
    Если `shouldAssignPublicIPAddress` установлен в `false`, создаваемые узлы должны иметь доступ к хранилищу образов и внешним сервисам через NAT Gateway, NAT-инстанс, прокси или другой egress-механизм. Для зон, в которых подсети отсутствуют, допустимо использовать значение `empty`.
@@ -259,9 +257,8 @@ description: Подготовка к гибридной интеграции с 
 1. Дождитесь включения модуля `cloud-provider-yandex` и появления кастомного ресурса YandexInstanceClass:
 
    ```shell
-   d8 k get moduleconfig cloud-provider-yandex
+   d8 k get module cloud-provider-dvp -o wide
    d8 k get crd yandexinstanceclasses.deckhouse.io
-   d8 k -n d8-cloud-provider-yandex get pods -o wide
    ```
 
 1. Создайте файл с манифестами [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup). Например, `yandex-instanceclass-nodegroup.yaml`:
@@ -297,7 +294,7 @@ description: Подготовка к гибридной интеграции с 
    Где:
 
    - YandexInstanceClass описывает параметры виртуальной машины, которая будет создана в Yandex Cloud;
-   - `mainSubnet` — ID подсети, из которой создаваемые worker-узлы должны иметь доступ к статическим узлам кластера;
+   - `mainSubnet` — ID подсети, из которой создаваемые узлы должны иметь доступ к статическим узлам кластера;
    - NodeGroup описывает группу узлов, которую DKP должен поддерживать в кластере;
    - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через облачного провайдера;
    - `cloudInstances.zones` должен содержать зоны из списка `zones` в `cloud-provider-discovery-data.json`.
@@ -340,10 +337,9 @@ description: Подготовка к гибридной интеграции с 
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- Модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) включён и настроен:
+- Модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) включён:
 
   ```shell
-  d8 k get moduleconfig cloud-provider-yandex 
   d8 k get module cloud-provider-yandex -o wide
   ```
 

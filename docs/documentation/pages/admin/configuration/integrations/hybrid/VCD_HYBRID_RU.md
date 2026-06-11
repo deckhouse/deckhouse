@@ -6,11 +6,11 @@ search: гибрид с VCD
 description: Подготовка к гибридной интеграции с VMware Cloud Director в Deckhouse Kubernetes Platform.
 ---
 
-Далее описан процесс добавления worker-узлов из VMware Cloud Director (VCD) в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
+Далее описан процесс добавления узлов из VMware Cloud Director (VCD) в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
 
 Для интеграции с VCD используется модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/). Он обеспечивает взаимодействие DKP с VMware Cloud Director, создание и удаление виртуальных машин, получение информации об инфраструктуре VCD, а также интеграцию со StorageClass и другими возможностями провайдера.
 
-В разделе описаны два способа добавления worker-узлов:
+В разделе описаны два способа добавления узлов:
 
 - **Автоматическое создание узлов в VCD**. DKP создаёт виртуальные машины через API VCD. Параметры ВМ задаются ресурсом [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass), а требуемое количество узлов — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
 - **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DKP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
@@ -20,14 +20,12 @@ description: Подготовка к гибридной интеграции с 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов и сетью виртуальных машин в VCD настроена [сетевая связность](./overview.html#общие-сетевые-требования).
-- Узлы VCD, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
+- Между сетью статических узлов и сетью виртуальных машин в VCD настроена [сетевая связность](./overview.html#общие-сетевые-требования). Узлы VCD, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 - Выполнены требования из раздела [«Подключение и авторизация в VMware vCloud Director»](../virtualization/vcd/connection-and-authorization.html):
   - настроен тенант в VCD с выделенными ресурсами;
   - подготовлена учётная запись VCD со статичным паролем и правами администратора;
   - настроена рабочая сеть в VCD с включённым DHCP-сервером;
   - подготовлены необходимые ресурсы VCD: VDC, vApp, шаблоны, политики и другие параметры.
-- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
 ## Добавление автоматически создаваемых узлов
 
@@ -151,10 +149,9 @@ description: Подготовка к гибридной интеграции с 
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- Модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) включён и настроен:
+- Модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) включён:
   
   ```shell
-  d8 k get moduleconfig cloud-provider-vcd
   d8 k get module cloud-provider-vcd -o wide
   ```
 

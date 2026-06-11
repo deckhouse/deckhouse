@@ -6,11 +6,11 @@ search: гибрид с vSphere
 description: Подготовка к гибридной интеграции с VMware vSphere в Deckhouse Kubernetes Platform.
 ---
 
-Далее описан процесс добавления worker-узлов из vSphere в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
+Далее описан процесс добавления узлов из vSphere в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
 
 Для интеграции с vSphere используется модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/). Он обеспечивает взаимодействие DKP с vCenter, получение информации о виртуальных машинах, работу с параметрами размещения и интеграцию с инфраструктурными возможностями vSphere.
 
-В разделе описаны два способа добавления worker-узлов:
+В разделе описаны два способа добавления узлов:
 
 - **Автоматическое создание узлов в vSphere**. DKP создаёт виртуальные машины через API vSphere. Параметры ВМ задаются ресурсом [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
 - **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DKP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
@@ -20,14 +20,12 @@ description: Подготовка к гибридной интеграции с 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов и сетью виртуальных машин во vSphere настроена [сетевая связность](./overview.html#общие-сетевые-требования).
-- Узлы vSphere, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
+- Между сетью статических узлов и сетью виртуальных машин во vSphere настроена [сетевая связность](./overview.html#общие-сетевые-требования). Узлы vSphere, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 - Выполнены требования из раздела [«Подключение и авторизация в VMware vSphere»](../virtualization/vsphere/authorization.html):
   - настроен доступ к vCenter;
   - подготовлена учётная запись vSphere с необходимыми привилегиями;
   - подготовлен шаблон виртуальной машины;
   - настроены сети, Datastore, теги регионов и зон.
-- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
 ## Добавление автоматически создаваемых узлов
 
@@ -85,9 +83,7 @@ description: Подготовка к гибридной интеграции с 
 1. Дождитесь готовности модуля `cloud-provider-vsphere`:
 
    ```shell
-   d8 k get moduleconfig cloud-provider-vsphere 
    d8 k get module cloud-provider-vsphere -o wide
-   d8 k get pods -n d8-cloud-provider-vsphere -o wide
    ```
 
 1. Создайте файл c ресурсами [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup) со значением `nodeType: CloudEphemeral`. Например, `vsphere-instance.yaml`:
@@ -173,10 +169,9 @@ description: Подготовка к гибридной интеграции с 
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- Модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) включён и настроен:
+- Модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) включён:
   
   ```shell
-  d8 k get moduleconfig cloud-provider-vsphere 
   d8 k get module cloud-provider-vsphere -o wide
   ```
 

@@ -5,11 +5,11 @@ search: hybrid with VCD
 description: Preparation for hybrid integration with VMware Cloud Director in Deckhouse Kubernetes Platform.
 ---
 
-The following describes the process of adding worker nodes from VMware Cloud Director (VCD) to an existing static Deckhouse Kubernetes Platform (DKP) cluster.
+The following describes the process of adding nodes from VMware Cloud Director (VCD) to an existing static Deckhouse Kubernetes Platform (DKP) cluster.
 
 Integration with VCD uses the [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module. It provides interaction between DKP and VMware Cloud Director, creation and deletion of virtual machines, retrieval of information about the VCD infrastructure, and integration with StorageClass and other provider capabilities.
 
-This section describes two ways to add worker nodes:
+This section describes two ways to add nodes:
 
 - **Automatic node creation in VCD**. DKP creates virtual machines through the VCD API. VM parameters are defined by the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) resource, and the required number of nodes is defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
 - **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DKP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
@@ -19,14 +19,12 @@ This section describes two ways to add worker nodes:
 Before you begin, make sure that the following conditions are met:
 
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the network of virtual machines in VCD.
-- VCD nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
+- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the network of virtual machines in VCD. VCD nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections. When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 - The requirements from the [Connection and authorization in VMware vCloud Director](../virtualization/vcd/connection-and-authorization.html) section are met:
   - A tenant with allocated resources is configured in VCD.
   - A VCD account with a static password and administrator permissions is prepared.
   - A working network with an enabled DHCP server is configured in VCD.
   - The required VCD resources are prepared: VDC, vApp, templates, policies, and other parameters.
-- When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 
 ## Adding automatically created nodes
 
@@ -151,10 +149,9 @@ Before you begin, make sure that the following conditions are met:
 
 Before you begin, make sure that the following conditions are met:
 
-- The [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module is enabled and configured:
+- The [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module is enabled:
 
   ```shell
-  d8 k get moduleconfig cloud-provider-vcd
   d8 k get module cloud-provider-vcd -o wide
   ```
 

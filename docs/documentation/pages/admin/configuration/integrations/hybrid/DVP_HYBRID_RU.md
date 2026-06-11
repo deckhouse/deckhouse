@@ -6,11 +6,11 @@ search: гибрид с DVP
 description: Подготовка к гибридной интеграции с DVP в Deckhouse Kubernetes Platform.
 ---
 
-Далее описан процесс добавления worker-узлов из Deckhouse Virtualization Platform (DVP) в существующий статический кластер DKP.
+Далее описан процесс добавления узлов из Deckhouse Virtualization Platform (DVP) в существующий статический кластер DKP.
 
-Для интеграции с DVP используется модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/). Он обеспечивает взаимодействие DKP с API кластера DVP, создание виртуальных машин, подключение созданных ВМ к существующему Kubernetes-кластеру и управление жизненным циклом worker-узлов через механизмы Cluster API.
+Для интеграции с DVP используется модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/). Он обеспечивает взаимодействие DKP с API кластера DVP, создание виртуальных машин, подключение созданных ВМ к существующему Kubernetes-кластеру и управление жизненным циклом узлов через механизмы Cluster API.
 
-В разделе описаны два способа добавления worker-узлов:
+В разделе описаны два способа добавления узлов:
 
 - **Автоматическое создание узлов в DVP**. DKP создаёт виртуальные машины через API DVP. Параметры ВМ задаются ресурсом [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
 - **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DKP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
@@ -20,8 +20,7 @@ description: Подготовка к гибридной интеграции с 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов кластера DKP и сетью виртуальных машин в DVP настроена [сетевая связность](./overview.html#общие-сетевые-требования).
-- Создаваемые в DVP worker-узлы имеют доступ к Kubernetes API подключаемого DKP-кластера, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
+- Между сетью статических узлов кластера DKP и сетью виртуальных машин в DVP настроена [сетевая связность](./overview.html#общие-сетевые-требования). Создаваемые в DVP узлы имеют доступ к Kubernetes API подключаемого DKP-кластера, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками. Из кластера DKP доступен Kubernetes API кластера DVP.
 - Выполнены требования из раздела [«Подготовка окружения»](/modules/cloud-provider-dvp/environment.html):
   - создан [ServiceAccount](/modules/cloud-provider-dvp/environment.html#создание-пользователя) для доступа к API DVP;
   - сгенерирован kubeconfig для подключения к API DVP;
@@ -30,8 +29,6 @@ description: Подготовка к гибридной интеграции с 
 - В DVP доступен подходящий [VirtualMachineClass](/modules/virtualization/stable/cr.html#virtualmachineclass), например `amd-epyc-gen-3`.
 - В DVP доступен StorageClass для корневых дисков виртуальных машин, например `replicated`.
 - Если используется шаблон виртуальной машины, убедитесь, что он содержит только один диск.
-- Из кластера DKP доступен Kubernetes API кластера DVP.
-- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
 {% alert level="warning" %}
 В параметрах [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) используются ресурсы кластера DVP: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk и StorageClass из DVP, а не из подключаемого DKP-кластера.
@@ -54,7 +51,7 @@ description: Подготовка к гибридной интеграции с 
    export DVP_NAMESPACE="<DVP_NAMESPACE>"
    ```
 
-1. Укажите зону DVP, в которой будут создаваться worker-узлы.
+1. Укажите зону DVP, в которой будут создаваться узлы.
 
    На данный момент зонирование в DVP находится в разработке, поэтому для параметров `zones` в ModuleConfig и NodeGroup используйте значение `default`:
 
@@ -96,7 +93,7 @@ description: Подготовка к гибридной интеграции с 
 
    - `provider.kubeconfigDataBase64` — kubeconfig для доступа к API DVP в кодировке Base64;
    - `provider.namespace` — неймспейс DVP, в котором будут создаваться виртуальные машины и диски;
-   - `zones` — список зон DVP, в которых разрешено создавать worker-узлы.
+   - `zones` — список зон DVP, в которых разрешено создавать узлы.
 
 1. Примените ModuleConfig:
 
@@ -107,9 +104,7 @@ description: Подготовка к гибридной интеграции с 
 1. Дождитесь включения модуля `cloud-provider-dvp`:
 
    ```shell
-   d8 k get moduleconfig cloud-provider-dvp
    d8 k get module cloud-provider-dvp -o wide
-   d8 k -n d8-cloud-provider-dvp get pods -o wide
    ```
 
    Модуль должен перейти в состояние `Ready`, а поды в неймспейсе `d8-cloud-provider-dvp` — в состояние `Running`.
@@ -183,7 +178,7 @@ description: Подготовка к гибридной интеграции с 
    - `rootDisk.storageClass` — имя StorageClass в DVP, например `replicated`;
    - `rootDisk.image.kind` — тип источника образа. Для кластерного образа используйте `ClusterVirtualImage`;
    - `rootDisk.image.name` — имя образа ОС в DVP, например `ubuntu-24-04-lts`;
-   - `cloudInstances.zones` — зона DVP, в которой будет создан worker-узел. Значение должно входить в список `zones` из ModuleConfig.
+   - `cloudInstances.zones` — зона DVP, в которой будет создан узел. Значение должно входить в список `zones` из ModuleConfig.
 
 1. Примените манифест:
 
@@ -191,7 +186,7 @@ description: Подготовка к гибридной интеграции с 
    d8 k apply -f dvp-instanceclass-nodegroup.yaml
    ```
 
-   После применения DKP начнёт создавать виртуальную машину в DVP и подключать её к кластеру как worker-узел.
+   После применения DKP начнёт создавать виртуальную машину в DVP и подключать её к кластеру как узел.
 
 1. Проверьте состояние NodeGroup:
 
@@ -221,10 +216,9 @@ description: Подготовка к гибридной интеграции с 
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- Модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) включён и настроен:
+- Модуль [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) включён:
 
   ```shell
-  d8 k get moduleconfig cloud-provider-dvp
   d8 k get module cloud-provider-dvp -o wide
   ```
 

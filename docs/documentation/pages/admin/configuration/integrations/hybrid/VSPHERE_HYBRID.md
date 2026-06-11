@@ -5,11 +5,11 @@ search: hybrid with vSphere
 description: Preparation for hybrid integration with VMware vSphere in Deckhouse Kubernetes Platform.
 ---
 
-The following describes the process of adding worker nodes from vSphere to an existing static Deckhouse Kubernetes Platform (DKP) cluster.
+The following describes the process of adding nodes from vSphere to an existing static Deckhouse Kubernetes Platform (DKP) cluster.
 
 Integration with vSphere uses the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module. It provides interaction between DKP and vCenter, retrieval of information about virtual machines, work with placement parameters, and integration with vSphere infrastructure capabilities.
 
-This section describes two ways to add worker nodes:
+This section describes two ways to add nodes:
 
 - **Automatic node creation in vSphere**. DKP creates virtual machines through the vSphere API. VM parameters are defined by the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource, and the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
 - **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DKP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
@@ -84,9 +84,7 @@ An example configuration and description of the available parameters are provide
 1. Wait for the `cloud-provider-vsphere` module to become ready:
 
    ```shell
-   d8 k get moduleconfig cloud-provider-vsphere 
    d8 k get module cloud-provider-vsphere -o wide
-   d8 k get pods -n d8-cloud-provider-vsphere -o wide
    ```
 
 1. Create a file with the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources with the `nodeType: CloudEphemeral` value. For example, `vsphere-instance.yaml`:
@@ -172,10 +170,9 @@ An example configuration and description of the available parameters are provide
 
 Before you begin, make sure that the following conditions are met:
 
-- The [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module is enabled and configured:
+- The [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module is enabled:
 
   ```shell
-  d8 k get moduleconfig cloud-provider-vsphere 
   d8 k get module cloud-provider-vsphere -o wide
   ```
 

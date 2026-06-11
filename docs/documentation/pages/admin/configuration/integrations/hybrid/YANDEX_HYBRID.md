@@ -5,11 +5,11 @@ search: hybrid with Yandex Cloud
 description: Preparation for hybrid integration with Yandex Cloud in Deckhouse Kubernetes Platform.
 ---
 
-The following describes the process of adding worker nodes from Yandex Cloud to an existing static Deckhouse Kubernetes Platform cluster.
+The following describes the process of adding nodes from Yandex Cloud to an existing static Deckhouse Kubernetes Platform cluster.
 
 Integration with Yandex Cloud uses the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module. It provides interaction between DKP and the Yandex Cloud API, retrieval of information about cloud infrastructure, creation of virtual machines, work with network parameters, and connection of nodes to an existing cluster.
 
-This section describes two ways to add worker nodes:
+This section describes two ways to add nodes:
 
 - **Automatic node creation in Yandex Cloud**. DKP creates virtual machines through the Yandex Cloud API. VM parameters are defined by the [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) resource, and the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the `CloudEphemeral` type.
 - **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DKP bootstrap script. This scenario uses [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the `CloudStatic` type.
@@ -19,19 +19,17 @@ This section describes two ways to add worker nodes:
 Before you begin, make sure that the following conditions are met:
 
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the Yandex Cloud VPC.
-- Yandex Cloud nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
+- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the Yandex Cloud VPC. Yandex Cloud nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections. When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 - The requirements from the [Connection and authorization in Yandex Cloud](../public/yandex/authorization.html) section are met:
   - A service account is prepared.
   - A folder where resources will be created is selected.
   - The required roles and access to the VPC being used are configured.
-- When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 
 ## Adding automatically created nodes
 
 To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.cloud/en/docs/cli/) (`yc`). You can use it on the administrator's workstation. The `yc` CLI is not required on the cluster master node: only the prepared manifests need to be applied in the cluster.
 
-1. Get the identifiers of the cloud and folder where worker nodes will be created:
+1. Get the identifiers of the cloud and folder where nodes will be created:
 
    ```shell
    yc resource-manager cloud list
@@ -50,7 +48,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    - `CLOUD_ID` — Yandex Cloud cloud ID;
    - `FOLDER_ID` — ID of the folder where resources will be created.
 
-1. Get the identifiers of the network, subnet, and zone where worker nodes will be created:
+1. Get the identifiers of the network, subnet, and zone where nodes will be created:
 
    ```shell
    yc vpc network list --folder-id "$FOLDER_ID"
@@ -69,7 +67,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    Where:
 
    - `NETWORK_ID` — VPC network ID;
-   - `SUBNET_ID` — ID of the subnet where worker nodes will be created;
+   - `SUBNET_ID` — ID of the subnet where nodes will be created;
    - `ZONE` — availability zone that corresponds to the selected subnet, for example `ru-central1-a`.
 
    For details, see [Connecting and authorizing in Yandex Cloud](../public/yandex/authorization.html).
@@ -120,7 +118,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    If you use another key, specify its path instead of `~/.ssh/id_rsa.pub`.
 
    {% alert level="warning" %}
-   The `SSH_PUBLIC_KEY` variable must contain the administrator's public SSH key that will be used to access the worker nodes being created. Do not use the public key from the service account JSON file.
+   The `SSH_PUBLIC_KEY` variable must contain the administrator's public SSH key that will be used to access the nodes being created. Do not use the public key from the service account JSON file.
    {% endalert %}
 
 1. Get the ID of the operating system image that will be used to create virtual machines and save it to the `IMAGE_ID` environment variable:
@@ -141,7 +139,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    export NODE_NETWORK_CIDR="<NODE_NETWORK_CIDR>"
    ```
 
-   `NODE_NETWORK_CIDR` is the CIDR that includes the internal IP addresses of Yandex Cloud nodes. For a single zone, it usually matches the CIDR of the selected subnet. For example, if worker nodes are created in the `10.128.0.0/24` subnet, specify `10.128.0.0/24`. You can get the subnet CIDR with the following command:
+   `NODE_NETWORK_CIDR` is the CIDR that includes the internal IP addresses of Yandex Cloud nodes. For a single zone, it usually matches the CIDR of the selected subnet. For example, if nodes are created in the `10.128.0.0/24` subnet, specify `10.128.0.0/24`. You can get the subnet CIDR with the following command:
 
    ```shell
    yc vpc subnet list --folder-id "$FOLDER_ID"
@@ -207,7 +205,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    The file automatically uses the values of the environment variables set in the previous steps: `NETWORK_ID`, `SUBNET_ID`, and `ZONE`.
 
-   The `shouldAssignPublicIPAddress` parameter controls whether public IP addresses are assigned to the worker nodes being created. In this example, it is set to `false`, so the created nodes will receive only internal IP addresses.
+   The `shouldAssignPublicIPAddress` parameter controls whether public IP addresses are assigned to the nodes being created. In this example, it is set to `false`, so the created nodes will receive only internal IP addresses.
 
    {% alert level="warning" %}
    If `shouldAssignPublicIPAddress` is set to `false`, the created nodes must have access to the image registry and external services through a NAT Gateway, NAT instance, proxy, or another egress mechanism. For zones where no subnets are available, the `empty` value is allowed.
@@ -258,9 +256,8 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 1. Wait until the `cloud-provider-yandex` module is enabled and the YandexInstanceClass resource appears:
 
    ```shell
-   d8 k get moduleconfig cloud-provider-yandex
+   d8 k get module cloud-provider-dvp -o wide
    d8 k get crd yandexinstanceclasses.deckhouse.io
-   d8 k -n d8-cloud-provider-yandex get pods -o wide
    ```
 
 1. Create a file with [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) manifests. For example, `yandex-instanceclass-nodegroup.yaml`:
@@ -296,7 +293,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    Where:
 
    - YandexInstanceClass describes the parameters of the virtual machine that will be created in Yandex Cloud;
-   - `mainSubnet` — ID of the subnet from which the created worker nodes must have access to the static cluster nodes;
+   - `mainSubnet` — ID of the subnet from which the created nodes must have access to the static cluster nodes;
    - NodeGroup describes the node group that DKP must maintain in the cluster;
    - `nodeType: CloudEphemeral` means that nodes will be created automatically through the cloud provider;
    - `cloudInstances.zones` must contain zones from the `zones` list in `cloud-provider-discovery-data.json`.
@@ -339,10 +336,9 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
 Before you begin, make sure that the following conditions are met:
 
-- The [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module is enabled and configured:
+- The [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module is enabled:
 
   ```shell
-  d8 k get moduleconfig cloud-provider-yandex 
   d8 k get module cloud-provider-yandex -o wide
   ```
 

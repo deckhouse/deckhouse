@@ -6,11 +6,11 @@ search: hybrid with DVP
 description: Preparing for hybrid integration with DVP in Deckhouse Kubernetes Platform.
 ---
 
-This section describes how to add worker nodes from Deckhouse Virtualization Platform (DVP) to an existing static DKP cluster.
+This section describes how to add nodes from Deckhouse Virtualization Platform (DVP) to an existing static DKP cluster.
 
-Integration with DVP uses the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) module. It enables DKP to interact with the DVP cluster API, create virtual machines, connect the created VMs to an existing Kubernetes cluster, and manage the lifecycle of worker nodes through Cluster API mechanisms.
+Integration with DVP uses the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) module. It enables DKP to interact with the DVP cluster API, create virtual machines, connect the created VMs to an existing Kubernetes cluster, and manage the lifecycle of nodes through Cluster API mechanisms.
 
-This section describes two ways to add worker nodes:
+This section describes two ways to add nodes:
 
 - **Automatically creating nodes in DVP**. DKP creates virtual machines through the DVP API. VM parameters are specified using the [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) resource, while the required number of nodes and placement zones are specified using the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
 - **Connecting manually created nodes using a bootstrap script**. A virtual machine is created in advance by the user and connected to the cluster using a DKP bootstrap script. This scenario uses a [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
@@ -20,8 +20,7 @@ This section describes two ways to add worker nodes:
 Before you begin, make sure that the following requirements are met:
 
 - The cluster is created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- Network connectivity is configured between the network of the static DKP cluster nodes and the network of virtual machines in DVP. For details, see [Network requirements](./overview.html##general-network-requirements).
-- Worker nodes created in DVP have access to the Kubernetes API of the target DKP cluster, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Configuring network policies](../../configuration/network/policy/configuration.html) sections.
+- Network connectivity is configured between the network of the static DKP cluster nodes and the network of virtual machines in DVP. For details, see [Network requirements](./overview.html##general-network-requirements). Nodes created in DVP have access to the Kubernetes API of the target DKP cluster, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Configuring network policies](../../configuration/network/policy/configuration.html) sections. If Cilium is used with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites. The Kubernetes API of the DVP cluster is accessible from the DKP cluster.
 - The requirements from the [Preparing the environment](/modules/cloud-provider-dvp/environment.html) section are met:
   - a [ServiceAccount](/modules/cloud-provider-dvp/environment.html#creating-a-user) has been created to access the DVP API;
   - a kubeconfig has been generated to connect to the DVP API;
@@ -30,8 +29,6 @@ Before you begin, make sure that the following requirements are met:
 - A suitable [VirtualMachineClass](/modules/virtualization/stable/cr.html#virtualmachineclass) is available in DVP, for example `amd-epyc-gen-3`.
 - A StorageClass for root disks of virtual machines is available in DVP, for example `replicated`.
 - If a virtual machine template is used, make sure that it contains only one disk.
-- The Kubernetes API of the DVP cluster is accessible from the DKP cluster.
-- If Cilium is used with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 
 {% alert level="warning" %}
 [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) parameters use resources from the DVP cluster: VirtualMachineClass, ClusterVirtualImage, VirtualImage, VirtualDisk, and StorageClass from DVP, not from the target DKP cluster.
@@ -54,7 +51,7 @@ Before you begin, make sure that the following requirements are met:
    export DVP_NAMESPACE="<DVP_NAMESPACE>"
    ```
 
-1. Specify the DVP zone where worker nodes will be created.
+1. Specify the DVP zone where nodes will be created.
 
    Currently, zoning in DVP is under development, so use the `default` value for the `zones` parameters in ModuleConfig and NodeGroup:
 
@@ -103,9 +100,7 @@ Before you begin, make sure that the following requirements are met:
 1. Wait until the `cloud-provider-dvp` module is enabled:
 
    ```shell
-   d8 k get moduleconfig cloud-provider-dvp
    d8 k get module cloud-provider-dvp -o wide
-   d8 k -n d8-cloud-provider-dvp get pods -o wide
    ```
 
    The module must switch to the `Ready` state, and the pods in the `d8-cloud-provider-dvp` namespace must be in the `Running` state.
@@ -179,7 +174,7 @@ Before you begin, make sure that the following requirements are met:
    - `rootDisk.storageClass` — name of the StorageClass in DVP, for example `replicated`;
    - `rootDisk.image.kind` — image source type. For a cluster image, use `ClusterVirtualImage`;
    - `rootDisk.image.name` — name of the OS image in DVP, for example `ubuntu-24-04-lts`;
-   - `cloudInstances.zones` — DVP zone where the worker node will be created. The value must match the `zones` value in ModuleConfig.
+   - `cloudInstances.zones` — DVP zone where the node will be created. The value must match the `zones` value in ModuleConfig.
 
 1. Apply the manifest:
 
@@ -187,7 +182,7 @@ Before you begin, make sure that the following requirements are met:
    d8 k apply -f dvp-instanceclass-nodegroup.yaml
    ```
 
-   After the manifest is applied, DKP will start creating a virtual machine in DVP and connect it to the cluster as a worker node.
+   After the manifest is applied, DKP will start creating a virtual machine in DVP and connect it to the cluster as a node.
 
 1. Check the NodeGroup status:
 
@@ -217,10 +212,9 @@ Before you begin, make sure that the following requirements are met:
 
 Before you begin, make sure that the following requirements are met:
 
-- The [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) module is enabled and configured:
+- The [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) module is enabled:
 
   ```shell
-  d8 k get moduleconfig cloud-provider-dvp
   d8 k get module cloud-provider-dvp -o wide
   ```
 
