@@ -1940,6 +1940,8 @@ Nehalem
 neighbour
 Netfilter
 NetworkAddress
+NetworkID
+NetworkLoadBalancer
 NetworkPolicy
 nexthop
 nexthops
@@ -2383,6 +2385,7 @@ Subfolder
 subGID
 subGIDs
 SubjectAccessReview
+SubnetID
 subresource
 subresources
 subUID
@@ -2416,6 +2419,7 @@ SystemTag
 TaintToleration
 tarball
 tarballs
+TargetGroup
 targetRef
 Taskfile
 TATLIN
@@ -2430,6 +2434,7 @@ terraform
 Terraform
 TestConvert
 testEnum
+TG
 Thanos
 THENEWSTACK
 Thev1
@@ -2626,6 +2631,7 @@ YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses
 YC
+YCC
 YCloud
 yml
 YouTube
