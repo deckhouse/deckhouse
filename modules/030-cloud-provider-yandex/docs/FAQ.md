@@ -56,7 +56,7 @@ d8 k edit mc global
 
 ## Resizing a PVC
 
-You can increase the size of an existing PVC without stopping or recreating the pod that uses it.
+You can increase the size of an existing PVC by changing the value of the `spec.resources.requests.storage` parameter, without stopping or recreating the pod that uses it.
 
 After the value of `spec.resources.requests.storage` is changed, the CSI driver performs the following operations:
 
@@ -135,10 +135,13 @@ To increase the size of a PVC, follow these steps:
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
    application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   20Gi       RWO            network-ssd
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Make sure that:
 
@@ -194,17 +197,23 @@ To increase the size of a PVC, follow these steps:
 
    During the resize operation, the `CAPACITY` field may continue to show the previous size:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
    application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   20Gi       RWO            network-ssd
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    The operation is complete when the `CAPACITY` field shows the new PVC size:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
    application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   30Gi       RWO            network-ssd
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Check the PVC events:
 

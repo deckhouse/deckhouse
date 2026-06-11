@@ -56,7 +56,7 @@ d8 k edit mc global
 
 ## Изменение размера PVC
 
-Размер существующего PVC можно увеличить без остановки и пересоздания использующего его пода.
+Размер существующего PVC можно увеличить путем изменения значения параметра `spec.resources.requests.storage`, без остановки и пересоздания использующего его пода.
 
 После изменения значения `spec.resources.requests.storage` CSI-драйвер последовательно:
 
@@ -135,10 +135,13 @@ d8 k edit mc global
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
    application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   20Gi       RWO            network-ssd
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Убедитесь, что:
 
@@ -194,17 +197,23 @@ d8 k edit mc global
 
    Во время увеличения в поле `CAPACITY` может отображаться прежний размер:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
    application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   20Gi       RWO            network-ssd
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Операция завершена, когда в поле `CAPACITY` отображается новый размер PVC:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS
    application-data   Bound    pvc-65e92674-077c-4b4f-b65d-19e92f04e103   30Gi       RWO            network-ssd
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Проверьте события PVC:
 
