@@ -86,10 +86,48 @@ type usageRule struct {
 	Resources   []string `json:"resources"`
 }
 
+type matchPredicate struct {
+	FieldPath string   `json:"fieldPath"`
+	Equals    string   `json:"equals"`
+	In        []string `json:"in"`
+}
+
 type fieldPathEntry struct {
-	APIGroups   []string `json:"apiGroups"`
-	APIVersions []string `json:"apiVersions"`
-	Path        string   `json:"path"`
+	APIGroups   []string        `json:"apiGroups"`
+	APIVersions []string        `json:"apiVersions"`
+	Path        string          `json:"path"`
+	Match       *matchPredicate `json:"match"`
+}
+
+// matchHolds reports whether the field path's guard holds on the object (nil guard always holds).
+func matchHolds(pred *matchPredicate, obj map[string]any) bool {
+	if pred == nil {
+		return true
+	}
+	p, err := jsonpath.Parse(pred.FieldPath)
+	if err != nil {
+		return false
+	}
+	var vals []string
+	for _, v := range p.Select(obj) {
+		if s, ok := v.(string); ok {
+			vals = append(vals, s)
+		}
+	}
+	if pred.Equals == "" && len(pred.In) == 0 {
+		return len(vals) > 0
+	}
+	for _, s := range vals {
+		if pred.Equals != "" && s == pred.Equals {
+			return true
+		}
+		for _, in := range pred.In {
+			if s == in {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 type clusterResourceReference struct {
@@ -297,9 +335,6 @@ func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource
 	for _, n := range entry.Allowed {
 		d.allowed[n] = struct{}{}
 	}
-	if entry.Default != "" {
-		d.allowed[entry.Default] = struct{}{}
-	}
 	for _, n := range entry.Denied {
 		d.denied[n] = struct{}{}
 	}
@@ -472,10 +507,10 @@ func versionMatches(versions []string, v string) bool {
 	return false
 }
 
-// selectFieldPath returns the field path for the given group/version: a scoped fieldPaths entry wins
-// over an unscoped fallback. The bool is false when no entry matches.
-func selectFieldPath(fps []fieldPathEntry, group, version string) (string, bool) {
-	fallback := ""
+// selectFieldPath returns the fieldPaths entry for the given group/version: a scoped entry wins over
+// an unscoped fallback. The bool is false when no entry matches.
+func selectFieldPath(fps []fieldPathEntry, group, version string) (fieldPathEntry, bool) {
+	var fallback fieldPathEntry
 	haveFallback := false
 	for _, p := range fps {
 		groupOK := len(p.APIGroups) == 0 || versionMatches(p.APIGroups, group)
@@ -484,10 +519,10 @@ func selectFieldPath(fps []fieldPathEntry, group, version string) (string, bool)
 			continue
 		}
 		if len(p.APIGroups) > 0 || len(p.APIVersions) > 0 {
-			return p.Path, true
+			return p, true
 		}
 		if !haveFallback {
-			fallback = p.Path
+			fallback = p
 			haveFallback = true
 		}
 	}
@@ -529,13 +564,13 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 		}
 		for _, ref := range refs {
 			for _, gvr := range usageGVRs(kube, ref.Spec.Rule) {
-				path, ok := selectFieldPath(ref.Spec.FieldPaths, gvr.Group, gvr.Version)
+				fp, ok := selectFieldPath(ref.Spec.FieldPaths, gvr.Group, gvr.Version)
 				if !ok {
 					continue
 				}
-				jsonPath, err := jsonpath.Parse(path)
+				jsonPath, err := jsonpath.Parse(fp.Path)
 				if err != nil {
-					log.Error("Invalid JSONPath expression", "expr", path, "registration", entry.ResourceName)
+					log.Error("Invalid JSONPath expression", "expr", fp.Path, "registration", entry.ResourceName)
 					continue
 				}
 				for _, project := range projects {
@@ -544,6 +579,11 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 						continue
 					}
 					for _, item := range list.Items {
+						// The reference's guard (e.g. roleRef.kind == ClusterRole) must hold, mirroring
+						// /is-granted, or unrelated objects raise phantom violations.
+						if !matchHolds(fp.Match, item.Object) {
+							continue
+						}
 						for _, rawVal := range jsonPath.Select(item.Object) {
 							s, ok := rawVal.(string)
 							if !ok || s == "" {
@@ -554,7 +594,7 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 									GVR:                gvr,
 									Project:            project,
 									Name:               item.GetName(),
-									ViolatingFieldPath: path,
+									ViolatingFieldPath: fp.Path,
 								})
 								break
 							}
