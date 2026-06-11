@@ -14,12 +14,10 @@ Managed PostgreSQL в Deckhouse Kubernetes Platform добавляет в кла
 Чтобы подготовить Managed PostgreSQL для пользователей:
 
 1. [Включите модуль `managed-postgres`](/modules/managed-postgres/configuration.html) одним из способов, описанных на странице настроек модуля в блоке «Как явно включить или отключить модуль...».
-2. Проверьте автоматически созданный PostgresClass `default` или подготовьте собственный PostgresClass.
-3. [Определите доступные топологии и зоны размещения](#настройка-топологии).
-4. [Настройте политики размера](#настройка-политик-определения-размера): диапазоны CPU, памяти и допустимые доли CPU.
-5. Задайте [значения PostgreSQL-параметров по умолчанию](#настройка-значений-конфигурации-по-умолчанию) и [список параметров, доступных для переопределения](#настройка-параметров-доступных-для-переопределения).
-6. При необходимости добавьте [правила валидации](#настройка-правил-валидации) и [параметры планирования подов](#настройка-планирования-подов).
-7. Примените PostgresClass и передайте пользователям его имя для создания ресурсов Postgres.
+2. Проверьте, подходят ли ограничения и значения по умолчанию в автоматически созданном PostgresClass `default`.
+3. Выберите PostgresClass для пользователей:
+   - если PostgresClass `default` подходит для пользовательских ресурсов Postgres, передайте пользователям имя `default`;
+   - если требуется отдельная конфигурация PostgreSQL, подготовьте собственный манифест PostgresClass, примените его и передайте пользователям имя созданного PostgresClass.
 
 Дальше описано, что происходит после включения модуля и как настроить PostgresClass.
 
@@ -31,7 +29,7 @@ Managed PostgreSQL в Deckhouse Kubernetes Platform добавляет в кла
 
 ## Подготовка PostgresClass
 
-Ресурс PostgresClass — это cluster-wide-ресурс, который описывает класс managed-сервиса PostgreSQL для пользовательских ресурсов Postgres. Используйте его, чтобы:
+Ресурс PostgresClass — это cluster-scoped-ресурс, который описывает класс managed-сервиса PostgreSQL для пользовательских ресурсов Postgres. Используйте его, чтобы:
 
 - задать допустимую топологию PostgreSQL;
 - ограничить CPU и память;
@@ -47,72 +45,11 @@ Managed PostgreSQL в Deckhouse Kubernetes Platform добавляет в кла
 d8 k get PostgresClass default -o yaml
 ```
 
-Если требуется отдельная конфигурация PostgreSQL, подготовьте собственный манифест PostgresClass.
+При проверке PostgresClass `default` обратите внимание на топологию, политики размера, значения PostgreSQL-параметров по умолчанию, список параметров, доступных для переопределения, правила валидации и параметры планирования подов.
 
-### Пример PostgresClass
+Если PostgresClass `default` подходит для ваших требований, передайте пользователям имя `default`; если требуется отдельная конфигурация PostgreSQL, подготовьте собственный манифест по следующим разделам. Примеры показывают отдельные фрагменты `spec`, полный манифест приведён в конце раздела.
 
-Ниже приведён пример ресурса PostgresClass, который задаёт топологию, значения конфигурации, переопределяемые параметры, правила валидации и политики определения размера:
-
-```yaml
-apiVersion: managed-services.deckhouse.io/v1alpha1
-kind: PostgresClass
-metadata:
-  labels:
-    app.kubernetes.io/name: managed-psql-operator
-  name: new
-spec:
-  topology:
-    allowedTopologies:
-      - Zonal
-      - TransZonal
-      - Ignored
-    allowedZones: []
-    defaultTopology: Ignored
-  configuration:
-    maxConnections: 300
-  overridableConfiguration:
-    - maxConnections
-    - sharedBuffers
-    - walKeepSize
-  validations:
-    - message: "Max connections should be more than 100"
-      rule: "configuration.maxConnections > 100"
-    - message: "Shared buffers should be less than 40% of memory.size"
-      rule: "configuration.sharedBuffers * 100 < instance.memory.size * 40"
-    - message: "walKeepSize can not be more than 1Gi"
-      rule: "configuration.walKeepSize <= 1073741824"
-  sizingPolicies:
-    - cores:
-        min: 1
-        max: 3
-      memory:
-        min: 1Gi
-        max: 5Gi
-        step: 1Gi
-      coreFractions:
-        - 10
-        - 20
-        - 50
-        - 100
-    - cores:
-        min: 4
-        max: 10
-      memory:
-        min: 5Gi
-        max: 15Gi
-        step: 1Gi
-      coreFractions:
-        - 50
-        - 100
-```
-
-Чтобы применить манифест PostgresClass, выполните команду:
-
-```shell
-d8 k apply -f postgresclass.yaml
-```
-
-## Настройка топологии
+### Настройка топологии
 
 В PostgresClass можно ограничить допустимые топологии, задать топологию по умолчанию и определить список зон, доступных для размещения экземпляров PostgreSQL.
 
@@ -140,7 +77,7 @@ spec:
       - zone-3
 ```
 
-## Настройка политик определения размера
+### Настройка политик определения размера
 
 Администратор может управлять размерами экземпляров PostgreSQL, доступными пользователям: задавать диапазоны CPU и памяти, а также допустимые доли CPU. Это помогает ограничить потребление ресурсов в рамках выбранного PostgresClass и не допустить создания конфигураций, которые не соответствуют требованиям к сервису.
 
@@ -176,7 +113,7 @@ spec:
         - 100
 ```
 
-## Настройка правил валидации
+### Настройка правил валидации
 
 Администратор может настроить дополнительные правила проверки итоговой конфигурации PostgreSQL. Такие правила позволяют отклонять ресурсы Postgres с нежелательными сочетаниями параметров, например если число подключений слишком велико для выбранного объёма памяти.
 
@@ -202,7 +139,7 @@ spec:
       rule: "configuration.sharedBuffers < instance.memory.size / 4"
 ```
 
-## Настройка параметров, доступных для переопределения
+### Настройка параметров, доступных для переопределения
 
 PostgresClass разделяет базовые значения PostgreSQL-параметров и право пользователя изменять их в своём ресурсе Postgres. Администратор может разрешить переопределение только тех параметров, которые пользователь действительно должен контролировать.
 
@@ -224,7 +161,7 @@ spec:
     - workMem
 ```
 
-## Настройка значений конфигурации по умолчанию
+### Настройка значений конфигурации по умолчанию
 
 После выбора параметров, доступных для переопределения, администратор может задать базовую конфигурацию PostgreSQL для всех ресурсов Postgres, связанных с этим PostgresClass. Значения по умолчанию применяются автоматически и дают пользователю готовую конфигурацию без необходимости указывать каждый параметр вручную.
 
@@ -246,7 +183,7 @@ spec:
 - `workMem`: (`memory.size` - `sharedBuffers`) * 4 / `maxConnections`;
 - `walKeepSize`: `512Mi`.
 
-## Настройка планирования подов
+### Настройка планирования подов
 
 Для управления размещением сервиса PostgreSQL на конкретных узлах администратор может использовать стандартные механизмы планирования Kubernetes: `nodeAffinity`, `nodeSelector` и `tolerations`. Это позволяет, например, размещать экземпляры PostgreSQL на выделенных узлах с нужными лейблами или разрешать планирование на узлы с taints.
 
@@ -256,7 +193,7 @@ spec:
 - [`spec.nodeSelector`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeselector);
 - [`spec.tolerations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-tolerations).
 
-### Пример nodeAffinity
+#### Пример nodeAffinity
 
 ```yaml
 spec:
@@ -270,7 +207,15 @@ spec:
                 - "pg"
 ```
 
-### Пример tolerations
+#### Пример nodeSelector
+
+```yaml
+spec:
+  nodeSelector:
+    "node.deckhouse.io/group": "pg"
+```
+
+#### Пример tolerations
 
 ```yaml
 spec:
@@ -281,10 +226,74 @@ spec:
       effect: NoSchedule
 ```
 
-### Пример nodeSelector
+### Пример полного манифеста PostgresClass
+
+После выбора параметров создайте файл `postgresclass.yaml` с манифестом PostgresClass.
+
+Пример манифеста, который задаёт топологию, политики размера, правила валидации, значения конфигурации, переопределяемые параметры и параметры планирования подов:
 
 ```yaml
+apiVersion: managed-services.deckhouse.io/v1alpha1
+kind: PostgresClass
+metadata:
+  labels:
+    app.kubernetes.io/name: managed-psql-operator
+  name: new
 spec:
+  topology:
+    allowedTopologies:
+      - Zonal
+      - TransZonal
+      - Ignored
+    allowedZones: []
+    defaultTopology: Ignored
+  sizingPolicies:
+    - cores:
+        min: 1
+        max: 3
+      memory:
+        min: 1Gi
+        max: 5Gi
+        step: 1Gi
+      coreFractions:
+        - 10
+        - 20
+        - 50
+        - 100
+    - cores:
+        min: 4
+        max: 10
+      memory:
+        min: 5Gi
+        max: 15Gi
+        step: 1Gi
+      coreFractions:
+        - 50
+        - 100
+  validations:
+    - message: "Max connections should be more than 100"
+      rule: "configuration.maxConnections > 100"
+    - message: "Shared buffers should be less than 40% of memory.size"
+      rule: "configuration.sharedBuffers * 100 < instance.memory.size * 40"
+    - message: "walKeepSize can not be more than 1Gi"
+      rule: "configuration.walKeepSize <= 1073741824"
+  overridableConfiguration:
+    - maxConnections
+    - sharedBuffers
+    - walKeepSize
+  configuration:
+    maxConnections: 300
   nodeSelector:
     "node.deckhouse.io/group": "pg"
+  tolerations:
+    - key: primary-role
+      operator: Equal
+      value: pg
+      effect: NoSchedule
+```
+
+Чтобы применить манифест PostgresClass, выполните команду:
+
+```shell
+d8 k apply -f postgresclass.yaml
 ```
