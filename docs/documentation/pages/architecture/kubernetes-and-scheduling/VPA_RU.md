@@ -23,7 +23,7 @@ VPA может работать в двух режимах:
 
     > Чтобы использовать режим **InPlaceOrRecreate** в Kubernetes до версии 1.33, включите функцию (feature gate) `InPlacePodVerticalScaling` в [настройках модуля `control-plane-manager`](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
 
-  - **Auto** — устаревший режим. Его поддержка будет прекращена в будущих версиях Deckhouse Kubernetes Platform (DKP). Рекомендуется перейти на явный режим работы, например **InPlaceOrRecreate**, **Recreate** или **Initial**.
+  - **Auto** — устаревший режим. Его поддержка будет прекращена в будущих версиях Deckhouse Kubernetes Platform (DKP). Рекомендуется перейти на один из поддерживаемых режимов работы, например **InPlaceOrRecreate**, **Recreate** или **Initial**.
 
   - **Recreate** — VPA может изменять ресурсы у работающих подов, перезапуская их. В случае одного пода (`replicas: 1`) это приведет к недоступности сервиса на время перезапуска. VPA не пересоздает поды, если они были созданы без контроллера.
 
