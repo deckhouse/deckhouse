@@ -87,13 +87,13 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 		BeforeEach(func() {
 			resources := []string{
 				// Binding "test" now resolves to a single namespace (test-ns).
-				manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
-				manageRole("d8:manage:others:manager", "subsystem", "others"),
-				manageBinding("test", "d8:manage:others:manager"),
-				// Leftover use RoleBinding from test2-ns, which no longer
-				// contributes to the binding (its module role lost the
+				systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
+				systemRole("d8:subsystem:others:manager", "subsystem", "others"),
+				manageBinding("test", "d8:subsystem:others:manager"),
+				// Leftover RoleBinding from test2-ns, which no longer
+				// contributes to the binding (its module capability lost the
 				// rbac.deckhouse.io/namespace label or was removed).
-				existingUseBinding("d8:use:admin:binding:test", "test2-ns"),
+				existingUseBinding("d8:namespace:admin:binding:test", "test2-ns"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -102,10 +102,10 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 		It("keeps the still-valid binding and deletes the orphan in the dropped namespace", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:namespace:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:namespace:admin:binding:test"))
 
-			orphan := f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test")
+			orphan := f.KubernetesResource("RoleBinding", "test2-ns", "d8:namespace:admin:binding:test")
 			Expect(orphan).To(BeEmpty())
 		})
 	})
@@ -236,7 +236,7 @@ func existingUseBinding(name, namespace string) string {
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "d8:use:role:admin",
+			Name:     "d8:namespace:admin",
 		},
 	}
 	marshaled, _ := yaml.Marshal(&binding)
