@@ -587,7 +587,7 @@ spec:
 
                     If used, `cri.type` must be set to `Docker`.
 
-                    > **Note!** the `Docker` is deprecated.
+                    > **Note.** the `Docker` is deprecated.
                   type: object
                   properties:
                     maxConcurrentDownloads:
@@ -625,7 +625,7 @@ spec:
                       description: |
                         Maximum log file size before it is rotated.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        > **Warning.** This parameter does nothing if CRI type is `Docker`.
                     containerLogMaxFiles:
                       type: integer
                       minimum: 1
@@ -634,7 +634,11 @@ spec:
                       description: |
                         How many rotated log files to store before deleting them.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        > **Warning.** This parameter does nothing if CRI type is `Docker`.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
     - name: v1alpha2
       served: true
       storage: false
@@ -833,7 +837,7 @@ spec:
                       description: |
                         Docker settings for nodes.
 
-                        > **Note!** the `Docker` is deprecated.
+                        > **Note.** the `Docker` is deprecated.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
@@ -1239,7 +1243,7 @@ spec:
                       description: |
                         Maximum log file size before it is rotated.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        > **Warning.** This parameter does nothing if CRI type is `Docker`.
                     containerLogMaxFiles:
                       type: integer
                       minimum: 1
@@ -1248,7 +1252,11 @@ spec:
                       description: |
                         How many rotated log files to store before deleting them.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        > **Warning.** This parameter does nothing if CRI type is `Docker`.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
     - name: v1
       served: true
       storage: true
@@ -2201,6 +2209,10 @@ spec:
                       default: 4
                       description: |
                         How many rotated log files to store before deleting them.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
                     resourceReservation:
                       default: {}
                       type: object
@@ -2392,7 +2404,7 @@ spec:
                         - `Watchdog`: Uses the watchdog kernel module to automatically reboot nodes that lose connectivity with the cluster. In this mode, the fencing-agent also monitors node availability in the cluster.
 
                         When `fencing` is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin` parameter set to the value of `spec.fencing.watchdog.timeout` (60 seconds by default) and `soft_panic=1`.
-                        
+
                         How the fencing-agent works:
 
                         - The agent opens the `/dev/watchdog` device and sets the `node-manager.deckhouse.io/fencing-enabled` label on the node, as well as the `node-manager.deckhouse.io/fencing-mode` label with the value `Watchdog`.
