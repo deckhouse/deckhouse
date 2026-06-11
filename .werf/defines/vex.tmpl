@@ -18,7 +18,7 @@
     {{- $knownVulnPath = (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
   {{- else }}
     {{- $knownVulnPath = (printf "/images/%s/known_vulnerabilities.vex" $context.ImageName) }}
-    {{- $imageName = trimPrefix $context.ModuleName $context.ImageName }}
+    {{- $imageName = trimPrefix ( get $context "ModuleName" ) $context.ImageName }}
   {{- end }}
   {{- $vexFile := false }}
   {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
