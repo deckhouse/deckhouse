@@ -33,11 +33,10 @@ func validate(ctx context.Context, input proto.PrepareInput) error {
 }
 
 func prepare(_ context.Context, input proto.PrepareInput) (*proto.PrepareResult, error) {
-	cv, err := proto.ParseResourcesYAML(input.ResourcesYAML)
-	if err != nil {
-		return nil, fmt.Errorf("parse resources: %w", err)
+	cv := input.Vars
+	if cv == nil {
+		cv = &proto.CloudProviderVars{}
 	}
-	cv.Settings = input.ModuleConfig
 	return &proto.PrepareResult{
 		Vars:                  cv,
 		ProviderClusterConfig: input.ProviderClusterConfig,
@@ -115,19 +114,3 @@ func validateKubeconfig(ctx context.Context, input proto.PrepareInput) error {
 
 	return nil
 }
-
-// func validateCredentialsSecret(input proto.PrepareInput) error {
-// 	cv, err := proto.ParseResourcesYAML(input.ResourcesYAML)
-// 	if err != nil {
-// 		return fmt.Errorf("parse resources: %w", err)
-// 	}
-
-// 	if len(cv.Secrets) == 0 {
-// 		return fmt.Errorf(
-// 			"DVP cloud provider config validation error: no credential Secret found\n" +
-// 				"Hint: Check your config file: a Secret with provider credentials is required.",
-// 		)
-// 	}
-
-// 	return nil
-// }

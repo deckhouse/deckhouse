@@ -62,7 +62,7 @@ type GlobalOptions struct {
 	VersionMap             string
 	ModulesDir             string
 
-	// EnsureCandiAvailable is true when the install tree (candi/modules/version_map) is missing on disk and must be downloaded from the registry.
+	// EnsureCandiAvailable: the install tree is missing and must be downloaded.
 	EnsureCandiAvailable bool
 }
 
@@ -224,15 +224,9 @@ func CheckDirs(skip ...string) bool {
 	return true
 }
 
-// ResolveAndApplyPaths recomputes the install-tree root and the
-// EnsureCandiAvailable flag for opts. If the required install tree is
-// present at pwd (subject to skip), root = pwd and EnsureCandiAvailable
-// is cleared. Otherwise root = opts.DownloadDir and EnsureCandiAvailable
-// is set, signalling that prepareCandiDir must run.
-//
-// skip... lists directories that may legitimately be absent — used by
-// converger/autoconverger pods that intentionally run without the
-// modules tree.
+// ResolveAndApplyPaths roots the install-tree paths at pwd when the tree is
+// present there, otherwise at opts.DownloadDir with EnsureCandiAvailable set.
+// skip lists directories that may legitimately be absent.
 func ResolveAndApplyPaths(opts *GlobalOptions, skip ...string) {
 	rootPath, err := os.Getwd()
 	if err != nil {

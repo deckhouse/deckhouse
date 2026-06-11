@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -160,14 +161,39 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 		m.ProviderClusterConfig[k] = raw
 	}
 
-	// A preparator may mutate ProviderClusterConfig (the protocol explicitly
-	// permits this). Re-extract typed fields so any new layout/masterNodeGroup/
-	// nodeGroups produced by the preparator land in m.Layout / etc.
+	if len(result.ProviderClusterConfig) > 0 {
+		if err := m.validateMutatedProviderClusterConfig(); err != nil {
+			return nil, err
+		}
+	}
+
+	// Re-extract typed fields: the preparator may have mutated PCC.
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
 	}
 
 	return m, nil
+}
+
+// validateMutatedProviderClusterConfig re-validates ProviderClusterConfig
+// against the provider schema after a preparator mutated it, so a buggy
+// provider binary cannot inject an invalid configuration into tfvars.
+func (m *MetaConfig) validateMutatedProviderClusterConfig() error {
+	var index SchemaIndex
+	_ = json.Unmarshal(m.ProviderClusterConfig["kind"], &index.Kind)
+	_ = json.Unmarshal(m.ProviderClusterConfig["apiVersion"], &index.Version)
+	if !index.IsValid() {
+		return nil
+	}
+
+	doc, err := json.Marshal(m.ProviderClusterConfig)
+	if err != nil {
+		return fmt.Errorf("marshal mutated provider cluster configuration: %w", err)
+	}
+	if err := NewSchemaStore(nil).ValidateWithIndex(&index, &doc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
+		return fmt.Errorf("provider %s preparator mutated provider cluster configuration into an invalid state: %w", m.ProviderName, err)
+	}
+	return nil
 }
 
 var deprecatedClusterConfigFields = []struct {
@@ -235,7 +261,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	if m.CloudProviderVars == nil && m.ResourcesYAML != "" {
-		cv, err := providerdata.CloudProviderVarsFromInput(ctx, providerdata.PrepareInput{ResourcesYAML: m.ResourcesYAML})
+		cv, err := providerdata.ParseResourcesYAML(m.ResourcesYAML)
 		if err != nil {
 			return nil, fmt.Errorf("parse cloud provider resources: %w", err)
 		}
@@ -250,14 +276,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
-// and TerraNodeGroupSpecs from m.ProviderClusterConfig (legacy PCC flow) and
-// falls back to CloudProviderVars.NodeGroups when PCC is empty (mc-flow).
-//
-// For providers in ProviderRequiresClusterConfig (yandex, vcd, gcp, aws,
-// azure, openstack, vsphere, zvirt) the PCC is the single source of truth
-// for layout / master / node groups — a missing field means the Secret was
-// hand-edited or otherwise corrupted, so we fail fast rather than silently
-// run converge with zeroed-out typed fields.
+// and TerraNodeGroupSpecs from PCC (legacy flow), falling back to
+// CloudProviderVars.NodeGroups when PCC is empty (mc-flow). For providers that
+// require PCC a missing field fails fast instead of running converge with
+// zeroed typed fields.
 func (m *MetaConfig) extractProviderClusterFields() error {
 	pccRequired := ProviderRequiresClusterConfig(m.ProviderName)
 	pccPresent := len(m.ProviderClusterConfig) > 0
@@ -286,25 +308,17 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 			return fmt.Errorf("unmarshal node groups from provider cluster configuration: %w", err)
 		}
 	}
-	// "nodeGroups" is intentionally not enforced as required even for
-	// whitelisted providers: an empty cluster (master-only) is a legitimate
-	// configuration with no worker node groups defined.
+	// "nodeGroups" is not required even for whitelisted providers: a
+	// master-only cluster is legitimate.
 
-	// mc-flow: PCC is absent, so MasterNodeGroupSpec and TerraNodeGroupSpecs
-	// stay empty after the PCC reads above. Derive them from the cluster's
-	// NodeGroup resources (already loaded into CloudProviderVars.NodeGroups by
-	// CloudProviderVarsFromCluster). Most consumers — converge/runner.go,
-	// MasterNodeGroupController, cluster-bootstrapper preflight,
-	// cloud_prefix_length — read these typed fields directly, so leaving
-	// them at zero misroutes converge into "decrease to 0" logic.
+	// mc-flow: derive replica counts from cluster NodeGroups, otherwise the
+	// zeroed typed fields misroute converge into "decrease to 0" logic.
 	applyNodeGroupReplicasFromCloudProviderVars(m)
 	return nil
 }
 
-// masterNodeGroupName is the canonical NodeGroup name for control-plane
-// nodes in every Deckhouse install. Renaming it is not supported, so it is
-// safe to look the master NG up by name when deriving replica counts from
-// mc-flow CloudProviderVars.
+// masterNodeGroupName is the canonical control-plane NodeGroup name; renaming
+// it is not supported in Deckhouse.
 const masterNodeGroupName = "master"
 
 func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
@@ -483,15 +497,6 @@ func (s ModuleConfigSpec) layoutString() string {
 	return typed.Nodes.Parameters.Layout
 }
 
-func (m *MetaConfig) findModuleConfig(name string) *ModuleConfig {
-	for _, mc := range m.ModuleConfigs {
-		if mc.GetName() == name {
-			return mc
-		}
-	}
-	return nil
-}
-
 func (m *MetaConfig) clusterCloudSpec() (ClusterConfigCloudSpec, error) {
 	var cloud ClusterConfigCloudSpec
 	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
@@ -521,7 +526,6 @@ func (m *MetaConfig) buildProviderInput() ProviderInput {
 		Operation:             m.Operation,
 		ProviderClusterConfig: m.ProviderClusterConfig,
 		CloudProviderVars:     m.CloudProviderVars,
-		ResourcesYAML:         m.ResourcesYAML,
 	}
 }
 
@@ -545,7 +549,7 @@ func (m *MetaConfig) prepareRegistry() error {
 	}
 
 	// Deckhouse mc
-	if mc := m.findModuleConfig("deckhouse"); mc != nil {
+	if mc := m.FindModuleConfig("deckhouse"); mc != nil {
 		rawJSON, err := json.Marshal(mc)
 		if err != nil {
 			return err
