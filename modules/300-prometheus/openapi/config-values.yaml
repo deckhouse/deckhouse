@@ -1,4 +1,4 @@
-x-config-version: 2
+x-config-version: 3
 type: object
 properties:
   retentionDays:
@@ -209,7 +209,7 @@ properties:
   vpa:
     type: object
     x-examples:
-      - {updateMode: "Initial", longtermMaxCPU: "1", longtermMaxMemory: "1500Mi", maxCPU: "1000m", maxMemory: "1500Mi"}
+      - {updateMode: "InPlaceOrRecreate", longtermMaxCPU: "1", longtermMaxMemory: "1500Mi", maxCPU: "1000m", maxMemory: "1500Mi"}
       - {updateMode: "Off"}
     default: {updateMode: "Initial"}
     description: |
@@ -259,10 +259,20 @@ properties:
         type: string
         description: |
           The VPA usage mode.
+
+          - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+            Resource values are not changed automatically afterwards.
+
+          - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+            If in-place updates are not possible, the pod will be recreated.
+
+          - `Off` — VPA does not apply resource changes to running pods; recommendations are available in the VPA status.
+
+          > The `Auto` mode is deprecated since Deckhouse 1.75. Use `InPlaceOrRecreate` instead.
         default: "Initial"
         enum:
           - "Initial"
-          - "Auto"
+          - "InPlaceOrRecreate"
           - "Off"
   highAvailability:
     type: boolean

@@ -65,6 +65,21 @@ grafana:
 			currentVersion:  1,
 			expectedVersion: 2,
 		},
+		{
+			name: "should convert from 2 to 3 version",
+			settings: `
+vpa:
+  updateMode: Auto
+  maxCPU: "1000m"
+`,
+			expected: `
+vpa:
+  updateMode: InPlaceOrRecreate
+  maxCPU: "1000m"
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
+		},
 	}
 
 	for _, c := range cases {
