@@ -12,7 +12,7 @@ import:
 {{- include "image mount points" . }}
 shell:
   beforeInstall:
-  - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux
+  - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils
   install:
   - rm -f /sbin
 imageSpec:
