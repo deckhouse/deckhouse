@@ -146,6 +146,7 @@ To view the permissions created by source modules, use the [command](#get_rules)
 
 ```text
 read:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -159,7 +160,6 @@ read:
     - batch/jobs
     - cert-manager.io/certificaterequests
     - cert-manager.io/certificates
-    - cert-manager.io/challenges
     - cert-manager.io/clusterissuers
     - cert-manager.io/issuers
     - cilium.io/ciliumclusterwidenetworkpolicies
@@ -389,10 +389,10 @@ write:
 create,patch,update:
     - pods
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apps/replicasets
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
     - extensions/replicasets
 read:
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -424,9 +424,9 @@ write:
 
 ```text
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
 patch,update:
     - nodes
 read:
