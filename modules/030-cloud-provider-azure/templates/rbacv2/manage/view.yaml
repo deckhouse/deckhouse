@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-azure
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-azure
-  name: d8:manage:permission:module:cloud-provider-azure:view
+  name: d8:system-capability:cloud-provider-azure:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cloud-provider-azure: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль cloud-provider-azure: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the cloud-provider-azure module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля cloud-provider-azure."
 rules:
 - apiGroups:
   - deckhouse.io

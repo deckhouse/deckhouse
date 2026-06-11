@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: csi-vsphere
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-csi-vsphere
-  name: d8:manage:permission:module:csi-vsphere:view
+  name: d8:system-capability:csi-vsphere:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module csi-vsphere: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль csi-vsphere: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the csi-vsphere module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля csi-vsphere."
 rules:
 - apiGroups:
   - deckhouse.io

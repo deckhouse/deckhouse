@@ -29,22 +29,32 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 )
 
 var (
 	ErrNamespaceOverride = errors.New("objects that defined in different namespaces will still be deployed to project namespace")
 )
 
+// filteredKinds lists the resource kinds that are no longer allowed in project templates: they are
+// now managed by the controller from the Project spec (quota -> ResourceQuota, administrators ->
+// ProjectRoleBinding -> AuthorizationRule). Such objects are dropped during rendering.
+var filteredKinds = map[string]struct{}{
+	"ResourceQuota":     {},
+	"AuthorizationRule": {},
+}
+
 type postRenderer struct {
-	project        *v1alpha2.Project
+	project        *v1alpha3.Project
 	versions       map[string]struct{}
 	logger         logr.Logger
 	warning        error
 	isFirstInstall bool
+	// filtered is set when at least one ResourceQuota/AuthorizationRule object was dropped.
+	filtered bool
 }
 
-func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, logger logr.Logger, isFirstInstall bool) *postRenderer {
+func newPostRenderer(project *v1alpha3.Project, versions map[string]struct{}, logger logr.Logger, isFirstInstall bool) *postRenderer {
 	return &postRenderer{
 		project:        project,
 		versions:       versions,
@@ -57,7 +67,7 @@ func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, lo
 // or will add a project namespace if it does not exist in manifests
 func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// clear resources
-	r.project.Status.Resources = make(map[string]map[string]v1alpha2.ResourceKind)
+	r.project.Status.Resources = make(map[string]map[string]v1alpha3.ResourceKind)
 
 	var core *unstructured.Unstructured
 	builder := strings.Builder{}
@@ -70,6 +80,14 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 
 		// skip empty manifests
 		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+			continue
+		}
+
+		// drop resources that are now managed by the controller from the Project spec
+		// (ResourceQuota via spec.quota, AuthorizationRule via spec.administrators).
+		if _, ok := filteredKinds[object.GetKind()]; ok {
+			r.filtered = true
+			r.logger.Info("the resource is managed by the project spec and was filtered out", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
 			continue
 		}
 
@@ -90,7 +108,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 
 		// check if resource should be excluded from management
 		isUnmanaged := false
-		if _, ok := labels[v1alpha2.ResourceLabelUnmanaged]; ok {
+		if _, ok := labels[v1alpha3.ResourceLabelUnmanaged]; ok {
 			isUnmanaged = true
 			// Include unmanaged resources only on first install to create them once
 			// On subsequent upgrades, skip them so they won't be updated
@@ -113,12 +131,12 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 		// For unmanaged resources, only add project and template labels, not heritage
 		// For other resources, skip heritage label if ResourceLabelSkipHeritage is set
 		if !isUnmanaged {
-			if _, skipHeritage := labels[v1alpha2.ResourceLabelSkipHeritage]; !skipHeritage {
-				labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+			if _, skipHeritage := labels[v1alpha3.ResourceLabelSkipHeritage]; !skipHeritage {
+				labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
 			}
 		}
-		labels[v1alpha2.ResourceLabelProject] = r.project.Name
-		labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
+		labels[v1alpha3.ResourceLabelProject] = r.project.Name
+		labels[v1alpha3.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 
 		object.SetLabels(labels)
 
@@ -140,7 +158,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 
 		// Track resource in project status only if it's not unmanaged
 		// Unmanaged resources are created once but not tracked/updated
-		if _, isUnmanaged := labels[v1alpha2.ResourceLabelUnmanaged]; !isUnmanaged {
+		if _, isUnmanaged := labels[v1alpha3.ResourceLabelUnmanaged]; !isUnmanaged {
 			r.project.AddResource(object, true)
 		}
 
@@ -175,9 +193,9 @@ func (r *postRenderer) newNamespace(name string) []byte {
 		},
 	}
 
-	obj.Labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
-	obj.Labels[v1alpha2.ResourceLabelProject] = r.project.Name
-	obj.Labels[v1alpha2.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
+	obj.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
+	obj.Labels[v1alpha3.ResourceLabelProject] = r.project.Name
+	obj.Labels[v1alpha3.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
 
 	data, _ := yaml.Marshal(obj)
 	return data

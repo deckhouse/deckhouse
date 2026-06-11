@@ -65,7 +65,7 @@ spec:
                   type: boolean
     - name: v1alpha2
       served: true
-      storage: true
+      storage: false
       deprecated: false
       subresources:
         status: {}
@@ -116,6 +116,151 @@ spec:
                   type: array
                   items:
                     type: string
+                observedGeneration:
+                  description: The last observed project`s generation
+                  type: integer
+                templateGeneration:
+                  description: The last observed template`s generation
+                  type: integer
+                resources:
+                  description: Rendered and skipped resources.
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        installed:
+                          type: boolean
+                          description: Indicates if the resources were successfully rendered.
+                        names:
+                          type: array
+                          description: List of resource names.
+                          items:
+                            type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
+                        type: string
+                state:
+                  description: Brief description of the project status, such as Error, Deploying, Deployed, etc.
+                  type: string
+    - name: v1alpha3
+      served: true
+      storage: true
+      deprecated: false
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.state
+          name: State
+          type: string
+        - jsonPath: .spec.projectTemplateName
+          name: Project template
+          type: string
+        - jsonPath: .spec.description
+          name: Description
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-validations:
+            - rule: 'size(self.metadata.name) <= 53'
+              message: "Project name must be no longer than 53 characters."
+          properties:
+            spec:
+              type: object
+              properties:
+                description:
+                  description: |
+                    Arbitrary description of the project's purpose. Specify an empty string if no description is required.
+                  type: string
+                projectTemplateName:
+                  description: |
+                    The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
+
+                    Optional. If omitted, the controller only ensures the project namespace and the standard fields (`administrators`, `quota`).
+                  type: string
+                administrators:
+                  description: |
+                    Users and groups that get administrative access to the project.
+
+                    For each entry the controller creates a managed `ProjectRoleBinding` granting the `d8:project:admin` role.
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - kind
+                      - name
+                    properties:
+                      kind:
+                        description: Kind of the subject.
+                        type: string
+                        enum:
+                          - User
+                          - Group
+                      name:
+                        description: Name of the subject.
+                        type: string
+                        minLength: 1
+                quota:
+                  description: |
+                    Resource quota of the project, applied as a `ResourceQuota` named `d8-project-quota` in the project namespace.
+
+                    Keys and values follow the `ResourceQuota.spec.hard` format, for example `requests.cpu: "100"`.
+                  type: object
+                  additionalProperties:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    x-kubernetes-int-or-string: true
+                parameters:
+                  additionalProperties:
+                    x-kubernetes-preserve-unknown-fields: true
+                  description: |
+                    Parameters passed to the [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) when creating the project.
+
+                    Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) of the template's input parameters.
+                  type: object
+            status:
+              type: object
+              properties:
+                namespaces:
+                  description: Namespaces that belong to the project.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        description: Name of the namespace.
+                        type: string
+                      kind:
+                        description: Kind of the namespace (Main or Additional).
+                        type: string
+                usage:
+                  description: Current utilization of the project quota.
+                  type: object
+                  additionalProperties:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    x-kubernetes-int-or-string: true
                 observedGeneration:
                   description: The last observed project`s generation
                   type: integer

@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:project:manager
+  annotations:
+    en.meta.deckhouse.io/title: "Project Manager"
+    ru.meta.deckhouse.io/title: "Менеджер проекта"
+    en.meta.deckhouse.io/description: "Project User plus management of quotas, basic policies, and project namespaces (ProjectNamespace)."
+    ru.meta.deckhouse.io/description: "Права пользователя проекта плюс управление квотами, базовыми политиками и пространствами имён проекта (ProjectNamespace)."
+    rbac.deckhouse.io/bindable-only-via: "ProjectRoleBinding,ClusterProjectRoleBinding"
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/delegatable: "true"
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: project
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-project-as: manager
+rules: []

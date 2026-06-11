@@ -109,6 +109,12 @@ func ensureDictBindings(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
+		// Recreate bindings referring to the legacy dict role name (renamed d8:use:dict -> d8:dict).
+		if parsed.RoleName != "d8:dict" {
+			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", parsed.Name)
+			continue
+		}
+
 		subjectString := stringBySubject(parsed.Subjects[0])
 
 		if _, ok := subjects[subjectString]; !ok {
@@ -145,7 +151,7 @@ func createDictBinding(subjectString string, subject rbacv1.Subject) *rbacv1.Rol
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "d8:use:dict",
+			Name:     "d8:dict",
 		},
 		Subjects: []rbacv1.Subject{subject},
 	}
@@ -173,7 +179,7 @@ func isD8DictBinding(bind *rbacv1.RoleBinding) bool {
 		return false
 	}
 
-	return strings.HasPrefix(bind.RoleRef.Name, "d8:use:role:")
+	return strings.HasPrefix(bind.RoleRef.Name, "d8:namespace:")
 }
 
 func isRBACv1ReservedRoleRef(bind *rbacv1.RoleBinding) bool {

@@ -5,9 +5,15 @@ metadata:
   labels:
     heritage: deckhouse
     module: log-shipper
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:log-shipper:view
+    rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:log-shipper:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module log-shipper: view"
+    ru.meta.deckhouse.io/title: "Модуль log-shipper: просмотр"
+    en.meta.deckhouse.io/description: "Read-only access to log-shipper resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к ресурсам модуля log-shipper в пространстве имён."
 rules:
 - apiGroups:
   - deckhouse.io

@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: prometheus-pushgateway
     rbac.deckhouse.io/aggregate-to-observability-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: kube-prometheus-pushgateway
-  name: d8:manage:permission:module:prometheus-pushgateway:view
+  name: d8:system-capability:prometheus-pushgateway:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module prometheus-pushgateway: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль prometheus-pushgateway: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the prometheus-pushgateway module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля prometheus-pushgateway."
 rules:
 - apiGroups:
   - deckhouse.io

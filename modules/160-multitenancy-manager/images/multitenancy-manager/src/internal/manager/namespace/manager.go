@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
 )
 
@@ -87,10 +87,10 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 		return ctrl.Result{}, fmt.Errorf("failed to update the '%s' namespace: %w", namespace.GetName(), err)
 	}
 
-	project := &v1alpha2.Project{
+	project := &v1alpha3.Project{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha2.SchemeGroupVersion.String(),
-			Kind:       v1alpha2.ProjectKind,
+			APIVersion: v1alpha3.SchemeGroupVersion.String(),
+			Kind:       v1alpha3.ProjectKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace.Name,
@@ -101,7 +101,7 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 	if err := m.client.Create(ctx, project); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			m.logger.Info("project already exists", "project", project.Name)
-			delete(namespace.Annotations, v1alpha2.NamespaceAnnotationAdopt)
+			delete(namespace.Annotations, v1alpha3.NamespaceAnnotationAdopt)
 			if err = m.client.Update(ctx, namespace); err != nil {
 				m.logger.Error(err, "failed to update the namespace", "namespace", project.Name)
 				return ctrl.Result{}, fmt.Errorf("failed to update the '%s' namespace: %w", namespace.GetName(), err)

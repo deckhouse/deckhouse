@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
 )
 
@@ -61,8 +61,8 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 
 		// cannot delete template if it is used
-		projects := new(v1alpha2.ProjectList)
-		if err := v.client.List(context.Background(), projects, client.MatchingLabels{v1alpha2.ResourceLabelTemplate: template.Name}); err != nil {
+		projects := new(v1alpha3.ProjectList)
+		if err := v.client.List(context.Background(), projects, client.MatchingLabels{v1alpha3.ResourceLabelTemplate: template.Name}); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if len(projects.Items) > 0 {

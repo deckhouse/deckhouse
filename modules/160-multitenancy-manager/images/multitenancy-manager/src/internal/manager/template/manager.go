@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
 )
 
@@ -97,7 +97,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 				if project.Annotations == nil {
 					project.Annotations = map[string]string{}
 				}
-				project.Annotations[v1alpha2.ProjectAnnotationRequireSync] = "true"
+				project.Annotations[v1alpha3.ProjectAnnotationRequireSync] = "true"
 				return m.client.Update(ctx, project)
 			})
 			if err != nil {

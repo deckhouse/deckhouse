@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: log-shipper
     rbac.deckhouse.io/aggregate-to-observability-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-log-shipper
-  name: d8:manage:permission:module:log-shipper:edit
+  name: d8:system-capability:log-shipper:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module log-shipper: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль log-shipper: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the log-shipper module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля log-shipper."
 rules:
 - apiGroups:
   - deckhouse.io

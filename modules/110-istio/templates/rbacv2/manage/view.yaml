@@ -7,10 +7,15 @@ metadata:
     module: istio
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
     rbac.deckhouse.io/aggregate-to-networking-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-istio
-  name: d8:manage:permission:module:istio:view
+  name: d8:system-capability:istio:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module istio: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль istio: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the istio module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля istio."
 rules:
 - apiGroups:
   - deckhouse.io

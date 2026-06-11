@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: admission-policy-engine
     rbac.deckhouse.io/aggregate-to-security-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-admission-policy-engine
-  name: d8:manage:permission:module:admission-policy-engine:view
+  name: d8:system-capability:admission-policy-engine:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module admission-policy-engine: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль admission-policy-engine: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the admission-policy-engine module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля admission-policy-engine."
 rules:
 - apiGroups:
   - deckhouse.io

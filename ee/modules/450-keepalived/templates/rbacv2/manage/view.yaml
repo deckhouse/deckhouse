@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: keepalived
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-keepalived
-  name: d8:manage:permission:module:keepalived:view
+  name: d8:system-capability:keepalived:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module keepalived: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль keepalived: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the keepalived module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля keepalived."
 rules:
 - apiGroups:
   - deckhouse.io

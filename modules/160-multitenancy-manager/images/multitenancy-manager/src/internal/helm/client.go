@@ -41,7 +41,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
 )
 
@@ -135,13 +135,14 @@ func (c *Client) DebugLog(format string, args ...interface{}) {
 	c.logger.Info(fmt.Sprintf(format, args...))
 }
 
-// Upgrade upgrades resources
-func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+// Upgrade upgrades resources. It returns whether any controller-managed resource (ResourceQuota,
+// AuthorizationRule) was filtered out of the rendered template.
+func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (bool, error) {
 	ch := buildChart(c.templates, project.Name)
 
 	versions, err := c.discoverAPI()
 	if err != nil {
-		return fmt.Errorf("discover api: %w", err)
+		return false, fmt.Errorf("discover api: %w", err)
 	}
 
 	values := buildValues(project, template)
@@ -159,29 +160,29 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			install.Timeout = c.opts.Timeout
 			install.UseReleaseName = true
 			install.Labels = map[string]string{
-				v1alpha2.ReleaseLabelHashsum: hash,
+				v1alpha3.ReleaseLabelHashsum: hash,
 			}
 			install.PostRenderer = post
 			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
-				return fmt.Errorf("install the release: %w", err)
+				return false, fmt.Errorf("install the release: %w", err)
 			}
 			c.logger.Info("the release installed", "release", project.Name, "namespace", project.Name)
-			return nil
+			return post.filtered, nil
 		}
-		return fmt.Errorf("retrieve history for the release: %w", err)
+		return false, fmt.Errorf("retrieve history for the release: %w", err)
 	}
 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
-	if releaseHash, ok := releases[0].Labels[v1alpha2.ReleaseLabelHashsum]; ok {
+	if releaseHash, ok := releases[0].Labels[v1alpha3.ReleaseLabelHashsum]; ok {
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
 			c.logger.Info("the release is up to date", "release", project.Name, "namespace", project.Name)
-			return nil
+			return false, nil
 		}
 	}
 
 	if releases[0].Info.Status.IsPending() {
 		if err = c.rollbackLatestRelease(releases); err != nil {
-			return fmt.Errorf("rollback latest release: %w", err)
+			return false, fmt.Errorf("rollback latest release: %w", err)
 		}
 	}
 
@@ -191,16 +192,16 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
 	upgrade.Labels = map[string]string{
-		v1alpha2.ReleaseLabelHashsum: hash,
+		v1alpha3.ReleaseLabelHashsum: hash,
 	}
 	upgrade.PostRenderer = post
 
 	if _, err = upgrade.RunWithContext(ctx, project.Name, ch, values); err != nil {
-		return fmt.Errorf("upgrade the release: %w", err)
+		return false, fmt.Errorf("upgrade the release: %w", err)
 	}
 
 	c.logger.Info("the release upgraded", "release", project.Name, "namespace", project.Name)
-	return nil
+	return post.filtered, nil
 }
 
 // discoverAPI returns api versions, they will be used in the post renderer
@@ -249,7 +250,7 @@ func buildChart(templates map[string][]byte, releaseName string) *chart.Chart {
 	return ch
 }
 
-func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
+func buildValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
 	// to handle empty template
 	if len(template.Spec.ResourcesTemplate) == 0 {
 		template.Spec.ResourcesTemplate = " "
@@ -360,7 +361,7 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 }
 
 // ValidateRender tests project render
-func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+func (c *Client) ValidateRender(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) error {
 	ch := buildChart(c.templates, project.Name)
 
 	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{

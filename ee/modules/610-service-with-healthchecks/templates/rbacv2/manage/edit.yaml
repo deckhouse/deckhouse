@@ -1,8 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/aggregate-to-networking-as" "manager" "rbac.deckhouse.io/kind" "manage" "rbac.deckhouse.io/level" "module" "rbac.deckhouse.io/namespace" "d8-service-with-healthchecks")) | nindent 2 }}
-  name: d8:manage:permission:module:service-with-healthchecks:edit
+  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/aggregate-to-networking-as" "manager" "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "system" "rbac.deckhouse.io/namespace" "d8-service-with-healthchecks")) | nindent 2 }}
+  name: d8:system-capability:service-with-healthchecks:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module service-with-healthchecks: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль service-with-healthchecks: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the service-with-healthchecks module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля service-with-healthchecks."
 rules:
 - apiGroups:
   - deckhouse.io

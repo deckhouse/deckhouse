@@ -7,10 +7,15 @@ metadata:
     module: kube-dns
     rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
     rbac.deckhouse.io/aggregate-to-networking-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: kube-system
-  name: d8:manage:permission:module:kube-dns:view
+  name: d8:system-capability:kube-dns:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module kube-dns: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль kube-dns: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the kube-dns module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля kube-dns."
 rules:
 - apiGroups:
   - deckhouse.io

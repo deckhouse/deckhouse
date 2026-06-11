@@ -1,0 +1,63 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem-capability:kubernetes:manage_resources
+  annotations:
+    en.meta.deckhouse.io/title: "Kubernetes: manage cluster resources"
+    ru.meta.deckhouse.io/title: "Kubernetes: управление кластерными ресурсами"
+    en.meta.deckhouse.io/description: "Manage common cluster-scoped Kubernetes resources."
+    ru.meta.deckhouse.io/description: "Управление общими кластерными ресурсами Kubernetes."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: kubernetes
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
+rules:
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - node.k8s.io
+    resources:
+      - runtimeclasses
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - scheduling.k8s.io
+    resources:
+      - priorityclasses
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
