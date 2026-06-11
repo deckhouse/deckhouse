@@ -22,12 +22,13 @@ import (
 )
 
 var (
-	checkPortsScriptPath              = filepath.Join("preflight", "check_ports.sh.tpl")
-	checkLocalhostScriptPath          = filepath.Join("preflight", "check_localhost.sh.tpl")
-	checkProxyRevTunnelOpenScriptPath = filepath.Join("preflight", "check_reverse_tunnel_open.sh.tpl")
-	killReverseTunnelPath             = filepath.Join("preflight", "kill_reverse_tunnel.sh.tpl")
-	checkDeckhouseUserScriptPath      = filepath.Join("preflight", "check_deckhouse_user.sh.tpl")
-	preflightScriptDirPath            = "preflight"
+	checkPortsScriptPath                  = filepath.Join("preflight", "check_ports.sh.tpl")
+	checkLocalhostScriptPath              = filepath.Join("preflight", "check_localhost.sh.tpl")
+	checkProxyRevTunnelOpenScriptPath     = filepath.Join("preflight", "check_reverse_tunnel_open.sh.tpl")
+	killReverseTunnelPath                 = filepath.Join("preflight", "kill_reverse_tunnel.sh.tpl")
+	checkReverseTunnelReachableScriptPath = filepath.Join("preflight", "check_reverse_tunnel_reachable.sh.tpl")
+	checkDeckhouseUserScriptPath          = filepath.Join("preflight", "check_deckhouse_user.sh.tpl")
+	preflightScriptDirPath                = "preflight"
 )
 
 func RenderAndSavePreflightCheckPortsScript(globalOptions *options.GlobalOptions) (string, error) {
@@ -78,6 +79,19 @@ func RenderAndSaveKillReverseTunnelScript(host, port string, globalOptions *opti
 		map[string]interface{}{
 			"host": host,
 			"port": port,
+		},
+	)
+}
+
+func RenderAndSavePreflightReverseTunnelReachableScript(url string, globalOptions *options.GlobalOptions) (string, error) {
+	log.DebugLn("Start render proxy reverse tunnel reachable script")
+	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkReverseTunnelReachableScriptPath)
+
+	return RenderAndSaveTemplate(
+		"check_reverse_tunnel_reachable.sh",
+		scriptPath,
+		map[string]interface{}{
+			"url": url,
 		},
 	)
 }
