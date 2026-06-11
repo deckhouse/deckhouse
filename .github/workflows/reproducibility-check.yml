@@ -16,9 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Weekly build reproducibility check.
+# Build reproducibility check, runs 4 times a day.
 #
-# Trigger: schedule (Saturday 01:00 MSK = Friday 22:00 UTC) or workflow_dispatch.
+# Trigger: schedule (every 6 hours) or workflow_dispatch.
 # On schedule the latest 'main' commit is taken; on manual run the commit SHA
 # is provided as an input.
 #
@@ -33,9 +33,10 @@
 name: 'Build reproducibility check'
 
 on:
-  # Saturday 01:00 MSK (UTC+3, no DST) == Friday 22:00 UTC.
+  # 4 times a day, every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
+  # (03:00, 09:00, 15:00, 21:00 MSK, UTC+3, no DST).
   schedule:
-    - cron: '0 22 * * 5'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       commit_sha:
@@ -991,3 +992,89 @@ jobs:
           python3 .github/scripts/python/reproducibility_check.py \
             baseline/build_report_FE/images_tags_werf.json \
             rerun/build_report_FE/images_tags_werf.json
+
+  # Notify the team in Loop when a scheduled check breaks: either the FE rebuild
+  # itself failed, or the rerun digests diverged from the baseline (the build is
+  # not reproducible). Only scheduled (automatic) runs alert; manual
+  # workflow_dispatch runs are assumed to be watched by the operator.
+  send_alert_about_workflow_problem:
+    name: Send alert about workflow problem
+    runs-on: "regular"
+    needs:
+      - resolve_target
+      - build_fe_main
+      - build_fe_dev
+      - compare_reports
+    if: ${{ failure() && github.event_name == 'schedule' && github.repository == 'deckhouse/deckhouse' && github.run_attempt == 1 }}
+    steps:
+    # <template: import_secrets>
+    - name: Split repository name
+      id: split
+      env:
+        REPO: ${{ github.repository }}
+      run: |
+        if [ $REPO == "deckhouse/deckhouse" ]; then
+          echo "name=deckhouse" >> $GITHUB_OUTPUT
+        else
+          echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+        fi
+    - name: Import secrets
+      id: secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: https://seguro.flant.com
+        path: github
+        role: "${{ steps.split.outputs.name }}"
+        method: jwt
+        jwtGithubAudience: github-access-aud
+        secrets: |
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop token | LOOP_CVE_REPORTS_SEND_TOKEN ;
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop channel_id | LOOP_E2E_REPORT_CHANNEL_ID ;
+
+    # </template: import_secrets>
+    - name: Check loop alerting credentials
+      id: check_loop_alerting
+      if: always()
+      env:
+        LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
+      run: |
+        if [[ -n $LOOP_TOKEN ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
+    - name: Send loop alert on fail
+      if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' }}
+      env:
+        LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
+        LOOP_CHANNEL_ID: ${{ steps.secrets.outputs.LOOP_E2E_REPORT_CHANNEL_ID }}
+        COMPARE_RESULT: ${{ needs.compare_reports.result }}
+        BUILD_MAIN_RESULT: ${{ needs.build_fe_main.result }}
+        BUILD_DEV_RESULT: ${{ needs.build_fe_dev.result }}
+        TARGET_SHA: ${{ needs.resolve_target.outputs.sha }}
+      run: |
+        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+
+        if [[ "$COMPARE_RESULT" == "failure" ]]; then
+          REASON="digest mismatch on rebuild (build is not reproducible)"
+        elif [[ "$BUILD_MAIN_RESULT" == "failure" || "$BUILD_DEV_RESULT" == "failure" ]]; then
+          REASON="FE rebuild failed"
+        else
+          REASON="failed to resolve baseline / workflow error"
+        fi
+
+        alertData=$(cat <<EOF
+        {
+        "channel_id": "${LOOP_CHANNEL_ID}",
+        "message": "🛑Build reproducibility check failed🛑\nReason: ${REASON}\nSHA: ${TARGET_SHA}\n[URL](${WORKFLOW_URL})"
+        }
+        EOF
+        )
+
+        for (( iter = 1; iter < 60; iter++ )); do
+          if curl -f -L -X POST "https://loop.flant.ru/api/v4/posts" -H "Content-Type: application/json" -H "Authorization: Bearer ${LOOP_TOKEN}" --data "${alertData}"; then
+            exit 0
+          fi
+
+          echo "Alert was not sent. Wait 5 seconds before next attempt"
+          sleep 5
+        done
+
+        echo "Alert was not sent. Timeout"
+        exit 1
