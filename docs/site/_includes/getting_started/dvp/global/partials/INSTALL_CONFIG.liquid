@@ -1,4 +1,10 @@
 {% assign revision=include.revision %}
+{% capture dvp_cfg_yaml %}
+{% include getting_started/dvp/global/partials/config-dvp.yml.inc.liquid revision=revision %}
+{% endcapture %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^\s*# \[<ru>\][^\r\n]*(?:\r\n|\n|\r)', '' %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^\s*# \[<ru>\][^\r\n]*\z', '' %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^(\s*)# \[<en>\]\s*', '\1# ' %}
 
 {% if revision == 'ee' %}
 {% include getting_started/global/EE_ACCESS.md revision=revision %}
@@ -6,46 +12,39 @@
 {% endif %}
 
 <div markdown="1">
-  The recommended settings for a Deckhouse Virtualization Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %} installation are generated below:
-- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters,{% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc), description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc){% else %} access parameters{% endif %}, and the initial cluster parameters.
+The recommended settings for a DVP {{ site.data.i18n[revision] }} installation are generated below:
+- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters and the initial cluster parameters.
 
 **Please pay attention to**:
-- <span class="mustChange">highlighted</span> parameters you *must* define.
-- <span class="mightChange">parameters</span> you might want to change.
-{%- if page.platform_type == 'baremetal' %}
-- The installation must be performed from a **personal computer** with SSH access to the node, the **master node** of the future cluster.
-{%- endif %}
-{%- if page.platform_type == 'existing' %}
-- We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
-{%- endif %}
+- <span class="mightChange">Highlighted parameters</span> can be adjusted if needed.
+- If you run the installer on **Windows**, ensure the configuration YAML files use UTF-8 encoding (or remove Russian comments).
+- Run the installation from a **personal computer** with SSH access to the node that will be the cluster **master node**.
 
 Create the `config.yml` file.
-{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
-{% include_file "{{ includePath }}" syntax="yaml" %}
-{%- if page.platform_type == 'existing' %}
-{% offtopic title="About nodeSelector, taints and tolerations..." %}
-You can control on which nodes the Deckhouse core components will run by setting  `nodeSelector`/`tolerations` in the `configOverrides.deckhouse` parameter of the installation configuration. You can also specify cluster node taints in the `configOverrides.global.modules.placement.customTolerationKeys` array so that Deckhouse can automatically add the appropriate `toleration` to its components.
 
-> Below is an example of setting `nodeSelector`/`tolerations` for the `deckhouse` module and specifying tolerations for other Deckhouse components in the `customTolerationKeys` array (do not copy this example without adapting it to your configuration as the values will be different):
-> ```yaml
-> deckhouse:
->   configOverrides:
->     # ...
->     deckhouse:
->       tolerations:
->         - key: dedicated.deckhouse.io
->           operator: Exists
->     # ...
->     global:
->       modules:
->         # ...
->         placement:
->           customTolerationKeys:
->           - SystemLoad
->           - app.kubernetes.io/instance
-> ```
-{% endofftopic %}
-{% endif %}
+<div class="dvp-config-yaml" markdown="1">
+
+```yaml
+{{ dvp_cfg_yaml | strip }}
+```
+
+</div>
+
+</div>
+
+<div markdown="1">
+
+{% alert level="info" %}
+When uploading large VM images (especially over a slow link), if the upload is interrupted when the Ingress controller reloads configuration, replace the `worker-shutdown-timeout` value in `config.yml` (`IngressNginxController` / `nginx`) with `1800s` or more:
+
+```yaml
+  config:
+    worker-shutdown-timeout: 1800s  # 30 minutes or more if needed
+```
+
+Otherwise the default applies — 300s (5 minutes).
+{% endalert %}
+
 </div>
 
 {% if revision == 'ee' %}

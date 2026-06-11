@@ -1,9 +1,6 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Virtualization Platform** используется Docker-образ, в который необходимо передать конфигурационный файл{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/<SSH_PRIVATE_KEY_FILE>`){% endif %}.
-{% if page.platform_code == 'bm-private' %}
-Авторизуйтесь на **персональном компьютере** в container image registry, который вы указали на предыдущем этапе.
-{%- endif %}
+Для установки **DVP** используется Docker-образ, в который необходимо передать конфигурационный файл и SSH-ключ Ed25519 для доступа на **master-узел** (`~/.ssh/id_ed25519`).
 
 Запустите установщик на **персональном компьютере**.
 
@@ -26,38 +23,39 @@
   </ul>
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__container tabs__container--descr active" markdown="1">
-<!-- Linux or macOS install, EE -->
+
+Авторизуйтесь на **персональном компьютере** в container image registry:
+
+```shell
+echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
+```
+
+Запустите контейнер с установщиком:
 
 {% alert level="info" %}
 Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
 {% endalert %}
 
 ```shell
- echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
-{%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
-  -v "$HOME/.kube/config:/kubeconfig"{% endif %}
-{%- if page.platform_type == "cloud" %} \
-  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %} registry.deckhouse.ru/deckhouse/ee/install:stable bash
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ee/install:stable bash -c "chmod 400 /tmp/.ssh/id_ed25519; bash"
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__container tabs__container--descr" markdown="1">
 <!-- Windows install, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
+
 ```text
 docker login -u license-token registry.deckhouse.ru
 ```
 
 Запустите контейнер с установщиком:
+
 ```text
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
-{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
-{%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
-{%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.ru/deckhouse/ee/install:stable bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
+docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ee/install:stable bash -c "chmod 400 /tmp/.ssh/id_ed25519; bash"
 ```
 </div>
 </div>
-{% else %}
+{%- else %}
 
 <div class="tabs-block">
   <ul class="tabs__container tabs__container--title">
@@ -81,52 +79,42 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
 {% endalert %}
 
+Запустите контейнер с установщиком:
+
 ```shell
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
-{%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
-  -v "$HOME/.kube/config:/kubeconfig"{% endif %}
-{%- if page.platform_type == "cloud" %} \
-  -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
-{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/ce/install:stable{% endif %} bash
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash -c "chmod 400 /tmp/.ssh/id_ed25519; bash"
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__container tabs__container--descr" markdown="1">
-<!-- Windows install, CE -->
+
+Запустите контейнер с установщиком:
+
 ```text
-docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
-{%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
-{%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
-{%- if page.platform_type == "cloud" %} -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
-{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
-{%- else %} registry.deckhouse.ru/deckhouse/ce/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
+docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash -c "chmod 400 /tmp/.ssh/id_ed25519; bash"
 ```
 </div>
 </div>
-{% endif %}
-
-{%- if page.platform_type == "existing" or page.platform_code == "kind" %}
-Примечание:
-- В файл `/kubeconfig` контейнера необходимо смонтировать файл конфигурации kubectl с доступом к Kubernetes API. В руководстве предполагается, что он находится в файле `.kube/config` домашнего каталога пользователя.
-{% endif %}
+{%- endif %}
 
 Внутри контейнера выполните команду:
 
 ```shell
-dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
+dhctl bootstrap --ssh-user=ubuntu --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
   --config=/config.yml \
   --ask-become-pass
 ```
 
-здесь:
-- `<master_ip>` — адрес **master-узла** для подключения по SSH.
-- `<username>` — имя пользователя (для доступа на **master-узел**), от которого генерировался SSH-ключ для установки. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`
-- `--ask-become-pass` — укажите параметр, если для запуска sudo на сервере необходим пароль;
-- `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+Переменные, используемые в данной команде:
+
+- `<MASTER_IP>` — адрес **master-узла** для подключения по SSH.
+- `--ssh-user=ubuntu` — имя пользователя на **master-узле** (по умолчанию `ubuntu`; замените, если на master используется другая учётная запись).
+- `--ssh-agent-private-keys=/tmp/.ssh/id_ed25519` — приватный ключ Ed25519: файл `id_ed25519` из `~/.ssh/` на персональном компьютере (в контейнере — `/tmp/.ssh/id_ed25519`).
+- `--ask-become-pass` — укажите параметр, если для запуска `sudo` на сервере необходим пароль; введите пароль в ответ на запрос `[sudo] Password:`.
 
 Процесс установки может занять от 5 до 30 минут, в зависимости от качества соединения между master-узлом и хранилищем образов.
 
 Пример вывода при успешном окончании установки:
+
 ```
 ...
 │ │ No more converge tasks found in Deckhouse queue.
@@ -134,10 +122,22 @@ dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private
 │ └ Waiting for Deckhouse to become Ready (157.34 seconds)
 └ ⛵ ~ Bootstrap: Install Deckhouse (158.47 seconds)
 
-❗ ~ Some resources require at least one non-master node to be added to the cluster.
+┌ ⛵ ~ Bootstrap: Create Resources
+│ ...
+│ 🎉 Succeeded!
+└ ⛵ ~ Bootstrap: Create Resources (420.15 seconds)
+
+┌ ⛵ ~ Bootstrap: Run post bootstrap actions
+│ ...
+│ │ 🎉 Succeeded!
+│ └ Set release channel to deckhouse module config (25.35 seconds)
+└ ⛵ ~ Bootstrap: Run post bootstrap actions (25.35 seconds)
+
 ┌ ⛵ ~ Bootstrap: Clear cache
 │ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
 └ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
+
+🎉 Deckhouse cluster was created successfully!
 ```
 
-Почти все готово для полноценной работы Deckhouse Virtualization Platform!
+Кластер с worker-узлом готов. Перейдите к следующему шагу для настройки доступа к веб-интерфейсам DVP.
