@@ -310,6 +310,8 @@ properties:
 
       Lets you opt into specific experimental modules without allowing all of them.
 
+      If `allowExperimentalModules` is `true`, all experimental modules are allowed and this list is ignored.
+
   license:
     type: object
     description: |

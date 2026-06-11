@@ -81,7 +81,7 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 
 	c.settings.ReleaseChannel = settings.ReleaseChannel
 	c.settings.AllowExperimentalModules = settings.AllowExperimentalModules
-	c.settings.AllowedExperimentalModules = settings.AllowedExperimentalModules
+	c.settings.AllowedExperimentalModules = slices.Clone(settings.AllowedExperimentalModules)
 	c.settings.Update.Mode = settings.Update.Mode
 	c.settings.Update.Windows = settings.Update.Windows
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
