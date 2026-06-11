@@ -226,9 +226,9 @@ spec:
                     Keys and values follow the `ResourceQuota.spec.hard` format, for example `requests.cpu: "100"`.
                   type: object
                   additionalProperties:
-                    oneOf:
+                    anyOf:
+                      - type: integer
                       - type: string
-                      - type: number
                     x-kubernetes-int-or-string: true
                 parameters:
                   additionalProperties:
@@ -257,9 +257,9 @@ spec:
                   description: Current utilization of the project quota.
                   type: object
                   additionalProperties:
-                    oneOf:
+                    anyOf:
+                      - type: integer
                       - type: string
-                      - type: number
                     x-kubernetes-int-or-string: true
                 observedGeneration:
                   description: The last observed project`s generation
