@@ -97,6 +97,7 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			constants.ControlPlaneNodeNameLabelKey: node.Name,
+			constants.ControlPlaneTypeLabelKey:     string(constants.ControlPlaneTypeNormal),
 		},
 	})
 	if err != nil {

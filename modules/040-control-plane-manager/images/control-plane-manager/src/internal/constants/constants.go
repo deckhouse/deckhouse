@@ -21,6 +21,23 @@ import (
 	"time"
 )
 
+type ControlPlaneType string
+
+const (
+	ControlPlaneTypeNormal  ControlPlaneType = "normal"
+	ControlPlaneTypeVirtual ControlPlaneType = "virtual"
+)
+
+// Normal control plane manager constants
+const (
+	ControlPlaneManagerName = "control-plane-manager"
+)
+
+// Virtual control plane manager constants
+const (
+	VirtualControlPlaneManagerName = "virtual-control-plane-manager"
+)
+
 const (
 	KubeSystemNamespace                 = "kube-system"
 	CpcControllerName                   = "control-plane-configuration-controller"
@@ -31,6 +48,7 @@ const (
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
 	EtcdArbiterNodeLabelKey             = "node.deckhouse.io/etcd-arbiter"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
+	ControlPlaneTypeLabelKey            = "control-plane.deckhouse.io/type"
 	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
 	HeritageLabelKey                    = "heritage"
 	HeritageLabelValue                  = "deckhouse"
