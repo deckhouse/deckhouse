@@ -3,12 +3,12 @@ title: Подсистема Deckhouse
 permalink: ru/architecture/deckhouse/
 lang: ru
 search: подсистема Deckhouse, контроллер Deckhouse
-description: Общие сведения о подсистеме Deckhouse платформы Deckhouse Kubernetes Platform.
+description: Архитектура подсистемы Deckhouse в Deckhouse Kubernetes Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-В данном подразделе описана архитектура контроллера Deckhouse и сопутствующих модулей, входящих в подсистему Deckhouse платформы Deckhouse Kubernetes Platform (DKP).
+В данном подразделе описана архитектура модулей, входящих в подсистему Deckhouse платформы Deckhouse Kubernetes Platform (DKP).
 
 В подсистему Deckhouse входят следующие модули:
 
@@ -18,4 +18,3 @@ extractedLinksMax: 0
 * [`documentation`](/modules/documentation/) — создает веб-интерфейс с документацией, соответствующей запущенной версии DKP;
 * [`registry`](/modules/registry/) — управляет конфигурацией компонентов DKP, отвечающих за работу с хранилищем образов контейнеров, и предоставляет внутреннее хранилище образов.
 
-В данный момент в подразделе описана [архитектура режима Direct](registry-direct-mode.html) модуля `registry`.

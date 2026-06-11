@@ -2,13 +2,12 @@
 title: Deckhouse subsystem
 permalink: en/architecture/deckhouse/
 search: Deckhouse subsystem, Deckhouse controller
-description: General information about the Deckhouse subsystem of Deckhouse Kubernetes Platform.
+description: Architecture of the Deckhouse subsystem in Deckhouse Kubernetes Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-This subsection describes the architecture of the Deckhouse controller
-and the related modules that are part of the Deckhouse subsystem of Deckhouse Kubernetes Platform (DKP).
+This subsection describes the architecture of the modules that are part of the Deckhouse subsystem of Deckhouse Kubernetes Platform (DKP).
 
 The Deckhouse subsystem includes the following modules:
 
@@ -19,4 +18,3 @@ The Deckhouse subsystem includes the following modules:
 * [`registry`](/modules/registry/): Manages the configuration of DKP components
   responsible for working with the container registry and provides an internal image storage.
 
-At the moment, this subsection describes the [Direct mode architecture](registry-direct-mode.html) of the `registry` module.
