@@ -8,7 +8,10 @@ search: global settings, global configuration, platform settings, default settin
 ---
 
 Глобальные настройки Deckhouse Kubernetes Platform позволяют вам настраивать параметры, которые используются по умолчанию всеми модулями и компонентами. Некоторые модули могут переопределять часть этих параметров (это можно узнать в разделе настройки соответствующего модуля в документации модуля).
+
+{% alert level="info" %}
 Практические навыки администрирования платформы подробно разобраны в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+{% endalert %}
 
 Глобальные настройки Deckhouse хранятся в ModuleConfig `global`.
 

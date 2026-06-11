@@ -4,7 +4,9 @@ permalink: ru/admin/configuration/storage/sds/lvm-local-faq.html
 lang: ru
 ---
 
+{% alert level="info" %}
 Систематизированные ответы на типовые сценарии администрирования подробно разобраны в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+{% endalert %}
 
 ## Выбор конкретных узлов для использования модуля
 

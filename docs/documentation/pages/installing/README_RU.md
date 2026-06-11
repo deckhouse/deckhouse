@@ -26,7 +26,10 @@ relatedLinks:
 {% endalert %}
 
 На этой странице представлена обзорная информация по установке Deckhouse Kubernetes Platform (DKP).
+
+{% alert level="info" %}
 Администрирование платформы подробно разобрано в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+{% endalert %}
 
 ## Способы установки
 
