@@ -38,10 +38,6 @@ const CloudProviderCredentialsSecretType = corev1.SecretType(providerdata.CloudP
 
 var nodeGroupGVR = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 
-const (
-	instanceClassAPIGroup = "deckhouse.io"
-)
-
 // cloudProviderNamespace returns the canonical d8-cloud-provider-<name>
 // namespace that hosts the provider's ModuleConfig, credential Secret and
 // other module-owned resources. All Deckhouse cloud-provider modules follow
@@ -121,7 +117,7 @@ func fetchInstanceClassesFromCluster(ctx context.Context, kubeCl *client.Kuberne
 
 	resource := strings.ToLower(providerName) + "instanceclasses"
 	for _, version := range instanceClassAPIVersions {
-		gvr := schema.GroupVersionResource{Group: instanceClassAPIGroup, Version: version, Resource: resource}
+		gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: version, Resource: resource}
 		list, err := kubeCl.Dynamic().Resource(gvr).List(ctx, metav1.ListOptions{})
 		if err == nil {
 			result := make(map[string]map[string]interface{}, len(list.Items))

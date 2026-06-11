@@ -59,7 +59,7 @@ func (s *Simple) Validate(strictInfraVersion bool) error {
 	}
 
 	if s.UseOpenTofuVal == nil {
-		return fmt.Errorf("useOpentoufly is required")
+		return fmt.Errorf("useOpentofu is required")
 	}
 
 	if strictInfraVersion && s.InfrastructureVersionVal == nil {
@@ -132,7 +132,7 @@ func (s *Simple) VMResourceType() string {
 
 func (s *Simple) UseOpenTofu() bool {
 	if s.UseOpenTofuVal == nil {
-		panic("useOpentoufu is required")
+		panic("useOpentofu is required")
 	}
 
 	return *s.UseOpenTofuVal

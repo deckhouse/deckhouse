@@ -80,12 +80,7 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 	}
 
-	providerPath := filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
-	if _, err := os.Stat(providerPath); err == nil {
-		source = providerPath
-	} else {
-		source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
-	}
+	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 
 	return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 }

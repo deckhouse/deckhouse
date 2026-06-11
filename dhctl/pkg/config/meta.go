@@ -263,7 +263,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	if m.CloudProviderVars == nil && m.ResourcesYAML != "" {
-		cv, err := providerdata.CloudProviderVarsFromInput(ctx, providerdata.PrepareInput{ResourcesYAML: m.ResourcesYAML})
+		cv, err := providerdata.ParseResourcesYAML(m.ResourcesYAML)
 		if err != nil {
 			return nil, fmt.Errorf("parse cloud provider resources: %w", err)
 		}
