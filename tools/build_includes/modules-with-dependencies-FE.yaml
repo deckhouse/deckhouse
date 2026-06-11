@@ -215,16 +215,16 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/140-user-authz/requirements
-  to: /deckhouse/modules/140-user-authz/requirements
+- add: /modules/140-user-authz/hooks
+  to: /deckhouse/modules/140-user-authz/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/140-user-authz/hooks
-  to: /deckhouse/modules/140-user-authz/hooks
+- add: /modules/140-user-authz/requirements
+  to: /deckhouse/modules/140-user-authz/requirements
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'

@@ -184,6 +184,7 @@ read:
     - deckhouse.io/clusterdeploymentmetrics
     - deckhouse.io/clusteringressmetrics
     - deckhouse.io/clusterpodmetrics
+    - deckhouse.io/clusterprojectrolebindings
     - deckhouse.io/clusterservicemetrics
     - deckhouse.io/clusterstatefulsetmetrics
     - deckhouse.io/daemonsetmetrics
@@ -214,6 +215,7 @@ read:
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/podmetrics
+    - deckhouse.io/projectrolebindings
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
@@ -584,6 +586,7 @@ write:
     - constraints.gatekeeper.sh/*
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
+    - deckhouse.io/clusterprojectrolebindings
     - deckhouse.io/deschedulers
     - deckhouse.io/dvpinstanceclasses
     - deckhouse.io/dynamixinstanceclasses
@@ -595,6 +598,7 @@ write:
     - deckhouse.io/localpathprovisioners
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
+    - deckhouse.io/projectrolebindings
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
