@@ -1,0 +1,32 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace-capability:kubernetes:scale_controllers
+  annotations:
+    en.meta.deckhouse.io/title: "Scale controllers"
+    ru.meta.deckhouse.io/title: "Масштабирование контроллеров"
+    en.meta.deckhouse.io/description: "Scale Deployments, StatefulSets and ReplicaSets."
+    ru.meta.deckhouse.io/description: "Масштабирование Deployment, StatefulSet и ReplicaSet."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: user
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - replicationcontrollers/scale
+    verbs:
+      - update
+      - patch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments/scale
+      - replicasets/scale
+      - statefulsets/scale
+    verbs:
+      - update
+      - patch

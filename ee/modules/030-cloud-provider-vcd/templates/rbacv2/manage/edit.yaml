@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-vcd
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-vcd
-  name: d8:manage:permission:module:cloud-provider-vcd:edit
+  name: d8:system-capability:cloud-provider-vcd:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module cloud-provider-vcd: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль cloud-provider-vcd: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the cloud-provider-vcd module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля cloud-provider-vcd."
 rules:
 - apiGroups:
   - deckhouse.io

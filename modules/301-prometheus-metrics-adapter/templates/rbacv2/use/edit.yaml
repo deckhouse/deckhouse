@@ -5,9 +5,15 @@ metadata:
   labels:
     heritage: deckhouse
     module: prometheus-metrics-adapter
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:prometheus-metrics-adapter:edit
+    rbac.deckhouse.io/aggregate-to-namespace-as: manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:prometheus-metrics-adapter:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module prometheus-metrics-adapter: edit"
+    ru.meta.deckhouse.io/title: "Модуль prometheus-metrics-adapter: редактирование"
+    en.meta.deckhouse.io/description: "Manage prometheus-metrics-adapter resources in a namespace."
+    ru.meta.deckhouse.io/description: "Управление ресурсами модуля prometheus-metrics-adapter в пространстве имён."
 rules:
 - apiGroups:
   - deckhouse.io

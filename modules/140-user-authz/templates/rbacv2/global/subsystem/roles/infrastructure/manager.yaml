@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:infrastructure:manager
+  annotations:
+    en.meta.deckhouse.io/title: "Infrastructure: Manager"
+    ru.meta.deckhouse.io/title: "Управление подсистемы инфраструктуры"
+    en.meta.deckhouse.io/description: "Management of the Infrastructure subsystem configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией подсистемы инфраструктуры."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: user
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: infrastructure
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: superadmin
+    rbac.deckhouse.io/aggregate-to-system-as: manager
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
+rules: []

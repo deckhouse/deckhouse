@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: operator-prometheus
     rbac.deckhouse.io/aggregate-to-observability-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-operator-prometheus
-  name: d8:manage:permission:module:operator-prometheus:view
+  name: d8:system-capability:operator-prometheus:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module operator-prometheus: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль operator-prometheus: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the operator-prometheus module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля operator-prometheus."
 rules:
 - apiGroups:
   - deckhouse.io

@@ -6,9 +6,14 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/aggregate-to-security-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
-  name: d8:manage:permission:module:user-authz:view
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
+  name: d8:system-capability:user-authz:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module user-authz: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль user-authz: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the user-authz module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля user-authz."
 rules:
 - apiGroups:
   - deckhouse.io

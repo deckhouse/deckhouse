@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:storage:manager
+  annotations:
+    en.meta.deckhouse.io/title: "Storage: Manager"
+    ru.meta.deckhouse.io/title: "Управление подсистемы хранилища"
+    en.meta.deckhouse.io/description: "Management of the Storage subsystem configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией подсистемы хранилища."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: user
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: storage
+    rbac.deckhouse.io/aggregate-to-storage-as: superadmin
+    rbac.deckhouse.io/aggregate-to-system-as: manager
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-storage-as: manager
+rules: []

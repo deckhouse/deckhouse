@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: node-local-dns
     rbac.deckhouse.io/aggregate-to-networking-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: kube-system
-  name: d8:manage:permission:module:node-local-dns:edit
+  name: d8:system-capability:node-local-dns:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module node-local-dns: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль node-local-dns: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the node-local-dns module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля node-local-dns."
 rules:
 - apiGroups:
   - deckhouse.io

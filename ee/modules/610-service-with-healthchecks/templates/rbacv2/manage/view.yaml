@@ -2,7 +2,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/aggregate-to-networking-as" "viewer" "rbac.deckhouse.io/kind" "manage" "rbac.deckhouse.io/level" "module" "rbac.deckhouse.io/namespace" "d8-service-with-healthchecks")) | nindent 2 }}
-  name: d8:manage:permission:module:service-with-healthchecks:view
+  name: d8:system-capability:service-with-healthchecks:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module service-with-healthchecks: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль service-with-healthchecks: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the service-with-healthchecks module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля service-with-healthchecks."
 rules:
 - apiGroups:
   - deckhouse.io

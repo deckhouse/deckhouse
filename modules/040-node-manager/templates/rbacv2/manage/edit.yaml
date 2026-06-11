@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: node-manager
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-instance-manager
-  name: d8:manage:permission:module:node-manager:edit
+  name: d8:system-capability:node-manager:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module node-manager: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль node-manager: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the node-manager module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля node-manager."
 rules:
 - apiGroups:
   - deckhouse.io

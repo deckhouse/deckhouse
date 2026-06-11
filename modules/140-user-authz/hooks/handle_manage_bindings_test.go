@@ -32,17 +32,17 @@ import (
 var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal": {}}}`, "")
 
-	Context("There`s ManageSubsystemBinding", func() {
+	Context("There`s SubsystemRoleBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
-				manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
-				manageModuleRole("d8:manage:permission:module:test2:edit", "others", "test2-ns"),
-				manageRole("d8:manage:others:manager", "subsystem", "others"),
-				manageBinding("test", "d8:manage:others:manager"),
+				systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
+				systemCapability("d8:system-capability:test2:edit", "others", "test2-ns"),
+				systemRole("d8:subsystem:others:manager", "subsystem", "others"),
+				manageBinding("test", "d8:subsystem:others:manager"),
 
-				manageModuleRole("d8:manage:permission:module:test3:edit", "test", "test2-ns"),
-				manageRole("d8:manage:test:manager", "subsystem", "test"),
-				manageBinding("test2", "d8:manage:test:manager"),
+				systemCapability("d8:system-capability:test3:edit", "test", "test2-ns"),
+				systemRole("d8:subsystem:test:manager", "subsystem", "test"),
+				manageBinding("test2", "d8:subsystem:test:manager"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -50,24 +50,25 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 
 		It("Should create RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
-			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:namespace:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:namespace:admin:binding:test"))
+			Expect(roleBinding.Field("roleRef.name").Str).To(Equal("d8:namespace:admin"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:namespace:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:namespace:admin:binding:test"))
 
-			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test2")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test2"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:namespace:admin:binding:test2")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:namespace:admin:binding:test2"))
 		})
 	})
 
-	Context("There`s ManageAllBinding", func() {
+	Context("There`s SystemRoleBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
-				manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
-				manageModuleRole("d8:manage:permission:module:test2:edit", "others", "test2-ns"),
-				manageRole("d8:manage:others:manager", "subsystem", "others"),
-				manageRole("d8:manage:all:manager", "all", "all"),
-				manageBinding("test", "d8:manage:all:manager"),
+				systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
+				systemCapability("d8:system-capability:test2:edit", "others", "test2-ns"),
+				systemRole("d8:subsystem:others:manager", "subsystem", "others"),
+				systemRole("d8:system:manager", "system", "system"),
+				manageBinding("test", "d8:system:manager"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -75,10 +76,10 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 
 		It("Should create RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
-			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:namespace:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:namespace:admin:binding:test"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:namespace:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:namespace:admin:binding:test"))
 		})
 	})
 
@@ -123,19 +124,19 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 
 		It("Should delete RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:binding:test")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test2")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns", "d8:binding:test2")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:use:admin:binding:test3")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:binding:test3")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:use:admin:binding:test4")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:binding:test4")
 			Expect(roleBinding).To(BeEmpty())
 		})
 	})
 })
 
-func manageRole(name, level, subsystem string) string {
+func systemRole(name, scope, lineage string) string {
 	role := rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -145,27 +146,27 @@ func manageRole(name, level, subsystem string) string {
 			Name: name,
 			Labels: map[string]string{
 				"rbac.deckhouse.io/use-role": "admin",
-				"rbac.deckhouse.io/level":    level,
-				"rbac.deckhouse.io/kind":     "manage",
+				"rbac.deckhouse.io/kind":     "role",
+				"rbac.deckhouse.io/scope":    scope,
 			},
 		},
 		AggregationRule: &rbacv1.AggregationRule{ClusterRoleSelectors: []metav1.LabelSelector{
 			{
 				MatchLabels: map[string]string{
-					"rbac.deckhouse.io/kind": "manage",
-					fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", subsystem): "manager",
+					fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", lineage): "manager",
 				},
 			},
 		}},
 	}
-	if level != "all" {
-		role.Labels["rbac.deckhouse.io/aggregate-to-all-as"] = "manager"
+	if scope == "subsystem" {
+		role.Labels["rbac.deckhouse.io/subsystem"] = lineage
+		role.Labels["rbac.deckhouse.io/aggregate-to-system-as"] = "manager"
 	}
 	marshaled, _ := yaml.Marshal(&role)
 	return string(marshaled)
 }
 
-func manageModuleRole(name, subsystem, namespace string) string {
+func systemCapability(name, subsystem, namespace string) string {
 	role := rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -174,8 +175,8 @@ func manageModuleRole(name, subsystem, namespace string) string {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"rbac.deckhouse.io/level":                                      "module",
-				"rbac.deckhouse.io/kind":                                       "manage",
+				"rbac.deckhouse.io/kind":                                       "capability",
+				"rbac.deckhouse.io/scope":                                      "system",
 				"rbac.deckhouse.io/namespace":                                  namespace,
 				fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", subsystem): "manager",
 			},
@@ -266,7 +267,7 @@ func useAutomaticBinding(relatedWith, namespace string) string {
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "d8:use:role",
+			Name:     "d8:namespace:user",
 		},
 	}
 	marshaled, _ := yaml.Marshal(&binding)

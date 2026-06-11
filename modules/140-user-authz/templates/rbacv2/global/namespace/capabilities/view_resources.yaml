@@ -1,0 +1,181 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace-capability:kubernetes:view_resources
+  annotations:
+    en.meta.deckhouse.io/title: "View resources"
+    ru.meta.deckhouse.io/title: "Просмотр ресурсов"
+    en.meta.deckhouse.io/description: "Read-only access to user resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к пользовательским ресурсам в пространстве имён."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - pods
+      - pods/status
+      - replicationcontrollers
+      - replicationcontrollers/scale
+      - services
+      - services/status
+      - limitranges
+      - replicationcontrollers/status
+      - resourcequotas
+      - resourcequotas/status
+      - persistentvolumeclaims
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+      - events.k8s.io
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - controllerrevisions
+      - daemonsets
+      - daemonsets/status
+      - deployments
+      - deployments/scale
+      - deployments/status
+      - replicasets
+      - replicasets/scale
+      - replicasets/status
+      - statefulsets
+      - statefulsets/scale
+      - statefulsets/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+      - horizontalpodautoscalers/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - autoscaling.k8s.io
+    resources:
+      - verticalpodautoscalers
+      - verticalpodautoscalercheckpoints
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs
+      - cronjobs/status
+      - jobs
+      - jobs/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+      - poddisruptionbudgets/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - networkpolicies
+      - ingresses
+      - ingresses/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshots
+    verbs:
+      - get
+      - list
+      - watch
+  - nonResourceURLs:
+      - /api
+      - /api/*
+      - /apis
+      - /apis/*
+      - /openapi
+      - /openapi/*
+      - /version
+      - /version/
+    verbs:
+      - get
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - selfsubjectaccessreviews
+      - selfsubjectrulesreviews
+    verbs:
+      - create
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - selfsubjectreviews
+    verbs:
+      - create
+{{- $consoleLegacyCompat := $.Values.userAuthz.internal.consoleLegacyCompat | default false -}}
+{{- $useAccessibleNamespaces := and (ne $.Values.global.deckhouseEdition "CE") ($.Values.userAuthz.enableMultiTenancy | default false) (not $consoleLegacyCompat) -}}
+{{- if $useAccessibleNamespaces }}
+  - apiGroups:
+      - authorization.deckhouse.io
+    resources:
+      - accessiblenamespaces
+    verbs:
+      - get
+      - list
+      - watch
+{{- else }}
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}

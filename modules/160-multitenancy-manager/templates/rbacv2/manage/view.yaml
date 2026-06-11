@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: multitenancy-manager
     rbac.deckhouse.io/aggregate-to-deckhouse-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-multitenancy-manager
-  name: d8:manage:permission:module:multitenancy-manager:view
+  name: d8:system-capability:multitenancy-manager:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module multitenancy-manager: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль multitenancy-manager: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the multitenancy-manager module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля multitenancy-manager."
 rules:
 - apiGroups:
   - deckhouse.io

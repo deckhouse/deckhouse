@@ -29,8 +29,10 @@ kubernetes:
     executeHookOnSynchronization: false
     keepFullObjectsInMemory: false
     labelSelector:
-      matchLabels:
-        rbac.deckhouse.io/kind: use
+      matchExpressions:
+        - key: rbac.deckhouse.io/scope
+          operator: In
+          values: ["namespace", "project"]
     jqFilter: |
       {
         "name": .metadata.name

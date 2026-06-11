@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: monitoring-ping
     rbac.deckhouse.io/aggregate-to-observability-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-monitoring
-  name: d8:manage:permission:module:monitoring-ping:edit
+  name: d8:system-capability:monitoring-ping:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module monitoring-ping: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль monitoring-ping: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the monitoring-ping module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля monitoring-ping."
 rules:
 - apiGroups:
   - deckhouse.io

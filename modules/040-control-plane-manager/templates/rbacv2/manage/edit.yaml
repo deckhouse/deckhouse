@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: control-plane-manager
     rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: kube-system
-  name: d8:manage:permission:module:control-plane-manager:edit
+  name: d8:system-capability:control-plane-manager:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module control-plane-manager: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль control-plane-manager: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the control-plane-manager module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля control-plane-manager."
 rules:
 - apiGroups:
   - deckhouse.io

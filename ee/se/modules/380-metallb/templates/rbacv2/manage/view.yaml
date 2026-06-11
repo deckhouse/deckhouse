@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: metallb
     rbac.deckhouse.io/aggregate-to-networking-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-metallb
-  name: d8:manage:permission:module:metallb:view
+  name: d8:system-capability:metallb:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module metallb: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль metallb: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the metallb module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля metallb."
 rules:
 - apiGroups:
   - deckhouse.io

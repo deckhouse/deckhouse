@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: monitoring-kubernetes-control-plane
     rbac.deckhouse.io/aggregate-to-observability-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-monitoring
-  name: d8:manage:permission:module:monitoring-kubernetes-control-plane:view
+  name: d8:system-capability:monitoring-kubernetes-control-plane:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module monitoring-kubernetes-control-plane: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль monitoring-kubernetes-control-plane: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the monitoring-kubernetes-control-plane module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля monitoring-kubernetes-control-plane."
 rules:
 - apiGroups:
   - deckhouse.io
