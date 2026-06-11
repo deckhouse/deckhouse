@@ -1,4 +1,3 @@
-{{- if .Values.global.clusterIsBootstrapped }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,4 +11,3 @@ spec:
     - name: https
       port: 443
       targetPort: https
-{{- end }}

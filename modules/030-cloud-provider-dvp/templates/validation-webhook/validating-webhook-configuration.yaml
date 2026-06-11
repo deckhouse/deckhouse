@@ -1,4 +1,3 @@
-{{- if .Values.global.clusterIsBootstrapped }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -95,4 +94,3 @@ webhooks:
         operations: ["CREATE", "UPDATE", "DELETE"]
         resources: ["dvpinstanceclasses"]
         scope: "Cluster"
-{{- end }}
