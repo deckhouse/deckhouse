@@ -1442,6 +1442,10 @@ entries:
                 en: Cert-manager module
                 ru: Модуль cert-manager
               url: /architecture/security/cert-manager.html
+            - title:
+                en: Runtime audit engine module
+                ru: Модуль runtime-audit-engine
+              url: /architecture/security/runtime-audit-engine.html
         - title:
             en: Network subsystem
             ru: Подсистема Network
