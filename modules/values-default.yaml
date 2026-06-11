@@ -14,7 +14,6 @@ ingressNginxEnabled: true
 kubeDnsEnabled: true
 kubeProxyEnabled: true
 localPathProvisionerEnabled: true
-logShipperEnabled: true
 monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
