@@ -1,0 +1,70 @@
+{{- $ := index . 0 -}}
+{{- $revision := index . 1 -}}
+{{- $imageSuffix := index . 2 -}}
+{
+  "revision": {{ $revision | quote }},
+  "global": {
+    "istiod": {"enableAnalysis": false},
+    "defaultPodDisruptionBudget": {"enabled": false},
+    "configValidation": false,
+    "operatorManageWebhooks": true,
+    "istioNamespace": "d8-{{ $.Chart.Name }}",
+    "meshID": "d8-istio-mesh",
+    "network": {{ include "istioNetworkName" $ | quote }},
+    "multiCluster": {
+      "clusterName": {{ printf "%s-%s" ($.Values.global.discovery.clusterDomain | replace "." "-") ($.Values.global.discovery.clusterUUID | adler32sum) | quote }}
+    },
+    "externalIstiod": false,
+    "jwtPolicy": {{ include "istioJWTPolicy" $ | quote }},
+    "pilotCertProvider": "istiod",
+    "trustBundleName": "istio-ca-root-cert",
+    "sds": {
+      "token": {
+        "aud": "istio-ca"
+      }
+    },
+    "proxy": {
+      "image": {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix)) | quote }},
+      "clusterDomain": {{ $.Values.global.discovery.clusterDomain | quote }},
+      "autoInject": "enabled",
+      "logLevel": "warning",
+      "componentLogLevel": "misc:error",
+      "includeIPRanges": {{ $.Values.istio.sidecar.includeOutboundIPRanges | default (list "0.0.0.0/0") | join "," | quote }},
+      "excludeIPRanges": {{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," | quote }},
+      "excludeOutboundPorts": {{ $.Values.istio.sidecar.excludeOutboundPorts | default list | join "," | quote }},
+      "excludeInboundPorts": {{ $.Values.istio.sidecar.excludeInboundPorts | default list | join "," | quote }},
+      "includeInboundPorts": "*",
+      "statusPort": 15020,
+      "privileged": false,
+      "capNetBindService": false,
+      "holdApplicationUntilProxyStarts": {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts | default false }},
+      "readinessFailureThreshold": 4,
+      "readinessInitialDelaySeconds": 0,
+      "readinessPeriodSeconds": 15,
+      "startupProbe": {
+        "enabled": true,
+        "failureThreshold": 600
+      },
+      "tracer": "none",
+      "resources": {}
+    },
+    "proxy_init": {
+      "image": {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix)) | quote }},
+      "resources": {
+        "limits": {"cpu": "100m", "memory": "50Mi"},
+        "requests": {"cpu": "10m", "memory": "10Mi"}
+      }
+    },
+    "revision": {{ $revision | quote }},
+    "logging": {"level": "default:info"},
+    "logAsJson": false,
+    "imagePullPolicy": "IfNotPresent",
+    "imagePullSecrets": ["d8-istio-sidecar-registry"],
+    "priorityClassName": "system-cluster-critical"
+  },
+  "pilot": {
+    "cni": {
+      "enabled": {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+    }
+  }
+}

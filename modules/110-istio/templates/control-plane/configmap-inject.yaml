@@ -1,0 +1,21 @@
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- if not (get $versionInfo "supportsOperator") }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{- $args := list $ $revision $imageSuffix $fullVersion }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sidecar-injector-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
+data:
+  values: |-
+{{ tpl ($.Files.Get (printf "files/%s/templates/sidecar-injection-values.yaml" $revision)) $args | nindent 4 }}
+  config: |-
+{{ tpl ($.Files.Get (printf "files/%s/templates/sidecar-injection-config.yaml" $revision)) $args | nindent 4 }}
+  {{- end }}
+{{- end }}
