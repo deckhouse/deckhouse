@@ -197,4 +197,40 @@ metadata:
 			Expect(f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-one").Exists()).To(BeFalse())
 		})
 	})
+
+	Context("Cluster with keep_firing_for rule", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
+---
+apiVersion: deckhouse.io/v1
+kind: CustomPrometheusRules
+metadata:
+  name: with-keep-firing
+spec:
+  groups:
+  - name: gr-keep
+    rules:
+    - alert: RuleWithKeepFiring
+      expr: up == 0
+      for: 5m
+      keep_firing_for: 10m
+`, 1))
+			f.RunHook()
+		})
+
+		It("Should create PrometheusRule and preserve keep_firing_for field", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			prometheusRule := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-with-keep-firing")
+			Expect(prometheusRule.Exists()).To(BeTrue())
+			Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`
+- name: gr-keep
+  rules:
+  - alert: RuleWithKeepFiring
+    expr: up == 0
+    for: 5m
+    keep_firing_for: 10m
+`))
+		})
+	})
 })

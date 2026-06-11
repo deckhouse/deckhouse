@@ -73,6 +73,8 @@ spec:
                               x-kubernetes-int-or-string: true
                             for:
                               type: string
+                            keep_firing_for:
+                              type: string
                             labels:
                               additionalProperties:
                                 type: string
