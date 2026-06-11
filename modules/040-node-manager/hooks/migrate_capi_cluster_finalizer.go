@@ -17,6 +17,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -68,36 +69,20 @@ func migrateCapiClusterFinalizer(_ context.Context, input *go_hook.HookInput) er
 	}
 
 	for _, cluster := range clusters {
-		if !hasString(cluster.Finalizers, capiControllerManagerFinalizer) {
+		finalizers := slices.DeleteFunc(append([]string(nil), cluster.Finalizers...), func(value string) bool {
+			return value == capiControllerManagerFinalizer
+		})
+		if len(finalizers) == len(cluster.Finalizers) {
 			continue
 		}
 
 		patch := map[string]interface{}{
 			"metadata": map[string]interface{}{
-				"finalizers": removeString(cluster.Finalizers, capiControllerManagerFinalizer),
+				"finalizers": finalizers,
 			},
 		}
 		input.PatchCollector.PatchWithMerge(patch, cluster.APIVersion, cluster.Kind, cluster.Namespace, cluster.Name)
 	}
 
 	return nil
-}
-
-func hasString(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
-			return true
-		}
-	}
-	return false
-}
-
-func removeString(values []string, target string) []string {
-	filtered := make([]string, 0, len(values))
-	for _, value := range values {
-		if value != target {
-			filtered = append(filtered, value)
-		}
-	}
-	return filtered
 }

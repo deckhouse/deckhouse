@@ -14,21 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// nolint:gci
 package main
 
 import (
+	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
+	"cluster-api-provider-dvp/internal/controller"
 	"crypto/tls"
+	dvpapi "dvp-common/api"
+	"dvp-common/config"
 	"flag"
 	"os"
 	"path/filepath"
-
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
-
-	dvpapi "dvp-common/api"
-	"dvp-common/config"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -37,6 +33,7 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -44,9 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
-	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
-	"cluster-api-provider-dvp/internal/controller"
 )
 
 var (

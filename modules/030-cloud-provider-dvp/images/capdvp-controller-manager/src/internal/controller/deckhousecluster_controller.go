@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// nolint:gci
 package controller
 
 import (
@@ -23,6 +22,8 @@ import (
 	"net/url"
 	"strconv"
 
+	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
+	dvpapi "dvp-common/api"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,9 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
-	dvpapi "dvp-common/api"
 )
 
 // DeckhouseClusterReconciler reconciles a DeckhouseCluster object
