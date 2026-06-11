@@ -223,22 +223,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/402-ingress-nginx/hooks
-  to: /deckhouse/modules/402-ingress-nginx/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/402-ingress-nginx/requirements
-  to: /deckhouse/modules/402-ingress-nginx/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/460-log-shipper/hooks
   to: /deckhouse/modules/460-log-shipper/hooks
   excludePaths:

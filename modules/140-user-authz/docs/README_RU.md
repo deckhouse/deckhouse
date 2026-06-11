@@ -439,7 +439,6 @@ patch,update:
     - nodes
 read:
     - deckhouse.io/ingressistiocontrollers
-    - deckhouse.io/ingressnginxcontrollers/status
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -454,9 +453,7 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
-    - apps.kruise.io/daemonsets
     - deckhouse.io/downtimes
-    - deckhouse.io/ingressnginxcontrollers
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - deckhouse.io/upmeterremotewrites
