@@ -438,7 +438,7 @@
  - **[ingress-nginx]** The default version of ingress-nginx has been changed to 1.12. [#18612](https://github.com/deckhouse/deckhouse/pull/18612)
     All pods of Ingress-NGINX Controllers using default version  (the controllerVersion is not set) will be restarted and updated from 1.10 to 1.12.
  - **[ingress-nginx]** The werf images are comply with DMT. [#18434](https://github.com/deckhouse/deckhouse/pull/18434)
-    All Ingerss-nginx controller pods will be restarted.
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** open source components versions migrated from werf.inc.yaml to oss.yaml [#18117](https://github.com/deckhouse/deckhouse/pull/18117)
  - **[istio]** Added kubernetes v1.31-1.35 in docs supported versions. [#18447](https://github.com/deckhouse/deckhouse/pull/18447)
  - **[istio]** Changing the multi-network Istio documentation [#18591](https://github.com/deckhouse/deckhouse/pull/18591)
