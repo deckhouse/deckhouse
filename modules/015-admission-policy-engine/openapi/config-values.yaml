@@ -62,11 +62,14 @@ properties:
       - cse-pro
     description: |
       Trivy provider will deny creation of the `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` with vulnerable images in namespaces with `security.deckhouse.io/trivy-provider: ""` label.
+      If a namespace does not have this label, vulnerability checking is not applied to it.
     properties:
       allowedSeverityLevels:
         type: array
         description: |
-          Images containing only vulnerabilities of specified severities will not be denied.
+          List of permitted vulnerability severity levels.
+          Container images containing only vulnerabilities of the specified severity levels will be allowed for deployment.
+          If the parameter is not specified (or specified as an empty list), there are no allowed levels, and creation will be prohibited if vulnerabilities of any level are present.
         items:
           type: string
           enum: ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
