@@ -42,10 +42,12 @@ const (
 	dvpInstanceClassAPI           = "deckhouse.io/v1alpha1"
 	dvpAuthSchemeKubeconfig       = "kubeconfig"
 	dvpCredentialSecretType       = "cloud-provider.deckhouse.io/credentials"
-	moduleConfigAPIVersion        = "deckhouse.io/v1alpha1"
-	pccSecretName                 = "d8-provider-cluster-configuration"
-	pccSecretNamespace            = "kube-system"
-	pccClusterConfigKey           = "cloud-provider-cluster-configuration.yaml"
+	moduleConfigAPIVersion           = "deckhouse.io/v1alpha1"
+	pccSecretName                    = "d8-provider-cluster-configuration"
+	pccSecretNamespace               = "kube-system"
+	pccClusterConfigKey              = "cloud-provider-cluster-configuration.yaml"
+	dvpCandiDiscoverySecretName      = "d8-candi-cloud-provider-discovery-data"
+	dvpCandiDiscoverySecretNamespace = "kube-system"
 )
 
 func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
