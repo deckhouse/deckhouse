@@ -73,11 +73,11 @@ function send_post() {
     --data "{\"channel_id\": \"${channel_id}\",\"message\": \"${message}\",\"file_ids\": ${file_ids}}"
 }
 function send_post_with_webhook() {
-  file_ids=$(IFS=,; echo "[${file_id_array[*]}]")
   curl -f -L -X POST $server_url \
     -H "Content-Type: application/json" \
     --data "{\"type\": \"${webhook_type}\",\"message\":\"${message}\"}"
 }
+
 if [ "$upload" = true ]; then
   for file_path in ${upload_files[@]}; do
     file_id=$(upload_file "$file_path")
