@@ -479,22 +479,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /modules/303-prometheus-pushgateway
-  to: /deckhouse/modules/303-prometheus-pushgateway
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /modules/340-extended-monitoring
   to: /deckhouse/modules/340-extended-monitoring
   excludePaths:

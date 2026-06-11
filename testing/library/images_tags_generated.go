@@ -421,9 +421,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"k8sPrometheusAdapter":   "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",
 		"prometheusReverseProxy": "imageHash-prometheusMetricsAdapter-prometheusReverseProxy",
 	},
-	"prometheusPushgateway": map[string]interface{}{
-		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
-	},
 	"registry": map[string]interface{}{
 		"dockerAuth":          "imageHash-registry-dockerAuth",
 		"dockerDistribution":  "imageHash-registry-dockerDistribution",
