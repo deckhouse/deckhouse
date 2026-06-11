@@ -23,10 +23,10 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestValidateInstanceClassEtcdDiskAttachmentRejectsUnattachedEtcdDisk(t *testing.T) {
+func TestValidateInstanceClassEtcdDiskAttachmentAllowsUnattachedEtcdDisk(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(
+	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
@@ -58,17 +58,17 @@ func TestValidateInstanceClassEtcdDiskAttachmentRejectsUnattachedEtcdDisk(t *tes
 				},
 			},
 		},
-	)
+	))
 
-	if !result.HasErrors() || !strings.Contains(result.Error(), "DVPInstanceClass/orphan-dvp.spec.etcdDisk") {
-		t.Fatalf("expected unattached etcdDisk error, got: %s", result.Error())
+	if result.HasErrors() {
+		t.Fatalf("expected unattached etcdDisk allowed, got: %s", result.Error())
 	}
 }
 
 func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(
+	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
@@ -117,17 +117,17 @@ func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *
 				},
 			},
 		},
-	)
+	))
 
-	if len(result.Errors) != 2 {
-		t.Fatalf("expected two etcdDisk errors, got %d: %s", len(result.Errors), result.Error())
+	if len(result.Errors()) != 1 {
+		t.Fatalf("expected one deduplicated etcdDisk error, got %d: %s", len(result.Errors()), result.Error())
 	}
 }
 
 func TestValidateInstanceClassEtcdDiskAttachmentAllowsMasterOnly(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(
+	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
@@ -146,7 +146,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsMasterOnly(t *testing.T) {
 				Spec:       cpapi.InstanceClassSpec{EtcdDisk: rawJSONForInstanceClassTest("{}")},
 			},
 		},
-	)
+	))
 
 	if result.HasErrors() {
 		t.Fatalf("ValidateInstanceClassEtcdDiskAttachment() unexpected errors: %s", result.Error())
@@ -156,7 +156,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsMasterOnly(t *testing.T) {
 func TestValidateInstanceClassEtcdDiskAttachmentSkipsOtherKinds(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(
+	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
 		"DVPInstanceClass",
 		nil,
 		[]cpapi.InstanceClass{
@@ -166,7 +166,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentSkipsOtherKinds(t *testing.T) {
 				Spec:       cpapi.InstanceClassSpec{EtcdDisk: rawJSONForInstanceClassTest("{}")},
 			},
 		},
-	)
+	))
 
 	if result.HasErrors() {
 		t.Fatalf("ValidateInstanceClassEtcdDiskAttachment() = %q, want skip other kinds", result.Error())
@@ -176,7 +176,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentSkipsOtherKinds(t *testing.T) {
 func TestValidateInstanceClassEtcdDiskAttachmentRequiresMasterWhenAttached(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(
+	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
@@ -195,7 +195,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentRequiresMasterWhenAttached(t *te
 				Spec:       cpapi.InstanceClassSpec{EtcdDisk: rawJSONForInstanceClassTest("{}")},
 			},
 		},
-	)
+	))
 
 	if !result.HasErrors() || !strings.Contains(result.Error(), "attached to NodeGroup master") {
 		t.Fatalf("ValidateInstanceClassEtcdDiskAttachment() = %q", result.Error())
@@ -205,14 +205,83 @@ func TestValidateInstanceClassEtcdDiskAttachmentRequiresMasterWhenAttached(t *te
 func TestValidateInstanceClassEtcdDiskAttachmentSkipsNilEtcdDisk(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(
+	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
 		"DVPInstanceClass",
 		nil,
 		[]cpapi.InstanceClass{{ObjectMeta: v1.ObjectMeta{Name: "plain"}}},
-	)
+	))
 
 	if result.HasErrors() {
 		t.Fatalf("ValidateInstanceClassEtcdDiskAttachment() = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateInstanceClassDeleteEmptyName(t *testing.T) {
+	t.Parallel()
+
+	state := instanceClassState("DVPInstanceClass", nil, nil)
+	if result := ValidateInstanceClassDelete(state, "", nil); result.HasErrors() {
+		t.Fatalf("ValidateInstanceClassDelete() = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateInstanceClassDeleteInUseByNodeGroup(t *testing.T) {
+	t.Parallel()
+
+	state := instanceClassState(
+		"DVPInstanceClass",
+		[]cpapi.NodeGroup{{
+			ObjectMeta: v1.ObjectMeta{Name: "master"},
+			Spec: cpapi.NodeGroupSpec{
+				CloudInstances: &cpapi.CloudInstances{
+					ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "master-dvp"},
+				},
+			},
+		}},
+		nil,
+	)
+
+	result := ValidateInstanceClassDelete(state, "master-dvp", nil)
+	if !hasViolationCode(result, "instance_class_in_use") {
+		t.Fatalf("ValidateInstanceClassDelete() = %q", result.Error())
+	}
+}
+
+func TestValidateInstanceClassDeleteWithStatusConsumers(t *testing.T) {
+	t.Parallel()
+
+	state := instanceClassState("DVPInstanceClass", nil, nil)
+	deleted := &cpapi.InstanceClass{
+		ObjectMeta: v1.ObjectMeta{Name: "orphan-dvp"},
+		Status:     cpapi.InstanceClassStatus{NodeGroupConsumers: []any{"worker"}},
+	}
+
+	result := ValidateInstanceClassDelete(state, "", deleted)
+	if !hasViolationCode(result, "instance_class_has_consumers") {
+		t.Fatalf("ValidateInstanceClassDelete() = %q", result.Error())
+	}
+}
+
+func TestValidateInstanceClassDeleteUsesDeletedClassName(t *testing.T) {
+	t.Parallel()
+
+	state := instanceClassState(
+		"DVPInstanceClass",
+		[]cpapi.NodeGroup{{
+			ObjectMeta: v1.ObjectMeta{Name: "master"},
+			Spec: cpapi.NodeGroupSpec{
+				CloudInstances: &cpapi.CloudInstances{
+					ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "master-dvp"},
+				},
+			},
+		}},
+		nil,
+	)
+	deleted := &cpapi.InstanceClass{ObjectMeta: v1.ObjectMeta{Name: "master-dvp"}}
+
+	result := ValidateInstanceClassDelete(state, "", deleted)
+	if !hasViolationCode(result, "instance_class_in_use") {
+		t.Fatalf("ValidateInstanceClassDelete() = %q", result.Error())
 	}
 }
 

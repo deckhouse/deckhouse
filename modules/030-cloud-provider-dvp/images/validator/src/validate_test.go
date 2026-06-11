@@ -22,7 +22,23 @@ import (
 	"testing"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
+
+func testModuleConfigObject(settings map[string]any) map[string]any {
+	return map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ModuleConfig",
+		"metadata": map[string]any{
+			"name": dvpval.ModuleName,
+		},
+		"spec": map[string]any{
+			"enabled":  true,
+			"version":  2,
+			"settings": settings,
+		},
+	}
+}
 
 func testCredentialSecretYAML() string {
 	kubeconfig := `apiVersion: v1
@@ -56,16 +72,43 @@ stringData:
 `, base64.StdEncoding.EncodeToString([]byte(kubeconfig)))
 }
 
+func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
+	t.Parallel()
+
+	err := validate(context.Background(), proto.PrepareInput{
+		Operation: proto.OperationBootstrap,
+		ModuleConfig: testModuleConfigObject(map[string]any{
+			"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
+			"storage":  map[string]any{"enabled": true, "parameters": map[string]any{}},
+			"nodes":    map[string]any{"enabled": false},
+		}),
+		ResourcesYAML: `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+`,
+	})
+	if err == nil {
+		t.Fatal("validate() error = nil, want missing credential secret")
+	}
+	if strings.Count(err.Error(), `credential Secret "d8-credentials" is required`) != 1 {
+		t.Fatalf("validate() error = %q, want single credential requirement message", err)
+	}
+}
+
 func TestValidateConvergeRunsPreflight(t *testing.T) {
 	t.Parallel()
 
 	err := validate(context.Background(), proto.PrepareInput{
 		Operation: proto.OperationConverge,
-		ModuleConfig: map[string]any{
+		ModuleConfig: testModuleConfigObject(map[string]any{
 			"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
 			"storage":  map[string]any{"enabled": false},
 			"nodes":    map[string]any{"enabled": false},
-		},
+		}),
 		ResourcesYAML: testCredentialSecretYAML(),
 	})
 	if err == nil || !strings.Contains(err.Error(), "NodeGroup \"master\" is required") {
@@ -77,7 +120,9 @@ func TestPrepareKeepsProviderVars(t *testing.T) {
 	t.Parallel()
 
 	result, err := prepare(context.Background(), proto.PrepareInput{
-		ModuleConfig: map[string]any{"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}}},
+		ModuleConfig: testModuleConfigObject(map[string]any{
+			"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
+		}),
 		ResourcesYAML: `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup

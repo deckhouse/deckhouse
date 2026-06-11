@@ -14,21 +14,31 @@
 
 package validation
 
-import (
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
-)
+import "fmt"
 
-// ValidatePreflight checks resources required before cluster bootstrap or converge.
-func ValidatePreflight(state *cpval.State) cpval.Result {
-	result := cpval.Result{}
-	if state == nil || cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
+// ValidateModuleConfig checks ModuleConfig presence and module-specific invariants.
+func ValidateModuleConfig(state *State) Result {
+	result := Result{}
+	if state == nil {
 		return result
 	}
 
-	result.Merge(cpval.ValidateCredentialSecretPresence(state))
-	result.Merge(cpval.ValidateMasterNodeGroup(state))
-	result.Merge(cpval.ValidateMasterInstanceClass(state))
+	if state.ModuleConfig == nil {
+		if len(state.LegacyProviderClusterConfig) == 0 {
+			result.AddError("ModuleConfig", "module_config_required", "ModuleConfig is required")
+		}
+
+		return result
+	}
+
+	moduleConfig := state.ModuleConfig
+	if moduleConfig.Name != "" && moduleConfig.Name != state.ModuleName {
+		result.AddError(
+			"ModuleConfig.metadata.name",
+			"invalid_module_config_name",
+			fmt.Sprintf("must be %q", state.ModuleName),
+		)
+	}
 
 	return result
 }

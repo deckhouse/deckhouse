@@ -14,7 +14,9 @@ Diagnostics go to stderr.
 Runs validation in `images/validator/src` using shared libraries:
 
 - generic checks from `go_lib/cloud-provider/validation`;
-- DVP-specific rules from `modules/030-cloud-provider-dvp/pkg/validation`.
+- DVP-specific rules from `modules/030-cloud-provider-dvp/pkg/validation`;
+- cluster state assembly via `go_lib/cloud-provider/validation/protocol.StateBuilder`
+  configured with constants from `modules/030-cloud-provider-dvp/pkg/validation`.
 
 The validator checks:
 
@@ -31,16 +33,14 @@ The validator checks:
 Migration from ProviderClusterConfiguration is skipped while legacy resources are
 incomplete (`MigrationStatus` / `d8-module-is-migrating` ConfigMap).
 
-**Preflight policy:** The admission webhook runs preflight on every admission request
-so the live cluster cannot drift into an invalid topology. The dhctl validator runs
-the same checks only for `bootstrap` and `converge` operations; other operations still
-validate ModuleConfig, credentials, and etcdDisk rules via `ValidateInvariants`.
+**Preflight policy:** Preflight runs only in the dhctl validator for `bootstrap` and
+`converge`. The admission webhook validates resource invariants only.
 
-| Path | ModuleConfig | Credentials | etcdDisk | Preflight | Migration skip |
-|------|-------------|-------------|----------|-----------|----------------|
-| dhctl bootstrap/converge | yes | yes | yes | yes | PCC / migration status |
-| dhctl other operations | yes | yes | yes | no | PCC / migration status |
-| admission webhook | yes | yes | yes | yes (every request) | ConfigMap |
+| Path                     | ModuleConfig | Credentials semantics | etcdDisk attachment | Preflight | Migration skip |
+| ------------------------ | ------------ | --------------------- | ------------------- | --------- | -------------- |
+| dhctl bootstrap/converge | yes          | yes (if present)      | yes                 | yes       | PCC / migration status |
+| dhctl other operations   | yes          | yes (if present)      | yes                 | no        | PCC / migration status |
+| admission webhook        | yes          | yes (if present)      | yes                 | no        | ConfigMap      |
 
 On success writes `{}` to stdout and exits 0.
 On validation error writes `{"error":"..."}` to stdout and exits 0.
@@ -53,11 +53,11 @@ and returns them together with the unchanged `providerClusterConfiguration`.
 
 `vars` population rules (from `go_lib/dhctl-provider-protocol/parse.go`):
 
-| Field | Condition |
-|---|---|
-| `nodeGroups` | `kind: NodeGroup`, `apiVersion: deckhouse.io/*`, `spec.nodeType: CloudPermanent` |
-| `instanceClasses` | `kind` ends with `InstanceClass`, `apiVersion: deckhouse.io/*` |
-| `secrets` | `kind: Secret`, `type: cloud-provider.deckhouse.io/credentials` |
+| Field             | Condition                                                                        |
+| ----------------- | -------------------------------------------------------------------------------- |
+| `nodeGroups`      | `kind: NodeGroup`, `apiVersion: deckhouse.io/*`, `spec.nodeType: CloudPermanent` |
+| `instanceClasses` | `kind` ends with `InstanceClass`, `apiVersion: deckhouse.io/*`                   |
+| `secrets`         | `kind: Secret`, `type: cloud-provider.deckhouse.io/credentials`                  |
 
 ## Build
 

@@ -14,19 +14,67 @@
 
 package validation
 
-import cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+import (
+	"fmt"
+	"strings"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+)
+
+// ValidateMasterInstanceClass checks master InstanceClass existence and etcdDisk requirements.
+func ValidateMasterInstanceClass(state *State) Result {
+	result := Result{}
+	if state == nil {
+		return result
+	}
+
+	masterNodeGroup, found := findNodeGroup(state, "master")
+	if !found {
+		return result
+	}
+
+	if masterNodeGroup.Spec.CloudInstances == nil || masterNodeGroup.Spec.CloudInstances.ClassReference == nil {
+		return result
+	}
+
+	classRef := masterNodeGroup.Spec.CloudInstances.ClassReference
+	if strings.TrimSpace(classRef.Name) == "" {
+		return result
+	}
+
+	class, found := findInstanceClass(state, classRef.Name)
+	if !found {
+		result.AddError(
+			"NodeGroup/master.spec.cloudInstances.classReference.name",
+			"master_instance_class_not_found",
+			fmt.Sprintf("%s %q was not found", state.InstanceClassKind, classRef.Name),
+		)
+
+		return result
+	}
+
+	if class.Spec.EtcdDisk == nil {
+		result.AddError(
+			state.InstanceClassKind+"/"+classRef.Name+".spec.etcdDisk",
+			"master_etcd_disk_required",
+			fmt.Sprintf("master %s must define spec.etcdDisk", state.InstanceClassKind),
+		)
+	}
+
+	return result
+}
 
 // ValidateInstanceClassEtcdDiskAttachment checks etcdDisk usage against NodeGroup attachments.
-func ValidateInstanceClassEtcdDiskAttachment(
-	instanceClassKind string,
-	nodeGroups []cpapi.NodeGroup,
-	instanceClasses []cpapi.InstanceClass,
-) Result {
+func ValidateInstanceClassEtcdDiskAttachment(state *State) Result {
 	result := Result{}
-	consumers := collectInstanceClassConsumers(instanceClassKind, nodeGroups)
+	if state == nil {
+		return result
+	}
 
-	for _, class := range instanceClasses {
-		if class.Kind != "" && class.Kind != instanceClassKind {
+	consumers := collectInstanceClassConsumers(state.InstanceClassKind, state.NodeGroups)
+
+	for _, class := range state.InstanceClasses {
+		if class.Kind != "" && class.Kind != state.InstanceClassKind {
 			continue
 		}
 
@@ -34,13 +82,10 @@ func ValidateInstanceClassEtcdDiskAttachment(
 			continue
 		}
 
-		path := namedResourcePath(instanceClassKind, class.Name)
-		classConsumers := consumers[class.Name]
-		hasMasterConsumer := false
+		path := namedResourcePath(state.InstanceClassKind, class.Name)
 
-		for _, nodeGroupName := range classConsumers {
+		for _, nodeGroupName := range consumers[class.Name] {
 			if nodeGroupName == "master" {
-				hasMasterConsumer = true
 				continue
 			}
 
@@ -50,14 +95,47 @@ func ValidateInstanceClassEtcdDiskAttachment(
 				"InstanceClass.spec.etcdDisk can be used only when class is attached to NodeGroup master",
 			)
 		}
+	}
 
-		if !hasMasterConsumer {
+	return result
+}
+
+// ValidateInstanceClassDelete checks whether an InstanceClass can be safely deleted.
+func ValidateInstanceClassDelete(state *State, className string, deletedClass *cpapi.InstanceClass) Result {
+	result := Result{}
+	if state == nil {
+		return result
+	}
+
+	if strings.TrimSpace(className) == "" && deletedClass != nil {
+		className = deletedClass.Name
+	}
+
+	if strings.TrimSpace(className) == "" {
+		return result
+	}
+
+	for _, nodeGroup := range state.NodeGroups {
+		if nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
+			continue
+		}
+
+		ref := nodeGroup.Spec.CloudInstances.ClassReference
+		if ref.Kind == state.InstanceClassKind && ref.Name == className {
 			result.AddError(
-				path+".spec.etcdDisk",
-				"etcd_disk_requires_master_attachment",
-				"InstanceClass.spec.etcdDisk can be used only when class is attached to NodeGroup master",
+				state.InstanceClassKind+"/"+className,
+				"instance_class_in_use",
+				fmt.Sprintf("InstanceClass is used by NodeGroup %q", nodeGroup.Name),
 			)
 		}
+	}
+
+	if deletedClass != nil && len(deletedClass.Status.NodeGroupConsumers) > 0 {
+		result.AddError(
+			state.InstanceClassKind+"/"+className,
+			"instance_class_has_consumers",
+			fmt.Sprintf("%s is used by %d NodeGroup consumers", state.InstanceClassKind, len(deletedClass.Status.NodeGroupConsumers)),
+		)
 	}
 
 	return result

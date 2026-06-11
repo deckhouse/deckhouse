@@ -25,11 +25,11 @@ import (
 	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpwebhookstate "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook/state"
+	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
-func newWebhookRuntimeStateBuilder(t *testing.T, objects ...runtime.Object) cpwebhookstate.Builder {
+func newWebhookAdmissionStateBuilder(t *testing.T, objects ...runtime.Object) *cpvaladmission.StateBuilder {
 	t.Helper()
 
 	scheme := runtime.NewScheme()
@@ -38,10 +38,11 @@ func newWebhookRuntimeStateBuilder(t *testing.T, objects ...runtime.Object) cpwe
 	}
 
 	client := clientfake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objects...).Build()
-	return cpwebhookstate.NewRuntimeStateBuilder(client, cpwebhookstate.Config{
-		ModuleName:        dvpval.ModuleName,
-		NamespaceName:     dvpval.Namespace,
-		InstanceClassKind: dvpval.InstanceClassKind,
+	return cpvaladmission.NewStateBuilder(client, cpvaladmission.StateBuilderConfig{
+		ModuleName:                   dvpval.ModuleName,
+		NamespaceName:                dvpval.Namespace,
+		InstanceClassKind:            dvpval.InstanceClassKind,
+		AllowedCredentialAuthSchemes: dvpval.AllowedCredentialAuthSchemes,
 	})
 }
 

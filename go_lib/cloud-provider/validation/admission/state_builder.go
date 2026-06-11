@@ -1,18 +1,4 @@
-// Copyright 2026 Flant JSC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-package state
+package admission
 
 import (
 	"context"
@@ -37,18 +23,20 @@ var (
 	nodeGroupListGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroupList"}
 )
 
-// Config holds provider-specific settings for RuntimeStateBuilder.
-type Config struct {
+// StateBuilderConfig holds provider-specific settings for StateBuilder.
+type StateBuilderConfig struct {
 	// InstanceClassKind is the provider InstanceClass resource kind.
 	InstanceClassKind string
 	// NamespaceName is the module namespace used for credential Secrets and migration markers.
 	NamespaceName string
 	// ModuleName is the cloud-provider ModuleConfig name.
 	ModuleName string
+	// AllowedCredentialAuthSchemes lists auth schemes supported by the provider.
+	AllowedCredentialAuthSchemes []cpapi.AuthScheme
 }
 
 // instanceClassGVK returns the GroupVersionKind for the configured InstanceClass kind.
-func (c Config) instanceClassGVK() schema.GroupVersionKind {
+func (c StateBuilderConfig) instanceClassGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   "deckhouse.io",
 		Version: "v1alpha1",
@@ -57,7 +45,7 @@ func (c Config) instanceClassGVK() schema.GroupVersionKind {
 }
 
 // instanceClassListGVK returns the GroupVersionKind for the configured InstanceClass list kind.
-func (c Config) instanceClassListGVK() schema.GroupVersionKind {
+func (c StateBuilderConfig) instanceClassListGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
 		Group:   "deckhouse.io",
 		Version: "v1alpha1",
@@ -65,31 +53,22 @@ func (c Config) instanceClassListGVK() schema.GroupVersionKind {
 	}
 }
 
-// Builder builds validation state from live cluster resources for admission webhooks.
-type Builder interface {
-	IsMigrationPending(ctx context.Context) (bool, error)
-	BuildForModuleConfig(ctx context.Context, operation admissionv1.Operation, obj runtime.Object) (*cpval.State, error)
-	BuildForCredentialSecret(ctx context.Context, operation admissionv1.Operation, obj *corev1.Secret) (*cpval.State, error)
-	BuildForNodeGroup(ctx context.Context, operation admissionv1.Operation, obj runtime.Object) (*cpval.State, error)
-	BuildForInstanceClass(ctx context.Context, operation admissionv1.Operation, obj runtime.Object) (*cpval.State, *cpapi.InstanceClass, error)
-}
-
-// RuntimeStateBuilder loads cluster state and applies admission object changes on top of it.
-type RuntimeStateBuilder struct {
+// StateBuilder loads cluster state and applies admission object changes on top of it.
+type StateBuilder struct {
 	client client.Client
-	config Config
+	config StateBuilderConfig
 }
 
-// NewRuntimeStateBuilder creates a state builder for the given provider configuration.
-func NewRuntimeStateBuilder(client client.Client, config Config) *RuntimeStateBuilder {
-	return &RuntimeStateBuilder{
+// NewStateBuilder creates a state builder for the given provider configuration.
+func NewStateBuilder(client client.Client, config StateBuilderConfig) *StateBuilder {
+	return &StateBuilder{
 		client: client,
 		config: config,
 	}
 }
 
 // IsMigrationPending reports whether the migration marker ConfigMap is present in the module namespace.
-func (b *RuntimeStateBuilder) IsMigrationPending(ctx context.Context) (bool, error) {
+func (b *StateBuilder) IsMigrationPending(ctx context.Context) (bool, error) {
 	// Runtime admission uses the migration marker ConfigMap created by the module hook
 	// while ProviderClusterConfiguration is still present. The dhctl validator instead
 	// derives MigrationStatus from the incoming PCC payload and resource completeness.
@@ -112,40 +91,45 @@ func (b *RuntimeStateBuilder) IsMigrationPending(ctx context.Context) (bool, err
 }
 
 // BuildForModuleConfig returns validation state with the admission ModuleConfig applied.
-func (b *RuntimeStateBuilder) BuildForModuleConfig(
+func (b *StateBuilder) BuildForModuleConfig(
 	ctx context.Context,
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (*cpval.State, error) {
 	state, err := b.buildBaseState(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build base state: %w", err)
 	}
 
 	switch operation {
 	case admissionv1.Delete:
 		state.ModuleConfig = nil
 	default:
-		moduleConfig, err := decodeRuntimeObject[cpapi.ModuleConfig](obj)
+		objMap, err := runtimeObjectToMap(obj)
 		if err != nil {
-			return nil, fmt.Errorf("decode ModuleConfig from admission object: %w", err)
+			return nil, fmt.Errorf("convert runtime object to map: %w", err)
 		}
 
-		state.ModuleConfig = &moduleConfig
+		moduleConfig, err := cpval.DecodeModuleConfig(objMap)
+		if err != nil {
+			return nil, fmt.Errorf("decode ModuleConfig: %w", err)
+		}
+
+		state.ModuleConfig = moduleConfig
 	}
 
 	return state, nil
 }
 
 // BuildForCredentialSecret returns validation state with the admission credential Secret applied.
-func (b *RuntimeStateBuilder) BuildForCredentialSecret(
+func (b *StateBuilder) BuildForCredentialSecret(
 	ctx context.Context,
 	operation admissionv1.Operation,
 	secret *corev1.Secret,
 ) (*cpval.State, error) {
 	state, err := b.buildBaseState(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build base state: %w", err)
 	}
 
 	if !cpapi.IsManagedCredentialSecret(secret) {
@@ -168,14 +152,14 @@ func (b *RuntimeStateBuilder) BuildForCredentialSecret(
 }
 
 // BuildForNodeGroup returns validation state with the admission NodeGroup applied.
-func (b *RuntimeStateBuilder) BuildForNodeGroup(
+func (b *StateBuilder) BuildForNodeGroup(
 	ctx context.Context,
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (*cpval.State, error) {
 	state, err := b.buildBaseState(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build base state: %w", err)
 	}
 
 	accessor, err := meta.Accessor(obj)
@@ -187,13 +171,18 @@ func (b *RuntimeStateBuilder) BuildForNodeGroup(
 	case admissionv1.Delete:
 		state.NodeGroups = removeNodeGroup(state.NodeGroups, accessor.GetName())
 	default:
-		nodeGroup, err := decodeRuntimeObject[cpapi.NodeGroup](obj)
+		objMap, err := runtimeObjectToMap(obj)
 		if err != nil {
-			return nil, fmt.Errorf("decode NodeGroup from admission object: %w", err)
+			return nil, fmt.Errorf("convert runtime object to map: %w", err)
+		}
+
+		nodeGroup, err := cpval.DecodeNodeGroup(objMap)
+		if err != nil {
+			return nil, fmt.Errorf("decode NodeGroup: %w", err)
 		}
 
 		if nodeGroup.Spec.NodeType == cpapi.NodeTypeCloudPermanent {
-			state.NodeGroups = upsertNodeGroup(state.NodeGroups, nodeGroup)
+			state.NodeGroups = upsertNodeGroup(state.NodeGroups, *nodeGroup)
 		} else {
 			state.NodeGroups = removeNodeGroup(state.NodeGroups, nodeGroup.Name)
 		}
@@ -203,14 +192,14 @@ func (b *RuntimeStateBuilder) BuildForNodeGroup(
 }
 
 // BuildForInstanceClass returns validation state with the admission InstanceClass applied.
-func (b *RuntimeStateBuilder) BuildForInstanceClass(
+func (b *StateBuilder) BuildForInstanceClass(
 	ctx context.Context,
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (*cpval.State, *cpapi.InstanceClass, error) {
 	state, err := b.buildBaseState(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("build base state: %w", err)
 	}
 
 	accessor, err := meta.Accessor(obj)
@@ -218,58 +207,61 @@ func (b *RuntimeStateBuilder) BuildForInstanceClass(
 		return nil, nil, fmt.Errorf("get %s metadata: %w", b.config.InstanceClassKind, err)
 	}
 
+	objMap, err := runtimeObjectToMap(obj)
+	if err != nil {
+		return nil, nil, fmt.Errorf("convert runtime object to map: %w", err)
+	}
+
+	instanceClass, err := cpval.DecodeInstanceClass(objMap)
+	if err != nil {
+		return nil, nil, fmt.Errorf("decode %s: %w", b.config.InstanceClassKind, err)
+	}
+
 	switch operation {
 	case admissionv1.Delete:
-		deletedClass, err := decodeRuntimeObject[cpapi.InstanceClass](obj)
-		if err != nil {
-			return nil, nil, fmt.Errorf("decode deleted %s: %w", b.config.InstanceClassKind, err)
-		}
-
 		state.InstanceClasses = removeInstanceClass(state.InstanceClasses, accessor.GetName())
-
-		return state, &deletedClass, nil
+		return state, instanceClass, nil
 	default:
-		instanceClass, err := decodeRuntimeObject[cpapi.InstanceClass](obj)
-		if err != nil {
-			return nil, nil, fmt.Errorf("decode %s from admission object: %w", b.config.InstanceClassKind, err)
-		}
-
-		state.InstanceClasses = upsertInstanceClass(state.InstanceClasses, instanceClass)
-
+		state.InstanceClasses = upsertInstanceClass(state.InstanceClasses, *instanceClass)
 		return state, nil, nil
 	}
 }
 
-func (b *RuntimeStateBuilder) buildBaseState(ctx context.Context) (*cpval.State, error) {
-	state := &cpval.State{}
+func (b *StateBuilder) buildBaseState(ctx context.Context) (*cpval.State, error) {
+	state := &cpval.State{
+		InstanceClassKind:            b.config.InstanceClassKind,
+		NamespaceName:                b.config.NamespaceName,
+		ModuleName:                   b.config.ModuleName,
+		AllowedCredentialAuthSchemes: b.config.AllowedCredentialAuthSchemes,
+	}
 
 	moduleConfig, err := b.getModuleConfig(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get ModuleConfig: %w", err)
 	}
 	state.ModuleConfig = moduleConfig
 
 	secrets, err := b.listCredentialSecrets(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list credential secrets: %w", err)
 	}
 	state.CredentialSecrets = secrets
 
 	nodeGroups, err := b.listCloudPermanentNodeGroups(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list CloudPermanent NodeGroups: %w", err)
 	}
 	state.NodeGroups = nodeGroups
 
 	instanceClasses, err := b.listInstanceClasses(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list InstanceClasses with kind %s: %w", b.config.InstanceClassKind, err)
 	}
 	state.InstanceClasses = instanceClasses
 
 	migrationPending, err := b.IsMigrationPending(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("check migration pending: %w", err)
 	}
 
 	if migrationPending {
@@ -282,7 +274,7 @@ func (b *RuntimeStateBuilder) buildBaseState(ctx context.Context) (*cpval.State,
 	return state, nil
 }
 
-func (b *RuntimeStateBuilder) getModuleConfig(ctx context.Context) (*cpapi.ModuleConfig, error) {
+func (b *StateBuilder) getModuleConfig(ctx context.Context) (*cpapi.ModuleConfig, error) {
 	obj := newUnstructured(moduleConfigGVK)
 	err := b.client.Get(ctx, client.ObjectKey{Name: b.config.ModuleName}, obj)
 	if err != nil {
@@ -292,15 +284,15 @@ func (b *RuntimeStateBuilder) getModuleConfig(ctx context.Context) (*cpapi.Modul
 		return nil, fmt.Errorf("get ModuleConfig: %w", err)
 	}
 
-	moduleConfig, err := cpval.DecodeJSONValue[cpapi.ModuleConfig](obj.Object)
+	moduleConfig, err := cpval.DecodeModuleConfig(obj.Object)
 	if err != nil {
 		return nil, fmt.Errorf("decode ModuleConfig: %w", err)
 	}
 
-	return &moduleConfig, nil
+	return moduleConfig, nil
 }
 
-func (b *RuntimeStateBuilder) listCredentialSecrets(ctx context.Context) ([]cpapi.CredentialSecret, error) {
+func (b *StateBuilder) listCredentialSecrets(ctx context.Context) ([]cpapi.CredentialSecret, error) {
 	list := &corev1.SecretList{}
 	if err := b.client.List(ctx, list, client.InNamespace(b.config.NamespaceName)); err != nil {
 		return nil, fmt.Errorf("list credential Secrets: %w", err)
@@ -319,7 +311,7 @@ func (b *RuntimeStateBuilder) listCredentialSecrets(ctx context.Context) ([]cpap
 	return result, nil
 }
 
-func (b *RuntimeStateBuilder) listCloudPermanentNodeGroups(ctx context.Context) ([]cpapi.NodeGroup, error) {
+func (b *StateBuilder) listCloudPermanentNodeGroups(ctx context.Context) ([]cpapi.NodeGroup, error) {
 	list := newUnstructuredList(nodeGroupListGVK)
 	if err := b.client.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list NodeGroups: %w", err)
@@ -327,20 +319,20 @@ func (b *RuntimeStateBuilder) listCloudPermanentNodeGroups(ctx context.Context) 
 
 	result := make([]cpapi.NodeGroup, 0, len(list.Items))
 	for i := range list.Items {
-		nodeGroup, err := cpval.DecodeJSONValue[cpapi.NodeGroup](list.Items[i].Object)
+		nodeGroup, err := cpval.DecodeNodeGroup(list.Items[i].Object)
 		if err != nil {
 			return nil, fmt.Errorf("decode NodeGroup: %w", err)
 		}
 
 		if nodeGroup.Spec.NodeType == cpapi.NodeTypeCloudPermanent {
-			result = append(result, nodeGroup)
+			result = append(result, *nodeGroup)
 		}
 	}
 
 	return result, nil
 }
 
-func (b *RuntimeStateBuilder) listInstanceClasses(ctx context.Context) ([]cpapi.InstanceClass, error) {
+func (b *StateBuilder) listInstanceClasses(ctx context.Context) ([]cpapi.InstanceClass, error) {
 	list := newUnstructuredList(b.config.instanceClassListGVK())
 	if err := b.client.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list %s: %w", b.config.InstanceClassKind+"List", err)
@@ -348,12 +340,12 @@ func (b *RuntimeStateBuilder) listInstanceClasses(ctx context.Context) ([]cpapi.
 
 	result := make([]cpapi.InstanceClass, 0, len(list.Items))
 	for i := range list.Items {
-		instanceClass, err := cpval.DecodeJSONValue[cpapi.InstanceClass](list.Items[i].Object)
+		instanceClass, err := cpval.DecodeInstanceClass(list.Items[i].Object)
 		if err != nil {
 			return nil, fmt.Errorf("decode %s: %w", b.config.InstanceClassKind, err)
 		}
 
-		result = append(result, instanceClass)
+		result = append(result, *instanceClass)
 	}
 
 	return result, nil
@@ -369,16 +361,6 @@ func newUnstructuredList(gvk schema.GroupVersionKind) *unstructured.Unstructured
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(gvk)
 	return list
-}
-
-func decodeRuntimeObject[T any](obj runtime.Object) (T, error) {
-	var out T
-	object, err := runtimeObjectToMap(obj)
-	if err != nil {
-		return out, err
-	}
-
-	return cpval.DecodeJSONValue[T](object)
 }
 
 func runtimeObjectToMap(obj runtime.Object) (map[string]any, error) {

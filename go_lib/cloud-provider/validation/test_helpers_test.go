@@ -16,19 +16,29 @@ package validation
 
 import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 )
 
-// ValidatePreflight checks resources required before cluster bootstrap or converge.
-func ValidatePreflight(state *cpval.State) cpval.Result {
-	result := cpval.Result{}
-	if state == nil || cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
-		return result
+func credentialContentState(secrets []cpapi.CredentialSecret, schemes []cpapi.AuthScheme) *State {
+	return &State{
+		NamespaceName:                "d8-cloud-provider-test",
+		CredentialSecrets:            secrets,
+		AllowedCredentialAuthSchemes: schemes,
 	}
+}
 
-	result.Merge(cpval.ValidateCredentialSecretPresence(state))
-	result.Merge(cpval.ValidateMasterNodeGroup(state))
-	result.Merge(cpval.ValidateMasterInstanceClass(state))
+func instanceClassState(kind string, nodeGroups []cpapi.NodeGroup, classes []cpapi.InstanceClass) *State {
+	return &State{
+		InstanceClassKind: kind,
+		NodeGroups:        nodeGroups,
+		InstanceClasses:   classes,
+	}
+}
 
-	return result
+func hasViolationCode(result Result, code string) bool {
+	for _, violation := range result.Errors() {
+		if violation.Code == code {
+			return true
+		}
+	}
+	return false
 }

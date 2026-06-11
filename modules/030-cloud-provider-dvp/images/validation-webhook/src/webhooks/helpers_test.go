@@ -49,7 +49,9 @@ func TestResultToAdmission(t *testing.T) {
 		t.Fatalf("resultToAdmission() = (%v, %v), want (nil, nil)", warnings, err)
 	}
 
-	_, err = resultToAdmission(cpval.Result{Errors: []cpval.Violation{{Message: "denied"}}})
+	denied := cpval.Result{}
+	denied.AddError("", "denied", "denied")
+	_, err = resultToAdmission(denied)
 	if err == nil {
 		t.Fatal("resultToAdmission() error = nil, want denial")
 	}
@@ -58,28 +60,11 @@ func TestResultToAdmission(t *testing.T) {
 	}
 }
 
-func TestValidateAdmissionStateSkipsPreflightWhenModuleDisabled(t *testing.T) {
+func TestValidateAdmissionStateRunsOnlyInvariants(t *testing.T) {
 	t.Parallel()
 
 	state := &cpval.State{
-		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: dvpval.ModuleName},
-			Spec: cpapi.ModuleConfigSpec{
-				Enabled: boolPtr(false),
-				Version: 2,
-			},
-		},
-	}
-	result := validateAdmissionState(state)
-	if strings.Contains(result.Error(), "credential Secret") {
-		t.Fatalf("validateAdmissionState(disabled) = %q, want preflight skipped", result.Error())
-	}
-}
-
-func TestValidateAdmissionStateMergesPreflight(t *testing.T) {
-	t.Parallel()
-
-	state := &cpval.State{
+		ModuleName: dvpval.ModuleName,
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: dvpval.ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
@@ -89,8 +74,26 @@ func TestValidateAdmissionStateMergesPreflight(t *testing.T) {
 		},
 	}
 	result := validateAdmissionState(state)
-	if !strings.Contains(result.Error(), "credential Secret") {
-		t.Fatalf("validateAdmissionState() = %q", result.Error())
+	if result.HasErrors() {
+		t.Fatalf("validateAdmissionState() = %q, want only invariants without preflight requirements", result.Error())
+	}
+}
+
+func TestValidateAdmissionStateDoesNotEnforceMasterTopology(t *testing.T) {
+	t.Parallel()
+
+	state := &cpval.State{
+		ModuleName: dvpval.ModuleName,
+		ModuleConfig: &cpapi.ModuleConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: dvpval.ModuleName},
+			Spec: cpapi.ModuleConfigSpec{
+				Enabled: boolPtr(true),
+				Version: 2,
+			},
+		},
+	}
+	if strings.Contains(validateAdmissionState(state).Error(), `NodeGroup "master" is required`) {
+		t.Fatal("validateAdmissionState() enforced preflight master topology")
 	}
 }
 

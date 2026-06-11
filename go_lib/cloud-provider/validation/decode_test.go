@@ -22,67 +22,6 @@ import (
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
-func TestBuildStateFromProtocolInput(t *testing.T) {
-	t.Parallel()
-
-	state, err := BuildStateFromProtocolInput("cloud-provider-dvp", proto.PrepareInput{
-		ModuleConfig: map[string]any{
-			"provider": map[string]any{
-				"parameters": map[string]any{
-					"namespace": "d8-cloud-provider-dvp",
-				},
-			},
-		},
-		ProviderClusterConfig: map[string]any{
-			"masterNodeGroup": map[string]any{"replicas": 3},
-		},
-	}, &proto.CloudProviderVars{
-		Secrets: map[string]map[string]any{
-			"d8-credentials": {
-				"metadata": map[string]any{"name": "d8-credentials"},
-				"type":     cpapi.CredentialsSecretType,
-				"stringData": map[string]any{
-					"authScheme": "kubeconfig",
-					"secret":     "token",
-				},
-			},
-		},
-		NodeGroups: map[string]map[string]any{
-			"master": {
-				"metadata": map[string]any{"name": "master"},
-				"spec": map[string]any{
-					"nodeType": "CloudPermanent",
-				},
-			},
-		},
-		InstanceClasses: map[string]map[string]any{
-			"master-dvp": {
-				"metadata": map[string]any{"name": "master-dvp"},
-				"kind":     "DVPInstanceClass",
-			},
-		},
-	})
-	if err != nil {
-		t.Fatalf("BuildStateFromProtocolInput() error = %v", err)
-	}
-
-	if state.ModuleConfig == nil || state.ModuleConfig.Name != "cloud-provider-dvp" {
-		t.Fatalf("BuildStateFromProtocolInput() module config = %#v", state.ModuleConfig)
-	}
-	if len(state.CredentialSecrets) != 1 || state.CredentialSecrets[0].Name != cpapi.CredentialSecretName {
-		t.Fatalf("BuildStateFromProtocolInput() credential secrets = %#v", state.CredentialSecrets)
-	}
-	if len(state.NodeGroups) != 1 || state.NodeGroups[0].Name != "master" {
-		t.Fatalf("BuildStateFromProtocolInput() node groups = %#v", state.NodeGroups)
-	}
-	if len(state.InstanceClasses) != 1 || state.InstanceClasses[0].Name != "master-dvp" {
-		t.Fatalf("BuildStateFromProtocolInput() instance classes = %#v", state.InstanceClasses)
-	}
-	if len(state.LegacyProviderClusterConfig) == 0 {
-		t.Fatal("BuildStateFromProtocolInput() legacy PCC not populated")
-	}
-}
-
 func TestDecodeCredentialSecretsNilVars(t *testing.T) {
 	t.Parallel()
 
@@ -116,7 +55,7 @@ func TestDecodeInstanceClassesNilVars(t *testing.T) {
 func TestDecodeModuleConfigEmptyRaw(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := DecodeModuleConfig("cloud-provider-test", nil)
+	cfg, err := DecodeModuleConfig(nil)
 	if err != nil || cfg != nil {
 		t.Fatalf("DecodeModuleConfig(nil) = %#v, err = %v", cfg, err)
 	}
@@ -125,7 +64,7 @@ func TestDecodeModuleConfigEmptyRaw(t *testing.T) {
 func TestDecodeModuleConfigFullObject(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := DecodeModuleConfig("ignored", map[string]any{
+	cfg, err := DecodeModuleConfig(map[string]any{
 		"metadata": map[string]any{"name": "cloud-provider-dvp"},
 		"spec": map[string]any{
 			"enabled": true,
@@ -140,17 +79,28 @@ func TestDecodeModuleConfigFullObject(t *testing.T) {
 	}
 }
 
-func TestDecodeModuleConfigFillsMissingName(t *testing.T) {
+func TestDecodeModuleConfigSettingsMap(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := DecodeModuleConfig("cloud-provider-dvp", map[string]any{
-		"spec": map[string]any{"enabled": true},
+	moduleConfig, err := DecodeModuleConfigForModule("cloud-provider-dvp", map[string]any{
+		"provider": map[string]any{
+			"parameters": map[string]any{"namespace": "d8-cloud-provider-dvp"},
+		},
 	})
 	if err != nil {
-		t.Fatalf("DecodeModuleConfig() error = %v", err)
+		t.Fatalf("DecodeModuleConfigForModule() error = %v", err)
 	}
-	if cfg.Name != "cloud-provider-dvp" {
-		t.Fatalf("DecodeModuleConfig() name = %q, want module name fallback", cfg.Name)
+	if moduleConfig == nil {
+		return
+	}
+	if moduleConfig.Name != "cloud-provider-dvp" {
+		t.Fatalf("DecodeModuleConfigForModule() name = %q", moduleConfig.Name)
+	}
+	if moduleConfig.Spec.Version != 2 || moduleConfig.Spec.Enabled == nil || !*moduleConfig.Spec.Enabled {
+		t.Fatalf("DecodeModuleConfigForModule() spec = %#v", moduleConfig.Spec)
+	}
+	if moduleConfig.Spec.Settings.Provider == nil || len(moduleConfig.Spec.Settings.Provider.Parameters) == 0 {
+		t.Fatalf("DecodeModuleConfigForModule() settings = %#v", moduleConfig.Spec.Settings)
 	}
 }
 
@@ -188,78 +138,5 @@ func TestDecodeJSONValueInvalidTarget(t *testing.T) {
 	_, err := DecodeJSONValue[int]("not-a-number")
 	if err == nil || !strings.Contains(err.Error(), "unmarshal value") {
 		t.Fatalf("DecodeJSONValue() error = %v, want unmarshal failure", err)
-	}
-}
-
-func TestBuildStateFromProtocolInputEmptyInput(t *testing.T) {
-	t.Parallel()
-
-	state, err := BuildStateFromProtocolInput("cloud-provider-dvp", proto.PrepareInput{}, nil)
-	if err != nil {
-		t.Fatalf("BuildStateFromProtocolInput() error = %v", err)
-	}
-	if state.ModuleConfig != nil || len(state.CredentialSecrets) != 0 || len(state.NodeGroups) != 0 || len(state.InstanceClasses) != 0 {
-		t.Fatalf("BuildStateFromProtocolInput() = %#v, want empty state", state)
-	}
-}
-
-func TestBuildStateFromProtocolInputModuleConfigDecodeError(t *testing.T) {
-	t.Parallel()
-
-	_, err := BuildStateFromProtocolInput("cloud-provider-dvp", proto.PrepareInput{
-		ModuleConfig: map[string]any{"spec": "invalid"},
-	}, nil)
-	if err == nil || !strings.Contains(err.Error(), "decode ModuleConfig object") {
-		t.Fatalf("BuildStateFromProtocolInput() error = %v", err)
-	}
-}
-
-func TestBuildStateFromProtocolInputCredentialSecretsDecodeError(t *testing.T) {
-	t.Parallel()
-
-	_, err := BuildStateFromProtocolInput("cloud-provider-dvp", proto.PrepareInput{}, &proto.CloudProviderVars{
-		Secrets: map[string]map[string]any{
-			"broken": {"metadata": "invalid"},
-		},
-	})
-	if err == nil || !strings.Contains(err.Error(), "decode secret") {
-		t.Fatalf("BuildStateFromProtocolInput() error = %v", err)
-	}
-}
-
-func TestBuildStateFromProtocolInputNodeGroupsDecodeError(t *testing.T) {
-	t.Parallel()
-
-	_, err := BuildStateFromProtocolInput("cloud-provider-dvp", proto.PrepareInput{}, &proto.CloudProviderVars{
-		NodeGroups: map[string]map[string]any{
-			"broken": {"spec": "invalid"},
-		},
-	})
-	if err == nil || !strings.Contains(err.Error(), "decode node group") {
-		t.Fatalf("BuildStateFromProtocolInput() error = %v", err)
-	}
-}
-
-func TestBuildStateFromProtocolInputInstanceClassesDecodeError(t *testing.T) {
-	t.Parallel()
-
-	_, err := BuildStateFromProtocolInput("cloud-provider-dvp", proto.PrepareInput{}, &proto.CloudProviderVars{
-		InstanceClasses: map[string]map[string]any{
-			"broken": {"metadata": 123},
-		},
-	})
-	if err == nil || !strings.Contains(err.Error(), "decode instance class") {
-		t.Fatalf("BuildStateFromProtocolInput() error = %v", err)
-	}
-}
-
-func TestBuildStateFromProtocolInputModuleConfigSettingsDecodeError(t *testing.T) {
-	t.Parallel()
-
-	_, err := BuildStateFromProtocolInput("cloud-provider-dvp", proto.PrepareInput{
-		ModuleConfig: map[string]any{"provider": "invalid"},
-	}, nil)
-	if err == nil || !strings.Contains(err.Error(), "decode module settings") {
-		t.Fatalf("BuildStateFromProtocolInput() error = %v", err)
 	}
 }

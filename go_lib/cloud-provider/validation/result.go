@@ -19,31 +19,8 @@ import (
 	"errors"
 	"strings"
 
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	"golang.org/x/exp/maps"
 )
-
-// State holds decoded provider resources used by validation rules.
-type State struct {
-	ModuleConfig      *cpapi.ModuleConfig
-	CredentialSecrets []cpapi.CredentialSecret
-	NodeGroups        []cpapi.NodeGroup
-	InstanceClasses   []cpapi.InstanceClass
-
-	// MigrationStatus controls whether new-model validation should run.
-	MigrationStatus cpapi.MigrationStatus
-
-	// LegacyProviderClusterConfig holds the legacy providerClusterConfiguration section.
-	LegacyProviderClusterConfig map[string]any
-}
-
-// ModuleEnabled reports whether the cloud-provider module is enabled in the current state.
-func (s *State) ModuleEnabled() bool {
-	if s == nil || s.ModuleConfig == nil || s.ModuleConfig.Spec.Enabled == nil {
-		return true
-	}
-
-	return *s.ModuleConfig.Spec.Enabled
-}
 
 const (
 	// SeverityError marks a validation violation that must block the operation.
@@ -66,39 +43,71 @@ type Violation struct {
 
 // Result aggregates validation errors and warnings.
 type Result struct {
-	Errors   []Violation `json:"errors,omitempty"`
-	Warnings []Violation `json:"warnings,omitempty"`
+	errors   map[string]Violation
+	warnings map[string]Violation
 }
 
-// AddError appends a blocking validation violation.
+// AddError records a blocking validation violation.
 func (r *Result) AddError(path, code, message string) {
-	r.Errors = append(r.Errors, Violation{
+	if r.errors == nil {
+		r.errors = make(map[string]Violation)
+	}
+
+	r.errors[violationKey(code, path)] = Violation{
 		Path:     path,
 		Code:     code,
 		Message:  message,
 		Severity: SeverityError,
-	})
+	}
 }
 
-// AddWarning appends a non-blocking validation violation.
+// AddWarning records a non-blocking validation violation.
 func (r *Result) AddWarning(path, code, message string) {
-	r.Warnings = append(r.Warnings, Violation{
+	if r.warnings == nil {
+		r.warnings = make(map[string]Violation)
+	}
+
+	r.warnings[violationKey(code, path)] = Violation{
 		Path:     path,
 		Code:     code,
 		Message:  message,
 		Severity: SeverityWarning,
-	})
+	}
 }
 
-// Merge appends errors and warnings from another result.
-func (r *Result) Merge(other Result) {
-	r.Errors = append(r.Errors, other.Errors...)
-	r.Warnings = append(r.Warnings, other.Warnings...)
+// Merge copies unique violations from another result.
+func (r *Result) Merge(results ...Result) {
+	if r.errors == nil {
+		r.errors = make(map[string]Violation)
+	}
+	if r.warnings == nil {
+		r.warnings = make(map[string]Violation)
+	}
+
+	for _, result := range results {
+		for key, violation := range result.errors {
+			r.errors[key] = violation
+		}
+
+		for key, violation := range result.warnings {
+			r.warnings[key] = violation
+		}
+	}
+}
+
+// Errors returns blocking violations.
+func (r Result) Errors() []Violation {
+	return maps.Values(r.errors)
+}
+
+// Warnings returns non-blocking violations.
+func (r Result) Warnings() []Violation {
+	return maps.Values(r.warnings)
 }
 
 // HasErrors reports whether the result contains blocking violations.
 func (r Result) HasErrors() bool {
-	return len(r.Errors) > 0
+	return len(r.errors) > 0
 }
 
 // Error returns a human-readable summary of blocking violations.
@@ -107,12 +116,13 @@ func (r Result) Error() string {
 		return ""
 	}
 
-	lines := make([]string, 0, len(r.Errors))
-	for _, violation := range r.Errors {
+	lines := make([]string, 0, len(r.errors))
+	for _, violation := range r.Errors() {
 		if violation.Path == "" {
 			lines = append(lines, violation.Message)
 			continue
 		}
+
 		lines = append(lines, violation.Path+": "+violation.Message)
 	}
 
@@ -126,4 +136,8 @@ func (r Result) ErrorOrNil() error {
 	}
 
 	return errors.New(r.Error())
+}
+
+func violationKey(code, path string) string {
+	return code + "\x00" + path
 }

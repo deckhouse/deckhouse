@@ -19,17 +19,26 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
+func testMigrationRules() MigrationRules {
+	return MigrationRules{
+		InstanceClassName: func(nodeGroupName string) string {
+			return nodeGroupName + "-test"
+		},
+	}
+}
+
 func TestMigrationStatusFromState(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
+
 	tests := []struct {
 		name  string
-		state *cpval.State
+		state *State
 		want  cpapi.MigrationStatus
 	}{
 		{
@@ -39,7 +48,7 @@ func TestMigrationStatusFromState(t *testing.T) {
 		},
 		{
 			name: "state B - PCC with incomplete new resources",
-			state: &cpval.State{
+			state: &State{
 				LegacyProviderClusterConfig: map[string]any{
 					"masterNodeGroup": map[string]any{"replicas": 3},
 				},
@@ -66,7 +75,7 @@ func TestMigrationStatusFromState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := MigrationStatusFromState(tt.state)
+			got := MigrationStatusFromState(tt.state, &rules)
 			if got != tt.want {
 				t.Fatalf("MigrationStatusFromState() = %#v, want %#v", got, tt.want)
 			}
@@ -74,16 +83,30 @@ func TestMigrationStatusFromState(t *testing.T) {
 	}
 }
 
-func migrationBaseState(t *testing.T) *cpval.State {
+func migrationBaseState(t *testing.T) *State {
 	t.Helper()
 
-	state := &cpval.State{
+	const (
+		moduleName        = "cloud-provider-test"
+		namespaceName     = "d8-cloud-provider-test"
+		instanceClassKind = "TestInstanceClass"
+	)
+
+	state := &State{
+		ModuleName:        moduleName,
+		NamespaceName:     namespaceName,
+		InstanceClassKind: instanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
+			ObjectMeta: metav1.ObjectMeta{Name: moduleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: ptr.To(true),
 				Version: 2,
 				Settings: cpapi.ModuleConfigSpecSettings{
+					Provider: &cpapi.ModuleConfigSpecProviderSettings{
+						Parameters: map[string]any{
+							"namespace": namespaceName,
+						},
+					},
 					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
 						Enabled:    ptr.To(true),
 						Parameters: map[string]any{},
@@ -98,7 +121,7 @@ func migrationBaseState(t *testing.T) *cpval.State {
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      cpapi.CredentialSecretName,
-					Namespace: Namespace,
+					Namespace: namespaceName,
 				},
 				Type: cpapi.CredentialsSecretType,
 			},
@@ -110,8 +133,8 @@ func migrationBaseState(t *testing.T) *cpval.State {
 					NodeType: cpapi.NodeTypeCloudPermanent,
 					CloudInstances: &cpapi.CloudInstances{
 						ClassReference: &cpapi.ClassReference{
-							Kind: InstanceClassKind,
-							Name: "master-dvp",
+							Kind: instanceClassKind,
+							Name: "master-test",
 						},
 					},
 				},
@@ -119,33 +142,18 @@ func migrationBaseState(t *testing.T) *cpval.State {
 		},
 		InstanceClasses: []cpapi.InstanceClass{
 			{
-				TypeMeta:   metav1.TypeMeta{Kind: InstanceClassKind},
-				ObjectMeta: metav1.ObjectMeta{Name: "master-dvp"},
+				TypeMeta:   metav1.TypeMeta{Kind: instanceClassKind},
+				ObjectMeta: metav1.ObjectMeta{Name: "master-test"},
 				Spec: cpapi.InstanceClassSpec{
 					EtcdDisk: migrationRawJSONForTest("{}"),
 				},
 			},
 		},
 	}
-	state.ModuleConfig.Spec.SetRawSettings(map[string]any{
-		"provider": map[string]any{
-			"parameters": map[string]any{
-				"namespace": Namespace,
-			},
-		},
-		"storage": map[string]any{
-			"enabled":    true,
-			"parameters": map[string]any{},
-		},
-		"nodes": map[string]any{
-			"enabled": false,
-		},
-	})
-
 	return state
 }
 
-func migrationCompleteState(t *testing.T) *cpval.State {
+func migrationCompleteState(t *testing.T) *State {
 	t.Helper()
 
 	state := migrationBaseState(t)
@@ -162,8 +170,8 @@ func migrationCompleteState(t *testing.T) *cpval.State {
 		},
 	})
 	state.InstanceClasses = append(state.InstanceClasses, cpapi.InstanceClass{
-		TypeMeta:   metav1.TypeMeta{Kind: InstanceClassKind},
-		ObjectMeta: metav1.ObjectMeta{Name: "worker-dvp"},
+		TypeMeta:   metav1.TypeMeta{Kind: state.InstanceClassKind},
+		ObjectMeta: metav1.ObjectMeta{Name: "worker-test"},
 	})
 
 	return state
@@ -177,9 +185,10 @@ func migrationRawJSONForTest(value string) *json.RawMessage {
 func TestMigrationStatusIncompleteWhenModuleConfigMissing(t *testing.T) {
 	t.Parallel()
 
-	got := MigrationStatusFromState(&cpval.State{
+	rules := testMigrationRules()
+	got := MigrationStatusFromState(&State{
 		LegacyProviderClusterConfig: map[string]any{"masterNodeGroup": map[string]any{}},
-	})
+	}, &rules)
 	if !got.MigrationPending || got.NewResourcesComplete {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -188,12 +197,13 @@ func TestMigrationStatusIncompleteWhenModuleConfigMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenModuleDisabled(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationBaseState(t)
 	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
 	disabled := false
 	state.ModuleConfig.Spec.Enabled = &disabled
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -202,11 +212,12 @@ func TestMigrationStatusIncompleteWhenModuleDisabled(t *testing.T) {
 func TestMigrationStatusIncompleteWhenModuleVersionTooLow(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationBaseState(t)
 	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
 	state.ModuleConfig.Spec.Version = 1
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -215,11 +226,14 @@ func TestMigrationStatusIncompleteWhenModuleVersionTooLow(t *testing.T) {
 func TestMigrationStatusIncompleteWhenProviderSettingsMissing(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationBaseState(t)
 	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
-	state.ModuleConfig.Spec.SetRawSettings(map[string]any{"storage": map[string]any{"enabled": true}})
+	state.ModuleConfig.Spec.Settings = cpapi.ModuleConfigSpecSettings{
+		Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(true)},
+	}
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -228,11 +242,12 @@ func TestMigrationStatusIncompleteWhenProviderSettingsMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenCredentialSecretMissing(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationBaseState(t)
 	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
 	state.CredentialSecrets = nil
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -241,10 +256,11 @@ func TestMigrationStatusIncompleteWhenCredentialSecretMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenLegacyPCCDecodeFails(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationBaseState(t)
 	state.LegacyProviderClusterConfig = map[string]any{"nodeGroups": "invalid"}
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -253,11 +269,12 @@ func TestMigrationStatusIncompleteWhenLegacyPCCDecodeFails(t *testing.T) {
 func TestMigrationStatusIncompleteWhenMasterNodeGroupMissing(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationBaseState(t)
 	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{"replicas": 3}}
 	state.NodeGroups = nil
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -266,11 +283,12 @@ func TestMigrationStatusIncompleteWhenMasterNodeGroupMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenMasterInstanceClassMissing(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationBaseState(t)
 	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{"replicas": 3}}
 	state.InstanceClasses = nil
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -279,13 +297,14 @@ func TestMigrationStatusIncompleteWhenMasterInstanceClassMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenLegacyWorkerNameMissing(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationCompleteState(t)
 	state.LegacyProviderClusterConfig = map[string]any{
 		"masterNodeGroup": map[string]any{"replicas": 3},
 		"nodeGroups":      []any{map[string]any{"name": ""}},
 	}
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}
@@ -294,10 +313,11 @@ func TestMigrationStatusIncompleteWhenLegacyWorkerNameMissing(t *testing.T) {
 func TestMigrationStatusIncompleteWhenWorkerInstanceClassMissing(t *testing.T) {
 	t.Parallel()
 
+	rules := testMigrationRules()
 	state := migrationCompleteState(t)
 	state.InstanceClasses = state.InstanceClasses[:1]
 
-	got := MigrationStatusFromState(state)
+	got := MigrationStatusFromState(state, &rules)
 	if !got.MigrationPending {
 		t.Fatalf("MigrationStatusFromState() = %#v, want pending migration", got)
 	}

@@ -16,17 +16,15 @@ package validation
 
 import (
 	"encoding/json"
-	"strings"
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
-func TestValidateInvariantsRejectsUnattachedEtcdDisk(t *testing.T) {
+func TestValidateInvariantsAllowsUnattachedEtcdDisk(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
@@ -39,11 +37,8 @@ func TestValidateInvariantsRejectsUnattachedEtcdDisk(t *testing.T) {
 	})
 
 	result := ValidateInvariants(state)
-	if !result.HasErrors() {
-		t.Fatalf("ValidateInvariants() expected errors")
-	}
-	if !strings.Contains(result.Error(), "DVPInstanceClass/orphan-dvp.spec.etcdDisk") {
-		t.Fatalf("ValidateInvariants() error = %q, want orphan etcdDisk path", result.Error())
+	if result.HasErrors() {
+		t.Fatalf("ValidateInvariants() = %q, want unattached etcdDisk allowed", result.Error())
 	}
 }
 
@@ -51,6 +46,9 @@ func TestValidateInvariantsSkipsPendingMigration(t *testing.T) {
 	t.Parallel()
 
 	state := &cpval.State{
+		ModuleName:      ModuleName,
+		NamespaceName:   Namespace,
+		InstanceClassKind: InstanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
@@ -113,57 +111,6 @@ func TestValidateInvariantsIgnoresNodeParameterFields(t *testing.T) {
 	}
 }
 
-func TestValidateModuleConfigAllowsDisabledSubsystems(t *testing.T) {
-	t.Parallel()
-
-	state := validState(t)
-	state.ModuleConfig.Spec.Settings.Storage = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)}
-	state.ModuleConfig.Spec.Settings.Nodes = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)}
-
-	result := ValidateModuleConfig(state)
-	if result.HasErrors() {
-		t.Fatalf("ValidateModuleConfig() unexpected errors: %s", result.Error())
-	}
-}
-
-func TestValidateModuleConfigIgnoresSensitiveSettings(t *testing.T) {
-	t.Parallel()
-
-	state := validState(t)
-	state.ModuleConfig.Spec.SetRawSettings(map[string]any{
-		"provider": map[string]any{
-			"parameters": map[string]any{
-				"token": "must-not-fail",
-			},
-		},
-	})
-
-	result := ValidateModuleConfig(state)
-	if result.HasErrors() {
-		t.Fatalf("ValidateModuleConfig() unexpected errors: %s", result.Error())
-	}
-}
-
-func TestValidateCredentialsIgnoresOrdinaryModuleSecrets(t *testing.T) {
-	t.Parallel()
-
-	state := validState(t)
-	state.CredentialSecrets = append(state.CredentialSecrets,
-		cpapi.CredentialSecret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "validation-webhook-tls",
-				Namespace: Namespace,
-			},
-			Type: string(corev1.SecretTypeTLS),
-		},
-	)
-
-	result := ValidateCredentials(state, true)
-	if result.HasErrors() {
-		t.Fatalf("ValidateCredentials() unexpected errors: %s", result.Error())
-	}
-}
-
 func TestValidateInvariantsNilState(t *testing.T) {
 	t.Parallel()
 
@@ -172,126 +119,15 @@ func TestValidateInvariantsNilState(t *testing.T) {
 	}
 }
 
-func TestValidateModuleConfigRequiredWithoutLegacyPCC(t *testing.T) {
-	t.Parallel()
-
-	state := &cpval.State{}
-	result := ValidateModuleConfig(state)
-	if !hasViolationCode(result, "module_config_required") {
-		t.Fatalf("ValidateModuleConfig() = %q", result.Error())
-	}
-}
-
-func TestValidateModuleConfigAllowsLegacyPCCWithoutModuleConfig(t *testing.T) {
-	t.Parallel()
-
-	state := &cpval.State{LegacyProviderClusterConfig: map[string]any{"masterNodeGroup": map[string]any{}}}
-	if result := ValidateModuleConfig(state); result.HasErrors() {
-		t.Fatalf("ValidateModuleConfig() = %q, want no errors", result.Error())
-	}
-}
-
-func TestValidateModuleConfigRejectsWrongName(t *testing.T) {
-	t.Parallel()
-
-	state := validState(t)
-	state.ModuleConfig.Name = "wrong-name"
-
-	result := ValidateModuleConfig(state)
-	if !hasViolationCode(result, "invalid_module_config_name") {
-		t.Fatalf("ValidateModuleConfig() = %q", result.Error())
-	}
-}
-
-func TestValidateCredentialsIgnoresUnmanagedInvalidType(t *testing.T) {
-	t.Parallel()
-
-	state := validState(t)
-	state.CredentialSecrets[0].Type = string(corev1.SecretTypeTLS)
-
-	result := ValidateCredentials(state, true)
-	if !hasViolationCode(result, "credential_secret_required") {
-		t.Fatalf("ValidateCredentials() = %q, want primary required when only unmanaged secret present", result.Error())
-	}
-}
-
-func TestValidateCredentialsRequiresPrimaryWhenEnabled(t *testing.T) {
+func TestValidateInvariantsDoesNotRequirePrimaryCredentialSecret(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
 	state.CredentialSecrets = nil
 
-	result := ValidateCredentials(state, true)
-	if !hasViolationCode(result, "credential_secret_required") {
-		t.Fatalf("ValidateCredentials() = %q", result.Error())
-	}
-}
-
-func TestValidateCredentialsSkipsPrimaryWhenNotRequired(t *testing.T) {
-	t.Parallel()
-
-	state := validState(t)
-	state.CredentialSecrets = nil
-
-	if result := ValidateCredentials(state, false); result.HasErrors() {
-		t.Fatalf("ValidateCredentials() = %q, want no primary requirement errors", result.Error())
-	}
-}
-
-func TestValidateCredentialsIgnoresOtherNamespace(t *testing.T) {
-	t.Parallel()
-
-	state := validState(t)
-	state.CredentialSecrets = append(state.CredentialSecrets, cpapi.CredentialSecret{
-		ObjectMeta: metav1.ObjectMeta{Name: cpapi.CredentialSecretName, Namespace: "other"},
-		Type:       cpapi.CredentialsSecretType,
-		StringData: cpapi.CredentialSecretStringData{AuthScheme: "invalid"},
-	})
-
-	if result := ValidateCredentials(state, true); result.HasErrors() {
-		t.Fatalf("ValidateCredentials() = %q, want other namespace secret ignored", result.Error())
-	}
-}
-
-func TestValidateInstanceClassDeleteEmptyName(t *testing.T) {
-	t.Parallel()
-
-	if result := ValidateInstanceClassDelete(validState(t), "", nil); result.HasErrors() {
-		t.Fatalf("ValidateInstanceClassDelete() = %q, want no errors", result.Error())
-	}
-}
-
-func TestValidateInstanceClassDeleteInUseByNodeGroup(t *testing.T) {
-	t.Parallel()
-
-	result := ValidateInstanceClassDelete(validState(t), "master-dvp", nil)
-	if !hasViolationCode(result, "instance_class_in_use") {
-		t.Fatalf("ValidateInstanceClassDelete() = %q", result.Error())
-	}
-}
-
-func TestValidateInstanceClassDeleteWithStatusConsumers(t *testing.T) {
-	t.Parallel()
-
-	deleted := &cpapi.InstanceClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "orphan-dvp"},
-		Status:     cpapi.InstanceClassStatus{NodeGroupConsumers: []any{"worker"}},
-	}
-	result := ValidateInstanceClassDelete(validState(t), "", deleted)
-	if !hasViolationCode(result, "instance_class_has_consumers") {
-		t.Fatalf("ValidateInstanceClassDelete() = %q", result.Error())
-	}
-}
-
-func TestValidateInstanceClassDeleteUsesDeletedClassName(t *testing.T) {
-	t.Parallel()
-
-	deleted := &cpapi.InstanceClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "master-dvp"},
-	}
-	result := ValidateInstanceClassDelete(validState(t), "", deleted)
-	if !hasViolationCode(result, "instance_class_in_use") {
-		t.Fatalf("ValidateInstanceClassDelete() = %q", result.Error())
+	result := ValidateInvariants(state)
+	if result.HasErrors() {
+		t.Fatalf("ValidateInvariants() = %q, want no primary credential requirement", result.Error())
 	}
 }
 
@@ -299,12 +135,21 @@ func validState(t *testing.T) *cpval.State {
 	t.Helper()
 
 	state := &cpval.State{
+		ModuleName:                   ModuleName,
+		NamespaceName:                Namespace,
+		InstanceClassKind:            InstanceClassKind,
+		AllowedCredentialAuthSchemes: AllowedCredentialAuthSchemes,
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: ptr.To(true),
 				Version: 2,
 				Settings: cpapi.ModuleConfigSpecSettings{
+					Provider: &cpapi.ModuleConfigSpecProviderSettings{
+						Parameters: map[string]any{
+							"namespace": Namespace,
+						},
+					},
 					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
 						Enabled:    ptr.To(true),
 						Parameters: map[string]any{},
@@ -352,21 +197,6 @@ func validState(t *testing.T) *cpval.State {
 			},
 		},
 	}
-	state.ModuleConfig.Spec.SetRawSettings(map[string]any{
-		"provider": map[string]any{
-			"parameters": map[string]any{
-				"namespace": Namespace,
-			},
-		},
-		"storage": map[string]any{
-			"enabled":    true,
-			"parameters": map[string]any{},
-		},
-		"nodes": map[string]any{
-			"enabled": false,
-		},
-	})
-
 	return state
 }
 

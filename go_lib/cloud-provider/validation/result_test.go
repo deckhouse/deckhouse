@@ -17,37 +17,7 @@ package validation
 import (
 	"strings"
 	"testing"
-
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	"k8s.io/utils/ptr"
 )
-
-func TestStateModuleEnabled(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name  string
-		state *State
-		want  bool
-	}{
-		{name: "nil state", state: nil, want: true},
-		{name: "nil module config", state: &State{}, want: true},
-		{name: "enabled nil", state: &State{ModuleConfig: &cpapi.ModuleConfig{}}, want: true},
-		{name: "enabled true", state: &State{ModuleConfig: &cpapi.ModuleConfig{Spec: cpapi.ModuleConfigSpec{Enabled: ptr.To(true)}}}, want: true},
-		{name: "enabled false", state: &State{ModuleConfig: &cpapi.ModuleConfig{Spec: cpapi.ModuleConfigSpec{Enabled: ptr.To(false)}}}, want: false},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := tt.state.ModuleEnabled(); got != tt.want {
-				t.Fatalf("ModuleEnabled() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestResultHelpers(t *testing.T) {
 	t.Parallel()
@@ -55,10 +25,10 @@ func TestResultHelpers(t *testing.T) {
 	result := Result{}
 	result.AddError("path.one", "code_one", "message one")
 	result.AddWarning("path.two", "code_two", "message two")
-	result.Merge(Result{
-		Errors:   []Violation{{Path: "path.three", Code: "code_three", Message: "message three", Severity: SeverityError}},
-		Warnings: []Violation{{Path: "path.four", Code: "code_four", Message: "message four", Severity: SeverityWarning}},
-	})
+	other := Result{}
+	other.AddError("path.three", "code_three", "message three")
+	other.AddWarning("path.four", "code_four", "message four")
+	result.Merge(other)
 
 	if !result.HasErrors() {
 		t.Fatal("HasErrors() = false, want true")
@@ -85,6 +55,56 @@ func TestResultHelpers(t *testing.T) {
 	pathless.AddError("", "code", "plain message")
 	if !strings.Contains(pathless.Error(), "plain message") || strings.Contains(pathless.Error(), ": plain message") {
 		t.Fatalf("Error() without path = %q", pathless.Error())
+	}
+}
+
+func TestResultMergeKeepsSameCodeAtDifferentPaths(t *testing.T) {
+	t.Parallel()
+
+	result := Result{}
+	result.AddError("Secret/d8-credentials", "credential_secret_required", `credential Secret "d8-credentials" is required`)
+
+	duplicate := Result{}
+	duplicate.AddError("Secret/other", "credential_secret_required", "other message")
+	result.Merge(duplicate)
+
+	if len(result.Errors()) != 2 {
+		t.Fatalf("Merge() errors = %d, want 2 for same code at different paths", len(result.Errors()))
+	}
+}
+
+func TestResultMergeDeduplicatesViolationsByCodeAndPath(t *testing.T) {
+	t.Parallel()
+
+	result := Result{}
+	result.AddError("Secret/d8-credentials", "credential_secret_required", `credential Secret "d8-credentials" is required`)
+
+	duplicate := Result{}
+	duplicate.AddError("Secret/d8-credentials", "credential_secret_required", "duplicate message")
+	result.Merge(duplicate)
+
+	if len(result.Errors()) != 1 {
+		t.Fatalf("Merge() errors = %d, want 1 after deduplication by code and path", len(result.Errors()))
+	}
+
+	violations := result.Errors()
+	if violations[0].Code != "credential_secret_required" || violations[0].Path != "Secret/d8-credentials" {
+		t.Fatalf("Errors() = %#v, want single violation for code and path pair", violations)
+	}
+}
+
+func TestResultMergeKeepsDifferentCodes(t *testing.T) {
+	t.Parallel()
+
+	result := Result{}
+	result.AddError("Secret/d8-credentials", "credential_secret_required", `credential Secret "d8-credentials" is required`)
+
+	duplicate := Result{}
+	duplicate.AddError("Secret/d8-credentials", "duplicate_credential_secret_required", `credential Secret "d8-credentials" is required`)
+	result.Merge(duplicate)
+
+	if len(result.Errors()) != 2 {
+		t.Fatalf("Merge() errors = %d, want distinct codes preserved", len(result.Errors()))
 	}
 }
 

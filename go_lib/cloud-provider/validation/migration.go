@@ -15,11 +15,14 @@
 package validation
 
 import (
-	"fmt"
-
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 )
+
+// MigrationRules configures provider-specific migration completeness checks.
+type MigrationRules struct {
+	// InstanceClassName maps a NodeGroup name to the expected InstanceClass name.
+	InstanceClassName func(nodeGroupName string) string
+}
 
 type legacyProviderClusterConfig struct {
 	MasterNodeGroup map[string]any   `json:"masterNodeGroup,omitempty"`
@@ -27,12 +30,19 @@ type legacyProviderClusterConfig struct {
 }
 
 // MigrationStatusFromState derives migration status from the decoded validation state.
-func MigrationStatusFromState(state *cpval.State) cpapi.MigrationStatus {
+func MigrationStatusFromState(state *State, rules *MigrationRules) cpapi.MigrationStatus {
 	if state == nil || len(state.LegacyProviderClusterConfig) == 0 {
 		return cpapi.MigrationStatus{}
 	}
 
-	complete := isNewResourcesComplete(state)
+	if rules == nil {
+		return cpapi.MigrationStatus{
+			LegacyPCCPresent: true,
+			MigrationPending: true,
+		}
+	}
+
+	complete := IsNewResourcesComplete(state, *rules)
 	return cpapi.MigrationStatus{
 		LegacyPCCPresent:     true,
 		NewResourcesComplete: complete,
@@ -40,20 +50,24 @@ func MigrationStatusFromState(state *cpval.State) cpapi.MigrationStatus {
 	}
 }
 
-func isNewResourcesComplete(state *cpval.State) bool {
+// IsNewResourcesComplete reports whether all new-model resources required by legacy PCC are present.
+func IsNewResourcesComplete(state *State, rules MigrationRules) bool {
+	if state == nil {
+		return false
+	}
+
 	if state.ModuleConfig == nil ||
 		state.ModuleConfig.Spec.Version < 2 ||
-		state.ModuleConfig.Spec.Enabled == nil ||
-		!*state.ModuleConfig.Spec.Enabled ||
-		!hasProviderSettings(state.ModuleConfig.Spec.RawSettings()) {
+		!isModuleConfigEnabled(state.ModuleConfig) ||
+		!hasProviderSettings(state.ModuleConfig) {
 		return false
 	}
 
-	if _, found := findCredentialSecret(state.CredentialSecrets, cpapi.CredentialSecretName); !found {
+	if _, ok := findCredentialSecret(state, cpapi.CredentialSecretName); !ok {
 		return false
 	}
 
-	legacy, err := cpval.DecodeJSONValue[legacyProviderClusterConfig](state.LegacyProviderClusterConfig)
+	legacy, err := DecodeJSONValue[legacyProviderClusterConfig](state.LegacyProviderClusterConfig)
 	if err != nil {
 		return false
 	}
@@ -68,8 +82,14 @@ func isNewResourcesComplete(state *cpval.State) bool {
 		instanceClasses[class.Name] = struct{}{}
 	}
 
-	if len(legacy.MasterNodeGroup) > 0 {
-		if !hasNamedResource(nodeGroups, "master") || !hasNamedResource(instanceClasses, "master-dvp") {
+	if rules.InstanceClassName == nil {
+		rules.InstanceClassName = func(nodeGroupName string) string {
+			return nodeGroupName
+		}
+	}
+
+	if legacy.MasterNodeGroup != nil {
+		if !hasNamedResource(nodeGroups, "master") || !hasNamedResource(instanceClasses, rules.InstanceClassName("master")) {
 			return false
 		}
 	}
@@ -80,7 +100,7 @@ func isNewResourcesComplete(state *cpval.State) bool {
 			return false
 		}
 
-		if !hasNamedResource(nodeGroups, name) || !hasNamedResource(instanceClasses, fmt.Sprintf("%s-dvp", name)) {
+		if !hasNamedResource(nodeGroups, name) || !hasNamedResource(instanceClasses, rules.InstanceClassName(name)) {
 			return false
 		}
 	}
@@ -88,18 +108,15 @@ func isNewResourcesComplete(state *cpval.State) bool {
 	return true
 }
 
+func isModuleConfigEnabled(moduleConfig *cpapi.ModuleConfig) bool {
+	return moduleConfig.Spec.Enabled != nil && *moduleConfig.Spec.Enabled
+}
+
+func hasProviderSettings(moduleConfig *cpapi.ModuleConfig) bool {
+	return moduleConfig.Spec.Settings.Provider != nil && len(moduleConfig.Spec.Settings.Provider.Parameters) > 0
+}
+
 func hasNamedResource(resources map[string]struct{}, name string) bool {
 	_, ok := resources[name]
 	return ok
-}
-
-func hasProviderSettings(settings map[string]any) bool {
-	provider, ok := settings["provider"].(map[string]any)
-	if !ok {
-		return false
-	}
-
-	parameters, ok := provider["parameters"].(map[string]any)
-
-	return ok && len(parameters) > 0
 }

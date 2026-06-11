@@ -30,7 +30,7 @@ import (
 func TestCredentialSecretValidatorWithFakeClientValidateCreate(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
 
 	_, err := validator.ValidateCreate(context.Background(), dvpCredentialSecret(validWebhookKubeconfigB64()))
@@ -42,7 +42,7 @@ func TestCredentialSecretValidatorWithFakeClientValidateCreate(t *testing.T) {
 func TestCredentialSecretValidatorWithFakeClientAllowsValidCluster(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
 
 	secret := dvpCredentialSecret(validWebhookKubeconfigB64())
@@ -55,7 +55,7 @@ func TestCredentialSecretValidatorWithFakeClientAllowsValidCluster(t *testing.T)
 func TestCredentialSecretValidatorWithFakeClientRejectsCredentialTypeChange(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
 
 	oldSecret := dvpCredentialSecret(validWebhookKubeconfigB64())
@@ -71,7 +71,7 @@ func TestCredentialSecretValidatorWithFakeClientRejectsCredentialTypeChange(t *t
 func TestCredentialSecretValidatorWithFakeClientRejectsInvalidAuthScheme(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
 
 	secret := dvpCredentialSecret("updated-token")
@@ -86,12 +86,12 @@ func TestCredentialSecretValidatorWithFakeClientRejectsInvalidAuthScheme(t *test
 func TestCredentialSecretValidatorWithFakeClientValidateDelete(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
 
 	_, err := validator.ValidateDelete(context.Background(), dvpCredentialSecret("token"))
-	if err == nil || !strings.Contains(err.Error(), "credential Secret") {
-		t.Fatalf("ValidateDelete() error = %v, want credential required denial", err)
+	if err != nil {
+		t.Fatalf("ValidateDelete() error = %v, want allow without preflight requirements", err)
 	}
 }
 
@@ -105,7 +105,7 @@ func TestCredentialSecretValidatorWithFakeClientSkipsMigration(t *testing.T) {
 			Namespace: dvpval.Namespace,
 		},
 	})
-	builder := newWebhookRuntimeStateBuilder(t, objects...)
+	builder := newWebhookAdmissionStateBuilder(t, objects...)
 	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
 
 	secret := dvpCredentialSecret("invalid")
@@ -120,7 +120,7 @@ func TestCredentialSecretValidatorWithFakeClientSkipsMigration(t *testing.T) {
 func TestCredentialSecretValidatorWithFakeClientRejectsCreateWithManagedNameWrongType(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewCredentialSecretValidator(builder, &corev1.Secret{})
 
 	secret := dvpCredentialSecret(validWebhookKubeconfigB64())

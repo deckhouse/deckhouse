@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
 	dhctlproto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
@@ -29,7 +30,17 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 		return fmt.Errorf("parse resources: %w", err)
 	}
 
-	state, err := dvpval.BuildStateFromProtocolInput(input, cpVars)
+	stateBuilder := cpvalprotocol.NewStateBuilder(
+		cpvalprotocol.StateBuilderConfig{
+			ModuleName:                   dvpval.ModuleName,
+			NamespaceName:                dvpval.Namespace,
+			InstanceClassKind:            dvpval.InstanceClassKind,
+			AllowedCredentialAuthSchemes: dvpval.AllowedCredentialAuthSchemes,
+			MigrationRules:               &dvpval.MigrationRules,
+		},
+	)
+
+	state, err := stateBuilder.Build(input, cpVars)
 	if err != nil {
 		return fmt.Errorf("build validation state: %w", err)
 	}

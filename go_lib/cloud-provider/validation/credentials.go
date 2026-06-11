@@ -24,9 +24,63 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
-// ValidateCredentialSecrets checks managed credential Secrets against allowed auth schemes.
-func ValidateCredentialSecrets(secrets []cpapi.CredentialSecret, allowedAuthSchemes []cpapi.AuthScheme) Result {
+// ValidateCredentialSecretPresence checks that primary credential Secret exists before bootstrap or converge.
+func ValidateCredentialSecretPresence(state *State) Result {
 	result := Result{}
+	if state == nil {
+		return result
+	}
+
+	secret, ok := findCredentialSecret(state, cpapi.CredentialSecretName)
+	if !ok {
+		result.AddError(
+			"Secret/"+cpapi.CredentialSecretName,
+			"credential_secret_required",
+			fmt.Sprintf(`credential Secret %q is required`, cpapi.CredentialSecretName),
+		)
+
+		return result
+	}
+
+	if secret.Type != cpapi.CredentialsSecretType {
+		result.AddError(
+			fmt.Sprintf("Secret/%s.type", secret.Name),
+			"invalid_credential_secret_type",
+			fmt.Sprintf("credential Secret type must be %q", cpapi.CredentialsSecretType),
+		)
+	}
+
+	return result
+}
+
+// ValidateCredentialSecretContent checks semantic validity of managed credential Secrets.
+func ValidateCredentialSecretContent(state *State) Result {
+	result := Result{}
+	if state == nil {
+		return result
+	}
+
+	secrets := getManagedCredentialSecrets(state)
+	for _, secret := range secrets {
+		if secret.Type != cpapi.CredentialsSecretType {
+			result.AddError(
+				fmt.Sprintf("Secret/%s.type", secret.Name),
+				"invalid_credential_secret_type",
+				fmt.Sprintf("credential Secret type must be %q", cpapi.CredentialsSecretType),
+			)
+		}
+	}
+
+	result.Merge(
+		validateCredentialSecrets(secrets, state.AllowedCredentialAuthSchemes),
+	)
+
+	return result
+}
+
+func validateCredentialSecrets(secrets []cpapi.CredentialSecret, allowedAuthSchemes []cpapi.AuthScheme) Result {
+	result := Result{}
+
 	allowed := make(map[cpapi.AuthScheme]struct{}, len(allowedAuthSchemes))
 	for _, scheme := range allowedAuthSchemes {
 		allowed[scheme] = struct{}{}
@@ -60,72 +114,37 @@ func ValidateCredentialSecrets(secrets []cpapi.CredentialSecret, allowedAuthSche
 func validateAuthSchemeKeys(path string, data map[string]string, authScheme cpapi.AuthScheme, result *Result) {
 	switch authScheme {
 	case cpapi.AuthSchemeAccessKeyPair:
-		ValidateAuthSchemeAccessKeyPairKeys(path, data, result)
+		validateRequiredCredentialKey(path, data, "identity", cpapi.AuthSchemeAccessKeyPair, result)
+		validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeAccessKeyPair, result)
 	case cpapi.AuthSchemeUserPassword:
-		ValidateAuthSchemeUserPasswordKeys(path, data, result)
+		validateRequiredCredentialKey(path, data, "identity", cpapi.AuthSchemeUserPassword, result)
+		validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeUserPassword, result)
 	case cpapi.AuthSchemeAPIToken:
-		ValidateAuthSchemeAPITokenKeys(path, data, result)
+		validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeAPIToken, result)
 	case cpapi.AuthSchemeServiceAccount:
-		ValidateAuthSchemeServiceAccountKeys(path, data, result)
+		validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeServiceAccount, result)
 	case cpapi.AuthSchemeClientSecret:
-		ValidateAuthSchemeClientSecretKeys(path, data, result)
-	case cpapi.AuthSchemeKubeconfig:
-		ValidateAuthSchemeKubeconfigKeys(path, data, result)
+		validateRequiredCredentialKey(path, data, "identity", cpapi.AuthSchemeClientSecret, result)
+		validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeClientSecret, result)
 	case cpapi.AuthSchemeAppSecret:
-		ValidateAuthSchemeAppSecretKeys(path, data, result)
+		validateRequiredCredentialKey(path, data, "identity", cpapi.AuthSchemeAppSecret, result)
+		validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeAppSecret, result)
+	case cpapi.AuthSchemeKubeconfig:
+		validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeKubeconfig, result)
+
+		secret := strings.TrimSpace(data["secret"])
+		if secret == "" {
+			return
+		}
+
+		if err := validateKubeconfigBase64(secret); err != nil {
+			result.AddError(
+				path+".data.secret",
+				"invalid_kubeconfig_secret",
+				"secret must contain base64-encoded kubeconfig",
+			)
+		}
 	}
-}
-
-// ValidateAuthSchemeAccessKeyPairKeys validates required fields for accessKeyPair credentials.
-func ValidateAuthSchemeAccessKeyPairKeys(path string, data map[string]string, result *Result) {
-	validateRequiredCredentialKey(path, data, "identity", cpapi.AuthSchemeAccessKeyPair, result)
-	validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeAccessKeyPair, result)
-}
-
-// ValidateAuthSchemeUserPasswordKeys validates required fields for userPassword credentials.
-func ValidateAuthSchemeUserPasswordKeys(path string, data map[string]string, result *Result) {
-	validateRequiredCredentialKey(path, data, "identity", cpapi.AuthSchemeUserPassword, result)
-	validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeUserPassword, result)
-}
-
-// ValidateAuthSchemeAPITokenKeys validates required fields for apiToken credentials.
-func ValidateAuthSchemeAPITokenKeys(path string, data map[string]string, result *Result) {
-	validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeAPIToken, result)
-}
-
-// ValidateAuthSchemeServiceAccountKeys validates required fields for serviceAccount credentials.
-func ValidateAuthSchemeServiceAccountKeys(path string, data map[string]string, result *Result) {
-	validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeServiceAccount, result)
-}
-
-// ValidateAuthSchemeClientSecretKeys validates required fields for clientSecret credentials.
-func ValidateAuthSchemeClientSecretKeys(path string, data map[string]string, result *Result) {
-	validateRequiredCredentialKey(path, data, "identity", cpapi.AuthSchemeClientSecret, result)
-	validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeClientSecret, result)
-}
-
-// ValidateAuthSchemeKubeconfigKeys validates required fields and kubeconfig format.
-func ValidateAuthSchemeKubeconfigKeys(path string, data map[string]string, result *Result) {
-	validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeKubeconfig, result)
-
-	secret := strings.TrimSpace(data["secret"])
-	if secret == "" {
-		return
-	}
-
-	if err := validateKubeconfigBase64(secret); err != nil {
-		result.AddError(
-			path+".data.secret",
-			"invalid_kubeconfig_secret",
-			"secret must contain base64-encoded kubeconfig",
-		)
-	}
-}
-
-// ValidateAuthSchemeAppSecretKeys validates required fields for appSecret credentials.
-func ValidateAuthSchemeAppSecretKeys(path string, data map[string]string, result *Result) {
-	validateRequiredCredentialKey(path, data, "identity", cpapi.AuthSchemeAppSecret, result)
-	validateRequiredCredentialKey(path, data, "secret", cpapi.AuthSchemeAppSecret, result)
 }
 
 func validateRequiredCredentialKey(path string, data map[string]string, key string, authScheme cpapi.AuthScheme, result *Result) {
@@ -133,11 +152,20 @@ func validateRequiredCredentialKey(path string, data map[string]string, key stri
 		return
 	}
 
-	result.AddError(
-		path+".data."+key,
-		"required_credential_field",
-		fmt.Sprintf("%s is required for authScheme %q", key, authScheme),
-	)
+	var code, message string
+	switch key {
+	case "identity":
+		code = "credential_identity_required"
+		message = fmt.Sprintf("identity is required for authScheme %q", authScheme)
+	case "secret":
+		code = "credential_secret_key_required"
+		message = fmt.Sprintf("secret is required for authScheme %q", authScheme)
+	default:
+		code = "credential_field_required"
+		message = fmt.Sprintf("%s is required for authScheme %q", key, authScheme)
+	}
+
+	result.AddError(path+".data."+key, code, message)
 }
 
 func validateKubeconfigBase64(kubeconfigB64 string) error {

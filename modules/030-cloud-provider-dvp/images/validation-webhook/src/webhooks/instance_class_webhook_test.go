@@ -25,7 +25,7 @@ import (
 func TestDVPInstanceClassValidatorWithFakeClientValidateUpdate(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewDVPInstanceClassValidator(builder, &unstructured.Unstructured{})
 
 	updated := dvpInstanceClassObject("master-dvp")
@@ -39,7 +39,7 @@ func TestDVPInstanceClassValidatorWithFakeClientValidateUpdate(t *testing.T) {
 func TestDVPInstanceClassValidatorWithFakeClientAllowsValidCluster(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewDVPInstanceClassValidator(builder, &unstructured.Unstructured{})
 
 	created := dvpInstanceClassObject("worker-dvp")
@@ -52,7 +52,7 @@ func TestDVPInstanceClassValidatorWithFakeClientAllowsValidCluster(t *testing.T)
 func TestDVPInstanceClassValidatorWithFakeClientRejectsDeleteInUse(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewDVPInstanceClassValidator(builder, &unstructured.Unstructured{})
 
 	_, err := validator.ValidateDelete(context.Background(), dvpInstanceClassObject("master-dvp"))

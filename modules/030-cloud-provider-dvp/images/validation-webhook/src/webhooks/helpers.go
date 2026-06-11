@@ -43,8 +43,9 @@ func resultToAdmission(result cpval.Result) (admission.Warnings, error) {
 		return nil, nil
 	}
 
-	fieldErrors := make(field.ErrorList, 0, len(result.Errors))
-	for _, violation := range result.Errors {
+	errors := result.Errors()
+	fieldErrors := make(field.ErrorList, 0, len(errors))
+	for _, violation := range errors {
 		fieldErrors = append(fieldErrors, field.Invalid(violationFieldPath(violation.Path), nil, violation.Message))
 	}
 
@@ -70,19 +71,10 @@ func violationFieldPath(path string) *field.Path {
 	return fp
 }
 
-// validateAdmissionState applies the shared DVP validation pipeline for admission
-// requests. It uses the same ValidateInvariants entry point as the dhctl validator
-// and additionally enforces ValidatePreflight on every admission so the live cluster
-// cannot drift into a state that bootstrap/converge would reject. The dhctl
-// validator runs preflight only for bootstrap and converge operations.
+// validateAdmissionState applies resource invariants for admission requests.
+// Preflight checks run only in the dhctl validator during bootstrap and converge.
 func validateAdmissionState(state *cpval.State) cpval.Result {
-	result := dvpval.ValidateInvariants(state)
-
-	if state != nil && state.ModuleEnabled() {
-		result.Merge(dvpval.ValidatePreflight(state))
-	}
-
-	return result
+	return dvpval.ValidateInvariants(state)
 }
 
 func internalBuildError(err error) error {

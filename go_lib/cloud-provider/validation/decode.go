@@ -20,60 +20,24 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
-// BuildStateFromProtocolInput decodes dhctl provider input into a validation State.
-func BuildStateFromProtocolInput(
-	moduleName string,
-	input proto.PrepareInput,
-	vars *proto.CloudProviderVars,
-) (*State, error) {
-	moduleConfig, err := DecodeModuleConfig(moduleName, input.ModuleConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	credSecrets, err := DecodeCredentialSecrets(vars)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeGroups, err := DecodeNodeGroups(vars)
-	if err != nil {
-		return nil, err
-	}
-
-	instanceClasses, err := DecodeInstanceClasses(vars)
-	if err != nil {
-		return nil, err
-	}
-
-	return &State{
-		ModuleConfig:                moduleConfig,
-		CredentialSecrets:           credSecrets,
-		NodeGroups:                  nodeGroups,
-		InstanceClasses:             instanceClasses,
-		LegacyProviderClusterConfig: input.ProviderClusterConfig,
-	}, nil
-}
-
 // DecodeCredentialSecrets decodes credential Secrets from CloudProviderVars.
 func DecodeCredentialSecrets(vars *proto.CloudProviderVars) ([]cpapi.CredentialSecret, error) {
-	credSecrets := make([]cpapi.CredentialSecret, 0)
-
-	if vars == nil {
-		return credSecrets, nil
+	if vars == nil || len(vars.Secrets) == 0 {
+		return []cpapi.CredentialSecret{}, nil
 	}
 
-	for _, rawSecret := range vars.Secrets {
+	credSecrets := make([]cpapi.CredentialSecret, 0, len(vars.Secrets))
+
+	for name, rawSecret := range vars.Secrets {
 		secret, err := DecodeJSONValue[corev1.Secret](rawSecret)
 		if err != nil {
-			return credSecrets, fmt.Errorf("decode secret: %w", err)
+			return credSecrets, fmt.Errorf("decode secret %q: %w", name, err)
 		}
 
 		credSecrets = append(credSecrets, cpapi.SecretToCredentialSecret(&secret))
@@ -82,80 +46,103 @@ func DecodeCredentialSecrets(vars *proto.CloudProviderVars) ([]cpapi.CredentialS
 	return credSecrets, nil
 }
 
-// DecodeNodeGroups decodes NodeGroup resources from CloudProviderVars.
-func DecodeNodeGroups(vars *proto.CloudProviderVars) ([]cpapi.NodeGroup, error) {
-	nodeGroups := make([]cpapi.NodeGroup, 0)
-
-	if vars == nil {
-		return nodeGroups, nil
+// DecodeNodeGroup decodes NodeGroup resource from CloudProviderVars.
+func DecodeNodeGroup(rawNodeGroup map[string]any) (*cpapi.NodeGroup, error) {
+	nodeGroup, err := DecodeJSONValue[cpapi.NodeGroup](rawNodeGroup)
+	if err != nil {
+		return nil, fmt.Errorf("decode node group: %w", err)
 	}
 
-	for _, rawNodeGroup := range vars.NodeGroups {
-		nodeGroup, err := DecodeJSONValue[cpapi.NodeGroup](rawNodeGroup)
+	return &nodeGroup, nil
+}
+
+// DecodeNodeGroups decodes NodeGroup resources from CloudProviderVars.
+func DecodeNodeGroups(rawNodeGroups map[string]map[string]any) ([]cpapi.NodeGroup, error) {
+	if len(rawNodeGroups) == 0 {
+		return []cpapi.NodeGroup{}, nil
+	}
+
+	nodeGroups := make([]cpapi.NodeGroup, 0, len(rawNodeGroups))
+
+	for name, rawNodeGroup := range rawNodeGroups {
+		nodeGroup, err := DecodeNodeGroup(rawNodeGroup)
 		if err != nil {
-			return nodeGroups, fmt.Errorf("decode node group: %w", err)
+			return nodeGroups, fmt.Errorf("decode node group %q: %w", name, err)
 		}
 
-		nodeGroups = append(nodeGroups, nodeGroup)
+		nodeGroups = append(nodeGroups, *nodeGroup)
 	}
 
 	return nodeGroups, nil
 }
 
-// DecodeInstanceClasses decodes InstanceClass resources from CloudProviderVars.
-func DecodeInstanceClasses(vars *proto.CloudProviderVars) ([]cpapi.InstanceClass, error) {
-	instanceClasses := make([]cpapi.InstanceClass, 0)
-
-	if vars == nil {
-		return instanceClasses, nil
+// DecodeInstanceClass decodes InstanceClass resource from CloudProviderVars.
+func DecodeInstanceClass(rawInstanceClass map[string]any) (*cpapi.InstanceClass, error) {
+	instanceClass, err := DecodeJSONValue[cpapi.InstanceClass](rawInstanceClass)
+	if err != nil {
+		return nil, fmt.Errorf("decode instance class: %w", err)
 	}
 
-	for _, rawInstanceClass := range vars.InstanceClasses {
-		instanceClass, err := DecodeJSONValue[cpapi.InstanceClass](rawInstanceClass)
+	return &instanceClass, nil
+}
+
+// DecodeInstanceClasses decodes InstanceClass resources from CloudProviderVars.
+func DecodeInstanceClasses(rawInstanceClasses map[string]map[string]any) ([]cpapi.InstanceClass, error) {
+	if len(rawInstanceClasses) == 0 {
+		return []cpapi.InstanceClass{}, nil
+	}
+
+	instanceClasses := make([]cpapi.InstanceClass, 0, len(rawInstanceClasses))
+
+	for name, rawInstanceClass := range rawInstanceClasses {
+		instanceClass, err := DecodeInstanceClass(rawInstanceClass)
 		if err != nil {
-			return instanceClasses, fmt.Errorf("decode instance class: %w", err)
+			return instanceClasses, fmt.Errorf("decode instance class %q: %w", name, err)
 		}
 
-		instanceClasses = append(instanceClasses, instanceClass)
+		instanceClasses = append(instanceClasses, *instanceClass)
 	}
 
 	return instanceClasses, nil
 }
 
-// DecodeModuleConfig decodes ModuleConfig from either a full object or a settings map.
-func DecodeModuleConfig(moduleName string, raw map[string]any) (*cpapi.ModuleConfig, error) {
-	if len(raw) == 0 {
+// DecodeModuleConfig decodes a ModuleConfig resource object from admission or cluster state.
+func DecodeModuleConfig(rawModuleConfig map[string]any) (*cpapi.ModuleConfig, error) {
+	return DecodeModuleConfigForModule("", rawModuleConfig)
+}
+
+// DecodeModuleConfigForModule decodes ModuleConfig from a full CR object or a dhctl settings map.
+func DecodeModuleConfigForModule(moduleName string, rawModuleConfig map[string]any) (*cpapi.ModuleConfig, error) {
+	if len(rawModuleConfig) == 0 {
 		return nil, nil
 	}
 
-	if _, hasSpec := raw["spec"]; hasSpec {
-		moduleConfig, err := DecodeJSONValue[cpapi.ModuleConfig](raw)
+	if _, hasSpec := rawModuleConfig["spec"]; hasSpec {
+		moduleConfig, err := DecodeJSONValue[cpapi.ModuleConfig](rawModuleConfig)
 		if err != nil {
-			return nil, fmt.Errorf("decode ModuleConfig object: %w", err)
+			return nil, fmt.Errorf("decode ModuleConfig: %w", err)
 		}
 
-		if moduleConfig.Name == "" {
+		if moduleConfig.Name == "" && moduleName != "" {
 			moduleConfig.Name = moduleName
 		}
 
 		return &moduleConfig, nil
 	}
 
-	settings, err := DecodeJSONValue[cpapi.ModuleConfigSpecSettings](raw)
+	settings, err := DecodeJSONValue[cpapi.ModuleConfigSpecSettings](rawModuleConfig)
 	if err != nil {
 		return nil, fmt.Errorf("decode module settings: %w", err)
 	}
 
-	spec := cpapi.ModuleConfigSpec{
-		Enabled:  ptr.To(true),
-		Version:  2,
-		Settings: settings,
-	}
-	spec.SetRawSettings(raw)
-
+	enabled := true
 	return &cpapi.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: moduleName},
-		Spec:       spec,
+		Spec: cpapi.ModuleConfigSpec{
+			Enabled:  &enabled,
+			Version:  2,
+			Settings: settings,
+		},
 	}, nil
 }
 

@@ -20,56 +20,68 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestValidateCredentialSecretsAllowsConfiguredAuthScheme(t *testing.T) {
+func validTestKubeconfigB64() string {
+	return "YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgotIG5hbWU6IHRlc3QKICBjbHVzdGVyOgogICAgc2VydmVyOiBodHRwczovLzEyNy4wLjAuMTo2NDQzCiAgICBpbnNlY3VyZS1za2lwLXRscy12ZXJpZnk6IHRydWUKY29udGV4dHM6Ci0gbmFtZTogdGVzdAogIGNvbnRleHQ6CiAgICBjbHVzdGVyOiB0ZXN0CiAgICB1c2VyOiB0ZXN0CmN1cnJlbnQtY29udGV4dDogdGVzdAp1c2VyczoKLSBuYW1lOiB0ZXN0CiAgdXNlcjoKICAgIHRva2VuOiB0ZXN0LXRva2Vu"
+}
+
+func managedCredentialSecret(name, namespace string, data cpapi.CredentialSecretStringData) cpapi.CredentialSecret {
+	return cpapi.CredentialSecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Type:       cpapi.CredentialsSecretType,
+		StringData: data,
+	}
+}
+
+func TestValidateCredentialSecretContentAllowsConfiguredAuthScheme(t *testing.T) {
 	t.Parallel()
 
-	secret := cpapi.CredentialSecret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "d8-credentials",
-			Namespace: "d8-cloud-provider-vcd",
-		},
-		Type: cpapi.CredentialsSecretType,
-		StringData: cpapi.CredentialSecretStringData{
+	secret := managedCredentialSecret(
+		cpapi.CredentialSecretName,
+		"d8-cloud-provider-vcd",
+		cpapi.CredentialSecretStringData{
 			AuthScheme: cpapi.AuthSchemeAPIToken,
 			Secret:     "token-123",
 		},
-	}
+	)
 
-	result := ValidateCredentialSecrets(
+	result := ValidateCredentialSecretContent(credentialContentState(
 		[]cpapi.CredentialSecret{secret},
 		[]cpapi.AuthScheme{cpapi.AuthSchemeAPIToken},
-	)
+	))
 
 	if result.HasErrors() {
-		t.Fatalf("ValidateCredentialSecrets() unexpected errors: %s", result.Error())
+		t.Fatalf("ValidateCredentialSecretContent() unexpected errors: %s", result.Error())
 	}
 }
 
-func TestValidateCredentialSecretsRejectsUnsupportedAuthScheme(t *testing.T) {
+func TestValidateCredentialSecretContentRejectsUnsupportedAuthScheme(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateCredentialSecrets(
-		[]cpapi.CredentialSecret{
-			{
-				ObjectMeta: metav1.ObjectMeta{Name: "d8-credentials"},
-				StringData: cpapi.CredentialSecretStringData{
-					AuthScheme: cpapi.AuthSchemeAPIToken,
-					Secret:     "token-123",
-				},
+	result := ValidateCredentialSecretContent(credentialContentState(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{
+				AuthScheme: cpapi.AuthSchemeAPIToken,
+				Secret:     "token-123",
 			},
-		},
+		)},
 		[]cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig},
-	)
+	))
 
 	if !result.HasErrors() || !strings.Contains(result.Error(), "is not allowed") {
-		t.Fatalf("ValidateCredentialSecrets() expected unsupported auth scheme error, got: %s", result.Error())
+		t.Fatalf("ValidateCredentialSecretContent() expected unsupported auth scheme error, got: %s", result.Error())
 	}
 }
 
-func TestValidateAuthSchemeKubeconfigKeys(t *testing.T) {
+func TestValidateCredentialSecretsAcceptsValidKubeconfig(t *testing.T) {
 	t.Parallel()
 
 	kubeconfigB64 := base64.StdEncoding.EncodeToString([]byte(`apiVersion: v1
@@ -90,153 +102,330 @@ users:
   user:
     token: test-token`))
 
-	result := Result{}
-	ValidateAuthSchemeKubeconfigKeys("Secret/d8-credentials", map[string]string{
-		"authScheme": string(cpapi.AuthSchemeKubeconfig),
-		"secret":     kubeconfigB64,
-	}, &result)
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{
+				AuthScheme: cpapi.AuthSchemeKubeconfig,
+				Secret:     kubeconfigB64,
+			},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig},
+	)
 
 	if result.HasErrors() {
-		t.Fatalf("ValidateAuthSchemeKubeconfigKeys() unexpected errors: %s", result.Error())
+		t.Fatalf("validateCredentialSecrets() unexpected errors: %s", result.Error())
 	}
 }
 
-func TestValidateAuthSchemeKubeconfigKeysInvalidSecret(t *testing.T) {
+func TestValidateCredentialSecretsRejectsInvalidKubeconfig(t *testing.T) {
 	t.Parallel()
 
-	result := Result{}
-	ValidateAuthSchemeKubeconfigKeys("Secret/d8-credentials", map[string]string{
-		"authScheme": string(cpapi.AuthSchemeKubeconfig),
-		"secret":     "not-base64",
-	}, &result)
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{
+				AuthScheme: cpapi.AuthSchemeKubeconfig,
+				Secret:     "not-base64",
+			},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig},
+	)
 
 	if !result.HasErrors() || !strings.Contains(result.Error(), "base64-encoded kubeconfig") {
-		t.Fatalf("ValidateAuthSchemeKubeconfigKeys() expected invalid kubeconfig error, got: %s", result.Error())
+		t.Fatalf("validateCredentialSecrets() expected invalid kubeconfig error, got: %s", result.Error())
 	}
 }
 
-func TestValidateAuthSchemeServiceAccountKeys(t *testing.T) {
+func TestValidateCredentialSecretsRequiresServiceAccountSecret(t *testing.T) {
 	t.Parallel()
 
-	result := Result{}
-	ValidateAuthSchemeServiceAccountKeys("Secret/d8-credentials", map[string]string{}, &result)
-	if !result.HasErrors() || !strings.Contains(result.Error(), "secret is required") {
-		t.Fatalf("ValidateAuthSchemeServiceAccountKeys() expected secret required error, got: %s", result.Error())
-	}
-}
-
-func TestValidateCredentialSecretsRequiresAuthScheme(t *testing.T) {
-	t.Parallel()
-
-	result := ValidateCredentialSecrets(
-		[]cpapi.CredentialSecret{{ObjectMeta: metav1.ObjectMeta{Name: "d8-credentials"}}},
-		[]cpapi.AuthScheme{cpapi.AuthSchemeAPIToken},
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeServiceAccount},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeServiceAccount},
 	)
+
+	if !result.HasErrors() || !hasViolationCode(result, "credential_secret_key_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_secret_key_required", result.Errors())
+	}
+}
+
+func TestValidateCredentialSecretContentRequiresAuthScheme(t *testing.T) {
+	t.Parallel()
+
+	result := ValidateCredentialSecretContent(credentialContentState(
+		[]cpapi.CredentialSecret{managedCredentialSecret(cpapi.CredentialSecretName, "", cpapi.CredentialSecretStringData{})},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeAPIToken},
+	))
 
 	if !result.HasErrors() || !strings.Contains(result.Error(), "authScheme is required") {
-		t.Fatalf("ValidateCredentialSecrets() = %q, want authScheme required", result.Error())
+		t.Fatalf("ValidateCredentialSecretContent() = %q, want authScheme required", result.Error())
 	}
 }
 
-func TestValidateCredentialSecretsEmptyNameUsesKindPath(t *testing.T) {
+func TestValidateCredentialSecretContentIgnoresOrdinaryModuleSecrets(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateCredentialSecrets(
-		[]cpapi.CredentialSecret{{StringData: cpapi.CredentialSecretStringData{Secret: "x"}}},
+	state := credentialContentState(
+		[]cpapi.CredentialSecret{
+			managedCredentialSecret(
+				cpapi.CredentialSecretName,
+				"d8-cloud-provider-test",
+				cpapi.CredentialSecretStringData{
+					AuthScheme: cpapi.AuthSchemeKubeconfig,
+					Secret:     validTestKubeconfigB64(),
+				},
+			),
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "validation-webhook-tls", Namespace: "d8-cloud-provider-test"},
+				Type:       string(corev1.SecretTypeTLS),
+			},
+		},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig},
+	)
+
+	if result := ValidateCredentialSecretContent(state); result.HasErrors() {
+		t.Fatalf("ValidateCredentialSecretContent() unexpected errors: %s", result.Error())
+	}
+}
+
+func TestValidateCredentialSecretContentIgnoresOtherNamespace(t *testing.T) {
+	t.Parallel()
+
+	state := credentialContentState(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"other",
+			cpapi.CredentialSecretStringData{AuthScheme: "invalid"},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig},
+	)
+
+	if result := ValidateCredentialSecretContent(state); result.HasErrors() {
+		t.Fatalf("ValidateCredentialSecretContent() = %q, want other namespace secret ignored", result.Error())
+	}
+}
+
+func TestValidateRequiredCredentialKeyErrorCodes(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		key      string
+		wantCode string
+	}{
+		{
+			name:     "identity",
+			key:      "identity",
+			wantCode: "credential_identity_required",
+		},
+		{
+			name:     "secret",
+			key:      "secret",
+			wantCode: "credential_secret_key_required",
+		},
+		{
+			name:     "custom field",
+			key:      "customKey",
+			wantCode: "credential_field_required",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := Result{}
+			validateRequiredCredentialKey(
+				"Secret/"+cpapi.CredentialSecretName,
+				map[string]string{},
+				tt.key,
+				cpapi.AuthSchemeAPIToken,
+				&result,
+			)
+
+			if !hasViolationCode(result, tt.wantCode) {
+				t.Fatalf("validateRequiredCredentialKey() errors = %#v, want code %q", result.Errors(), tt.wantCode)
+			}
+		})
+	}
+}
+
+func TestValidateCredentialSecretsRequiresAccessKeyPairFields(t *testing.T) {
+	t.Parallel()
+
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeAccessKeyPair},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeAccessKeyPair},
+	)
+
+	if !result.HasErrors() {
+		t.Fatalf("validateCredentialSecrets() = %q, want errors", result.Error())
+	}
+	if !hasViolationCode(result, "credential_identity_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_identity_required", result.Errors())
+	}
+	if !hasViolationCode(result, "credential_secret_key_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_secret_key_required", result.Errors())
+	}
+}
+
+func TestValidateCredentialSecretsRequiresUserPasswordSecret(t *testing.T) {
+	t.Parallel()
+
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{
+				AuthScheme: cpapi.AuthSchemeUserPassword,
+				Identity:   "user",
+			},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeUserPassword},
+	)
+
+	if !result.HasErrors() || !hasViolationCode(result, "credential_secret_key_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_secret_key_required", result.Errors())
+	}
+}
+
+func TestValidateCredentialSecretsRequiresAPITokenSecret(t *testing.T) {
+	t.Parallel()
+
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeAPIToken},
+		)},
 		[]cpapi.AuthScheme{cpapi.AuthSchemeAPIToken},
 	)
 
-	if !strings.Contains(result.Error(), "Secret.data.authScheme") {
-		t.Fatalf("ValidateCredentialSecrets() = %q, want Secret path without name", result.Error())
+	if !result.HasErrors() || !hasViolationCode(result, "credential_secret_key_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_secret_key_required", result.Errors())
 	}
 }
 
-func TestValidateAuthSchemeAccessKeyPairKeys(t *testing.T) {
+func TestValidateCredentialSecretsRequiresClientSecretFields(t *testing.T) {
 	t.Parallel()
 
-	result := Result{}
-	ValidateAuthSchemeAccessKeyPairKeys("Secret/x", map[string]string{}, &result)
-	if !result.HasErrors() || !strings.Contains(result.Error(), "identity is required") || !strings.Contains(result.Error(), "secret is required") {
-		t.Fatalf("ValidateAuthSchemeAccessKeyPairKeys() = %q", result.Error())
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeClientSecret},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeClientSecret},
+	)
+
+	if !result.HasErrors() {
+		t.Fatalf("validateCredentialSecrets() = %q, want errors", result.Error())
+	}
+	if !hasViolationCode(result, "credential_identity_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_identity_required", result.Errors())
+	}
+	if !hasViolationCode(result, "credential_secret_key_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_secret_key_required", result.Errors())
 	}
 }
 
-func TestValidateAuthSchemeUserPasswordKeys(t *testing.T) {
+func TestValidateCredentialSecretsRequiresAppSecretFields(t *testing.T) {
 	t.Parallel()
 
-	result := Result{}
-	ValidateAuthSchemeUserPasswordKeys("Secret/x", map[string]string{"identity": "user"}, &result)
-	if !result.HasErrors() || !strings.Contains(result.Error(), "secret is required") {
-		t.Fatalf("ValidateAuthSchemeUserPasswordKeys() = %q", result.Error())
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeAppSecret},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeAppSecret},
+	)
+
+	if !result.HasErrors() {
+		t.Fatalf("validateCredentialSecrets() = %q, want errors", result.Error())
+	}
+	if !hasViolationCode(result, "credential_identity_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_identity_required", result.Errors())
+	}
+	if !hasViolationCode(result, "credential_secret_key_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_secret_key_required", result.Errors())
 	}
 }
 
-func TestValidateAuthSchemeAPITokenKeys(t *testing.T) {
+func TestValidateCredentialSecretsRequiresKubeconfigSecret(t *testing.T) {
 	t.Parallel()
 
-	result := Result{}
-	ValidateAuthSchemeAPITokenKeys("Secret/x", map[string]string{}, &result)
-	if !result.HasErrors() || !strings.Contains(result.Error(), "secret is required") {
-		t.Fatalf("ValidateAuthSchemeAPITokenKeys() = %q", result.Error())
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{AuthScheme: cpapi.AuthSchemeKubeconfig},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig},
+	)
+
+	if !result.HasErrors() || len(result.Errors()) != 1 {
+		t.Fatalf("validateCredentialSecrets() = %q, want only required secret error", result.Error())
+	}
+	if !hasViolationCode(result, "credential_secret_key_required") {
+		t.Fatalf("validateCredentialSecrets() errors = %#v, want credential_secret_key_required", result.Errors())
 	}
 }
 
-func TestValidateAuthSchemeClientSecretKeys(t *testing.T) {
-	t.Parallel()
-
-	result := Result{}
-	ValidateAuthSchemeClientSecretKeys("Secret/x", map[string]string{}, &result)
-	if len(result.Errors) != 2 {
-		t.Fatalf("ValidateAuthSchemeClientSecretKeys() errors = %d, want 2", len(result.Errors))
-	}
-}
-
-func TestValidateAuthSchemeAppSecretKeys(t *testing.T) {
-	t.Parallel()
-
-	result := Result{}
-	ValidateAuthSchemeAppSecretKeys("Secret/x", map[string]string{}, &result)
-	if len(result.Errors) != 2 {
-		t.Fatalf("ValidateAuthSchemeAppSecretKeys() errors = %d, want 2", len(result.Errors))
-	}
-}
-
-func TestValidateAuthSchemeKubeconfigKeysSkipsValidationForEmptySecret(t *testing.T) {
-	t.Parallel()
-
-	result := Result{}
-	ValidateAuthSchemeKubeconfigKeys("Secret/x", map[string]string{}, &result)
-	if !result.HasErrors() || len(result.Errors) != 1 {
-		t.Fatalf("ValidateAuthSchemeKubeconfigKeys() = %q, want only required secret error", result.Error())
-	}
-}
-
-func TestValidateAuthSchemeKubeconfigKeysInvalidYAML(t *testing.T) {
+func TestValidateCredentialSecretsRejectsInvalidKubeconfigYAML(t *testing.T) {
 	t.Parallel()
 
 	invalid := base64.StdEncoding.EncodeToString([]byte("not-a-kubeconfig"))
-	result := Result{}
-	ValidateAuthSchemeKubeconfigKeys("Secret/x", map[string]string{
-		"authScheme": string(cpapi.AuthSchemeKubeconfig),
-		"secret":     invalid,
-	}, &result)
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{
+				AuthScheme: cpapi.AuthSchemeKubeconfig,
+				Secret:     invalid,
+			},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig},
+	)
 
 	if !result.HasErrors() || !strings.Contains(result.Error(), "base64-encoded kubeconfig") {
-		t.Fatalf("ValidateAuthSchemeKubeconfigKeys() = %q", result.Error())
+		t.Fatalf("validateCredentialSecrets() = %q", result.Error())
 	}
 }
 
-func TestValidateAuthSchemeServiceAccountKeysSuccess(t *testing.T) {
+func TestValidateCredentialSecretsAcceptsServiceAccountSecret(t *testing.T) {
 	t.Parallel()
 
-	result := Result{}
-	ValidateAuthSchemeServiceAccountKeys("Secret/x", map[string]string{"secret": "token"}, &result)
+	result := validateCredentialSecrets(
+		[]cpapi.CredentialSecret{managedCredentialSecret(
+			cpapi.CredentialSecretName,
+			"",
+			cpapi.CredentialSecretStringData{
+				AuthScheme: cpapi.AuthSchemeServiceAccount,
+				Secret:     "token",
+			},
+		)},
+		[]cpapi.AuthScheme{cpapi.AuthSchemeServiceAccount},
+	)
+
 	if result.HasErrors() {
-		t.Fatalf("ValidateAuthSchemeServiceAccountKeys() unexpected errors: %s", result.Error())
+		t.Fatalf("validateCredentialSecrets() unexpected errors: %s", result.Error())
 	}
 }
 
-func TestValidateCredentialSecretsDispatchesAllAuthSchemeValidators(t *testing.T) {
+func TestValidateCredentialSecretContentDispatchesAllAuthSchemeValidators(t *testing.T) {
 	t.Parallel()
 
 	allowed := []cpapi.AuthScheme{
@@ -254,15 +443,16 @@ func TestValidateCredentialSecretsDispatchesAllAuthSchemeValidators(t *testing.T
 		t.Run(string(scheme), func(t *testing.T) {
 			t.Parallel()
 
-			result := ValidateCredentialSecrets(
-				[]cpapi.CredentialSecret{{
-					ObjectMeta: metav1.ObjectMeta{Name: cpapi.CredentialSecretName},
-					StringData: cpapi.CredentialSecretStringData{AuthScheme: scheme},
-				}},
+			result := ValidateCredentialSecretContent(credentialContentState(
+				[]cpapi.CredentialSecret{managedCredentialSecret(
+					cpapi.CredentialSecretName,
+					"",
+					cpapi.CredentialSecretStringData{AuthScheme: scheme},
+				)},
 				allowed,
-			)
+			))
 			if !result.HasErrors() {
-				t.Fatalf("ValidateCredentialSecrets(%s) = %q, want validation errors", scheme, result.Error())
+				t.Fatalf("ValidateCredentialSecretContent(%s) = %q, want validation errors", scheme, result.Error())
 			}
 		})
 	}

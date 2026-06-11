@@ -14,16 +14,33 @@
 
 package api
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
-func TestModuleConfigSpecRawSettings(t *testing.T) {
+func TestModuleConfigSpecProviderParameters(t *testing.T) {
 	t.Parallel()
 
-	raw := map[string]any{"provider": map[string]any{"enabled": true}}
-	spec := ModuleConfigSpec{}
-	spec.SetRawSettings(raw)
+	raw := `{
+		"spec": {
+			"settings": {
+				"provider": {
+					"parameters": {
+						"namespace": "d8-cloud-provider-dvp"
+					}
+				}
+			}
+		}
+	}`
 
-	if got := spec.RawSettings(); got["provider"] == nil {
-		t.Fatalf("RawSettings() = %#v, want provider key", got)
+	var moduleConfig ModuleConfig
+	if err := json.Unmarshal([]byte(raw), &moduleConfig); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if moduleConfig.Spec.Settings.Provider == nil ||
+		moduleConfig.Spec.Settings.Provider.Parameters["namespace"] != "d8-cloud-provider-dvp" {
+		t.Fatalf("Provider.Parameters = %#v, want namespace parameter", moduleConfig.Spec.Settings.Provider)
 	}
 }

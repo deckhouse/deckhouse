@@ -86,7 +86,7 @@ require (
 	k8s.io/code-generator v0.33.12
 	k8s.io/kube-openapi v0.0.0-20250701173324-9bd5c66d9911
 	k8s.io/kubectl v0.33.8
-	sigs.k8s.io/controller-runtime v0.20.4
+	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
 	sigs.k8s.io/kustomize/kyaml v0.19.0
 )
@@ -362,6 +362,8 @@ replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 replace github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ./go_lib/dhctl-provider-protocol
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/go_lib/cloud-provider => ./go_lib/cloud-provider
 
 replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
 

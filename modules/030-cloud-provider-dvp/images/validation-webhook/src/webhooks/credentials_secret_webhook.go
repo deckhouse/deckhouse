@@ -29,13 +29,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	cpwebhookstate "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook/state"
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
 type CredentialSecretValidator struct {
-	builder cpwebhookstate.Builder
+	builder *cpvaladmission.StateBuilder
 	object  runtime.Object
 }
 
@@ -44,7 +44,7 @@ var (
 	_ cpwebhook.Registrar       = (*CredentialSecretValidator)(nil)
 )
 
-func NewCredentialSecretValidator(builder cpwebhookstate.Builder, object runtime.Object) *CredentialSecretValidator {
+func NewCredentialSecretValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *CredentialSecretValidator {
 	return &CredentialSecretValidator{
 		builder: builder,
 		object:  object,

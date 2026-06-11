@@ -16,7 +16,6 @@ package webhooks
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -26,7 +25,7 @@ import (
 func TestNodeGroupValidatorWithFakeClientValidateUpdate(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewNodeGroupValidator(builder, &unstructured.Unstructured{})
 
 	updated := dvpNodeGroupObject("master", cpapi.NodeTypeCloudPermanent)
@@ -39,7 +38,7 @@ func TestNodeGroupValidatorWithFakeClientValidateUpdate(t *testing.T) {
 func TestNodeGroupValidatorWithFakeClientAllowsValidCluster(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewNodeGroupValidator(builder, &unstructured.Unstructured{})
 
 	_, err := validator.ValidateCreate(context.Background(), dvpNodeGroupObject("worker", cpapi.NodeTypeCloudPermanent))
@@ -51,7 +50,7 @@ func TestNodeGroupValidatorWithFakeClientAllowsValidCluster(t *testing.T) {
 func TestNodeGroupValidatorWithFakeClientAllowsStaticNodeGroupWhenStackIncomplete(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, dvpModuleConfigObject())
+	builder := newWebhookAdmissionStateBuilder(t, dvpModuleConfigObject())
 	validator := NewNodeGroupValidator(builder, &unstructured.Unstructured{})
 
 	_, err := validator.ValidateCreate(context.Background(), dvpStaticNodeGroupObject("worker-static"))
@@ -60,30 +59,30 @@ func TestNodeGroupValidatorWithFakeClientAllowsStaticNodeGroupWhenStackIncomplet
 	}
 }
 
-func TestNodeGroupValidatorWithFakeClientRejectsMasterDemotion(t *testing.T) {
+func TestNodeGroupValidatorWithFakeClientAllowsMasterDemotion(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewNodeGroupValidator(builder, &unstructured.Unstructured{})
 
 	oldMaster := dvpNodeGroupObject("master", cpapi.NodeTypeCloudPermanent)
 	newMaster := dvpStaticNodeGroupObject("master")
 
 	_, err := validator.ValidateUpdate(context.Background(), oldMaster, newMaster)
-	if err == nil || !strings.Contains(err.Error(), `NodeGroup "master" is required`) {
-		t.Fatalf("ValidateUpdate() error = %v, want master demotion denial", err)
+	if err != nil {
+		t.Fatalf("ValidateUpdate() error = %v, want allow without preflight requirements", err)
 	}
 }
 
-func TestNodeGroupValidatorWithFakeClientValidateDelete(t *testing.T) {
+func TestNodeGroupValidatorWithFakeClientValidateDeleteAllowsMaster(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewNodeGroupValidator(builder, &unstructured.Unstructured{})
 
 	_, err := validator.ValidateDelete(context.Background(), dvpNodeGroupObject("master", cpapi.NodeTypeCloudPermanent))
-	if err == nil || !strings.Contains(err.Error(), "NodeGroup \"master\" is required") {
-		t.Fatalf("ValidateDelete() error = %v, want preflight denial", err)
+	if err != nil {
+		t.Fatalf("ValidateDelete() error = %v, want allow master deletion without preflight", err)
 	}
 }
 

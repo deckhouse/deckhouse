@@ -27,13 +27,13 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	cpwebhookstate "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook/state"
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
 type NodeGroupValidator struct {
-	builder cpwebhookstate.Builder
+	builder *cpvaladmission.StateBuilder
 	object  runtime.Object
 }
 
@@ -42,7 +42,7 @@ var (
 	_ cpwebhook.Registrar       = (*NodeGroupValidator)(nil)
 )
 
-func NewNodeGroupValidator(builder cpwebhookstate.Builder, object runtime.Object) *NodeGroupValidator {
+func NewNodeGroupValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *NodeGroupValidator {
 	return &NodeGroupValidator{
 		builder: builder,
 		object:  object,

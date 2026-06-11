@@ -22,13 +22,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	cpwebhookstate "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook/state"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
 type DVPInstanceClassValidator struct {
-	builder cpwebhookstate.Builder
+	builder *cpvaladmission.StateBuilder
 	object  runtime.Object
 }
 
@@ -37,7 +37,7 @@ var (
 	_ cpwebhook.Registrar       = (*DVPInstanceClassValidator)(nil)
 )
 
-func NewDVPInstanceClassValidator(builder cpwebhookstate.Builder, object runtime.Object) *DVPInstanceClassValidator {
+func NewDVPInstanceClassValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *DVPInstanceClassValidator {
 	return &DVPInstanceClassValidator{
 		builder: builder,
 		object:  object,
@@ -80,7 +80,7 @@ func (v *DVPInstanceClassValidator) validate(
 	result := validateAdmissionState(state)
 
 	if operation == admissionv1.Delete {
-		deleteResult := dvpval.ValidateInstanceClassDelete(state, objectName(obj), deletedClass)
+		deleteResult := cpval.ValidateInstanceClassDelete(state, objectName(obj), deletedClass)
 		result.Merge(deleteResult)
 	}
 

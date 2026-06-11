@@ -16,7 +16,6 @@ package webhooks
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -25,7 +24,7 @@ import (
 func TestModuleConfigValidatorWithFakeClientValidateCreate(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewModuleConfigValidator(builder, &unstructured.Unstructured{})
 
 	obj := dvpModuleConfigObject()
@@ -40,7 +39,7 @@ func TestModuleConfigValidatorWithFakeClientValidateCreate(t *testing.T) {
 func TestModuleConfigValidatorWithFakeClientAllowsValidCluster(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, validDVPClusterObjects()...)
+	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
 	validator := NewModuleConfigValidator(builder, &unstructured.Unstructured{})
 
 	obj := dvpModuleConfigObject()
@@ -55,7 +54,7 @@ func TestModuleConfigValidatorWithFakeClientAllowsValidCluster(t *testing.T) {
 func TestModuleConfigValidatorWithFakeClientIgnoresOtherModules(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t)
+	builder := newWebhookAdmissionStateBuilder(t)
 	validator := NewModuleConfigValidator(builder, &unstructured.Unstructured{})
 
 	obj := dvpModuleConfigObject()
@@ -67,22 +66,22 @@ func TestModuleConfigValidatorWithFakeClientIgnoresOtherModules(t *testing.T) {
 	}
 }
 
-func TestModuleConfigValidatorWithFakeClientRejectsIncompleteStack(t *testing.T) {
+func TestModuleConfigValidatorWithFakeClientAllowsIncompleteStack(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t, dvpModuleConfigObject())
+	builder := newWebhookAdmissionStateBuilder(t, dvpModuleConfigObject())
 	validator := NewModuleConfigValidator(builder, &unstructured.Unstructured{})
 
 	_, err := validator.ValidateUpdate(context.Background(), nil, dvpModuleConfigObject())
-	if err == nil || !strings.Contains(err.Error(), "credential Secret") {
-		t.Fatalf("ValidateUpdate() error = %v, want preflight denial", err)
+	if err != nil {
+		t.Fatalf("ValidateUpdate() error = %v, want allow without preflight requirements", err)
 	}
 }
 
 func TestModuleConfigValidatorWithFakeClientValidateDeleteAllowed(t *testing.T) {
 	t.Parallel()
 
-	builder := newWebhookRuntimeStateBuilder(t)
+	builder := newWebhookAdmissionStateBuilder(t)
 	validator := NewModuleConfigValidator(builder, &unstructured.Unstructured{})
 
 	_, err := validator.ValidateDelete(context.Background(), dvpModuleConfigObject())

@@ -31,8 +31,6 @@ type ModuleConfigSpec struct {
 	Enabled  *bool                    `json:"enabled,omitempty"`
 	Version  int                      `json:"version,omitempty"`
 	Settings ModuleConfigSpecSettings `json:"settings,omitempty"`
-
-	rawSettings map[string]any
 }
 
 // ModuleConfigSpecSettings groups provider and subsystem settings.
@@ -44,21 +42,11 @@ type ModuleConfigSpecSettings struct {
 
 // ModuleConfigSpecProviderSettings holds provider-level enablement flags.
 type ModuleConfigSpecProviderSettings struct {
-	Enabled *bool `json:"enabled,omitempty"`
+	Parameters map[string]any `json:"parameters,omitempty"`
 }
 
 // ModuleConfigSpecSubsystemSettings holds subsystem enablement and parameters.
 type ModuleConfigSpecSubsystemSettings struct {
 	Enabled    *bool          `json:"enabled,omitempty"`
 	Parameters map[string]any `json:"parameters,omitempty"`
-}
-
-// RawSettings returns the original settings map before typed decoding.
-func (s ModuleConfigSpec) RawSettings() map[string]any {
-	return s.rawSettings
-}
-
-// SetRawSettings stores the original settings map for migration and validation helpers.
-func (s *ModuleConfigSpec) SetRawSettings(raw map[string]any) {
-	s.rawSettings = raw
 }

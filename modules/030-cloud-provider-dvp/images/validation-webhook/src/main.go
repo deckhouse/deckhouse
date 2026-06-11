@@ -26,8 +26,8 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	cpwebhookstate "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook/state"
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 
 	"cloud-provider-dvp-validation-webhook/webhooks"
@@ -56,12 +56,16 @@ func main() {
 		if err != nil {
 			return fmt.Errorf("init webhook server: %w", err)
 		}
-		stateBuilderConfig := cpwebhookstate.Config{
-			ModuleName:        dvpval.ModuleName,
-			NamespaceName:     dvpval.Namespace,
-			InstanceClassKind: dvpval.InstanceClassKind,
-		}
-		builder := cpwebhookstate.NewRuntimeStateBuilder(server.Client(), stateBuilderConfig)
+
+		builder := cpvaladmission.NewStateBuilder(
+			server.Client(),
+			cpvaladmission.StateBuilderConfig{
+				ModuleName:                   dvpval.ModuleName,
+				NamespaceName:                dvpval.Namespace,
+				InstanceClassKind:            dvpval.InstanceClassKind,
+				AllowedCredentialAuthSchemes: dvpval.AllowedCredentialAuthSchemes,
+			},
+		)
 
 		registrars := []cpwebhook.Registrar{
 			webhooks.NewCredentialSecretValidator(builder, &corev1.Secret{}),

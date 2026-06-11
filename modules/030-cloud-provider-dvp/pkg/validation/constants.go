@@ -17,6 +17,7 @@ package validation
 
 import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 )
 
 const (
@@ -28,5 +29,14 @@ const (
 	InstanceClassKind = "DVPInstanceClass"
 )
 
-// AllowedCredentialAuthSchemes lists auth schemes supported by the DVP provider.
-var AllowedCredentialAuthSchemes = []cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig}
+var (
+	// AllowedCredentialAuthSchemes lists auth schemes supported by the DVP provider.
+	AllowedCredentialAuthSchemes = []cpapi.AuthScheme{cpapi.AuthSchemeKubeconfig}
+
+	// MigrationRules configures DVP migration completeness checks.
+	MigrationRules = cpval.MigrationRules{
+		InstanceClassName: func(nodeGroupName string) string {
+			return nodeGroupName + "-dvp"
+		},
+	}
+)
