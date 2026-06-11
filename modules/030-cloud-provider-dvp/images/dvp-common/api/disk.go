@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"time"
 
 	storagev1 "k8s.io/api/storage/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	cloudprovider "k8s.io/cloud-provider"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
@@ -59,7 +59,7 @@ func (d *DiskService) ListDisksByName(ctx context.Context, diskName string) (*v1
 
 	if err := d.client.List(ctx, &virtualDiskList, opts); err != nil {
 		if k8serrors.IsNotFound(err) {
-			return nil, cloudprovider.DiskNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -189,11 +189,15 @@ func (d *DiskService) GetDiskByName(ctx context.Context, diskName string) (*v1al
 		return nil, fmt.Errorf("found more than one disk with the name %s, please contanct the DVP admin to check the name duplication", diskName)
 	}
 	if len(disks.Items) == 0 {
-		return nil, cloudprovider.DiskNotFound
+		return nil, ErrNotFound
 	}
 
 	return &disks.Items[0], nil
 }
+
+const (
+	DefaultDiskDeletionTimeout = 5 * time.Minute
+)
 
 func (d *DiskService) RemoveDiskByName(ctx context.Context, diskName string) error {
 	disk, err := d.GetDiskByName(ctx, diskName)
@@ -201,17 +205,13 @@ func (d *DiskService) RemoveDiskByName(ctx context.Context, diskName string) err
 		return err
 	}
 
-	err = d.client.Delete(ctx, disk)
-	if err != nil {
+	if err = d.client.Delete(ctx, disk); err != nil {
 		return err
 	}
 
-	err = d.WaitDiskDeletion(ctx, diskName)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	deleteCtx, cancel := context.WithTimeout(ctx, DefaultDiskDeletionTimeout)
+	defer cancel()
+	return d.WaitDiskDeletion(deleteCtx, diskName)
 }
 
 func (d *DiskService) ResizeDisk(ctx context.Context, diskName string, newSize string) error {
@@ -259,7 +259,7 @@ func (d *DiskService) GetStorageClassList(ctx context.Context) (*storagev1.Stora
 	storageClassList, err := d.clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return nil, cloudprovider.DiskNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (d *DiskService) GetStorageClass(ctx context.Context, name string) (*storag
 	storageClass, err := d.clientset.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return nil, cloudprovider.DiskNotFound
+			return nil, ErrNotFound
 		}
 		return nil, err
 	}

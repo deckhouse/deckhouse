@@ -19,6 +19,7 @@ package controller
 
 import (
 	"context"
+	"crypto/sha1" //nolint:gosec
 	"errors"
 	"fmt"
 	"strings"
@@ -60,6 +61,8 @@ const (
 	OrphanedVMAnnotation = "dvp.deckhouse.io/orphaned-vm"
 	// OrphanedVMTimestampAnnotation records when VM became orphaned
 	OrphanedVMTimestampAnnotation = "dvp.deckhouse.io/orphaned-vm-timestamp"
+	// OrphanedDiskAnnotationPrefix is the prefix for annotations marking timed-out disk deletions
+	OrphanedDiskAnnotationPrefix = "dvp.deckhouse.io/orphaned-disk-"
 )
 
 type ownedResourceCreator struct {
@@ -554,12 +557,40 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	for _, disk := range disksToDelete {
 		logger.Info("Removing VirtualDisk", "disk_name", disk)
 		if err = r.DVP.DiskService.RemoveDiskByName(ctx, disk); err != nil {
+			if errors.Is(err, dvpapi.ErrNotFound) {
+				logger.Info("VirtualDisk already gone, skipping", "disk_name", disk)
+				continue
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				logger.Error(err, "VirtualDisk deletion timed out, marking as orphaned and continuing",
+					"disk_name", disk,
+				)
+				if dvpMachine.Annotations == nil {
+					dvpMachine.Annotations = make(map[string]string)
+				}
+				h := sha1.Sum([]byte(disk)) //nolint:gosec
+				key := fmt.Sprintf("%s%x", OrphanedDiskAnnotationPrefix, h[:8])
+				dvpMachine.Annotations[key] = disk
+				continue
+			}
 			merr = multierror.Append(merr, fmt.Errorf("delete VirtualDisk %s: %w", disk, err))
 		}
 	}
 
 	if err = merr.ErrorOrNil(); err != nil {
 		return ctrl.Result{}, fmt.Errorf("delete VirtualDisks: %w", err)
+	}
+
+	var orphanedDisks []string
+	for k, v := range dvpMachine.Annotations {
+		if strings.HasPrefix(k, OrphanedDiskAnnotationPrefix) {
+			orphanedDisks = append(orphanedDisks, v)
+		}
+	}
+	if len(orphanedDisks) > 0 {
+		logger.Info("VirtualDisks timed out and were not deleted — manual cleanup required in parent DVP cluster",
+			"orphaned_disks", orphanedDisks,
+		)
 	}
 
 	controllerutil.RemoveFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer)
