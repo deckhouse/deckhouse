@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package providerdata re-exports the shared protocol types from
-// go_lib/dhctl-provider-protocol. All wire types and constants are defined
-// there; this package provides stable import paths for dhctl internals.
+// Package providerdata re-exports the wire types from
+// go_lib/dhctl-provider-protocol for dhctl internals.
 package providerdata
 
 import proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"

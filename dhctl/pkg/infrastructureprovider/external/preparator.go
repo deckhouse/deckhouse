@@ -12,17 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package external provides a preparator that delegates Validate/Prepare to an
-// external provider binary via stdin/stdout JSON protocol.
-//
-// Binary protocol:
-//
-//	<binary> validate   — reads ValidateRequest JSON from stdin, exits 0 on success,
-//	                      writes ValidateResponse JSON to stdout on error.
-//	<binary> prepare    — reads PrepareRequest JSON from stdin, writes PrepareResponse
-//	                      JSON to stdout, exits 0 on success.
-//
-// Both commands write human-readable diagnostics to stderr.
+// Package external delegates Validate/Prepare to an external provider binary
+// via the stdin/stdout JSON protocol (see go_lib/dhctl-provider-protocol).
 package external
 
 import (
@@ -32,11 +23,9 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"sort"
-	"strings"
+	"time"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
-	"sigs.k8s.io/yaml"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
@@ -55,36 +44,10 @@ func NewBinaryPreparator(binaryPath string) *Preparator {
 }
 
 func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) error {
-	ctx, span := telemetry.StartSpan(ctx, "external.Validate")
-	defer span.End()
-	span.SetAttributes(
-		otattribute.String("provider.name", input.ProviderName),
-		otattribute.String("provider.binary", p.binaryPath),
-		otattribute.String("provider.subcommand", "validate"),
-	)
-
-	wireInput, err := toWireInput(input)
-	if err != nil {
-		return fmt.Errorf("build validate request: %w", err)
-	}
-
-	req := providerdata.ValidateRequest{Version: proto.ProtocolVersion, Input: wireInput}
-	payload, err := json.Marshal(req)
-	if err != nil {
-		return fmt.Errorf("marshal validate request: %w", err)
-	}
-
-	span.SetAttributes(otattribute.String("validate.request", string(payload)))
-	log.DebugF("external.Validate binary=%s request=%s\n", p.binaryPath, payload)
-
-	stdout, err := p.run(ctx, "validate", payload)
+	stdout, err := p.call(ctx, "validate", input)
 	if err != nil {
 		return err
 	}
-
-	span.SetAttributes(otattribute.String("validate.response", string(stdout)))
-	log.DebugF("external.Validate binary=%s response=%s\n", p.binaryPath, stdout)
-
 	if len(bytes.TrimSpace(stdout)) == 0 {
 		return nil
 	}
@@ -100,35 +63,10 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 }
 
 func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (providerdata.PrepareResult, error) {
-	ctx, span := telemetry.StartSpan(ctx, "external.Prepare")
-	defer span.End()
-	span.SetAttributes(
-		otattribute.String("provider.name", input.ProviderName),
-		otattribute.String("provider.binary", p.binaryPath),
-		otattribute.String("provider.subcommand", "prepare"),
-	)
-
-	wireInput, err := toWireInput(input)
-	if err != nil {
-		return providerdata.PrepareResult{}, fmt.Errorf("build prepare request: %w", err)
-	}
-
-	req := providerdata.PrepareRequest{Version: proto.ProtocolVersion, Input: wireInput}
-	payload, err := json.Marshal(req)
-	if err != nil {
-		return providerdata.PrepareResult{}, fmt.Errorf("marshal prepare request: %w", err)
-	}
-
-	span.SetAttributes(otattribute.String("prepare.request", string(payload)))
-	log.DebugF("external.Prepare binary=%s request=%s\n", p.binaryPath, payload)
-
-	stdout, err := p.run(ctx, "prepare", payload)
+	stdout, err := p.call(ctx, "prepare", input)
 	if err != nil {
 		return providerdata.PrepareResult{}, err
 	}
-
-	span.SetAttributes(otattribute.String("prepare.response", string(stdout)))
-	log.DebugF("external.Prepare binary=%s response=%s\n", p.binaryPath, stdout)
 
 	var resp providerdata.PrepareResponse
 	if err := json.Unmarshal(stdout, &resp); err != nil {
@@ -137,16 +75,49 @@ func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (p
 	if resp.Error != "" {
 		return providerdata.PrepareResult{}, errors.New(resp.Error)
 	}
-
 	if resp.Result != nil {
 		return *resp.Result, nil
 	}
 	return providerdata.PrepareResult{}, nil
 }
 
-// toWireInput converts ProviderInput to the JSON wire format for external binaries.
-// ProviderClusterConfig is converted from json.RawMessage to interface{} and
-// CloudProviderVars is serialized back to ResourcesYAML.
+// call encodes input, runs the binary subcommand and returns its stdout.
+// Request/response payloads go to the span and debug log in full — deliberate
+// development-stage telemetry. ValidateRequest and PrepareRequest share the
+// same wire shape, so one request type serves both subcommands.
+func (p *Preparator) call(ctx context.Context, subcommand string, input config.ProviderInput) ([]byte, error) {
+	ctx, span := telemetry.StartSpan(ctx, "external."+subcommand)
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("provider.name", input.ProviderName),
+		otattribute.String("provider.binary", p.binaryPath),
+		otattribute.String("provider.subcommand", subcommand),
+	)
+
+	wireInput, err := toWireInput(input)
+	if err != nil {
+		return nil, fmt.Errorf("build %s request: %w", subcommand, err)
+	}
+	payload, err := json.Marshal(providerdata.PrepareRequest{Version: proto.ProtocolVersion, Input: wireInput})
+	if err != nil {
+		return nil, fmt.Errorf("marshal %s request: %w", subcommand, err)
+	}
+
+	span.SetAttributes(otattribute.String(subcommand+".request", string(payload)))
+	log.DebugF("external.%s binary=%s request=%s\n", subcommand, p.binaryPath, payload)
+
+	stdout, err := p.run(ctx, subcommand, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	span.SetAttributes(otattribute.String(subcommand+".response", string(stdout)))
+	log.DebugF("external.%s binary=%s response=%s\n", subcommand, p.binaryPath, stdout)
+	return stdout, nil
+}
+
+// toWireInput converts ProviderInput to the wire format; ProviderClusterConfig
+// goes from json.RawMessage to plain values.
 func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) {
 	pcc := make(map[string]interface{}, len(input.ProviderClusterConfig))
 	for k, v := range input.ProviderClusterConfig {
@@ -157,76 +128,23 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 		pcc[k] = val
 	}
 
-	encoded, err := encodeResourcesYAML(input.CloudProviderVars)
-	if err != nil {
-		return providerdata.PrepareInput{}, fmt.Errorf("encode resources yaml: %w", err)
-	}
-	resourcesYAML := mergeResourcesYAML(input.ResourcesYAML, encoded)
-
-	var moduleConfig map[string]interface{}
-	if input.CloudProviderVars != nil {
-		moduleConfig = input.CloudProviderVars.Settings
-	}
-
 	return providerdata.PrepareInput{
 		ProviderName:          input.ProviderName,
 		ClusterPrefix:         input.ClusterPrefix,
 		Layout:                input.Layout,
 		Operation:             input.Operation,
 		ProviderClusterConfig: pcc,
-		ResourcesYAML:         resourcesYAML,
-		ModuleConfig:          moduleConfig,
+		Vars:                  input.CloudProviderVars,
 	}, nil
 }
 
-// mergeResourcesYAML prefers user-supplied YAML when present (bootstrap-from-
-// file: CloudProviderVars were parsed from this same YAML, so re-emitting
-// encoded would duplicate every resource). On cluster-loaded paths
-// (converge/check/destroy) user is empty and we fall back to encoded.
-func mergeResourcesYAML(user, encoded string) string {
-	if user = strings.TrimSpace(user); user != "" {
-		return user
-	}
-	return strings.TrimSpace(encoded)
-}
-
-func encodeResourcesYAML(cv *providerdata.CloudProviderVars) (string, error) {
-	if cv == nil {
-		return "", nil
-	}
-
-	var docs []string
-	for _, group := range []map[string]map[string]interface{}{cv.NodeGroups, cv.InstanceClasses, cv.Secrets} {
-		groupDocs, err := marshalSortedYAMLDocs(group)
-		if err != nil {
-			return "", err
-		}
-		docs = append(docs, groupDocs...)
-	}
-	return strings.Join(docs, "\n---\n"), nil
-}
-
-func marshalSortedYAMLDocs(group map[string]map[string]interface{}) ([]string, error) {
-	if len(group) == 0 {
-		return nil, nil
-	}
-	keys := make([]string, 0, len(group))
-	for k := range group {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	docs := make([]string, 0, len(group))
-	for _, k := range keys {
-		doc, err := yaml.Marshal(group[k])
-		if err != nil {
-			return nil, err
-		}
-		docs = append(docs, string(doc))
-	}
-	return docs, nil
-}
+// runTimeout caps one validator invocation so a hung binary cannot hang the caller.
+const runTimeout = 30 * time.Second
 
 func (p *Preparator) run(ctx context.Context, subcommand string, stdin []byte) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, runTimeout)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, p.binaryPath, subcommand)
 	cmd.Stdin = bytes.NewReader(stdin)
 

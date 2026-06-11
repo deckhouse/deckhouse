@@ -66,12 +66,8 @@ type Context struct {
 	logger log.Logger
 	opts   *options.GlobalOptions
 
-	// metaConfig is memoised for the lifetime of a single converge run.
-	// Each MetaConfig() call would otherwise re-fetch NodeGroups /
-	// InstanceClasses / Secrets from the apiserver and re-invoke the
-	// external provider validator (one Validate + one Prepare round-trip
-	// each), adding ~500 ms per call. Across a converge that touches 7+
-	// pipeline steps this adds 3.5+ s of redundant work.
+	// metaConfig is memoised per converge run: repeat pipeline steps must not
+	// re-fetch cluster resources and re-run the external provider validator.
 	metaConfigOnce sync.Once
 	metaConfig     *config.MetaConfig
 	metaConfigErr  error
@@ -208,9 +204,6 @@ func (c *Context) CompleteExecutionPhase(ctx context.Context, data any) error {
 	return c.phaseContext.CompletePhase(ctx, c.stateCache, data)
 }
 
-// MetaConfig returns the converge-time MetaConfig, memoised so that repeat
-// pipeline steps reuse the same parsed/validated config instead of
-// re-running the external provider validator.
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 	c.metaConfigOnce.Do(func() {
 		c.metaConfig, c.metaConfigErr = c.loadMetaConfig()

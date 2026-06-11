@@ -32,17 +32,15 @@ var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
 type MetaConfigPreparator struct {
 	validatePrefix bool
-	operation      string
 	logger         log.Logger
 }
 
-func NewMetaConfigPreparator(validatePrefix bool, logger log.Logger, operation string) *MetaConfigPreparator {
+func NewMetaConfigPreparator(validatePrefix bool, logger log.Logger) *MetaConfigPreparator {
 	if govalue.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
 	return &MetaConfigPreparator{
 		validatePrefix: validatePrefix,
-		operation:      operation,
 		logger:         logger,
 	}
 }
@@ -114,7 +112,7 @@ func (p *MetaConfigPreparator) validateWithNATInstanceLayout(input config.Provid
 		return nil
 	}
 
-	if p.operation != providerdata.OperationBootstrap {
+	if input.Operation != providerdata.OperationBootstrap {
 		p.logger.LogDebugLn("Skip validate WithNATInstance layout. Validation disabled")
 		return nil
 	}
