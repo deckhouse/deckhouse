@@ -34,7 +34,7 @@ type AvailableObject struct {
 }
 
 // AvailableClusterResourceStatus is the per-project catalog for one GrantableClusterResourceDefinition: the
-// allowed names and the default. It carries no quota (that is ClusterResourceGrant).
+// allowed names and the default.
 type AvailableClusterResourceStatus struct {
 	// GrantedResourceKind is the kind of the granted resource (informational).
 	// +optional

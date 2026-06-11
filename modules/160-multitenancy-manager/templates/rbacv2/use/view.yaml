@@ -9,12 +9,11 @@ metadata:
     rbac.deckhouse.io/kind: use
   name: d8:use:capability:module:multitenancy-manager:view
 rules:
-# Tenants discover what their project may use and how much quota is left.
+# Tenants discover what their project may use (the read-only catalog).
 - apiGroups:
   - multitenancy.deckhouse.io
   resources:
   - availableclusterresources
-  - clusterresourcegrants
   verbs:
   - get
   - list

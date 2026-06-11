@@ -23,8 +23,8 @@ rules:
   - multitenancy.deckhouse.io
   resources:
   - grantableclusterresourcedefinitions
+  - grantableclusterresourcereferences
   - clusterresourcegrantpolicies
-  - clusterresourcegrants
   - availableclusterresources
   verbs:
   - get

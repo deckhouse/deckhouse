@@ -26,9 +26,8 @@ import (
 
 var _ http.Handler = &ProtectValidator{}
 
-// ProtectValidator is the /protect validating webhook: it keeps the controller-owned status surfaces
-// (AvailableClusterResource catalog and ClusterResourceGrant usage) read-only to everyone but the controller. The
-// ClusterResourceGrant pool spec itself is governed by RBAC (cluster-admin only), so spec writes pass here.
+// ProtectValidator is the /protect validating webhook: it keeps the controller-owned
+// AvailableClusterResource catalog read-only to everyone but the controller (and system controllers).
 type ProtectValidator struct {
 	log          logr.Logger
 	controllerSA string // e.g. system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
@@ -100,14 +99,6 @@ func (p *ProtectValidator) decide(req *admissionv1.AdmissionRequest) *admissionv
 	case "AvailableClusterResource":
 		return deniedResponse(req.UID,
 			"[multitenancy] AvailableClusterResource is a read-only catalog managed by multitenancy-manager.")
-	case "ClusterResourceGrant":
-		// Usage status is controller-owned; only the controller may write it.
-		if req.SubResource == "status" {
-			return deniedResponse(req.UID,
-				"[multitenancy] ClusterResourceGrant status is managed by multitenancy-manager and is read-only.")
-		}
-		// Spec writes (the pool) are governed by RBAC — cluster admins only; let them through.
-		return allowedResponse(req.UID)
 	default:
 		return allowedResponse(req.UID)
 	}

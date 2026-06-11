@@ -1,5 +1,6 @@
-# Project + grant + object quota for the demo. The GrantableClusterResourceDefinition registrations
-# (storageclasses, clusterissuers, loadbalancerclasses, clusterroles) ship with the module.
+# Project + availability policy for the demo. The GrantableClusterResourceDefinition registrations and
+# their GrantableClusterResourceReference paths (storageclasses, clusterissuers, loadbalancerclasses,
+# clusterroles) ship with the module. Object quota is delegated to Kubernetes ResourceQuota.
 ---
 apiVersion: deckhouse.io/v1alpha2
 kind: Project
@@ -43,19 +44,3 @@ spec:
     - resourceName: loadbalancerclasses
       allowed:
         - internal
----
-# Object quota pool for the project (lives in the project's control namespace = demo).
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterResourceGrant
-metadata:
-  name: objects
-  namespace: demo
-spec:
-  objects:
-    storageclasses:
-      "*":
-        requests.storage: 5Gi          # total requested storage across the project
-        persistentvolumeclaims: "3"    # max number of PVCs
-    loadbalancerclasses:
-      "*":
-        services: "1"                  # max number of LoadBalancer services

@@ -23,7 +23,7 @@ import (
 // NOTE: json tags are required. Any new fields you add must have json tags for the fields to be serialized.
 
 // GrantResource is one entry of a grant: it references a GrantableClusterResourceDefinition and decides
-// the per-project allow-list and default. It carries no quota (object quota lives on ClusterResourceGrant).
+// the per-project allow-list and default.
 type GrantResource struct {
 	// ResourceName is the name of the GrantableClusterResourceDefinition this entry configures.
 	// +required

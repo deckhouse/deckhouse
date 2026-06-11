@@ -48,12 +48,19 @@ metadata:
   name: testreg
 spec:
   defaultAvailability: None
-  usageReferences:
-  - rule:
-      apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["configmaps"]
-    fieldPath: $.data.scName
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: testref
+spec:
+  grantableClusterResourceName: testreg
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["configmaps"]
+  fieldPaths:
+  - path: $.data.scName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -105,12 +112,19 @@ spec:
   defaultAvailability: All
   excluded:
   - names: ["forbidden"]
-  usageReferences:
-  - rule:
-      apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["configmaps"]
-    fieldPath: $.data.scName
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: excref
+spec:
+  grantableClusterResourceName: excreg
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["configmaps"]
+  fieldPaths:
+  - path: $.data.scName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -149,12 +163,19 @@ metadata:
   name: allreg
 spec:
   defaultAvailability: All
-  usageReferences:
-  - rule:
-      apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["configmaps"]
-    fieldPath: $.data.scName
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: allref
+spec:
+  grantableClusterResourceName: allreg
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["configmaps"]
+  fieldPaths:
+  - path: $.data.scName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -177,9 +198,65 @@ data:
   scName: violating
 `
 
+	// A reference with a match guard must not flag objects where the guard does not hold (mirrors
+	// /is-granted), even if the value would otherwise be a violation.
+	const kubeStateGuardSkips = `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: testproj
+  labels:
+    heritage: multitenancy-manager
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: guardreg
+spec:
+  defaultAvailability: None
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: guardref
+spec:
+  grantableClusterResourceName: guardreg
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["configmaps"]
+  fieldPaths:
+  - path: $.data.scName
+    match:
+      fieldPath: $.data.kind
+      equals: Counted
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: guardgrant
+spec:
+  projectSelector:
+    matchLabels:
+      heritage: multitenancy-manager
+  resources:
+  - resourceName: guardreg
+    allowed: ["local"]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardcm
+  namespace: testproj
+data:
+  kind: Skipped
+  scName: violating
+`
+
 	f := HookExecutionConfigInit(initValues, `{}`)
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterResourceGrantPolicy", false)
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceDefinition", false)
+	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceReference", false)
 
 	Context("No violations", func() {
 		BeforeEach(func() {
@@ -188,6 +265,24 @@ data:
 		})
 
 		It("Hook should only expire the shared metric group and publish no violations", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			metrics := f.MetricsCollector.CollectedMetrics()
+			Expect(metrics).To(ConsistOf(
+				operation.MetricOperation{
+					Group:  grantViolationMetricGroup,
+					Action: operation.ActionExpireMetrics,
+				},
+			))
+		})
+	})
+
+	Context("Match guard not satisfied", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(kubeStateGuardSkips))
+			f.RunHook()
+		})
+
+		It("Should not flag an object whose reference guard does not hold", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			metrics := f.MetricsCollector.CollectedMetrics()
 			Expect(metrics).To(ConsistOf(

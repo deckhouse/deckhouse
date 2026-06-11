@@ -29,7 +29,7 @@ type EnforcementMode string
 const (
 	// EnforcementManaged means the built-in webhooks deny/default uses of the resource.
 	EnforcementManaged EnforcementMode = "Managed"
-	// EnforcementExternal means the module's own webhook enforces; we only materialize the catalog/quota.
+	// EnforcementExternal means the module's own webhook enforces; we only materialize the catalog.
 	EnforcementExternal EnforcementMode = "External"
 )
 
@@ -44,12 +44,13 @@ const (
 	AvailabilityNone AvailabilityDefault = "None"
 )
 
-// GrantedResource is the GVK of the cluster-scoped resource being governed. When absent the
-// grant is value-backed (the granted names are values of a reference field, e.g. loadBalancerClass).
+// GrantedResource identifies the cluster-scoped resource being governed by group and kind. When
+// absent the grant is value-backed (the granted names are values of a reference field, e.g.
+// loadBalancerClass). The served version is resolved via discovery.
 type GrantedResource struct {
-	// APIVersion is the group/version of the granted resource (e.g. storage.k8s.io/v1).
+	// APIGroup is the API group of the granted resource (e.g. storage.k8s.io; "" for the core group).
 	// +optional
-	APIVersion string `json:"apiVersion,omitempty"`
+	APIGroup string `json:"apiGroup,omitempty"`
 
 	// Kind is the kind of the granted resource (e.g. StorageClass).
 	// +optional
@@ -78,103 +79,9 @@ type DefaultFrom struct {
 	AnnotationKey string `json:"annotationKey,omitempty"`
 }
 
-// UsageRule matches the usage object like a webhook/RBAC rule. A resource may live in several
-// groups and versions; "*" matches any group or version.
-type UsageRule struct {
-	// APIGroups are the API groups of the usage object (e.g. networking.k8s.io, extensions); "*" = any.
-	// +required
-	APIGroups []string `json:"apiGroups"`
-
-	// APIVersions are the versions to match (e.g. v1, v1beta1); "*" = any.
-	// +required
-	APIVersions []string `json:"apiVersions"`
-
-	// Resources are the plural names of the usage object (e.g. ingresses).
-	// +required
-	Resources []string `json:"resources"`
-}
-
-// PathOverride overrides FieldPath for specific groups/versions, because a field may sit at
-// different paths across versions.
-type PathOverride struct {
-	// APIGroups restricts this override to these groups (empty = any matched group).
-	// +optional
-	APIGroups []string `json:"apiGroups,omitempty"`
-
-	// APIVersions restricts this override to these versions (empty = any matched version).
-	// +optional
-	APIVersions []string `json:"apiVersions,omitempty"`
-
-	// FieldPath is the JSONPath to the granted name for the matched group/versions.
-	// +required
-	FieldPath string `json:"fieldPath"`
-}
-
-// MatchPredicate guards a usage reference: it applies only when the predicate holds on the object.
-type MatchPredicate struct {
-	// FieldPath is the JSONPath to the value tested by the predicate.
-	// +required
-	FieldPath string `json:"fieldPath"`
-
-	// Equals matches when the value equals this string.
-	// +optional
-	Equals string `json:"equals,omitempty"`
-
-	// In matches when the value is one of these strings.
-	// +optional
-	In []string `json:"in,omitempty"`
-}
-
-// QuantityMeasure is a summable quantity field; Name is the measure (quota) key.
-type QuantityMeasure struct {
-	// Name is the measure key used in ClusterResourceGrant (e.g. requests.storage).
-	// +required
-	Name string `json:"name"`
-
-	// FieldPath is the JSONPath to the resource.Quantity value to sum.
-	// +required
-	FieldPath string `json:"fieldPath"`
-}
-
-// UsageReference declares where a granted name is referenced and what is measurable there.
-type UsageReference struct {
-	// Rule matches which usage objects this reference applies to (groups/versions/resources).
-	// +required
-	Rule UsageRule `json:"rule"`
-
-	// FieldPath is the default JSONPath to the granted object's name (a string), for all matched
-	// group/versions. May target an annotation, e.g. $.metadata.annotations['ipam.cilium.io/ip-pool'].
-	// +required
-	FieldPath string `json:"fieldPath"`
-
-	// Paths overrides FieldPath per group/version when the field moved between versions.
-	// +optional
-	Paths []PathOverride `json:"paths,omitempty"`
-
-	// Match guards this reference; it applies only when the predicate holds on the object.
-	// +optional
-	Match *MatchPredicate `json:"match,omitempty"`
-
-	// Default, if true, lets the /defaults webhook inject the per-project default into this field when
-	// it is empty (and coerce it when the registration sets coerceToDefault). Enable it only for a
-	// field whose value the resource always needs (e.g. a PVC storageClassName or a Certificate
-	// issuerRef.name). Leave it off for an opt-in reference such as an annotation that merely toggles
-	// a feature — there the field's absence is meaningful and must not be filled in; the reference is
-	// still validated and counted, just never defaulted.
-	// +optional
-	Default bool `json:"default,omitempty"`
-
-	// Countable, if true, lets the count of these usage objects be limited; the measure key is the
-	// resource plural.
-	// +optional
-	Countable bool `json:"countable,omitempty"`
-
-	// Quantities are summable quantity fields; each Name is a measure key.
-	// +optional
-	Quantities []QuantityMeasure `json:"quantities,omitempty"`
-}
-
 // GrantableClusterResourceDefinitionSpec is the desired state of a GrantableClusterResourceDefinition.
+// It declares governance and baseline availability only; where the resource is referenced (and how it
+// is validated/defaulted) lives in GrantableClusterResourceReference objects.
 type GrantableClusterResourceDefinitionSpec struct {
 	// GrantedResource is the cluster-scoped resource being governed (absent ⇒ value-backed).
 	// +optional
@@ -200,18 +107,17 @@ type GrantableClusterResourceDefinitionSpec struct {
 	// DefaultFrom marks the cluster-wide default object by annotation (fallback default).
 	// +optional
 	DefaultFrom *DefaultFrom `json:"defaultFrom,omitempty"`
+}
 
-	// CoerceToDefault, when true, makes the /defaults webhook rewrite a referencing value that is not
-	// available to the project to the project default, instead of letting /is-granted reject it. Enable
-	// it only for fields a built-in admission controller pre-populates with a cluster default that the
-	// project may not allow — e.g. PVC spec.storageClassName (DefaultStorageClass). For fields with no
-	// such defaulter, leave it false so an explicit out-of-list value is rejected, not silently rewritten.
-	// +optional
-	CoerceToDefault bool `json:"coerceToDefault,omitempty"`
+// ResourceReferenceBinding is one GrantableClusterResourceReference bound to this definition.
+type ResourceReferenceBinding struct {
+	// Name is the GrantableClusterResourceReference object name.
+	// +required
+	Name string `json:"name"`
 
-	// UsageReferences declares where the granted name is referenced and what is measurable.
+	// Resources are the usage-object plural resources the reference matches (from its rule).
 	// +optional
-	UsageReferences []UsageReference `json:"usageReferences,omitempty"`
+	Resources []string `json:"resources,omitempty"`
 }
 
 // GrantableClusterResourceDefinitionStatus is the observed state of a GrantableClusterResourceDefinition.
@@ -219,6 +125,15 @@ type GrantableClusterResourceDefinitionStatus struct {
 	// ObservedGeneration is the most recent generation observed by the controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// References is the reverse index of GrantableClusterResourceReference objects bound to this
+	// definition (i.e. the validation/defaulting paths registered against it).
+	// +optional
+	References []ResourceReferenceBinding `json:"references,omitempty"`
+
+	// ReferenceCount is the number of bound references (len(References)).
+	// +optional
+	ReferenceCount int `json:"referenceCount,omitempty"`
 
 	// Conditions represent the current state of the resource.
 	// +listType=map
@@ -233,6 +148,7 @@ type GrantableClusterResourceDefinitionStatus struct {
 // +kubebuilder:printcolumn:name="Granted",type=string,JSONPath=`.spec.grantedResource.kind`
 // +kubebuilder:printcolumn:name="Enforcement",type=string,JSONPath=`.spec.enforcement`
 // +kubebuilder:printcolumn:name="Default",type=string,JSONPath=`.spec.defaultAvailability`
+// +kubebuilder:printcolumn:name="References",type=integer,JSONPath=`.status.referenceCount`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // GrantableClusterResourceDefinition registers a cluster-scoped resource as grant-controllable.
