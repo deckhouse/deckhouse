@@ -48,12 +48,19 @@ metadata:
   name: testreg
 spec:
   defaultAvailability: None
-  usageReferences:
-  - rule:
-      apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["configmaps"]
-    fieldPath: $.data.scName
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: testref
+spec:
+  grantableClusterResourceName: testreg
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["configmaps"]
+  fieldPaths:
+  - path: $.data.scName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -105,12 +112,19 @@ spec:
   defaultAvailability: All
   excluded:
   - names: ["forbidden"]
-  usageReferences:
-  - rule:
-      apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["configmaps"]
-    fieldPath: $.data.scName
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: excref
+spec:
+  grantableClusterResourceName: excreg
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["configmaps"]
+  fieldPaths:
+  - path: $.data.scName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -149,12 +163,19 @@ metadata:
   name: allreg
 spec:
   defaultAvailability: All
-  usageReferences:
-  - rule:
-      apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["configmaps"]
-    fieldPath: $.data.scName
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: allref
+spec:
+  grantableClusterResourceName: allreg
+  rule:
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["configmaps"]
+  fieldPaths:
+  - path: $.data.scName
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
@@ -180,6 +201,7 @@ data:
 	f := HookExecutionConfigInit(initValues, `{}`)
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterResourceGrantPolicy", false)
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceDefinition", false)
+	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceReference", false)
 
 	Context("No violations", func() {
 		BeforeEach(func() {

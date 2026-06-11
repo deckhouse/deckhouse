@@ -86,28 +86,29 @@ type usageRule struct {
 	Resources   []string `json:"resources"`
 }
 
-type pathOverride struct {
+type fieldPathEntry struct {
 	APIGroups   []string `json:"apiGroups"`
 	APIVersions []string `json:"apiVersions"`
-	FieldPath   string   `json:"fieldPath"`
+	Path        string   `json:"path"`
 }
 
-type usageReference struct {
-	Rule      usageRule      `json:"rule"`
-	FieldPath string         `json:"fieldPath"`
-	Paths     []pathOverride `json:"paths"`
+type clusterResourceReference struct {
+	Spec struct {
+		GrantableClusterResourceName string           `json:"grantableClusterResourceName"`
+		Rule                         usageRule        `json:"rule"`
+		FieldPaths                   []fieldPathEntry `json:"fieldPaths"`
+	} `json:"spec"`
 }
 
 type clusterGrantableResource struct {
 	Spec struct {
 		GrantedResource *struct {
-			APIVersion string `json:"apiVersion"`
-			Kind       string `json:"kind"`
+			APIGroup string `json:"apiGroup"`
+			Kind     string `json:"kind"`
 		} `json:"grantedResource"`
 		Enforcement         string           `json:"enforcement"`
 		DefaultAvailability string           `json:"defaultAvailability"`
 		Excluded            []resourceFilter `json:"excluded"`
-		UsageReferences     []usageReference `json:"usageReferences"`
 	} `json:"spec"`
 }
 
@@ -310,7 +311,7 @@ func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource
 	}
 	// Object-backed: expand selectors against live granted objects.
 	if reg.Spec.GrantedResource != nil && reg.Spec.GrantedResource.Kind != "" {
-		gvr, err := grantedResourceGVR(kube, reg.Spec.GrantedResource.APIVersion, reg.Spec.GrantedResource.Kind)
+		gvr, err := grantedResourceGVR(kube, reg.Spec.GrantedResource.APIGroup, reg.Spec.GrantedResource.Kind)
 		if err != nil {
 			return d, err
 		}
@@ -368,22 +369,38 @@ func filterToSelector(f *resourceFilter) labels.Selector {
 	return sel
 }
 
-// grantedResourceGVR resolves a granted resource (apiVersion + kind) to its GVR via discovery.
-func grantedResourceGVR(kube k8s.Client, apiVersion, kind string) (schema.GroupVersionResource, error) {
-	gv, err := schema.ParseGroupVersion(apiVersion)
-	if err != nil {
-		return schema.GroupVersionResource{}, fmt.Errorf("parse apiVersion %q: %w", apiVersion, err)
-	}
+// grantedResourceGVR resolves a granted resource (apiGroup + kind) to its served GVR via discovery.
+func grantedResourceGVR(kube k8s.Client, apiGroup, kind string) (schema.GroupVersionResource, error) {
 	groupResources, err := restmapper.GetAPIGroupResources(kube.Discovery())
 	if err != nil {
 		return schema.GroupVersionResource{}, fmt.Errorf("discover api resources: %w", err)
 	}
 	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
-	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: gv.Group, Kind: kind}, gv.Version)
+	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: apiGroup, Kind: kind})
 	if err != nil {
-		return schema.GroupVersionResource{}, fmt.Errorf("map %s/%s: %w", apiVersion, kind, err)
+		return schema.GroupVersionResource{}, fmt.Errorf("map %s/%s: %w", apiGroup, kind, err)
 	}
 	return mapping.Resource, nil
+}
+
+// referencesFor lists the GrantableClusterResourceReference objects targeting the given definition name.
+func referencesFor(ctx context.Context, kube k8s.Client, resourceName string) ([]clusterResourceReference, error) {
+	refGVR := schema.GroupVersionResource{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Resource: "grantableclusterresourcereferences"}
+	list, err := kube.Dynamic().Resource(refGVR).List(ctx, v1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list GrantableClusterResourceReferences: %w", err)
+	}
+	var out []clusterResourceReference
+	for i := range list.Items {
+		r := clusterResourceReference{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(list.Items[i].Object, &r); err != nil {
+			continue
+		}
+		if r.Spec.GrantableClusterResourceName == resourceName {
+			out = append(out, r)
+		}
+	}
+	return out, nil
 }
 
 // usageGVRs resolves the concrete GVRs a usage rule targets (skipping wildcard groups). Concrete
@@ -455,16 +472,26 @@ func versionMatches(versions []string, v string) bool {
 	return false
 }
 
-// selectFieldPath returns the path for the given group/version (paths[] override else default).
-func selectFieldPath(ref usageReference, group, version string) string {
-	for _, p := range ref.Paths {
+// selectFieldPath returns the field path for the given group/version: a scoped fieldPaths entry wins
+// over an unscoped fallback. The bool is false when no entry matches.
+func selectFieldPath(fps []fieldPathEntry, group, version string) (string, bool) {
+	fallback := ""
+	haveFallback := false
+	for _, p := range fps {
 		groupOK := len(p.APIGroups) == 0 || versionMatches(p.APIGroups, group)
 		versionOK := len(p.APIVersions) == 0 || versionMatches(p.APIVersions, version)
-		if groupOK && versionOK {
-			return p.FieldPath
+		if !groupOK || !versionOK {
+			continue
+		}
+		if len(p.APIGroups) > 0 || len(p.APIVersions) > 0 {
+			return p.Path, true
+		}
+		if !haveFallback {
+			fallback = p.Path
+			haveFallback = true
 		}
 	}
-	return ref.FieldPath
+	return fallback, haveFallback
 }
 
 func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, log go_hook.Logger) ([]violation, error) {
@@ -496,9 +523,16 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 			return nil, fmt.Errorf("build decision for %s: %w", entry.ResourceName, err)
 		}
 
-		for _, ref := range reg.Spec.UsageReferences {
-			for _, gvr := range usageGVRs(kube, ref.Rule) {
-				path := selectFieldPath(ref, gvr.Group, gvr.Version)
+		refs, err := referencesFor(ctx, kube, entry.ResourceName)
+		if err != nil {
+			return nil, err
+		}
+		for _, ref := range refs {
+			for _, gvr := range usageGVRs(kube, ref.Spec.Rule) {
+				path, ok := selectFieldPath(ref.Spec.FieldPaths, gvr.Group, gvr.Version)
+				if !ok {
+					continue
+				}
 				jsonPath, err := jsonpath.Parse(path)
 				if err != nil {
 					log.Error("Invalid JSONPath expression", "expr", path, "registration", entry.ResourceName)
