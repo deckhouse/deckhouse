@@ -70,5 +70,6 @@ require (
 
 replace (
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider => ../../../../../go_lib/cloud-provider
+	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ../../../../../go_lib/dhctl-provider-protocol
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg => ../../../pkg
 )
