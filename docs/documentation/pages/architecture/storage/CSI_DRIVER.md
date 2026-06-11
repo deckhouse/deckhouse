@@ -1,6 +1,6 @@
 ---
-title: CSI driver
-permalink: en/architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
+title: Standard CSI driver
+permalink: en/architecture/storage/csi-drivers/csi-driver.html
 search: csi driver, csi-driver, container storage interface
 description: Overview of the CSI driver architecture in Deckhouse Kubernetes Platform.
 ---
@@ -9,7 +9,7 @@ A CSI driver (plugin) is used to manage persistent storage volumes in Deckhouse 
 
 [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) is a standard interface that unifies access to storage systems and simplifies integration of different storage systems into clusters.
 
-The CSI driver is included in DKP modules named `cloud-provider-*`. Although each supported cloud provider or storage system uses its own implementation of the CSI specification, the architecture of the CSI driver is the same across all implementations. Implementations may differ in the set of supported capabilities and components.
+The CSI driver is included in DKP modules named `cloud-provider-*` and `csi-*`. Although each supported cloud provider or storage system uses its own implementation of the CSI specification, the architecture of the CSI driver is the same across all implementations. Implementations may differ in the set of supported capabilities and components.
 
 The following is a description of the reference CSI driver architecture used in DKP. It includes all possible components and implements the full functionality used by DKP modules.
 
@@ -25,7 +25,7 @@ The following simplifications are made in the diagram:
 The reference CSI driver architecture at Level 2 of the C4 model and its interactions with other DKP components are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Reference CSI driver architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-common.png)
+![Reference CSI driver architecture](../../../../images/architecture/storage/c4-l2-csi-driver-common.png)
 
 ## Driver components
 
@@ -57,7 +57,9 @@ The CSI driver consists of the following components:
 
 2. **Csi-node** (DaemonSet): Node Plugin running on all cluster nodes and responsible for local volume mount and unmount operations.
 
-   > **Warning.** The plugin has privileged access to the filesystem of each node. On Linux, this requires the `CAP_SYS_ADMIN` capability. This is necessary to perform mount operations and interact with block devices.
+   {% alert level="warning" %}
+   The plugin has privileged access to the filesystem of each node. On Linux, this requires the `CAP_SYS_ADMIN` capability. This is necessary to perform mount operations and interact with block devices.
+   {% endalert %}
 
    It consists of the following containers:
 

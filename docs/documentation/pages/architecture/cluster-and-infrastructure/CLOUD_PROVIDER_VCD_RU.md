@@ -67,7 +67,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
    * **infra-controller-manager**.
 
-1. **CSI-драйвер (VCD)** — реализация CSI-драйвера для VMware Cloud Director. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../infrastructure/csi-driver.html). В модуле `cloud-provider-vcd` используется [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
+1. **CSI-драйвер (VCD)** — реализация CSI-драйвера для VMware Cloud Director. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html). В модуле `cloud-provider-vcd` используется [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
 
    CSI-драйвер (VCD) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

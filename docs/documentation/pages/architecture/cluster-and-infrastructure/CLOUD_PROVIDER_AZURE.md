@@ -50,7 +50,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-1. **CSI driver (azure)**: It is an implementation of the CSI driver for Microsoft Azure. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../infrastructure/csi-driver.html) section.
+1. **CSI driver (azure)**: It is an implementation of the CSI driver for Microsoft Azure. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver.html) section.
 
 ## Module interactions
 

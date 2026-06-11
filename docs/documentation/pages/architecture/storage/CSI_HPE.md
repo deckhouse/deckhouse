@@ -41,7 +41,7 @@ The module consists of the following components:
     * **controller**: Main container.
     * **webhooks**: Sidecar container implementing a webhook server for StorageClass validation.
 
-1. **CSI driver (hpe)**: CSI driver implementation for the `csi.hpe.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to [the CSI driver documentation page](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI driver (hpe)**: CSI driver implementation for the `csi.hpe.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to [the CSI driver documentation page](../csi-drivers/csi-driver.html).
 
 1. **Primera3par-csp**: A service container provider (Container Storage Provider, CSP) responsible for integrating the CSI driver with HPE Primera and 3PAR storage systems. It handles communication between Kubernetes and the storage arrays, manages session handling, and path replication.
 

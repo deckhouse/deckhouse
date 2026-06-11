@@ -1,6 +1,6 @@
 ---
-title: CSI driver (VMware vSphere)
-permalink: en/architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
+title: VMware vSphere CSI driver
+permalink: en/architecture/storage/csi-drivers/csi-driver-vsphere.html
 search: csi vsphere, csi-vsphere, container storage interface, vmware vsphere
 description: Overview of the CSI driver architecture for VMware vSphere in Deckhouse Kubernetes Platform.
 ---
@@ -9,7 +9,7 @@ A CSI driver (plugin) is used to manage persistent storage volumes in Deckhouse 
 
 [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) is a standard interface that unifies access to storage systems and simplifies integration of different storage systems into clusters.
 
-The [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module uses [`csi-vsphere`](/modules/csi-vsphere/) (based on [vSphere CSI Driver](https://github.com/kubernetes-sigs/vsphere-csi-driver)). It differs from the drivers used in other `cloud-provider-*` DKP modules by the presence of a syncer component specific to VMware vSphere.
+The [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module uses [`csi-vsphere`](/modules/csi-vsphere/) (based on [vSphere CSI Driver](https://github.com/kubernetes-sigs/vsphere-csi-driver)). It differs from the drivers used in other DKP modules by the presence of a syncer component specific to VMware vSphere.
 
 ## Driver architecture
 
@@ -23,7 +23,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`csi-vsphere`](/modules/csi-vsphere/) CSI driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Architecture of the csi-vsphere CSI driver](../../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-vsphere.png)
+![Architecture of the csi-vsphere CSI driver](../../../../images/architecture/storage/c4-l2-csi-driver-vsphere.png)
 
 ## Driver components
 
