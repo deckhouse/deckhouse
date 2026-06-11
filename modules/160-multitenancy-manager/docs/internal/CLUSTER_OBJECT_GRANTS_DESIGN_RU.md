@@ -208,6 +208,7 @@ Per-путь (`fieldPaths[].defaulting`):
 ## Примеры
 
 **StorageClass** — definition + путь PVC (PVC-путь `defaulting: Coerce` — встроенный DefaultStorageClass):
+
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -243,6 +244,7 @@ spec:
 **Косвенность (PostgresDatabase → PVC).** `PostgresDatabase` ссылается на StorageClass, оператор под
 капотом создаёт PVC. Регистрируем validation-only reference для CRD; PVC валидируется своим reference.
 Оба валидируются; квоты нет — проблемы двойного учёта нет:
+
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -265,6 +267,7 @@ spec:
 
 **ClusterIssuer — два пути.** Certificate (`spec.issuerRef`, guard `kind == ClusterIssuer`,
 `FillEmpty`) и аннотация Ingress (переключатель — `defaulting: None`, никогда не заполняется):
+
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -316,6 +319,7 @@ spec:
 ```
 
 **ClusterRole** — availability-only; делегируемый набор через метку `rbac.deckhouse.io/delegatable`:
+
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1

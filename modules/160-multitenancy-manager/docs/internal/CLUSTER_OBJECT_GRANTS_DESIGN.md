@@ -233,6 +233,7 @@ GVKs — so registering a reference automatically extends interception to that m
 ## Worked examples
 
 **StorageClass** — definition + the PVC path:
+
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -269,6 +270,7 @@ spec:
 StorageClass; the operator creates a PVC under the hood. Register a *validation-only* reference for the
 CRD; the PVC is validated by its own reference. Both are validated; there is no quota, so no
 double-counting concern:
+
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -291,6 +293,7 @@ spec:
 
 **ClusterIssuer — two paths.** Certificate (`spec.issuerRef`, guarded `kind == ClusterIssuer`) and the
 Ingress annotation (a toggle — `defaulting: None`, never filled in):
+
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -342,6 +345,7 @@ spec:
 ```
 
 **ClusterRole** — availability-only; bind a curated set via the `rbac.deckhouse.io/delegatable` label:
+
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1

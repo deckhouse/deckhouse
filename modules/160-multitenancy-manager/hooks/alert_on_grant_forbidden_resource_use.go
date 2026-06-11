@@ -344,15 +344,17 @@ func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource
 			d.excluded[n] = struct{}{}
 		}
 	}
-	// Object-backed: expand selectors against live granted objects.
-	if reg.Spec.GrantedResource != nil && reg.Spec.GrantedResource.Kind != "" {
+	// Object-backed: expand selectors against live granted objects. A granted resource that cannot be
+	// mapped (e.g. its CRD is absent, or a registration is mid-migration with an empty apiGroup) must
+	// not fail the whole alert scan — fall back to the literal allow/deny sets only.
+	if reg.Spec.GrantedResource != nil && reg.Spec.GrantedResource.Kind != "" && reg.Spec.GrantedResource.APIGroup != "" {
 		gvr, err := grantedResourceGVR(kube, reg.Spec.GrantedResource.APIGroup, reg.Spec.GrantedResource.Kind)
 		if err != nil {
-			return d, err
+			return d, nil
 		}
 		list, err := kube.Dynamic().Resource(gvr).List(ctx, v1.ListOptions{})
 		if err != nil {
-			return d, fmt.Errorf("list granted resource %s: %w", reg.Spec.GrantedResource.Kind, err)
+			return d, nil
 		}
 		excludedSels := make([]labels.Selector, 0, len(reg.Spec.Excluded))
 		for i := range reg.Spec.Excluded {
