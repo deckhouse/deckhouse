@@ -17,11 +17,7 @@ limitations under the License.
 package main
 
 import (
-	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
-	"cluster-api-provider-dvp/internal/controller"
 	"crypto/tls"
-	dvpapi "dvp-common/api"
-	"dvp-common/config"
 	"flag"
 	"os"
 	"path/filepath"
@@ -41,6 +37,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
+	"cluster-api-provider-dvp/internal/controller"
+	dvpapi "dvp-common/api"
+	"dvp-common/config"
 )
 
 var (
