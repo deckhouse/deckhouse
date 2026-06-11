@@ -306,6 +306,7 @@
 инстанс
 инстанса
 инстансам
+инстансами
 инстансах
 инстансов
 инстансом
@@ -517,7 +518,9 @@
 несекретных
 несистемных
 неунифицированных
+неуспешной
 неуспешные
+неуспешных
 нешифрованные
 ноде
 нуть
@@ -612,6 +615,7 @@
 пересоздает
 пересоздается
 пересоздастся
+пересоздаёт
 переупорядочивание
 перехешируются
 пецификация
@@ -1570,10 +1574,10 @@ healthchecks
 HEC
 helmignore
 helthcheck
+HH
 HighAvailability
 HighLoad
 HighNodeUtilization
-HH
 HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
@@ -1940,6 +1944,8 @@ Nehalem
 neighbour
 Netfilter
 NetworkAddress
+NetworkID
+NetworkLoadBalancer
 NetworkPolicy
 nexthop
 nexthops
@@ -2382,6 +2388,7 @@ Subfolder
 subGID
 subGIDs
 SubjectAccessReview
+SubnetID
 subresource
 subresources
 subUID
@@ -2415,6 +2422,7 @@ SystemTag
 TaintToleration
 tarball
 tarballs
+TargetGroup
 targetRef
 Taskfile
 TATLIN
@@ -2429,6 +2437,7 @@ terraform
 Terraform
 TestConvert
 testEnum
+TG
 Thanos
 THENEWSTACK
 Thev1
@@ -2625,6 +2634,7 @@ YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses
 YC
+YCC
 YCloud
 yml
 YouTube
