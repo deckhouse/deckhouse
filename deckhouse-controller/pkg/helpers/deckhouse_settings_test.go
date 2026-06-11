@@ -42,6 +42,13 @@ func TestDeckhouseSettingsContainer_ExperimentalModuleAllowed(t *testing.T) {
 			want:     true,
 		},
 		{
+			name:     "allowed when all are allowed and the module is also listed",
+			allowAll: true,
+			allowed:  []string{"foo"},
+			module:   "foo",
+			want:     true,
+		},
+		{
 			name:    "allowed when listed in the allowlist",
 			allowed: []string{"foo", "bar"},
 			module:  "foo",
