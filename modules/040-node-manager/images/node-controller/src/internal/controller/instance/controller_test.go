@@ -742,6 +742,65 @@ func TestReconcileExistingInstanceBindsMachineSource(t *testing.T) {
 	}, persisted.Spec.MachineRef)
 }
 
+func TestReconcileExistingInstanceBindsNodeRefFromMachine(t *testing.T) {
+	t.Parallel()
+
+	capiRef := &deckhousev1alpha2.MachineRef{
+		Kind:       "Machine",
+		APIVersion: capiv1beta2.GroupVersion.String(),
+		Name:       "worker-capi",
+		Namespace:  machine.MachineNamespace,
+	}
+	mcmRef := &deckhousev1alpha2.MachineRef{
+		Kind:       "Machine",
+		APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
+		Name:       "worker-mcm",
+		Namespace:  machine.MachineNamespace,
+	}
+
+	tests := []struct {
+		name        string
+		instance    *deckhousev1alpha2.Instance
+		machine     client.Object
+		wantNodeRef deckhousev1alpha2.NodeRef
+	}{
+		{
+			name: "capi machine reports node ref after instance creation",
+			instance: existingInstanceWithFinalizer("worker-capi", deckhousev1alpha2.InstanceSpec{
+				MachineRef: capiRef,
+			}, deckhousev1alpha2.InstancePhaseRunning),
+			machine:     capiMachine("worker-capi", "worker-capi-node"),
+			wantNodeRef: deckhousev1alpha2.NodeRef{Name: "worker-capi-node"},
+		},
+		{
+			name: "mcm machine reports node ref after instance creation",
+			instance: existingInstanceWithFinalizer("worker-mcm", deckhousev1alpha2.InstanceSpec{
+				MachineRef: mcmRef,
+			}, deckhousev1alpha2.InstancePhaseRunning),
+			machine:     mcmMachine("worker-mcm", "worker-mcm-node"),
+			wantNodeRef: deckhousev1alpha2.NodeRef{Name: "worker-mcm-node"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
+			controller, k8sClient := newTestInstanceController(t, nil, tt.instance, tt.machine)
+
+			result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: tt.instance.Name}})
+			require.NoError(t, err)
+			require.Equal(t, ctrl.Result{RequeueAfter: instanceRequeueInterval}, result)
+
+			persisted := &deckhousev1alpha2.Instance{}
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: tt.instance.Name}, persisted)
+			require.NoError(t, err)
+			require.Equal(t, tt.wantNodeRef, persisted.Spec.NodeRef)
+		})
+	}
+}
+
 func TestReconcileSourceExistence(t *testing.T) {
 	t.Parallel()
 

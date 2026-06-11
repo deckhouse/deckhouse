@@ -48,7 +48,7 @@ func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state
 	log.InfoF("State cache directory: %s\n", tmpDir)
 
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
-		return nil, fmt.Errorf("Can't create cache directory: %w", err)
+		return nil, fmt.Errorf("Cannot create cache directory: %w", err)
 	}
 
 	if cacheOpts.KubeNamespace == "" {
@@ -58,7 +58,7 @@ func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state
 		return cache.NewStateCache(tmpDir)
 	}
 
-	log.DebugLn("Use kubernetes state cache")
+	log.DebugLn("Using Kubernetes state cache")
 
 	kubeCl := client.NewKubernetesClient()
 	err := kubeCl.Init(&client.KubernetesInitParams{

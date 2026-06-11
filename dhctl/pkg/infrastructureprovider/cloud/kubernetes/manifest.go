@@ -28,13 +28,13 @@ func IsManifest(change plan.ChangeOp, kind string, logger log.Logger) bool {
 func extractManifestKind(state map[string]interface{}, logger log.Logger) string {
 	v, ok := state["manifest"]
 	if !ok || v == nil {
-		logger.LogDebugF("State does not have a manifest. Returns empty kind\n")
+		logger.LogDebugF("State does not have a manifest. Returning empty kind\n")
 		return ""
 	}
 
 	mv, ok := v.(map[string]any)
 	if !ok {
-		logger.LogDebugF("manifest is not a map. Returns empty kind\n")
+		logger.LogDebugF("manifest is not a map. Returning empty kind\n")
 		return ""
 	}
 	if kind, ok := mv["kind"].(string); ok {
@@ -42,6 +42,6 @@ func extractManifestKind(state map[string]interface{}, logger log.Logger) string
 		return kind
 	}
 
-	logger.LogDebugF("manifest does not have a kind. Returns empty kind\n")
+	logger.LogDebugF("manifest does not have a kind. Returning empty kind\n")
 	return ""
 }

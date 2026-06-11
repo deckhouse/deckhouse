@@ -93,14 +93,14 @@ type Loader struct {
 	registries map[string]*addonmodules.Registry
 
 	dependencyContainer dependency.Container
-	exts                *extenders.ExtendersStack
+	exts                extenders.IExtendersStack
 
 	downloadedModulesDir string
 	symlinksDir          string
 	conversionsStore     *conversion.ConversionsStore
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts extenders.IExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,

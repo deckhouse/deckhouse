@@ -1,0 +1,28 @@
+# Load balancer count quota: max 1 LoadBalancer service in the project.
+#
+# ALLOW  lb-1  -> first LoadBalancer (loadBalancerClass: internal)
+# DENY   lb-2  -> second LoadBalancer exceeds the services quota (limit 1)
+#
+# Note: these are real Services. Delete afterwards: k -n demo delete svc lb-1 lb-2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lb-1
+  namespace: demo
+spec:
+  type: LoadBalancer
+  loadBalancerClass: internal
+  ports:
+    - port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lb-2
+  namespace: demo
+spec:
+  type: LoadBalancer
+  loadBalancerClass: internal   # DENY: 2nd LoadBalancer, quota = 1
+  ports:
+    - port: 80

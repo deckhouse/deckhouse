@@ -100,7 +100,7 @@ func TestCheckPythonAndItsModules(t *testing.T) {
 					mni.On("Command", "command", []string{"-v", binary}).Return(cmd)
 				}
 			},
-			expectedError: "Python was not found under any of expected names",
+			expectedError: "Python was not found under any of the expected names",
 		},
 		{
 			name: "python available but missing required modules",
@@ -198,7 +198,7 @@ func TestDetectPythonBinary(t *testing.T) {
 					mni.On("Command", "command", []string{"-v", binary}).Return(cmd)
 				}
 			},
-			expectedError: "Python was not found under any of expected names",
+			expectedError: "Python was not found under any of the expected names",
 		},
 	}
 

@@ -46,17 +46,17 @@ func NewChecker(nodeToHostForChecks map[string]string, checkers []hook.NodeCheck
 
 func (c *Checker) IsAllNodesReady(ctx context.Context) error {
 	if c.checkers == nil {
-		log.DebugF("Not passed checkers. Skip. Nodes for check: %v", c.nodeToHostForChecks)
+		log.DebugF("No checkers passed. Skipping. Nodes to check: %v", c.nodeToHostForChecks)
 
 		return nil
 	}
 
 	if len(c.nodeToHostForChecks) == 0 {
-		return fmt.Errorf("do not have nodes for control plane nodes are readinss check")
+		return fmt.Errorf("no nodes provided for the control-plane nodes readiness check")
 	}
 
 	for nodeName := range c.nodeToHostForChecks {
-		if !c.confirm(fmt.Sprintf("Do you want to wait node %s will be ready?", nodeName)) {
+		if !c.confirm(fmt.Sprintf("Do you want to wait for node %s to become ready?", nodeName)) {
 			continue
 		}
 

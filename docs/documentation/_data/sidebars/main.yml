@@ -41,10 +41,6 @@ entries:
                     en: Restoring registry access
                     ru: Восстановление подключения к registry
                   url: /admin/configuration/registry/restore-token.html
-                - title:
-                    en: Switching editions
-                    ru: Переключение редакций
-                  url: /admin/configuration/registry/switching-editions.html
             - title:
                 en: IAM
                 ru: IAM
@@ -897,6 +893,10 @@ entries:
                 en: Updating Kubernetes and versioning
                 ru: Обновление Kubernetes и управление версиями
               url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+            - title:
+                en: Switching editions
+                ru: Переключение редакций
+              url: /admin/configuration/update/switching-editions.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
@@ -1382,6 +1382,10 @@ entries:
                 en: Infrastructure components
                 ru: Инфраструктурные компоненты
               folders:
+                - title:
+                    en: Chrony module
+                    ru: Модуль chrony
+                  url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
                 - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager

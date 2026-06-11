@@ -1,0 +1,31 @@
+# Storage object quota: 5Gi total requested storage, max 3 PVCs.
+#
+# DENY  pvc-big      -> 10Gi exceeds the 5Gi requests.storage quota.
+# DENY  pvc-extra    -> the 4th PVC exceeds the count quota (3). Apply 10-storage.yaml first
+#                       (3 PVCs), then this file.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-big
+  namespace: demo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local
+  resources:
+    requests:
+      storage: 10Gi   # DENY: exceeds the 5Gi total
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-extra
+  namespace: demo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local
+  resources:
+    requests:
+      storage: 1Gi    # DENY if it is the 4th PVC (count quota = 3)

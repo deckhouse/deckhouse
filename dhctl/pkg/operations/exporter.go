@@ -215,7 +215,7 @@ func (c *ConvergeExporter) registerMetrics() {
 //
 //nolint:gocritic
 func (c *ConvergeExporter) Start(ctx context.Context) {
-	log.InfoLn("Start exporter")
+	log.InfoLn("Starting exporter")
 	log.InfoLn("Address: ", c.ListenAddress)
 	log.InfoLn("Metrics path: ", c.MetricsPath)
 	log.InfoLn("Checks interval: ", c.CheckInterval)
@@ -264,7 +264,7 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 		case <-ticker.C:
 			c.recordStatistic(c.getStatistic(ctx, clearTmp))
 		case <-ctx.Done():
-			log.ErrorLn("Stop exporter...")
+			log.ErrorLn("Stopping exporter...")
 			return
 		}
 	}
@@ -354,7 +354,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 		}
 
 		c.GaugeMetrics["cluster_status"].WithLabelValues(status).Set(0)
-		log.InfoF("Cluster status: clean %s status\n", status)
+		log.InfoF("Cluster status: clearing %s status\n", status)
 	}
 
 	newExistedEntities := newPreviouslyExistedEntities()
@@ -368,7 +368,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 				continue
 			}
 			c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(0)
-			log.InfoF("%v/%v: clean node status %v\n", node.Group, node.Name, status)
+			log.InfoF("%v/%v: clearing node status %v\n", node.Group, node.Name, status)
 		}
 	}
 
@@ -380,7 +380,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 				continue
 			}
 			c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(0)
-			log.InfoF("%v: node template clean status %v\n", template.Name, status)
+			log.InfoF("%v: clearing node template status %v\n", template.Name, status)
 		}
 	}
 
@@ -391,7 +391,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 		}
 		for _, status := range nodeStatuses {
 			c.GaugeMetrics["node_status"].WithLabelValues(status, nodeGroup, nodeName).Set(0)
-			log.InfoF("%v/%v: clean missing node status %v\n", nodeGroup, nodeName, status)
+			log.InfoF("%v/%v: clearing missing node status %v\n", nodeGroup, nodeName, status)
 		}
 	}
 
