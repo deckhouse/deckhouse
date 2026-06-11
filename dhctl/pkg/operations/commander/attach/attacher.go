@@ -214,7 +214,6 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		kubeClient = &client.KubernetesClient{KubeClient: kubeCl}
 
 		preparatorParams := infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger)
-		preparatorParams.WithOperationConverge()
 		metaConfig, err = config.ParseConfigInCluster(
 			ctx,
 			kubeClient,

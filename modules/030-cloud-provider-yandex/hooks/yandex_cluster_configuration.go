@@ -38,5 +38,5 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 
 	return nil
 }, cluster_configuration.NewConfig(func(_, _ string) config.MetaConfigPreparator {
-	return yandex.NewMetaConfigPreparator(false, nil, "hook")
+	return yandex.NewMetaConfigPreparator(false, nil)
 }))

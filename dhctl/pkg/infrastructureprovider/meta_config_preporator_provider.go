@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/name212/govalue"
 
@@ -39,20 +38,7 @@ const (
 )
 
 type PreparatorProviderParams struct {
-	logger    log.Logger
-	Operation DhctlOperation
-}
-
-func (p *PreparatorProviderParams) WithOperation(op DhctlOperation) {
-	p.Operation = op
-}
-
-func (p *PreparatorProviderParams) WithOperationBootstrap() {
-	p.WithOperation(DhctlOperationBootstrap)
-}
-
-func (p *PreparatorProviderParams) WithOperationConverge() {
-	p.WithOperation(DhctlOperationConverge)
+	logger log.Logger
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -68,13 +54,12 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 	if govalue.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
-	operation := params.Operation
 	return func(provider, downloadRootDir string) config.MetaConfigPreparator {
-		return selectPreparator(provider, downloadRootDir, logger, operation)
+		return selectPreparator(provider, downloadRootDir, logger)
 	}
 }
 
-func selectPreparator(provider, downloadRootDir string, logger log.Logger, operation DhctlOperation) config.MetaConfigPreparator {
+func selectPreparator(provider, downloadRootDir string, logger log.Logger) config.MetaConfigPreparator {
 	switch provider {
 	case "":
 		// static cluster
@@ -82,37 +67,27 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger, opera
 	case yandex.ProviderName:
 		// Top-level dhctl path (bootstrap/converge/check): validate cluster
 		// prefix. The hook-side caller passes false.
-		return yandex.NewMetaConfigPreparator(true, logger, operation)
+		return yandex.NewMetaConfigPreparator(true, logger)
 	case vcd.ProviderName:
 		return vcd.NewMetaConfigPreparator(logger)
 	default:
 		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
 			return external.NewBinaryPreparator(binaryPath)
 		}
-		// External providers (DVP and any future plugin) ship a validator
-		// binary inside their OCI bundle. Falling back to a prefix-only
-		// validator here would silently skip every provider-specific check
-		// — registry credentials, kubeconfig, layout, NodeGroup sizing —
-		// and let a broken configuration reach terraform apply. Refuse to
-		// proceed with a precise diagnostic instead.
 		searched := ""
 		if downloadRootDir != "" {
-			searched = filepath.Join(downloadRootDir, provider, externalPreparatorBinaryName)
+			searched = providerdata.ValidatorPath(downloadRootDir, provider)
 		}
 		logger.LogErrorF("external validator for provider %q not found at %q\n", provider, searched)
 		return &missingExternalValidatorPreparator{provider: provider, searchedPath: searched}
 	}
 }
 
-const externalPreparatorBinaryName = "validator"
-
-// findExternalPreparatorBinary looks for a validator binary in pluginsDir/<providerName>/.
-// Returns the full path if found and is a regular file, empty string otherwise.
 func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	if pluginsDir == "" {
 		return ""
 	}
-	path := filepath.Join(pluginsDir, providerName, externalPreparatorBinaryName)
+	path := providerdata.ValidatorPath(pluginsDir, providerName)
 	info, err := os.Stat(path)
 	if err != nil || info.IsDir() {
 		return ""
@@ -120,11 +95,8 @@ func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	return path
 }
 
-// missingExternalValidatorPreparator is the preparator returned when an
-// external provider declares itself but its validator binary is absent from
-// the unpacked OCI bundle. Both Validate and Prepare hard-fail so the caller
-// surfaces a clear configuration error rather than a downstream
-// "terraform plan diverged" or "external API rejected the request" mystery.
+// missingExternalValidatorPreparator hard-fails Validate and Prepare when an
+// external provider's validator binary is absent from the unpacked OCI bundle.
 type missingExternalValidatorPreparator struct {
 	provider     string
 	searchedPath string

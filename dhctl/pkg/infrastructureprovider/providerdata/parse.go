@@ -15,7 +15,6 @@
 package providerdata
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -38,35 +37,21 @@ const (
 	cloudProviderModuleNamePrefix = "cloud-provider-"
 )
 
-// CloudProviderModuleName returns the ModuleConfig name for the given provider.
 func CloudProviderModuleName(providerName string) string {
 	return cloudProviderModuleNamePrefix + strings.ToLower(providerName)
 }
 
-// IsCloudPermanentNodeGroup reports whether obj is a CloudPermanent NodeGroup.
 func IsCloudPermanentNodeGroup(obj map[string]interface{}) bool {
 	nodeType, _, _ := unstructured.NestedString(obj, "spec", "nodeType")
 	return nodeType == "CloudPermanent"
 }
 
-// CloudProviderVarsFromInput builds CloudProviderVars from a PrepareInput.
-// This is the core parsing logic shared between the built-in preparators and
-// the external binary.
-func CloudProviderVarsFromInput(_ context.Context, input PrepareInput) (*CloudProviderVars, error) {
+// ParseResourcesYAML extracts CloudPermanent NodeGroups, instance classes and
+// credential Secrets from a multi-document YAML string.
+func ParseResourcesYAML(resourcesYAML string) (*CloudProviderVars, error) {
 	cv := &CloudProviderVars{}
-
-	cv.Settings = input.ModuleConfig
-
-	if err := parseResourcesYAML(input.ResourcesYAML, cv); err != nil {
-		return nil, err
-	}
-
-	return cv, nil
-}
-
-func parseResourcesYAML(resourcesYAML string, cv *CloudProviderVars) error {
 	if strings.TrimSpace(resourcesYAML) == "" {
-		return nil
+		return cv, nil
 	}
 
 	docs := libdhctlyaml.SplitYAML(resourcesYAML)
@@ -79,12 +64,12 @@ func parseResourcesYAML(resourcesYAML string, cv *CloudProviderVars) error {
 
 		index, err := yamlvalidation.ParseIndex(strings.NewReader(doc))
 		if err != nil {
-			return fmt.Errorf("parse resources document %d index: %w", i, err)
+			return nil, fmt.Errorf("parse resources document %d index: %w", i, err)
 		}
 
 		var obj map[string]interface{}
 		if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
-			return fmt.Errorf("unmarshal resources document %d: %w", i, err)
+			return nil, fmt.Errorf("unmarshal resources document %d: %w", i, err)
 		}
 
 		switch {
@@ -122,5 +107,5 @@ func parseResourcesYAML(resourcesYAML string, cv *CloudProviderVars) error {
 		}
 	}
 
-	return nil
+	return cv, nil
 }

@@ -193,7 +193,7 @@ func main() {
 		dhctlOpts.Global.GlobalHooksModule = options.DefaultGlobalHooksModule
 		dhctlOpts.Global.InfrastructureVersions = options.DefaultInfrastructureVersions
 		dhctlOpts.Global.VersionMap = options.DefaultVersionMap
-		dhctlOpts.Global.NeedDownload = false
+		dhctlOpts.Global.EnsureCandiAvailable = false
 
 		dhctlcli.RegisterCobraBridges(rootCmd, fileName, dhctlOpts)
 	}

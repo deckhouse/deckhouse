@@ -23,10 +23,8 @@ import (
 
 // ParseResourcesYAML parses a multi-document YAML string that may contain
 // NodeGroups, *InstanceClass objects, and credential Secrets, and returns a
-// populated CloudProviderVars.
-//
-// This is the standard parsing logic for provider resource files. Use it in
-// your Prepare handler to turn input.ResourcesYAML into CloudProviderVars.
+// populated CloudProviderVars. Provider resources arrive pre-parsed in
+// input.Vars — this helper is for parsing standalone resource files.
 func ParseResourcesYAML(resourcesYAML string) (*CloudProviderVars, error) {
 	cv := &CloudProviderVars{}
 	if strings.TrimSpace(resourcesYAML) == "" {
