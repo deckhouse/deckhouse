@@ -92,7 +92,7 @@ spec:
             drop:
             - ALL
         command:
-        - /usr/bin/simple-bridge
+        - /bin/simple-bridge
         env:
         {{- if hasKey .Values.global "clusterConfiguration" }}
           {{- if .Values.global.clusterConfiguration.cloud }}
