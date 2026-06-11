@@ -993,10 +993,11 @@ jobs:
             baseline/build_report_FE/images_tags_werf.json \
             rerun/build_report_FE/images_tags_werf.json
 
-  # Notify the team in Loop when a scheduled check breaks: either the FE rebuild
-  # itself failed, or the rerun digests diverged from the baseline (the build is
-  # not reproducible). Only scheduled (automatic) runs alert; manual
-  # workflow_dispatch runs are assumed to be watched by the operator.
+  # Single Loop alert for the build reproducibility check. Runs on any trigger
+  # (run_attempt == 1, deckhouse/deckhouse only) and picks ONE reason to report,
+  # evaluated in priority order: a slow rebuild first (so it does not clash with
+  # the failure conditions), then a digest mismatch, then a failed FE rebuild,
+  # then a baseline-resolution error. If nothing is wrong, nothing is sent.
   send_alert_about_workflow_problem:
     name: Send alert about workflow problem
     runs-on: "regular"
@@ -1005,7 +1006,7 @@ jobs:
       - build_fe_main
       - build_fe_dev
       - compare_reports
-    if: ${{ failure() && github.event_name == 'schedule' && github.repository == 'deckhouse/deckhouse' && github.run_attempt == 1 }}
+    if: ${{ always() && github.repository == 'deckhouse/deckhouse' && github.run_attempt == 1 }}
     steps:
     # <template: import_secrets>
     - name: Split repository name
@@ -1032,6 +1033,36 @@ jobs:
           projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop channel_id | LOOP_E2E_REPORT_CHANNEL_ID ;
 
     # </template: import_secrets>
+    - name: Measure rebuild job duration
+      id: duration
+      if: always()
+      uses: actions/github-script@v6.4.1
+      with:
+        github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+        script: |
+          const THRESHOLD_SECONDS = 300; // 5 minutes
+
+          const jobs = await github.paginate(
+            github.rest.actions.listJobsForWorkflowRun,
+            { owner: context.repo.owner, repo: context.repo.repo, run_id: context.runId, per_page: 100 },
+          );
+          const buildJob = jobs.find(j => j.name && j.name.startsWith('Build FE'));
+          if (!buildJob || buildJob.conclusion !== 'success' || !buildJob.started_at || !buildJob.completed_at) {
+            core.info(`No completed-successful Build FE job (conclusion=${buildJob ? buildJob.conclusion : 'absent'}); slow check skipped.`);
+            core.setOutput('slow', 'false');
+            return;
+          }
+
+          const durSec = Math.round((new Date(buildJob.completed_at) - new Date(buildJob.started_at)) / 1000);
+          const durHuman = `${Math.floor(durSec / 60)}m ${durSec % 60}s`;
+          core.info(`Build FE job '${buildJob.name}' duration: ${durHuman} (${durSec}s); threshold ${THRESHOLD_SECONDS}s`);
+          if (durSec > THRESHOLD_SECONDS) {
+            core.setOutput('slow', 'true');
+            core.setOutput('duration_human', durHuman);
+            core.setOutput('job_url', buildJob.html_url);
+          } else {
+            core.setOutput('slow', 'false');
+          }
     - name: Check loop alerting credentials
       id: check_loop_alerting
       if: always()
@@ -1039,30 +1070,41 @@ jobs:
         LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
       run: |
         if [[ -n $LOOP_TOKEN ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
-    - name: Send loop alert on fail
-      if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' }}
+    - name: Send loop alert
+      if: ${{ always() && steps.check_loop_alerting.outputs.has_credentials == 'true' }}
       env:
         LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
         LOOP_CHANNEL_ID: ${{ steps.secrets.outputs.LOOP_E2E_REPORT_CHANNEL_ID }}
+        SLOW: ${{ steps.duration.outputs.slow }}
+        DURATION_HUMAN: ${{ steps.duration.outputs.duration_human }}
+        JOB_URL: ${{ steps.duration.outputs.job_url }}
         COMPARE_RESULT: ${{ needs.compare_reports.result }}
         BUILD_MAIN_RESULT: ${{ needs.build_fe_main.result }}
         BUILD_DEV_RESULT: ${{ needs.build_fe_dev.result }}
+        RESOLVE_RESULT: ${{ needs.resolve_target.result }}
         TARGET_SHA: ${{ needs.resolve_target.outputs.sha }}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
 
-        if [[ "$COMPARE_RESULT" == "failure" ]]; then
-          REASON="digest mismatch on rebuild (build is not reproducible)"
+        # Priority order: a slow (but successful) rebuild is checked first so it
+        # does not clash with the failure/mismatch conditions below.
+        if [[ "$SLOW" == "true" ]]; then
+          MESSAGE="🐢Build reproducibility rebuild is slow🐢\nBuild FE job took ${DURATION_HUMAN} (threshold 5m)\nSHA: ${TARGET_SHA}\n[URL](${JOB_URL})"
+        elif [[ "$COMPARE_RESULT" == "failure" ]]; then
+          MESSAGE="🛑Build reproducibility check failed🛑\nReason: digest mismatch on rebuild (build is not reproducible)\nSHA: ${TARGET_SHA}\n[URL](${WORKFLOW_URL})"
         elif [[ "$BUILD_MAIN_RESULT" == "failure" || "$BUILD_DEV_RESULT" == "failure" ]]; then
-          REASON="FE rebuild failed"
+          MESSAGE="🛑Build reproducibility check failed🛑\nReason: FE rebuild failed\nSHA: ${TARGET_SHA}\n[URL](${WORKFLOW_URL})"
+        elif [[ "$RESOLVE_RESULT" == "failure" ]]; then
+          MESSAGE="🛑Build reproducibility check failed🛑\nReason: failed to resolve baseline / workflow error\nSHA: ${TARGET_SHA}\n[URL](${WORKFLOW_URL})"
         else
-          REASON="failed to resolve baseline / workflow error"
+          echo "Nothing to alert about (build succeeded within the time budget)."
+          exit 0
         fi
 
         alertData=$(cat <<EOF
         {
         "channel_id": "${LOOP_CHANNEL_ID}",
-        "message": "🛑Build reproducibility check failed🛑\nReason: ${REASON}\nSHA: ${TARGET_SHA}\n[URL](${WORKFLOW_URL})"
+        "message": "${MESSAGE}"
         }
         EOF
         )
