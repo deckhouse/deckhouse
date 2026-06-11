@@ -1,0 +1,21 @@
+{{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alliance-healthcheck-{{ .Values.global.discovery.clusterUUID }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- if .Values.istio.federation.enabled }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "alliance-healthcheck" "federation.istio.deckhouse.io/public-service" "")) | nindent 2 }}
+  {{- else }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "alliance-healthcheck")) | nindent 2 }}
+  {{- end }}
+spec:
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: http
+  selector:
+    app: alliance-healthcheck
+{{- end }}
