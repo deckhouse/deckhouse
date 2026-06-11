@@ -39,7 +39,7 @@ Managed PostgreSQL в Deckhouse Kubernetes Platform использует namespa
 Убедитесь, что:
 
 - [`managed-postgres`](/modules/managed-postgres/) включён;
-- администратор сообщил имя подходящего [PostgresClass](../../../admin/configuration/managed-services/postgres.html#ресурс-postgresclass), допустимые размеры и доступные варианты топологии;
+- администратор сообщил имя подходящего [PostgresClass](../../../admin/configuration/managed-services/postgres.html#подготовка-postgresclass), допустимые размеры и доступные варианты топологии;
 - у вас есть права на создание ресурсов в целевом неймспейсе.
 
 ## Создание сервиса с базой и пользователем
@@ -231,7 +231,7 @@ spec:
     sharedBuffers: 128Mi
 ```
 
-Доступность переопределения этих параметров зависит от настроек связанного [PostgresClass](../../../admin/configuration/managed-services/postgres.html#ресурс-postgresclass). Если администратор не разрешил переопределять параметр в PostgresClass, ресурс Postgres не пройдёт валидацию.
+Доступность переопределения этих параметров зависит от настроек связанного [PostgresClass](../../../admin/configuration/managed-services/postgres.html#подготовка-postgresclass). Если администратор не разрешил переопределять параметр в PostgresClass, ресурс Postgres не пройдёт валидацию.
 
 ## Выбор варианта развёртывания
 
