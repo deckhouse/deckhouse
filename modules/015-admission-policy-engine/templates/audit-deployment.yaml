@@ -56,6 +56,8 @@ spec:
         app: 'gatekeeper'
         control-plane: audit-controller
         gatekeeper.sh/operation: audit
+      annotations:
+        checksum/certificate: {{ include (print $.Template.BasePath "/cert-secret.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system" "with-no-csi") | nindent 6 }}

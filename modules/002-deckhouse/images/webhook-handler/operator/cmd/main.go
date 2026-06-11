@@ -329,6 +329,16 @@ func main() {
 		tlsOpts = append(tlsOpts, disableHTTP2)
 	}
 
+	// Category A TLS profile (deckhouse TLS standard, see
+	// go_lib/hooks/tls_certificate/README.md): the only client of the
+	// admission/conversion webhook server is kube-apiserver, so we pin
+	// the handshake floor to TLS 1.3 and let Go pick the fixed AEAD
+	// cipher suite list. Applied last so earlier opts can never downgrade.
+	tlsOpts = append(tlsOpts, func(c *tls.Config) {
+		c.MinVersion = tls.VersionTLS13
+		c.CipherSuites = nil
+	})
+
 	// Create watchers for metrics and webhooks certificates
 	var metricsCertWatcher, webhookCertWatcher *certwatcher.CertWatcher
 

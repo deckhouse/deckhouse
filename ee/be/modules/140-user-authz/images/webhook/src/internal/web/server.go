@@ -55,6 +55,13 @@ func buildTLSConfig() (*tls.Config, error) {
 	}
 
 	return &tls.Config{
+		// Category A TLS profile (deckhouse TLS standard, see
+		// go_lib/hooks/tls_certificate/README.md): the only clients are
+		// kube-apiserver (mTLS, verified below) and the in-pod kubelet
+		// liveness probe — both reach this server with controlled Go
+		// stacks, so we pin the handshake floor to TLS 1.3 and let Go
+		// pick the fixed AEAD cipher suite list.
+		MinVersion: tls.VersionTLS13,
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientCAs:  clientCertPool,
 	}, nil

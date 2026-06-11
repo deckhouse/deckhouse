@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"os"
@@ -157,7 +158,20 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		Scheme:                  scheme,
 		GracefulShutdownTimeout: ptr.To(10 * time.Second),
 		HealthProbeBindAddress:  ":9090",
-		WebhookServer:           webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		// Category A TLS profile (deckhouse TLS standard, see
+		// go_lib/hooks/tls_certificate/README.md): the only client of
+		// the admission/conversion webhook is kube-apiserver, so we pin
+		// the handshake floor to TLS 1.3 and let Go pick the fixed
+		// AEAD suite list.
+		WebhookServer: webhook.NewServer(webhook.Options{
+			CertDir: "/certs",
+			TLSOpts: []func(*tls.Config){
+				func(c *tls.Config) {
+					c.MinVersion = tls.VersionTLS13
+					c.CipherSuites = nil
+				},
+			},
+		}),
 		Metrics: metrics.Options{
 			BindAddress: "0",
 		},

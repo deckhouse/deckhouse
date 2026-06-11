@@ -76,6 +76,7 @@ spec:
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
         checksum/registry-version: {{ .Values.global.modulesImages.registry.hash | default "" | quote }}
+        checksum/admission-webhook-cert: {{ include (print $.Template.BasePath "/admission/secret.yaml") . | sha256sum }}
         kubectl.kubernetes.io/default-container: deckhouse
     spec:
       affinity:

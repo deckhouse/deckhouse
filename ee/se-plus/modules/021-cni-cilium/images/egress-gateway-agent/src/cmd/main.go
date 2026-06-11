@@ -64,8 +64,16 @@ func main() {
 		c.NextProtos = []string{"http/1.1"}
 	}
 
-	tlsOpts := make([]func(*tls.Config), 0, 1)
+	tlsOpts := make([]func(*tls.Config), 0, 2)
 	tlsOpts = append(tlsOpts, disableHTTP2)
+
+	// Category A TLS profile (deckhouse TLS standard, see
+	// go_lib/hooks/tls_certificate/README.md): kube-apiserver is the
+	// only webhook client, so the handshake floor is pinned to TLS 1.3.
+	tlsOpts = append(tlsOpts, func(c *tls.Config) {
+		c.MinVersion = tls.VersionTLS13
+		c.CipherSuites = nil
+	})
 
 	webhookServer := webhook.NewServer(webhook.Options{
 		TLSOpts: tlsOpts,
