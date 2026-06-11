@@ -1263,6 +1263,18 @@ entries:
                 ru: Хуки
               url: /architecture/marketplace/hooks.html
         - title:
+            en: Delivery subsystem
+            ru: Подсистема Delivery
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/delivery/
+            - title:
+                en: operator-argo module
+                ru: Модуль operator-argo
+              url: /architecture/delivery/operator-argo.html
+        - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
           folders:
