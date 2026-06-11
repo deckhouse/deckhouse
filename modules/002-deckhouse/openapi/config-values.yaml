@@ -248,7 +248,25 @@ properties:
               - "All"
               - "Minor"
             default: "Minor"
-
+      blockOnAlerts:
+        type: object
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: |
+              If enabled, the update will be blocked if there are any alerts in the cluster.
+          severity:
+            type: integer
+            description: |
+              The severity of the alerts that will block the update.
+            enum:
+              - 0
+              - 1
+              - 2
+              - 3
+              - 4
+            default: 4
   nodeSelector:
     type: object
     additionalProperties:

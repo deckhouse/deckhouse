@@ -37,6 +37,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
@@ -56,6 +58,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -537,12 +540,66 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 
+const defaultBlockOnAlertsSeverity = 4
+
+// checkBlockOnAlerts returns an error if there is at least one ClusterAlert
+// with severityLevel greater than the given threshold (default: 4).
+func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, severityThreshold int) error {
+	if severityThreshold == 0 {
+		severityThreshold = defaultBlockOnAlertsSeverity
+	}
+
+	alertList := &unstructured.UnstructuredList{}
+	alertList.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "deckhouse.io",
+		Version: "v1alpha1",
+		Kind:    "ClusterAlertList",
+	})
+	if err := r.client.List(ctx, alertList); err != nil {
+		return fmt.Errorf("list ClusterAlerts: %w", err)
+	}
+
+	for _, alert := range alertList.Items {
+		rawVal, found, err := unstructured.NestedFieldNoCopy(alert.Object, "alert", "severityLevel")
+		if err != nil || !found {
+			continue
+		}
+
+		var alertSeverity int
+		switch v := rawVal.(type) {
+		case int64:
+			alertSeverity = int(v)
+		case string:
+			alertSeverity, err = strconv.Atoi(v)
+			if err != nil {
+				continue
+			}
+		default:
+			continue
+		}
+
+		if alertSeverity > severityThreshold {
+			return fmt.Errorf("release update is blocked by alert %q: severity %d exceeds threshold %d",
+				alert.GetName(), alertSeverity, severityThreshold)
+		}
+	}
+
+	return nil
+}
+
 // PreApplyReleaseCheck checks final conditions before apply
 //
 // - Calculating deploy time (if zero - deploy)
 func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task, metricLabels releaseUpdater.MetricLabels) error {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "preApplyReleaseCheck")
 	defer span.End()
+
+	us := r.updateSettings.Get()
+	if us.Update.BlockOnAlerts.Enabled {
+		if err := r.checkBlockOnAlerts(ctx, us.Update.BlockOnAlerts.Severity); err != nil {
+			return err
+		}
+	}
 
 	timeResult := r.DeployTimeCalculate(ctx, dr, task, metricLabels)
 
@@ -612,9 +669,10 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		NotificationConfig:     us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
 		// if we have wrong mode - autopatch
-		Mode:    v1alpha2.ParseUpdateMode(us.Update.Mode),
-		Windows: us.Update.Windows,
-		Subject: releaseUpdater.SubjectDeckhouse,
+		Mode:          v1alpha2.ParseUpdateMode(us.Update.Mode),
+		Windows:       us.Update.Windows,
+		Subject:       releaseUpdater.SubjectDeckhouse,
+		BlockOnAlerts: us.Update.BlockOnAlerts,
 	}
 
 	releaseNotifier := releaseUpdater.NewReleaseNotifier(dus)
