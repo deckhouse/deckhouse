@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: vertical-pod-autoscaler
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: kube-system
-  name: d8:manage:permission:module:vertical-pod-autoscaler:edit
+  name: d8:system-capability:vertical-pod-autoscaler:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module vertical-pod-autoscaler: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль vertical-pod-autoscaler: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the vertical-pod-autoscaler module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля vertical-pod-autoscaler."
 rules:
 - apiGroups:
   - deckhouse.io

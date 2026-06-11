@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace-capability:kubernetes:proxy_resources
+  annotations:
+    en.meta.deckhouse.io/title: "Proxy resources"
+    ru.meta.deckhouse.io/title: "Проксирование ресурсов"
+    en.meta.deckhouse.io/description: "Proxy access to pods and services."
+    ru.meta.deckhouse.io/description: "Доступ к подам и сервисам через proxy."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: user
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods/proxy
+      - services/proxy
+    verbs:
+      - create

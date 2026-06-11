@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:project-capability:multitenancy-manager:manage_rbac
+  annotations:
+    en.meta.deckhouse.io/title: "Project: manage RBAC"
+    ru.meta.deckhouse.io/title: "Проект: управление RBAC"
+    en.meta.deckhouse.io/description: "Create, update and delete role bindings within the project (ProjectRoleBinding)."
+    ru.meta.deckhouse.io/description: "Создание, изменение и удаление привязок ролей в пределах проекта (ProjectRoleBinding)."
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: project
+    rbac.deckhouse.io/aggregate-to-project-as: admin
+rules:
+  - apiGroups:
+      - deckhouse.io
+    resources:
+      - projectrolebindings
+    verbs:
+      - create
+      - update
+      - patch
+      - delete

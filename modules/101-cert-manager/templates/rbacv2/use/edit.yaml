@@ -5,9 +5,15 @@ metadata:
   labels:
     heritage: deckhouse
     module: cert-manager
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:cert-manager:edit
+    rbac.deckhouse.io/aggregate-to-namespace-as: manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:cert-manager:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module cert-manager: edit"
+    ru.meta.deckhouse.io/title: "Модуль cert-manager: редактирование"
+    en.meta.deckhouse.io/description: "Manage cert-manager resources in a namespace."
+    ru.meta.deckhouse.io/description: "Управление ресурсами модуля cert-manager в пространстве имён."
 rules:
 - apiGroups:
   - cert-manager.io

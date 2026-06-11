@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: csi-vsphere
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-csi-vsphere
-  name: d8:manage:permission:module:csi-vsphere:edit
+  name: d8:system-capability:csi-vsphere:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module csi-vsphere: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль csi-vsphere: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the csi-vsphere module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля csi-vsphere."
 rules:
 - apiGroups:
   - deckhouse.io

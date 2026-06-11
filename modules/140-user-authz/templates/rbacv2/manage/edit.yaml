@@ -6,9 +6,14 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/aggregate-to-security-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
-  name: d8:manage:permission:module:user-authz:edit
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
+  name: d8:system-capability:user-authz:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module user-authz: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль user-authz: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the user-authz module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля user-authz."
 rules:
 - apiGroups:
   - deckhouse.io

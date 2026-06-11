@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:storage:superadmin
+  annotations:
+    en.meta.deckhouse.io/title: "Storage: Superadmin"
+    ru.meta.deckhouse.io/title: "Суперадминистратор подсистемы хранилища"
+    en.meta.deckhouse.io/description: "Full control over the Storage subsystem, including its system resources."
+    ru.meta.deckhouse.io/description: "Полный контроль над подсистемы хранилища, включая её системные ресурсы."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: superadmin
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: storage
+    rbac.deckhouse.io/aggregate-to-system-as: superadmin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-storage-as: superadmin
+rules: []

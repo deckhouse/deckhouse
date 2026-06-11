@@ -1,0 +1,29 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: extended-monitoring
+    rbac.deckhouse.io/aggregate-to-observability-as: manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
+    rbac.deckhouse.io/namespace: d8-monitoring
+  name: d8:system-capability:extended-monitoring:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module extended-monitoring: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль extended-monitoring: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the extended-monitoring module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля extended-monitoring."
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - extended-monitoring
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

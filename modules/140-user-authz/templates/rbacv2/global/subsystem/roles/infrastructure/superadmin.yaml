@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:infrastructure:superadmin
+  annotations:
+    en.meta.deckhouse.io/title: "Infrastructure: Superadmin"
+    ru.meta.deckhouse.io/title: "Суперадминистратор подсистемы инфраструктуры"
+    en.meta.deckhouse.io/description: "Full control over the Infrastructure subsystem, including its system resources."
+    ru.meta.deckhouse.io/description: "Полный контроль над подсистемы инфраструктуры, включая её системные ресурсы."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: superadmin
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: infrastructure
+    rbac.deckhouse.io/aggregate-to-system-as: superadmin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-infrastructure-as: superadmin
+rules: []

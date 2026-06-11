@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Validates RBAC v2 framework objects (ClusterRoles):
+#   - the "d8:" name prefix is reserved for Deckhouse, users may only create "d8:custom:*" objects;
+#   - the built-in framework kinds (role/capability) cannot be created by users,
+#     they must use custom-role/custom-capability;
+#   - custom-role must not define its own rules (aggregation only);
+#   - custom roles/capabilities must not aggregate the system lineages together with
+#     the namespace/project lineages (privilege escalation across scopes).
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: rbacv2-cluster-roles.deckhouse.io
+  group: main
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
+    name: exclude-aggregation-controller
+  rules:
+  - apiGroups:   ["rbac.authorization.k8s.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["clusterroles"]
+    scope:       "Cluster"
+EOF
+}
+
+function deny() {
+  jq -nc --arg message "$1" '{"allowed": false, "message": $message}' > "$VALIDATING_RESPONSE_PATH"
+}
+
+function allow() {
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+}
+
+function __main__() {
+  name=$(context::jq -r '.review.request.object.metadata.name')
+  kindLabel=$(context::jq -r '.review.request.object.metadata.labels["rbac.deckhouse.io/kind"] // ""')
+  hasRules=$(context::jq -r '[.review.request.object.rules // [] | .[]] | length > 0')
+  hasAggregation=$(context::jq -r '(.review.request.object.aggregationRule.clusterRoleSelectors // []) | length > 0')
+
+  # The d8: name prefix is reserved; users may only create objects under d8:custom:.
+  if [[ "$name" == d8:* && "$name" != d8:custom:* ]]; then
+    deny "ClusterRole names with the \"d8:\" prefix are reserved for Deckhouse. Use the \"d8:custom:\" prefix for custom roles and capabilities."
+    return 0
+  fi
+
+  # Built-in framework kinds cannot be claimed by users.
+  if [[ "$kindLabel" == "role" || "$kindLabel" == "capability" ]]; then
+    deny "The label \"rbac.deckhouse.io/kind: ${kindLabel}\" is reserved for Deckhouse built-in objects. Use \"custom-role\" or \"custom-capability\" instead."
+    return 0
+  fi
+
+  if [[ "$kindLabel" == "custom-role" || "$kindLabel" == "custom-capability" ]]; then
+    if [[ "$name" != d8:custom:* ]]; then
+      deny "ClusterRole \"${name}\" labeled \"rbac.deckhouse.io/kind: ${kindLabel}\" must be named with the \"d8:custom:\" prefix."
+      return 0
+    fi
+
+    # Custom roles aggregate capabilities and must not carry their own rules.
+    if [[ "$kindLabel" == "custom-role" ]]; then
+      if [[ "$hasRules" == "true" ]]; then
+        deny "ClusterRole \"${name}\" with \"rbac.deckhouse.io/kind: custom-role\" must not define rules. Move the rules to a custom-capability and aggregate it."
+        return 0
+      fi
+      if [[ "$hasAggregation" != "true" ]]; then
+        deny "ClusterRole \"${name}\" with \"rbac.deckhouse.io/kind: custom-role\" must define aggregationRule.clusterRoleSelectors."
+        return 0
+      fi
+    fi
+
+    # Forbid aggregating the system-side lineages together with the namespace/project lineages.
+    lineages=$(context::jq -r '
+      [(.review.request.object.aggregationRule.clusterRoleSelectors // [])[]
+        | (.matchLabels // {}) | keys[]
+        | capture("^rbac\\.deckhouse\\.io/aggregate-to-(?<lineage>.+)-as$") | .lineage
+      ] | unique | join(" ")')
+    systemSide=""
+    tenantSide=""
+    for lineage in $lineages; do
+      case "$lineage" in
+        namespace|project) tenantSide="$lineage" ;;
+        *) systemSide="$lineage" ;;
+      esac
+    done
+    if [[ -n "$systemSide" && -n "$tenantSide" ]]; then
+      deny "ClusterRole \"${name}\" must not aggregate the \"${systemSide}\" lineage together with the \"${tenantSide}\" lineage: mixing system and namespace/project scopes is forbidden."
+      return 0
+    fi
+  fi
+
+  allow
+}
+
+hook::run "$@"

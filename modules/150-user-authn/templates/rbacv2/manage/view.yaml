@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: user-authn
     rbac.deckhouse.io/aggregate-to-security-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-user-authn
-  name: d8:manage:permission:module:user-authn:view
+  name: d8:system-capability:user-authn:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module user-authn: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль user-authn: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the user-authn module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля user-authn."
 rules:
 - apiGroups:
   - deckhouse.io

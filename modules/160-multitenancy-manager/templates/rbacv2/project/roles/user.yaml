@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:project:user
+  annotations:
+    en.meta.deckhouse.io/title: "Project User"
+    ru.meta.deckhouse.io/title: "Пользователь проекта"
+    en.meta.deckhouse.io/description: "View and modify user resources in all project namespaces. No access to quotas, RBAC, or project structure management."
+    ru.meta.deckhouse.io/description: "Просмотр и изменение пользовательских ресурсов во всех пространствах имён проекта. Без доступа к квотам, RBAC и управлению структурой проекта."
+    rbac.deckhouse.io/bindable-only-via: "ProjectRoleBinding,ClusterProjectRoleBinding"
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/delegatable: "true"
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: project
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-project-as: user
+rules: []

@@ -5,9 +5,15 @@ metadata:
   labels:
     heritage: deckhouse
     module: cert-manager
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:cert-manager:view
+    rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:cert-manager:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cert-manager: view"
+    ru.meta.deckhouse.io/title: "Модуль cert-manager: просмотр"
+    en.meta.deckhouse.io/description: "Read-only access to cert-manager resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к ресурсам модуля cert-manager в пространстве имён."
 rules:
 - apiGroups:
   - cert-manager.io

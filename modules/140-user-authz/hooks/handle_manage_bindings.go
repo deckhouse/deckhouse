@@ -47,8 +47,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
 			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"rbac.deckhouse.io/kind": "manage",
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "rbac.deckhouse.io/scope",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"system", "subsystem"},
+					},
 				},
 			},
 			FilterFunc: filterManageRole,
@@ -137,7 +141,7 @@ func syncBindings(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to get role and namespaces for binding '%s': %w", binding.Name, err)
 		}
 
-		useBindingName := fmt.Sprintf("d8:use:%s:binding:%s", role, binding.Name)
+		useBindingName := fmt.Sprintf("d8:namespace:%s:binding:%s", role, binding.Name)
 		for namespace := range namespaces {
 			input.PatchCollector.CreateOrUpdate(createBinding(&binding, role, namespace))
 			// Track by (namespace, name): one manage binding fans out to the
@@ -238,7 +242,7 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 			APIVersion: "rbac.authorization.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("d8:use:%s:binding:%s", useRoleName, binding.Name),
+			Name:      fmt.Sprintf("d8:namespace:%s:binding:%s", useRoleName, binding.Name),
 			Namespace: namespace,
 			Annotations: map[string]string{
 				"rbac.deckhouse.io/related-with": binding.Name,
@@ -251,7 +255,7 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     fmt.Sprintf("d8:use:role:%s", useRoleName),
+			Name:     fmt.Sprintf("d8:namespace:%s", useRoleName),
 		},
 		Subjects: binding.Subjects,
 	}

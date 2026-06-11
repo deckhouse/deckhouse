@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: deckhouse
     rbac.deckhouse.io/aggregate-to-deckhouse-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-system
-  name: d8:manage:permission:module:deckhouse:view
+  name: d8:system-capability:deckhouse:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module deckhouse: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль deckhouse: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the deckhouse module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля deckhouse."
 rules:
 - apiGroups:
   - deckhouse.io

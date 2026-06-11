@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: okmeter
     rbac.deckhouse.io/aggregate-to-observability-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-okmeter
-  name: d8:manage:permission:module:okmeter:view
+  name: d8:system-capability:okmeter:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module okmeter: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль okmeter: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the okmeter module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля okmeter."
 rules:
 - apiGroups:
   - deckhouse.io

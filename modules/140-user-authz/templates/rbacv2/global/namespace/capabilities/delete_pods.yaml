@@ -1,0 +1,29 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace-capability:kubernetes:delete_pods
+  annotations:
+    en.meta.deckhouse.io/title: "Delete pods"
+    ru.meta.deckhouse.io/title: "Удаление подов"
+    en.meta.deckhouse.io/description: "Delete pods in a namespace."
+    ru.meta.deckhouse.io/description: "Удаление подов в пространстве имён."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: user
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - delete
+      - deletecollection
+  - apiGroups:
+      - ""
+    resources:
+      - pods/eviction
+    verbs:
+      - create

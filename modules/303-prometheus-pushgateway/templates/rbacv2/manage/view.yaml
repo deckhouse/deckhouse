@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: prometheus-pushgateway
+    rbac.deckhouse.io/aggregate-to-observability-as: viewer
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
+    rbac.deckhouse.io/namespace: kube-prometheus-pushgateway
+  name: d8:system-capability:prometheus-pushgateway:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module prometheus-pushgateway: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль prometheus-pushgateway: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the prometheus-pushgateway module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля prometheus-pushgateway."
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - prometheus-pushgateway
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-vsphere
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-vsphere
-  name: d8:manage:permission:module:cloud-provider-vsphere:view
+  name: d8:system-capability:cloud-provider-vsphere:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cloud-provider-vsphere: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль cloud-provider-vsphere: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the cloud-provider-vsphere module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля cloud-provider-vsphere."
 rules:
 - apiGroups:
   - deckhouse.io

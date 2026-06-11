@@ -6,10 +6,15 @@ metadata:
     heritage: deckhouse
     module: descheduler
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-descheduler
-  name: d8:manage:permission:module:descheduler:edit
+  name: d8:system-capability:descheduler:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module descheduler: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль descheduler: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the descheduler module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля descheduler."
 rules:
 - apiGroups:
   - deckhouse.io
