@@ -195,6 +195,22 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            {{- if and (semverCompare "> 1.27.0" $fullVersion) }}
+            - name: AMBIENT_ENABLEMENT_SELECTOR
+              value: |
+                - podSelector:
+                    matchLabels:
+                      istio.io/dataplane-mode: ambient
+                - namespaceSelector:
+                    matchLabels:
+                      istio.io/dataplane-mode: ambient
+                  podSelector:
+                    matchExpressions:
+                    - key: istio.io/dataplane-mode
+                      operator: NotIn
+                      values:
+                      - none
+            {{- end }}
             - name: CNI_NETWORK_CONFIG
               valueFrom:
                 configMapKeyRef:
