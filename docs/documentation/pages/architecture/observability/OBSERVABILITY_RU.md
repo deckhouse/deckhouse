@@ -6,14 +6,16 @@ search: observability, grafana, alertmanager, dashboard, дашборд, alert, 
 description: Архитектура модуля observability в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`observability`](/modules/observability/) расширяет функциональность модулей [Prometheus](/modules/prometheus/) и [Deckhouse Веб Интерфейс](/modules/console/), предоставляя следующие дополнительные возможности для гибкого управления визуализацией метрик и разграничения доступа к ним:
+Модуль [`observability`](/modules/observability/) расширяет функциональность модулей [Prometheus](/modules/prometheus/) и [Deckhouse Веб Интерфейс](/modules/console/), предоставляя дополнительные возможности для гибкого управления метриками, дашбордами и алертами, а также средства разграничения доступа к ним.
 
-- [механизм самостоятельного управления дашбордами](/modules/observability/stable/#%D0%BC%D0%B5%D1%85%D0%B0%D0%BD%D0%B8%D0%B7%D0%BC-%D1%81%D0%B0%D0%BC%D0%BE%D1%81%D1%82%D0%BE%D1%8F%D1%82%D0%B5%D0%BB%D1%8C%D0%BD%D0%BE%D0%B3%D0%BE-%D1%83%D0%BF%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F-%D0%B4%D0%B0%D1%88%D0%B1%D0%BE%D1%80%D0%B4%D0%B0%D0%BC%D0%B8);
-- [разграничение доступа к дашбордам](/modules/observability/stable/#%D1%80%D0%B0%D0%B7%D0%B3%D1%80%D0%B0%D0%BD%D0%B8%D1%87%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B0-%D0%BA-%D0%B4%D0%B0%D1%88%D0%B1%D0%BE%D1%80%D0%B4%D0%B0%D0%BC);
-- [разграничение доступа к метрикам](/modules/observability/stable/#%D1%80%D0%B0%D0%B7%D0%B3%D1%80%D0%B0%D0%BD%D0%B8%D1%87%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B0-%D0%BA-%D0%BC%D0%B5%D1%82%D1%80%D0%B8%D0%BA%D0%B0%D0%BC);
-- [поддержка пользовательских источников данных](/modules/observability/stable/#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%BA%D0%B0-%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D1%81%D0%BA%D0%B8%D1%85-%D0%B8%D1%81%D1%82%D0%BE%D1%87%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2-%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85);
+Возможности модуля:
 
-а также управление алертами.
+* **Управление дашбордами** — модуль позволяет пользователям добавлять собственные дашборды в формате Grafana.
+* **Управление группами триггеров и метрик** — модуль позволяет создавать и настраивать собственные группы триггеров и метрик.
+* **Настройка уведомлений** — модуль позволяет настраивать каналы уведомлений (Telegram, Slack, электронная почта, вебхуки), политики уведомлений, а также дает возможность отключать уведомления при необходимости.
+* **Работа с алертами** — модуль предоставляет информацию об активных алертах, а также сохраняет историю завершенных алертов.
+* **Предоставление стандартных источников данных**.
+* **Поддержка пользовательских источников данных** — модуль дополнительно к предоставляемому набору стандартных источников данных позволяет добавить пользовательские.
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/observability/).
 
@@ -35,24 +37,23 @@ description: Архитектура модуля observability в Deckhouse Kube
 
 Модуль состоит из следующих компонентов:
 
-1. **Observability-controller** — состоит из одного контейнера, управляет жизненным циклом большинства кастомных ресурсов модуля, таких как: ObservabilityMetricsAlertingRules, ObservabilityNotificationChannels, ObservabilityNotificationSilence и т.д. Полный список ресурсов, которыми управляет модуль, приведён [в документации модуля](/modules/observability/cr.html).
+1. **Observability-controller** — состоит из одного контейнера, управляет жизненным циклом большинства кастомных ресурсов модуля, таких как: ObservabilityMetricsRulesGroup, ObservabilityNotificationChannels, ObservabilityNotificationSilence и т.д. Полный список ресурсов, которыми управляет модуль, приведён [в документации модуля](/modules/observability/cr.html).
 
 1. **Observability-webhook** — состоит из одного контейнера, реализующего вебхук-сервер для проверки и изменения кастомных ресурсов через механизмы [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
 2. **Alert-kube-api** — состоит из одного контейнера, реализует [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который расширяет Kubernetes API кастомными ресурсами ObservabilityAlerts и ClusterObservabilityAlerts. Alert-kube-api позволяет запрашивать алерты как кастомные реурсы, используя в качестве бэкенда alertmanager, и кэширует их в памяти для быстрого доступа.
 
-4. **Alertmanager** — принимает алерты от Prometheus сервера, обрабатывает и отправляет их конечным получателям. DKP поддерживает отправку алертов с помощью Alertmanager:
+4. **Alertmanager** — принимает алерты от Prometheus сервера, обрабатывает и отправляет их конечным получателям. DKP поддерживает отправку алертов через следующие каналы доставки:
 
-   - по протоколу SMTP;
-   - в PagerDuty;
-   - в Slack;
-   - в Telegram;
-   - посредством Webhook;
-   - по любым другим каналам, поддерживаемым в Alertmanager.
+   - `Email`;
+   - `Telegram`;
+   - `Slack`;
+   - `Webhook`.
 
    Компонент содержит следующие контейнеры:
 
-   - **alertmanager** — основной контейнер. В модуле используется в значительной степени доработанный форк [оригинального Alertmanager](https://github.com/prometheus/alertmanager) от компании «Флант».
+   - **alertmanager** — основной контейнер. В модуле используется в форк [оригинального Alertmanager](https://github.com/prometheus/alertmanager) от компании «Флант», поддерживающий мультитенантность: разделение алертов по системным(кластерным) и проектным, доставка алертов (политики, каналы, сайленсеры) так же мультитенантные, т.е. в разных проектах можно настроить разные каналы и политики доставки.
+
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к API-эндпойнту Alertmanager. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 {% alert level="info" %}
@@ -73,10 +74,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 
    **enforcer**.
 
-7. **Opagent** (DaemonSet) — агент, предназначенный для сбора метрик как с операционной системы, так и с прикладного программного обеспечения, установленного на серверы. Разработан компанией «Флант» для [Deckhouse Observability Platform (DOP)](/products/observability-platform/) на основе [Okagent (агента Okmeter)](https://okmeter.ru/docs/features/), также входящего в состав системы мониторинга [Okmeter](https://okmeter.ru/docs/overview/). В модуле [`observability`](/modules/observability/) opAgent используется для интеграции с:
-
-   - managed-сервисами, например [`managed-postgres`](/modules/managed-postgres/), [managed-memcached](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/) и т.д. (cписок поддерживаемых сервисов постоянно расширяется). opAgent собирает метрики с установленных в DKP managed-сервисов, соответствующий модуль managed-сервиса должен быть включен;
-   - [Deckhouse Observability Platform](/products/observability-platform/). opAgent собирает метрики с узлов, модуль [`observability-platform`](/modules/observability-platform/) должен быть включен.
+7. **Opagent** (DaemonSet) — агент, предназначенный для сбора метрик как с операционной системы, так и с прикладного программного обеспечения, установленного на серверы. Разработан компанией «Флант» для [Deckhouse Observability Platform (DOP)](/products/observability-platform/) на основе [Okagent (агента Okmeter)](https://okmeter.ru/docs/features/), также входящего в состав системы мониторинга [Okmeter](https://okmeter.ru/docs/overview/). В модуле [`observability`](/modules/observability/) opAgent подключается к managed-сервисам, например [`managed-postgres`](/modules/managed-postgres/), [managed-memcached](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/) и т.д. (cписок поддерживаемых сервисов постоянно расширяется), собирает с них метрики, затем отправляет их в Prometheus. Если включен модуль [`observability-platform`](/modules/observability-platform/), opAgent собирает метрики с узлов и отправлет в [Deckhouse Observability Platform](/products/observability-platform/).
 
    opAgent отправляет собранные метрики по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) в Prometheus через label-enforcer (метрики managed-сервисов) и в [Deckhouse Observability Platform](/products/observability-platform/) (метрики с узлов).
 
