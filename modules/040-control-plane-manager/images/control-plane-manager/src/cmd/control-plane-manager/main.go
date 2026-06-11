@@ -46,7 +46,7 @@ func main() {
 	for range sigs {
 		log.Info("Shutdown signal received")
 		cancel()
-		log.Info("Bye from %s", constants.CpcControllerName)
+		log.Info("Bye from %s", constants.ControlPlaneManagerName)
 		break
 	}
 }
