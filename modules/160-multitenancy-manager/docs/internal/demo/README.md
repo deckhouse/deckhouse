@@ -1,9 +1,10 @@
 # Cluster resource grants — demo
 
 Demonstrates the multitenancy-manager grants feature: per-project availability (allow-list),
-object quotas, default injection / coercion, and the read-only catalog.
+default injection / coercion, and the read-only catalog. Object quota is delegated to Kubernetes
+`ResourceQuota` and is not part of this feature.
 
-> Requires the multitenancy-manager image with `coerceToDefault` (PR #20520, current `pr20520`).
+> Requires the multitenancy-manager image from the references redesign (PR #20611, `pr20611`).
 
 ## Run
 
@@ -14,7 +15,7 @@ alias k='sudo /opt/deckhouse/bin/kubectl --kubeconfig=/etc/kubernetes/admin.conf
 cd grants-demo
 ```
 
-`00-setup.yaml` (project `demo` + grant + object quota) is normally already applied. To (re)create:
+`00-setup.yaml` (project `demo` + availability policy) is normally already applied. To (re)create:
 
 ```bash
 k apply -f 00-setup.yaml
@@ -25,33 +26,34 @@ prints a `Forbidden` error for the denied ones — that is the demo.
 
 ## What is configured for project `demo`
 
-| Resource              | Allowed            | Default     | Quota                         | coerceToDefault |
-|-----------------------|--------------------|-------------|-------------------------------|-----------------|
-| storageclasses        | `local`            | `local`     | 5Gi total, 3 PVCs             | yes             |
-| clusterissuers        | `selfsigned`       | `selfsigned`| —                             | no              |
-| loadbalancerclasses   | `internal`         | —           | 1 LoadBalancer service        | no              |
-| clusterroles          | d8:use:role:* + user-authz access (user,priv-user,editor,admin) | —   | —                             | no              |
+| Resource              | Allowed                                                         | Default      | Defaulting |
+|-----------------------|----------------------------------------------------------------|--------------|------------|
+| storageclasses        | `local`                                                        | `local`      | Coerce     |
+| clusterissuers        | `selfsigned`                                                   | `selfsigned` | FillEmpty (Certificate) / None (Ingress annotation) |
+| loadbalancerclasses   | `internal`                                                     | —            | FillEmpty  |
+| clusterroles          | d8:use:role:* + user-authz access (user,priv-user,editor,admin) | —            | None       |
 
-Key difference: storage has `coerceToDefault: true` (the built-in DefaultStorageClass admission
-pre-fills `storageClassName`), so a disallowed/omitted storage class is silently rewritten to `local`.
-Issuers / LB / cluster roles have no such defaulter, so a disallowed explicit value is **rejected**.
+Key difference: the storageclasses PVC path uses `defaulting: Coerce` (the built-in DefaultStorageClass
+admission pre-fills `storageClassName`), so a disallowed/omitted storage class is rewritten to `local`.
+Issuers / LB / cluster roles have no such pre-filler, so a disallowed explicit value is **rejected**.
 
-## Discovery & protection (run, don't apply)
+## Discovery, status & protection (run, don't apply)
 
 ```bash
-# Tenant's "what can I use" view (the controller-owned catalog). The AVAILABLE column is a count,
-# so the table stays readable even for cluster roles (dozens of entries):
+# Tenant's "what can I use" view (the controller-owned catalog). AVAILABLE is a count, so the table
+# stays readable even for cluster roles (dozens of entries):
 k -n demo get availableclusterresources
 
-# Full list of available names for one resource:
-k -n demo get availableclusterresource clusterroles -o jsonpath='{.status.available[*].name}'
-# or the structured form (with the default flagged):
+# Full list of available names for one resource (with the default flagged):
 k -n demo get availableclusterresource storageclasses -o yaml
 
-# Object-quota usage vs limit:
-k -n demo get clusterresourcegrant objects -o yaml
+# Definition status — which reference paths point at a resource:
+k get grantableclusterresourcedefinition storageclasses -o jsonpath='{.status.references}'
 
-# The catalog is read-only (protected webhook) — this is denied:
+# Reference status — bound to a definition, or a typo'd name:
+k get grantableclusterresourcereference
+
+# The catalog is read-only (protect webhook) — this is denied:
 k -n demo delete availableclusterresource storageclasses
 ```
 
@@ -64,11 +66,9 @@ k delete project demo
 
 ## Files
 
-- `00-setup.yaml`         — project + grant + object quota
+- `00-setup.yaml`         — project + availability policy
 - `10-storage.yaml`       — disk allowed / coerced (omit & disallowed class → `local`)
-- `11-storage-quota.yaml` — disk size & count quota (denied)
 - `20-issuer-cert.yaml`   — ClusterIssuer in a Certificate (allow / deny)
 - `21-issuer-ingress.yaml`— ClusterIssuer in an Ingress annotation (allow / deny)
 - `30-lb-class.yaml`      — loadBalancerClass (allow / deny)
-- `31-lb-quota.yaml`      — load balancer count quota (2nd denied)
 - `40-clusterrole.yaml`   — RoleBinding to a ClusterRole (allow / deny)
