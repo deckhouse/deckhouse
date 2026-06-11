@@ -16,12 +16,11 @@ rules:
   - get
   - list
   - watch
-# Tenants discover what their project may use and how much quota is left.
+# Tenants discover what their project may use (the read-only catalog).
 - apiGroups:
   - multitenancy.deckhouse.io
   resources:
   - availableclusterresources
-  - clusterresourcegrants
   verbs:
   - get
   - list
@@ -55,11 +54,12 @@ metadata:
   name: d8:user-authz:multitenancy-manager:cluster-editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
-# Cluster editors view the module-shipped registrations (read-only — nobody creates them).
+# Cluster editors view the module-shipped registrations and reference paths (read-only — nobody creates them).
 - apiGroups:
   - multitenancy.deckhouse.io
   resources:
   - grantableclusterresourcedefinitions
+  - grantableclusterresourcereferences
   verbs:
   - get
   - list
@@ -73,17 +73,6 @@ rules:
   - get
   - list
   - watch
-  - create
-  - delete
-  - deletecollection
-  - patch
-  - update
-# Cluster editors set the object-quota pools (read of grants comes from the User role above).
-- apiGroups:
-  - multitenancy.deckhouse.io
-  resources:
-  - clusterresourcegrants
-  verbs:
   - create
   - delete
   - deletecollection
