@@ -119,7 +119,13 @@ func TestRBACv2TemplatesValidation(t *testing.T) {
 func collectRBACv2Files(t *testing.T, root string) []string {
 	var files []string
 	for _, dir := range []string{"modules", "ee"} {
-		err := filepath.WalkDir(filepath.Join(root, dir), func(path string, d fs.DirEntry, err error) error {
+		base := filepath.Join(root, dir)
+		// Some editions/test images (e.g. OSS) ship without the ee/ tree; skip
+		// top-level directories that are not present in this build.
+		if _, statErr := os.Stat(base); os.IsNotExist(statErr) {
+			continue
+		}
+		err := filepath.WalkDir(base, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}

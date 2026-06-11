@@ -10,7 +10,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    rbac.deckhouse.io/use-role: user
+    rbac.deckhouse.io/use-role: admin
     rbac.deckhouse.io/kind: role
     rbac.deckhouse.io/scope: subsystem
     rbac.deckhouse.io/subsystem: storage

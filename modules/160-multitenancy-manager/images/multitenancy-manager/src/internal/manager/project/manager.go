@@ -110,8 +110,8 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
 		project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
 		project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
-	} else if result, err, done := m.handleTemplate(ctx, project); done {
-		return result, err
+	} else if err, done := m.handleTemplate(ctx, project); done {
+		return ctrl.Result{}, err
 	}
 
 	// reconcile standard fields (administrators, quota) regardless of the template
@@ -150,9 +150,9 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 }
 
 // handleTemplate runs the template-based part of the reconciliation: resolving the template,
-// validating the project against it and upgrading the helm release. The third return value reports
+// validating the project against it and upgrading the helm release. The bool return value reports
 // whether reconciliation must stop (an error already updated the status and the caller should return).
-func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error, bool) {
+func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project) (error, bool) {
 	m.logger.Info("get the project template for project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 	projectTemplate, err := m.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
@@ -160,9 +160,9 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectTemplateFound, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			return ctrl.Result{}, updateErr, true
+			return updateErr, true
 		}
-		return ctrl.Result{}, err, true
+		return err, true
 	}
 
 	if projectTemplate == nil {
@@ -170,9 +170,9 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectTemplateFound, "The project template not found")
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			return ctrl.Result{}, updateErr, true
+			return updateErr, true
 		}
-		return ctrl.Result{}, nil, true
+		return nil, true
 	}
 
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
@@ -184,9 +184,9 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectValidated, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			return ctrl.Result{}, updateErr, true
+			return updateErr, true
 		}
-		return ctrl.Result{}, nil, true
+		return nil, true
 	}
 
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
@@ -198,9 +198,9 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectResourcesUpgraded, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			return ctrl.Result{}, updateErr, true
+			return updateErr, true
 		}
-		return ctrl.Result{}, err, true
+		return err, true
 	}
 
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
@@ -210,7 +210,7 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	} else {
 		project.SetConditionTrue(v1alpha3.ProjectConditionTemplateResourcesFiltered)
 	}
-	return ctrl.Result{}, nil, false
+	return nil, false
 }
 
 // HandleVirtual handles virtual project
