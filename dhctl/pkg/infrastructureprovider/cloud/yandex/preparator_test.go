@@ -23,18 +23,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestValidateClusterPrefix(t *testing.T) {
-	getInput := func(clusterPrefix string) config.ProviderInput {
-		input := config.ProviderInput{ClusterPrefix: clusterPrefix}
-		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
-		fillTestProviderClusterConfig(&input, master, nil)
-		return input
-	}
 	assertClusterPrefix := func(t *testing.T, clusterPrefix string, hasError bool) {
-		assertValidation(t, true, getInput(clusterPrefix), hasError)
+		input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
+		input.ClusterPrefix = clusterPrefix
+		assertValidation(t, input, hasError)
 	}
 
 	assertClusterPrefix(t, "", true)
@@ -46,7 +43,7 @@ func TestValidateClusterPrefix(t *testing.T) {
 func TestValidateMasterNodeGroupSpec(t *testing.T) {
 	assertMasterNodeGroup := func(t *testing.T, replicas int, externalIPS []string, hasError bool) {
 		input := getTestInputForMaster(t, replicas, externalIPS)
-		assertValidation(t, true, input, hasError)
+		assertValidation(t, input, hasError)
 	}
 
 	assertMasterNodeGroup(t, 2, []string{"1.1.1.1"}, true)
@@ -61,7 +58,7 @@ func TestValidateNodeGroupsSpec(t *testing.T) {
 		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
 		nodeGroups := getTestNodeGroupsSpec(t, replicas, externalIPS)
 		fillTestProviderClusterConfig(&input, master, nodeGroups)
-		assertValidation(t, true, input, hasError)
+		assertValidation(t, input, hasError)
 	}
 
 	assertNodeGroups(t, 2, []string{"1.1.1.1"}, true)
@@ -81,7 +78,7 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 
 	assertWithNATInstance := func(t *testing.T, settings string, hasError bool, nodeGroups json.RawMessage) {
 		input := getInput(t, settings, nodeGroups)
-		assertValidation(t, true, input, hasError)
+		assertValidation(t, input, hasError)
 	}
 
 	assertWithNATInstance(t, "", true, nil)
@@ -96,9 +93,12 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 		getTestNodeGroupsSpec(t, 1, []string{"1.1.1.1"}),
 	)
 
+	// WithNAT layout validation fires only on bootstrap; any other operation
+	// (converge here) skips it even for otherwise-invalid settings.
 	assertSkipValidationWithNATInstance := func(t *testing.T, settings string, nodeGroups json.RawMessage) {
 		input := getInput(t, settings, nodeGroups)
-		preparator := NewMetaConfigPreparator(true, log.NewSilentLogger(), "")
+		input.Operation = providerdata.OperationConverge
+		preparator := NewMetaConfigPreparator(true, log.NewSilentLogger())
 
 		err := preparator.Validate(context.TODO(), input)
 		require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestNilLoggerDoesNotPanic(t *testing.T) {
 	input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
 
 	do := func() {
-		preparator := NewMetaConfigPreparator(true, nil, "")
+		preparator := NewMetaConfigPreparator(true, nil)
 		_ = preparator.Validate(context.TODO(), input)
 	}
 
@@ -176,8 +176,9 @@ func fillTestWithNatInstanceLayout(t *testing.T, input *config.ProviderInput, se
 	}
 }
 
-func assertValidation(t *testing.T, _ bool, input config.ProviderInput, hasError bool) {
-	preparator := NewMetaConfigPreparator(true, log.NewSilentLogger(), "bootstrap")
+func assertValidation(t *testing.T, input config.ProviderInput, hasError bool) {
+	input.Operation = providerdata.OperationBootstrap
+	preparator := NewMetaConfigPreparator(true, log.NewSilentLogger())
 
 	err := preparator.Validate(context.TODO(), input)
 	if hasError {
