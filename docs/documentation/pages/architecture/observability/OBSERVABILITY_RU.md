@@ -56,10 +56,6 @@ description: Архитектура модуля observability в Deckhouse Kube
 
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к API-эндпойнту Alertmanager. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-{% alert level="info" %}
-В модуле [`prometheus`](/modules/prometheus/) используется другая инсталляция Grafana, основанная на [оригинальном проекте](https://github.com/grafana/grafana).
-{% endalert %}
-
 5. **Grafana** — компонент, предоставляющий веб-интерфейс для визуализации данных мониторинга. В модуле [`observability`](/modules/observability/) используется [форк Grafana](https://github.com/okmeter/grafana)от компании «Флант». Используемая модификация Grafana обладает расширенными возможностями, такими как разграничение доступа к метрикам и дашбордам в рамках [мультитенантности](../iam/multitenancy.html). Дашборды Grafana модуля [`observability`](/modules/observability/) интегрированы в [веб-интерфейс](/modules/console/stable/) DKP (управление системой мониторинга из одного окна).
 
    Компонент содержит следующие контейнеры:
