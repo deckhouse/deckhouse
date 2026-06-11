@@ -37,6 +37,7 @@ var (
 	_ Step = (*renewKubeconfigsStep)(nil)
 	_ Step = (*syncManifestsStep)(nil)
 	_ Step = (*joinEtcdClusterStep)(nil)
+	_ Step = (*defragEtcdStep)(nil)
 	_ Step = (*waitPodReadyStep)(nil)
 	_ Step = (*certObserveStep)(nil)
 )
@@ -72,6 +73,7 @@ func defaultSteps() map[controlplanev1alpha1.StepName]Step {
 		controlplanev1alpha1.StepRenewKubeconfigs: &renewKubeconfigsStep{},
 		controlplanev1alpha1.StepSyncManifests:    &syncManifestsStep{},
 		controlplanev1alpha1.StepJoinEtcdCluster:  &joinEtcdClusterStep{},
+		controlplanev1alpha1.StepDefragEtcd:       &defragEtcdStep{},
 		controlplanev1alpha1.StepWaitPodReady:     &waitPodReadyStep{},
 		controlplanev1alpha1.StepCertObserve:      &certObserveStep{},
 	}
@@ -249,6 +251,41 @@ func syncAnnotationsOnly(component controlplanev1alpha1.OperationComponent, anno
 		return nil, fmt.Errorf("update checksum annotations: %w", err)
 	}
 	return []fileWriteResult{manifestResult}, nil
+}
+
+// defragEtcdStep defragments the local etcd data store if fragmentation exceeds the threshold.
+// No-op for non-Etcd components. Requires the etcd pod to be Ready before running.
+type defragEtcdStep struct {
+	isEtcdPodReady func(ctx context.Context) (bool, error)
+}
+
+func (c *defragEtcdStep) Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+	if env.State.Raw().Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
+		return StepResult{Outcome: OutcomeCompleted}, nil
+	}
+
+	ready, err := c.isEtcdPodReady(ctx)
+	if err != nil {
+		return StepResult{}, fmt.Errorf("check etcd pod readiness: %w", err)
+	}
+	if !ready {
+		logger.Info("etcd pod not ready, will retry before defragmentation")
+		return StepResult{
+			Outcome:      OutcomePending,
+			Message:      "waiting for etcd pod to be ready before defragmentation",
+			RequeueAfter: requeueWaitPod,
+		}, nil
+	}
+
+	defragged, err := defragEtcdIfNeeded(ctx, env.Node.AdvertiseIP, constants.KubernetesPkiPath, env.Node.KubeconfigDir, logger)
+	if err != nil {
+		return StepResult{}, err
+	}
+
+	if defragged {
+		return StepResult{Outcome: OutcomeCompleted, Message: "defragmented"}, nil
+	}
+	return StepResult{Outcome: OutcomeCompleted, Message: "skipped: fragmentation below threshold"}, nil
 }
 
 // waitPodReadyStep waits for the static pod to become ready with the expected checksum annotations.
