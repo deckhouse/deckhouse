@@ -62,7 +62,7 @@ func disableConfirmationReason(reason string, needConfirm bool) (string, bool) {
 }
 
 func experimentalRejectMessage(moduleName string) string {
-	return fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", moduleName)
+	return fmt.Sprintf("the '%s' module is experimental; to allow it, in the 'deckhouse' ModuleConfig either set spec.settings.allowExperimentalModules: true (allows all experimental modules) or add '%s' to spec.settings.allowedExperimentalModules", moduleName, moduleName)
 }
 
 // moduleConfigValidationHandler validates ModuleConfig admission requests.
