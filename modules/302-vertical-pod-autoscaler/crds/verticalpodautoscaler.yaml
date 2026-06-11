@@ -265,11 +265,11 @@ spec:
                     description: |-
                       The operation mode of the VPA controller.
 
-                      - `Auto` — a deprecated mode. It will no longer be supported in future Deckhouse Kubernetes Platform (DKP) versions. Use one of the supported operating modes instead, such as `InPlaceOrRecreate`, `Recreate`, or `Initial`.
-                      - `Recreate` — this mode allows VPA to modify resource requirements of the running pods (i.e., restart them during operation). This mode might result in temporary unavailability of the service (due to restart) if you have just one replica (replicas: 1). In this mode, VPA does not recreate pods that were not created by a controller.
-                      - `Initial` — VPA modifies pod resources only when pods are started (but not when pods are running).
-                      - `Off` — VPA does not take any action to update the resource requests for the running containers. Autoscaler calculates recomendations and stores them in the status field of the VPA object. You can browse VPA recommendations using the following command: `d8 k describe vpa <vpa-name>`.
-                      - `InPlaceOrRecreate` — available in Kubernetes 1.33 and later. VPA attempts to update Pod resources without a restart; if that is not possible, it recreates the Pod.
+                      - `InPlaceOrRecreate`: A default mode. Available in Kubernetes 1.33 and later. VPA attempts to update Pod resources without a restart; if that is not possible, it recreates the Pod.
+                      - `Recreate`: This mode allows VPA to modify resource requirements of the running pods (i.e., restart them during operation). This mode might result in temporary unavailability of the service (due to restart) if you have just one replica (`replicas: 1`). In this mode, VPA does not recreate pods that were not created by a controller.
+                      - `Initial`: VPA modifies pod resources only when pods are started (but not when pods are running).
+                      - `Auto`: A deprecated mode. It will no longer be supported in future DKP versions. Use one of the supported operating modes instead.
+                      - `Off`: VPA does not take any action to update the resource requests for the running containers. Autoscaler calculates recommendations and stores them in the status field of the VPA object. You can browse VPA recommendations using the following command: `d8 k describe vpa <vpa-name>`.
                     enum:
                     - "Off"
                     - Initial

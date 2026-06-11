@@ -20,11 +20,13 @@ VPA can operate in two modes:
 
   - **InPlaceOrRecreate** (the default, available in Kubernetes 1.33 and later): VPA attempts to update resources without recreating Pods. If in-place resource updates are not possible, VPA falls back to behavior similar to the **Recreate** mode: the Pod for which the resources cannot be updated is evicted, and the controller creates a new Pod with updated resources.
 
-    > To use the **InPlaceOrRecreate** mode in Kubernetes versions earlier than 1.33, enable the `InPlacePodVerticalScaling` feature gate in the [`control-plane-manager` configuration](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
-
-  - **Auto**: a deprecated mode. It will no longer be supported in future Deckhouse Kubernetes Platform (DKP) versions. Use one of the supported operating modes instead, such as **InPlaceOrRecreate**, **Recreate**, or **Initial**.
+    {% alert level="info" %}
+    To use the **InPlaceOrRecreate** mode in Kubernetes versions earlier than 1.33, enable the `InPlacePodVerticalScaling` feature gate in the [`control-plane-manager` configuration](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
+    {% endalert %}
 
   - **Recreate**: VPA adjusts the resources of running Pods by restarting them. For a single Pod (`replicas: 1`), this will result in service unavailability during the restart. VPA does not restart Pods that were created without a controller.
+
+  - **Auto**: A deprecated mode. It will no longer be supported in future DKP versions. Use one of the supported operating modes instead.
 
 - Recommendations only, without modifying resources:
 
@@ -38,7 +40,7 @@ When VPA is enabled and configured, resource requests are set automatically base
 
 Before using the vertical pod autoscaler (VPA), you need to consider several limitations:
 
-- Pod restarts when resources change:
+- Pod restarts when resources are changed:
   - When using modes that allow Pod recreation, VPA may recreate a Pod if requested resources cannot be updated in place.
   - The new Pod can be scheduled on a different node.
 
