@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -104,6 +105,64 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 	}
 
 	return nil
+}
+
+func (lb *LoadBalancerService) CleanupLoadBalancersByClusterUUID(ctx context.Context, clusterUUID string) error {
+	if clusterUUID == "" {
+		return fmt.Errorf("cluster UUID is empty")
+	}
+
+	names, err := lb.listLoadBalancerNamesByClusterUUID(ctx, clusterUUID)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range names {
+		if err := lb.DeleteLoadBalancerByName(ctx, name); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (lb *LoadBalancerService) listLoadBalancerNamesByClusterUUID(ctx context.Context, clusterUUID string) ([]string, error) {
+	names := map[string]struct{}{}
+	selector := labels.SelectorFromSet(labels.Set{"dvp.deckhouse.io/cluster-uuid": clusterUUID})
+
+	var services corev1.ServiceList
+	if err := lb.client.List(ctx, &services, &client.ListOptions{
+		Namespace:     lb.namespace,
+		LabelSelector: selector,
+	}); err != nil {
+		return nil, err
+	}
+
+	for _, service := range services.Items {
+		names[service.Name] = struct{}{}
+	}
+
+	swhcList := newServiceWithHealthchecksListUnstructured()
+	if err := lb.client.List(ctx, swhcList, &client.ListOptions{
+		Namespace:     lb.namespace,
+		LabelSelector: selector,
+	}); err != nil {
+		if !isSWHCUnsupportedErr(err) {
+			return nil, err
+		}
+	} else {
+		for _, item := range swhcList.Items {
+			names[item.GetName()] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0, len(names))
+	for name := range names {
+		result = append(result, name)
+	}
+	sort.Strings(result)
+
+	return result, nil
 }
 
 func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) { // nolint:unparam
