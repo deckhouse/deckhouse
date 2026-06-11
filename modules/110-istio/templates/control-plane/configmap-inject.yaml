@@ -4,129 +4,18 @@
   {{- $revision := get $versionInfo "revision" }}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{- $args := list $ $revision $imageSuffix $fullVersion }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: istio-sidecar-injector-{{ $revision }}
+  name: sidecar-injector-{{ $revision }}
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
 data:
   values: |-
-    {
-      "revision": {{ $revision | quote }},
-      "global": {
-        "istiod": {"enableAnalysis": false},
-        "defaultPodDisruptionBudget": {"enabled": false},
-        "configValidation": false,
-        "operatorManageWebhooks": true,
-        "istioNamespace": "d8-{{ $.Chart.Name }}",
-        "meshID": "d8-istio-mesh",
-        "network": {{ include "istioNetworkName" $ | quote }},
-        "multiCluster": {
-          "clusterName": {{ printf "%s-%s" ($.Values.global.discovery.clusterDomain | replace "." "-") ($.Values.global.discovery.clusterUUID | adler32sum) | quote }}
-        },
-        "externalIstiod": false,
-        "jwtPolicy": {{ include "istioJWTPolicy" $ | quote }},
-        "pilotCertProvider": "istiod",
-        "trustBundleName": "istio-ca-root-cert",
-        "sds": {
-          "token": {
-            "aud": "istio-ca"
-          }
-        },
-        "proxy": {
-          "image": {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix)) | quote }},
-          "clusterDomain": {{ $.Values.global.discovery.clusterDomain | quote }},
-          "autoInject": "enabled",
-          "logLevel": "warning",
-          "componentLogLevel": "misc:error",
-          "includeIPRanges": {{ $.Values.istio.sidecar.includeOutboundIPRanges | default (list "0.0.0.0/0") | join "," | quote }},
-          "excludeIPRanges": {{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," | quote }},
-          "excludeOutboundPorts": {{ $.Values.istio.sidecar.excludeOutboundPorts | default list | join "," | quote }},
-          "excludeInboundPorts": {{ $.Values.istio.sidecar.excludeInboundPorts | default list | join "," | quote }},
-          "includeInboundPorts": "*",
-          "statusPort": 15020,
-          "privileged": false,
-          "capNetBindService": false,
-          "holdApplicationUntilProxyStarts": {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts | default false }},
-          "readinessFailureThreshold": 4,
-          "readinessInitialDelaySeconds": 0,
-          "readinessPeriodSeconds": 15,
-          "startupProbe": {
-            "enabled": true,
-            "failureThreshold": 600
-          },
-          "tracer": "none",
-          "resources": {}
-        },
-        "proxy_init": {
-          "image": {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix)) | quote }},
-          "resources": {
-            "limits": {"cpu": "100m", "memory": "50Mi"},
-            "requests": {"cpu": "10m", "memory": "10Mi"}
-          }
-        },
-        "revision": {{ $revision | quote }},
-        "logging": {"level": "default:info"},
-        "logAsJson": false,
-        "imagePullPolicy": "IfNotPresent",
-        "imagePullSecrets": ["d8-istio-sidecar-registry"],
-        "priorityClassName": "system-cluster-critical"
-      },
-      "pilot": {
-        "cni": {
-          "enabled": {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
-        }
-      }
-    }
+{{ tpl ($.Files.Get (printf "files/%s/templates/sidecar-injection-values.yaml" $revision)) $args | nindent 4 }}
   config: |-
-    defaultTemplates:
-    - sidecar
-    - d8-seccomp
-    policy: enabled
-    alwaysInjectSelector: []
-    neverInjectSelector:
-    - matchExpressions:
-      - key: job-name
-        operator: Exists
-    injectedAnnotations:
-      istio.deckhouse.io/full-version: {{ $fullVersion | quote }}
-    template: '{{`{{ Template_Version_And_Istio_Version_Mismatched_Check_Installation }}`}}'
-    templates:
-      sidecar: |
-{{ $.Files.Get "sidecar-injection/injection-template.yaml" | trim | indent 8 }}
-      gateway: |
-{{ $.Files.Get "sidecar-injection/gateway-injection-template.yaml" | trim | indent 8 }}
-      d8-seccomp: |
-        spec:
-          {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
-          initContainers:
-          - name: istio-validation
-            securityContext:
-              seccompProfile:
-                type: RuntimeDefault
-          {{- end }}
-          containers:
-          - name: istio-proxy
-            securityContext:
-              seccompProfile:
-                type: RuntimeDefault
-            livenessProbe:
-              httpGet:
-                path: /healthz/ready
-                port: 15021
-              initialDelaySeconds: 10
-              periodSeconds: 2
-              timeoutSeconds: 3
-              failureThreshold: 30
-      d8-hold-istio-proxy-termination-until-application-stops: |
-        spec:
-          containers:
-          - name: istio-proxy
-            lifecycle:
-              preStop:
-                exec:
-                  command: ["/bin/sh", "-c", "curl -X POST localhost:15000/drain_listeners?inboundonly; while [ $(ss -Htlp state all | grep -vE '(envoy|pilot-agent|TIME-WAIT)' | wc -l | xargs ) -ne 0 ]; do sleep 1; done"]
+{{ tpl ($.Files.Get (printf "files/%s/templates/sidecar-injection-config.yaml" $revision)) $args | nindent 4 }}
   {{- end }}
 {{- end }}

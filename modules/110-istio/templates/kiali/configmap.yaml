@@ -32,7 +32,7 @@ data:
         url_service_version: http://istiod.d8-istio:15014/version
         istiod_deployment_name: istiod-{{ $revision }}
         config_map_name: istio-{{ $revision }}
-        istio_sidecar_injector_config_map_name: istio-sidecar-injector-{{ $revision }}
+        istio_sidecar_injector_config_map_name: {{ if get $versionInfo "supportsOperator" }}istio-sidecar-injector-{{ $revision }}{{ else }}sidecar-injector-{{ $revision }}{{ end }}
       prometheus:
         url: https://trickster.d8-monitoring/trickster/main
         auth:
