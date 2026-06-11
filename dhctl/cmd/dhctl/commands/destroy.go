@@ -15,8 +15,8 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -109,7 +109,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		if interactive {
 			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger, phases.DestroyPhases())
 			if err != nil {
-				if strings.Contains(err.Error(), "Terminal screen has not enouth height") {
+				if errors.Is(err, progressbar.ErrTerminalScreenIsToSmall) {
 					// fallback to plain logger
 					log.SwitchToNonInteractive()
 					logger = log.GetDefaultLogger()

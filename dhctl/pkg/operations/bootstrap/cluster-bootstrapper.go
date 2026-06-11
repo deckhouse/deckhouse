@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -360,7 +359,7 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	if interactive {
 		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Bootstrap cluster", b.logger, phases.BootstrapPhases())
 		if err != nil {
-			if strings.Contains(err.Error(), "Terminal screen has not enouth height") {
+			if errors.Is(err, progressbar.ErrTerminalScreenIsToSmall) {
 				// fallback to plain logger
 				log.SwitchToNonInteractive()
 				b.logger = log.GetDefaultLogger()

@@ -15,6 +15,7 @@
 package progressbar
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -26,7 +27,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
-var defaultpb *Pb
+var (
+	defaultpb                  *Pb
+	ErrTerminalScreenIsToSmall = errors.New("Terminal screen has not enouth height")
+)
 
 func GetDefaultPb() *Pb {
 	return defaultpb
@@ -249,7 +253,7 @@ func InitProgressBar(param *PbParam) error {
 
 	if height-param.phasesNumber <= 0 {
 		// terminal screen is smaller then MultiPrinter output w/o LogBox, returning an error
-		return fmt.Errorf("Terminal screen has not enouth height")
+		return ErrTerminalScreenIsToSmall
 	}
 
 	p := pterm.DefaultProgressbar.

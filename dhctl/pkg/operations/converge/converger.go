@@ -16,8 +16,8 @@ package converge
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -230,7 +230,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	if interactive {
 		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Converge", c.Logger, phases.ConvergePhases())
 		if err != nil {
-			if strings.Contains(err.Error(), "Terminal screen has not enouth height") {
+			if errors.Is(err, progressbar.ErrTerminalScreenIsToSmall) {
 				// fallback to plain logger
 				log.SwitchToNonInteractive()
 				c.Logger = log.GetDefaultLogger()
