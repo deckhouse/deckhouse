@@ -213,13 +213,13 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		}
 		kubeClient = &client.KubernetesClient{KubeClient: kubeCl}
 
+		preparatorParams := infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger)
 		metaConfig, err = config.ParseConfigInCluster(
 			ctx,
 			kubeClient,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger),
-			),
+			infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 			nil,
+			infrastructureprovider.DhctlOperationConverge,
 		)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)

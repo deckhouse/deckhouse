@@ -17,6 +17,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/name212/govalue"
@@ -26,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -63,6 +65,12 @@ type Context struct {
 
 	logger log.Logger
 	opts   *options.GlobalOptions
+
+	// metaConfig is memoised per converge run: repeat pipeline steps must not
+	// re-fetch cluster resources and re-run the external provider validator.
+	metaConfigOnce sync.Once
+	metaConfig     *config.MetaConfig
+	metaConfigErr  error
 }
 
 type Params struct {
@@ -197,12 +205,18 @@ func (c *Context) CompleteExecutionPhase(ctx context.Context, data any) error {
 }
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
+	c.metaConfigOnce.Do(func() {
+		c.metaConfig, c.metaConfigErr = c.loadMetaConfig()
+	})
+	return c.metaConfig, c.metaConfigErr
+}
+
+func (c *Context) loadMetaConfig() (*config.MetaConfig, error) {
 	if c.CommanderMode() {
-		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger)
+		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger, infrastructureprovider.DhctlOperationConverge)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
-
 		return metaConfig, nil
 	}
 
@@ -211,11 +225,10 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.opts)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.opts, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return nil, err
 	}
-
 	return metaConfig, nil
 }
 

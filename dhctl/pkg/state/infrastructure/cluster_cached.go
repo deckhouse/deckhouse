@@ -32,15 +32,17 @@ type KubeTerraStateLoader struct {
 	kubeProvider kubernetes.KubeClientProviderWithCtx
 	stateCache   state.Cache
 	logger       log.Logger
+	operation    string
 
 	forceFromCache bool
 }
 
-func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, logger log.Logger) *KubeTerraStateLoader {
+func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, logger log.Logger, operation string) *KubeTerraStateLoader {
 	return &KubeTerraStateLoader{
 		kubeProvider: kubeProvider,
 		stateCache:   stateCache,
 		logger:       logger,
+		operation:    operation,
 
 		forceFromCache: false,
 	}
@@ -75,13 +77,13 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, globalOpt
 		return nil, err
 	}
 
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(s.logger)
 	metaConfig, err = config.ParseConfigFromCluster(
 		ctx,
 		kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(s.logger),
-		),
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		globalOptions,
+		s.operation,
 	)
 	if err != nil {
 		return nil, err

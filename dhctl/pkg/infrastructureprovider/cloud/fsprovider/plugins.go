@@ -20,12 +20,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
-	"unicode"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -56,19 +57,17 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 	}
 
-	sectionName := params.Settings.CloudName()
-	runes := []rune(sectionName)
-	runes[0] = unicode.ToUpper(runes[0])
-	sectionName = "cloudProvider" + string(runes)
+	cloudName := strings.ToLower(params.Settings.CloudName())
+	sectionName := "cloudProvider" + strings.ToUpper(cloudName[:1]) + cloudName[1:]
 
 	// Fast-path: if the fallback source binary is already present under DownloadRootDir
 	// (e.g. preserved across `wipe-state` or pre-injected for dev iteration), skip the
 	// terraform-manager image download entirely. Saves ~10-15s per bootstrap and lets
 	// us iterate with a custom-patched provider binary without dhctl clobbering it.
-	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
+	terraformManagerDir := filepath.Join(providerdata.ProviderDir(conf.DownloadRootDir, cloudName), "terraform-manager")
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if _, statErr := os.Stat(source); statErr == nil {
-		if err := copyTFVersionFile(conf.DownloadRootDir); err != nil {
+		if err := copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
 			return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 		}
 		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
@@ -77,32 +76,44 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
 		return err
 	}
-	if err = copyTFVersionFile(conf.DownloadRootDir); err != nil {
+	if err = copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
 		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 	}
+
+	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 
 	return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 }
 
-func copyTFVersionFile(downloadRootDir string) error {
-	terraformManagerDir := filepath.Join(downloadRootDir, "terraform-manager")
+func copyTFVersionFile(downloadRootDir, terraformManagerDir string) error {
 	downloadCandiPath := filepath.Join(downloadRootDir, "deckhouse", "candi")
 	src := filepath.Join(terraformManagerDir, versionFile)
+	dstPath := filepath.Join(downloadCandiPath, versionFile)
 
-	f, err := os.OpenFile(src, os.O_RDONLY, 0o644)
+	f, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("could not read file %s: %w\n", src, err)
+		return fmt.Errorf("open %s: %w", src, err)
+	}
+	defer f.Close()
+
+	if err := os.MkdirAll(downloadCandiPath, 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", downloadCandiPath, err)
+	}
+	if err := os.RemoveAll(dstPath); err != nil {
+		return fmt.Errorf("remove %s: %w", dstPath, err)
 	}
 
-	if err = os.RemoveAll(filepath.Join(downloadCandiPath, versionFile)); err != nil {
-		return fmt.Errorf("could not delete %s: %w", versionFile, err)
-	}
-
-	dst, err := os.OpenFile(filepath.Join(downloadCandiPath, versionFile), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+	dst, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
-		return fmt.Errorf("could not open file %s: %w\n", filepath.Join(downloadCandiPath, versionFile), err)
+		return fmt.Errorf("create %s: %w", dstPath, err)
 	}
-	_, err = io.Copy(dst, f)
+	defer dst.Close()
 
-	return err
+	if _, err := io.Copy(dst, f); err != nil {
+		return fmt.Errorf("copy %s -> %s: %w", src, dstPath, err)
+	}
+	if err := dst.Sync(); err != nil {
+		return fmt.Errorf("sync %s: %w", dstPath, err)
+	}
+	return nil
 }

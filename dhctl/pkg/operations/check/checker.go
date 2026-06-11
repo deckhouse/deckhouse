@@ -119,7 +119,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		return nil, cleaner, err
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
+	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
@@ -225,7 +225,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("Unable to get static/provider cluster config: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger, &c.Options.Global)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger, &c.Options.Global, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}

@@ -109,7 +109,7 @@ func TestInitStateLoader(t *testing.T) {
 				kubeProvider: createKubeProvider(),
 				before: func(t *testing.T, tst *testInitStateLoader) {
 					testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
-					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider())
+					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider(), "")
 					ctx := context.TODO()
 					_, err := loader.PopulateMetaConfig(ctx, nil)
 					require.NoError(t, err, "populate metaconfig before test")
@@ -360,6 +360,10 @@ func testCreateMetaConfigForInitLoaderTestInCluster(t *testing.T, tst *testInitS
 	testCreateProviderClusterConfigSecret(t, client, providerConfigYAML)
 
 	testCreateClusterConfigSecret(t, client, cloudClusterGenericConfigYAML)
+
+	// Cloud-cluster parseConfigFromCluster fetches d8-system/deckhouse-registry
+	// unconditionally; seed it so the retry-loop doesn't trip the test timeout.
+	testCreateDeckhouseRegistrySecret(t, client)
 
 	testCreateClusterUUIDCM(t, client, tst.clusterUUID)
 

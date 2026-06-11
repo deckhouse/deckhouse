@@ -17,106 +17,102 @@ package infrastructureprovider
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-// todo it is ugly solution because we validate some filds in providers only in bootstrap
-// need migration in cloud-provider-yandex in withNat layout
-type DhctlPhase string
+type DhctlOperation = string
 
 const (
-	DhctlPhaseBootstrap DhctlPhase = "bootstrap"
+	DhctlOperationBootstrap DhctlOperation = providerdata.OperationBootstrap
+	DhctlOperationConverge  DhctlOperation = providerdata.OperationConverge
+	DhctlOperationDestroy   DhctlOperation = providerdata.OperationDestroy
 )
 
-type PreflightChecks struct {
-	DVPValidateKubeAPI bool
-}
-
 type PreparatorProviderParams struct {
-	logger          log.Logger
-	phase           DhctlPhase
-	PreflightChecks PreflightChecks
-}
-
-func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
-	p.phase = phase
-}
-
-func (p *PreparatorProviderParams) WithPhaseBootstrap() {
-	p.WithPhase(DhctlPhaseBootstrap)
-}
-
-func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
-	p.PreflightChecks = checks
+	logger log.Logger
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
-	return PreparatorProviderParams{
-		logger: logger,
-	}
+	return PreparatorProviderParams{logger: logger}
 }
 
 func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
-	return PreparatorProviderParams{
-		logger: log.NewSilentLogger(),
-	}
+	return PreparatorProviderParams{logger: log.NewSilentLogger()}
 }
 
-// looger can be nil if nil will use silent logger
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
 	logger := params.logger
-
 	if govalue.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
+	return func(provider, downloadRootDir string) config.MetaConfigPreparator {
+		return selectPreparator(provider, downloadRootDir, logger)
+	}
+}
 
-	return func(provider string) config.MetaConfigPreparator {
-		switch provider {
+func selectPreparator(provider, downloadRootDir string, logger log.Logger) config.MetaConfigPreparator {
+	switch provider {
+	case "":
 		// static cluster
-		case "":
-			return config.DummyPreparatorProvider()("")
-		case yandex.ProviderName:
-			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
-			if params.phase == DhctlPhaseBootstrap {
-				yandexPreparator.EnableValidateWithNATLayout()
-			}
-			return yandexPreparator
-		case vcd.ProviderName:
-			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
-				PrepareMetaConfig:     true,
-				ValidateClusterPrefix: true,
-			}, logger)
-		case dvp.ProviderName:
-			prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
-			if params.phase != DhctlPhaseBootstrap {
-				return prep
-			}
-			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
-		default:
-			return &defaultCloudOnlyPrefixValidatorPreparator{}
+		return config.DummyPreparatorProvider()("", "")
+	case yandex.ProviderName:
+		// Top-level dhctl path (bootstrap/converge/check): validate cluster
+		// prefix. The hook-side caller passes false.
+		return yandex.NewMetaConfigPreparator(true, logger)
+	case vcd.ProviderName:
+		return vcd.NewMetaConfigPreparator(logger)
+	default:
+		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
+			return external.NewBinaryPreparator(binaryPath)
 		}
+		searched := ""
+		if downloadRootDir != "" {
+			searched = providerdata.ValidatorPath(downloadRootDir, provider)
+		}
+		logger.LogErrorF("external validator for provider %q not found at %q\n", provider, searched)
+		return &missingExternalValidatorPreparator{provider: provider, searchedPath: searched}
 	}
 }
 
-type defaultCloudOnlyPrefixValidatorPreparator struct{}
-
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
-	err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
-	if err != nil {
-		return fmt.Errorf("%v for provider %s", err, metaConfig.ProviderName)
+func findExternalPreparatorBinary(pluginsDir, providerName string) string {
+	if pluginsDir == "" {
+		return ""
 	}
-
-	return nil
+	path := providerdata.ValidatorPath(pluginsDir, providerName)
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return ""
+	}
+	return path
 }
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
-	return nil
+// missingExternalValidatorPreparator hard-fails Validate and Prepare when an
+// external provider's validator binary is absent from the unpacked OCI bundle.
+type missingExternalValidatorPreparator struct {
+	provider     string
+	searchedPath string
+}
+
+func (p *missingExternalValidatorPreparator) err() error {
+	if p.searchedPath == "" {
+		return fmt.Errorf("external validator for provider %q not found: provider plugins directory was not configured", p.provider)
+	}
+	return fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", p.provider, p.searchedPath)
+}
+
+func (p *missingExternalValidatorPreparator) Validate(_ context.Context, _ config.ProviderInput) error {
+	return p.err()
+}
+
+func (p *missingExternalValidatorPreparator) Prepare(_ context.Context, _ config.ProviderInput) (providerdata.PrepareResult, error) {
+	return providerdata.PrepareResult{}, p.err()
 }

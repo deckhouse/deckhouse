@@ -431,6 +431,12 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 			patch,
 			metav1.PatchOptions{},
 		)
+		if k8errors.IsNotFound(err) {
+			// mc-flow cluster: the legacy Secret is intentionally absent and
+			// discovery data is recomputed on each run — nothing to patch.
+			log.WarnLn("Skipping cloud discovery data update: legacy Secret d8-provider-cluster-configuration not present (mc-flow cluster)")
+			return nil
+		}
 		return err
 	})
 }

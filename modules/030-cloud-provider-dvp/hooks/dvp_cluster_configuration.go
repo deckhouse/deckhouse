@@ -17,80 +17,416 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal/v1"
 )
 
-var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, _ bool) error {
-	p := make(map[string]json.RawMessage)
-	if metaCfg != nil {
-		p = metaCfg.ProviderClusterConfig
+// pccSecretFilterResult holds the parsed data from the PCC secret.
+type pccSecretFilterResult struct {
+	// ProviderClusterConfig is the raw JSON map from the cluster configuration.
+	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfig,omitempty"`
+	// ProviderDiscoveryData is the raw JSON of the cloud provider discovery data.
+	ProviderDiscoveryDataJSON json.RawMessage `json:"providerDiscoveryDataJSON,omitempty"`
+}
+
+// moduleConfigFilterResult holds the relevant fields from a ModuleConfig object.
+type moduleConfigFilterResult struct {
+	Version  int64           `json:"version"`
+	Enabled  bool            `json:"enabled"`
+	Provider json.RawMessage `json:"provider,omitempty"`
+}
+
+// namedResourceResult holds just the name of a Kubernetes resource.
+type namedResourceResult struct {
+	Name string `json:"name"`
+}
+
+// credentialSecretResult holds the name of a credential secret.
+type credentialSecretResult struct {
+	Name string `json:"name"`
+}
+
+// ---- filter functions ----
+
+func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &corev1.Secret{}
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return nil, fmt.Errorf("cannot convert PCC secret from unstructured: %v", err)
 	}
 
-	var providerClusterConfiguration v1.DvpProviderClusterConfiguration
-	err := convertJSONRawMessageToStruct(p, &providerClusterConfiguration)
-	if err != nil {
-		return err
+	result := &pccSecretFilterResult{}
+
+	if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {
+		if _, err := config.ValidateDiscoveryData(&discoveryDataJSON, nil, nil); err != nil {
+			return nil, fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
+		}
+		result.ProviderDiscoveryDataJSON = json.RawMessage(discoveryDataJSON)
 	}
 
-	var moduleConfiguration v1.DvpModuleConfiguration
-	err = json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration)
-	if err != nil {
-		return err
-	}
-
-	err = overrideValues(&providerClusterConfiguration, &moduleConfiguration)
-	if err != nil {
-		return err
-	}
-	input.Values.Set("cloudProviderDvp.internal.providerClusterConfiguration", providerClusterConfiguration)
-
-	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
-	if providerDiscoveryData != nil {
-		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
+	if clusterConfigYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigYAML) > 0 {
+		m, err := config.ParseConfigFromData(
+			context.Background(),
+			string(clusterConfigYAML),
+			infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()),
+			nil,
+		)
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
+		}
+		result.ProviderClusterConfig = m.ProviderClusterConfig
+	}
+
+	return result, nil
+}
+
+func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mc := &deckhousev1alpha1.ModuleConfig{}
+	if err := sdk.FromUnstructured(obj, mc); err != nil {
+		return nil, fmt.Errorf("convert ModuleConfig from unstructured: %w", err)
+	}
+
+	result := moduleConfigFilterResult{
+		Version: int64(mc.Spec.Version),
+		Enabled: mc.Spec.Enabled != nil && *mc.Spec.Enabled,
+	}
+
+	if mc.Spec.Settings != nil {
+		if providerRaw, ok := mc.Spec.Settings.GetMap()["provider"]; ok {
+			providerBytes, err := json.Marshal(providerRaw)
+			if err == nil {
+				result.Provider = json.RawMessage(providerBytes)
+			}
 		}
 	}
 
+	return result, nil
+}
+
+func filterNamedResource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return namedResourceResult{Name: obj.GetName()}, nil
+}
+
+func filterCredentialSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &corev1.Secret{}
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return nil, err
+	}
+	if secret.Type != dvpCredentialSecretType {
+		return nil, nil
+	}
+	return credentialSecretResult{Name: secret.Name}, nil
+}
+
+// ---- hook registration ----
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+	Kubernetes: []go_hook.KubernetesConfig{
+		// Binding 0: PCC secret in kube-system (triggers the hook on change)
+		{
+			Name:       "provider_cluster_configuration",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-provider-cluster-configuration"},
+			},
+			FilterFunc: filterPCCSecret,
+		},
+		// Binding 1: ModuleConfig for the DVP module - triggers hook on change to detect migration completion.
+		{
+			Name:       "module_config",
+			ApiVersion: moduleConfigAPIVersion,
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{dvpModuleName},
+			},
+			FilterFunc: filterModuleConfig,
+		},
+		// Binding 2: d8-credentials Secret - triggers hook on change to detect migration completion.
+		{
+			Name:       "credential_secret_d8",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{dvpNamespace},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{dvpCredentialSecretName},
+			},
+			FilterFunc: filterCredentialSecret,
+		},
+		// Binding 3: NodeGroup CRs - triggers hook on change to detect migration completion.
+		{
+			Name:       "node_groups",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+			FilterFunc: filterNamedResource,
+		},
+		// Binding 4: DVPInstanceClass CRs - triggers hook on change to detect migration completion.
+		{
+			Name:       "dvp_instance_classes",
+			ApiVersion: moduleConfigAPIVersion,
+			Kind:       dvpInstanceClassKind,
+			FilterFunc: filterNamedResource,
+		},
+	},
+}, handleDVPClusterConfiguration)
+
+func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
+	// ---- Determine PCC presence ----
+	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
+	pccPresent := len(pccSnaps) > 0
+
+	// ---- State machine ----
+	if !pccPresent {
+		// State A: no PCC - new cluster on v2, standard flow.
+		// Values come from ModuleConfig v2 via addon-operator (already in input.Values).
+		// Clean up migration artifacts if they exist.
+		deleteMigrationArtifacts(input)
+		return mergeAndSetDiscoveryData(input, cloudDataV1.DVPCloudProviderDiscoveryData{})
+	}
+
+	// PCC is present - parse it.
+	var pccResult pccSecretFilterResult
+	if err := pccSnaps[0].UnmarshalTo(&pccResult); err != nil {
+		return fmt.Errorf("unmarshal PCC snapshot: %w", err)
+	}
+
+	var pcc v1.DvpProviderClusterConfiguration
+	if len(pccResult.ProviderClusterConfig) > 0 {
+		if err := convertJSONRawMessageToStruct(pccResult.ProviderClusterConfig, &pcc); err != nil {
+			return fmt.Errorf("parse PCC: %w", err)
+		}
+	}
+
+	// Parse discovery data.
+	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
+	if len(pccResult.ProviderDiscoveryDataJSON) > 0 {
+		if err := json.Unmarshal(pccResult.ProviderDiscoveryDataJSON, &discoveryData); err != nil {
+			return fmt.Errorf("unmarshal discovery data: %w", err)
+		}
+	}
+
+	// ---- Determine completeness of new resources ----
+	newResourcesComplete := isNewResourcesComplete(input, &pcc)
+
+	if newResourcesComplete {
+		// State C: PCC present but migration is done.
+		// Values come from MC v2 (root path) - do NOT override from PCC.
+		// Clean up migration artifacts.
+		deleteMigrationArtifacts(input)
+		return mergeAndSetDiscoveryData(input, discoveryData)
+	}
+
+	// State B: PCC present, new resources incomplete - migration in progress.
+	// Write root values from PCC so templates can render.
+	if err := mapPCCtoRootValues(input, &pcc); err != nil {
+		return fmt.Errorf("map PCC to root values: %w", err)
+	}
+
+	// Validate and enrich the PCC (e.g. merge any MC-level overrides).
+	var moduleConfiguration v1.DvpModuleConfiguration
+	if err := json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration); err != nil {
+		return fmt.Errorf("parse module configuration: %w", err)
+	}
+	if err := overrideValues(&pcc, &moduleConfiguration); err != nil {
+		return fmt.Errorf("override values: %w", err)
+	}
+
+	return mergeAndSetDiscoveryData(input, discoveryData)
+}
+
+// isNewResourcesComplete checks whether the migration target resources are fully in place.
+func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConfiguration) bool {
+	// Check ModuleConfig.
+	mcSnaps := input.Snapshots.Get("module_config")
+	if len(mcSnaps) == 0 {
+		return false
+	}
+	var mc moduleConfigFilterResult
+	if err := mcSnaps[0].UnmarshalTo(&mc); err != nil {
+		return false
+	}
+	if mc.Version < 2 || !mc.Enabled || len(mc.Provider) == 0 {
+		return false
+	}
+
+	// Check d8-credentials Secret.
+	credSnaps := input.Snapshots.Get("credential_secret_d8")
+	if len(credSnaps) == 0 {
+		return false
+	}
+	var cred credentialSecretResult
+	if err := credSnaps[0].UnmarshalTo(&cred); err != nil || cred.Name == "" {
+		return false
+	}
+
+	// Build sets of existing NodeGroups and DVPInstanceClasses.
+	existingNodeGroups, err := sdkobjectpatch.UnmarshalToStruct[namedResourceResult](input.Snapshots, "node_groups")
+	if err != nil {
+		return false
+	}
+	nodeGroupSet := make(map[string]bool, len(existingNodeGroups))
+	for _, ng := range existingNodeGroups {
+		nodeGroupSet[ng.Name] = true
+	}
+
+	existingICs, err := sdkobjectpatch.UnmarshalToStruct[namedResourceResult](input.Snapshots, "dvp_instance_classes")
+	if err != nil {
+		return false
+	}
+	icSet := make(map[string]bool, len(existingICs))
+	for _, ic := range existingICs {
+		icSet[ic.Name] = true
+	}
+
+	// Check master NodeGroup + InstanceClass only when the PCC defines a masterNodeGroup.
+	// Hybrid clusters (static control plane, CSI-only) have no masterNodeGroup in PCC.
+	if pcc != nil && pcc.MasterNodeGroup != nil {
+		if !nodeGroupSet["master"] || !icSet["master-dvp"] {
+			return false
+		}
+	}
+
+	// Check each additional nodeGroup from PCC.
+	if pcc != nil {
+		for _, rawNG := range pcc.NodeGroups {
+			ng, err := mapFromAny(rawNG)
+			if err != nil {
+				return false
+			}
+			name, ok := ng["name"].(string)
+			if !ok || name == "" {
+				return false
+			}
+			if !nodeGroupSet[name] || !icSet[fmt.Sprintf("%s-dvp", name)] {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// mapPCCtoRootValues writes PCC fields into the root module values path
+// (cloudProviderDvp.provider/nodes) in v2 format so templates can render during migration.
+// Only individual leaf values are written so that fields populated by addon-operator from
+// config-values defaults (e.g. nodes.enabled, storage.enabled) are never overwritten.
+// storage is left entirely untouched - PCC does not control subsystem enablement.
+//
+// It also injects a synthetic cloudProviderDvp.internal.credentialSecrets["d8-credentials"]
+// entry built from PCC.provider.kubeconfigDataBase64, but ONLY when the key is absent.
+// The credentials.go hook (Order 19) populates credentialSecrets from real Secrets; if it
+// already placed d8-credentials, we must not overwrite it.
+func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConfiguration) error {
+	if pcc == nil {
+		return nil
+	}
+
+	// provider - set the whole object (provider has no enabled flag, so overwriting is safe).
+	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
+		input.Values.Set("cloudProviderDvp.provider", map[string]any{
+			"parameters": map[string]any{
+				"namespace": *pcc.Provider.Namespace,
+			},
+		})
+	}
+
+	// nodes.parameters - only PCC-derived fields; nodes.enabled is intentionally not touched
+	// so the default from config-values is preserved.
+	nodesParams := map[string]any{}
+	if pcc.Layout != nil {
+		nodesParams["layout"] = *pcc.Layout
+	}
+	if pcc.SSHPublicKey != nil {
+		nodesParams["sshPublicKey"] = *pcc.SSHPublicKey
+	}
+	if pcc.Region != nil {
+		nodesParams["region"] = *pcc.Region
+	}
+	if pcc.Zones != nil && len(*pcc.Zones) > 0 {
+		nodesParams["zones"] = *pcc.Zones
+	}
+	if len(nodesParams) > 0 {
+		input.Values.Set("cloudProviderDvp.nodes.parameters", nodesParams)
+	}
+
+	// storage - not touched; PCC does not control subsystem enablement.
+
+	// Inject synthetic d8-credentials from PCC kubeconfig only when the real Secret
+	// is not yet present (i.e. credentials.go did not populate it at Order 19).
+	// We must set the whole credentialSecrets map at once to avoid JSON-patch
+	// "missing path" errors when the key does not exist yet.
+	if _, exists := input.Values.GetOk("cloudProviderDvp.internal.credentialSecrets.d8-credentials"); !exists {
+		if pcc.Provider != nil && pcc.Provider.KubeconfigDataBase64 != nil && len(*pcc.Provider.KubeconfigDataBase64) > 0 {
+			// Read existing credentialSecrets map and add the synthetic entry.
+			existing := make(map[string]any)
+			if v, ok := input.Values.GetOk("cloudProviderDvp.internal.credentialSecrets"); ok {
+				if err := json.Unmarshal([]byte(v.Raw), &existing); err != nil {
+					return fmt.Errorf("unmarshal credentialSecrets: %w", err)
+				}
+			}
+			existing[dvpCredentialSecretName] = map[string]any{
+				"authScheme": dvpAuthSchemeKubeconfig,
+				"secret":     *pcc.Provider.KubeconfigDataBase64,
+			}
+			input.Values.Set("cloudProviderDvp.internal.credentialSecrets", existing)
+		}
+	}
+
+	return nil
+}
+
+// mergeAndSetDiscoveryData merges the provided discovery data with any existing values
+// and writes the result to internal.providerDiscoveryData.
+func mergeAndSetDiscoveryData(input *go_hook.HookInput, discoveryData cloudDataV1.DVPCloudProviderDiscoveryData) error {
 	providerDiscoveryDataValuesJSON, ok := input.Values.GetOk("cloudProviderDvp.internal.providerDiscoveryData")
 	if ok && len(providerDiscoveryDataValuesJSON.String()) != 0 {
-		var providerDiscoveryDataValues cloudDataV1.DVPCloudProviderDiscoveryData
-		err = json.Unmarshal([]byte(providerDiscoveryDataValuesJSON.String()), &providerDiscoveryDataValues)
-		if err != nil {
+		var existing cloudDataV1.DVPCloudProviderDiscoveryData
+		if err := json.Unmarshal([]byte(providerDiscoveryDataValuesJSON.String()), &existing); err != nil {
 			return err
 		}
-		discoveryData = mergeDiscoveryData(discoveryData, providerDiscoveryDataValues)
+		discoveryData = mergeDiscoveryData(discoveryData, existing)
 	}
 
 	if discoveryData.APIVersion == "" {
 		discoveryData.APIVersion = "deckhouse.io/v1"
 	}
-
 	if discoveryData.Kind == "" {
 		discoveryData.Kind = "DVPCloudDiscoveryData"
 	}
-
 	if len(discoveryData.Zones) == 0 {
 		discoveryData.Zones = []string{"default"}
 	}
 
 	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", discoveryData)
-
 	return nil
-}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))
+}
 
-func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
+func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out any) error {
 	b, err := json.Marshal(in)
 	if err != nil {
 		return err

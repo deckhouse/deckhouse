@@ -52,6 +52,13 @@ func (CloudSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c CloudSystemRequirementsCheck) Run(_ context.Context) error {
+	// In the ModuleConfig-only flow (no <Provider>ClusterConfiguration in the
+	// input file) the master sizing lives in NodeGroup + InstanceClass resources
+	// resolved by the provider validator, not in PCC. Skip the legacy PCC-based
+	// check — the external validator performs its own checks.
+	if len(c.InstallConfig.ProviderClusterConfig) == 0 {
+		return nil
+	}
 	configObject := make(map[string]any)
 	configKind, err := unmarshalProviderClusterConfiguration(c.InstallConfig.ProviderClusterConfig, configObject)
 	if err != nil {
