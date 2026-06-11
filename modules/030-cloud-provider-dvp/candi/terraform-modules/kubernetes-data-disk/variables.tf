@@ -63,9 +63,7 @@ variable "timeouts" {
 
 locals {
   data_disk_destructive_params = {
-    "kbernetesDataDisk" = {
-      "storageClass" = var.storage_class
-    }
+    "kbernetesDataDisk" = {}
   }
 
   data_disk_destructive_params_json      = jsonencode(local.data_disk_destructive_params)
