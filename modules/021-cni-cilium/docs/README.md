@@ -50,34 +50,13 @@ Network equipment must be ready for asymmetric traffic flow: IP address anti-spo
 
 * `Hybrid` — in this mode, TCP traffic is processed in `DSR` mode, and UDP in `SNAT` mode.
 
-## Using CiliumClusterwideNetworkPolicies
+## Using CiliumClusterwideNetworkPolicy
 
 {% alert level="danger" %}
-Using CiliumClusterwideNetworkPolicies if the `policyAuditMode` option is absent in the cni-cilium module settings may lead to incorrect operation of Control plane or loss of SSH access to all cluster nodes.
+Applying CiliumClusterwideNetworkPolicy without [`policyAuditMode`](configuration.html#parameters-policyauditmode) enabled may break control plane operation or cut SSH access to all cluster nodes.
 {% endalert %}
 
-Follow these steps to use CiliumClusterwideNetworkPolicies:
-
-1. Apply the primary set of `CiliumClusterwideNetworkPolicy` objects. To do this, in the settings of the cni-cilium module add the configuration option [`policyAuditMode`](configuration.html#parameters-policyauditmode) with the value `true`.
-The option can be removed after applying all `CiliumClusterwideNetworkPolicy` objects and verifying their functionality in Hubble UI.
-
-1. Apply network security policy rule:
-
-   ```yaml
-   apiVersion: "cilium.io/v2"
-   kind: CiliumClusterwideNetworkPolicy
-   metadata:
-     name: "allow-control-plane-connectivity"
-   spec:
-     ingress:
-     - fromEntities:
-       - kube-apiserver
-     nodeSelector:
-       matchLabels:
-         node-role.kubernetes.io/control-plane: ""
-   ```
-
-If CiliumClusterwideNetworkPolicies are not used, the control plane may work incorrectly for up to a minute during the reboot of `cilium-agent` pods. This occurs due to [Conntrack table reset](https://github.com/cilium/cilium/issues/19367). Binding to the `kube-apiserver` entity helps to bypass the bug.
+The safe rollout procedure for `CiliumClusterwideNetworkPolicy`, including mandatory control plane and host firewall rules, is described in the [Network policies](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html) section of the documentation. For details on the Cilium policy formats, refer to [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/cilium_networkpolicy.html).
 
 ## Changing Cilium Operation Mode
 
