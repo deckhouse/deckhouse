@@ -65,8 +65,8 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 		return nil, status.Errorf(codes.Internal, "unmarshalling cluster Config: %s", err)
 	}
 
-	// The request carries only the provider-specific section, so the provider
-	// name comes from the cluster config argument, not from the docs.
+	// The request carries only the provider section; the provider name comes
+	// from the cluster config argument.
 	if err := s.ensureProviderSchemas(ctx, clusterConfig.Cloud.Provider, request.Config); err != nil {
 		errResponse, err = errorToResponse(err)
 		if err != nil {

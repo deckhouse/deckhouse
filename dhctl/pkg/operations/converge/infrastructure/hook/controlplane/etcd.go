@@ -39,10 +39,7 @@ func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProv
 	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
 		attempt++
 
-		// Re-resolve the client on every attempt — during destructive master
-		// replace the SSH-tunnel / kube-proxy used by the previously-captured
-		// client can die (kube-apiserver on the host we're tunnelling through
-		// restarts on etcd reconfig). The getter returns a fresh tunnel.
+		// Fresh client each attempt: the captured tunnel dies on master replace.
 		kc, err := kubeGetter.KubeClientCtx(ctx)
 		if err != nil {
 			return fmt.Errorf("get kube client: %w", err)

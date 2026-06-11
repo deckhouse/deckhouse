@@ -167,9 +167,7 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 		}
 	}
 
-	// A preparator may mutate ProviderClusterConfig (the protocol explicitly
-	// permits this). Re-extract typed fields so any new layout/masterNodeGroup/
-	// nodeGroups produced by the preparator land in m.Layout / etc.
+	// Re-extract typed fields: the preparator may have mutated PCC.
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
 	}
@@ -278,14 +276,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
-// and TerraNodeGroupSpecs from m.ProviderClusterConfig (legacy PCC flow) and
-// falls back to CloudProviderVars.NodeGroups when PCC is empty (mc-flow).
-//
-// For providers in ProviderRequiresClusterConfig (yandex, vcd, gcp, aws,
-// azure, openstack, vsphere, zvirt) the PCC is the single source of truth
-// for layout / master / node groups — a missing field means the Secret was
-// hand-edited or otherwise corrupted, so we fail fast rather than silently
-// run converge with zeroed-out typed fields.
+// and TerraNodeGroupSpecs from PCC (legacy flow), falling back to
+// CloudProviderVars.NodeGroups when PCC is empty (mc-flow). For providers that
+// require PCC a missing field fails fast instead of running converge with
+// zeroed typed fields.
 func (m *MetaConfig) extractProviderClusterFields() error {
 	pccRequired := ProviderRequiresClusterConfig(m.ProviderName)
 	pccPresent := len(m.ProviderClusterConfig) > 0
@@ -314,25 +308,17 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 			return fmt.Errorf("unmarshal node groups from provider cluster configuration: %w", err)
 		}
 	}
-	// "nodeGroups" is intentionally not enforced as required even for
-	// whitelisted providers: an empty cluster (master-only) is a legitimate
-	// configuration with no worker node groups defined.
+	// "nodeGroups" is not required even for whitelisted providers: a
+	// master-only cluster is legitimate.
 
-	// mc-flow: PCC is absent, so MasterNodeGroupSpec and TerraNodeGroupSpecs
-	// stay empty after the PCC reads above. Derive them from the cluster's
-	// NodeGroup resources (already loaded into CloudProviderVars.NodeGroups by
-	// CloudProviderVarsFromCluster). Most consumers — converge/runner.go,
-	// MasterNodeGroupController, cluster-bootstrapper preflight,
-	// cloud_prefix_length — read these typed fields directly, so leaving
-	// them at zero misroutes converge into "decrease to 0" logic.
+	// mc-flow: derive replica counts from cluster NodeGroups, otherwise the
+	// zeroed typed fields misroute converge into "decrease to 0" logic.
 	applyNodeGroupReplicasFromCloudProviderVars(m)
 	return nil
 }
 
-// masterNodeGroupName is the canonical NodeGroup name for control-plane
-// nodes in every Deckhouse install. Renaming it is not supported, so it is
-// safe to look the master NG up by name when deriving replica counts from
-// mc-flow CloudProviderVars.
+// masterNodeGroupName is the canonical control-plane NodeGroup name; renaming
+// it is not supported in Deckhouse.
 const masterNodeGroupName = "master"
 
 func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {

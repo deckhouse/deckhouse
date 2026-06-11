@@ -41,9 +41,8 @@ func New(schemaStore *config.SchemaStore, globalOptions *options.GlobalOptions) 
 	}
 }
 
-// ensureProviderSchemas lazily downloads the external provider bundle and
-// loads its schemas, so validation works on a cold pod. provider may be empty
-// — then it is extracted from the request config's ClusterConfiguration.
+// ensureProviderSchemas lazily delivers the external provider bundle so
+// validation works on a cold pod.
 func (s *Service) ensureProviderSchemas(ctx context.Context, provider, configYAML string) error {
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configYAML), -1)
 	return config.EnsureProviderSchemas(ctx, provider, docs, s.globalOptions)

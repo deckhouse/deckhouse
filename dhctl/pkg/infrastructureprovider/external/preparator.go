@@ -12,17 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package external provides a preparator that delegates Validate/Prepare to an
-// external provider binary via stdin/stdout JSON protocol.
-//
-// Binary protocol:
-//
-//	<binary> validate   — reads ValidateRequest JSON from stdin, exits 0 on success,
-//	                      writes ValidateResponse JSON to stdout on error.
-//	<binary> prepare    — reads PrepareRequest JSON from stdin, writes PrepareResponse
-//	                      JSON to stdout, exits 0 on success.
-//
-// Both commands write human-readable diagnostics to stderr.
+// Package external delegates Validate/Prepare to an external provider binary
+// via the stdin/stdout JSON protocol (see go_lib/dhctl-provider-protocol).
 package external
 
 import (
@@ -126,9 +117,8 @@ func (p *Preparator) call(ctx context.Context, subcommand string, input config.P
 	return stdout, nil
 }
 
-// toWireInput converts ProviderInput to the JSON wire format for external
-// binaries. ProviderClusterConfig is converted from json.RawMessage to
-// interface{}; CloudProviderVars travel structurally as Vars.
+// toWireInput converts ProviderInput to the wire format; ProviderClusterConfig
+// goes from json.RawMessage to plain values.
 func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) {
 	pcc := make(map[string]interface{}, len(input.ProviderClusterConfig))
 	for k, v := range input.ProviderClusterConfig {
@@ -156,8 +146,7 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 	}, nil
 }
 
-// runTimeout caps a single validator invocation so a hung binary cannot hang
-// the calling RPC or CLI command.
+// runTimeout caps one validator invocation so a hung binary cannot hang the caller.
 const runTimeout = 30 * time.Second
 
 func (p *Preparator) run(ctx context.Context, subcommand string, stdin []byte) ([]byte, error) {

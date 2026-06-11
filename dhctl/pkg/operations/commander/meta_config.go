@@ -24,13 +24,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-// ParseMetaConfig is the entry point used by every server-mode RPC handler
-// (converge / check / destroy / detach). The operation argument flows down
-// to the provider preparator so that external validators can distinguish
-// bootstrap from converge / destroy and skip the checks that only make sense
-// on a fresh cluster (NAT layout validation, kubeconfig probing, etc.).
-// Pass infrastructureprovider.DhctlOperation* — an empty string disables
-// operation-conditional logic on the preparator side.
+// ParseMetaConfig parses commander-mode config. operation
+// (infrastructureprovider.DhctlOperation*) reaches the provider preparator,
+// which skips bootstrap-only checks on other operations.
 func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger, operation infrastructureprovider.DhctlOperation) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 	if err != nil {

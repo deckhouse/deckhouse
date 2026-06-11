@@ -74,8 +74,6 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger) confi
 		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
 			return external.NewBinaryPreparator(binaryPath)
 		}
-		// A silent fallback would skip every provider-specific check;
-		// refuse with a precise diagnostic instead.
 		searched := ""
 		if downloadRootDir != "" {
 			searched = providerdata.ValidatorPath(downloadRootDir, provider)
@@ -85,8 +83,6 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger) confi
 	}
 }
 
-// findExternalPreparatorBinary looks for a validator binary in pluginsDir/<providerName>/.
-// Returns the full path if found and is a regular file, empty string otherwise.
 func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	if pluginsDir == "" {
 		return ""

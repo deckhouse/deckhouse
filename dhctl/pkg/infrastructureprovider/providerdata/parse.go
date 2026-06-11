@@ -37,12 +37,10 @@ const (
 	cloudProviderModuleNamePrefix = "cloud-provider-"
 )
 
-// CloudProviderModuleName returns the ModuleConfig name for the given provider.
 func CloudProviderModuleName(providerName string) string {
 	return cloudProviderModuleNamePrefix + strings.ToLower(providerName)
 }
 
-// IsCloudPermanentNodeGroup reports whether obj is a CloudPermanent NodeGroup.
 func IsCloudPermanentNodeGroup(obj map[string]interface{}) bool {
 	nodeType, _, _ := unstructured.NestedString(obj, "spec", "nodeType")
 	return nodeType == "CloudPermanent"

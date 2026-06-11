@@ -49,22 +49,11 @@ func newFromClusterMetaConfigFiller(kubeCl *client.KubernetesClient, schemaStore
 	}
 }
 
-// Cloud loads cloud-provider configuration from the running cluster. The
-// cluster carries one of two mutually understood "markers":
-//
-//   - mc-flow:     ModuleConfig cloud-provider-<name> exists.
-//   - legacy:      Secret d8-provider-cluster-configuration exists.
-//
-// Both are loaded when present — a cluster mid-migration carries both, and
-// the ModuleConfig in that case is typically a stub without settings. The
-// downstream split is done by extractProviderClusterFields /
-// applyCloudProviderModuleSettings: PCC populates the typed fields first
-// (Layout, MasterNodeGroupSpec, TerraNodeGroupSpecs), and the ModuleConfig
-// only fills the gaps left over. That preserves legacy correctness during
-// migration; the post-migration state (PCC absent, MC carries real
-// settings) falls out automatically.
-//
-// If neither marker is present we return a descriptive error.
+// Cloud loads cloud-provider configuration from the running cluster. Two
+// markers exist — the cloud-provider-<name> ModuleConfig (mc-flow) and the
+// legacy d8-provider-cluster-configuration Secret — and both are loaded when
+// present: a cluster mid-migration carries both, with PCC staying the source
+// of truth for the typed fields. Neither present is an error.
 func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
 	if err := metaConfig.prepareProviderName(); err != nil {
 		return nil, err

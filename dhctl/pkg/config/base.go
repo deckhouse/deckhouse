@@ -81,9 +81,8 @@ func LoadConfigFromFile(
 		return nil, err
 	}
 
-	// DownloadRootDir / DownloadCacheDir must be set before ParseConfig so that
-	// metaConfig.Prepare → validateAndPrepareMetaConfig sees them and the
-	// external preparator binary can be resolved under <DownloadRootDir>/<provider>/.
+	// Resolved before ParseConfig: the external preparator binary lives under
+	// <DownloadRootDir>/<provider>/.
 	downloadRootDir := globalOptions.DownloadDir
 	if downloadRootDir == "" {
 		downloadRootDir = options.DefaultTmpDir()
@@ -239,12 +238,6 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		return nil, err
 	}
 
-	// Extract provider name early so we can decide whether to download the
-	// provider's terraform-manager image even when the bundled candi tree is
-	// already on disk (EnsureCandiAvailable=false). Bundled installer images
-	// ship cluster_configuration.yaml schema but NOT the validator binary or
-	// terraform-manager plugins — providerCandiPresent also checks for the
-	// validator file for external providers.
 	var cloudProvider string
 	if clusterType == CloudClusterType {
 		var cloudSpec struct {
@@ -257,10 +250,8 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	}
 	needProviderCandi := cloudProvider != "" && !providerCandiPresent(cloudProvider, globalOptions)
 
-	// Registry data is needed when we owe a candi download OR when the cluster
-	// is Cloud (provider plugins are pulled lazily by downloadImage and need
-	// metaConfig.DeckhouseConfig.RegistryDockerCfg even on a fresh dhctl run
-	// that didn't have to refresh the install tree).
+	// Cloud clusters need registry data even without downloads: provider
+	// plugins are pulled lazily and read DeckhouseConfig.RegistryDockerCfg.
 	needRegistryData := globalOptions.EnsureCandiAvailable || needProviderCandi || clusterType == CloudClusterType
 	if needRegistryData {
 		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
@@ -581,24 +572,16 @@ func FetchDocuments(paths []string) ([]string, error) {
 	return docs, nil
 }
 
-// inTreePreparatorProviders are providers whose validation is implemented
-// inside dhctl (no external "validator" binary on disk). They are mirrored
-// in infrastructureprovider/meta_config_preporator_provider.go::selectPreparator
-// and kept here to avoid importing infrastructureprovider from pkg/config.
+// inTreePreparatorProviders mirrors selectPreparator in infrastructureprovider
+// (not imported from here to avoid a cycle).
 var inTreePreparatorProviders = map[string]struct{}{
 	"yandex": {},
 	"vcd":    {},
 }
 
-// providerCandiPresent reports whether everything needed to load and
-// validate the given provider is already on disk. That means:
-//   - the cluster_configuration.yaml schema is reachable (bundled candi
-//     OR previously-extracted DownloadDir/<provider>);
-//   - for providers handled by an external validator binary (everything
-//     except in-tree yandex/vcd), <DownloadDir>/<provider>/validator exists.
-//
-// Returning false makes LoadConfigFromFile pull the terraformManager image so
-// the validator binary lands alongside the schemas.
+// providerCandiPresent reports whether the provider's schemas — and, for
+// external providers, the validator binary — are already on disk, so the
+// terraform-manager image download can be skipped.
 func providerCandiPresent(provider string, globalOptions *options.GlobalOptions) bool {
 	if provider == "" {
 		return true
@@ -618,16 +601,11 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 	}
 
 	if _, inTree := inTreePreparatorProviders[provider]; inTree {
-		// in-tree providers (yandex, vcd) ship their preparator inside dhctl
-		// and only need the openapi schema for validation
 		return schemaPresent
 	}
 
-	// External providers (DVP, future ones) need the validator binary that
-	// ships in the terraform-manager OCI image. Bundled installer images
-	// typically do NOT carry their openapi schemas — the terraform-manager
-	// download is what brings the validator. So the binary alone is enough
-	// to consider provider-candi present.
+	// The validator binary ships in the same image as the schemas, so its
+	// presence alone marks the bundle as delivered.
 	validatorPath := providerdata.ValidatorPath(globalOptions.DownloadDir, provider)
 	if _, err := os.Stat(validatorPath); err == nil {
 		return true
@@ -737,8 +715,7 @@ func fetchCloudProvider(docs []string) (string, error) {
 
 var ensureProviderGroup singleflight.Group
 
-// Test seams: digest resolution reads the embedded images_digests.json and the
-// downloader hits the network; both are replaced in unit tests.
+// Vars (not funcs) so unit tests can stub digest resolution and the download.
 var (
 	resolveProviderBundleDigest = func(provider string) (string, error) {
 		sectionName := "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
@@ -751,15 +728,11 @@ var (
 	downloadProviderBundle = image.DownloadAndUnpackImage
 )
 
-// EnsureProviderSchemas makes provider (empty means "extract it from docs")
-// validatable in this process. For an external provider it downloads the
-// provider bundle into <DownloadDir>/<provider>@<digest>/, points the
-// <DownloadDir>/<provider> symlink at it and loads the bundle schemas into the
-// schema store. docs supply the registry access (InitConfiguration or the
-// deckhouse ModuleConfig); without registry data the default public registry
-// is used. It is a no-op for static clusters and for providers whose candi is
-// already present (in-tree or previously unpacked). Concurrent calls for the
-// same provider@digest share one download.
+// EnsureProviderSchemas downloads the external provider bundle and loads its
+// schemas so the provider becomes validatable in this process. No-op for
+// static clusters and already-present candi (in-tree or unpacked). Empty
+// provider is extracted from docs; docs also supply registry access (default
+// public registry otherwise). Concurrent same-provider calls share one download.
 func EnsureProviderSchemas(ctx context.Context, provider string, docs []string, globalOptions *options.GlobalOptions) error {
 	if globalOptions == nil {
 		globalOptions = &options.GlobalOptions{}
