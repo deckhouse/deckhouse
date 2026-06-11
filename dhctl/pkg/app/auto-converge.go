@@ -30,7 +30,7 @@ func DefineAutoConvergeFlags(cmd *kingpin.CmdClause, o *options.AutoConvergeOpti
 		Envar(configEnvName("LISTEN_ADDRESS")).
 		StringVar(&o.ListenAddress)
 
-	cmd.Flag("node-name", "Node name where running auto-converger pod").
+	cmd.Flag("node-name", "Name of the node where the auto-converger pod is running").
 		Envar(configEnvName("RUNNING_NODE_NAME")).
 		StringVar(&o.RunningNodeName)
 }

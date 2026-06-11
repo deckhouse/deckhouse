@@ -1,0 +1,55 @@
+diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
+index 50325866..ba7c5def 100644
+--- a/api/v1beta2/vcdmachine_types.go
++++ b/api/v1beta2/vcdmachine_types.go
+@@ -136,6 +136,13 @@ type VCDMachineSpec struct {
+ 	Metadata []VCDMachineMetadata `json:"metadata,omitempty"`
+ }
+
++// VCDMachineInitialization defines the initialization status of a VCDMachine.
++type VCDMachineInitialization struct {
++	// Provisioned is true when the infrastructure machine has been provisioned.
++	// +optional
++	Provisioned bool `json:"provisioned,omitempty"`
++}
++
+ // VCDMachineStatus defines the observed state of VCDMachine
+ type VCDMachineStatus struct {
+ 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+@@ -153,6 +160,10 @@ type VCDMachineStatus struct {
+ 	// +optional
+ 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
+
++	// Initialization contains the initialization status of the machine.
++	// +optional
++	Initialization *VCDMachineInitialization `json:"initialization,omitempty"`
++
+ 	// Template is the path of the template OVA that is to be used
+ 	// +optional
+ 	Template string `json:"template,omitempty"`
+diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
+index 04cce4cf..3d8f5a58 100644
+--- a/controllers/vcdmachine_controller.go
++++ b/controllers/vcdmachine_controller.go
+@@ -379,6 +379,10 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
+ 	}
+ 	if vcdMachine.Spec.ProviderID != nil && vcdMachine.Status.ProviderID != nil {
+ 		vcdMachine.Status.Ready = true
++		if vcdMachine.Status.Initialization == nil {
++			vcdMachine.Status.Initialization = &infrav1.VCDMachineInitialization{}
++		}
++		vcdMachine.Status.Initialization.Provisioned = true
+ 		conditions.MarkTrue(vcdMachine, ContainerProvisionedCondition)
+ 		err = capvcdRdeManager.AddToEventSet(ctx, capisdk.InfraVmBootstrapped, "", machine.Name, "", skipRDEEventUpdates)
+ 		if err != nil {
+@@ -938,6 +942,10 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
+ 	providerID := fmt.Sprintf("%s://%s", infrav1.VCDProviderID, vm.VM.ID)
+ 	vcdMachine.Spec.ProviderID = &providerID
+ 	vcdMachine.Status.Ready = true
++	if vcdMachine.Status.Initialization == nil {
++		vcdMachine.Status.Initialization = &infrav1.VCDMachineInitialization{}
++	}
++	vcdMachine.Status.Initialization.Provisioned = true
+ 	vcdMachine.Status.Template = vcdMachine.Spec.Template
+ 	vcdMachine.Status.ProviderID = vcdMachine.Spec.ProviderID
+ 	vcdMachine.Status.SizingPolicy = vcdMachine.Spec.SizingPolicy

@@ -140,7 +140,11 @@ func syncBindings(_ context.Context, input *go_hook.HookInput) error {
 		useBindingName := fmt.Sprintf("d8:use:%s:binding:%s", role, binding.Name)
 		for namespace := range namespaces {
 			input.PatchCollector.CreateOrUpdate(createBinding(&binding, role, namespace))
-			expected[useBindingName] = true
+			// Track by (namespace, name): one manage binding fans out to the
+			// same RoleBinding name across many namespaces, so keying by name
+			// alone would keep an orphan alive whenever a namespace drops out
+			// of the binding while any other namespace remains.
+			expected[useBindingKey(namespace, useBindingName)] = true
 		}
 	}
 
@@ -149,12 +153,19 @@ func syncBindings(_ context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'useBindings' snapshot: %w", err)
 		}
-		if _, ok := expected[existing.Name]; !ok {
+		if _, ok := expected[useBindingKey(existing.Namespace, existing.Name)]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
 
 	return nil
+}
+
+// useBindingKey identifies an automated use RoleBinding uniquely. A single
+// manage binding produces RoleBindings with the same name in every target
+// namespace, so reconciliation must compare by namespace and name together.
+func useBindingKey(namespace, name string) string {
+	return namespace + "/" + name
 }
 
 func roleAndNamespacesByBinding(manageRoles []pkg.Snapshot, roleName string) (string, map[string]bool, error) {

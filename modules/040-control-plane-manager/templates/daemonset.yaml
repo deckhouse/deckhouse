@@ -45,8 +45,13 @@ memory: 10Mi
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "scheduler" dict }}
-{{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
-{{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
+{{- $_ := set $tpl_context "settings" dict }}
+{{- with .Values.controlPlaneManager.internal.resourcesRequests }}
+  {{- $_ := set $tpl_context.settings "resourcesRequests" (dict
+    "milliCPU" .milliCpuControlPlane
+    "memoryBytes" .memoryControlPlane
+  ) }}
+{{- end }}
 
 {{- $allowedKubernetesVersions := list }}
 {{- $automaticVersion := ""}}

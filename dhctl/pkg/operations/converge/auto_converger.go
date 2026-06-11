@@ -48,11 +48,11 @@ func NewAutoConverger(runner *runner, params AutoConvergerParams) *AutoConverger
 }
 
 func (c *AutoConverger) Start(ctx *convergectx.Context) error {
-	defer log.InfoLn("Stop autoconverger fully")
+	defer log.InfoLn("Stopping autoconverger completely")
 
 	log.InfoLn("Start exporter")
 	log.InfoLn("Address: ", c.params.ListenAddress)
-	log.InfoLn("Checks interval: ", c.params.CheckInterval)
+	log.InfoLn("Check interval: ", c.params.CheckInterval)
 
 	// channels to stop converge loop
 	shutdownAllCh := make(chan struct{})
@@ -66,7 +66,7 @@ func (c *AutoConverger) Start(ctx *convergectx.Context) error {
 
 		err := httpServer.Shutdown(context.TODO())
 		if err != nil {
-			log.ErrorF("Cannot shutdown http server %v", err)
+			log.ErrorF("Cannot shut down http server: %v", err)
 		}
 	})
 
@@ -109,7 +109,7 @@ func (c *AutoConverger) getHTTPServer() *http.Server {
 	indexPageContent := fmt.Sprintf(`<html>
              <head><title>CandI Auto converge</title></head>
              <body>
-             <h1>CandI Auto converge terrform state every %s</h1>
+             <h1>CandI Auto converge terraform state every %s</h1>
              </body>
              </html>`, c.params.CheckInterval.String())
 

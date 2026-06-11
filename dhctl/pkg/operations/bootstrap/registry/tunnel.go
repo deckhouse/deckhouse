@@ -81,7 +81,7 @@ func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	}
 
 	logger := params.Logger
-	logger.DebugF("Up bundle registry tunnel...")
+	logger.DebugF("Starting bundle registry tunnel...")
 
 	tunnel := newTunnel(params.GlobalOpts, wrapper.Client())
 	if err := tunnel.start(ctx); err != nil {

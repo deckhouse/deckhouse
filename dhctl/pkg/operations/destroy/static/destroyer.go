@@ -109,7 +109,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 
 	if err != nil {
 		if !errors.Is(err, errNotFoundCredentials) {
-			return fmt.Errorf("Error while getting node user from cache: %w", err)
+			return fmt.Errorf("Error getting node user from cache: %w", err)
 		}
 
 		d.nodesWithCredentials, err = d.createAndSaveCredentials(ctx, logger)
@@ -117,7 +117,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 			return err
 		}
 	} else {
-		logger.LogDebugLn("Found existing nodes with credentials. Saved to destroyer and skipping creating")
+		logger.LogDebugLn("Found existing nodes with credentials. Saved to destroyer and skipping creation")
 	}
 
 	return d.waitNodeUserExists(ctx)
@@ -134,7 +134,7 @@ func (d *Destroyer) CleanupBeforeDestroy(ctx context.Context) error {
 
 func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	if govalue.IsNil(d.params.SSHClientProvider) {
-		return errors.New("Internal error. SSH provider did not pass")
+		return errors.New("Internal error. SSH provider was not passed")
 	}
 
 	return d.params.PhasedActionProvider().Run(ctx, phases.AllNodesPhase, true, func() (phases.DefaultContextType, error) {
@@ -150,7 +150,7 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error {
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
-			return fmt.Errorf("Cleanup master nodes disallow")
+			return fmt.Errorf("Cleaning up master nodes is not allowed")
 		}
 	}
 
@@ -308,7 +308,7 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHC
 
 func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSHProvider, settings *session.Session) (libcon.SSHClient, error) {
 	if d.nodesWithCredentials == nil {
-		return nil, fmt.Errorf("Internal error. No nodes with credentials in destroyer. Probably Prepare did not call or try destroy when abort")
+		return nil, fmt.Errorf("Internal error. No nodes with credentials in destroyer. Probably Prepare was not called, or destroy was attempted during an abort")
 	}
 
 	if d.params.TmpDir == "" {
@@ -404,15 +404,15 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSH
 
 func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 	if d.params.PhasedActionProvider == nil {
-		return fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you try to destroy when need abort")
+		return fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you tried to destroy when an abort was needed")
 	}
 
 	if d.nodesWithCredentials == nil {
-		return fmt.Errorf("Internal error. nodesWithCredentials not initialized. Probably you try to destroy when need abort")
+		return fmt.Errorf("Internal error. nodesWithCredentials not initialized. Probably you tried to destroy when an abort was needed")
 	}
 
 	if len(d.nodesWithCredentials.IPs) == 0 {
-		return fmt.Errorf("Internal error. nodesWithCredentials ips is empty")
+		return fmt.Errorf("Internal error. nodesWithCredentials IPs are empty")
 	}
 
 	logger := d.logger()
@@ -462,7 +462,7 @@ func (d *Destroyer) createNodeUserCredentials(ctx context.Context, ips []entity.
 
 func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Logger) (*NodesWithCredentials, error) {
 	if d.params.PhasedActionProvider == nil {
-		return nil, fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you try to destroy when need abort")
+		return nil, fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you tried to destroy when an abort was needed")
 	}
 
 	nodeIPs, err := entity.GetMasterNodesIPs(ctx, d.params.KubeProvider, d.params.Loops.GetMastersIPs)

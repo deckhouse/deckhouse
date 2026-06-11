@@ -89,7 +89,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.globalOptions == nil {
-		log.WarnLn("GlobalOption in nil!")
+		log.WarnLn("GlobalOption is nil!")
 	}
 
 	if r.infrastructureContext == nil {
