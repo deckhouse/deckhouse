@@ -18,7 +18,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -71,6 +70,5 @@ require (
 
 replace (
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider => ../../../../../go_lib/cloud-provider
-	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ../../../../../go_lib/dhctl-provider-protocol
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg => ../../../pkg
 )

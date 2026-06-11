@@ -241,9 +241,9 @@ func (b *StateBuilder) BuildForInstanceClass(
 
 func (b *StateBuilder) buildBaseState(ctx context.Context) (*cpval.State, error) {
 	state := &cpval.State{
-		InstanceClassKind:            b.config.InstanceClassKind,
-		NamespaceName:                b.config.NamespaceName,
-		ModuleName:                   b.config.ModuleName,
+		InstanceClassKind: b.config.InstanceClassKind,
+		NamespaceName:     b.config.NamespaceName,
+		ModuleName:        b.config.ModuleName,
 	}
 
 	moduleConfig, err := b.getModuleConfig(ctx)

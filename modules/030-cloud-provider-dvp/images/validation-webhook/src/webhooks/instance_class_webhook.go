@@ -17,7 +17,6 @@ package webhooks
 import (
 	"context"
 
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -26,6 +25,7 @@ import (
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
 type DVPInstanceClassValidator struct {

@@ -26,21 +26,16 @@ import (
 )
 
 func validate(_ context.Context, input dhctlproto.PrepareInput) error {
-	cpVars, err := dhctlproto.ParseResourcesYAML(input.ResourcesYAML)
-	if err != nil {
-		return fmt.Errorf("parse resources: %w", err)
-	}
-
 	stateBuilder := cpvalprotocol.NewStateBuilder(
 		cpvalprotocol.StateBuilderConfig{
-			ModuleName:                   dvpval.ModuleName,
-			NamespaceName:                dvpval.Namespace,
-			InstanceClassKind:            dvpval.InstanceClassKind,
-			MigrationRules:               &dvpval.MigrationRules,
+			ModuleName:        dvpval.ModuleName,
+			NamespaceName:     dvpval.Namespace,
+			InstanceClassKind: dvpval.InstanceClassKind,
+			MigrationRules:    &dvpval.MigrationRules,
 		},
 	)
 
-	state, err := stateBuilder.Build(input, cpVars)
+	state, err := stateBuilder.Build(input)
 	if err != nil {
 		return fmt.Errorf("build validation state: %w", err)
 	}
@@ -61,12 +56,10 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 }
 
 func prepare(_ context.Context, input dhctlproto.PrepareInput) (*dhctlproto.PrepareResult, error) {
-	cpVars, err := dhctlproto.ParseResourcesYAML(input.ResourcesYAML)
-	if err != nil {
-		return nil, fmt.Errorf("parse resources: %w", err)
+	cpVars := input.Vars
+	if cpVars == nil {
+		cpVars = input.Vars
 	}
-
-	cpVars.Settings = input.ModuleConfig
 
 	return &dhctlproto.PrepareResult{
 		Vars:                  cpVars,

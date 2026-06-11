@@ -17,30 +17,23 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"strings"
 	"testing"
 
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
-func testModuleConfigObject(settings map[string]any) map[string]any {
+func testModuleSettings() map[string]any {
 	return map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha1",
-		"kind":       "ModuleConfig",
-		"metadata": map[string]any{
-			"name": dvpval.ModuleName,
-		},
-		"spec": map[string]any{
-			"enabled":  true,
-			"version":  2,
-			"settings": settings,
-		},
+		"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
+		"storage":  map[string]any{"enabled": true, "parameters": map[string]any{}},
+		"nodes":    map[string]any{"enabled": false},
 	}
 }
 
-func testCredentialSecretYAML() string {
+func testCredentialSecretObject() map[string]any {
 	kubeconfig := `apiVersion: v1
 kind: Config
 clusters:
@@ -59,17 +52,18 @@ users:
   user:
     token: test-token
 `
-	return fmt.Sprintf(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-credentials
-  namespace: d8-cloud-provider-dvp
-type: cloud-provider.deckhouse.io/credentials
-stringData:
-  authScheme: kubeconfig
-  secret: %s
-`, base64.StdEncoding.EncodeToString([]byte(kubeconfig)))
+
+	return map[string]any{
+		"metadata": map[string]any{
+			"name":      cpapi.CredentialSecretName,
+			"namespace": dvpval.Namespace,
+		},
+		"type": cpapi.CredentialsSecretType,
+		"stringData": map[string]any{
+			"authScheme": string(cpapi.AuthSchemeKubeconfig),
+			"secret":     base64.StdEncoding.EncodeToString([]byte(kubeconfig)),
+		},
+	}
 }
 
 func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
@@ -77,19 +71,15 @@ func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 
 	err := validate(context.Background(), proto.PrepareInput{
 		Operation: proto.OperationBootstrap,
-		ModuleConfig: testModuleConfigObject(map[string]any{
-			"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
-			"storage":  map[string]any{"enabled": true, "parameters": map[string]any{}},
-			"nodes":    map[string]any{"enabled": false},
-		}),
-		ResourcesYAML: `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: master
-spec:
-  nodeType: CloudPermanent
-`,
+		Vars: &proto.CloudProviderVars{
+			Settings: testModuleSettings(),
+			NodeGroups: map[string]map[string]any{
+				"master": {
+					"metadata": map[string]any{"name": "master"},
+					"spec":     map[string]any{"nodeType": "CloudPermanent"},
+				},
+			},
+		},
 	})
 	if err == nil {
 		t.Fatal("validate() error = nil, want missing credential secret")
@@ -104,14 +94,18 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 
 	err := validate(context.Background(), proto.PrepareInput{
 		Operation: proto.OperationConverge,
-		ModuleConfig: testModuleConfigObject(map[string]any{
-			"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
-			"storage":  map[string]any{"enabled": false},
-			"nodes":    map[string]any{"enabled": false},
-		}),
-		ResourcesYAML: testCredentialSecretYAML(),
+		Vars: &proto.CloudProviderVars{
+			Settings: map[string]any{
+				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
+				"storage":  map[string]any{"enabled": false},
+				"nodes":    map[string]any{"enabled": false},
+			},
+			Secrets: map[string]map[string]any{
+				cpapi.CredentialSecretName: testCredentialSecretObject(),
+			},
+		},
 	})
-	if err == nil || !strings.Contains(err.Error(), "NodeGroup \"master\" is required") {
+	if err == nil || !strings.Contains(err.Error(), `NodeGroup "master" is required`) {
 		t.Fatalf("validate() error = %v, want master NodeGroup preflight error", err)
 	}
 }
@@ -119,19 +113,19 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 func TestPrepareKeepsProviderVars(t *testing.T) {
 	t.Parallel()
 
-	result, err := prepare(context.Background(), proto.PrepareInput{
-		ModuleConfig: testModuleConfigObject(map[string]any{
+	vars := &proto.CloudProviderVars{
+		Settings: map[string]any{
 			"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
-		}),
-		ResourcesYAML: `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  nodeType: CloudPermanent
-`,
-	})
+		},
+		NodeGroups: map[string]map[string]any{
+			"worker": {
+				"metadata": map[string]any{"name": "worker"},
+				"spec":     map[string]any{"nodeType": "CloudPermanent"},
+			},
+		},
+	}
+
+	result, err := prepare(context.Background(), proto.PrepareInput{Vars: vars})
 	if err != nil {
 		t.Fatalf("prepare() error = %v", err)
 	}

@@ -61,7 +61,6 @@ shell:
   - cd /src/validation-webhook/src
   - sed -i -e 's# ../../../pkg# /src/validation-webhook/pkg#g' go.mod
   - sed -i -e 's# ../../../../../go_lib/cloud-provider# /src/go_lib/cloud-provider#g' go.mod
-  - sed -i -e 's# ../../../../../go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
   - cd /src/go_lib/cloud-provider
   - sed -i -e 's# ../dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
 ---

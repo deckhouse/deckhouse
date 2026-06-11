@@ -50,39 +50,40 @@ func TestStateBuilderBuild(t *testing.T) {
 	t.Parallel()
 
 	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
-		ModuleConfig: testProtocolModuleConfigCR(map[string]any{
-			"provider": map[string]any{
-				"parameters": map[string]any{
-					"namespace": "d8-cloud-provider-dvp",
-				},
-			},
-		}),
 		ProviderClusterConfig: map[string]any{
 			"masterNodeGroup": map[string]any{"replicas": 3},
 		},
-	}, &proto.CloudProviderVars{
-		Secrets: map[string]map[string]any{
-			"d8-credentials": {
-				"metadata": map[string]any{"name": "d8-credentials"},
-				"type":     cpapi.CredentialsSecretType,
-				"stringData": map[string]any{
-					"authScheme": "kubeconfig",
-					"secret":     "token",
+		Vars: &proto.CloudProviderVars{
+			Settings: testProtocolModuleConfigCR(map[string]any{
+				"provider": map[string]any{
+					"parameters": map[string]any{
+						"namespace": "d8-cloud-provider-dvp",
+					},
+				},
+			}),
+			Secrets: map[string]map[string]any{
+				"d8-credentials": {
+					"metadata": map[string]any{"name": "d8-credentials"},
+					"type":     cpapi.CredentialsSecretType,
+					"stringData": map[string]any{
+						"authScheme": "kubeconfig",
+						"secret":     "token",
+					},
 				},
 			},
-		},
-		NodeGroups: map[string]map[string]any{
-			"master": {
-				"metadata": map[string]any{"name": "master"},
-				"spec": map[string]any{
-					"nodeType": "CloudPermanent",
+			NodeGroups: map[string]map[string]any{
+				"master": {
+					"metadata": map[string]any{"name": "master"},
+					"spec": map[string]any{
+						"nodeType": "CloudPermanent",
+					},
 				},
 			},
-		},
-		InstanceClasses: map[string]map[string]any{
-			"master-dvp": {
-				"metadata": map[string]any{"name": "master-dvp"},
-				"kind":     "DVPInstanceClass",
+			InstanceClasses: map[string]map[string]any{
+				"master-dvp": {
+					"metadata": map[string]any{"name": "master-dvp"},
+					"kind":     "DVPInstanceClass",
+				},
 			},
 		},
 	})
@@ -115,12 +116,14 @@ func TestStateBuilderBuildDhctlSettingsMap(t *testing.T) {
 
 	cfg := testStateBuilderConfig()
 	state, err := NewStateBuilder(cfg).Build(proto.PrepareInput{
-		ModuleConfig: map[string]any{
-			"provider": map[string]any{
-				"parameters": map[string]any{"namespace": cfg.NamespaceName},
+		Vars: &proto.CloudProviderVars{
+			Settings: map[string]any{
+				"provider": map[string]any{
+					"parameters": map[string]any{"namespace": cfg.NamespaceName},
+				},
 			},
 		},
-	}, nil)
+	})
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
@@ -143,31 +146,32 @@ func TestStateBuilderBuildWithMigrationRules(t *testing.T) {
 	}
 
 	state, err := NewStateBuilder(cfg).Build(proto.PrepareInput{
-		ModuleConfig: testProtocolModuleConfigCR(map[string]any{
-			"provider": map[string]any{
-				"parameters": map[string]any{"namespace": cfg.NamespaceName},
-			},
-		}),
 		ProviderClusterConfig: map[string]any{
 			"masterNodeGroup": map[string]any{"replicas": 3},
 		},
-	}, &proto.CloudProviderVars{
-		Secrets: map[string]map[string]any{
-			cpapi.CredentialSecretName: {
-				"metadata": map[string]any{"name": cpapi.CredentialSecretName, "namespace": cfg.NamespaceName},
-				"type":     cpapi.CredentialsSecretType,
+		Vars: &proto.CloudProviderVars{
+			Settings: testProtocolModuleConfigCR(map[string]any{
+				"provider": map[string]any{
+					"parameters": map[string]any{"namespace": cfg.NamespaceName},
+				},
+			}),
+			Secrets: map[string]map[string]any{
+				cpapi.CredentialSecretName: {
+					"metadata": map[string]any{"name": cpapi.CredentialSecretName, "namespace": cfg.NamespaceName},
+					"type":     cpapi.CredentialsSecretType,
+				},
 			},
-		},
-		NodeGroups: map[string]map[string]any{
-			"master": {
-				"metadata": map[string]any{"name": "master"},
-				"spec":     map[string]any{"nodeType": "CloudPermanent"},
+			NodeGroups: map[string]map[string]any{
+				"master": {
+					"metadata": map[string]any{"name": "master"},
+					"spec":     map[string]any{"nodeType": "CloudPermanent"},
+				},
 			},
-		},
-		InstanceClasses: map[string]map[string]any{
-			"master-dvp": {
-				"metadata": map[string]any{"name": "master-dvp"},
-				"kind":     cfg.InstanceClassKind,
+			InstanceClasses: map[string]map[string]any{
+				"master-dvp": {
+					"metadata": map[string]any{"name": "master-dvp"},
+					"kind":     cfg.InstanceClassKind,
+				},
 			},
 		},
 	})
@@ -182,7 +186,7 @@ func TestStateBuilderBuildWithMigrationRules(t *testing.T) {
 func TestStateBuilderBuildEmptyInput(t *testing.T) {
 	t.Parallel()
 
-	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{}, nil)
+	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{})
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
@@ -195,11 +199,13 @@ func TestStateBuilderBuildModuleConfigDecodeError(t *testing.T) {
 	t.Parallel()
 
 	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
-		ModuleConfig: map[string]any{
-			"metadata": map[string]any{"name": "cloud-provider-dvp"},
-			"spec":     "invalid",
+		Vars: &proto.CloudProviderVars{
+			Settings: map[string]any{
+				"metadata": map[string]any{"name": "cloud-provider-dvp"},
+				"spec":     "invalid",
+			},
 		},
-	}, nil)
+	})
 	if err == nil || !strings.Contains(err.Error(), "decode ModuleConfig") {
 		t.Fatalf("Build() error = %v", err)
 	}
@@ -208,9 +214,11 @@ func TestStateBuilderBuildModuleConfigDecodeError(t *testing.T) {
 func TestStateBuilderBuildCredentialSecretsDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{}, &proto.CloudProviderVars{
-		Secrets: map[string]map[string]any{
-			"broken": {"metadata": "invalid"},
+	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+		Vars: &proto.CloudProviderVars{
+			Secrets: map[string]map[string]any{
+				"broken": {"metadata": "invalid"},
+			},
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "decode secret") {
@@ -221,9 +229,11 @@ func TestStateBuilderBuildCredentialSecretsDecodeError(t *testing.T) {
 func TestStateBuilderBuildNodeGroupsDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{}, &proto.CloudProviderVars{
-		NodeGroups: map[string]map[string]any{
-			"broken": {"spec": "invalid"},
+	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+		Vars: &proto.CloudProviderVars{
+			NodeGroups: map[string]map[string]any{
+				"broken": {"spec": "invalid"},
+			},
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "decode node group") {
@@ -234,9 +244,11 @@ func TestStateBuilderBuildNodeGroupsDecodeError(t *testing.T) {
 func TestStateBuilderBuildInstanceClassesDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{}, &proto.CloudProviderVars{
-		InstanceClasses: map[string]map[string]any{
-			"broken": {"metadata": 123},
+	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
+		Vars: &proto.CloudProviderVars{
+			InstanceClasses: map[string]map[string]any{
+				"broken": {"metadata": 123},
+			},
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "decode instance class") {
@@ -248,8 +260,10 @@ func TestStateBuilderBuildModuleConfigMarshalError(t *testing.T) {
 	t.Parallel()
 
 	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.PrepareInput{
-		ModuleConfig: map[string]any{"broken": func() {}},
-	}, nil)
+		Vars: &proto.CloudProviderVars{
+			Settings: map[string]any{"broken": func() {}},
+		},
+	})
 	if err == nil || !strings.Contains(err.Error(), "marshal value") {
 		t.Fatalf("Build() error = %v", err)
 	}

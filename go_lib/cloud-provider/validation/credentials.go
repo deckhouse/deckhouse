@@ -113,7 +113,7 @@ func validateCredentialSecrets(secrets []cpapi.CredentialSecret, allowedAuthSche
 
 func validateAuthSchemeKeys(path string, data map[string]string, authScheme cpapi.AuthScheme, result *Result) {
 	switch authScheme {
-	case cpapi.AuthSchemeAccessKeyPair, cpapi.AuthSchemeUserPassword, cpapi.AuthSchemeClientSecret,  cpapi.AuthSchemeAppSecret:
+	case cpapi.AuthSchemeAccessKeyPair, cpapi.AuthSchemeUserPassword, cpapi.AuthSchemeClientSecret, cpapi.AuthSchemeAppSecret:
 		validateRequiredCredentialKey(path, data, "identity", authScheme, result)
 		validateRequiredCredentialKey(path, data, "secret", authScheme, result)
 	case cpapi.AuthSchemeAPIToken, cpapi.AuthSchemeServiceAccount:

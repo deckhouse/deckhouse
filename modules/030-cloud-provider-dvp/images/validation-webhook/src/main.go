@@ -60,9 +60,9 @@ func main() {
 		builder := cpvaladmission.NewStateBuilder(
 			server.Client(),
 			cpvaladmission.StateBuilderConfig{
-				ModuleName:                   dvpval.ModuleName,
-				NamespaceName:                dvpval.Namespace,
-				InstanceClassKind:            dvpval.InstanceClassKind,
+				ModuleName:        dvpval.ModuleName,
+				NamespaceName:     dvpval.Namespace,
+				InstanceClassKind: dvpval.InstanceClassKind,
 			},
 		)
 

@@ -44,52 +44,44 @@ func NewStateBuilder(config StateBuilderConfig) *StateBuilder {
 }
 
 // Build decodes dhctl input and applies provider context from the builder configuration.
-func (b *StateBuilder) Build(input proto.PrepareInput, vars *proto.CloudProviderVars) (*cpval.State, error) {
+func (b *StateBuilder) Build(input proto.PrepareInput) (*cpval.State, error) {
+	var err error
 	state := &cpval.State{
-		InstanceClassKind:            b.config.InstanceClassKind,
-		NamespaceName:                b.config.NamespaceName,
-		ModuleName:                   b.config.ModuleName,
-		LegacyProviderClusterConfig:  input.ProviderClusterConfig,
+		InstanceClassKind:           b.config.InstanceClassKind,
+		NamespaceName:               b.config.NamespaceName,
+		ModuleName:                  b.config.ModuleName,
+		LegacyProviderClusterConfig: input.ProviderClusterConfig,
 	}
 
-	moduleConfig, err := cpval.DecodeModuleConfigForModule(b.config.ModuleName, input.ModuleConfig)
-	if err != nil {
-		return nil, err
-	}
-	state.ModuleConfig = moduleConfig
-
-	if vars != nil {
-		state.CredentialSecrets, err = cpval.DecodeCredentialSecrets(vars.Secrets)
+	if input.Vars != nil {
+		state.ModuleConfig, err = cpval.DecodeModuleConfigForModule(b.config.ModuleName, input.Vars.Settings)
 		if err != nil {
 			return nil, err
 		}
 
-		state.NodeGroups, err = cpval.DecodeNodeGroups(vars.NodeGroups)
+		state.CredentialSecrets, err = cpval.DecodeCredentialSecrets(input.Vars.Secrets)
 		if err != nil {
 			return nil, err
 		}
 
-		state.InstanceClasses, err = cpval.DecodeInstanceClasses(vars.InstanceClasses)
+		state.NodeGroups, err = cpval.DecodeNodeGroups(input.Vars.NodeGroups)
+		if err != nil {
+			return nil, err
+		}
+
+		state.InstanceClasses, err = cpval.DecodeInstanceClasses(input.Vars.InstanceClasses)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	b.applyProviderContext(state)
+	if state.ModuleConfig != nil && state.ModuleConfig.Name == "" {
+		state.ModuleConfig.Name = b.config.ModuleName
+	}
 
 	if b.config.MigrationRules != nil {
 		state.MigrationStatus = cpval.MigrationStatusFromState(state, b.config.MigrationRules)
 	}
 
 	return state, nil
-}
-
-func (b *StateBuilder) applyProviderContext(state *cpval.State) {
-	state.ModuleName = b.config.ModuleName
-	state.NamespaceName = b.config.NamespaceName
-	state.InstanceClassKind = b.config.InstanceClassKind
-
-	if state.ModuleConfig != nil && state.ModuleConfig.Name == "" {
-		state.ModuleConfig.Name = b.config.ModuleName
-	}
 }
