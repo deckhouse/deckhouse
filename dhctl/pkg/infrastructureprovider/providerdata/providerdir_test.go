@@ -12,30 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vmresource
+package providerdata
 
 import (
-	"strings"
+	"testing"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
+	"github.com/stretchr/testify/require"
 )
 
-// Match reports whether rc matches rule.
-func Match(rc plan.ResourceChange, rule *Rule) bool {
-	if rule == nil {
-		return false
-	}
-	if rc.Type != rule.Type {
-		return false
-	}
-	if rule.FieldEquals == nil {
-		return true
-	}
-	value, _, err := unstructured.NestedString(rc.Change.After, strings.Split(rule.FieldEquals.Path, ".")...)
-	if err != nil {
-		return false
-	}
-	return value == rule.FieldEquals.Value
+func TestProviderDirLowercasesProvider(t *testing.T) {
+	require.Equal(t, "/tmp/dl/dvp", ProviderDir("/tmp/dl", "DVP"))
+	require.Equal(t, "/tmp/dl/yandex", ProviderDir("/tmp/dl", "yandex"))
+}
+
+func TestProviderDigestDir(t *testing.T) {
+	require.Equal(t, "/tmp/dl/dvp@sha256:abc", ProviderDigestDir("/tmp/dl", "DVP", "sha256:abc"))
+}
+
+func TestValidatorPath(t *testing.T) {
+	require.Equal(t, "/tmp/dl/dvp/validator", ValidatorPath("/tmp/dl", "Dvp"))
 }

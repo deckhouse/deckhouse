@@ -54,7 +54,7 @@ func (s *Service) ValidateClusterConfig(
 
 //nolint:musttag
 func (s *Service) ValidateProviderSpecificClusterConfig(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.ValidateProviderSpecificClusterConfigRequest,
 ) (*pb.ValidateProviderSpecificClusterConfigResponse, error) {
 	var errResponse string
@@ -63,6 +63,16 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 	err := json.Unmarshal([]byte(request.ClusterConfig), &clusterConfig)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "unmarshalling cluster Config: %s", err)
+	}
+
+	// The request carries only the provider section; the provider name comes
+	// from the cluster config argument.
+	if err := s.ensureProviderSchemas(ctx, clusterConfig.Cloud.Provider, request.Config); err != nil {
+		errResponse, err = errorToResponse(err)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "%s", err)
+		}
+		return &pb.ValidateProviderSpecificClusterConfigResponse{Err: errResponse}, nil
 	}
 
 	err = config.ValidateProviderSpecificClusterConfiguration(

@@ -432,11 +432,8 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 			metav1.PatchOptions{},
 		)
 		if k8errors.IsNotFound(err) {
-			// mc-flow cluster: the legacy d8-provider-cluster-configuration
-			// Secret is intentionally absent; cloud-provider settings live in
-			// the cloud-provider-<name> ModuleConfig instead. Discovery data
-			// for terraform-modules is recomputed from MC/NodeGroups/
-			// InstanceClasses on each run, so there is nothing to patch here.
+			// mc-flow cluster: the legacy Secret is intentionally absent and
+			// discovery data is recomputed on each run — nothing to patch.
 			log.WarnLn("Skipping cloud discovery data update: legacy Secret d8-provider-cluster-configuration not present (mc-flow cluster)")
 			return nil
 		}

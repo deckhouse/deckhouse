@@ -38,23 +38,15 @@ const CloudProviderCredentialsSecretType = corev1.SecretType(providerdata.CloudP
 
 var nodeGroupGVR = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 
-const (
-	instanceClassAPIGroup = "deckhouse.io"
-)
-
 // cloudProviderNamespace returns the canonical d8-cloud-provider-<name>
-// namespace that hosts the provider's ModuleConfig, credential Secret and
-// other module-owned resources. All Deckhouse cloud-provider modules follow
-// this naming, so the helper is the single source of truth.
+// namespace of the provider module.
 func cloudProviderNamespace(providerName string) string {
 	return "d8-" + providerdata.CloudProviderModuleName(providerName)
 }
 
-// CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and credential
-// Secrets from the cluster. Settings is intentionally left empty here — it is
-// later populated by metaConfig.applyCloudProviderModuleSettings from the
-// cloud-provider-<name> ModuleConfig loaded into metaConfig.ModuleConfigs,
-// keeping the cluster-side and bootstrap-from-file flows symmetric.
+// CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and
+// credential Secrets from the cluster. Settings stays empty here and is filled
+// later by applyCloudProviderModuleSettings from the provider ModuleConfig.
 func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (*providerdata.CloudProviderVars, error) {
 	ctx, span := telemetry.StartSpan(ctx, "CloudProviderVarsFromCluster")
 	defer span.End()
@@ -108,10 +100,8 @@ func fetchCloudPermanentNodeGroupsFromCluster(ctx context.Context, kubeCl *clien
 	return result, nil
 }
 
-// instanceClassAPIVersions lists the API versions to probe for
-// <provider>instanceclasses. Legacy providers (yandex, vcd, aws, ...) register
-// under v1; newer external providers (DVP) ship as v1alpha1. We try v1 first
-// to keep the happy path one round-trip for the common case.
+// instanceClassAPIVersions: legacy providers register instance classes under
+// v1, newer external ones (DVP) under v1alpha1; v1 is probed first.
 var instanceClassAPIVersions = []string{"v1", "v1alpha1"}
 
 func fetchInstanceClassesFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (map[string]map[string]interface{}, error) {
@@ -121,7 +111,7 @@ func fetchInstanceClassesFromCluster(ctx context.Context, kubeCl *client.Kuberne
 
 	resource := strings.ToLower(providerName) + "instanceclasses"
 	for _, version := range instanceClassAPIVersions {
-		gvr := schema.GroupVersionResource{Group: instanceClassAPIGroup, Version: version, Resource: resource}
+		gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: version, Resource: resource}
 		list, err := kubeCl.Dynamic().Resource(gvr).List(ctx, metav1.ListOptions{})
 		if err == nil {
 			result := make(map[string]map[string]interface{}, len(list.Items))
@@ -139,11 +129,9 @@ func fetchInstanceClassesFromCluster(ctx context.Context, kubeCl *client.Kuberne
 	return nil, nil
 }
 
-// fetchCredentialSecretsFromCluster lists provider credential Secrets from
-// the provider's canonical d8-cloud-provider-<name> namespace. Both the
-// namespace scoping and the apiserver-side FieldSelector on Secret.type
-// (an indexed field) keep the query narrow, so least-privilege RBAC granting
-// only namespace-scoped list over this Secret type still works.
+// fetchCredentialSecretsFromCluster lists credential Secrets from the
+// provider's namespace, narrowed by a FieldSelector on Secret.type so
+// least-privilege namespace-scoped RBAC suffices.
 func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (map[string]map[string]interface{}, error) {
 	if providerName == "" {
 		return nil, nil

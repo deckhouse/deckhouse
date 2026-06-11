@@ -693,7 +693,7 @@ podSubnetNodeCIDRPrefix: "24"
 			clusterConfig: clusterGenericConfig,
 			clusterType:   CloudClusterType,
 			extraGVRs: map[schema.GroupVersionResource]string{
-				{Group: instanceClassAPIGroup, Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+				{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
 			},
 		}
 
