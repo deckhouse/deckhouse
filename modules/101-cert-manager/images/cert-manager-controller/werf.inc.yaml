@@ -21,6 +21,9 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
   to: /module_crds    
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -41,8 +44,14 @@ final: false
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
   to: /module_crds
+  stageDependencies:
+    install:
+    - '**/*'
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/docs
   to: /docs  
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src/deploy/crds
