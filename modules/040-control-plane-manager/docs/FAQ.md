@@ -1408,6 +1408,7 @@ To enable field protection, do the following:
    The marker can be applied to the fields of the following types: `string`, `integer`, `number`, `boolean`, `object` and `array` (applying the marker to an `object` or `array` makes the entire subtree sensitive). Fields marked with `x-kubernetes-int-or-string: true` are supported as well.
 
    The marker can't be set on the schema root (the `openAPIV3Schema` node) and inside `anyOf`, `oneOf`, `allOf`, or `not` branches.
+   It is also not allowed inside `items` of arrays with `x-kubernetes-list-type: map`, because masked value restoration is index-based while list-map items are keyed, not positional.
 
 1. For users and ServiceAccounts that require access to full data, grant RBAC permissions for the `<resource>/sensitive` subresource.
 

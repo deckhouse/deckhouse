@@ -227,6 +227,8 @@ The `x-kubernetes-sensitive-data` marker is validated by `kube-apiserver` when a
   Applying the marker to `object` or `array` makes the entire subtree sensitive.
 - Fields defined with `x-kubernetes-int-or-string: true` are supported.
 - Marker is not allowed inside `anyOf`, `oneOf`, `allOf`, or `not` branches (this is enforced by the structural schema validator).
+- Marker is not allowed inside `items` of arrays with `x-kubernetes-list-type: map`,
+  because masked value restoration is index-based while list-map items are keyed, not positional.
 
 If at least one field in the resource schema is marked with `x-kubernetes-sensitive-data: true`,
 the following protection mechanisms are applied to all custom resources of this type:
