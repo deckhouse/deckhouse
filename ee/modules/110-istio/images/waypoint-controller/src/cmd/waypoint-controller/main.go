@@ -134,26 +134,37 @@ func main() {
 
 	vpaEnabled, err := vpaEnabledFromEnv()
 	if err != nil {
-		klog.Fatal(err, "unable to parse VPA_ENABLED")
+		klog.Error(err, "Failed to parse VPA_ENABLED env variable")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	}
+
+	if err := waypointcontroller.WaitForGatewayAPICRDCompliance(ctx); err != nil {
+		klog.Error(err, "Failed to ensure Gateway API CRD compliance")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	mgr, err := newManager(healthProbeBindAddress, leaderElect, vpaEnabled)
 	if err != nil {
-		klog.Fatal(err, "unable to create manager")
+		klog.Error(err, "Failed to create manager")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	if err := (&waypointcontroller.WaypointController{VPAEnabled: vpaEnabled}).SetupWithManager(mgr); err != nil {
-		klog.Fatal(err, "unable to set up waypoint controller")
+		klog.Error(err, "Failed to set up waypoint controller")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		klog.Fatal(err, "unable to set up health check")
+		klog.Error(err, "Failed to set up healthz endpoint")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		klog.Fatal(err, "unable to set up ready check")
+		klog.Error(err, "Failed to set up readyz endpoint")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	if err := mgr.Start(ctx); err != nil {
-		klog.Fatal(err, "unable to continue running manager")
+		klog.Error(err, "Failed to run manager")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 }

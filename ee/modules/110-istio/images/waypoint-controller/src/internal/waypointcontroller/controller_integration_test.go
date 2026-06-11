@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -134,19 +135,30 @@ const managerStopTimeout = 30 * time.Second
 func setupEnv(t *testing.T) *testEnv {
 	t.Helper()
 
-	// modules/110-istio/crds holds the WaypointInstance CRD; testdata/crds
-	// holds permissive Gateway and VPA stand-ins. Locate them relative to this
-	// file so `go test` works from any cwd.
+	// modules/110-istio/crds holds the WaypointInstance CRD; the bundled
+	// Gateway API CRDs (crds_gateway_api/) provide the full upstream spec
+	// for Gateway, HTTPRoute, etc.; testdata/crds holds the VPA stand-in.
+	// Locate paths relative to this file so `go test` works from any cwd.
 	_, thisFile, _, _ := runtime.Caller(0)
 	thisDir := filepath.Dir(thisFile)
 	repoCRDDir := filepath.Join(thisDir, "..", "..", "..", "..", "..", "crds")
 	testCRDDir := filepath.Join(thisDir, "testdata", "crds")
+
+	bundledCRDs, err := loadBundledGatewayAPICRDs()
+	if err != nil {
+		t.Fatalf("load bundled Gateway API CRDs: %v", err)
+	}
+	crdObjs := make([]*apiextensionsv1.CustomResourceDefinition, 0, len(bundledCRDs))
+	for _, b := range bundledCRDs {
+		crdObjs = append(crdObjs, b.crd)
+	}
 
 	env := &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			repoCRDDir,
 			testCRDDir,
 		},
+		CRDs:                crdObjs,
 		ErrorIfCRDPathMissing: true,
 	}
 
