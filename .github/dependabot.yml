@@ -268,6 +268,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/cloud-provider"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/configtools/conversion"
   labels:
   - "type/dependencies"
@@ -521,6 +530,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/030-cloud-provider-dvp/images/dvp-csi-driver/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/030-cloud-provider-dvp/images/validation-webhook/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

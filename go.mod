@@ -364,6 +364,8 @@ replace github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ./go_li
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
 
+replace github.com/deckhouse/deckhouse/go_lib/cloud-provider => ./go_lib/cloud-provider
+
 replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
 
 // replace with master branch to work with single dash
