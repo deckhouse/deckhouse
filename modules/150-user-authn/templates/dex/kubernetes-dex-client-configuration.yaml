@@ -1,0 +1,40 @@
+{{- if or (and (.Values.userAuthn.internal.publishAPI.enabled) (.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-dex-client-configuration
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+data:
+  config.yaml: |-
+    {{- include "kubernetes_dex_client_configuration_conf" . | b64enc | nindent 4 }}
+{{- end }}
+
+
+{{- define "kubernetes_dex_client_configuration_conf" }}
+  {{- with .Values.userAuthn.internal.discoveredDexCA }}
+idpCA: | {{- . | nindent 2 }}
+  {{- end }}
+clusters:
+  {{- if and (.Values.userAuthn.internal.publishAPI.enabled) (.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry) }}
+    {{- $publishAPIDomain := include "helm_lib_module_public_domain" (list . "api") }}
+- id: {{ $publishAPIDomain | quote }}
+  name: {{ $publishAPIDomain | quote }}
+  masterURI: {{ printf "https://%s" $publishAPIDomain | quote }}
+  masterCA: {{ .Values.userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA | quote }}
+  clientID: "kubeconfig-publish-api"
+  clientSecret: {{ .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
+  issuer: "https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/"
+  {{- end }}
+  {{- range $cluster := .Values.userAuthn.kubeconfigGenerator }}
+    {{- $slug := $cluster.id | replace "@" "-at-" | replace ":" "-" }}
+- id: {{ $cluster.id | quote }}
+  name: {{ $cluster.id | quote }}
+  masterURI: {{ $cluster.masterURI | quote }}
+  masterCA: {{ ($cluster.masterCA | default $.Values.global.discovery.kubernetesCA) | quote }}
+  clientID: {{ printf "kubeconfig-%s" $slug | quote }}
+  clientSecret: {{ $.Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
+  issuer: "https://{{ include "helm_lib_module_public_domain" (list $ "dex") }}/"
+  {{- end }}
+{{- end }}

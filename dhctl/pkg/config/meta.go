@@ -22,6 +22,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -44,21 +45,27 @@ import (
 )
 
 type MetaConfig struct {
-	ClusterType         string                 `json:"-"`
-	Layout              string                 `json:"-"`
-	ProviderName        string                 `json:"-"`
-	ClusterPrefix       string                 `json:"-"`
-	ClusterDNSAddress   string                 `json:"-"`
-	DeckhouseConfig     DeckhouseClusterConfig `json:"-"`
-	MasterNodeGroupSpec MasterNodeGroupSpec    `json:"-"`
-	TerraNodeGroupSpecs []TerraNodeGroupSpec   `json:"-"`
+	ClusterType          string                 `json:"-"`
+	Layout               string                 `json:"-"`
+	ProviderName         string                 `json:"-"`
+	OriginalProviderName string                 `json:"-"`
+	ClusterPrefix        string                 `json:"-"`
+	ClusterDNSAddress    string                 `json:"-"`
+	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
+	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
+	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
 
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
 	CloudProviderVars *CloudProviderVars `json:"-"`
-	Operation         string             `json:"-"`
+	// Operation propagates the dhctl entry point (bootstrap/converge/destroy/
+	// check) to the provider preparator. It is intentionally serialised
+	// (json:"operation") so a JSON round-trip through dhctl-server RPC or a
+	// state-cache fallback preserves it. MarshalConfig clears it before
+	// emitting tfvars, since the terraform layer does not consume it.
+	Operation string `json:"operation,omitempty"`
 
 	ClusterDomain string `json:"-"`
 
@@ -245,7 +252,16 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
 // and TerraNodeGroupSpecs from m.ProviderClusterConfig (legacy PCC flow) and
 // falls back to CloudProviderVars.NodeGroups when PCC is empty (mc-flow).
+//
+// For providers in ProviderRequiresClusterConfig (yandex, vcd, gcp, aws,
+// azure, openstack, vsphere, zvirt) the PCC is the single source of truth
+// for layout / master / node groups — a missing field means the Secret was
+// hand-edited or otherwise corrupted, so we fail fast rather than silently
+// run converge with zeroed-out typed fields.
 func (m *MetaConfig) extractProviderClusterFields() error {
+	pccRequired := ProviderRequiresClusterConfig(m.ProviderName)
+	pccPresent := len(m.ProviderClusterConfig) > 0
+
 	if raw, ok := m.ProviderClusterConfig["layout"]; ok && len(raw) > 0 {
 		var layout string
 		if err := json.Unmarshal(raw, &layout); err != nil {
@@ -254,11 +270,15 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 		if layout != "" {
 			m.Layout = strcase.ToKebab(layout)
 		}
+	} else if pccRequired && pccPresent {
+		return fmt.Errorf("provider cluster configuration for %q is missing required field %q", m.ProviderName, "layout")
 	}
 	if raw, ok := m.ProviderClusterConfig["masterNodeGroup"]; ok && len(raw) > 0 {
 		if err := json.Unmarshal(raw, &m.MasterNodeGroupSpec); err != nil {
 			return fmt.Errorf("unmarshal master node group from provider cluster configuration: %w", err)
 		}
+	} else if pccRequired && pccPresent {
+		return fmt.Errorf("provider cluster configuration for %q is missing required field %q", m.ProviderName, "masterNodeGroup")
 	}
 	if raw, ok := m.ProviderClusterConfig["nodeGroups"]; ok && len(raw) > 0 {
 		m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
@@ -266,6 +286,9 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 			return fmt.Errorf("unmarshal node groups from provider cluster configuration: %w", err)
 		}
 	}
+	// "nodeGroups" is intentionally not enforced as required even for
+	// whitelisted providers: an empty cluster (master-only) is a legitimate
+	// configuration with no worker node groups defined.
 
 	// mc-flow: PCC is absent, so MasterNodeGroupSpec and TerraNodeGroupSpecs
 	// stay empty after the PCC reads above. Derive them from the cluster's
@@ -278,21 +301,35 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 	return nil
 }
 
+// masterNodeGroupName is the canonical NodeGroup name for control-plane
+// nodes in every Deckhouse install. Renaming it is not supported, so it is
+// safe to look the master NG up by name when deriving replica counts from
+// mc-flow CloudProviderVars.
+const masterNodeGroupName = "master"
+
 func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
 	if m.CloudProviderVars == nil {
 		return
 	}
-	if m.MasterNodeGroupSpec.Replicas == 0 {
-		if r := nodeGroupMinPerZone(m.CloudProviderVars.NodeGroups, "master"); r > 0 {
+	if _, hasMaster := m.CloudProviderVars.NodeGroups[masterNodeGroupName]; hasMaster && m.MasterNodeGroupSpec.Replicas == 0 {
+		if r := nodeGroupReplicas(m.CloudProviderVars.NodeGroups, masterNodeGroupName); r > 0 {
 			m.MasterNodeGroupSpec.Replicas = r
 		}
 	}
 	if len(m.TerraNodeGroupSpecs) == 0 && len(m.CloudProviderVars.NodeGroups) > 0 {
-		for name, ng := range m.CloudProviderVars.NodeGroups {
-			if name == "master" {
+		// Iterate over sorted names so the order of TerraNodeGroupSpecs
+		// is reproducible. Map iteration is randomised by the Go runtime;
+		// downstream state-hash comparisons see spurious drift otherwise.
+		//
+		// All non-master CloudPermanent NodeGroups (already filtered by
+		// IsCloudPermanentNodeGroup before reaching here) are emitted as
+		// TerraNodeGroupSpecs so converge keeps managing them.
+		for _, name := range sortedKeys(m.CloudProviderVars.NodeGroups) {
+			if name == masterNodeGroupName {
 				continue
 			}
-			r := nodeGroupMinPerZone(m.CloudProviderVars.NodeGroups, name)
+			ng := m.CloudProviderVars.NodeGroups[name]
+			r := nodeGroupReplicas(m.CloudProviderVars.NodeGroups, name)
 			nodeTemplate, _ := nestedMap(ng, "spec", "nodeTemplate")
 			m.TerraNodeGroupSpecs = append(m.TerraNodeGroupSpecs, TerraNodeGroupSpec{
 				Name:         name,
@@ -303,27 +340,52 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
 	}
 }
 
-func nodeGroupMinPerZone(ngs map[string]map[string]interface{}, name string) int {
+// nodeGroupReplicas derives the replica count for a CloudPermanent NodeGroup
+// from spec.cloudInstances.minPerZone. CloudPermanent NGs always set this
+// field; spec.staticInstances.count is kept as a defensive fallback in case
+// the upstream IsCloudPermanentNodeGroup filter is ever relaxed. Returning
+// zero is interpreted by MasterNodeGroupController as "scale to zero", so
+// the caller must explicitly guard the master NG against that outcome.
+func nodeGroupReplicas(ngs map[string]map[string]interface{}, name string) int {
 	ng, ok := ngs[name]
 	if !ok {
 		return 0
 	}
-	ci, ok := nestedMap(ng, "spec", "cloudInstances")
-	if !ok {
-		return 0
+	if ci, ok := nestedMap(ng, "spec", "cloudInstances"); ok {
+		if r := toPositiveInt(ci["minPerZone"]); r > 0 {
+			return r
+		}
 	}
-	switch v := ci["minPerZone"].(type) {
+	if si, ok := nestedMap(ng, "spec", "staticInstances"); ok {
+		if r := toPositiveInt(si["count"]); r > 0 {
+			return r
+		}
+	}
+	return 0
+}
+
+func sortedKeys(m map[string]map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func toPositiveInt(v interface{}) int {
+	switch n := v.(type) {
 	case float64:
-		if v > 0 {
-			return int(v)
+		if n > 0 {
+			return int(n)
 		}
 	case int64:
-		if v > 0 {
-			return int(v)
+		if n > 0 {
+			return int(n)
 		}
 	case int:
-		if v > 0 {
-			return v
+		if n > 0 {
+			return n
 		}
 	}
 	return 0
@@ -447,6 +509,7 @@ func (m *MetaConfig) prepareProviderName() error {
 		return fmt.Errorf("unmarshal cloud section from cluster configuration: provider is empty")
 	}
 	m.ProviderName = strings.ToLower(cloud.Provider)
+	m.OriginalProviderName = cloud.Provider
 	return nil
 }
 
@@ -608,6 +671,9 @@ func (m *MetaConfig) MarshalConfig() []byte {
 
 	newM := m.DeepCopy()
 	newM.StaticClusterConfig = nil
+	// Operation is not part of the terraform input contract — strip it
+	// before the tfvars JSON reaches OpenTofu/Terraform.
+	newM.Operation = ""
 
 	wrap := cfg{MetaConfig: newM}
 	if cv := m.CloudProviderVars; cv != nil {
@@ -1043,7 +1109,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 func (m *MetaConfig) LoadImagesDigests() error {
 	imagesDigests, err := digests.GetAllDigests()
 	if err != nil {
-		return fmt.Errorf("Cannot get images digests: %w", err)
+		return fmt.Errorf("Cannot get image digests: %w", err)
 	}
 
 	m.Images = imagesDigests
@@ -1111,7 +1177,7 @@ func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
 func getDNSAddress(serviceCIDR string) string {
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
-		log.DebugLn("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		log.DebugLn("serviceSubnetCIDR is not a valid CIDR (should be validated with the openapi schema)")
 		return ""
 	}
 

@@ -69,7 +69,7 @@ func loadOrGetStore(logger log.Logger, infraVersionsFile string) (settingsStore,
 
 	fileToSettingsStore[infraVersionsFile] = store
 
-	logger.LogDebugF("Providers settings store for terraform versions file %s loaded from file and add to cache\n", infraVersionsFile)
+	logger.LogDebugF("Providers settings store for terraform versions file %s loaded from file and added to cache\n", infraVersionsFile)
 
 	return store, nil
 }
@@ -181,7 +181,7 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 
 	for name, rawSettings := range infrastructureProviders {
 		if _, ok := noneProviderKeys[name]; ok {
-			logger.LogDebugF("Found not provider name key %s\n", name)
+			logger.LogDebugF("Found non-provider-name key %s\n", name)
 			continue
 		}
 

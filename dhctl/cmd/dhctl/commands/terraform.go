@@ -183,7 +183,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 		if provider.NeedToUseTofu() && needMigrationToTofu {
 			// todo(log): why do not use logger?
-			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
+			fmt.Printf("\nNeed to migrate to tofu: %v\n", needMigrationToTofu)
 		}
 
 		return provider.Cleanup()

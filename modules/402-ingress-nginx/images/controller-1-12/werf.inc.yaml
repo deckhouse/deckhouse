@@ -35,6 +35,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 from: {{ index $.Images "builder/src" }}
 final: false
+fromCacheVersion: "2026-06-03"
 mount:
 - from: build_dir
   to: /extra_apps

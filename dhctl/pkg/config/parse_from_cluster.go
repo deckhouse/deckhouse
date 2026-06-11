@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -52,18 +53,22 @@ func newFromClusterMetaConfigFiller(kubeCl *client.KubernetesClient, schemaStore
 //   - mc-flow:     ModuleConfig cloud-provider-<name> exists.
 //   - legacy:      Secret d8-provider-cluster-configuration exists.
 //
-// We prefer mc-flow when both are present (mid-migration cluster): the legacy
-// Secret is treated as a stale artifact. If neither marker exists, the cluster
-// has no provider configuration and we return a descriptive error.
+// Both are loaded when present — a cluster mid-migration carries both, and
+// the ModuleConfig in that case is typically a stub without settings. The
+// downstream split is done by extractProviderClusterFields /
+// applyCloudProviderModuleSettings: PCC populates the typed fields first
+// (Layout, MasterNodeGroupSpec, TerraNodeGroupSpecs), and the ModuleConfig
+// only fills the gaps left over. That preserves legacy correctness during
+// migration; the post-migration state (PCC absent, MC carries real
+// settings) falls out automatically.
+//
+// If neither marker is present we return a descriptive error.
 func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
 	if err := metaConfig.prepareProviderName(); err != nil {
 		return nil, err
 	}
 
-	// Load both ModuleConfig and PCC: during a mc-flow migration both can
-	// coexist. extractProviderClusterFields prefers PCC for typed fields and
-	// falls back to the ModuleConfig when PCC is gone (post-migration state).
-	mc, err := loadCloudProviderModuleConfig(ctx, f.kubeCl, metaConfig.ProviderName)
+	mc, err := loadCloudProviderModuleConfig(ctx, f.kubeCl, metaConfig.ProviderName, f.schemaStore)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +96,7 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 	return nil, nil
 }
 
-func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (*ModuleConfig, error) {
+func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	name := providerdata.CloudProviderModuleName(providerName)
 	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
@@ -100,14 +105,34 @@ func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.Kubernete
 	if err != nil {
 		return nil, fmt.Errorf("get ModuleConfig %q: %w", name, err)
 	}
-	return moduleConfigFromUnstructured(obj)
+	return moduleConfigFromUnstructured(obj, schemaStore)
 }
 
-func moduleConfigFromUnstructured(obj *unstructured.Unstructured) (*ModuleConfig, error) {
+// moduleConfigFromUnstructured deserialises a ModuleConfig fetched from the
+// cluster and validates it against its registered schema. Validation matches
+// the legacy PCC path (parseLegacyProviderClusterConfig also calls
+// schemaStore.Validate) so a kubectl-patched invalid ModuleConfig fails fast
+// here instead of surfacing as a confusing downstream error from the
+// external preparator. When no schema is registered for the module (e.g.
+// the module-config schemas weren't loaded into this SchemaStore) we accept
+// the document — Validate-without-schema is what HasSchemaForModuleConfig
+// guards us from in higher-level paths.
+func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	raw, err := json.Marshal(obj.Object)
 	if err != nil {
 		return nil, fmt.Errorf("marshal ModuleConfig: %w", err)
 	}
+
+	if schemaStore != nil {
+		yamlDoc, err := yaml.JSONToYAML(raw)
+		if err != nil {
+			return nil, fmt.Errorf("convert ModuleConfig to YAML: %w", err)
+		}
+		if _, err := schemaStore.Validate(&yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
+			return nil, fmt.Errorf("validate ModuleConfig %q: %w", obj.GetName(), err)
+		}
+	}
+
 	mc := &ModuleConfig{}
 	if err := json.Unmarshal(raw, mc); err != nil {
 		return nil, fmt.Errorf("unmarshal ModuleConfig: %w", err)

@@ -668,6 +668,13 @@ func testYAMLToUnstructured(t *testing.T, r string) *unstructured.Unstructured {
 func testCreateFakeKubeClient() *client.KubernetesClient {
 	kinds := map[schema.GroupVersionResource]string{
 		v1.NodeUserGVR: v1.NodeUserList,
+		// Cloud-cluster parseConfigFromCluster lists NodeGroups /
+		// InstanceClasses / ModuleConfigs via the dynamic client
+		// (CloudProviderVarsFromCluster). The fake dynamic client panics
+		// on LIST for any GVR whose list kind is not registered.
+		{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}:            "NodeGroupList",
+		{Group: "deckhouse.io", Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "moduleconfigs"}:   "ModuleConfigList",
 	}
 
 	apisToAdd := []apis.ListKindToGVR{
@@ -766,6 +773,29 @@ func testCreateProviderClusterConfigSecret(t *testing.T, kubeCl *client.Kubernet
 		"cloud-provider-cluster-configuration.yaml": []byte(configYAML),
 		"cloud-provider-discovery-data.json":        []byte(`{"a": "b"}`),
 	})
+}
+
+// testCreateDeckhouseRegistrySecret seeds the d8-system/deckhouse-registry
+// Secret that registrydata.GetRegistryData looks up unconditionally for
+// Cloud clusters. Without it parseConfigFromCluster retry-loops for
+// 45 × 5 s and trips the 600 s go-test timeout.
+func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesClient) {
+	t.Helper()
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse-registry",
+			Namespace: "d8-system",
+		},
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`),
+			"imagesRegistry":    []byte("registry.example.com/deckhouse"),
+			"scheme":            []byte("HTTPS"),
+		},
+	}
+
+	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
 }
 
 func testCreateClusterConfigSecret(t *testing.T, kubeCl *client.KubernetesClient, configYAML string) {

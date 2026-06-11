@@ -114,7 +114,7 @@ func (f *Context) getCloudProvider(ctx context.Context, metaConfig *config.MetaC
 	getter := f.CloudProviderGetter()
 	if getter == nil {
 		return nil, fmt.Errorf(
-			"Failed to get cloud provider for %s/%s/%s. Cloud providerGetter should set",
+			"Failed to get cloud provider for %s/%s/%s. Cloud provider getter must be set",
 			metaConfig.ClusterPrefix,
 			uuid,
 			metaConfig.ProviderName,

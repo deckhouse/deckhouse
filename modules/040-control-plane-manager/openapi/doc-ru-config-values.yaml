@@ -156,7 +156,7 @@ properties:
                           В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике сделает невалидными ранее сгенерированные файлы конфигурации kubectl.
           loadBalancer:
             description: 'Настройки для публикации API через service с типом LoadBalancer.'
-            properties: 
+            properties:
               enabled:
                 description: 'Если указать `true`, будет создан сервис `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.'
               annotations:
@@ -205,9 +205,9 @@ properties:
 
       Когда включён модуль [user-authz](/modules/user-authz/) и этот параметр равен `false`, символическая ссылка удаляется, в подах `control-plane-manager` выставляется переменная окружения `NODE_ADMIN_KUBECONFIG` соответствующим образом. Для доступа к API с узла используйте `d8 k` с `--kubeconfig=/etc/kubernetes/admin.conf` (или другие учётные данные).
 
-      Если модуль `user-authz` выключен, `control-plane-manager` этот параметр не учитывает и сохраняет поведение по умолчанию (симлинк создаётся).
+      Если модуль `user-authz` выключен, `control-plane-manager` этот параметр не учитывает и сохраняет поведение по умолчанию (символическая ссылка создаётся).
 
-      Переключение обратно на `true` восстанавливает симлинк при следующем цикле согласования.
+      Переключение обратно на `true` восстанавливает символическую ссылку при следующем цикле согласования.
   etcd:
     description: |
       Параметры etcd.
@@ -249,3 +249,16 @@ properties:
 
       Описание отдельных feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
       Список поддерживаемых в DKP feature gates доступен на [странице описания модуля](./#feature-gates).
+  resourcesRequests:
+    description: |
+      Количество ресурсов CPU и памяти, выделяемых компонентам control plane на каждом master-узле.
+
+      Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например Google Kubernetes Engine или Azure Kubernetes Service.
+      Подробнее об единицах измерения ресурсов — в [документации Kubernetes](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
+    properties:
+      cpu:
+        description: |
+          Суммарные запросы CPU для компонентов control plane на каждом master-узле.
+      memory:
+        description: |
+          Суммарные запросы памяти для компонентов control plane на каждом master-узле.

@@ -103,11 +103,11 @@ func versionConstraintAction(apiVersion string, logger log.Logger, action func(l
 	}
 
 	if versionConstraint.Check(ver) {
-		logger.LogDebugF("Use legacy VCD version %s (%s). Use legacy mode as true\n", ver, versionConstraintStr)
+		logger.LogDebugF("Using legacy VCD version %s (%s). Using legacy mode (true)\n", ver, versionConstraintStr)
 		return action(true)
 	}
 
-	logger.LogDebugF("Use latest VCD version %s (%s)\n", ver, versionConstraintStr)
+	logger.LogDebugF("Using latest VCD version %s (%s)\n", ver, versionConstraintStr)
 	return action(false)
 }
 

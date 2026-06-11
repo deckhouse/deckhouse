@@ -111,7 +111,7 @@ func RegistryConfigFromDockerConfig(dc *dockerConfig, scheme, registry string) (
 
 	_, ok := dc.Auths[baseRegistry]
 	if !ok {
-		return nil, fmt.Errorf("docker config doesn't contains %s registry credentials", registry)
+		return nil, fmt.Errorf("docker config doesn't contain %s registry credentials", registry)
 	}
 	rc := &RegistryConfig{
 		scheme:   scheme,
@@ -266,7 +266,16 @@ func saveHash(digest, hash, cacheDir string) error {
 	return nil
 }
 
-func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, digest, dstPath, cacheDir string, showProgress bool) (v1.Image, error) {
+// pullImage downloads an image and writes both the tarball and its checksum
+// under imgName. tryToRestoreLocalImage reads back under the same key, so
+// the cache hits on the next bootstrap/converge for the same imageRef.
+//
+// Caveat: imgName is typically a tag identifier (e.g. "stable" or "v1.2.3"),
+// not a content digest. Rolling tags can therefore retain a stale tarball if
+// remote content changes — that is acceptable here because the checksum
+// stored alongside is also recomputed on every pull. Callers that need
+// strict content-addressed caching must pass the digest as imgName.
+func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, imgName, dstPath, cacheDir string, showProgress bool) (v1.Image, error) {
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
 	}
@@ -280,13 +289,13 @@ func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, di
 	}
 	cached := cache.Image(img, layersCache)
 
-	checksum, err := saveImageAsTarGz(ctx, ref.String(), filepath.Join(dstPath, digest), cached, showProgress)
+	checksum, err := saveImageAsTarGz(ctx, ref.String(), filepath.Join(dstPath, imgName), cached, showProgress)
 	if err != nil {
 		return cached, fmt.Errorf("saving tar.gz: %w", err)
 	}
 
 	log.DebugF("checksum: %s\n", checksum)
-	if err = saveHash(digest, checksum, cacheDir); err != nil {
+	if err = saveHash(imgName, checksum, cacheDir); err != nil {
 		return cached, fmt.Errorf("saving checksum to file: %w", err)
 	}
 
@@ -411,7 +420,10 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	log.DebugF("hash: %s\n", desc.Digest.String())
 	span.SetAttributes(otattribute.String("image.digest", desc.Digest.String()))
 
-	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), destDir, cacheDir, showProgress)
+	// Pass imgName (same key tryToRestoreLocalImage reads under) so that
+	// the next run finds the tarball and recomputed checksum without going
+	// back to the registry.
+	img, err = pullImage(ctx, ref, opts, imgName, destDir, cacheDir, showProgress)
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", imageRef, err)
 	}

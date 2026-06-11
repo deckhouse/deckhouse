@@ -23,7 +23,6 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
@@ -90,7 +89,18 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger, opera
 		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
 			return external.NewBinaryPreparator(binaryPath)
 		}
-		return &defaultCloudOnlyPrefixValidatorPreparator{}
+		// External providers (DVP and any future plugin) ship a validator
+		// binary inside their OCI bundle. Falling back to a prefix-only
+		// validator here would silently skip every provider-specific check
+		// — registry credentials, kubeconfig, layout, NodeGroup sizing —
+		// and let a broken configuration reach terraform apply. Refuse to
+		// proceed with a precise diagnostic instead.
+		searched := ""
+		if downloadRootDir != "" {
+			searched = filepath.Join(downloadRootDir, provider, externalPreparatorBinaryName)
+		}
+		logger.LogErrorF("external validator for provider %q not found at %q\n", provider, searched)
+		return &missingExternalValidatorPreparator{provider: provider, searchedPath: searched}
 	}
 }
 
@@ -110,15 +120,27 @@ func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	return path
 }
 
-type defaultCloudOnlyPrefixValidatorPreparator struct{}
-
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(_ context.Context, input config.ProviderInput) error {
-	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
-		return fmt.Errorf("%v for provider %s", err, input.ProviderName)
-	}
-	return nil
+// missingExternalValidatorPreparator is the preparator returned when an
+// external provider declares itself but its validator binary is absent from
+// the unpacked OCI bundle. Both Validate and Prepare hard-fail so the caller
+// surfaces a clear configuration error rather than a downstream
+// "terraform plan diverged" or "external API rejected the request" mystery.
+type missingExternalValidatorPreparator struct {
+	provider     string
+	searchedPath string
 }
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(_ context.Context, _ config.ProviderInput) (providerdata.PrepareResult, error) {
-	return providerdata.PrepareResult{}, nil
+func (p *missingExternalValidatorPreparator) err() error {
+	if p.searchedPath == "" {
+		return fmt.Errorf("external validator for provider %q not found: provider plugins directory was not configured", p.provider)
+	}
+	return fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", p.provider, p.searchedPath)
+}
+
+func (p *missingExternalValidatorPreparator) Validate(_ context.Context, _ config.ProviderInput) error {
+	return p.err()
+}
+
+func (p *missingExternalValidatorPreparator) Prepare(_ context.Context, _ config.ProviderInput) (providerdata.PrepareResult, error) {
+	return providerdata.PrepareResult{}, p.err()
 }

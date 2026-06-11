@@ -42,7 +42,7 @@ func TestParseConfigFromData(t *testing.T) {
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 `
@@ -505,7 +505,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -523,7 +523,7 @@ podSubnetNodeCIDRPrefix: "24"
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: ""
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -541,7 +541,7 @@ podSubnetNodeCIDRPrefix: "24"
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: "invalid"
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -575,7 +575,7 @@ podSubnetNodeCIDRPrefix: "24"
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -681,7 +681,7 @@ clusterType: Cloud
 cloud:
   provider: Yandex
   prefix: "test"
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
@@ -801,7 +801,14 @@ provider:
 			require.Equal(t, "cloud-provider-yandex", metaConfig.ModuleConfigs[0].GetName())
 		})
 
-		t.Run("mc-flow wins over legacy: both markers present", func(t *testing.T) {
+		t.Run("mc-flow and legacy: both markers loaded, PCC kept for typed fields", func(t *testing.T) {
+			// A cluster mid-migration carries both markers. The ModuleConfig
+			// is often a stub without settings while the legacy PCC still
+			// holds the real layout/master sizing, so Cloud() loads both:
+			// extractProviderClusterFields gives PCC priority for typed
+			// fields, with the ModuleConfig filling whatever is left. Ignoring
+			// the PCC here would zero out Layout on such clusters
+			// (the "Empty Layout" converge regression).
 			tst := createTestParseConfigFromCluster(t, testParams)
 			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
 			createCloudConfigSecret(t, tst, pointer.String(`
@@ -826,8 +833,9 @@ provider:
 
 			metaConfig := doParseFromClusterNoError(t, tst)
 
-			require.Empty(t, metaConfig.ProviderClusterConfig, "legacy PCC must be ignored when MC is present")
+			require.NotEmpty(t, metaConfig.ProviderClusterConfig, "legacy PCC must be loaded alongside the MC")
 			require.Len(t, metaConfig.ModuleConfigs, 1)
+			require.Equal(t, "without-nat", metaConfig.Layout, "Layout must come from PCC, not the stub MC")
 		})
 
 		t.Run("neither marker present", func(t *testing.T) {
@@ -842,18 +850,7 @@ provider:
 		t.Run("cloud cluster loads registry-fields even when EnsureCandiAvailable=false", func(t *testing.T) {
 			tst := createTestParseConfigFromCluster(t, testParams)
 			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
-
-			dockerCfg := `{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`
-			secret := &apiv1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "deckhouse-registry", Namespace: "d8-system"},
-				Data: map[string][]byte{
-					".dockerconfigjson": []byte(dockerCfg),
-					"imagesRegistry":    []byte("registry.example.com/deckhouse"),
-					"scheme":            []byte("HTTPS"),
-				},
-			}
-			_, err := tst.kubeCl.CoreV1().Secrets("d8-system").Create(t.Context(), secret, metav1.CreateOptions{})
-			require.NoError(t, err)
+			// deckhouse-registry Secret is already seeded by createTestParseConfigFromCluster.
 
 			metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{EnsureCandiAvailable: false}, "")
 			require.NoError(t, err)
@@ -866,18 +863,20 @@ provider:
 func testCreateCloudProviderModuleConfig(t *testing.T, kubeCl *client.KubernetesClient, providerName string) {
 	t.Helper()
 
+	// Real cloud-provider-<name> ModuleConfig schemas vary per provider
+	// (yandex exposes additionalExternalNetworkIDs/storageClass, not
+	// nodes.parameters.layout). These tests don't exercise
+	// applyCloudProviderModuleSettings — they only need the MC to exist as
+	// a marker — so seed an empty-settings spec that validates under any
+	// provider's schema.
 	mc := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "ModuleConfig",
 		"metadata":   map[string]interface{}{"name": "cloud-provider-" + providerName},
 		"spec": map[string]interface{}{
-			"version": float64(2),
-			"enabled": true,
-			"settings": map[string]interface{}{
-				"nodes": map[string]interface{}{
-					"parameters": map[string]interface{}{"layout": "Standard"},
-				},
-			},
+			"version":  float64(2),
+			"enabled":  true,
+			"settings": map[string]interface{}{},
 		},
 	}}
 
@@ -913,6 +912,13 @@ func createTestParseConfigFromCluster(t *testing.T, p testParseConfigFromCluster
 			"cluster-configuration.yaml": []byte(p.clusterConfig),
 		})
 	}
+
+	// parseConfigFromCluster fetches the d8-system/deckhouse-registry Secret
+	// for every Cloud cluster (base.go: needRegistryData = ... ||
+	// clusterType == CloudClusterType). Without this seed registrydata.
+	// GetRegistryData retry-loops for 45 × 5 s and the test trips the 600 s
+	// go-test timeout.
+	testCreateDeckhouseRegistrySecret(t, kubeCl)
 
 	return &testParseConfigFromCluster{
 		testParseConfigFromClusterParams: p,
@@ -1137,5 +1143,29 @@ func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, n
 	}
 
 	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+// testCreateDeckhouseRegistrySecret seeds the d8-system/deckhouse-registry
+// Secret that registrydata.GetRegistryData looks up unconditionally for
+// Cloud clusters. Tests that hit parseConfigFromCluster on a Cloud
+// ClusterConfiguration must call this helper, otherwise the test hangs on
+// the retry-loop until the go-test timeout fires.
+func testCreateDeckhouseRegistrySecret(t *testing.T, kubeCl *client.KubernetesClient) {
+	t.Helper()
+
+	secret := &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deckhouse-registry",
+			Namespace: "d8-system",
+		},
+		Data: map[string][]byte{
+			".dockerconfigjson": []byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`),
+			"imagesRegistry":    []byte("registry.example.com/deckhouse"),
+			"scheme":            []byte("HTTPS"),
+		},
+	}
+
+	_, err := kubeCl.CoreV1().Secrets("d8-system").Create(t.Context(), secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 }

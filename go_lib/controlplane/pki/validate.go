@@ -47,6 +47,20 @@ func validateCert(oldCert *x509.Certificate, newCertCfg certConfig) error {
 	return nil
 }
 
+// validateRootCert is like validateCert but skips the encryption algorithm check,
+// because root CA certificates are never rotated on algorithm changes.
+func validateRootCert(oldCert *x509.Certificate, newCertCfg certConfig) error {
+	if certificateExpiresSoon(oldCert, 30*24*time.Hour) {
+		return fmt.Errorf("expired at %s", oldCert.NotAfter.UTC().Format(time.RFC3339))
+	}
+
+	if !certificateSubjectAndSansIsEqual(oldCert, newCertCfg) {
+		return fmt.Errorf("subject or SANs mismatch")
+	}
+
+	return nil
+}
+
 func certificateExpiresSoon(cert *x509.Certificate, durationLeft time.Duration) bool {
 	return pkiutil.CertificateExpiresSoon(cert, durationLeft)
 }

@@ -130,7 +130,7 @@ func TestRegistryConfigFromDockerConfig(t *testing.T) {
 				registry:      "registry.io",
 				scheme:        "HTTPS",
 				wantErr:       true,
-				err:           "docker config doesn't contains registry.io registry credentials",
+				err:           "docker config doesn't contain registry.io registry credentials",
 			},
 			{
 				title: "Invalid auth, failure",
@@ -675,7 +675,11 @@ func TestRestoreImageFromTarGz(t *testing.T) {
 
 	err = DownloadAndUnpackImage(context.Background(), "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"}, false)
 	require.NoError(t, err)
-	cachePath := filepath.Join(testDir, "sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb")
+	// pullImage now stores tarballs under the image's tag/identifier (so
+	// tryToRestoreLocalImage can find them again on the next run). The
+	// previous expectation of a sha256 digest filename was an artifact of
+	// the image-cache key mismatch fixed in image.go:pullImage.
+	cachePath := filepath.Join(testDir, "v1.75.4")
 	require.FileExists(t, cachePath)
 
 	t.Run("restoreImageFromTarGz tests", func(t *testing.T) {

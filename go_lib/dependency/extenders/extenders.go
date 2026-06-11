@@ -35,45 +35,86 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+type IExtendersStack interface {
+	GetExtenders() []extenders.Extender
+	AddConstraints(module string, critical bool, access *moduletypes.ModuleAccessibility, requirements *v1alpha1.ModuleRequirements) error
+	DeleteConstraints(module string)
+	CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error
+	IsExtendersField(field string) bool
+
+	GetDeckhouseVersion() deckhouseversion.IExtender
+	GetKubernetesVersion() kubernetesversion.IExtender
+	GetModuleDependency() moduledependency.IExtender
+	GetBootstrapped() bootstrapped.IExtender
+	GetEditionAvailable() editionavailable.IExtender
+	GetEditionEnabled() editionenabled.IExtender
+}
+
+var _ IExtendersStack = &ExtendersStack{}
+
 type ExtendersStack struct {
-	DeckhouseVersion  *deckhouseversion.Extender
-	KubernetesVersion *kubernetesversion.Extender
-	ModuleDependency  *moduledependency.Extender
-	Bootstrapped      *bootstrapped.Extender
-	EditionAvailable  *editionavailable.Extender
-	EditionEnabled    *editionenabled.Extender
+	deckhouseVersion  deckhouseversion.IExtender
+	kubernetesVersion kubernetesversion.IExtender
+	moduleDependency  moduledependency.IExtender
+	bootstrapped      bootstrapped.IExtender
+	editionAvailable  editionavailable.IExtender
+	editionEnabled    editionenabled.IExtender
 }
 
 func NewExtendersStack(edition *d8edition.Edition, bootstrappedHelper func() (bool, error), logger *log.Logger) *ExtendersStack {
 	return &ExtendersStack{
-		DeckhouseVersion:  deckhouseversion.NewExtender(edition.Version, logger.Named("deckhouse-version-extender")),
-		KubernetesVersion: kubernetesversion.Instance(),
-		ModuleDependency:  moduledependency.Instance(),
-		Bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender")),
-		EditionAvailable:  editionavailable.New(edition.Name, logger.Named("edition-available-extender")),
-		EditionEnabled:    editionenabled.New(edition.Name, edition.Bundle, logger.Named("edition-enabled-extender")),
+		deckhouseVersion:  deckhouseversion.NewExtender(edition.Version, logger.Named("deckhouse-version-extender")),
+		kubernetesVersion: kubernetesversion.Instance(),
+		moduleDependency:  moduledependency.Instance(),
+		bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender")),
+		editionAvailable:  editionavailable.New(edition.Name, logger.Named("edition-available-extender")),
+		editionEnabled:    editionenabled.New(edition.Name, edition.Bundle, logger.Named("edition-enabled-extender")),
 	}
+}
+
+func (b *ExtendersStack) GetDeckhouseVersion() deckhouseversion.IExtender {
+	return b.deckhouseVersion
+}
+
+func (b *ExtendersStack) GetKubernetesVersion() kubernetesversion.IExtender {
+	return b.kubernetesVersion
+}
+
+func (b *ExtendersStack) GetModuleDependency() moduledependency.IExtender {
+	return b.moduleDependency
+}
+
+func (b *ExtendersStack) GetBootstrapped() bootstrapped.IExtender {
+	return b.bootstrapped
+}
+
+func (b *ExtendersStack) GetEditionAvailable() editionavailable.IExtender {
+	return b.editionAvailable
+}
+
+func (b *ExtendersStack) GetEditionEnabled() editionenabled.IExtender {
+	return b.editionEnabled
 }
 
 func (b *ExtendersStack) GetExtenders() []extenders.Extender {
 	return []extenders.Extender{
-		b.DeckhouseVersion,
-		b.KubernetesVersion,
-		b.ModuleDependency,
-		b.Bootstrapped,
-		b.EditionAvailable,
-		b.EditionEnabled,
+		b.deckhouseVersion,
+		b.kubernetesVersion,
+		b.moduleDependency,
+		b.bootstrapped,
+		b.editionAvailable,
+		b.editionEnabled,
 	}
 }
 
 func (b *ExtendersStack) AddConstraints(module string, critical bool, access *moduletypes.ModuleAccessibility, requirements *v1alpha1.ModuleRequirements) error {
 	if !critical {
-		b.Bootstrapped.AddFunctionalModule(module)
+		b.bootstrapped.AddFunctionalModule(module)
 	}
 
 	if access != nil {
-		b.EditionEnabled.AddModule(module, access)
-		b.EditionAvailable.AddModule(module, access)
+		b.editionEnabled.AddModule(module, access)
+		b.editionAvailable.AddModule(module, access)
 	}
 
 	if requirements == nil {
@@ -82,19 +123,19 @@ func (b *ExtendersStack) AddConstraints(module string, critical bool, access *mo
 	}
 
 	if len(requirements.Deckhouse) > 0 {
-		if err := b.DeckhouseVersion.AddConstraint(module, requirements.Deckhouse); err != nil {
+		if err := b.deckhouseVersion.AddConstraint(module, requirements.Deckhouse); err != nil {
 			return fmt.Errorf("add constraint: %w", err)
 		}
 	}
 
 	if len(requirements.Kubernetes) > 0 {
-		if err := b.KubernetesVersion.AddConstraint(module, requirements.Kubernetes); err != nil {
+		if err := b.kubernetesVersion.AddConstraint(module, requirements.Kubernetes); err != nil {
 			return fmt.Errorf("add constraint: %w", err)
 		}
 	}
 
 	if len(requirements.ParentModules) > 0 {
-		if err := b.ModuleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
+		if err := b.moduleDependency.AddConstraint(module, requirements.ParentModules); err != nil {
 			return fmt.Errorf("add constraint: %w", err)
 		}
 	}
@@ -103,9 +144,9 @@ func (b *ExtendersStack) AddConstraints(module string, critical bool, access *mo
 }
 
 func (b *ExtendersStack) DeleteConstraints(module string) {
-	b.DeckhouseVersion.DeleteConstraint(module)
-	b.KubernetesVersion.DeleteConstraint(module)
-	b.ModuleDependency.DeleteConstraint(module)
+	b.deckhouseVersion.DeleteConstraint(module)
+	b.kubernetesVersion.DeleteConstraint(module)
+	b.moduleDependency.DeleteConstraint(module)
 }
 
 func (b *ExtendersStack) CheckModuleReleaseRequirements(moduleName, moduleRelease string, moduleReleaseVersion *semver.Version, requirements *v1alpha1.ModuleReleaseRequirements) error {
@@ -115,19 +156,19 @@ func (b *ExtendersStack) CheckModuleReleaseRequirements(moduleName, moduleReleas
 	}
 
 	if len(requirements.Deckhouse) > 0 {
-		if err := b.DeckhouseVersion.ValidateRelease(moduleRelease, requirements.Deckhouse); err != nil {
+		if err := b.deckhouseVersion.ValidateRelease(moduleRelease, requirements.Deckhouse); err != nil {
 			return fmt.Errorf("validate release: %w", err)
 		}
 	}
 
 	if len(requirements.Kubernetes) > 0 {
-		if err := b.KubernetesVersion.ValidateRelease(moduleRelease, requirements.Kubernetes); err != nil {
+		if err := b.kubernetesVersion.ValidateRelease(moduleRelease, requirements.Kubernetes); err != nil {
 			return fmt.Errorf("validate release: %w", err)
 		}
 	}
 
 	if len(requirements.ParentModules) > 0 {
-		if err := b.ModuleDependency.ValidateRelease(moduleName, moduleRelease, moduleReleaseVersion, requirements.ParentModules); err != nil {
+		if err := b.moduleDependency.ValidateRelease(moduleName, moduleRelease, moduleReleaseVersion, requirements.ParentModules); err != nil {
 			return fmt.Errorf("validate release: %w", err)
 		}
 	}

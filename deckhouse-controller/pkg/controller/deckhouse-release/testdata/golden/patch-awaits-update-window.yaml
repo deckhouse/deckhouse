@@ -3,7 +3,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.25.0
   resourceVersion: "999"
 spec:
@@ -21,7 +20,6 @@ metadata:
   annotations:
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "true"
-  creationTimestamp: null
   name: v1.25.1
   resourceVersion: "1001"
 spec:
@@ -36,7 +34,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  creationTimestamp: null
   name: v1.26.0
   resourceVersion: "1000"
 spec:

@@ -16,15 +16,24 @@ package providerdata
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
+	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 )
 
 const (
-	CloudProviderCredentialsSecretType = proto.CredentialsSecretType
+	nodeGroupKind     = "NodeGroup"
+	nodeGroupAPIGroup = "deckhouse.io"
+
+	instanceClassAPIGroup   = "deckhouse.io"
+	instanceClassKindSuffix = "InstanceClass"
+
+	CloudProviderCredentialsSecretType = "cloud-provider.deckhouse.io/credentials"
 
 	cloudProviderModuleNamePrefix = "cloud-provider-"
 )
@@ -44,12 +53,74 @@ func IsCloudPermanentNodeGroup(obj map[string]interface{}) bool {
 // This is the core parsing logic shared between the built-in preparators and
 // the external binary.
 func CloudProviderVarsFromInput(_ context.Context, input PrepareInput) (*CloudProviderVars, error) {
-	cv, err := proto.ParseResourcesYAML(input.ResourcesYAML)
-	if err != nil {
-		return nil, err
-	}
+	cv := &CloudProviderVars{}
 
 	cv.Settings = input.ModuleConfig
 
+	if err := parseResourcesYAML(input.ResourcesYAML, cv); err != nil {
+		return nil, err
+	}
+
 	return cv, nil
+}
+
+func parseResourcesYAML(resourcesYAML string, cv *CloudProviderVars) error {
+	if strings.TrimSpace(resourcesYAML) == "" {
+		return nil
+	}
+
+	docs := libdhctlyaml.SplitYAML(resourcesYAML)
+
+	for i, doc := range docs {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			continue
+		}
+
+		index, err := yamlvalidation.ParseIndex(strings.NewReader(doc))
+		if err != nil {
+			return fmt.Errorf("parse resources document %d index: %w", i, err)
+		}
+
+		var obj map[string]interface{}
+		if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
+			return fmt.Errorf("unmarshal resources document %d: %w", i, err)
+		}
+
+		switch {
+		case index.Kind == nodeGroupKind && index.Group() == nodeGroupAPIGroup:
+			if IsCloudPermanentNodeGroup(obj) {
+				name, _, _ := unstructured.NestedString(obj, "metadata", "name")
+				if name != "" {
+					if cv.NodeGroups == nil {
+						cv.NodeGroups = make(map[string]map[string]interface{})
+					}
+					cv.NodeGroups[name] = obj
+				}
+			}
+
+		case strings.HasSuffix(index.Kind, instanceClassKindSuffix) && index.Group() == instanceClassAPIGroup:
+			name, _, _ := unstructured.NestedString(obj, "metadata", "name")
+			if name != "" {
+				if cv.InstanceClasses == nil {
+					cv.InstanceClasses = make(map[string]map[string]interface{})
+				}
+				cv.InstanceClasses[name] = obj
+			}
+
+		case index.Kind == "Secret":
+			secretType, _, _ := unstructured.NestedString(obj, "type")
+			if secretType == CloudProviderCredentialsSecretType {
+				name, _, _ := unstructured.NestedString(obj, "metadata", "name")
+				if name != "" {
+					if cv.Secrets == nil {
+						cv.Secrets = make(map[string]map[string]interface{})
+					}
+					cv.Secrets[name] = obj
+				}
+			}
+		}
+	}
+
+	return nil
 }

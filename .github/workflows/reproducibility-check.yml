@@ -39,8 +39,8 @@ on:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: 'Git commit SHA to verify reproducibility for'
-        required: true
+        description: 'PR commit SHA that already has a successful build-and-test_dev.yml run (empty = newest main commit with a successful build)'
+        required: false
         type: string
 
 env:
@@ -48,8 +48,6 @@ env:
   # <template: werf_envs>
   WERF_VERSION: "v2.70.0"
   WERF_ENV: "FE"
-  WERF_TELEMETRY: "1"
-  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   REGISTRY_PATH: "sys/deckhouse-oss"
@@ -79,13 +77,14 @@ permissions:
 jobs:
   resolve_target:
     name: Resolve target commit and baseline
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
       baseline_run_id: ${{ steps.resolve.outputs.baseline_run_id }}
       baseline_run_url: ${{ steps.resolve.outputs.baseline_run_url }}
       baseline_workflow: ${{ steps.resolve.outputs.baseline_workflow }}
       pr_number: ${{ steps.resolve.outputs.pr_number }}
+      ci_commit_ref_name: ${{ steps.resolve.outputs.ci_commit_ref_name }}
     steps:
       - name: Resolve target SHA and locate baseline
         id: resolve
@@ -97,23 +96,56 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            // Trigger fully determines which build workflow holds the baseline:
-            //   schedule          -> 'main' commit, baseline in build-and-test_main.yml
-            //   workflow_dispatch -> arbitrary commit (treated as dev/PR), baseline in build-and-test_dev.yml
+            if (eventName !== 'schedule' && eventName !== 'workflow_dispatch') {
+              return core.setFailed(`Unsupported event: ${eventName}`);
+            }
+
+            const inputSha = ((context.payload.inputs || {}).commit_sha || '').trim();
+
+            // Baseline selection:
+            //   schedule, or manual run WITHOUT a commit -> newest 'main' commit that
+            //     HAS a successful build (baseline in build-and-test_main.yml)
+            //   manual run WITH a commit                 -> that exact commit, treated
+            //     as a dev/PR build (baseline in build-and-test_dev.yml)
+            const useMainBaseline = (eventName === 'schedule') || !inputSha;
+
             let sha = '';
             let baselineKind = '';
             let baselineWorkflowId = '';
-            if (eventName === 'schedule') {
-              const r = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
-              sha = r.data.commit.sha;
+            let baseline = null;
+            if (useMainBaseline) {
               baselineKind = 'main';
               baselineWorkflowId = 'build-and-test_main.yml';
-              core.notice(`Schedule run: using latest 'main' commit ${sha}, baseline workflow=${baselineWorkflowId}`);
-            } else if (eventName === 'workflow_dispatch') {
-              sha = ((context.payload.inputs || {}).commit_sha || '').trim();
-              if (!sha) {
-                return core.setFailed(`'commit_sha' input is required for manual runs`);
+              if (eventName === 'workflow_dispatch') {
+                core.notice(`Manual run without commit_sha: falling back to newest successful 'main' build.`);
               }
+              // Do NOT pin to HEAD of 'main': the latest commit's build may still
+              // be running, may have failed, or may not be queued yet. Instead pick
+              // the most recent SUCCESSFUL build-and-test_main.yml run on 'main' and
+              // use its head commit. listWorkflowRuns returns runs newest-first, so
+              // the first success is the freshest 'main' commit with a usable
+              // build_report_FE artifact.
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo,
+                workflow_id: baselineWorkflowId,
+                branch: 'main',
+                status: 'success',
+                per_page: 30,
+              });
+              baseline = (runs.data.workflow_runs || [])[0];
+              if (!baseline) {
+                return core.setFailed(
+                  `No successful '${baselineWorkflowId}' run found on 'main'. ` +
+                  `Reproducibility check requires an existing baseline build_report_FE artifact.`
+                );
+              }
+              sha = baseline.head_sha;
+              core.notice(
+                `Using newest successful 'main' build for commit ${sha} ` +
+                `(run ${baseline.id}, ${baseline.html_url})`
+              );
+            } else {
+              sha = inputSha;
               try {
                 const r = await github.rest.repos.getCommit({ owner, repo, ref: sha });
                 sha = r.data.sha;
@@ -123,34 +155,41 @@ jobs:
               baselineKind = 'dev';
               baselineWorkflowId = 'build-and-test_dev.yml';
               core.notice(`Manual run: using commit ${sha}, baseline workflow=${baselineWorkflowId}`);
-            } else {
-              return core.setFailed(`Unsupported event: ${eventName}`);
+
+              // Locate the latest successful baseline run for this exact SHA.
+              // API supports a server-side head_sha filter, so we only fetch matching runs.
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner, repo,
+                workflow_id: baselineWorkflowId,
+                head_sha: sha,
+                status: 'success',
+                per_page: 10,
+              });
+              // Runs are returned newest-first; pick the most recent success.
+              baseline = (runs.data.workflow_runs || [])[0];
+              if (!baseline) {
+                return core.setFailed(
+                  `No successful '${baselineWorkflowId}' run found for SHA ${sha}. ` +
+                  `Reproducibility check requires an existing baseline build_report_FE artifact. ` +
+                  `Ensure the regular build pipeline has completed for this commit first.`
+                );
+              }
             }
 
-            // Locate the latest successful baseline run for this SHA in the chosen workflow.
-            // API supports a server-side head_sha filter, so we only fetch matching runs.
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner, repo,
-              workflow_id: baselineWorkflowId,
-              head_sha: sha,
-              status: 'success',
-              per_page: 10,
-            });
-            // Runs are returned newest-first; pick the most recent success.
-            const baseline = (runs.data.workflow_runs || [])[0];
-            if (!baseline) {
-              return core.setFailed(
-                `No successful '${baselineWorkflowId}' run found for SHA ${sha}. ` +
-                `Reproducibility check requires an existing baseline build_report_FE artifact. ` +
-                `Ensure the regular build pipeline has completed for this commit first.`
-              );
-            }
-
-            // For dev mode we need the PR number to reconstruct CI_COMMIT_REF_SLUG = prN.
-            // Prefer the PR attached to the baseline run itself: it is always the exact PR
-            // on which this SHA was built. Fall back to commit-associated PRs only if the
-            // run object has no pull_requests payload (e.g. older runs, edge cases).
+            // For dev mode we reconstruct the exact CI_COMMIT_* context the baseline
+            // build-and-test_dev.yml run used, so the rerun produces identical digests:
+            //   CI_COMMIT_REF_SLUG = prN  (always)
+            //   CI_COMMIT_REF_NAME = PR head branch name for internal PRs, prN for forks
+            // (this mirrors git_info_job in ci_templates/helper_jobs.yml).
+            // CI_COMMIT_REF_NAME is baked into release-channel-version(-prebuild) via
+            // .werf/werf-release-channel.yaml, so an incorrect value makes those images
+            // look non-reproducible even on the same commit.
+            //
+            // We need the PR number first. Prefer the PR attached to the baseline run
+            // itself: it is always the exact PR this SHA was built on. Fall back to
+            // commit-associated PRs only if the run object has no pull_requests payload.
             let prNumber = '';
+            let ciCommitRefName = '';
             if (baselineKind === 'dev') {
               const runPr = (baseline.pull_requests || [])[0];
               if (runPr && runPr.number) {
@@ -170,6 +209,26 @@ jobs:
                   );
                 }
               }
+
+              // Reconstruct CI_COMMIT_REF_NAME exactly like git_info_job:
+              //   refName = (prRepo === targetRepo) ? pr.head.ref : `pr${number}`
+              const targetRepo = `${owner}/${repo}`;
+              try {
+                const pr = (await github.rest.pulls.get({
+                  owner, repo, pull_number: Number(prNumber),
+                })).data;
+                const prRepo = (pr.head && pr.head.repo) ? pr.head.repo.full_name : '';
+                const prRef  = (pr.head && pr.head.ref)  ? pr.head.ref            : '';
+                ciCommitRefName = (prRepo === targetRepo && prRef) ? prRef : `pr${prNumber}`;
+                core.notice(
+                  `dev baseline: CI_COMMIT_REF_NAME='${ciCommitRefName}' ` +
+                  `(PR head '${prRepo}:${prRef}', target '${targetRepo}')`
+                );
+              } catch (e) {
+                return core.setFailed(
+                  `Failed to fetch PR #${prNumber} to reconstruct CI_COMMIT_REF_NAME: ${e.message}`
+                );
+              }
             }
 
             core.notice(`Baseline run: ${baseline.html_url} (workflow=${baselineKind}, id=${baseline.id})`);
@@ -178,6 +237,7 @@ jobs:
             core.setOutput('baseline_run_url', baseline.html_url);
             core.setOutput('baseline_workflow', baselineKind);
             core.setOutput('pr_number', prNumber);
+            core.setOutput('ci_commit_ref_name', ciCommitRefName);
 
   # Synthetic git_info: build_template reads needs.git_info.outputs.*. We
   # construct the values from the resolved target SHA and baseline workflow kind
@@ -186,7 +246,7 @@ jobs:
     name: Get git info (synthetic)
     needs:
       - resolve_target
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       ci_commit_tag: ${{ steps.set.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.set.outputs.ci_commit_branch }}
@@ -199,20 +259,31 @@ jobs:
           SHA: ${{ needs.resolve_target.outputs.sha }}
           WF: ${{ needs.resolve_target.outputs.baseline_workflow }}
           PR_NUMBER: ${{ needs.resolve_target.outputs.pr_number }}
+          REF_NAME: ${{ needs.resolve_target.outputs.ci_commit_ref_name }}
         run: |
+          # Reproduce the baseline build's CI_COMMIT_* context. In the real builds
+          # (git_info_job, ci_templates/helper_jobs.yml):
+          #   main: ref_slug = ref_name = branch = "main"
+          #   dev:  ref_slug = "prN"; ref_name = branch = PR head branch (internal)
+          #         or "prN" (fork). ref_name is resolved upstream in resolve_target.
           if [[ "$WF" == "main" ]]; then
-            REF="main"
+            REF_SLUG="main"
+            REF_NAME="main"
           elif [[ "$WF" == "dev" ]]; then
-            REF="pr${PR_NUMBER}"
+            REF_SLUG="pr${PR_NUMBER}"
+            if [[ -z "$REF_NAME" ]]; then
+              echo "::error::ci_commit_ref_name is empty in dev mode"
+              exit 1
+            fi
           else
             echo "::error::Unknown baseline_workflow: '$WF'"
             exit 1
           fi
           {
             echo "ci_commit_tag="
-            echo "ci_commit_branch=${REF}"
-            echo "ci_commit_ref_name=${REF}"
-            echo "ci_commit_ref_slug=${REF}"
+            echo "ci_commit_branch=${REF_NAME}"
+            echo "ci_commit_ref_name=${REF_NAME}"
+            echo "ci_commit_ref_slug=${REF_SLUG}"
             echo "github_sha=${SHA}"
           } >> $GITHUB_OUTPUT
 
@@ -223,7 +294,7 @@ jobs:
     needs:
       - resolve_target
     if: needs.resolve_target.outputs.baseline_workflow == 'dev'
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       ref_slug: ${{ steps.set.outputs.ref_slug }}
     steps:
@@ -405,6 +476,8 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -721,6 +794,8 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -860,7 +935,7 @@ jobs:
 
   compare_reports:
     name: Compare build reports
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     needs:
       - resolve_target
       - build_fe_main

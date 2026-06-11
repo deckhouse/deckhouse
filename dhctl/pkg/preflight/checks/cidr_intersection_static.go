@@ -112,7 +112,7 @@ func cidrIntersects(cidr1, cidr2 string) error {
 	}
 
 	if ipNet1.Contains(ipNet2.IP) || ipNet2.Contains(ipNet1.IP) {
-		return fmt.Errorf("CIDRs %s and %s are intersects", cidr1, cidr2)
+		return fmt.Errorf("CIDRs %s and %s intersect", cidr1, cidr2)
 	}
 
 	return nil

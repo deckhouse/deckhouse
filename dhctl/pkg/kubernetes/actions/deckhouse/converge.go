@@ -216,7 +216,7 @@ func (t *taskProviderForCluster) Static(ctx context.Context, metaConfig *config.
 
 	if len(staticClusterConfig) == 0 {
 		// static cluster configuration can be empty because we have auto discovering interfaces
-		log.DebugLn("No static cluster configuration section found. Rewrite with empty data because we have auto discovery")
+		log.DebugLn("No static cluster configuration section found. Rewriting with empty data because we have auto discovery")
 	}
 
 	const secretName = "d8-static-cluster-configuration"
