@@ -13,14 +13,12 @@ Before you enable [`managed-postgres`](/modules/managed-postgres/), meet the [in
 To prepare Managed PostgreSQL for users:
 
 1. [Enable the `managed-postgres` module](/modules/managed-postgres/configuration.html) using one of the methods described on the module configuration page in the "How to explicitly enable the module..." block.
-2. Review the automatically created `default` PostgresClass or prepare a custom PostgresClass.
-3. [Define available topologies and placement zones](#configure-topology).
-4. [Configure sizing policies](#configure-sizing-policies): CPU ranges, memory ranges, and allowed CPU fractions.
-5. Set [default PostgreSQL parameter values](#configure-default-values) and the [list of parameters users can override](#configure-overridable-parameters).
-6. If needed, add [validation rules](#configure-validation-rules) and [pod scheduling parameters](#configure-pod-scheduling).
-7. Apply the PostgresClass and provide users with its name for creating Postgres resources.
+2. Check whether the limits and default values in the automatically created `default` PostgresClass are suitable.
+3. Select a PostgresClass for users:
+   - if the `default` PostgresClass is suitable for user Postgres resources, provide users with the `default` name;
+   - if you need a separate PostgreSQL configuration, prepare a custom PostgresClass manifest, apply it, and provide users with the name of the created PostgresClass.
 
-The following sections describe what happens after the module is enabled and how to configure PostgresClass.
+The following sections describe what happens after the module is enabled and which settings are included in PostgresClass preparation.
 
 ## After Enabling Managed PostgreSQL
 
@@ -46,72 +44,11 @@ To view the automatically created `default` PostgresClass, run:
 d8 k get PostgresClass default -o yaml
 ```
 
-If you need a separate PostgreSQL configuration, prepare a custom PostgresClass manifest.
+When reviewing the `default` PostgresClass, check topology, sizing policies, default PostgreSQL parameter values, the list of parameters users can override, validation rules, and pod scheduling parameters.
 
-### PostgresClass example
+If the `default` PostgresClass is suitable for your requirements, provide users with the `default` name; if you need a separate PostgreSQL configuration, prepare a custom manifest using the following sections. Examples show separate `spec` fragments; a complete manifest is provided at the end of the section.
 
-The following is a PostgresClass resource example that defines topology, configuration values, overridable parameters, validation rules, and sizing policies:
-
-```yaml
-apiVersion: managed-services.deckhouse.io/v1alpha1
-kind: PostgresClass
-metadata:
-  labels:
-    app.kubernetes.io/name: managed-psql-operator
-  name: new
-spec:
-  topology:
-    allowedTopologies:
-      - Zonal
-      - TransZonal
-      - Ignored
-    allowedZones: []
-    defaultTopology: Ignored
-  configuration:
-    maxConnections: 300
-  overridableConfiguration:
-    - maxConnections
-    - sharedBuffers
-    - walKeepSize
-  validations:
-    - message: "Max connections should be more than 100"
-      rule: "configuration.maxConnections > 100"
-    - message: "Shared buffers should be less than 40% of memory.size"
-      rule: "configuration.sharedBuffers * 100 < instance.memory.size * 40"
-    - message: "walKeepSize can not be more than 1Gi"
-      rule: "configuration.walKeepSize <= 1073741824"
-  sizingPolicies:
-    - cores:
-        min: 1
-        max: 3
-      memory:
-        min: 1Gi
-        max: 5Gi
-        step: 1Gi
-      coreFractions:
-        - 10
-        - 20
-        - 50
-        - 100
-    - cores:
-        min: 4
-        max: 10
-      memory:
-        min: 5Gi
-        max: 15Gi
-        step: 1Gi
-      coreFractions:
-        - 50
-        - 100
-```
-
-To apply a PostgresClass manifest, run:
-
-```shell
-d8 k apply -f postgresclass.yaml
-```
-
-## Configure topology
+### Configure topology
 
 In PostgresClass, you can limit allowed topologies, define the default topology, and set the list of zones available for PostgreSQL instance placement.
 
@@ -139,7 +76,7 @@ spec:
       - zone-3
 ```
 
-## Configure sizing policies
+### Configure sizing policies
 
 Administrators can control PostgreSQL instance sizes available to users by defining CPU and memory ranges and allowed CPU fractions. This helps keep resource consumption within the selected PostgresClass limits and prevents configurations that do not meet service requirements.
 
@@ -175,7 +112,7 @@ spec:
         - 100
 ```
 
-## Configure validation rules
+### Configure validation rules
 
 Administrators can configure additional validation rules for the resulting PostgreSQL configuration. These rules let the controller reject Postgres resources with unwanted parameter combinations, for example when the number of connections is too high for the selected memory size.
 
@@ -201,7 +138,7 @@ spec:
       rule: "configuration.sharedBuffers < instance.memory.size / 4"
 ```
 
-## Configure overridable parameters
+### Configure overridable parameters
 
 PostgresClass separates baseline PostgreSQL parameter values from the user's ability to override them in a Postgres resource. Administrators can allow users to override only the parameters they should control.
 
@@ -223,7 +160,7 @@ spec:
     - workMem
 ```
 
-## Configure default values
+### Configure default values
 
 After choosing which parameters users can override, administrators can define a baseline PostgreSQL configuration for all Postgres resources that reference this PostgresClass. Default values are applied automatically, so users get a ready configuration without setting every parameter manually.
 
@@ -245,7 +182,7 @@ The operator sets the following default values:
 - `workMem`: (`memory.size` - `sharedBuffers`) * 4 / `maxConnections`;
 - `walKeepSize`: `512Mi`.
 
-## Configure pod scheduling
+### Configure pod scheduling
 
 To control placement of the PostgreSQL service on specific nodes, administrators can use standard Kubernetes scheduling mechanisms: `nodeAffinity`, `nodeSelector`, and `tolerations`. For example, this allows PostgreSQL instances to run on dedicated nodes with specific labels or to be scheduled onto nodes with taints.
 
@@ -255,7 +192,7 @@ Scheduling parameters are configured in PostgresClass:
 - [`spec.nodeSelector`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeselector);
 - [`spec.tolerations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-tolerations).
 
-### nodeAffinity example
+#### nodeAffinity example
 
 ```yaml
 spec:
@@ -269,7 +206,15 @@ spec:
                 - "pg"
 ```
 
-### tolerations example
+#### nodeSelector example
+
+```yaml
+spec:
+  nodeSelector:
+    "node.deckhouse.io/group": "pg"
+```
+
+#### tolerations example
 
 ```yaml
 spec:
@@ -280,10 +225,74 @@ spec:
       effect: NoSchedule
 ```
 
-### nodeSelector example
+### Complete PostgresClass manifest example
+
+After selecting the parameters, create a `postgresclass.yaml` file with a PostgresClass manifest.
+
+The following manifest example defines topology, sizing policies, validation rules, configuration values, overridable parameters, and pod scheduling parameters:
 
 ```yaml
+apiVersion: managed-services.deckhouse.io/v1alpha1
+kind: PostgresClass
+metadata:
+  labels:
+    app.kubernetes.io/name: managed-psql-operator
+  name: new
 spec:
+  topology:
+    allowedTopologies:
+      - Zonal
+      - TransZonal
+      - Ignored
+    allowedZones: []
+    defaultTopology: Ignored
+  sizingPolicies:
+    - cores:
+        min: 1
+        max: 3
+      memory:
+        min: 1Gi
+        max: 5Gi
+        step: 1Gi
+      coreFractions:
+        - 10
+        - 20
+        - 50
+        - 100
+    - cores:
+        min: 4
+        max: 10
+      memory:
+        min: 5Gi
+        max: 15Gi
+        step: 1Gi
+      coreFractions:
+        - 50
+        - 100
+  validations:
+    - message: "Max connections should be more than 100"
+      rule: "configuration.maxConnections > 100"
+    - message: "Shared buffers should be less than 40% of memory.size"
+      rule: "configuration.sharedBuffers * 100 < instance.memory.size * 40"
+    - message: "walKeepSize can not be more than 1Gi"
+      rule: "configuration.walKeepSize <= 1073741824"
+  overridableConfiguration:
+    - maxConnections
+    - sharedBuffers
+    - walKeepSize
+  configuration:
+    maxConnections: 300
   nodeSelector:
     "node.deckhouse.io/group": "pg"
+  tolerations:
+    - key: primary-role
+      operator: Equal
+      value: pg
+      effect: NoSchedule
+```
+
+To apply a PostgresClass manifest, run:
+
+```shell
+d8 k apply -f postgresclass.yaml
 ```
