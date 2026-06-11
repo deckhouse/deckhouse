@@ -27,7 +27,7 @@ func ValidateInvariants(state *cpval.State) cpval.Result {
 	}
 
 	result.Merge(cpval.ValidateModuleConfig(state))
-	result.Merge(cpval.ValidateCredentialSecretContent(state))
+	result.Merge(cpval.ValidateCredentialSecretContent(state, AllowedCredentialAuthSchemes))
 	result.Merge(cpval.ValidateInstanceClassEtcdDiskAttachment(state))
 
 	return result

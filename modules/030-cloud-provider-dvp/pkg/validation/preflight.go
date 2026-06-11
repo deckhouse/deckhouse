@@ -27,6 +27,7 @@ func ValidatePreflight(state *cpval.State) cpval.Result {
 	}
 
 	result.Merge(cpval.ValidateCredentialSecretPresence(state))
+	result.Merge(cpval.ValidateProviderClusterConfigKubeconfig(state, ProviderClusterConfigKubeconfigPath))
 	result.Merge(cpval.ValidateMasterNodeGroup(state))
 	result.Merge(cpval.ValidateMasterInstanceClass(state))
 

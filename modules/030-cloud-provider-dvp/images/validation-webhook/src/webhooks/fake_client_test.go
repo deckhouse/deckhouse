@@ -42,7 +42,6 @@ func newWebhookAdmissionStateBuilder(t *testing.T, objects ...runtime.Object) *c
 		ModuleName:                   dvpval.ModuleName,
 		NamespaceName:                dvpval.Namespace,
 		InstanceClassKind:            dvpval.InstanceClassKind,
-		AllowedCredentialAuthSchemes: dvpval.AllowedCredentialAuthSchemes,
 	})
 }
 

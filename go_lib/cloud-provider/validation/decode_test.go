@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 func TestDecodeCredentialSecretsNilVars(t *testing.T) {
@@ -107,10 +106,8 @@ func TestDecodeModuleConfigSettingsMap(t *testing.T) {
 func TestDecodeCredentialSecretsInvalidPayload(t *testing.T) {
 	t.Parallel()
 
-	_, err := DecodeCredentialSecrets(&proto.CloudProviderVars{
-		Secrets: map[string]map[string]any{
-			"broken": {"metadata": "not-an-object"},
-		},
+	_, err := DecodeCredentialSecrets(map[string]map[string]any{
+		"broken": {"metadata": "not-an-object"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "decode secret") {
 		t.Fatalf("DecodeCredentialSecrets() error = %v, want decode secret failure", err)

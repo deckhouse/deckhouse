@@ -27,7 +27,6 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
 func shouldSkipState(state *cpval.State) bool {
@@ -69,12 +68,6 @@ func violationFieldPath(path string) *field.Path {
 	}
 
 	return fp
-}
-
-// validateAdmissionState applies resource invariants for admission requests.
-// Preflight checks run only in the dhctl validator during bootstrap and converge.
-func validateAdmissionState(state *cpval.State) cpval.Result {
-	return dvpval.ValidateInvariants(state)
 }
 
 func internalBuildError(err error) error {

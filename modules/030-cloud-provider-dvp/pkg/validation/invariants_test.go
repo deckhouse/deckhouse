@@ -138,7 +138,6 @@ func validState(t *testing.T) *cpval.State {
 		ModuleName:                   ModuleName,
 		NamespaceName:                Namespace,
 		InstanceClassKind:            InstanceClassKind,
-		AllowedCredentialAuthSchemes: AllowedCredentialAuthSchemes,
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{

@@ -17,7 +17,6 @@ package protocol
 import (
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 )
 
@@ -29,8 +28,6 @@ type StateBuilderConfig struct {
 	NamespaceName string
 	// ModuleName is the cloud-provider ModuleConfig name.
 	ModuleName string
-	// AllowedCredentialAuthSchemes lists auth schemes supported by the provider.
-	AllowedCredentialAuthSchemes []cpapi.AuthScheme
 	// MigrationRules configures migration completeness checks for dhctl protocol input.
 	// When nil, MigrationStatus is not derived from legacy ProviderClusterConfiguration.
 	MigrationRules *cpval.MigrationRules
@@ -49,7 +46,10 @@ func NewStateBuilder(config StateBuilderConfig) *StateBuilder {
 // Build decodes dhctl input and applies provider context from the builder configuration.
 func (b *StateBuilder) Build(input proto.PrepareInput, vars *proto.CloudProviderVars) (*cpval.State, error) {
 	state := &cpval.State{
-		LegacyProviderClusterConfig: input.ProviderClusterConfig,
+		InstanceClassKind:            b.config.InstanceClassKind,
+		NamespaceName:                b.config.NamespaceName,
+		ModuleName:                   b.config.ModuleName,
+		LegacyProviderClusterConfig:  input.ProviderClusterConfig,
 	}
 
 	moduleConfig, err := cpval.DecodeModuleConfigForModule(b.config.ModuleName, input.ModuleConfig)
@@ -59,7 +59,7 @@ func (b *StateBuilder) Build(input proto.PrepareInput, vars *proto.CloudProvider
 	state.ModuleConfig = moduleConfig
 
 	if vars != nil {
-		state.CredentialSecrets, err = cpval.DecodeCredentialSecrets(vars)
+		state.CredentialSecrets, err = cpval.DecodeCredentialSecrets(vars.Secrets)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +88,6 @@ func (b *StateBuilder) applyProviderContext(state *cpval.State) {
 	state.ModuleName = b.config.ModuleName
 	state.NamespaceName = b.config.NamespaceName
 	state.InstanceClassKind = b.config.InstanceClassKind
-	state.AllowedCredentialAuthSchemes = b.config.AllowedCredentialAuthSchemes
 
 	if state.ModuleConfig != nil && state.ModuleConfig.Name == "" {
 		state.ModuleConfig.Name = b.config.ModuleName

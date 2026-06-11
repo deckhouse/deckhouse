@@ -63,7 +63,6 @@ func main() {
 				ModuleName:                   dvpval.ModuleName,
 				NamespaceName:                dvpval.Namespace,
 				InstanceClassKind:            dvpval.InstanceClassKind,
-				AllowedCredentialAuthSchemes: dvpval.AllowedCredentialAuthSchemes,
 			},
 		)
 

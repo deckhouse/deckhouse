@@ -29,6 +29,8 @@ The validator checks:
 4. **Preflight (`bootstrap` + `converge`)** — requires:
    `Secret/d8-credentials`, `NodeGroup/master` with `DVPInstanceClass` reference,
    and `spec.etcdDisk` in that referenced class.
+   When legacy `providerClusterConfiguration` contains `provider.kubeconfigDataBase64`,
+   the value is validated as a base64-encoded kubeconfig (replaces the former dhctl `dvp-kubeconfig` preflight check).
 
 Migration from ProviderClusterConfiguration is skipped while legacy resources are
 incomplete (`MigrationStatus` / `d8-module-is-migrating` ConfigMap).

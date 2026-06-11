@@ -45,8 +45,6 @@ type StateBuilderConfig struct {
 	NamespaceName string
 	// ModuleName is the cloud-provider ModuleConfig name.
 	ModuleName string
-	// AllowedCredentialAuthSchemes lists auth schemes supported by the provider.
-	AllowedCredentialAuthSchemes []cpapi.AuthScheme
 }
 
 // instanceClassGVK returns the GroupVersionKind for the configured InstanceClass kind.
@@ -246,7 +244,6 @@ func (b *StateBuilder) buildBaseState(ctx context.Context) (*cpval.State, error)
 		InstanceClassKind:            b.config.InstanceClassKind,
 		NamespaceName:                b.config.NamespaceName,
 		ModuleName:                   b.config.ModuleName,
-		AllowedCredentialAuthSchemes: b.config.AllowedCredentialAuthSchemes,
 	}
 
 	moduleConfig, err := b.getModuleConfig(ctx)

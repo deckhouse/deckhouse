@@ -18,11 +18,10 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
-func credentialContentState(secrets []cpapi.CredentialSecret, schemes []cpapi.AuthScheme) *State {
+func credentialContentState(secrets []cpapi.CredentialSecret) *State {
 	return &State{
-		NamespaceName:                "d8-cloud-provider-test",
-		CredentialSecrets:            secrets,
-		AllowedCredentialAuthSchemes: schemes,
+		NamespaceName:     "d8-cloud-provider-test",
+		CredentialSecrets: secrets,
 	}
 }
 

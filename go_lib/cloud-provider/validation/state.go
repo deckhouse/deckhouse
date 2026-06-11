@@ -24,18 +24,16 @@ type State struct {
 	NamespaceName string
 	// ModuleName is the cloud-provider ModuleConfig name.
 	ModuleName string
-
-	ModuleConfig      *cpapi.ModuleConfig
+	// ModuleConfig is the decoded cloud-provider ModuleConfig resource.
+	ModuleConfig *cpapi.ModuleConfig
+	// CredentialSecrets holds managed credential Secrets from the module namespace.
 	CredentialSecrets []cpapi.CredentialSecret
-	NodeGroups        []cpapi.NodeGroup
-	InstanceClasses   []cpapi.InstanceClass
-
-	// MigrationStatus controls whether new-model validation should run.
-	MigrationStatus cpapi.MigrationStatus
-
+	// NodeGroups holds CloudPermanent NodeGroups used for cross-resource validation.
+	NodeGroups []cpapi.NodeGroup
+	// InstanceClasses holds provider InstanceClass resources of InstanceClassKind.
+	InstanceClasses []cpapi.InstanceClass
 	// LegacyProviderClusterConfig holds the legacy providerClusterConfiguration section.
 	LegacyProviderClusterConfig map[string]any
-
-	// AllowedCredentialAuthSchemes lists auth schemes supported by the provider.
-	AllowedCredentialAuthSchemes []cpapi.AuthScheme
+	// MigrationStatus controls whether new-model validation should run.
+	MigrationStatus cpapi.MigrationStatus
 }

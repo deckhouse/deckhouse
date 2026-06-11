@@ -21,20 +21,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 // DecodeCredentialSecrets decodes credential Secrets from CloudProviderVars.
-func DecodeCredentialSecrets(vars *proto.CloudProviderVars) ([]cpapi.CredentialSecret, error) {
-	if vars == nil || len(vars.Secrets) == 0 {
+func DecodeCredentialSecrets(rawSecrets map[string]map[string]any) ([]cpapi.CredentialSecret, error) {
+	if len(rawSecrets) == 0 {
 		return []cpapi.CredentialSecret{}, nil
 	}
 
-	credSecrets := make([]cpapi.CredentialSecret, 0, len(vars.Secrets))
+	credSecrets := make([]cpapi.CredentialSecret, 0, len(rawSecrets))
 
-	for name, rawSecret := range vars.Secrets {
+	for name, rawSecret := range rawSecrets {
 		secret, err := DecodeJSONValue[corev1.Secret](rawSecret)
 		if err != nil {
 			return credSecrets, fmt.Errorf("decode secret %q: %w", name, err)

@@ -73,7 +73,7 @@ func TestValidateAdmissionStateRunsOnlyInvariants(t *testing.T) {
 			},
 		},
 	}
-	result := validateAdmissionState(state)
+	result := dvpval.ValidateInvariants(state)
 	if result.HasErrors() {
 		t.Fatalf("validateAdmissionState() = %q, want only invariants without preflight requirements", result.Error())
 	}
@@ -92,7 +92,7 @@ func TestValidateAdmissionStateDoesNotEnforceMasterTopology(t *testing.T) {
 			},
 		},
 	}
-	if strings.Contains(validateAdmissionState(state).Error(), `NodeGroup "master" is required`) {
+	if strings.Contains(dvpval.ValidateInvariants(state).Error(), `NodeGroup "master" is required`) {
 		t.Fatal("validateAdmissionState() enforced preflight master topology")
 	}
 }

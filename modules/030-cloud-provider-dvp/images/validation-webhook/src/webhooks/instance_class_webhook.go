@@ -17,6 +17,7 @@ package webhooks
 import (
 	"context"
 
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -77,7 +78,7 @@ func (v *DVPInstanceClassValidator) validate(
 		return nil, nil
 	}
 
-	result := validateAdmissionState(state)
+	result := dvpval.ValidateInvariants(state)
 
 	if operation == admissionv1.Delete {
 		deleteResult := cpval.ValidateInstanceClassDelete(state, objectName(obj), deletedClass)

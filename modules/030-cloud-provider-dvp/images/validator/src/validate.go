@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
 	dhctlproto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
@@ -35,7 +36,6 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 			ModuleName:                   dvpval.ModuleName,
 			NamespaceName:                dvpval.Namespace,
 			InstanceClassKind:            dvpval.InstanceClassKind,
-			AllowedCredentialAuthSchemes: dvpval.AllowedCredentialAuthSchemes,
 			MigrationRules:               &dvpval.MigrationRules,
 		},
 	)
@@ -49,10 +49,13 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 		return nil
 	}
 
-	result := dvpval.ValidateInvariants(state)
+	result := cpval.Result{}
+
 	if input.Operation == dhctlproto.OperationBootstrap || input.Operation == dhctlproto.OperationConverge {
 		result.Merge(dvpval.ValidatePreflight(state))
 	}
+
+	result.Merge(dvpval.ValidateInvariants(state))
 
 	return result.ErrorOrNil()
 }

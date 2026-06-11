@@ -75,6 +75,22 @@ func TestValidatePreflightRejectsInvalidCredentialSecretType(t *testing.T) {
 	}
 }
 
+func TestValidatePreflightRejectsInvalidPCCKubeconfig(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.LegacyProviderClusterConfig = map[string]any{
+		"provider": map[string]any{
+			"kubeconfigDataBase64": "%%%",
+		},
+	}
+
+	result := ValidatePreflight(state)
+	if !hasViolationCode(result, "invalid_pcc_kubeconfig") {
+		t.Fatalf("ValidatePreflight() = %q", result.Error())
+	}
+}
+
 func TestValidatePreflightRequiresMasterNodeGroup(t *testing.T) {
 	t.Parallel()
 

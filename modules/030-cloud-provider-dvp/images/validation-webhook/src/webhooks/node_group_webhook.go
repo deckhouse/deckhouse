@@ -94,7 +94,7 @@ func (v *NodeGroupValidator) validate(
 		return nil, nil
 	}
 
-	result := validateAdmissionState(state)
+	result := dvpval.ValidateInvariants(state)
 
 	return resultToAdmission(result)
 }

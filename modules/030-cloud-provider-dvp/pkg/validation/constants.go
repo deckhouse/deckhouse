@@ -27,6 +27,8 @@ const (
 	Namespace = "d8-cloud-provider-dvp"
 	// InstanceClassKind is the DVP InstanceClass resource kind.
 	InstanceClassKind = "DVPInstanceClass"
+	// ProviderClusterConfigKubeconfigPath is the dot path to kubeconfig in legacy ProviderClusterConfiguration.
+	ProviderClusterConfigKubeconfigPath = "provider.kubeconfigDataBase64"
 )
 
 var (
