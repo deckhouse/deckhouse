@@ -54,36 +54,10 @@ func NewBinaryPreparator(binaryPath string) *Preparator {
 }
 
 func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) error {
-	ctx, span := telemetry.StartSpan(ctx, "external.Validate")
-	defer span.End()
-	span.SetAttributes(
-		otattribute.String("provider.name", input.ProviderName),
-		otattribute.String("provider.binary", p.binaryPath),
-		otattribute.String("provider.subcommand", "validate"),
-	)
-
-	wireInput, err := toWireInput(input)
-	if err != nil {
-		return fmt.Errorf("build validate request: %w", err)
-	}
-
-	req := providerdata.ValidateRequest{Version: proto.ProtocolVersion, Input: wireInput}
-	payload, err := json.Marshal(req)
-	if err != nil {
-		return fmt.Errorf("marshal validate request: %w", err)
-	}
-
-	span.SetAttributes(otattribute.String("validate.request", string(payload)))
-	log.DebugF("external.Validate binary=%s request=%s\n", p.binaryPath, payload)
-
-	stdout, err := p.run(ctx, "validate", payload)
+	stdout, err := p.call(ctx, "validate", input)
 	if err != nil {
 		return err
 	}
-
-	span.SetAttributes(otattribute.String("validate.response", string(stdout)))
-	log.DebugF("external.Validate binary=%s response=%s\n", p.binaryPath, stdout)
-
 	if len(bytes.TrimSpace(stdout)) == 0 {
 		return nil
 	}
@@ -99,35 +73,10 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 }
 
 func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (providerdata.PrepareResult, error) {
-	ctx, span := telemetry.StartSpan(ctx, "external.Prepare")
-	defer span.End()
-	span.SetAttributes(
-		otattribute.String("provider.name", input.ProviderName),
-		otattribute.String("provider.binary", p.binaryPath),
-		otattribute.String("provider.subcommand", "prepare"),
-	)
-
-	wireInput, err := toWireInput(input)
-	if err != nil {
-		return providerdata.PrepareResult{}, fmt.Errorf("build prepare request: %w", err)
-	}
-
-	req := providerdata.PrepareRequest{Version: proto.ProtocolVersion, Input: wireInput}
-	payload, err := json.Marshal(req)
-	if err != nil {
-		return providerdata.PrepareResult{}, fmt.Errorf("marshal prepare request: %w", err)
-	}
-
-	span.SetAttributes(otattribute.String("prepare.request", string(payload)))
-	log.DebugF("external.Prepare binary=%s request=%s\n", p.binaryPath, payload)
-
-	stdout, err := p.run(ctx, "prepare", payload)
+	stdout, err := p.call(ctx, "prepare", input)
 	if err != nil {
 		return providerdata.PrepareResult{}, err
 	}
-
-	span.SetAttributes(otattribute.String("prepare.response", string(stdout)))
-	log.DebugF("external.Prepare binary=%s response=%s\n", p.binaryPath, stdout)
 
 	var resp providerdata.PrepareResponse
 	if err := json.Unmarshal(stdout, &resp); err != nil {
@@ -136,11 +85,45 @@ func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (p
 	if resp.Error != "" {
 		return providerdata.PrepareResult{}, errors.New(resp.Error)
 	}
-
 	if resp.Result != nil {
 		return *resp.Result, nil
 	}
 	return providerdata.PrepareResult{}, nil
+}
+
+// call encodes input, runs the binary subcommand and returns its stdout.
+// Request/response payloads go to the span and debug log in full — deliberate
+// development-stage telemetry. ValidateRequest and PrepareRequest share the
+// same wire shape, so one request type serves both subcommands.
+func (p *Preparator) call(ctx context.Context, subcommand string, input config.ProviderInput) ([]byte, error) {
+	ctx, span := telemetry.StartSpan(ctx, "external."+subcommand)
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("provider.name", input.ProviderName),
+		otattribute.String("provider.binary", p.binaryPath),
+		otattribute.String("provider.subcommand", subcommand),
+	)
+
+	wireInput, err := toWireInput(input)
+	if err != nil {
+		return nil, fmt.Errorf("build %s request: %w", subcommand, err)
+	}
+	payload, err := json.Marshal(providerdata.PrepareRequest{Version: proto.ProtocolVersion, Input: wireInput})
+	if err != nil {
+		return nil, fmt.Errorf("marshal %s request: %w", subcommand, err)
+	}
+
+	span.SetAttributes(otattribute.String(subcommand+".request", string(payload)))
+	log.DebugF("external.%s binary=%s request=%s\n", subcommand, p.binaryPath, payload)
+
+	stdout, err := p.run(ctx, subcommand, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	span.SetAttributes(otattribute.String(subcommand+".response", string(stdout)))
+	log.DebugF("external.%s binary=%s response=%s\n", subcommand, p.binaryPath, stdout)
+	return stdout, nil
 }
 
 // toWireInput converts ProviderInput to the JSON wire format for external

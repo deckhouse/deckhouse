@@ -511,15 +511,6 @@ func (s ModuleConfigSpec) layoutString() string {
 	return typed.Nodes.Parameters.Layout
 }
 
-func (m *MetaConfig) findModuleConfig(name string) *ModuleConfig {
-	for _, mc := range m.ModuleConfigs {
-		if mc.GetName() == name {
-			return mc
-		}
-	}
-	return nil
-}
-
 func (m *MetaConfig) clusterCloudSpec() (ClusterConfigCloudSpec, error) {
 	var cloud ClusterConfigCloudSpec
 	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
@@ -573,7 +564,7 @@ func (m *MetaConfig) prepareRegistry() error {
 	}
 
 	// Deckhouse mc
-	if mc := m.findModuleConfig("deckhouse"); mc != nil {
+	if mc := m.FindModuleConfig("deckhouse"); mc != nil {
 		rawJSON, err := json.Marshal(mc)
 		if err != nil {
 			return err

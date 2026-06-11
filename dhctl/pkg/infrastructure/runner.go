@@ -302,6 +302,19 @@ func (r *Runner) checkInfrastructureUtilityIsRunning() bool {
 	return (atomic.LoadInt32(&r.infrastructureUtilityRunningCounter) % 2) > 0
 }
 
+// traceStateAndVars attaches the current tfvars and state file contents to the
+// span — deliberate development-stage telemetry.
+func (r *Runner) traceStateAndVars(span ottrace.Span) {
+	if len(r.variablesData) > 0 {
+		span.AddEvent("runner.tfvars", ottrace.WithAttributes(otattribute.String("data", string(r.variablesData))))
+	}
+	if r.statePath != "" {
+		if stateData, err := os.ReadFile(r.statePath); err == nil {
+			span.AddEvent("runner.state", ottrace.WithAttributes(otattribute.String("data", string(stateData))))
+		}
+	}
+}
+
 func (r *Runner) Init(ctx context.Context) error {
 	if r.stopped {
 		return ErrRunnerStopped
@@ -313,11 +326,7 @@ func (r *Runner) Init(ctx context.Context) error {
 		otattribute.String("runner.name", r.name),
 		otattribute.String("runner.step", string(r.infraExecutor.Step())),
 	)
-	if r.statePath != "" {
-		if stateData, err := os.ReadFile(r.statePath); err == nil {
-			span.AddEvent("runner.state", ottrace.WithAttributes(otattribute.String("data", string(stateData))))
-		}
-	}
+	r.traceStateAndVars(span)
 
 	if r.statePath == "" {
 		// Save state directly in the cache to prevent state loss
@@ -457,14 +466,7 @@ func (r *Runner) Apply(ctx context.Context) error {
 		otattribute.String("runner.name", r.name),
 		otattribute.String("runner.step", string(r.infraExecutor.Step())),
 	)
-	if len(r.variablesData) > 0 {
-		span.AddEvent("runner.tfvars", ottrace.WithAttributes(otattribute.String("data", string(r.variablesData))))
-	}
-	if r.statePath != "" {
-		if stateData, err := os.ReadFile(r.statePath); err == nil {
-			span.AddEvent("runner.state", ottrace.WithAttributes(otattribute.String("data", string(stateData))))
-		}
-	}
+	r.traceStateAndVars(span)
 
 	return r.logger.LogProcessCtx(ctx, "default", "infrastructure apply ...", func(ctx context.Context) error {
 		skip, err := r.isSkipChanges(ctx)
@@ -557,14 +559,7 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 		otattribute.String("runner.step", string(r.infraExecutor.Step())),
 		otattribute.Bool("runner.destroy", destroy),
 	)
-	if len(r.variablesData) > 0 {
-		span.AddEvent("runner.tfvars", ottrace.WithAttributes(otattribute.String("data", string(r.variablesData))))
-	}
-	if r.statePath != "" {
-		if stateData, err := os.ReadFile(r.statePath); err == nil {
-			span.AddEvent("runner.state", ottrace.WithAttributes(otattribute.String("data", string(stateData))))
-		}
-	}
+	r.traceStateAndVars(span)
 
 	return r.logger.LogProcessCtx(ctx, "default", "infrastructure plan ...", func(ctx context.Context) error {
 		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhousePlanSuffix)
