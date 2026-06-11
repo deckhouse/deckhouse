@@ -20,17 +20,17 @@ Runs validation in `images/validator/src` using shared libraries:
 
 The validator checks:
 
-1. **ModuleConfig** — resource is present and named `cloud-provider-dvp`.
-2. **CredentialSecret** — `d8-credentials` must have
-   `type: cloud-provider.deckhouse.io/credentials`, `authScheme: kubeconfig`, and a
-   valid kubeconfig in `secret` (stored as base64).
-3. **etcdDisk attachment** — `DVPInstanceClass.spec.etcdDisk` is allowed only for the
-   class attached to `NodeGroup/master`.
-4. **Preflight (`bootstrap` + `converge`)** — requires:
-   `Secret/d8-credentials`, `NodeGroup/master` with `DVPInstanceClass` reference,
-   and `spec.etcdDisk` in that referenced class.
-   When legacy `providerClusterConfiguration` contains `provider.kubeconfigDataBase64`,
-   the value is validated as a base64-encoded kubeconfig (replaces the former dhctl `dvp-kubeconfig` preflight check).
+1. **ModuleConfig** (invariants) — resource is present and named `cloud-provider-dvp`.
+2. **CredentialSecret content** (invariants) — if a managed credential Secret is present,
+   it must have `type: cloud-provider.deckhouse.io/credentials`, `authScheme: kubeconfig`,
+   and a valid base64 kubeconfig in `secret`.
+3. **etcdDisk attachment** (invariants) — `DVPInstanceClass.spec.etcdDisk` is allowed only
+   for the class attached to `NodeGroup/master`.
+4. **Preflight (`bootstrap` + `converge` only)** — requires:
+   - `Secret/d8-credentials` with credential type;
+   - `NodeGroup/master` with `DVPInstanceClass` reference and `spec.etcdDisk` in that class;
+   - when legacy `providerClusterConfiguration` contains `provider.kubeconfigDataBase64`,
+     a non-empty valid base64 kubeconfig (replaces dhctl `dvp-kubeconfig` preflight).
 
 Migration from ProviderClusterConfiguration is skipped while legacy resources are
 incomplete (`MigrationStatus` / `d8-module-is-migrating` ConfigMap).
@@ -38,11 +38,11 @@ incomplete (`MigrationStatus` / `d8-module-is-migrating` ConfigMap).
 **Preflight policy:** Preflight runs only in the dhctl validator for `bootstrap` and
 `converge`. The admission webhook validates resource invariants only.
 
-| Path                     | ModuleConfig | Credentials semantics | etcdDisk attachment | Preflight | Migration skip |
-| ------------------------ | ------------ | --------------------- | ------------------- | --------- | -------------- |
-| dhctl bootstrap/converge | yes          | yes (if present)      | yes                 | yes       | PCC / migration status |
-| dhctl other operations   | yes          | yes (if present)      | yes                 | no        | PCC / migration status |
-| admission webhook        | yes          | yes (if present)      | yes                 | no        | ConfigMap      |
+| Path                     | ModuleConfig | Credential content | Credential presence | etcdDisk | Preflight | Migration skip |
+| ------------------------ | ------------ | ------------------ | ------------------- | -------- | --------- | -------------- |
+| dhctl bootstrap/converge | yes          | yes (if present)   | yes                 | yes      | yes       | PCC / migration status |
+| dhctl other operations   | yes          | yes (if present)   | no                  | yes      | no        | PCC / migration status |
+| admission webhook        | yes          | yes (if present)   | no                  | yes      | no        | ConfigMap      |
 
 On success writes `{}` to stdout and exits 0.
 On validation error writes `{"error":"..."}` to stdout and exits 0.
@@ -50,16 +50,17 @@ On protocol/decode error writes to stderr and exits 1.
 
 ### prepare
 
-Parses `resourcesYAML` into structured `vars` (NodeGroups, InstanceClasses, Secrets)
-and returns them together with the unchanged `providerClusterConfiguration`.
+Returns `input.vars` and unchanged `providerClusterConfiguration`.
+dhctl builds `vars` before calling the provider binary.
 
-`vars` population rules (from `go_lib/dhctl-provider-protocol/parse.go`):
+`vars` fields:
 
-| Field             | Condition                                                                        |
-| ----------------- | -------------------------------------------------------------------------------- |
-| `nodeGroups`      | `kind: NodeGroup`, `apiVersion: deckhouse.io/*`, `spec.nodeType: CloudPermanent` |
-| `instanceClasses` | `kind` ends with `InstanceClass`, `apiVersion: deckhouse.io/*`                   |
-| `secrets`         | `kind: Secret`, `type: cloud-provider.deckhouse.io/credentials`                  |
+| Field             | Source |
+| ----------------- | ------ |
+| `settings`        | ModuleConfig settings for `cloud-provider-dvp` |
+| `nodeGroups`      | CloudPermanent NodeGroups |
+| `instanceClasses` | Provider InstanceClasses |
+| `secrets`         | Credential Secrets in `d8-cloud-provider-dvp` |
 
 ## Build
 
@@ -82,12 +83,20 @@ cat > /tmp/req.json << 'EOF'
     "layout": "standard",
     "operation": "converge",
     "providerClusterConfiguration": {},
-    "moduleConfig": {
-      "provider": {"parameters": {"namespace": "default"}},
-      "storage": {"enabled": true, "parameters": {}},
-      "nodes": {"enabled": false}
-    },
-    "resourcesYAML": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: d8-credentials\n  namespace: d8-cloud-provider-dvp\ntype: cloud-provider.deckhouse.io/credentials\nstringData:\n  authScheme: kubeconfig\n  secret: YXBpVmV=\n"
+    "vars": {
+      "settings": {
+        "provider": {"parameters": {"namespace": "default"}},
+        "storage": {"enabled": true, "parameters": {}},
+        "nodes": {"enabled": false}
+      },
+      "secrets": {
+        "d8-credentials": {
+          "metadata": {"name": "d8-credentials", "namespace": "d8-cloud-provider-dvp"},
+          "type": "cloud-provider.deckhouse.io/credentials",
+          "stringData": {"authScheme": "kubeconfig", "secret": "YXBpVmV="}
+        }
+      }
+    }
   }
 }
 EOF
@@ -95,7 +104,7 @@ EOF
 # {"error":"NodeGroup/master: NodeGroup \"master\" is required"}
 ```
 
-### prepare — full vars
+### prepare — passthrough vars
 
 ```bash
 cat > /tmp/req.json << 'EOF'
@@ -103,18 +112,22 @@ cat > /tmp/req.json << 'EOF'
   "version": "1",
   "input": {
     "providerName": "dvp",
-    "clusterPrefix": "test",
-    "layout": "standard",
     "operation": "bootstrap",
     "providerClusterConfiguration": {"apiVersion": "deckhouse.io/v1", "kind": "DVPClusterConfiguration"},
-    "resourcesYAML": "apiVersion: deckhouse.io/v1alpha1\nkind: DVPInstanceClass\nmetadata:\n  name: worker\nspec:\n  cpu: 4\n---\napiVersion: deckhouse.io/v1\nkind: NodeGroup\nmetadata:\n  name: static-worker\nspec:\n  nodeType: CloudPermanent\n---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: dvp-creds\ntype: cloud-provider.deckhouse.io/credentials\n",
-    "moduleConfig": {"setting": "value"}
+    "vars": {
+      "settings": {"provider": {"parameters": {"namespace": "default"}}},
+      "nodeGroups": {
+        "worker": {
+          "metadata": {"name": "worker"},
+          "spec": {"nodeType": "CloudPermanent"}
+        }
+      }
+    }
   }
 }
 EOF
 /tmp/dvp-validator prepare < /tmp/req.json
-# {"result":{"vars":{"settings":{"setting":"value"},"nodeGroups":{"static-worker":{...}},"instanceClasses":{"worker":{...}},"secrets":{"dvp-creds":{...}}},"providerClusterConfiguration":{...}}}
+# {"result":{"vars":{...},"providerClusterConfiguration":{...}}}
 ```
 
-Note: `NodeGroup` with `nodeType: CloudEphemeral` is **not** included in `vars.nodeGroups` —
-only `CloudPermanent` static nodes are passed to Terraform.
+Manual test configs: `~/flant/bootstrap-configs/dvp/tests/` (see `TEST-CASES.md`).
