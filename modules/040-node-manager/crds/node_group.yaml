@@ -88,6 +88,20 @@ spec:
               type: object
               required: []
               properties:
+                engine:
+                  type: string
+                  enum:
+                    - None
+                    - MCM
+                    - CAPI
+                  description: |
+                    Machinery used to manage nodes in this group.
+
+                    The field value indicates which component manages the nodes:
+                    
+                    - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
+                    - `MCM` — nodes in the group are managed by Machine Controller Manager.
+                    - `CAPI` — nodes in the group are managed by Cluster API.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
@@ -707,6 +721,20 @@ spec:
               type: object
               required: []
               properties:
+                engine:
+                  type: string
+                  enum:
+                    - None
+                    - MCM
+                    - CAPI
+                  description: |
+                    Machinery used to manage nodes in this group.
+
+                    The field value indicates which component manages the nodes:
+                    
+                    - `None` — nodes in the group are not managed by MCM or CAPI.
+                    - `MCM` — nodes in the group are managed by machine-controller-manager.
+                    - `CAPI` — nodes in the group are managed by Cluster API.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
@@ -1366,6 +1394,20 @@ spec:
               type: object
               required: []
               properties:
+                engine:
+                  type: string
+                  enum:
+                    - None
+                    - MCM
+                    - CAPI
+                  description: |
+                    Machinery used to manage nodes in this group.
+
+                    The field value indicates which component manages the nodes:
+                    
+                    - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
+                    - `MCM` — nodes in the group are managed by Machine Controller Manager.
+                    - `CAPI` — nodes in the group are managed by Cluster API.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
