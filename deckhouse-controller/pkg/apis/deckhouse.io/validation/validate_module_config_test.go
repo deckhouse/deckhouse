@@ -1135,6 +1135,22 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 			wantAllowed:         false,
 			wantMessage:         "experimental",
 		},
+		{
+			name:                "experimental module is allowed when allowExperimentalModules is true and it is also listed",
+			allowExperimental:   true,
+			allowedExperimental: []string{moduleName},
+			storageStage:        moduletypes.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
+		{
+			name:                "experimental module is allowed when allowExperimentalModules is true and a different module is listed",
+			allowExperimental:   true,
+			allowedExperimental: []string{"other-experimental-module"},
+			storageStage:        moduletypes.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
 	}
 
 	for _, tt := range tests {
