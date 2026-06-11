@@ -656,7 +656,7 @@ dhctl:
       pull_request: https://github.com/deckhouse/deckhouse/pull/18212
     - summary: Excluded `BaseInfraPhase` from the progress phase list for static clusters.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17856
-    - summary: Аix non-strict unmarshalling for metaconfigs.
+    - summary: Aix non-strict unmarshalling for metaconfigs.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18359
     - summary: Refactored preflight checks.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17564
