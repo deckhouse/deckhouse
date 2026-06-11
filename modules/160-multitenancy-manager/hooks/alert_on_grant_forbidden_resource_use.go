@@ -313,7 +313,7 @@ func (d decisionSets) violates(name string) bool {
 	return d.registrationDefault == "None"
 }
 
-func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource, reg *clusterGrantableResource) (decisionSets, error) {
+func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource, reg *clusterGrantableResource) decisionSets {
 	d := decisionSets{
 		allowed:             map[string]struct{}{},
 		denied:              map[string]struct{}{},
@@ -350,11 +350,11 @@ func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource
 	if reg.Spec.GrantedResource != nil && reg.Spec.GrantedResource.Kind != "" && reg.Spec.GrantedResource.APIGroup != "" {
 		gvr, err := grantedResourceGVR(kube, reg.Spec.GrantedResource.APIGroup, reg.Spec.GrantedResource.Kind)
 		if err != nil {
-			return d, nil
+			return d
 		}
 		list, err := kube.Dynamic().Resource(gvr).List(ctx, v1.ListOptions{})
 		if err != nil {
-			return d, nil
+			return d
 		}
 		excludedSels := make([]labels.Selector, 0, len(reg.Spec.Excluded))
 		for i := range reg.Spec.Excluded {
@@ -381,7 +381,7 @@ func buildDecisionSets(ctx context.Context, kube k8s.Client, entry grantResource
 			}
 		}
 	}
-	return d, nil
+	return d
 }
 
 func labelSelector(ls *v1.LabelSelector) labels.Selector {
@@ -555,10 +555,7 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kube k8s.Client, lo
 		if reg.Spec.Enforcement == "External" {
 			continue
 		}
-		decision, err := buildDecisionSets(ctx, kube, entry, reg)
-		if err != nil {
-			return nil, fmt.Errorf("build decision for %s: %w", entry.ResourceName, err)
-		}
+		decision := buildDecisionSets(ctx, kube, entry, reg)
 
 		refs, err := referencesFor(ctx, kube, entry.ResourceName)
 		if err != nil {
