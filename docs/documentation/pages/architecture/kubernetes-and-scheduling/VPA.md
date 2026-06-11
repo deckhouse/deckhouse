@@ -22,7 +22,7 @@ VPA can operate in two modes:
 
     > To use the **InPlaceOrRecreate** mode in Kubernetes versions earlier than 1.33, enable the `InPlacePodVerticalScaling` feature gate in the [`control-plane-manager` configuration](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
 
-  - **Auto**: a deprecated mode. It will be removed in a future VPA API version. Use an explicit mode instead, such as **InPlaceOrRecreate**, **Recreate**, or **Initial**.
+  - **Auto**: a deprecated mode. It will no longer be supported in future Deckhouse Kubernetes Platform (DKP) versions. Use an explicit mode instead, such as **InPlaceOrRecreate**, **Recreate**, or **Initial**.
 
   - **Recreate**: VPA adjusts the resources of running Pods by restarting them. For a single Pod (`replicas: 1`), this will result in service unavailability during the restart. VPA does not restart Pods that were created without a controller.
 

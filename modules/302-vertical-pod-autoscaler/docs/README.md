@@ -10,7 +10,7 @@ Also, VPA can recommend values for resource requests and limits without updating
 VPA has the following operating modes:
 
 - `"InPlaceOrRecreate"` (default) — available in Kubernetes 1.33 and later. VPA attempts to update Pod resources without recreating the Pod. If in-place resource updates are not possible, VPA recreates the Pod similarly to the `Recreate` mode.
-- `"Auto"` — a deprecated mode. It will be removed in a future VPA API version. Use an explicit mode instead, such as `InPlaceOrRecreate`, `Recreate`, or `Initial`.
+- `"Auto"` — a deprecated mode. It will no longer be supported in future Deckhouse Kubernetes Platform (DKP) versions. Use an explicit mode instead, such as `InPlaceOrRecreate`, `Recreate`, or `Initial`.
 - `"Recreate"` — the mode allows VPA to change resources of running pods (restart them while running). In case of one pod running (`replicas: 1`), this will lead to the service being unavailable during the restart. In this mode, VPA does not recreate pods that were created without a controller.
 - `"Initial"` — VPA modifies Pod resources only when Pods are started (but not during operation).
 - `"Off"` — VPA does not take any action to update the resource requests for the running containers. In this case, if VPA is running in this mode, you can see what resource values it recommends (`d8 k describe vpa <vpa-name>`).
