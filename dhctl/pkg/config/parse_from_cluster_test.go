@@ -20,11 +20,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
@@ -66,40 +64,6 @@ func mustSeedCloudProviderMC(t *testing.T, kubeCl *client.KubernetesClient, prov
 	require.NoError(t, err)
 }
 
-func mustSeedLegacyPCCSecret(t *testing.T, kubeCl *client.KubernetesClient, payload string) {
-	t.Helper()
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      legacyProviderClusterConfigSecretName,
-			Namespace: global.ConfigsNS,
-		},
-		Data: map[string][]byte{
-			"cloud-provider-cluster-configuration.yaml": []byte(payload),
-		},
-	}
-	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(t.Context(), secret, metav1.CreateOptions{})
-	require.NoError(t, err)
-}
-
-const legacyPCCMinimalYAML = `
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: WithoutNAT
-masterNodeGroup:
-  replicas: 1
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: imageId
-    platform: standard-v2
-sshPublicKey: ssh-rsa AAAAB3NzaC
-nodeNetworkCIDR: 10.100.0.0/21
-provider:
-  cloudID: cloudId
-  folderID: folderId
-  serviceAccountJSON: "{}"
-`
-
 func TestCloudFiller_McFlowOnly_NoLegacy(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClient()
 	mustSeedCloudProviderMC(t, kubeCl, "yandex")
@@ -114,42 +78,6 @@ func TestCloudFiller_McFlowOnly_NoLegacy(t *testing.T) {
 	require.Empty(t, mc.ProviderClusterConfig, "PCC must stay unset in mc-flow")
 	require.Len(t, mc.ModuleConfigs, 1)
 	require.Equal(t, "cloud-provider-yandex", mc.ModuleConfigs[0].GetName())
-}
-
-func TestCloudFiller_McFlowAndLegacy_BothLoaded(t *testing.T) {
-	// During a mc-flow migration the cluster carries both markers
-	// simultaneously, and the ModuleConfig is often a stub without
-	// settings while the legacy PCC still holds the real layout/master
-	// sizing. Cloud() therefore loads both: the downstream split
-	// (extractProviderClusterFields + applyCloudProviderModuleSettings)
-	// gives PCC priority for typed fields, with the ModuleConfig only
-	// filling whatever is left. This test pins that behaviour so a
-	// future "mc-flow always wins" attempt does not silently break
-	// legacy clusters whose MC is empty.
-	kubeCl := client.NewFakeKubernetesClient()
-	mustSeedCloudProviderMC(t, kubeCl, "yandex")
-	mustSeedLegacyPCCSecret(t, kubeCl, legacyPCCMinimalYAML)
-
-	mc := mustMetaConfigForProvider(t, "yandex")
-	// schemaStore is required when the legacy Secret is present —
-	// parseLegacyProviderClusterConfig validates against schemas. Test
-	// the no-MC path via TestParseConfigFromCluster on CI; here we
-	// limit ourselves to mc+pcc coexistence sans schema validation by
-	// deferring the legacy-load assertion to the existing CI harness.
-	t.Skip("requires SchemaStore for legacy Secret validation — covered by TestParseConfigFromCluster on CI")
-	filler := newFromClusterMetaConfigFiller(kubeCl, newSchemaStore(nil, nil))
-	_, err := filler.Cloud(context.Background(), mc)
-	require.NoError(t, err)
-	require.NotEmpty(t, mc.ProviderClusterConfig, "PCC must be loaded alongside the stub MC")
-	require.Len(t, mc.ModuleConfigs, 1)
-}
-
-func TestCloudFiller_LegacyOnly_NoMC(t *testing.T) {
-	// We need a real SchemaStore for legacy PCC validation; the harness
-	// for that lives in TestParseConfigFromCluster which is CI-only.
-	// Skip locally — TestParseConfigFromCluster covers this path when
-	// the werf-bundled candi tree is available.
-	t.Skip("legacy-only validation requires SchemaStore — covered by TestParseConfigFromCluster on CI")
 }
 
 func TestCloudFiller_NeitherMarker(t *testing.T) {

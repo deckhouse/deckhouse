@@ -70,6 +70,8 @@ func TestPrepareMutationMergeContract(t *testing.T) {
 func TestPrepareMutationRevalidatesAgainstSchema(t *testing.T) {
 	dir := t.TempDir()
 	writeTestProviderSchema(t, dir, "MutProvConfiguration")
+	// NewSchemaStore is a process-wide singleton: loading here is what makes
+	// the revalidation inside validateAndPrepareMetaConfig see the schema.
 	store := NewSchemaStore(nil)
 	require.NoError(t, store.LoadProviderDir("mutprov", "sha256:mut1", dir))
 

@@ -28,14 +28,10 @@ import (
 )
 
 func TestValidateClusterPrefix(t *testing.T) {
-	getInput := func(clusterPrefix string) config.ProviderInput {
-		input := config.ProviderInput{ClusterPrefix: clusterPrefix}
-		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
-		fillTestProviderClusterConfig(&input, master, nil)
-		return input
-	}
 	assertClusterPrefix := func(t *testing.T, clusterPrefix string, hasError bool) {
-		assertValidation(t, true, getInput(clusterPrefix), hasError)
+		input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
+		input.ClusterPrefix = clusterPrefix
+		assertValidation(t, input, hasError)
 	}
 
 	assertClusterPrefix(t, "", true)
@@ -47,7 +43,7 @@ func TestValidateClusterPrefix(t *testing.T) {
 func TestValidateMasterNodeGroupSpec(t *testing.T) {
 	assertMasterNodeGroup := func(t *testing.T, replicas int, externalIPS []string, hasError bool) {
 		input := getTestInputForMaster(t, replicas, externalIPS)
-		assertValidation(t, true, input, hasError)
+		assertValidation(t, input, hasError)
 	}
 
 	assertMasterNodeGroup(t, 2, []string{"1.1.1.1"}, true)
@@ -62,7 +58,7 @@ func TestValidateNodeGroupsSpec(t *testing.T) {
 		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
 		nodeGroups := getTestNodeGroupsSpec(t, replicas, externalIPS)
 		fillTestProviderClusterConfig(&input, master, nodeGroups)
-		assertValidation(t, true, input, hasError)
+		assertValidation(t, input, hasError)
 	}
 
 	assertNodeGroups(t, 2, []string{"1.1.1.1"}, true)
@@ -82,7 +78,7 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 
 	assertWithNATInstance := func(t *testing.T, settings string, hasError bool, nodeGroups json.RawMessage) {
 		input := getInput(t, settings, nodeGroups)
-		assertValidation(t, true, input, hasError)
+		assertValidation(t, input, hasError)
 	}
 
 	assertWithNATInstance(t, "", true, nil)
@@ -180,7 +176,7 @@ func fillTestWithNatInstanceLayout(t *testing.T, input *config.ProviderInput, se
 	}
 }
 
-func assertValidation(t *testing.T, _ bool, input config.ProviderInput, hasError bool) {
+func assertValidation(t *testing.T, input config.ProviderInput, hasError bool) {
 	input.Operation = providerdata.OperationBootstrap
 	preparator := NewMetaConfigPreparator(true, log.NewSilentLogger())
 
