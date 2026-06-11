@@ -24,32 +24,11 @@ import (
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: inject cabundle to capi crds ::", func() {
-	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {"capiControllerManagerWebhookCert": {"ca": "-----BEGIN CERTIFICATE-----CaPICert"}}}}`, `{}`)
 
-	Context("Have a CRD with caBundle not injected and secret + service generated", func() {
+	Context("Have a CRD with caBundle not injected and CA in values", func() {
 		BeforeEach(func() {
 			state := `
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: capi-webhook-service
-  namespace: d8-cloud-instance-manager
-spec:
-  ports:
-    - port: 443
-      targetPort: webhook-server
-  selector:
-    app: capi-controller-manager
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: capi-webhook-tls
-  namespace: d8-cloud-instance-manager
-type: kubernetes.io/tls
-data:
-  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tQ2FQSUNlcnQK
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -150,7 +129,7 @@ spec:
   scope: Cluster
 `
 			f.KubeStateSet(state)
-			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("Should inject caBundle into CRD", func() {
@@ -162,27 +141,6 @@ spec:
 	Context("Have a CRD with caBundle already injected and matching", func() {
 		BeforeEach(func() {
 			state := `
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: capi-webhook-service
-  namespace: d8-cloud-instance-manager
-spec:
-  ports:
-    - port: 443
-      targetPort: webhook-server
-  selector:
-    app: capi-controller-manager
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: capi-webhook-tls
-  namespace: d8-cloud-instance-manager
-type: kubernetes.io/tls
-data:
-  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tQ2FQSUNlcnQK
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -284,7 +242,7 @@ spec:
   scope: Cluster
 `
 			f.KubeStateSet(state)
-			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("Should not patch CRD because caBundle is identical", func() {
@@ -295,30 +253,9 @@ spec:
 		})
 	})
 
-	Context("Have a CRD with no conversion section and secret + service generated", func() {
+	Context("Have a CRD with no conversion section and CA in values", func() {
 		BeforeEach(func() {
 			state := `
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: capi-webhook-service
-  namespace: d8-cloud-instance-manager
-spec:
-  ports:
-    - port: 443
-      targetPort: webhook-server
-  selector:
-    app: capi-controller-manager
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: capi-webhook-tls
-  namespace: d8-cloud-instance-manager
-type: kubernetes.io/tls
-data:
-  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tQ2FQSUNlcnQK
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -409,7 +346,7 @@ spec:
   scope: Cluster
 `
 			f.KubeStateSet(state)
-			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("Should inject a conversion webhook section with caBundle", func() {
@@ -419,21 +356,35 @@ spec:
 		})
 	})
 
-	Context("Have secret but no CRDs", func() {
+	Context("Have CA in values but no CRDs", func() {
 		BeforeEach(func() {
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("Should execute successfully and not patch anything", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Have CRDs but no CA in values", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.capiControllerManagerWebhookCert.ca", "")
 			state := `
 ---
-apiVersion: v1
-kind: Secret
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
 metadata:
-  name: capi-webhook-tls
-  namespace: d8-cloud-instance-manager
-type: kubernetes.io/tls
-data:
-  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tQ2FQSUNlcnQK
+  name: clusters.cluster.x-k8s.io
+spec:
+  group: cluster.x-k8s.io
+  names:
+    kind: Cluster
+    plural: clusters
+  scope: Cluster
 `
 			f.KubeStateSet(state)
-			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("Should execute successfully and not patch anything", func() {

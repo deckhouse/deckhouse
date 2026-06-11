@@ -2,7 +2,7 @@
   {{- $prefix := .Values.nodeManager.internal.cloudProvider.capiClusterName }}
   {{- if and $prefix .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
 
-# Cluster (cluster.x-k8s.io/v1beta1) and MachineHealthCheck (cluster.x-k8s.io/v1beta1)
+# Cluster (cluster.x-k8s.io/v1beta2) and MachineHealthCheck (cluster.x-k8s.io/v1beta2)
 # are created by the create_capi_cluster_resources hook on its dedicated queue.
 # Both go through a conversion webhook served by capi-webhook-service →
 # capi-controller-manager; helm-rendering them here races the very first install
