@@ -4,49 +4,31 @@ permalink: en/admin/configuration/managed-services/postgres.html
 description: "Administering the managed PostgreSQL service in Deckhouse Kubernetes Platform"
 ---
 
-Managed PostgreSQL in Deckhouse Kubernetes Platform adds an API for creating and maintaining PostgreSQL instances in the cluster. The administrator enables the [`managed-postgres`](/modules/managed-postgres/) module and configures PostgresClass resources that define allowed configurations for user Postgres resources.
+Managed PostgreSQL in Deckhouse Kubernetes Platform adds an API for creating and maintaining PostgreSQL instances in the cluster. This page describes service administration: enabling the [`managed-postgres`](/modules/managed-postgres/) module and preparing PostgresClass classes for users.
 
-A Postgres resource can describe a highly available PostgreSQL cluster or a single instance. Through PostgresClass, the administrator defines which topologies, CPU and memory ranges, PostgreSQL configuration values, and validation rules are available to users.
+Before you enable [`managed-postgres`](/modules/managed-postgres/), meet the [installation requirements](/modules/managed-postgres/configuration.html#requirements). For user operations with PostgreSQL services, see [Using Managed PostgreSQL](../../../user/managed-services/postgres.html).
 
-The service is in the [`Preview` stage](/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle). Before you enable [`managed-postgres`](/modules/managed-postgres/), meet the [installation requirements](/modules/managed-postgres/configuration.html#requirements). The main administrator cluster-wide resource is PostgresClass. It defines which Postgres configurations are available to users and which values are applied by default. For user operations with PostgreSQL services, see [Using Managed PostgreSQL](../../../user/managed-services/postgres.html).
+## Basic Managed PostgreSQL configuration
 
-## Available PostgreSQL configurations
+To prepare Managed PostgreSQL for users:
 
-Configure one or more PostgresClass resources to define the PostgreSQL configuration options available to users:
+1. [Enable the `managed-postgres` module](/modules/managed-postgres/configuration.html) using one of the methods described on the module configuration page in the "How to explicitly enable the module..." block.
+2. Review the automatically created `default` PostgresClass or prepare a custom PostgresClass.
+3. [Define available topologies and placement zones](#configure-topology).
+4. [Configure sizing policies](#configure-sizing-policies): CPU ranges, memory ranges, and allowed CPU fractions.
+5. Set [default PostgreSQL parameter values](#configure-default-values) and the [list of parameters users can override](#configure-overridable-parameters).
+6. If needed, add [validation rules](#configure-validation-rules) and [pod scheduling parameters](#configure-pod-scheduling).
+7. Apply the PostgresClass and provide users with its name for creating Postgres resources.
 
-- topologies and zones are available to users;
-- CPU and memory ranges are allowed;
-- PostgreSQL parameters are applied by default;
-- parameters a user can override in their Postgres resource;
-- validation rules must pass before service creation.
+The following sections describe what happens after the module is enabled and how to configure PostgresClass.
 
-## Before you begin
+## After Enabling Managed PostgreSQL
 
-Make sure that:
-
-- [`managed-postgres`](/modules/managed-postgres/) is available in your installation.
-- The [installation requirements](/modules/managed-postgres/configuration.html#requirements) are met.
-- You have permission to create cluster-wide resources.
-
-## Enable Managed PostgreSQL
-
-To enable Managed PostgreSQL, apply the ModuleConfig resource:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: managed-postgres
-spec:
-  enabled: true
-  version: 1
-```
-
-After `managed-postgres` is enabled, the `default` PostgresClass resource is created automatically.
+The `managed-postgres` module automatically creates the `default` PostgresClass resource.
 
 The controller is also deployed in the `d8-managed-postgres` system namespace. It reconciles the state of Postgres resources in all user namespaces.
 
-## PostgresClass resource
+## Prepare PostgresClass
 
 The PostgresClass resource is a cluster-wide resource that describes a managed PostgreSQL service class for user Postgres resources. Use it to:
 
@@ -58,166 +40,17 @@ The PostgresClass resource is a cluster-wide resource that describes a managed P
 
 Each Postgres resource must reference an existing PostgresClass through the `spec.postgresClassName` parameter.
 
-## Configure topology
+To view the automatically created `default` PostgresClass, run:
 
-In PostgresClass, you can limit allowed topology options and define the default topology. The following values are supported:
-
-- `Ignored`;
-- `Zonal`;
-- `TransZonal`.
-
-Example:
-
-```yaml
-spec:
-  topology:
-    allowedTopologies:
-      - Ignored
-      - Zonal
-      - TransZonal
-    defaultTopology: TransZonal
-    allowedZones:
-      - zone-1
-      - zone-2
-      - zone-3
+```shell
+d8 k get PostgresClass default -o yaml
 ```
 
-## Configure sizing policies
+If you need a separate PostgreSQL configuration, prepare a custom PostgresClass manifest.
 
-The `spec.sizingPolicies` parameter defines allowed CPU and memory ranges for related Postgres resources. The `cores.min`–`cores.max` ranges must not overlap between policies.
+### PostgresClass example
 
-Example:
-
-```yaml
-spec:
-  sizingPolicies:
-    - cores:
-        min: 1
-        max: 4
-      memory:
-        min: 100Mi
-        max: 1Gi
-        step: 1Mi
-      coreFractions:
-        - 10
-        - 30
-        - 50
-    - cores:
-        min: 5
-        max: 10
-      memory:
-        min: 500Mi
-        max: 2Gi
-      coreFractions:
-        - 50
-        - 70
-        - 100
-```
-
-## Configure validation rules
-
-For PostgresClass, you can define validation rules in the `spec.validations` parameter. The CEL language is supported. The following predefined variables are available:
-
-- `configuration.maxConnections`;
-- `configuration.workMem`;
-- `configuration.sharedBuffers`;
-- `configuration.walKeepSize`;
-- `instance.memory.size`;
-- `instance.cpu.cores`.
-
-Example:
-
-```yaml
-spec:
-  validations:
-    - message: "Max connections should not be more than 300"
-      rule: "configuration.maxConnections < 300"
-    - message: "Shared buffers should not be more than 25% of RAM"
-      rule: "configuration.sharedBuffers < instance.memory.size / 4"
-```
-
-## Configure overridable parameters
-
-The `spec.overridableConfiguration` parameter defines an allowlist of PostgreSQL parameters that users can set in the Postgres resource. The following values are supported:
-
-- `maxConnections`;
-- `sharedBuffers`;
-- `workMem`;
-- `walKeepSize`.
-
-Example:
-
-```yaml
-spec:
-  overridableConfiguration:
-    - maxConnections
-    - workMem
-```
-
-## Configure default values
-
-In `spec.configuration` of the PostgresClass resource, you can define default PostgreSQL configuration values. If a parameter is allowed in `overridableConfiguration` and is set in the Postgres resource, the value from Postgres takes precedence.
-
-Example:
-
-```yaml
-spec:
-  configuration:
-    maxConnections: 100
-    workMem: 100Mi
-```
-
-The operator sets the following default values:
-
-- `maxConnections`: `100`;
-- `sharedBuffers`: 25% of `memory.size`;
-- `workMem`: (`memory.size` - `sharedBuffers`) * 4 / `maxConnections`;
-- `walKeepSize`: `512Mi`.
-
-## Configure pod scheduling
-
-For PostgresClass, you can define the following pod scheduling parameters:
-
-- `nodeAffinity`;
-- `nodeSelector`;
-- `tolerations`.
-
-### nodeAffinity example
-
-```yaml
-spec:
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "node.deckhouse.io/group"
-              operator: "In"
-              values:
-                - "pg"
-```
-
-### tolerations example
-
-```yaml
-spec:
-  tolerations:
-    - key: primary-role
-      operator: Equal
-      value: pg
-      effect: NoSchedule
-```
-
-### nodeSelector example
-
-```yaml
-spec:
-  nodeSelector:
-    "node.deckhouse.io/group": "pg"
-```
-
-## PostgresClass example
-
-The following is a complete PostgresClass resource example that defines topology, configuration values, overridable parameters, validation rules, and sizing policies:
+The following is a PostgresClass resource example that defines topology, configuration values, overridable parameters, validation rules, and sizing policies:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
@@ -272,8 +105,185 @@ spec:
         - 100
 ```
 
-## Important notes
+To apply a PostgresClass manifest, run:
 
-{% alert level="warning" %}
-Deckhouse Kubernetes Platform does not remove the related CRDs when [`managed-postgres`](/modules/managed-postgres/) is disabled. If you no longer need these resources, delete the corresponding CRDs manually.
-{% endalert %}
+```shell
+d8 k apply -f postgresclass.yaml
+```
+
+## Configure topology
+
+In PostgresClass, you can limit allowed topologies, define the default topology, and set the list of zones available for PostgreSQL instance placement.
+
+Topologies available to users are listed in the [`spec.topology.allowedTopologies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedtopologies) parameter of the PostgresClass resource. If the [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology) parameter is not set in a Postgres resource, the controller applies the value from [`spec.topology.defaultTopology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-defaulttopology). For `Zonal` and `TransZonal` topologies, the list of available zones is set in the [`spec.topology.allowedZones`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedzones) parameter.
+
+| Topology | Features | Where it is defined |
+| --- | --- | --- |
+| `Ignored` | PostgreSQL instance placement is not bound to zones. Use it for clusters without zone separation or when zone-aware placement is not important. | Allowed in `spec.topology.allowedTopologies`; can be the value of `spec.topology.defaultTopology`. |
+| `Zonal` | PostgreSQL instances are placed in one zone from the `spec.topology.allowedZones` list. | Allowed in `spec.topology.allowedTopologies`; users select it in `spec.cluster.topology`. |
+| `TransZonal` | PostgreSQL instances are distributed across several zones from the `spec.topology.allowedZones` list. | Allowed in `spec.topology.allowedTopologies`; users select it in `spec.cluster.topology`. |
+
+Example:
+
+```yaml
+spec:
+  topology:
+    allowedTopologies:
+      - Ignored
+      - Zonal
+      - TransZonal
+    defaultTopology: TransZonal
+    allowedZones:
+      - zone-1
+      - zone-2
+      - zone-3
+```
+
+## Configure sizing policies
+
+Administrators can control PostgreSQL instance sizes available to users by defining CPU and memory ranges and allowed CPU fractions. This helps keep resource consumption within the selected PostgresClass limits and prevents configurations that do not meet service requirements.
+
+Sizing policies are configured in the [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) parameter of the PostgresClass resource.
+
+The `cores.min`–`cores.max` ranges must not overlap between policies.
+
+Example:
+
+```yaml
+spec:
+  sizingPolicies:
+    - cores:
+        min: 1
+        max: 4
+      memory:
+        min: 100Mi
+        max: 1Gi
+        step: 1Mi
+      coreFractions:
+        - 10
+        - 30
+        - 50
+    - cores:
+        min: 5
+        max: 10
+      memory:
+        min: 500Mi
+        max: 2Gi
+      coreFractions:
+        - 50
+        - 70
+        - 100
+```
+
+## Configure validation rules
+
+Administrators can configure additional validation rules for the resulting PostgreSQL configuration. These rules let the controller reject Postgres resources with unwanted parameter combinations, for example when the number of connections is too high for the selected memory size.
+
+Validation rules are configured in the [`spec.validations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-validations) parameter of the PostgresClass resource. The CEL language is supported.
+
+Rules can use PostgreSQL parameter values after `spec.configuration` and user overrides are applied, as well as the selected instance size:
+
+- `configuration.maxConnections`;
+- `configuration.workMem`;
+- `configuration.sharedBuffers`;
+- `configuration.walKeepSize`;
+- `instance.memory.size`;
+- `instance.cpu.cores`.
+
+Example:
+
+```yaml
+spec:
+  validations:
+    - message: "Max connections should not be more than 300"
+      rule: "configuration.maxConnections < 300"
+    - message: "Shared buffers should not be more than 25% of RAM"
+      rule: "configuration.sharedBuffers < instance.memory.size / 4"
+```
+
+## Configure overridable parameters
+
+PostgresClass separates baseline PostgreSQL parameter values from the user's ability to override them in a Postgres resource. Administrators can allow users to override only the parameters they should control.
+
+Parameters available for override are configured in [`spec.overridableConfiguration`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-overridableconfiguration). The same parameters can be used when configuring default values in `spec.configuration`.
+
+The following values are supported:
+
+- `maxConnections`;
+- `sharedBuffers`;
+- `workMem`;
+- `walKeepSize`.
+
+Example:
+
+```yaml
+spec:
+  overridableConfiguration:
+    - maxConnections
+    - workMem
+```
+
+## Configure default values
+
+After choosing which parameters users can override, administrators can define a baseline PostgreSQL configuration for all Postgres resources that reference this PostgresClass. Default values are applied automatically, so users get a ready configuration without setting every parameter manually.
+
+Default values are configured in [`spec.configuration`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-configuration). If a parameter is allowed in `spec.overridableConfiguration` and is set in the Postgres resource, the value from Postgres takes precedence.
+
+Example:
+
+```yaml
+spec:
+  configuration:
+    maxConnections: 100
+    workMem: 100Mi
+```
+
+The operator sets the following default values:
+
+- `maxConnections`: `100`;
+- `sharedBuffers`: 25% of `memory.size`;
+- `workMem`: (`memory.size` - `sharedBuffers`) * 4 / `maxConnections`;
+- `walKeepSize`: `512Mi`.
+
+## Configure pod scheduling
+
+To control placement of the PostgreSQL service on specific nodes, administrators can use standard Kubernetes scheduling mechanisms: `nodeAffinity`, `nodeSelector`, and `tolerations`. For example, this allows PostgreSQL instances to run on dedicated nodes with specific labels or to be scheduled onto nodes with taints.
+
+Scheduling parameters are configured in PostgresClass:
+
+- [`spec.nodeAffinity`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeaffinity);
+- [`spec.nodeSelector`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeselector);
+- [`spec.tolerations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-tolerations).
+
+### nodeAffinity example
+
+```yaml
+spec:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: "node.deckhouse.io/group"
+              operator: "In"
+              values:
+                - "pg"
+```
+
+### tolerations example
+
+```yaml
+spec:
+  tolerations:
+    - key: primary-role
+      operator: Equal
+      value: pg
+      effect: NoSchedule
+```
+
+### nodeSelector example
+
+```yaml
+spec:
+  nodeSelector:
+    "node.deckhouse.io/group": "pg"
+```

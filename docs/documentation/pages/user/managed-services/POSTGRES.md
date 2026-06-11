@@ -38,7 +38,7 @@ In a typical user scenario, you need to:
 Make sure that:
 
 - [`managed-postgres`](/modules/managed-postgres/) is enabled;
-- the administrator has provided the name of a suitable [PostgresClass](../../../admin/configuration/managed-services/postgres.html#postgresclass-resource), allowed sizes, and available topology options;
+- the administrator has provided the name of a suitable [PostgresClass](../../../admin/configuration/managed-services/postgres.html#prepare-postgresclass), allowed sizes, and available topology options;
 - you have permission to create resources in the target namespace.
 
 ## Create a service with a database and a user
@@ -230,7 +230,7 @@ spec:
     sharedBuffers: 128Mi
 ```
 
-Whether these parameters can be overridden depends on the settings of the related [PostgresClass](../../../admin/configuration/managed-services/postgres.html#postgresclass-resource). If the administrator has not allowed overriding a parameter in PostgresClass, the Postgres resource fails validation.
+Whether these parameters can be overridden depends on the settings of the related [PostgresClass](../../../admin/configuration/managed-services/postgres.html#prepare-postgresclass). If the administrator has not allowed overriding a parameter in PostgresClass, the Postgres resource fails validation.
 
 ## Select a deployment option
 
