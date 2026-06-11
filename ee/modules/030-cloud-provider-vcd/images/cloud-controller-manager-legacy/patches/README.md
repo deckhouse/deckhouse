@@ -33,7 +33,7 @@ Files:
 
 Changes:
 
-- Update dependencies
+- Update go-vcloud-director SDK: v2.14.0-rc.3 → v2.21.0 (required for patch 005 which uses QueryCatalogRecords method introduced in v2.21.0)
 
 ### 004-klog.patch
 
@@ -87,3 +87,13 @@ Files:
 Changes:
 
 - Add support for the `vcd.cpi.flant.com/load-balancer-ip` annotation
+
+### 008-fix-ccm-command-signature.patch
+
+Files:
+
+- cmd/ccm/main.go
+
+Changes:
+
+- Keep legacy `v1.5.0` call signature of `NewCloudControllerManagerCommand` without adding an extra feature-gates map argument.
