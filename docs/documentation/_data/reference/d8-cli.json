@@ -50125,7 +50125,7 @@
         },
         {
           "name": "vnc VirtualMachine",
-          "description": "Open a vnc connection to a virtual machine.",
+          "description": "Open a VNC connection to a virtual machine. Install one of the supported VNC clients. No additional configuration is required. A custom client binary cannot be specified.<br><br>macOS (first found): TigerVNC Viewer, Chicken VNC, RealVNC Viewer, or remote-viewer in $PATH.<br>Linux and Windows: remote-viewer or vncviewer in $PATH.",
           "aliases": null,
           "flags": {
             "address": {
