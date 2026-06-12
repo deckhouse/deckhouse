@@ -7,7 +7,7 @@ FORMATTING_END = \033[0m
 FOCUS =
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
-SPELLCHECKER_IMAGE = registry.deckhouse.io/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
+SPELLCHECKER_IMAGE = registry.deckhouse.ru/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
 
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
@@ -50,6 +50,13 @@ else ifeq ($(PLATFORM_NAME), arm64)
 	TRDL_ARCH = arm64
 	CRANE_ARCH = arm64
 	GH_ARCH = arm64
+endif
+
+# Set proxy for github
+ifeq ($(DISTRO_PACKAGES_PROXY),)
+	GITHUB_URL = https://github.com
+else
+	GITHUB_URL = http://$(DISTRO_PACKAGES_PROXY)/repository/github-com
 endif
 
 # Set testing path for tests-modules
@@ -129,7 +136,7 @@ bin:
 
 bin/promtool-${PROMTOOL_VERSION}/promtool:
 	mkdir -p bin/promtool-${PROMTOOL_VERSION}
-	curl -sSfL https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/promtool-${PROMTOOL_VERSION} --strip=1 prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}/promtool
+	curl -sSfL $(GITHUB_URL)/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/promtool-${PROMTOOL_VERSION} --strip=1 prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}/promtool
 
 .PHONY: bin/promtool
 bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
@@ -138,7 +145,7 @@ bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
 
 bin/gator-${GATOR_VERSION}/gator:
 	mkdir -p bin/gator-${GATOR_VERSION}
-	curl -sSfL https://github.com/open-policy-agent/gatekeeper/releases/download/v${GATOR_VERSION}/gator-v${GATOR_VERSION}-${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/gator-${GATOR_VERSION} gator
+	curl -sSfL $(GITHUB_URL)/open-policy-agent/gatekeeper/releases/download/v${GATOR_VERSION}/gator-v${GATOR_VERSION}-${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/gator-${GATOR_VERSION} gator
 
 .PHONY: bin/gator
 bin/gator: bin/gator-${GATOR_VERSION}/gator
@@ -157,7 +164,7 @@ bin/opa: bin/opa-${OPA_VERSION}/opa
 
 .PHONY: bin/yq
 bin/yq: bin ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
+	curl -sSfL $(GITHUB_URL)/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: bin/gator bin/opa gotestsum ## Run unit tests for modules hooks and templates.
@@ -264,10 +271,10 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs generate-werf
+generate: generate-kubernetes generate-tools generate-docs dmt-gen generate-werf 
 
 .PHONY: generate-tools
-generate-tools:
+generate-tools: yq
 	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
@@ -380,7 +387,7 @@ docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all page
 
 bin/jq-$(JQ_VERSION)/jq:
 	mkdir -p bin/jq-$(JQ_VERSION)
-	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-$(JQ_VERSION)/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq-$(JQ_VERSION)/jq && chmod +x $(PWD)/bin/jq-$(JQ_VERSION)/jq
+	curl -sSfL $(GITHUB_URL)/stedolan/jq/releases/download/jq-$(JQ_VERSION)/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq-$(JQ_VERSION)/jq && chmod +x $(PWD)/bin/jq-$(JQ_VERSION)/jq
 
 .PHONY: bin/jq
 bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
@@ -388,7 +395,7 @@ bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion s
 	ln -s jq-$(JQ_VERSION)/jq bin/jq
 
 bin/crane: bin ## Install crane deps for update-patchversion script.
-	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
+	curl -sSfL $(GITHUB_URL)/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
 bin/trdl: bin
 	@if ! command -v bin/trdl >/dev/null 2>&1; then \
@@ -407,11 +414,11 @@ bin/werf: bin bin/trdl ## Install werf for images-digests generator.
 
 bin/gh: bin ## Install gh cli.
 ifeq ($(OS_NAME), Darwin)
-	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
+	curl -sSfL $(GITHUB_URL)/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
 	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
 	rm bin/gh.zip
 else
-	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
+	curl -sSfL $(GITHUB_URL)/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
 	tar zxf bin/gh.tar.gz -C bin/ && ln -s bin/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh bin/gh
 	rm bin/gh.tar.gz
 endif
@@ -431,6 +438,36 @@ update-base-images-versions:
 	##~ Options: version=vMAJOR.MINOR.PATCH
 	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
 	$(MAKE) render-workflow
+
+BASE_LIMIT_KEYS := REGISTRY_PATH \
+                builder/distroless \
+                builder/golang-1.25 \
+                builder/golang-1.26 \
+                builder/golang \
+                minget-0.1 \
+                minget
+
+.PHONY: update-container-factory
+update-container-factory: ## Download container-factory digests and update candi/alt_base_images.yml
+	@set -e; \
+	test -n "$(version)" || (echo 'Err: version is required. Example: make update-container-factory version=v1.0.37' >&2; exit 1); \
+	ver="$(version)"; \
+	case "$$ver" in \
+	  v[0-9]*.[0-9]*.[0-9]*) ;; \
+	  [0-9]*.[0-9]*.[0-9]*) ver="v$$ver" ;; \
+	esac; \
+	cd candi; \
+	URL="https://fox.flant.com/api/v4/projects/deckhouse%2Fcontainer-base%2Fbase-images/packages/generic/base_images/$$ver/base_images.yml"; \
+	curl --fail -sSL "$$URL" -o .alt_base_images.full.yml; \
+	{ \
+	  echo "# version=$$ver"; \
+	  for key in $(BASE_LIMIT_KEYS); do \
+	    line=$$(grep -F "$${key}:" .alt_base_images.full.yml | head -n1); \
+	    echo "$$line"; \
+	  done; \
+	} > alt_base_images.yml; \
+	rm -f .alt_base_images.full.yml; \
+	echo "Updated candi/alt_base_images.yml to version $$ver"
 
 ##@ Build
 .PHONY: build
@@ -529,6 +566,7 @@ build: bin/werf set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: bin/werf set-build-envs ## render werf.yaml for build Deckhouse images.
+	echo "Cur dir $$(pwd)"
 	bin/werf config render --dev
 
 GO=$(shell which go)
@@ -568,9 +606,10 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.30.12
-CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CODE_GENERATOR_VERSION ?= v0.33.8
+DECKHOUSE_CLI_VERSION ?= v0.31.0
+DMT_VERSION ?= 0.1.78
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
+CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
 GOTESTSUM_VERSION ?= v1.13.0
 
@@ -585,6 +624,13 @@ generate-werf: yq ## Generate changes in werf files.
 		echo "No GOLANGCI_LINT_VERSION specified. Skipping update."; \
 	fi
 
+
+## Generate dmt version in dmt-lint.sh
+.PHONY: dmt-gen
+dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
+  ##~ Options: DMT_VERSION=X.Y.Z
+	@sed -i 's/DMT_VERSION=[0-9.]\+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh
+	@echo "Updated DMT_VERSION to $(DMT_VERSION) in tools/dmt-lint.sh"
 
 ## Generate tools documentation
 .PHONY: generate-docs
@@ -663,14 +709,14 @@ deckhouse-cli:
 		CURRENT_VERSION=$$($(DECKHOUSE_CLI) --version 2>/dev/null | head -n1 | awk '{print $$3}' || echo "unknown"); \
 		if [ "$$CURRENT_VERSION" != "$(DECKHOUSE_CLI_VERSION)" ]; then \
 			echo "Current d8 version ($$CURRENT_VERSION) does not match required version ($(DECKHOUSE_CLI_VERSION)), downloading new binary..."; \
-			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
 		else \
 			echo "d8 version $(DECKHOUSE_CLI_VERSION) is already installed."; \
+			exit 0; \
 		fi; \
 	else \
 		echo "d8 not found, downloading..."; \
-		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
-	fi
+	fi; \
+	curl -sSfL "$(GITHUB_URL)/deckhouse/deckhouse-cli/releases/download/$(DECKHOUSE_CLI_VERSION)/d8-$(DECKHOUSE_CLI_VERSION)-$(YQ_PLATFORM)-$(YQ_ARCH).tar.gz" | tar -xz -C $(LOCALBIN) --strip-components=2 $(YQ_PLATFORM)-$(YQ_ARCH)/bin/d8
 
 ## Download client-gen locally if necessary.
 .PHONY: client-gen

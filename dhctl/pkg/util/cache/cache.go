@@ -146,7 +146,7 @@ func (s *StateCache) CleanWithExceptions(ctx context.Context, excludeKeys ...str
 		return nil
 	})
 	if err != nil {
-		log.WarnF("Can't getting keys to remove: %s ...\n", err)
+		log.WarnF("Can't get keys to remove: %s ...\n", err)
 		return
 	}
 

@@ -122,7 +122,7 @@ spec:
                             ca:
                               description: |
                                 Применённая контрольная сумма CA-сертификатов компонента.
-                        certificatesExpirationDate:
+                        certificatesExpirationTime:
                           description: |
                             Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 
@@ -147,7 +147,7 @@ spec:
                             ca:
                               description: |
                                 Применённая контрольная сумма CA-сертификатов компонента.
-                        certificatesExpirationDate:
+                        certificatesExpirationTime:
                           description: |
                             Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 
@@ -172,7 +172,7 @@ spec:
                             ca:
                               description: |
                                 Применённая контрольная сумма CA-сертификатов компонента.
-                        certificatesExpirationDate:
+                        certificatesExpirationTime:
                           description: |
                             Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 
@@ -197,7 +197,7 @@ spec:
                             ca:
                               description: |
                                 Применённая контрольная сумма CA-сертификатов компонента.
-                        certificatesExpirationDate:
+                        certificatesExpirationTime:
                           description: |
                             Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 

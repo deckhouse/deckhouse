@@ -1,0 +1,37 @@
+diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
+index e1070ee..79e2efd 100644
+--- a/pkg/providers/v1/aws.go
++++ b/pkg/providers/v1/aws.go
+@@ -3278,6 +3278,11 @@ func mapNodeNameToPrivateDNSName(nodeName types.NodeName) string {
+ // Deprecated: use instanceIDToNodeName instead. See
+ // mapNodeNameToPrivateDNSName for details.
+ func mapInstanceToNodeName(i *ec2types.Instance) types.NodeName {
++	for _, tag := range i.Tags {
++		if aws.ToString(tag.Key) == "Name" {
++			return types.NodeName(aws.ToString(tag.Value))
++		}
++	}
+ 	return types.NodeName(aws.ToString(i.PrivateDnsName))
+ }
+ 
+@@ -3305,7 +3310,19 @@ func (c *Cloud) findInstanceByNodeName(ctx context.Context, nodeName types.NodeN
+ 	}
+ 
+ 	if len(instances) == 0 {
+-		return nil, nil
++		filters := []ec2types.Filter{
++			newEc2Filter("tag:Name", privateDNSName),
++			newEc2Filter("instance-state-name", aliveFilter...),
++		}
++
++		instances, err = c.describeInstances(ctx, filters)
++		if err != nil {
++			return nil, err
++		}
++
++		if len(instances) == 0 {
++			return nil, nil
++		}
+ 	}
+ 	if len(instances) > 1 {
+ 		return nil, fmt.Errorf("multiple instances found for name: %s", nodeName)

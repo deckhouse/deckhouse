@@ -31,7 +31,7 @@ import (
 func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	resourcesToCreate := make(template.Resources, 0)
 	if b.Options.Bootstrap.ResourcesPath != "" {
-		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
+		log.WarnLn("--resources flag is deprecated. Please use the --config flag multiple times for logical resource separation")
 		parsedResources, err := template.ParseResources(b.Options.Bootstrap.ResourcesPath, nil)
 		if err != nil {
 			return err
@@ -53,7 +53,7 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	log.DebugF("Resources: %s\n", resourcesToCreate.String())
 
 	if len(resourcesToCreate) == 0 {
-		log.WarnLn("Resources to create were not found.")
+		log.WarnLn("No resources to create were found.")
 		return nil
 	}
 
@@ -65,7 +65,7 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		}
 		labelChan := intLogger.GetPhaseChan()
 		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Create resources", labelChan, phasesChan)
+		pbParam := progressbar.NewPbParams(100, "Create resources", labelChan, phasesChan, intLogger.GetLogChan())
 
 		if err := progressbar.InitProgressBar(pbParam); err != nil {
 			return err

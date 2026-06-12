@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -66,10 +67,10 @@ type ConvergeExporter struct {
 	GaugeMetrics    map[string]*prometheus.GaugeVec
 	CounterMetrics  map[string]*prometheus.CounterVec
 
-	tmpDir      string
-	downloadDir string
-	logger      log.Logger
-	isDebug     bool
+	tmpDir        string
+	globalOptions *options.GlobalOptions
+	logger        log.Logger
+	isDebug       bool
 }
 
 var (
@@ -95,13 +96,11 @@ var (
 )
 
 type ExporterParams struct {
-	Address     string
-	Path        string
-	Interval    time.Duration
-	TmpDir      string
-	DownloadDir string
-	Logger      log.Logger
-	IsDebug     bool
+	Address       string
+	Path          string
+	Interval      time.Duration
+	GlobalOptions *options.GlobalOptions
+	Logger        log.Logger
 
 	// KubeCl is the in-cluster API client. The caller builds it via
 	// providerinitializer.GetProviders / kubeProvider.Client(ctx) just like
@@ -115,7 +114,9 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		logger = log.GetDefaultLogger()
 	}
 
-	infraContext := infrastructure.NewContext(logger).WithDebug(params.IsDebug)
+	isDebug := params.GlobalOptions.IsDebug
+
+	infraContext := infrastructure.NewContext(logger).WithDebug(isDebug)
 	return &ConvergeExporter{
 		MetricsPath:           params.Path,
 		ListenAddress:         params.Address,
@@ -126,10 +127,10 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		OneGaugeMetrics:       make(map[string]prometheus.Gauge),
 		GaugeMetrics:          make(map[string]*prometheus.GaugeVec),
 		CounterMetrics:        make(map[string]*prometheus.CounterVec),
-		tmpDir:                params.TmpDir,
-		downloadDir:           params.DownloadDir,
+		tmpDir:                params.GlobalOptions.TmpDir,
+		globalOptions:         params.GlobalOptions,
 		logger:                logger,
-		isDebug:               params.IsDebug,
+		isDebug:               isDebug,
 	}
 }
 
@@ -214,7 +215,7 @@ func (c *ConvergeExporter) registerMetrics() {
 //
 //nolint:gocritic
 func (c *ConvergeExporter) Start(ctx context.Context) {
-	log.InfoLn("Start exporter")
+	log.InfoLn("Starting exporter")
 	log.InfoLn("Address: ", c.ListenAddress)
 	log.InfoLn("Metrics path: ", c.MetricsPath)
 	log.InfoLn("Checks interval: ", c.CheckInterval)
@@ -263,7 +264,7 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 		case <-ticker.C:
 			c.recordStatistic(c.getStatistic(ctx, clearTmp))
 		case <-ctx.Done():
-			log.ErrorLn("Stop exporter...")
+			log.ErrorLn("Stopping exporter...")
 			return
 		}
 	}
@@ -276,7 +277,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(c.logger),
 		),
-		nil,
+		c.globalOptions,
 	)
 	if err != nil {
 		log.ErrorLn(err)
@@ -293,7 +294,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           c.tmpDir,
-		DownloadDir:      c.downloadDir,
+		GlobalOptions:    c.globalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           c.logger,
 		IsDebug:          c.isDebug,
@@ -318,7 +319,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 
 	c.infrastructureContext.SetCloudProviderGetter(providerGetter)
 
-	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{}, true)
+	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{}, true, c.globalOptions)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
@@ -353,7 +354,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 		}
 
 		c.GaugeMetrics["cluster_status"].WithLabelValues(status).Set(0)
-		log.InfoF("Cluster status: clean %s status\n", status)
+		log.InfoF("Cluster status: clearing %s status\n", status)
 	}
 
 	newExistedEntities := newPreviouslyExistedEntities()
@@ -367,7 +368,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 				continue
 			}
 			c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(0)
-			log.InfoF("%v/%v: clean node status %v\n", node.Group, node.Name, status)
+			log.InfoF("%v/%v: clearing node status %v\n", node.Group, node.Name, status)
 		}
 	}
 
@@ -379,7 +380,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 				continue
 			}
 			c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(0)
-			log.InfoF("%v: node template clean status %v\n", template.Name, status)
+			log.InfoF("%v: clearing node template status %v\n", template.Name, status)
 		}
 	}
 
@@ -390,7 +391,7 @@ func (c *ConvergeExporter) recordStatistic(statistic *check.Statistics, hasTerra
 		}
 		for _, status := range nodeStatuses {
 			c.GaugeMetrics["node_status"].WithLabelValues(status, nodeGroup, nodeName).Set(0)
-			log.InfoF("%v/%v: clean missing node status %v\n", nodeGroup, nodeName, status)
+			log.InfoF("%v/%v: clearing missing node status %v\n", nodeGroup, nodeName, status)
 		}
 	}
 

@@ -28,7 +28,6 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -98,10 +97,10 @@ func ParseConnectionConfig(
 	}
 
 	unmarshallError := func(err error, kind string, docNumber int) string {
-		return fmt.Sprintf("Cannot unmarshal to %s document %d: %v", kind, docNumber, err)
+		return fmt.Sprintf("Cannot unmarshal %s document %d: %v", kind, docNumber, err)
 	}
 
-	log.DebugF("Parsing connection config has %d documents\n", len(docs))
+	log.DebugF("Connection config has %d documents\n", len(docs))
 
 	config := &ConnectionConfig{}
 
@@ -127,7 +126,7 @@ func ParseConnectionConfig(
 			Version: gvk.GroupVersion().String(),
 		}
 
-		log.DebugF("Process validate and parse connection config document %d for index %v\n", i, index)
+		log.DebugF("Validating and parsing connection config document %d for index %v\n", i, index)
 
 		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
@@ -144,7 +143,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHConfig = &sshConfig
-			log.DebugF("SSHConfig added in result config\n")
+			log.DebugF("SSHConfig added to the result config\n")
 		case SSHConfigHostKind:
 			sshHostConfigDocsCount++
 			var sshHost SSHHost
@@ -153,7 +152,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHHosts = append(config.SSHHosts, sshHost)
-			log.DebugF("SSHHost added in result config, host in result config %d\n", len(config.SSHHosts))
+			log.DebugF("SSHHost added to the result config, hosts in result config %d\n", len(config.SSHHosts))
 		default:
 			msg := fmt.Sprintf("Unknown kind, expected one of (%q, %q)", SSHConfigKind, SSHConfigHostKind)
 			appendValidationError(msg, i, &gvk, &obj)
@@ -203,7 +202,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 	log.DebugF("Connection config path: %s\n", connectionConfigPath)
 
-	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, p.opts.DirConfig())
+	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, &p.opts.Global)
 	if err != nil {
 		return fmt.Errorf("Parsing ssh config from file: %w", err)
 	}
@@ -225,7 +224,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 		keysPaths = append(keysPaths, fullPath)
 		if len(key.Passphrase) > 0 {
-			log.DebugF("Passphrase for key %s added in map\n", fullPath)
+			log.DebugF("Passphrase for key %s added to the map\n", fullPath)
 			pathToPassPhrase[fullPath] = key.Passphrase
 		}
 	}
@@ -263,7 +262,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	return nil
 }
 
-func parseConnectionConfigFromFile(path string, dirConfig *directoryconfig.DirectoryConfig) (*ConnectionConfig, error) {
+func parseConnectionConfigFromFile(path string, globalOptions *options.GlobalOptions) (*ConnectionConfig, error) {
 	configData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading connection config file: %v", err)
@@ -271,7 +270,7 @@ func parseConnectionConfigFromFile(path string, dirConfig *directoryconfig.Direc
 
 	return ParseConnectionConfig(
 		string(configData),
-		NewSchemaStore(dirConfig),
+		NewSchemaStore(globalOptions),
 		ValidateOptionValidateExtensions(true),
 	)
 }

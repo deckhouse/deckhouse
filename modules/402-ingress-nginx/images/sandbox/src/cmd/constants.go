@@ -46,6 +46,7 @@ var sandboxExtraAllowSyscalls = []string{
 	"geteuid",
 	"getegid",
 	"getppid",
+	"getpgid",
 	"uname",
 	"wait4",
 	"poll",
@@ -88,11 +89,35 @@ var sandboxExtraReadBase = []string{
 	"/etc/ingress-controller/auth/",
 	"/etc/ingress-controller/geoip/",
 	"/etc/ingress-controller/telemetry/",
-	"/bin/sh", // for modsecurity
+	"/bin/sh",                          // for modsecurity
+	"/usr/local/sbin/sh",               // for modsecurity
+	"/usr/local/bin/sh",                // for modsecurity
+	"/usr/sbin/sh",                     // for modsecurity
+	"/usr/bin/sh",                      // for modsecurity
+	"/sbin/sh",                         // for modsecurity
+	"/iis-errors.data",                 // for modsecurity
+	"java-classes.data",                // for modsecurity
+	"java-code-leakages.data",          // for modsecurity
+	"java-errors.data",                 // for modsecurity
+	"lfi-os-files.data",                // for modsecurity
+	"php-config-directives.data",       // for modsecurity
+	"php-errors-pl2.data",              // for modsecurity
+	"php-errors.data",                  // for modsecurity
+	"php-function-names-933150.data",   // for modsecurity
+	"php-function-names-933151.data",   // for modsecurity
+	"php-variables.data",               // for modsecurity
+	"restricted-files.data",            // for modsecurity
+	"restricted-upload.data",           // for modsecurity
+	"scanners-user-agents.data",        // for modsecurity
+	"sql-errors.data",                  // for modsecurity
+	"ssrf.data",                        // for modsecurity
+	"unix-shell.data",                  // for modsecurity
+	"web-shells-php.data",              // for modsecurity
+	"windows-powershell-commands.data", // for modsecurity
 	"/lib/",
 	"/usr/lib/",
 	"/usr/local/lib/",
-	"/unicode.mapping",
+	"/unicode.mapping", // for modsecurity
 	"/usr/local/modsecurity/lib/",
 	"/modules_mount/etc/nginx/modules/otel/",
 	"/chroot/*",            // allow only top-level files in /chroot (not recursive into /chroot/<dir>/...) for modsecurity "/chroot/unicode.mapping", "/chroot/scanners-user-agents.data" etc ...

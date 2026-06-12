@@ -15,6 +15,8 @@
 package app
 
 import (
+	"os"
+
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -32,15 +34,15 @@ const (
 
 // GlobalFlags registers application-wide flags into cmd, writing into o.
 func GlobalFlags(cmd *kingpin.Application, o *options.GlobalOptions) {
-	cmd.Flag("logger-type", "Format logs output of a dhctl in different ways.").
+	cmd.Flag("logger-type", "Format the log output of dhctl in different ways.").
 		Envar(configEnvName("LOGGER_TYPE")).
 		Default("pretty").
 		EnumVar(&o.LoggerType, "pretty", "json")
-	cmd.Flag("tmp-dir", "Set temporary directory for debug purposes.").
+	cmd.Flag("tmp-dir", "Set the temporary directory for debug purposes.").
 		Envar(configEnvName("TMP_DIR")).
 		Default(o.TmpDir).
 		StringVar(&o.TmpDir)
-	cmd.Flag("do-not-write-debug-log-file", `Skip write debug log into file in tmp-dir`).
+	cmd.Flag("do-not-write-debug-log-file", `Skip writing the debug log to a file in tmp-dir`).
 		Envar(configEnvName("DO_NOT_WRITE_DEBUG_LOG")).
 		Default("false").
 		BoolVar(&o.DoNotWriteDebugLogFile)
@@ -52,11 +54,11 @@ func GlobalFlags(cmd *kingpin.Application, o *options.GlobalOptions) {
 		Envar(configEnvName("PROGRESS_LOG_FILE_PATH")).
 		Default("").
 		StringVar(&o.ProgressFilePath)
-	cmd.Flag("download-dir", "Set directory for downloaded images and it's content").
+	cmd.Flag("download-dir", "Set the directory for downloaded images and their content").
 		Envar(configEnvName("DOWNLOAD_DIR")).
 		Default(o.DownloadDir).
 		StringVar(&o.DownloadDir)
-	cmd.Flag("download-cache-dir", "Set directory for downloaded images layers cache.").
+	cmd.Flag("download-cache-dir", "Set the directory for the downloaded image layers cache.").
 		Envar(configEnvName("DOWNLOAD_CACHE_DIR")).
 		Default(o.DownloadCacheDir).
 		StringVar(&o.DownloadCacheDir)
@@ -64,13 +66,24 @@ func GlobalFlags(cmd *kingpin.Application, o *options.GlobalOptions) {
 		Default("false").
 		Short('v').
 		BoolVar(&o.ShowProgress)
+
+	rootPath, err := os.Getwd()
+	if err != nil {
+		rootPath = "/"
+	}
+	if !options.CheckDirs() {
+		rootPath = o.DownloadDir
+		o.NeedDownload = true
+	}
+
+	options.SetPaths(rootPath, o)
 }
 
 // DefineConfigFlags registers --config (required).
 func DefineConfigFlags(cmd *kingpin.CmdClause, o *options.GlobalOptions) {
 	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.
-It can be go-template file (for only string keys!). Passed data contains next keys:
-  cloudDiscovery - the data discovered by applying infrastructure creation utility and getting its output. It depends on the cloud provider.
+It can be a go-template file (string keys only!). The passed data contains the following keys:
+  cloudDiscovery - the data discovered by running the infrastructure creation utility and getting its output. It depends on the cloud provider.
 `).
 		Required().
 		Envar(configEnvName("CONFIG")).
@@ -79,7 +92,7 @@ It can be go-template file (for only string keys!). Passed data contains next ke
 
 // DefineSanityFlags registers the destructive-action confirmation flag.
 func DefineSanityFlags(cmd *kingpin.CmdClause, o *options.GlobalOptions) {
-	cmd.Flag("yes-i-am-sane-and-i-understand-what-i-am-doing", "You should double check what you are doing here.").
+	cmd.Flag("yes-i-am-sane-and-i-understand-what-i-am-doing", "You should double-check what you are doing here.").
 		Default("false").
 		BoolVar(&o.SanityCheck)
 }

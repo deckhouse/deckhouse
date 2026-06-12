@@ -26,18 +26,6 @@ kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
-# [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-# [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  imagesRepo: registry.deckhouse.ru/deckhouse/<REVISION>
-  # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
-  # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
-  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
----
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
@@ -53,6 +41,13 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
+    # [<en>] Settings for accessing the container registry with Deckhouse images.
+    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.ru/deckhouse/<REVISION>
+        license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Turn on cni-cilium module.
 # [<en>] https://deckhouse.io/modules/cni-cilium/

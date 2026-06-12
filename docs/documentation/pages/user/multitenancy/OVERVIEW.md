@@ -117,12 +117,15 @@ For example:
 
    In the output list of projects, you should see the newly created project corresponding to the namespace:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d
    test        Deployed   empty                                                                     1m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 You can change the template of the created project to an existing one.
 

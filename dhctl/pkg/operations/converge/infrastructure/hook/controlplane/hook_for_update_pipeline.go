@@ -135,7 +135,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	// in restart operation we will get error with strict getting
 	outputs, err := infrastructure.GetMasterNodeResultNoStrict(ctx, runner)
 	if err != nil {
-		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
+		return false, fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
 
 	masterIP := outputs.MasterIPForSSH
@@ -165,7 +165,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 
 	err = infra_utils.DeleteNodeObjectFromCluster(ctx, kubeClient, h.nodeToConverge)
 	if err != nil {
-		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToConverge, err)
+		return false, fmt.Errorf("failed to delete node object '%s' from cluster: %v\n", h.nodeToConverge, err)
 	}
 
 	return false, nil
@@ -181,7 +181,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return nil
 	}
 
-	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
+	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}

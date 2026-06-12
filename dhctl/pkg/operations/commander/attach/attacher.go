@@ -98,7 +98,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           i.Params.TmpDir,
-		DownloadDir:      i.Params.Options.Global.DownloadDir,
+		GlobalOptions:    &i.Params.Options.Global,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           i.Params.Logger,
 		IsDebug:          i.Params.IsDebug,
@@ -311,7 +311,7 @@ func (i *Attacher) scan(
 
 		clusterState, err := infrastructurestate.GetClusterStateFromCluster(ctx, kubeClient)
 		if err != nil {
-			return fmt.Errorf("unable get cluster tf state: %w", err)
+			return fmt.Errorf("unable to get cluster tf state: %w", err)
 		}
 
 		if err = stateCache.Save(ctx, "base-infrastructure.tfstate", clusterState); err != nil {

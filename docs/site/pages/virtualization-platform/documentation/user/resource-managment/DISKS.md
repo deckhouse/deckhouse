@@ -45,6 +45,7 @@ d8 k get storageclass
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                 PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 i-sds-replicated-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
@@ -57,6 +58,8 @@ rv-thin-r1 (default)                 replicated.csi.storage.deckhouse.io   Delet
 rv-thin-r2                           replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/modules/virtualization/cr.html#virtualdisk).
 
@@ -117,10 +120,13 @@ d8 k get vd blank-disk
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE   CAPACITY   AGE
 blank-disk   Ready   100Mi      1m2s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to create an empty disk in the web interface (this step can be skipped and performed when creating a VM):
 
@@ -147,10 +153,13 @@ d8 k get vi ubuntu-24-04 -o wide
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
 ubuntu-24-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-24-04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The size you are looking for is specified in the **UNPACKEDSIZE** column and is 2.5Gi.
 
@@ -208,11 +217,14 @@ d8 k get vd
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE   CAPACITY   AGE
 linux-vm-root    Ready   10Gi       7m52s
 linux-vm-root-2  Ready   2590Mi     7m15s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to create a disk from an image in the web interface (this step can be skipped and performed when creating a VM):
 
@@ -291,10 +303,13 @@ d8 k get vd linux-vm-root
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   10Gi       10m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Let's apply the changes:
 
@@ -314,10 +329,13 @@ d8 k get vd linux-vm-root
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   11Gi       12m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to change the disk size in the web interface:
 

@@ -1,6 +1,6 @@
 module oom-kills-exporter
 
-go 1.25.5
+go 1.25.10
 
 require (
 	github.com/golang/glog v1.2.5

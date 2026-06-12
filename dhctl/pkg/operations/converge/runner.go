@@ -199,7 +199,7 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 
 		log.DebugF("NodeGroup for converge %v\n", nodeGroupName)
 
-		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, true)
+		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, true, r.switcher.GetGlobalOptions())
 		err := rr.Run(ctx)
 		if err != nil {
 			return err
@@ -263,6 +263,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 		metaConfig,
 		nodeGroupsWithoutStateInCluster,
 		ctx.InfrastructureContext(metaConfig),
+		r.switcher.GetGlobalOptions(),
 	); err != nil {
 		return err
 	}
@@ -272,7 +273,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 
 		log.DebugF("NodeGroup for converge %v", nodeGroupName)
 
-		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, false)
+		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, false, r.switcher.GetGlobalOptions())
 		err := rr.Run(ctx)
 		if err != nil {
 			return err
@@ -341,35 +342,36 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 			StateCache:    ctx.StateCache(),
 		},
 			false,
+			r.switcher.GetGlobalOptions(),
 		)
 		if err != nil {
 			return err
 		}
 
 		if !hasTerraFormState {
-			log.InfoLn("Cluster do not have terraform state. Skipping migration")
+			log.InfoLn("Cluster does not have terraform state. Skipping migration")
 			return nil
 		}
 
 		commanderError := ""
 		if ctx.CommanderMode() {
-			commanderError = " For fix to migrate to opentofy please " +
-				"detach cluster from commander, converge on previous installer version manually and attach cluster to commander. " +
-				"Show complete guide in D8NeedMigrateStateToOpenTofu alert"
+			commanderError = " To migrate to opentofu, please " +
+				"detach the cluster from commander, converge on the previous installer version manually, and attach the cluster to commander again. " +
+				"See the complete guide in the D8NeedMigrateStateToOpenTofu alert"
 		}
 
 		if stats.Cluster.Status != check.OKStatus {
-			return fmt.Errorf("Cluster state has no ok status.%s", commanderError)
+			return fmt.Errorf("Cluster state does not have an OK status.%s", commanderError)
 		}
 
 		for _, node := range stats.Node {
 			if node.Status != check.OKStatus {
-				return fmt.Errorf("Node %s state has no ok status.%s", node.Name, commanderError)
+				return fmt.Errorf("Node %s state does not have an OK status.%s", node.Name, commanderError)
 			}
 		}
 	}
 
-	log.DebugLn("Start backup infrastructure states")
+	log.DebugLn("Starting backup of infrastructure states")
 
 	var commanderMode *infrastructurestate.TofuBackupCommanderMode
 	if ctx.CommanderMode() {
@@ -385,7 +387,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		return err
 	}
 
-	log.DebugLn("End backup infrastructure states")
+	log.DebugLn("Finished backup of infrastructure states")
 
 	if err := r.updateClusterState(ctx, metaConfig); err != nil {
 		return err
@@ -400,7 +402,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		return err
 	}
 
-	log.DebugLn("Restart infrastructure manager deployments")
+	log.DebugLn("Restarting infrastructure manager deployments")
 
 	err = manager.RestartStateExporter(ctx.Ctx(), ctx.KubeProvider())
 	if err != nil {
@@ -413,7 +415,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 			return err
 		}
 	} else {
-		log.InfoF("Skip restarting autoconverger\n")
+		log.InfoF("Skipping restart of autoconverger\n")
 	}
 
 	log.DebugLn("Restarting infrastructure manager deployments finished")
@@ -423,7 +425,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 
 func (r *runner) converge(ctx *context.Context) error {
 	log.DebugF("Converge start\n")
-	defer log.DebugF("Converge finisher\n")
+	defer log.DebugF("Converge finished\n")
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err
@@ -436,7 +438,7 @@ func (r *runner) converge(ctx *context.Context) error {
 			return err
 		}
 	} else {
-		log.InfoLn("Skip converge base infrastructure")
+		log.InfoLn("Skipping converge of base infrastructure")
 	}
 
 	kubeClientSwitched := false
@@ -458,7 +460,7 @@ func (r *runner) converge(ctx *context.Context) error {
 			return err
 		}
 	} else {
-		log.InfoLn("Skip converge nodes")
+		log.InfoLn("Skipping converge of nodes")
 	}
 
 	if !r.isSkip(phases.DeckhouseConfigurationPhase) {
@@ -467,7 +469,7 @@ func (r *runner) converge(ctx *context.Context) error {
 			return err
 		}
 	} else {
-		log.InfoLn("Skip converge deckhouse configuration")
+		log.InfoLn("Skipping converge of deckhouse configuration")
 	}
 
 	if kubeClientSwitched {
@@ -513,7 +515,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			return err
 		}
 
-		outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
+		outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", r.switcher.GetGlobalOptions(), infrastructure.GetBaseInfraResult)
 		if err != nil {
 			return err
 		}

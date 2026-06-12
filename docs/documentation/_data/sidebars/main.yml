@@ -41,10 +41,6 @@ entries:
                     en: Restoring registry access
                     ru: Восстановление подключения к registry
                   url: /admin/configuration/registry/restore-token.html
-                - title:
-                    en: Switching editions
-                    ru: Переключение редакций
-                  url: /admin/configuration/registry/switching-editions.html
             - title:
                 en: IAM
                 ru: IAM
@@ -861,6 +857,22 @@ entries:
                 en: Assigning namespace labels
                 ru: Назначение лейблов пространствам имён
               url: /admin/configuration/label-assignment.html
+            - title:
+                en: Marketplace
+                ru: Marketplace
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/marketplace/
+                - title:
+                    en: Package repositories
+                    ru: Репозитории пакетов
+                  url: /admin/configuration/marketplace/package-repository.html
+                - title:
+                    en: Scanning
+                    ru: Сканирование
+                  url: /admin/configuration/marketplace/scanning.html
         - title:
             en: Platform update
             ru: Обновление платформы
@@ -881,6 +893,10 @@ entries:
                 en: Updating Kubernetes and versioning
                 ru: Обновление Kubernetes и управление версиями
               url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+            - title:
+                en: Switching editions
+                ru: Переключение редакций
+              url: /admin/configuration/update/switching-editions.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
@@ -1072,6 +1088,22 @@ entries:
                 ru: Настройка мониторинга приложений
               url: /user/monitoring/app.html
         - title:
+            en: Marketplace
+            ru: Marketplace
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/marketplace/
+            - title:
+                en: Installing and managing applications
+                ru: Установка и управление приложениями
+              url: /user/marketplace/applications.html
+            - title:
+                en: Troubleshooting
+                ru: Диагностика
+              url: /user/marketplace/troubleshooting.html
+        - title:
             en: Logging settings
             ru: Настройки логирования
           url: /user/logging/
@@ -1207,6 +1239,30 @@ entries:
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
         - title:
+            en: Marketplace
+            ru: Marketplace
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/marketplace/
+            - title:
+                en: Concepts
+                ru: Концепции
+              url: /architecture/marketplace/concepts.html
+            - title:
+                en: Application development
+                ru: Разработка приложений
+              url: /architecture/marketplace/application-development.html
+            - title:
+                en: Nelm annotations
+                ru: Аннотации Nelm
+              url: /architecture/marketplace/nelm-annotations.html
+            - title:
+                en: Hooks
+                ru: Хуки
+              url: /architecture/marketplace/hooks.html
+        - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
           folders:
@@ -1327,6 +1383,10 @@ entries:
                 ru: Инфраструктурные компоненты
               folders:
                 - title:
+                    en: Chrony module
+                    ru: Модуль chrony
+                  url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
@@ -1443,6 +1503,10 @@ entries:
                 ru: Модули систем хранения
               folders:
                 - title:
+                    en: Csi-ceph module
+                    ru: Модуль csi-ceph
+                  url: /architecture/storage/external/csi-ceph.html
+                - title:
                     en: Csi-hpe module
                     ru: Модуль csi-hpe
                   url: /architecture/storage/external/csi-hpe.html
@@ -1474,6 +1538,10 @@ entries:
                 en: CSI drivers
                 ru: CSI-драйверы
               folders:
+                - title:
+                    en: Ceph RBD CSI driver
+                    ru: CSI-драйвер Ceph RBD
+                  url: /architecture/storage/csi-drivers/csi-driver-ceph-rbd.html
                 - title:
                     en: Huawei CSI driver
                     ru: CSI-драйвер Huawei
@@ -1515,6 +1583,10 @@ entries:
                 ru: Обзор
               url: /architecture/virtualization/
             - title:
+                en: Module core
+                ru: Ядро модуля
+              url: /architecture/virtualization/core.html
+            - title:
                 en: Deckhouse Virtualization Container Registry (DVCR)
                 ru: Deckhouse Virtualization Container Registry (DVCR)
               url: /architecture/virtualization/dvcr.html
@@ -1550,6 +1622,10 @@ entries:
             en: Revision comparison
             ru: Сравнение редакций
           url: /reference/revision-comparison.html
+        - title:
+            en: Container registry structure
+            ru: Структура хранилища образов контейнеров
+          url: /reference/container-registry-structure.html
         - title:
             en: Network interaction
             ru: Сетевое взаимодействие

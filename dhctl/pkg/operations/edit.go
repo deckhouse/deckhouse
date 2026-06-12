@@ -20,8 +20,8 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -35,8 +35,8 @@ type EditOptions struct {
 	SanityCheck bool
 }
 
-func Edit(data []byte, dc *directoryconfig.DirectoryConfig, opts EditOptions) ([]byte, error) {
-	schemaStore := config.NewSchemaStore(dc)
+func Edit(data []byte, globalOptions *options.GlobalOptions, opts EditOptions) ([]byte, error) {
+	schemaStore := config.NewSchemaStore(globalOptions)
 
 	editor := opts.Editor
 	if editor == "" {
@@ -54,7 +54,7 @@ func Edit(data []byte, dc *directoryconfig.DirectoryConfig, opts EditOptions) ([
 
 	err = os.WriteFile(tmpFile.Name(), data, 0o600)
 	if err != nil {
-		log.ErrorF("can't write write cluster configuration to the file %s: %s\n", tmpFile.Name(), err)
+		log.ErrorF("can't write cluster configuration to the file %s: %s\n", tmpFile.Name(), err)
 		return nil, err
 	}
 

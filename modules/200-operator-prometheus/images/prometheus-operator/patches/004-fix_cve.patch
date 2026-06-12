@@ -6,9 +6,9 @@ index aa0c389..ec1d474 100644
  module github.com/prometheus-operator/prometheus-operator
  
 -go 1.20
-+go 1.24.0
++go 1.25.10
 +
-+toolchain go1.24.3
++toolchain go1.25.10
  
  require (
  	github.com/alecthomas/kingpin/v2 v2.3.2
@@ -585,7 +585,7 @@ index cf1d99d..213ff51 100644
  module github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring
  
 -go 1.17
-+go 1.23
++go 1.25.10
  
  require (
  	k8s.io/api v0.28.1
@@ -678,7 +678,7 @@ index e65dae5..bbe5c5a 100644
  module github.com/prometheus-operator/prometheus-operator/pkg/client
  
 -go 1.19
-+go 1.23
++go 1.25.10
  
  require (
  	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.68.0
@@ -821,7 +821,7 @@ index 0eb8922..be33dc4 100644
  module github.com/prometheus-operator/prometheus-operator/tooling
  
 -go 1.20
-+go 1.23
++go 1.25.10
  
  require (
  	github.com/ahmetb/gen-crd-api-reference-docs v0.3.1-0.20220618162802-424739b250f5

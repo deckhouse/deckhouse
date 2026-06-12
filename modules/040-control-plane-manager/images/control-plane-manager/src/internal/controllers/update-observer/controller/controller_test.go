@@ -72,8 +72,8 @@ type ControllerTestSuite struct {
 
 func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 	synctest.Test(suite.T(), func(*testing.T) {
-		suite.T().Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.31,1.32,1.33,1.34,1.35")
-		suite.T().Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.33")
+		suite.T().Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.32,1.33,1.34,1.35,1.36")
+		suite.T().Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.34")
 
 		suite.Run("When cluster is up to date", func() {
 			suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))

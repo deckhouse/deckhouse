@@ -27,7 +27,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -36,7 +36,7 @@ import (
 
 type SSHTunnelCheck struct {
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
-	dc                     *directoryconfig.DirectoryConfig
+	globalOptions          *options.GlobalOptions
 }
 
 const (
@@ -69,11 +69,11 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 	if !ok {
 		return nil
 	}
-	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthURL(defaultTunnelRemotePort), c.dc)
+	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthURL(defaultTunnelRemotePort), c.globalOptions)
 	if err != nil {
 		return fmt.Errorf("render reverse tunnel script: %w", err)
 	}
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(localhost, strconv.Itoa(defaultTunnelRemotePort), c.dc)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(localhost, strconv.Itoa(defaultTunnelRemotePort), c.globalOptions)
 	if err != nil {
 		return fmt.Errorf("render kill tunnel script: %w", err)
 	}
@@ -143,8 +143,8 @@ func startHTTPServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	return func() { _ = server.Shutdown(ctx) }, nil
 }
 
-func SSHTunnel(sshProviderInitializer *providerinitializer.SSHProviderInitializer, dc *directoryconfig.DirectoryConfig) preflight.Check {
-	check := SSHTunnelCheck{SSHProviderInitializer: sshProviderInitializer, dc: dc}
+func SSHTunnel(sshProviderInitializer *providerinitializer.SSHProviderInitializer, globalOptions *options.GlobalOptions) preflight.Check {
+	check := SSHTunnelCheck{SSHProviderInitializer: sshProviderInitializer, globalOptions: globalOptions}
 	return preflight.Check{
 		Name:        SSHTunnelCheckName,
 		Description: check.Description(),

@@ -93,3 +93,25 @@ message ParseConnectionConfigResponse {
   string err = 2;
 }
 
+// ConfigExtensionKind enumerates the kinds of recommended config extensions a
+// client may request. Adding a kind is an additive enum change.
+enum ConfigExtensionKind {
+  CONFIG_EXTENSION_KIND_UNSPECIFIED = 0;
+  CONFIG_EXTENSION_KIND_CNI = 1;
+}
+
+message ConfigExtenderRequest {
+  // Source cluster YAML (Cluster/Provider/MC documents).
+  string config = 1;
+  // Which single extension kind to compute.
+  ConfigExtensionKind kind = 2;
+}
+
+// ConfigExtenderResponse returns the recommended config for the requested kind
+// as a single generic string. "Nothing to recommend" = empty config, not an error.
+message ConfigExtenderResponse {
+  string err = 1;
+  // Recommended ModuleConfig (JSON) for the requested kind. Distinct from
+  // ConfigExtenderRequest.config.
+  string config = 2;
+}

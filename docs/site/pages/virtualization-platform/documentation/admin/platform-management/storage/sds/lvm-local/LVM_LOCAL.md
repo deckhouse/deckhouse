@@ -105,6 +105,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                           NODE       CONSUMABLE   SIZE           PATH
    dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
@@ -114,6 +115,8 @@ d8 k -n d8-sds-local-volume get pod -owide
    dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
    dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Create an [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource for the `worker-0` node:
 

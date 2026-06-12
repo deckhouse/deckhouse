@@ -23,7 +23,7 @@ function discover_internal_network_cidrs() {
     discovered_internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
     echo "$discovered_internal_network_cidrs"
   else
-    echo "Cannot discover internal network CIDRs. Node has more than one interface, and StaticClusterConfiguration internalNetworkCIDRs is not set." >&2
+    echo "Cannot discover internal network CIDRs: node has more than one interface and StaticClusterConfiguration.internalNetworkCIDRs is not set" >&2
     return 1
   fi
 }
@@ -57,7 +57,7 @@ if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2> /dev/null)" ; then
     echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address])[0] // ""' > /var/lib/bashible/discovered-node-ip
   else
-    bb-log-error "Unable to discover node IP for node object: No access to API server"
+    bb-log-error "Cannot discover node IP from Node object: Kubernetes API server is unreachable"
     exit 1
   fi
 fi

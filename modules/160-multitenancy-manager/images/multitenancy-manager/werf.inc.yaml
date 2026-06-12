@@ -2,19 +2,18 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/multitenancy-manager
-    to: /multitenancy-manager
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /src/templates
-    to: /templates
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /src/helmlib
-    to: /helmlib
-    before: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/multitenancy-manager
+  to: /multitenancy-manager
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/templates
+  to: /templates
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/helmlib
+  to: /helmlib
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

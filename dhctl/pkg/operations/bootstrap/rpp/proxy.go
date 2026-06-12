@@ -30,7 +30,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	tlsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/tls"
 )
@@ -44,7 +44,7 @@ type RegistryPackagesProxy struct {
 	configGetter  registry.ClientConfigGetter
 	clusterDomain string
 	clusterUUID   string
-	dc            *directoryconfig.DirectoryConfig
+	opts          *options.GlobalOptions
 
 	localPort           string
 	remotePort          string
@@ -121,8 +121,8 @@ func (p *RegistryPackagesProxy) WithClusterUUID(clusterUUID string) *RegistryPac
 	return p
 }
 
-func (p *RegistryPackagesProxy) WithDirectoryConfig(dc *directoryconfig.DirectoryConfig) *RegistryPackagesProxy {
-	p.dc = dc
+func (p *RegistryPackagesProxy) WithGlobalOptions(globalOptions *options.GlobalOptions) *RegistryPackagesProxy {
+	p.opts = globalOptions
 
 	return p
 }
@@ -141,8 +141,8 @@ func (p *RegistryPackagesProxy) upTunnel(ctx context.Context, sshCl libcon.SSHCl
 		return upTunnelError(fmt.Errorf("internal error - ssh client is nil"))
 	}
 
-	if govalue.IsNil(p.dc) {
-		return upTunnelError(fmt.Errorf("internal error - directory is nil"))
+	if govalue.IsNil(p.opts) {
+		return upTunnelError(fmt.Errorf("internal error - global options is nil"))
 	}
 
 	if govalue.IsNil(p.proxy) {
@@ -211,7 +211,7 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		oneDay,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to generate TLS certificate for registry proxy: %v", err)
+		return fmt.Errorf("failed to generate TLS certificate for registry proxy: %w", err)
 	}
 
 	addr := net.JoinHostPort(localhost, p.localPort)
@@ -219,14 +219,14 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		Certificates: []tls.Certificate{*cert},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to listen registry proxy socket: %v", err)
+		return fmt.Errorf("failed to listen registry proxy socket: %w", err)
 	}
 
 	bootstrapAddr := net.JoinHostPort(localhost, p.bootstrapLocalPort)
 	bootstrapListener, err := net.Listen("tcp", bootstrapAddr)
 	if err != nil {
 		_ = listener.Close()
-		return fmt.Errorf("failed to listen rpp-get socket: %v", err)
+		return fmt.Errorf("failed to listen rpp-get socket: %w", err)
 	}
 
 	srv := &http.Server{}
@@ -264,7 +264,7 @@ func (p *RegistryPackagesProxy) startProxy() error {
 }
 
 func (p *RegistryPackagesProxy) startTunnel(ctx context.Context, sshCl libcon.SSHClient) error {
-	p.debug("Up registry packages proxy tunnel...")
+	p.debug("Starting registry packages proxy tunnel...")
 
 	tunnel, err := p.upSingleTunnel(ctx, sshCl, p.localPort, p.remotePort, true)
 	if err != nil {
@@ -287,7 +287,7 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 
 	tun := sshCl.ReverseTunnel(addr)
 	if err := tun.Up(); err != nil {
-		return nil, fmt.Errorf("cannot up tunnel for registry packages proxy: %w", err)
+		return nil, fmt.Errorf("cannot bring up tunnel for registry packages proxy: %w", err)
 	}
 
 	if !healthCheck {
@@ -295,16 +295,16 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 	}
 
 	preflightURL := fmt.Sprintf("https://%s/healthz", net.JoinHostPort(listenAddress, remotePort))
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, p.dc)
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, p.opts)
 	if err != nil {
 		tun.Stop()
-		return nil, fmt.Errorf("cannot render reverse tunnel checking script: %v", err)
+		return nil, fmt.Errorf("cannot render reverse tunnel checking script: %w", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, remotePort, p.dc)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, remotePort, p.opts)
 	if err != nil {
 		tun.Stop()
-		return nil, fmt.Errorf("cannot render kill reverse tunnel script: %v", err)
+		return nil, fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}
 
 	checker := utils.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
@@ -319,5 +319,5 @@ func (p *RegistryPackagesProxy) debug(f string, args ...any) {
 }
 
 func upTunnelError(err error) error {
-	return fmt.Errorf("Cannot up registry packages proxy tunnel: %w", err)
+	return fmt.Errorf("Cannot bring up registry packages proxy tunnel: %w", err)
 }

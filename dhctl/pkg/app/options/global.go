@@ -19,10 +19,25 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 )
+
+const (
+	DefaultCandiDir               = DefaultDeckhouseDir + "/candi"
+	DefaultInfrastructureVersions = DefaultCandiDir + "/terraform_versions.yml"
+	DefaultGlobalHooksModule      = DefaultDeckhouseDir + "/global-hooks"
+	DefaultVersionMap             = DefaultCandiDir + "/version_map.yml"
+	DefaultModulesDir             = DefaultDeckhouseDir + "/modules"
+)
+
+var ConvergerPodsSpiCheckPaths = []string{
+	DefaultModulesDir,
+	DefaultGlobalHooksModule,
+	DefaultVersionMap,
+}
 
 // GlobalOptions holds settings shared by every dhctl command.
 type GlobalOptions struct {
@@ -37,6 +52,18 @@ type GlobalOptions struct {
 	ConfigPaths            []string
 	SanityCheck            bool
 	ShowProgress           bool
+
+	// directory vars, moved from global and config
+	DhctlPath              string
+	DeckhouseDir           string
+	CandiDir               string
+	InfrastructureVersions string
+	GlobalHooksModule      string
+	VersionMap             string
+	ModulesDir             string
+
+	// indecates if download is needed
+	NeedDownload bool
 }
 
 func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
@@ -53,12 +80,27 @@ func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
 	}
 }
 
+func (o GlobalOptions) RecheckNeedDownload(skip ...string) GlobalOptions {
+	if len(skip) == 0 || !o.NeedDownload || !CheckDirs(skip...) {
+		return o
+	}
+
+	root, err := os.Getwd()
+	if err != nil {
+		root = "/"
+	}
+	cpy := o
+	cpy.NeedDownload = false
+	SetPaths(root, &cpy)
+	return cpy
+}
+
 // NewGlobalOptions returns GlobalOptions with defaults applied.
 //
 // The DHCTL_DEBUG environment variable is honored here so commands receive
 // the same IsDebug behavior the previous package init() used to set.
 func NewGlobalOptions() GlobalOptions {
-	return GlobalOptions{
+	o := GlobalOptions{
 		TmpDir:           DefaultTmpDir(),
 		LoggerType:       "pretty",
 		IsDebug:          os.Getenv("DHCTL_DEBUG") == "yes",
@@ -66,6 +108,16 @@ func NewGlobalOptions() GlobalOptions {
 		DownloadCacheDir: filepath.Join(DefaultTmpDir(), "cache"),
 		ConfigPaths:      make([]string, 0),
 	}
+
+	rootPath, _ := os.Getwd()
+	if !CheckDirs() {
+		rootPath = o.DownloadDir
+		o.NeedDownload = true
+	}
+
+	SetPaths(rootPath, &o)
+
+	return o
 }
 
 // BuildInfo carries version/edition metadata loaded once at startup.
@@ -125,4 +177,88 @@ func readBuildFile(dst *string, filePath string) {
 		*dst = strings.TrimSpace(string(buf[:n]))
 		*dst = strings.ReplaceAll(*dst, "\n", "")
 	}
+}
+
+func CheckDirs(skip ...string) bool {
+	// old global dirs to check
+	pwd, err := os.Getwd()
+	if err != nil {
+		return false
+	}
+
+	type pathToIsDir struct {
+		path  string
+		isDir bool
+	}
+
+	// default path -> should dir
+	forCheckDefaults := []pathToIsDir{
+		{
+			path:  DefaultDeckhouseDir,
+			isDir: true,
+		},
+		{
+			path:  DefaultCandiDir,
+			isDir: true,
+		},
+		{
+			path:  DefaultInfrastructureVersions,
+			isDir: false,
+		},
+		{
+			path:  DefaultGlobalHooksModule,
+			isDir: true,
+		},
+		{
+			path:  DefaultVersionMap,
+			isDir: false,
+		},
+		{
+			path:  DefaultModulesDir,
+			isDir: true,
+		},
+	}
+
+	forCheck := make([]pathToIsDir, 0, len(forCheckDefaults))
+
+	for _, d := range forCheckDefaults {
+		if !slices.Contains(skip, d.path) {
+			withPwd := filepath.Join(pwd, d.path)
+			forCheck = append(forCheck, pathToIsDir{
+				path:  withPwd,
+				isDir: d.isDir,
+			})
+		}
+	}
+
+	for _, fd := range forCheck {
+		fileInfo, err := os.Stat(fd.path)
+		if err != nil {
+			return false
+		}
+
+		if fd.isDir && !fileInfo.IsDir() {
+			return false
+		}
+	}
+
+	return true
+}
+
+func SetPaths(root string, o *GlobalOptions) {
+	dhctlPath, err := os.Getwd()
+	if err != nil {
+		dhctlPath = "/"
+	}
+	_, err = os.Stat(filepath.Join(dhctlPath, "dhctl"))
+	if err != nil {
+		dhctlPath = "/"
+	}
+	o.DeckhouseDir = filepath.Join(root, "deckhouse")
+	o.CandiDir = filepath.Join(o.DeckhouseDir, "candi")
+	o.DhctlPath = dhctlPath
+	o.InfrastructureVersions = filepath.Join(o.CandiDir, "terraform_versions.yml")
+	o.GlobalHooksModule = filepath.Join(o.DeckhouseDir, "global-hooks")
+	o.VersionMap = filepath.Join(o.CandiDir, "version_map.yml")
+	o.ModulesDir = filepath.Join(o.DeckhouseDir, "modules")
 }

@@ -18,17 +18,16 @@
 {% else %}
 #### Select the Deckhouse Kubernetes Platform revision
 {% endif %}
-<div class="tabs">
+<div class="tabs-block">
+   <ul class="tabs__container tabs__container--title">
     {%- for revision in revisions %}
         {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
-        <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
+      <li id="tab_layout_{{ revision }}" class="tabs__item tabs__item--title tabs__item--revision--{{ revision }} tabs__btn_revision{% if revision == 'ce' %} active{% endif %}" data-index="{{ forloop.index }}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
-                 toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
-        {{ site.data.i18n[revision] }}
-        </a>
+                 toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');">{{ site.data.i18n[revision] }}</li>
     {%- endfor %}
-</div>
+   </ul>
 {%- endunless %}
 {%- if page.ee_only == true and page.se_support == true %}
 {% if page.lang == 'ru' %}
@@ -42,19 +41,18 @@ The {{ page.title_main }} installation is not available in the Community Edition
 {% endalert %}
 <h4>Select the Deckhouse Kubernetes Platform revision</h4>
 {% endif %}
-  <div class="tabs">
-    {%- for revision in revisions %}
-      {%  if revision == "se" or revision == "se-plus" or revision == "ee" %}
-      {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
-      <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'se-plus' %} active{% endif %}"
-         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
-           openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
-           toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
-        {{ site.data.i18n[revision] }}
-      </a>
-      {% endif %}
-    {%- endfor %}
-  </div>
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+  {%- for revision in revisions %}
+    {%  if revision == "se" or revision == "se-plus" or revision == "ee" %}
+    {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
+    <li id="tab_layout_{{ revision }}" class="tabs__item tabs__item--title tabs__item--revision--{{ revision }} tabs__btn_revision{% if revision == 'se-plus' %} active{% endif %}" data-index="{{ forloop.index }}"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
+          openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
+          toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');">{{ site.data.i18n[revision] }}</li>
+    {% endif %}
+  {%- endfor %}
+  </ul>
 
   <script>
     // Function for initializing tabs on page load
@@ -76,6 +74,8 @@ The {{ page.title_main }} installation is not available in the Community Edition
   </script>
 {% endif %}
 
+
+<div class="tabs__container tabs__container--descr">
 {%- for revision in revisions %}
 {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
@@ -142,6 +142,8 @@ The {{ page.title_main }} installation is not available in the Community Edition
 {%- endif %}
 
 {%- endfor %}
+</div>
+</div>
 
 <script>
 $(document).ready(function() {

@@ -86,10 +86,13 @@ sudo -i d8 k get lvg vg-on-dvp-worker -w
 
 Example of the output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME               THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
 vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Create an LVM volume pool:
 
@@ -114,10 +117,13 @@ sudo -i d8 k get rsp sds-pool -w
 
 Example of the output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME         PHASE       TYPE   AGE
 sds-pool     Completed   LVM    87d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Create a StorageClass:
 

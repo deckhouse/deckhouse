@@ -61,8 +61,7 @@ mount:
 {{ include "mount points for golang builds" . }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache elfutils-dev openssl-dev
+  - pm install elfutils-devel openssl-devel
   install:
   - go install github.com/onsi/ginkgo/ginkgo@latest
   - go install github.com/go-delve/delve/cmd/dlv@latest
@@ -101,10 +100,8 @@ import:
 # images_digests.json, testing/library/utils.go falls back to the dummy
 # DefaultImagesDigests (tools/images_tags) — the path designed for
 # template/matrix tests.
-git:
-- add: /tools/mounts/mountfile
+- image: werf-mountpoints
+  add: /tools/mounts/mountfile
   to: /root/.ack-ginkgo-rc
-  stageDependencies:
-    setup:
-    - "**/*"
+  before: setup
 {{- end }}

@@ -50,10 +50,8 @@ const (
 	globalPath = "global-hooks"
 )
 
-var (
-	// ErrPackageNotFound is returned when the requested package directory doesn't exist
-	ErrPackageNotFound = errors.New("package not found")
-)
+// ErrPackageNotFound is returned when the requested package directory doesn't exist
+var ErrPackageNotFound = errors.New("package not found")
 
 // LoadAppConf loads an application package from the given directory on the filesystem.
 // The directory name must follow the "namespace.name" convention (e.g., "default.my-app").
@@ -408,8 +406,9 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 	var requirements dto.Requirements
 	if def.Requirements != nil {
 		requirements = dto.Requirements{
-			Kubernetes: def.Requirements.Kubernetes,
-			Deckhouse:  def.Requirements.Deckhouse,
+			Kubernetes: dto.VersionConstraint{Constraint: def.Requirements.Kubernetes},
+			Deckhouse:  dto.VersionConstraint{Constraint: def.Requirements.Deckhouse},
+			Modules:    legacyModuleRequirements(def.Requirements.ParentModules),
 		}
 	}
 
@@ -440,6 +439,44 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 		Weight:   int(def.Weight),
 		Critical: def.Critical,
 	}, nil
+}
+
+// legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
+// conditional (skippable if the parent module is absent). See
+// go_lib/dependency/extenders/moduledependency for the original parser.
+const legacyOptionalSuffix = "!optional"
+
+// legacyModuleRequirements projects the legacy module.yaml ParentModules map onto the
+// new dto.ModulesRequirements shape. A constraint ending in "!optional" maps to a
+// conditional dependency; the suffix is stripped from the constraint string.
+func legacyModuleRequirements(parentModules map[string]string) dto.ModulesRequirements {
+	if len(parentModules) == 0 {
+		return dto.ModulesRequirements{}
+	}
+
+	var (
+		mandatory   []dto.ModuleDependency
+		conditional []dto.ModuleDependency
+	)
+
+	for name, constraint := range parentModules {
+		raw, optional := strings.CutSuffix(constraint, legacyOptionalSuffix)
+		dep := dto.ModuleDependency{
+			Name:       name,
+			Constraint: strings.TrimSpace(raw),
+		}
+
+		if optional {
+			conditional = append(conditional, dep)
+		} else {
+			mandatory = append(mandatory, dep)
+		}
+	}
+
+	return dto.ModulesRequirements{
+		Mandatory:   mandatory,
+		Conditional: conditional,
+	}
 }
 
 // loadModuleDefinition reads and parses the legacy module.yaml file from the package directory.

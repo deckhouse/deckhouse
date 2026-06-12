@@ -42,7 +42,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 		ctx := kpcontext.ExtractContext(c)
 
 		doneCh := make(chan struct{})
-		tomb.RegisterOnShutdown("wait kubernetes-api-connection to stop", func() {
+		tomb.RegisterOnShutdown("wait for kubernetes-api-connection to stop", func() {
 			<-doneCh
 		})
 
@@ -52,7 +52,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 			WithInitParams(client.AppKubernetesInitParams(&opts.Kube))
 
 		proxyClose := func() {
-			log.InteractiveInfoLn("Press Ctrl+C to close proxy connection.")
+			log.InteractiveInfoLn("Press Ctrl+C to close the proxy connection.")
 			ch := make(chan struct{})
 			<-ch
 		}
@@ -106,11 +106,11 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		return log.ProcessCtx(ctx, "bootstrap", "Wait for Deckhouse to become Ready", func(ctx context.Context) error {
 			kube, err := kubeProvider.Client(ctx)

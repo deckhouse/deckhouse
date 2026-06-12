@@ -25,11 +25,14 @@ d8 k get vm -n test-project
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME   PHASE     NODE           IPADDRESS     AGE
 vm-a   Running   virtlab-2      10.66.20.70   5m
 vm-b   Running   virtlab-1      10.66.20.71   5m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Virtual machines have corresponding labels:
 

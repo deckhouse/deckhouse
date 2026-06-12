@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Базис.DynamiX: FAQ"
+title: "Cloud provider — Basis Dynamix: FAQ"
 ---
 ### Как настроить INTERNAL LoadBalancer?
 
