@@ -195,7 +195,7 @@ To extend the Pod Security Standards policy by adding your checks to existing ch
 - create a constraint template for the check (`ConstraintTemplate`);
 - bind it to the `restricted` or `baseline` policy.
 
-Example of the `ConstraintTemplate` for checking a  repository URL of a container image:
+Example of the `ConstraintTemplate` for checking a repository URL of a container image:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
