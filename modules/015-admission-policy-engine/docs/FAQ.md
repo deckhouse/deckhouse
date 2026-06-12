@@ -22,17 +22,17 @@ If either selector is omitted, the corresponding check is not performed (all pod
 
 - `spec.match.labelSelector` – pod selection
 
-    The `labelSelector` is used to set criteria for selecting pods by their labels. Two mutually exclusive methods are supported:
+The `labelSelector` is used to set criteria for selecting pods by their labels. Two mutually exclusive methods are supported:
 
-    - `matchLabels` – a simple check for an exact label match (key-value). The pod must have all the specified labels.
-    - `matchExpressions` – flexible expressions with operators. Each expression is defined by an object with the following fields:
-        - `key` (string, required) – the label name.
-        - `operator` (string, required) – one of the values: `In`, `NotIn`, `Exists`, `DoesNotExist`.
-        - `values` (array of strings) – a list of values for the `In` / `NotIn` operators; not specified for `Exists` / `DoesNotExist`.
+- `matchLabels` – a simple check for an exact label match (key-value). The pod must have all the specified labels.
+- `matchExpressions` – flexible expressions with operators. Each expression is defined by an object with the following fields:
+  - `key` (string, required) – the label name.
+  - `operator` (string, required) – one of the values: `In`, `NotIn`, `Exists`, `DoesNotExist`.
+  - `values` (array of strings) – a list of values for the `In` / `NotIn` operators; not specified for `Exists` / `DoesNotExist`.
 
-    All elements in the `matchExpressions` list are combined with a logical AND – the pod must satisfy every expression.
+All elements in the `matchExpressions` list are combined with a logical AND – the pod must satisfy every expression.
 
-    Examples:
+Examples:
 
 ```yaml
 spec:
@@ -59,48 +59,48 @@ spec:
 
 - `spec.match.namespaceSelector` – namespace selection
 
-    Allows limiting the namespaces in which the policy is active. You can use a combination of three filters:
+Allows limiting the namespaces in which the policy is active. You can use a combination of three filters:
 
-    - `matchNames` – an explicit list of allowed namespaces. If specified, the policy only applies to the listed namespaces.
-    - `excludeNames` – a list of excluded namespaces. The policy will apply to all namespaces except those specified.
-    - `labelSelector` – a selector based on the labels of the Namespace object itself.
+- `matchNames` – an explicit list of allowed namespaces. If specified, the policy only applies to the listed namespaces.
+- `excludeNames` – a list of excluded namespaces. The policy will apply to all namespaces except those specified.
+- `labelSelector` – a selector based on the labels of the Namespace object itself.
 
-    If multiple fields are set, they are combined with logical AND:
+If multiple fields are set, they are combined with logical AND:
 
-    1. Start with the set from `matchNames` (or all namespaces if `matchNames` is omitted).
-    1. Apply `labelSelector` (if set).
-    1. Subtract `excludeNames`.
+1. Start with the set from `matchNames` (or all namespaces if `matchNames` is omitted).
+1. Apply `labelSelector` (if set).
+1. Subtract `excludeNames`.
 
-    Formula:
+Formula:
 
-    `result = (base_from_matchNames ∩ selected_by_labelSelector) \ excludeNames`
+`result = (base_from_matchNames ∩ selected_by_labelSelector) \ excludeNames`
 
-    It is recommended not to mix `matchNames`, `excludeNames`, and `labelSelector` without a clear need.
+It is recommended not to mix `matchNames`, `excludeNames`, and `labelSelector` without a clear need.
 
 ### When to use `labelSelector`
 
-    Use `labelSelector` when the policy should automatically apply to a group of namespaces by attribute rather than by fixed names.
+Use `labelSelector` when the policy should automatically apply to a group of namespaces by attribute rather than by fixed names.
 
-    For example:
+For example:
 
-    - “all namespaces with label `env=prod`”;
-    - “all `team=backend` namespaces” (with the corresponding label);
-    - “all namespaces with `security.deckhouse.io/pod-policy=restricted`”.
+- “all namespaces with label `env=prod`”;
+- “all `team=backend` namespaces” (with the corresponding label);
+- “all namespaces with `security.deckhouse.io/pod-policy=restricted`”.
 
-    `labelSelector` is especially useful when namespaces are created/deleted dynamically: it is enough to automatically set a label on the namespace when it is created, and the policy will apply without editing the policy.
+`labelSelector` is especially useful when namespaces are created/deleted dynamically: it is enough to automatically set a label on the namespace when it is created, and the policy will apply without editing the policy.
 
-    `labelSelector` is not required if you have a small static list of namespaces — in that case, using `matchNames` is simpler and easier to read.
+`labelSelector` is not required if you have a small static list of namespaces — in that case, using `matchNames` is simpler and easier to read.
 
 ### Can `matchNames` and `labelSelector` be used together?
 
-    Yes, technically they are not mutually exclusive: you can specify both, and then their intersection applies.
+Yes, technically they are not mutually exclusive: you can specify both, and then their intersection applies.
 
-    But in practice this often hurts readability and complicates maintenance. Therefore, it is recommended to choose one primary selection method:
+But in practice this often hurts readability and complicates maintenance. Therefore, it is recommended to choose one primary selection method:
 
-    - either `matchNames + excludeNames`;
-    - or `labelSelector + excludeNames`.
+- either `matchNames + excludeNames`;
+- or `labelSelector + excludeNames`.
 
-    This makes it easier to understand why a particular namespace is included in or excluded from the policy.
+This makes it easier to understand why a particular namespace is included in or excluded from the policy.
 
 ### Typical scenarios
 
