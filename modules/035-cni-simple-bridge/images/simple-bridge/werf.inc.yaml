@@ -5,16 +5,15 @@ git:
 - add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/rootfs
   to: /
 import:
-- image: registrypackages/d8-curl-artifact-8-9-1
-  add: /d8-curl
-  to: /usr/bin/curl
-  before: setup
 {{- include "image mount points" . }}
 shell:
   beforeInstall:
-  - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils
+  - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl
   install:
-  - rm -f /sbin
+  - unlink /sbin
 imageSpec:
   config:
     entrypoint: ["/sbin/iptables-wrapper"]
+    env:
+      "PATH": "/root/.local/bin:/root/bin:/opt/deckhouse/bin:/sbin:/usr/local/sbin:/bin:/usr/sbin:/usr/bin"
+
