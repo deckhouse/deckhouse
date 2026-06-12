@@ -34,28 +34,28 @@ If either selector is omitted, the corresponding check is not performed (all pod
 
     Examples:
 
-    ```yaml
-    spec:
-      match:
-        labelSelector:
-          matchLabels:
-            app: nginx
-            role: frontend
-    ```
+```yaml
+spec:
+  match:
+    labelSelector:
+      matchLabels:
+        app: nginx
+        role: frontend
+```
 
-    ```yaml
-    spec:
-      match:
-        labelSelector:
-          matchExpressions:
-            - key: tier
-              operator: In
-              values:
-                - production
-                - staging
-            - key: monitoring
-              operator: Exists
-    ```
+```yaml
+spec:
+  match:
+    labelSelector:
+      matchExpressions:
+        - key: tier
+          operator: In
+          values:
+            - production
+            - staging
+        - key: monitoring
+          operator: Exists
+```
 
 - `spec.match.namespaceSelector` – namespace selection
 
@@ -104,85 +104,85 @@ If either selector is omitted, the corresponding check is not performed (all pod
 
 ### Typical scenarios
 
-    1. Static environments list → `matchNames + excludeNames`.
-    1. Dynamic environments/teams → `labelSelector + excludeNames`.
-    1. `matchNames + labelSelector` combination — only when you really need the intersection of two independent conditions.
+1. Static environments list → `matchNames + excludeNames`.
+1. Dynamic environments/teams → `labelSelector + excludeNames`.
+1. `matchNames + labelSelector` combination — only when you really need the intersection of two independent conditions.
 
-    Examples:
+Examples:
 
-    1. Static namespace list (`matchNames + excludeNames`)
+1. Static namespace list (`matchNames + excludeNames`)
 
-    ```yaml
-    spec:
-      match:
-        namespaceSelector:
-          matchNames:
-            - production
-            - staging
-          excludeNames:
-            - staging
-    ```
+```yaml
+spec:
+  match:
+    namespaceSelector:
+      matchNames:
+        - production
+        - staging
+      excludeNames:
+        - staging
+```
 
-    Result: the policy applies only in the `production` namespace.
+Result: the policy applies only in the `production` namespace.
 
-    1. Dynamic label-based selection (`labelSelector + excludeNames`)
+1. Dynamic label-based selection (`labelSelector + excludeNames`)
 
-    ```yaml
-    spec:
-      match:
-        namespaceSelector:
-          labelSelector:
-            matchLabels:
-              team: backend
-              environment: production
-          excludeNames:
-            - backend-sandbox
-    ```
+```yaml
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          team: backend
+          environment: production
+      excludeNames:
+        - backend-sandbox
+```
 
-    Result: all namespaces with labels `team=backend` and `environment=production`, except `backend-sandbox`.
+Result: all namespaces with labels `team=backend` and `environment=production`, except `backend-sandbox`.
 
-    1. Flexible filtering with expressions (`labelSelector.matchExpressions`)
+1. Flexible filtering with expressions (`labelSelector.matchExpressions`)
 
-    ```yaml
-    spec:
-      match:
-        namespaceSelector:
-          labelSelector:
-            matchExpressions:
-              - key: compliance
-                operator: In
-                values:
-                  - pci
-                  - sox
-              - key: lifecycle
-                operator: NotIn
-                values:
-                  - deprecated
-    ```
+```yaml
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchExpressions:
+          - key: compliance
+            operator: In
+            values:
+              - pci
+              - sox
+          - key: lifecycle
+            operator: NotIn
+            values:
+              - deprecated
+```
 
-    Result: only namespaces with labels `compliance=pci` or `compliance=sox` and without label `lifecycle=deprecated`.
+Result: only namespaces with labels `compliance=pci` or `compliance=sox` and without label `lifecycle=deprecated`.
 
-    1. `matchNames` and `labelSelector` combination (intersection, use carefully)
+1. `matchNames` and `labelSelector` combination (intersection, use carefully)
 
-    ```yaml
-    spec:
-      match:
-        namespaceSelector:
-          matchNames:
-            - production
-            - staging
-            - qa
-          labelSelector:
-            matchLabels:
-              team: backend
-    ```
+```yaml
+spec:
+  match:
+    namespaceSelector:
+      matchNames:
+        - production
+        - staging
+        - qa
+      labelSelector:
+        matchLabels:
+          team: backend
+```
 
-    Result: applies only to namespaces that simultaneously:
+Result: applies only to namespaces that simultaneously:
 
-    - are in the list `production|staging|qa`;
-    - have label `team=backend`.
+- are in the list `production|staging|qa`;
+- have label `team=backend`.
 
-    For example, if `qa` does not have `team=backend`, it will not be matched.
+For example, if `qa` does not have `team=backend`, it will not be matched.
 
 ## How do I extend Pod Security Standards policies?
 
