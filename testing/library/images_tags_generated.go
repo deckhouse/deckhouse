@@ -343,6 +343,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"monitoringKubernetes": map[string]interface{}{
 		"kubeStateMetrics":                  "imageHash-monitoringKubernetes-kubeStateMetrics",
+		"kubeSummaryExporter":               "imageHash-monitoringKubernetes-kubeSummaryExporter",
 		"kubeletEvictionThresholdsExporter": "imageHash-monitoringKubernetes-kubeletEvictionThresholdsExporter",
 		"nodeExporter":                      "imageHash-monitoringKubernetes-nodeExporter",
 		"oomKillsExporter":                  "imageHash-monitoringKubernetes-oomKillsExporter",
