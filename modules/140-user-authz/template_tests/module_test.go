@@ -371,6 +371,35 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(manifest).To(ContainSubstring("protocol: TCP"))
 		})
 
+		It("Should render SecurityPolicyException when admission-policy-engine module is enabled", func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["admission-policy-engine"]`)
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `[]`)
+
+			rendered := map[string]string{}
+			f.HelmRender(WithFilteredRenderOutput(rendered, []string{"webhook/daemonset.yaml"}))
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			manifest := ""
+			for k, v := range rendered {
+				if strings.Contains(k, "webhook/daemonset.yaml") {
+					manifest = v
+					break
+				}
+			}
+			if manifest == "" {
+				if len(rendered) == 1 {
+					for _, v := range rendered {
+						manifest = v
+						break
+					}
+				}
+			}
+
+			Expect(manifest).ToNot(BeEmpty())
+			Expect(manifest).To(ContainSubstring("kind: SecurityPolicyException"))
+			Expect(manifest).To(ContainSubstring("name: user-authz-webhook"))
+		})
+
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {
 			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Service", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
