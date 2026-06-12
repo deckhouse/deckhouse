@@ -8,12 +8,11 @@ import:
 {{- include "image mount points" . }}
 shell:
   beforeInstall:
-  - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl
+    - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl
   install:
-  - unlink /sbin
+    # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
+    - unlink /sbin
 imageSpec:
   config:
     entrypoint: ["/sbin/iptables-wrapper"]
-    env:
-      "PATH": "/root/.local/bin:/root/bin:/opt/deckhouse/bin:/sbin:/usr/local/sbin:/bin:/usr/sbin:/usr/bin"
 
