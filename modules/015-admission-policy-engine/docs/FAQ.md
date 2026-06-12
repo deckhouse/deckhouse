@@ -110,7 +110,7 @@ This makes it easier to understand why a particular namespace is included in or 
 
 Examples:
 
-1. Static namespace list (`matchNames + excludeNames`)
+Static namespace list (`matchNames + excludeNames`)
 
 ```yaml
 spec:
@@ -125,7 +125,7 @@ spec:
 
 Result: the policy applies only in the `production` namespace.
 
-1. Dynamic label-based selection (`labelSelector + excludeNames`)
+Dynamic label-based selection (`labelSelector + excludeNames`)
 
 ```yaml
 spec:
@@ -141,7 +141,7 @@ spec:
 
 Result: all namespaces with labels `team=backend` and `environment=production`, except `backend-sandbox`.
 
-1. Flexible filtering with expressions (`labelSelector.matchExpressions`)
+Flexible filtering with expressions (`labelSelector.matchExpressions`)
 
 ```yaml
 spec:
@@ -162,7 +162,7 @@ spec:
 
 Result: only namespaces with labels `compliance=pci` or `compliance=sox` and without label `lifecycle=deprecated`.
 
-1. `matchNames` and `labelSelector` combination (intersection, use carefully)
+`matchNames` and `labelSelector` combination (intersection, use carefully)
 
 ```yaml
 spec:

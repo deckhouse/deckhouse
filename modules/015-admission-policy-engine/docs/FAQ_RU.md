@@ -110,7 +110,7 @@ spec:
 
 Примеры:
 
-1. Статичный список неймспейсов (`matchNames + excludeNames`)
+Статичный список неймспейсов (`matchNames + excludeNames`)
 
 ```yaml
 spec:
@@ -125,7 +125,7 @@ spec:
 
 Итог: политика действует только в неймспейсе `production`.
 
-2. Динамический выбор по лейблам (`labelSelector + excludeNames`)
+Динамический выбор по лейблам (`labelSelector + excludeNames`)
 
 ```yaml
 spec:
@@ -141,7 +141,7 @@ spec:
 
 Итог: все неймспейсы с лейблами `team=backend` и `environment=production`, кроме `backend-sandbox`.
 
-3. Гибкая фильтрация по выражениям (`labelSelector.matchExpressions`)
+Гибкая фильтрация по выражениям (`labelSelector.matchExpressions`)
 
 ```yaml
 spec:
@@ -162,7 +162,7 @@ spec:
 
 Итог: только неймспейсы с лейблами `compliance=pci` или `compliance=sox` и без лейбла `lifecycle=deprecated`.
 
-4. Комбинация `matchNames` и `labelSelector` (пересечение, использовать осторожно)
+Комбинация `matchNames` и `labelSelector` (пересечение, использовать осторожно)
 
 ```yaml
 spec:
