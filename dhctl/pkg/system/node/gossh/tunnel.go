@@ -15,6 +15,7 @@
 package gossh
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -22,7 +23,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -80,7 +81,7 @@ func (t *Tunnel) upNewTunnel(oldId int) (int, error) {
 
 	listener, err := net.Listen("tcp", localAddress)
 	if err != nil {
-		return -1, errors.Wrap(err, fmt.Sprintf("failed to listen local on %s", localAddress))
+		return -1, pkgerrors.Wrap(err, fmt.Sprintf("failed to listen local on %s", localAddress))
 	}
 
 	log.DebugF("[%d] Listen remote %s successful\n", id, localAddress)
@@ -97,9 +98,12 @@ func (t *Tunnel) acceptTunnelConnection(id int, remoteAddress string, listener n
 	for {
 		localConn, err := listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
 			e := fmt.Errorf("[%d] Accept(): %s", id, err.Error())
 			t.errorCh <- e
-			continue
+			return
 		}
 
 		remoteConn, err := t.sshClient.GetClient().Dial("tcp", remoteAddress)

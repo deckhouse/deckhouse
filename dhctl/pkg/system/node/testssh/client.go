@@ -447,7 +447,7 @@ func (c *Client) isStopped() bool {
 
 type kubeProxy struct{}
 
-func (k *kubeProxy) Start(useLocalPort int) (string, error) {
+func (k *kubeProxy) Start(_ context.Context, useLocalPort int) (string, error) {
 	i := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	return fmt.Sprintf("%d", i), nil
 }
