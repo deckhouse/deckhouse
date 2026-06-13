@@ -106,7 +106,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		}
 		labelChan := intLogger.GetPhaseChan()
 		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Base infrastructure", labelChan, phasesChan, intLogger.GetLogChan())
+		pbParam := progressbar.NewPbParams(100, "Base infrastructure", labelChan, phasesChan, intLogger.GetLogChan(), 2)
 
 		if err := progressbar.InitProgressBar(pbParam); err != nil {
 			return err

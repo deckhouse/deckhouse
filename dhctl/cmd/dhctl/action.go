@@ -416,8 +416,10 @@ func (i *actionIniter) cleanupProgressbar() onShutdownFunc {
 				log.WarnF("failed to stop progress bar printer: %v", err)
 			}
 
-			if err := pb.LogBox.Stop(); err != nil {
-				log.WarnF("failed to stop logbox: %v", err)
+			if pb.LogBox != nil {
+				if err := pb.LogBox.Stop(); err != nil {
+					log.WarnF("failed to stop logbox: %v", err)
+				}
 			}
 
 			_, err = pb.MultiPrinter.Stop()

@@ -16,6 +16,7 @@ package converge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -227,21 +228,29 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	interactive := input.IsTerminal() && !c.Options.Global.ShowProgress
 	if interactive {
-		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Converge", c.Logger)
+		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Converge", c.Logger, phases.ConvergePhases())
 		if err != nil {
-			return nil, err
-		}
+			if errors.Is(err, progressbar.ErrTerminalScreenIsToSmall) {
+				// fallback to plain logger
+				log.SwitchToNonInteractive()
+				c.Logger = log.GetDefaultLogger()
+				c.SSHProviderInitializer.Reinitialize(ctx, c.Logger, c.SSHProviderInitializer.GetSettings(), c.SSHProviderInitializer.GetConfig())
+				c.Options.Global.ShowProgress = true
+			} else {
+				return nil, err
+			}
+		} else {
+			onUpdateFunc := func(progress phases.Progress) error {
+				phasesChan <- progress
+				if c.OnProgressFunc != nil {
+					return c.OnProgressFunc(progress)
+				}
 
-		onUpdateFunc := func(progress phases.Progress) error {
-			phasesChan <- progress
-			if c.OnProgressFunc != nil {
-				return c.OnProgressFunc(progress)
+				return nil
 			}
 
-			return nil
+			c.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationConverge, c.OnPhaseFunc, onUpdateFunc)
 		}
-
-		c.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationConverge, c.OnPhaseFunc, onUpdateFunc)
 	}
 
 	stateCache := cache.Global()
