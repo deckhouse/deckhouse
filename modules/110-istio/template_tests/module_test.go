@@ -147,6 +147,17 @@ const istioValues = `
               min: "64Mi"
     ambient:
       enabled: false
+      waypointController:
+        resourcesManagement:
+          mode: VPA
+          vpa:
+            mode: InPlaceOrRecreate
+            cpu:
+              max: "1"
+              min: "25m"
+            memory:
+              max: "1Gi"
+              min: "64Mi"
 `
 
 func getSubdirs(dir string) ([]string, error) {

@@ -769,8 +769,12 @@ properties:
         type: object
         description: |
           ztunnel specific settings.
-        default: {}
+        x-doc-d8Editions:
+        - ee
+        - cse-pro
+        x-doc-skip: true
         x-experimental: true
+        default: {}
         properties:
           resourcesManagement:
             description: |
@@ -943,10 +947,14 @@ properties:
                           Configuring memory limits.
   ambient:
     type: object
-    default: {"enabled": false}
     description: |
       Ambient mesh related settings.
+    x-doc-d8Editions:
+    - ee
+    - cse-pro
+    x-doc-skip: true
     x-experimental: true
+    default: {"enabled": false}
     properties:
       enabled:
         type: boolean
@@ -955,6 +963,170 @@ properties:
           Enable ambient mesh.
         x-experimental: true
         x-examples: [true]
+      waypointController:
+        type: object
+        description: |
+          Settings for CPU and memory requests and limits by waypoint-controller pods.
+        x-doc-d8Editions:
+        - ee
+        - cse-pro
+        x-doc-skip: true
+        x-experimental: true
+        default: {}
+        properties:
+          resourcesManagement:
+            description: |
+              Settings for CPU and memory requests and limits by waypoint-controller pods.
+            type: object
+            default: {}
+            x-examples:
+            - mode: VPA
+              vpa:
+                mode: InPlaceOrRecreate
+                cpu:
+                  min: "25m"
+                  max: 1
+                  limitRatio: 1.5
+                memory:
+                  min: "64Mi"
+                  max: "1Gi"
+                  limitRatio: 1.5
+            - mode: Static
+              static:
+                requests:
+                  cpu: "25m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+            properties:
+              mode:
+                type: string
+                description: |
+                  Resource management mode:
+                  - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static) parameter section;
+                  - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa) parameter section.
+                enum: ['VPA', 'Static']
+                default: 'VPA'
+              vpa:
+                type: object
+                default: {}
+                description: |
+                  Resource management options for the `VPA` mode.
+                properties:
+                  mode:
+                    type: string
+                    description: |
+                      VPA operating mode.
+
+                      - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                        Resource values are not changed automatically afterwards.
+
+                      - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                        If in-place updates are not possible, the pod will be recreated.
+                    enum: ['Initial', 'InPlaceOrRecreate']
+                    default: 'InPlaceOrRecreate'
+                  cpu:
+                    type: object
+                    default: {}
+                    description: |
+                      CPU-related VPA settings.
+                    properties:
+                      max:
+                        description: |
+                          The maximum value that the VPA can set for the CPU requests.
+                        default: 1
+                        oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      min:
+                        description: |
+                          The minimum value that the VPA can set for the CPU requests.
+                        default: '25m'
+                        oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      limitRatio:
+                        type: number
+                        examples: [1.5]
+                        description: |
+                          The CPU limits/requests ratio.
+
+                          This ratio is used for calculating the initial CPU limits for a pod.
+
+                          If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
+                  memory:
+                    type: object
+                    default: {}
+                    description: |
+                      Memory-related VPA settings.
+                    properties:
+                      max:
+                        description: |
+                          The maximum memory requests the VPA can set.
+                        default: '1Gi'
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                      min:
+                        description: |
+                          The minimum memory requests the VPA can set.
+                        default: '64Mi'
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                      limitRatio:
+                        type: number
+                        examples: [1.5]
+                        description: |
+                          The memory limits/requests ratio.
+
+                          This ratio is used for calculating the initial memory limits for a pod.
+
+                          If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
+              static:
+                type: object
+                description: |
+                  Resource management options for the `Static` mode.
+                properties:
+                  requests:
+                    type: object
+                    description: |
+                      Resource requests settings for pods.
+                    properties:
+                      cpu:
+                        type: string
+                        pattern: "^[0-9]+m?$"
+                        description: |
+                          Configuring CPU requests.
+                      memory:
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                        description: |
+                          Configuring memory requests.
+                  limits:
+                    type: object
+                    description: |
+                      Configuring CPU and memory limits.
+                    properties:
+                      cpu:
+                        type: string
+                        pattern: "^[0-9]+m?$"
+                        description: |
+                          Configuring CPU limits.
+                      memory:
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                        description: |
+                          Configuring memory limits.
   nodeSelector:
     type: object
     additionalProperties:
