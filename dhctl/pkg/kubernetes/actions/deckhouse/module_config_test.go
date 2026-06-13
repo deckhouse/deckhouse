@@ -28,7 +28,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func createMC(name string, settings map[string]interface{}) *config.ModuleConfig {
@@ -48,7 +47,6 @@ func createMC(name string, settings map[string]interface{}) *config.ModuleConfig
 
 func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 	ctx := context.Background()
-	log.InitLogger("json", false)
 
 	t.Run("ModuleConfig deckhouse with releaseChannel should remove releaseChannel from mc and adds to result task with returning releaseChannel to post bootstrap tasks", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
@@ -131,7 +129,6 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 
 func TestPrepareGlobalModuleConfig(t *testing.T) {
 	ctx := context.Background()
-	log.InitLogger("json", false)
 
 	assertSaveAnotherFields := func(t *testing.T, mc *unstructured.Unstructured, publicDomainTemplateFound bool) {
 		// does not change another fields

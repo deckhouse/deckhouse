@@ -19,11 +19,13 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -31,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 const (
@@ -56,13 +57,12 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		l := logger.FromContext(ctx)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
@@ -70,10 +70,10 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if !opts.Global.SanityCheck {
-			log.InteractiveWarnLn(destroyApprovalsMessage)
+			l.Warn(fmt.Sprint(destroyApprovalsMessage))
 
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cluster resource cleanup was not approved")
@@ -95,29 +95,25 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		destroyerParams := &destroy.Params{
-			SSHProvider:    sshProvider,
-			KubeProvider:   kubeProvider,
-			StateCache:     cache.Global(),
-			SkipResources:  opts.Destroy.SkipResources,
-			LoggerProvider: log.SimpleLoggerProvider(logger),
-			IsDebug:        opts.Global.IsDebug,
-			TmpDir:         opts.Global.TmpDir,
-			Options:        opts,
+			SSHProvider:   sshProvider,
+			KubeProvider:  kubeProvider,
+			StateCache:    cache.Global(),
+			SkipResources: opts.Destroy.SkipResources,
+			Logger:        logger.FromContext(ctx),
+			IsDebug:       opts.Global.IsDebug,
+			TmpDir:        opts.Global.TmpDir,
+			Options:       opts,
 		}
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
-			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
-			if err != nil {
-				return err
-			}
+			progressCh, finishProgress := phases.InitProgress(ctx, logger.FromContext(ctx), "Destroy cluster")
+			defer finishProgress()
 
 			onUpdateFunc := func(progress phases.Progress) error {
-				phasesChan <- progress
+				progressCh <- progress
 				return nil
 			}
 			destroyerParams.OnProgressFunc = onUpdateFunc
-
-			defer onComplete()
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(ctx, destroyerParams)

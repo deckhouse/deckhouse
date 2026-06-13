@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -55,10 +56,10 @@ func PayloadHasClusterConfiguration(payload string) bool {
 // Used by domain analyzers (CNI mismatch, future ones) that need a partial
 // MetaConfig to reason about user intent. Schema validation of the same
 // payload is expected to happen separately in the schema-validation pass.
-func ParseClusterPayload(payload string) (*MetaConfig, error) {
+func ParseClusterPayload(ctx context.Context, payload string) (*MetaConfig, error) {
 	meta := &MetaConfig{}
 	for _, doc := range input.YAMLSplitRegexp.Split(strings.TrimSpace(payload), -1) {
-		if _, err := parseDocument(doc, meta, nil, ValidateOptionSkipSchemaValidation(true)); err != nil {
+		if _, err := parseDocument(ctx, doc, meta, nil, ValidateOptionSkipSchemaValidation(true)); err != nil {
 			return nil, fmt.Errorf("parse cluster payload: %w", err)
 		}
 	}

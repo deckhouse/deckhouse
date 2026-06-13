@@ -19,12 +19,11 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"os"
-	"path/filepath"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
+	"os"
+	"path/filepath"
 )
 
 // NewTempStateCache creates new cache instance under baseDir, namespaced by identity.
@@ -51,16 +50,16 @@ func NewStateCache(dir string) (*StateCache, error) {
 }
 
 // NewStateCacheWithInitialState creates new cache instance in specified directory with initial state
-func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (*StateCache, error) {
+func NewStateCacheWithInitialState(ctx context.Context, dir string, initialState map[string][]byte) (*StateCache, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}
 
 	// Check for tombstone BEFORE cleaning the directory
 	tombstonePath := filepath.Join(dir, state.TombstoneKey)
-	log.InfoF("Checking for tombstone file before cleaning: %s\n", tombstonePath)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Checking for tombstone file before cleaning: %s", tombstonePath))
 	if _, err := os.Stat(tombstonePath); err == nil {
-		log.InfoF("Tombstone file found at %s - the cluster was already bootstrapped\n", tombstonePath)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Tombstone file found at %s - the cluster was already bootstrapped", tombstonePath))
 		return nil, fmt.Errorf("The cluster was already bootstrapped")
 	}
 
@@ -93,7 +92,7 @@ func (s *StateCache) Save(ctx context.Context, name string, content []byte) erro
 		return err
 	}
 
-	log.DebugF("Saved infrastructure state in cache: %s\n", path)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Saved infrastructure state in cache: %s", path))
 
 	return nil
 }
@@ -121,13 +120,13 @@ func (s *StateCache) InCache(ctx context.Context, name string) (bool, error) {
 func (s *StateCache) Clean(ctx context.Context) {
 	_ = os.RemoveAll(s.dir)
 	if err := os.MkdirAll(s.dir, 0o755); err != nil {
-		log.ErrorF("Failed to recreate cache directory %s: %v\n", s.dir, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Failed to recreate cache directory %s: %v", s.dir, err))
 		return
 	}
 
 	_, err := os.Create(filepath.Join(s.dir, state.TombstoneKey))
 	if err != nil {
-		log.WarnF("Can't mark the cache as exhausted: %s ...\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't mark the cache as exhausted: %s ...", err))
 	}
 }
 
@@ -146,14 +145,14 @@ func (s *StateCache) CleanWithExceptions(ctx context.Context, excludeKeys ...str
 		return nil
 	})
 	if err != nil {
-		log.WarnF("Can't get keys to remove: %s ...\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get keys to remove: %s ...", err))
 		return
 	}
 
 	// yes first write tombstone that is idempotent
 	_, err = os.Create(filepath.Join(s.dir, state.TombstoneKey))
 	if err != nil {
-		log.WarnF("Can't mark the cache as exhausted: %s ...\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't mark the cache as exhausted: %s ...", err))
 	}
 
 	for _, key := range keysToRemove {
@@ -166,7 +165,7 @@ func (s *StateCache) Delete(ctx context.Context, name string) {
 	ok, _ := s.InCache(ctx, name)
 	if ok {
 		if err := os.Remove(path); err != nil {
-			log.ErrorF("Failed to delete cache file %s: %v\n", path, err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Failed to delete cache file %s: %v", path, err))
 		}
 	}
 }

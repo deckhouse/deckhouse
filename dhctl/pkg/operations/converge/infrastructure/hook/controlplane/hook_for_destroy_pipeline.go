@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -69,7 +69,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
-		log.InfoF("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.\n", h.nodeToDestroy)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.", h.nodeToDestroy))
 		return false, nil
 	}
 
@@ -100,7 +100,7 @@ func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrast
 
 	cl, err := h.sshProvider.Client(ctx)
 	if err != nil {
-		log.DebugLn("Node interface is not ssh")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Node interface is not ssh")
 		return nil
 	}
 
@@ -143,7 +143,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 		node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' has been deleted. Skipping\n", nodeName)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node '%s' has been deleted. Skipping", nodeName))
 				return nil
 			}
 			return err

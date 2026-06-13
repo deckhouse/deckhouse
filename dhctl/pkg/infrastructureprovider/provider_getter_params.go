@@ -15,6 +15,7 @@
 package infrastructureprovider
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -37,7 +38,6 @@ type CloudProviderGetterParams struct {
 	// plugins, infrastructure_versions.json). When empty, falls back to
 	// options.DefaultTmpDir() — same behavior as the previous global default.
 	AdditionalParams cloud.ProviderAdditionalParams
-	Logger           log.Logger
 	FSDIParams       *fsprovider.DIParams
 	IsDebug          bool
 
@@ -47,32 +47,22 @@ type CloudProviderGetterParams struct {
 	GlobalOptions *options.GlobalOptions
 }
 
-func (p *CloudProviderGetterParams) getProvidersCache() (CloudProvidersCache, error) {
-	logger, err := p.getLogger()
-	if err != nil {
-		return nil, err
-	}
-
+func (p *CloudProviderGetterParams) getProvidersCache(ctx context.Context) (CloudProvidersCache, error) {
 	providersCache := p.ProvidersCache
-	providersCacheLogMessage := "Provider cache is not nil. Using custom\n"
+	providersCacheLogMessage := "Provider cache is not nil. Using custom"
 	if govalue.IsNil(providersCache) {
-		providersCacheLogMessage = "Provider cache is nil. Using default\n"
+		providersCacheLogMessage = "Provider cache is nil. Using default"
 		providersCache = defaultProvidersCache
 	}
 
-	logger.LogDebugF(providersCacheLogMessage)
+	dhlog.FromContext(ctx).DebugContext(ctx, providersCacheLogMessage)
 
 	return providersCache, nil
 }
 
-func (p *CloudProviderGetterParams) getFSDIParams() (*fsprovider.DIParams, error) {
-	logger, err := p.getLogger()
-	if err != nil {
-		return nil, err
-	}
-
+func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context) (*fsprovider.DIParams, error) {
 	if p.FSDIParams != nil {
-		logger.LogDebugF("Using custom FSDIParams: %+v\n", p.FSDIParams)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using custom FSDIParams: %+v", p.FSDIParams))
 		return p.FSDIParams, nil
 	}
 
@@ -103,41 +93,31 @@ func (p *CloudProviderGetterParams) getFSDIParams() (*fsprovider.DIParams, error
 		diDefaultParams.PluginsDir = filepath.Join(p.GlobalOptions.DownloadDir, "plugins")
 	}
 
-	logger.LogDebugF("Using default FSDIParams: %+v\n", diDefaultParams)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using default FSDIParams: %+v", diDefaultParams))
 	return diDefaultParams, nil
 }
 
-func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(di *cloud.ProviderDI) error {
-	logger, err := p.getLogger()
-	if err != nil {
-		return err
-	}
-
+func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(ctx context.Context, di *cloud.ProviderDI) error {
 	if di.VersionsContentProviderGetter != nil {
-		logger.LogDebugF("fs.GetDI provided our own VersionProviderGetter\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "fs.GetDI provided our own VersionProviderGetter")
 		return nil
 	}
 
 	versionProviderGetter := cloud.DefaultVersionContentProvider
-	logMessage := "Using default VersionProviderGetter\n"
+	logMessage := "Using default VersionProviderGetter"
 
 	if p.VersionProviderGetter != nil {
-		logMessage = "Using custom VersionProviderGetter\n"
+		logMessage = "Using custom VersionProviderGetter"
 		versionProviderGetter = p.VersionProviderGetter
 	}
 
-	logger.LogDebugF(logMessage)
+	dhlog.FromContext(ctx).DebugContext(ctx, logMessage)
 	di.VersionsContentProviderGetter = versionProviderGetter
 
 	return nil
 }
 
-func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
-	logger, err := p.getLogger()
-	if err != nil {
-		return "", err
-	}
-
+func (p *CloudProviderGetterParams) getTmpDir(ctx context.Context) (string, error) {
 	tmpDir := p.TmpDir
 	logMsg := "Using passed tmp dir."
 	if tmpDir == "" {
@@ -150,17 +130,9 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 		return "", fmt.Errorf("Cannot prepare tmp dir %s: %w", tmpDir, err)
 	}
 
-	logger.LogDebugF("%s Before preparation: '%s', absolute path: '%s'\n", logMsg, tmpDir, preparedTmpDir)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s Before preparation: '%s', absolute path: '%s'", logMsg, tmpDir, preparedTmpDir))
 
 	return preparedTmpDir, nil
-}
-
-func (p *CloudProviderGetterParams) getLogger() (log.Logger, error) {
-	if govalue.IsNil(p.Logger) {
-		return nil, fmt.Errorf("CloudProviderGetterParams must have a non-nil pointer logger")
-	}
-
-	return p.Logger, nil
 }
 
 func (p *CloudProviderGetterParams) isDebug() bool {

@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package log
+package logger
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -39,33 +40,22 @@ var sensitiveKeywords = []string{
 	`node-tf-state.json`,
 }
 
-type LogSanitizer struct{}
-
-func (l *LogSanitizer) Filter(args []any) []any {
-	for i, arg := range args {
-		str, ok := arg.(string)
-		if !ok {
-			continue
-		}
-		if matchedKeyword := findSensitiveSubstring(str); matchedKeyword != "" {
-			args[i] = fmt.Sprintf(`[FILTERED - %s]`, matchedKeyword)
-		}
+// Sanitize is a slog.HandlerOptions.ReplaceAttr function: if the message attribute
+// contains a sensitive keyword, the whole message is replaced with a redaction marker.
+func Sanitize(_ []string, attr slog.Attr) slog.Attr {
+	if attr.Key != slog.MessageKey {
+		return attr
 	}
-	return args
+	if kw := findSensitive(attr.Value.String()); kw != "" {
+		attr.Value = slog.StringValue(fmt.Sprintf("[FILTERED - %s]", kw))
+	}
+	return attr
 }
 
-func (l *LogSanitizer) FilterF(format string, args []any) (string, []any) {
-	return format, l.Filter(args)
-}
-
-func (l *LogSanitizer) FilterS(msg string, keysAndValues []any) (string, []any) {
-	return msg, l.Filter(keysAndValues)
-}
-
-func findSensitiveSubstring(msg string) string {
-	for _, keyword := range sensitiveKeywords {
-		if strings.Contains(msg, keyword) {
-			return keyword
+func findSensitive(msg string) string {
+	for _, kw := range sensitiveKeywords {
+		if strings.Contains(msg, kw) {
+			return kw
 		}
 	}
 	return ""

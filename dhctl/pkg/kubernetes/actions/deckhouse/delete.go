@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -55,7 +55,7 @@ func DeleteValidatingWebhookConfigurations(ctx context.Context, kubeCl *client.K
 			if err != nil && !errors.IsNotFound(err) {
 				return err
 			}
-			log.InfoF("ValidatingWebhookConfiguration/%s\n", vwc.Name)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("ValidatingWebhookConfiguration/%s", vwc.Name))
 		}
 
 		return nil
@@ -117,7 +117,7 @@ func DeleteD8StorageResources(ctx context.Context, kubeCl *client.KubernetesClie
 	if err != nil {
 		return fmt.Errorf("delete %s %s: %v", cr, obj.GetName(), err)
 	}
-	log.InfoF("%s/%s\n", obj.GetKind(), obj.GetName())
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s/%s", obj.GetKind(), obj.GetName()))
 	return nil
 }
 
@@ -127,7 +127,7 @@ func DeleteAllD8StorageResources(ctx context.Context, kubeCl *client.KubernetesC
 			storageCRs, err := ListD8StorageResources(ctx, kubeCl, cr)
 			if err != nil {
 				if errors.IsNotFound(err) {
-					log.InfoF("Resources kind of %s not found, skipping...\n", cr)
+					dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Resources kind of %s not found, skipping...", cr))
 					continue
 				}
 				return fmt.Errorf("get %s: %v", cr, err)
@@ -193,9 +193,9 @@ func DeletePods(ctx context.Context, kubeCl *client.KubernetesClient) error {
 
 			err := kubeCl.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 			if err != nil {
-				log.ErrorLn(err.Error())
+				dhlog.FromContext(ctx).ErrorContext(ctx, err.Error())
 			} else {
-				log.InfoF("%s/%s\n", pod.Namespace, pod.Name)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 			}
 		}
 
@@ -219,7 +219,7 @@ func DeleteServices(ctx context.Context, kubeCl *client.KubernetesClient) error 
 			if err != nil {
 				return err
 			}
-			log.InfoF("%s/%s\n", service.Namespace, service.Name)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s/%s", service.Namespace, service.Name))
 		}
 		return nil
 	})
@@ -237,7 +237,7 @@ func DeletePVC(ctx context.Context, kubeCl *client.KubernetesClient) error {
 			if err != nil {
 				return err
 			}
-			log.InfoF("%s/%s\n", claim.Namespace, claim.Name)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s/%s", claim.Namespace, claim.Name))
 		}
 		return nil
 	})
@@ -247,7 +247,7 @@ func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.Kube
 	return retry.NewLoop("Wait for Deckhouse Deployment deletion", 30, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		_, err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Get(ctx, deckhouseDeploymentName, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
-			log.InfoLn("Deckhouse Deployment and its dependents are removed")
+			dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse Deployment and its dependents are removed")
 			return nil
 		}
 
@@ -282,7 +282,7 @@ func WaitForServicesDeletion(ctx context.Context, kubeCl *client.KubernetesClien
 			}
 			return fmt.Errorf("%d Services left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
-		log.InfoLn("All Services with type LoadBalancer are deleted from the cluster")
+		dhlog.FromContext(ctx).InfoContext(ctx, "All Services with type LoadBalancer are deleted from the cluster")
 		return nil
 	})
 }
@@ -312,7 +312,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 			for _, item := range skipPVs {
 				fmt.Fprintf(&skipPVsInfo, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
-			log.InfoF("%d PersistentVolumes provided manually or with a reclaimPolicy other than Delete were skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%d PersistentVolumes provided manually or with a reclaimPolicy other than Delete were skipped.\n%s", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n")))
 		}
 
 		count := len(filteredResources)
@@ -323,7 +323,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 			}
 			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(remainingPVs.String(), "\n"))
 		}
-		log.InfoLn("All PersistentVolumes are deleted from the cluster")
+		dhlog.FromContext(ctx).InfoContext(ctx, "All PersistentVolumes are deleted from the cluster")
 		return nil
 	})
 }
@@ -351,7 +351,7 @@ func WaitForPVCDeletion(ctx context.Context, kubeCl *client.KubernetesClient) er
 			}
 			return fmt.Errorf("%d PersistentVolumeClaims left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
-		log.InfoLn("All PersistentVolumeClaims are deleted from the cluster")
+		dhlog.FromContext(ctx).InfoContext(ctx, "All PersistentVolumeClaims are deleted from the cluster")
 		return nil
 	})
 }
@@ -413,7 +413,7 @@ func DeleteMCMMachineDeployments(ctx context.Context, kubeCl *client.KubernetesC
 			if err != nil {
 				return fmt.Errorf("delete machinedeployments %s: %v", name, err)
 			}
-			log.InfoF("%s/%s\n", namespace, name)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s/%s", namespace, name))
 		}
 		return nil
 	})
@@ -434,7 +434,7 @@ func WaitForMCMMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesCl
 			}
 			return fmt.Errorf("%d Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
-		log.InfoLn("All Machines are deleted from the cluster")
+		dhlog.FromContext(ctx).InfoContext(ctx, "All Machines are deleted from the cluster")
 		return nil
 	})
 }
@@ -449,7 +449,7 @@ func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.Kubernet
 			return checkMCMMachinesAPI(kubeCl)
 		})
 	if err != nil {
-		log.WarnF("Can't get resources in group=machine.sapcloud.io, version=v1alpha1: %v\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get resources in group=machine.sapcloud.io, version=v1alpha1: %v", err))
 		if input.NewConfirmation().
 			WithMessage("Machines weren't deleted from the cluster. Do you want to continue?").
 			WithYesByDefault().
@@ -474,7 +474,7 @@ func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.Kubernet
 			return checkCAPIMachinesAPI(kubeCl)
 		})
 	if err != nil {
-		log.WarnF("Can't get resources in group=cluster.x-k8s.io, version=v1beta1: %v\n", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get resources in group=cluster.x-k8s.io, version=v1beta1: %v", err))
 		if input.NewConfirmation().
 			WithMessage("Machines weren't deleted from the cluster. Do you want to continue?").
 			WithYesByDefault().
@@ -504,7 +504,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 		}
 
 		for _, machine := range allMachines.Items {
-			log.DebugF("Patch nodeDrainTimeout for machine %s\n", machine.GetName())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Patch nodeDrainTimeout for machine %s", machine.GetName()))
 			m := machine
 			// we delete cluster anyway and we can force delete machine (without drain)
 			if err = unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout"); err != nil {
@@ -516,7 +516,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
 			}
 
-			log.DebugF("Machine %s patched\n", machine.GetName())
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Machine %s patched", machine.GetName()))
 		}
 
 		allMachineDeployments, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
@@ -528,14 +528,14 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 			namespace := machineDeployment.GetNamespace()
 			name := machineDeployment.GetName()
 			if name == "master" {
-				log.InfoLn("Machine deployment 'master' was skipped. It will be deleted later.")
+				dhlog.FromContext(ctx).InfoContext(ctx, "Machine deployment 'master' was skipped. It will be deleted later.")
 				continue
 			}
 			err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("Delete CAPI machinedeployments %s: %v", name, err)
 			}
-			log.InfoF("%s/%s\n", namespace, name)
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s/%s", namespace, name))
 		}
 		return nil
 	})
@@ -554,7 +554,7 @@ func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesC
 			if labels != nil {
 				ng, ok := labels["node-group"]
 				if ok && ng == "master" {
-					log.DebugF("Machine %s was skipped from delete check because it is in master ng. Continue.\n", m.GetName())
+					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Machine %s was skipped from delete check because it is in master ng. Continue.", m.GetName()))
 					continue
 				}
 			}
@@ -570,7 +570,7 @@ func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesC
 			}
 			return fmt.Errorf("%d CAPI Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
-		log.InfoLn("All CAPI Machines are deleted from the cluster")
+		dhlog.FromContext(ctx).InfoContext(ctx, "All CAPI Machines are deleted from the cluster")
 		return nil
 	})
 }

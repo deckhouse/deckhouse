@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,28 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package log
+package main
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
-	"github.com/name212/govalue"
-	"github.com/stretchr/testify/require"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
-func TestSafeProvideLogger(t *testing.T) {
-	providers := []func(LoggerProvider) Logger{
-		SafeProvideLogger,
-		SafeProvideLoggerOrSilent,
+func TestRootWritesFileAndTTY(t *testing.T) {
+	var file, tty bytes.Buffer
+	root := logger.NewRoot(logger.Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true, Debug: true})
+	root.Info("Debug log file: /tmp/x.log")
+
+	if !strings.Contains(file.String(), "Debug log file") {
+		t.Fatalf("file missing notice: %q", file.String())
 	}
-
-	nilProvider := SimpleLoggerProvider(nil)
-
-	for _, provider := range providers {
-		logger := provider(nil)
-		require.False(t, govalue.IsNil(logger))
-
-		logger = provider(nilProvider)
-		require.False(t, govalue.IsNil(logger))
+	if !strings.Contains(tty.String(), "Debug log file") {
+		t.Fatalf("tty missing notice: %q", tty.String())
 	}
 }

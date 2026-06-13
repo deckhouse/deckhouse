@@ -295,13 +295,13 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 	}
 
 	preflightURL := fmt.Sprintf("https://%s/healthz", net.JoinHostPort(listenAddress, remotePort))
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, p.opts)
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(ctx, preflightURL, p.opts)
 	if err != nil {
 		tun.Stop()
 		return nil, fmt.Errorf("cannot render reverse tunnel checking script: %w", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, remotePort, p.opts)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(ctx, listenAddress, remotePort, p.opts)
 	if err != nil {
 		tun.Stop()
 		return nil, fmt.Errorf("cannot render kill reverse tunnel script: %w", err)

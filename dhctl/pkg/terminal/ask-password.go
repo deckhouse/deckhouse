@@ -15,6 +15,7 @@
 package terminal
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -22,7 +23,7 @@ import (
 	terminal "golang.org/x/term"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 // AskBecomePassword reads a sudo/become password from stdin and stores it in o.BecomePass
@@ -48,9 +49,10 @@ func AskPassword(prompt string) ([]byte, error) {
 		return nil, fmt.Errorf("stdin is not a terminal, cannot read password")
 	}
 
-	log.InfoF(prompt)
+	ctx := context.Background()
+	dhlog.FromContext(ctx).InfoContext(ctx, prompt)
 	data, err := terminal.ReadPassword(fd)
-	log.InfoLn()
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint())
 
 	if err != nil {
 		return nil, fmt.Errorf("read secret: %w", err)
@@ -79,6 +81,7 @@ func AskBastionPassword(o *options.SSHOptions) error {
 }
 
 func readPassword(prompt string) ([]byte, error) {
+	ctx := context.Background()
 	fd := int(os.Stdin.Fd())
 
 	var data []byte
@@ -87,11 +90,11 @@ func readPassword(prompt string) ([]byte, error) {
 	if !terminal.IsTerminal(fd) {
 		data, err = io.ReadAll(os.Stdin)
 	} else {
-		log.InfoF(prompt)
+		dhlog.FromContext(ctx).InfoContext(ctx, prompt)
 		data, err = terminal.ReadPassword(fd)
 	}
 
-	log.InfoLn()
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint())
 
 	if err != nil {
 		return nil, fmt.Errorf("read password: %v", err)

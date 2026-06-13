@@ -35,7 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
@@ -106,8 +106,8 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	templateController := template.NewTemplateController("")
 	bashible := dhbashible.NewRunner(nodeInterface, loggerProvider)
 
-	err := log.ProcessCtx(ctx, "bootstrap", "Preparing bootstrap", func(ctx context.Context) error {
-		log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
+	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing bootstrap", func(ctx context.Context) error {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Rendered templates directory %s", templateController.TmpDir))
 
 		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, globalOpts); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
@@ -119,7 +119,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	if err != nil {
 		return err
 	}
-	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseBundlePreparation)
+	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseBundlePreparation)
 
 	ready, err := bashible.AlreadyRun(ctx)
 	if err != nil {
@@ -127,7 +127,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	if ready {
-		log.Success("Bashible has already run! Skipping Bashible installation\n")
+		dhlog.Success(ctx, dhlog.FromContext(ctx), "Bashible has already run! Skipping Bashible installation")
 		return nil
 	}
 
@@ -158,7 +158,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	defer registryPackagesProxyCleanup()
-	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseRegistryPackagesProxy)
+	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseRegistryPackagesProxy)
 
 	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, globalOpts); err != nil {
 		return err
@@ -185,11 +185,11 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return fmt.Errorf("read discovered node IP: %w", err)
 	}
 
-	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, globalOpts); err != nil {
+	if err := PrepareControlPlaneArtifacts(ctx, nodeName, discoveredNodeIP, cfg, templateController, globalOpts); err != nil {
 		return err
 	}
 
-	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseNodePreparation)
+	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseNodePreparation)
 
 	if err := bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
@@ -199,7 +199,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseExecuteBashibleBundle)
+	params.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseExecuteBashibleBundle)
 	return nil
 }
 
@@ -213,7 +213,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 
 		if _, err := os.Stat(scriptPath); err != nil {
 			if os.IsNotExist(err) {
-				log.InfoF("Script %s wasn't found\n", scriptPath)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Script %s wasn't found", scriptPath))
 				return nil
 			}
 			return fmt.Errorf("script path: %v", err)
@@ -224,7 +224,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 		cmd := nodeInterface.UploadScript(scriptPath)
 		cmd.WithStdoutHandler(func(l string) {
 			logs = append(logs, l)
-			log.DebugLn(l)
+			dhlog.FromContext(ctx).DebugContext(ctx, l)
 		})
 		cmd.Sudo()
 
@@ -237,7 +237,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 				stderr = string(exitErr.Stderr)
 			}
 
-			log.ErrorF("%s\nstderr:\n%s\n", strings.Join(logs, "\n"), stderr)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("%s\nstderr:\n%s", strings.Join(logs, "\n"), stderr))
 
 			return fmt.Errorf("run %s: %w", scriptPath, err)
 		}
@@ -245,17 +245,16 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 		return nil
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Initial bootstrap", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Initial bootstrap", func(ctx context.Context) error {
 		for _, bootstrapScript := range []string{"01-bootstrap-prerequisites.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			name := fmt.Sprintf("Execute %s", bootstrapScript)
-			extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 			p := retry.NewEmptyParams(
 				retry.WithName("%s", name),
 				retry.WithAttempts(30),
 				retry.WithWait(5*time.Second),
-				retry.WithLogger(extLogger()),
+				retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
 			)
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)
@@ -276,19 +275,20 @@ func PrepareBashibleBundle(
 	controller *template.Controller,
 	globalOpts *options.GlobalOptions,
 ) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare Bashible", func(ctx context.Context) error {
 		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, globalOpts)
 	})
 }
 
 func PrepareControlPlaneArtifacts(
+	ctx context.Context,
 	nodeName, nodeIP string,
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
 	globalOpts *options.GlobalOptions,
 ) error {
-	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
-		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare control-plane manifests", func(ctx context.Context) error {
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Using node hostname %q and IP %q for control-plane manifests", nodeName, nodeIP))
 
 		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
@@ -303,7 +303,7 @@ func PrepareControlPlaneArtifacts(
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, globalOpts); err != nil {
+		if err := template.PrepareControlPlaneManifests(ctx, controller, controlPlaneData, globalOpts); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 

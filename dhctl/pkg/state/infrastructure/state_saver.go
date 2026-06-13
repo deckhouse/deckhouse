@@ -17,6 +17,7 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -27,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -92,7 +93,7 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 		},
 	}
 
-	log.DebugF("Saving intermediate base infra in cluster...\n")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Saving intermediate base infra in cluster...")
 	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 15, 3*time.Second).Run(
 		func() error {
 			return task.Patch(ctx)
@@ -103,7 +104,7 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 		msg = fmt.Sprintf("Intermediate base infra was not saved in cluster: %v\n", err)
 	}
 
-	log.DebugF(msg)
+	dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(msg, "\n"))
 	return err
 }
 
@@ -135,7 +136,7 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 		return nil
 	}
 
-	kubeClient, err := s.getter.KubeClientCtx(context.Background())
+	kubeClient, err := s.getter.KubeClientCtx(ctx)
 	if err != nil {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
@@ -167,7 +168,7 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 	}
 
 	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
-	log.DebugF("Saving intermediate state for node %s in cluster...\n", s.nodeName)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Saving intermediate state for node %s in cluster...", s.nodeName))
 	err = retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(func() error {
 		return task.PatchOrCreate(ctx)
 	})
@@ -177,7 +178,7 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 		msg = fmt.Sprintf("Intermediate state for node %s was not saved in cluster: %v\n", s.nodeName, err)
 	}
 
-	log.DebugF(msg)
+	dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(msg, "\n"))
 
 	return err
 }

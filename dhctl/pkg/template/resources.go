@@ -16,6 +16,7 @@ package template
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -26,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -127,7 +128,7 @@ func (r Resources) Less(i, j int) bool {
 	return firstOrder < secondOrder
 }
 
-func ParseResourcesContent(content string, data map[string]interface{}) (Resources, error) {
+func ParseResourcesContent(ctx context.Context, content string, data map[string]interface{}) (Resources, error) {
 	if data != nil {
 		t := template.New("resource_render").Funcs(FuncMap())
 		t, err := t.Parse(content)
@@ -165,7 +166,7 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 		gvk := schema.FromAPIVersionAndKind(kubernetesResource.GetAPIVersion(), kubernetesResource.GetKind())
 
 		if gvk.Empty() || gvk.GroupVersion().Empty() || gvk.GroupKind().Empty() {
-			log.DebugF("Empty gvr for resource:\n%s\n", doc)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Empty gvr for resource:\n%s", doc))
 			continue
 		}
 
@@ -189,7 +190,7 @@ func (r Resources) String() string {
 	return strings.Join(s, ";")
 }
 
-func loadResources(path string, data map[string]interface{}) (Resources, error) {
+func loadResources(ctx context.Context, path string, data map[string]interface{}) (Resources, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading resources file: %v", err)
@@ -197,11 +198,11 @@ func loadResources(path string, data map[string]interface{}) (Resources, error) 
 
 	content := string(fileContent)
 
-	return ParseResourcesContent(content, data)
+	return ParseResourcesContent(ctx, content, data)
 }
 
-func ParseResources(path string, data map[string]interface{}) (Resources, error) {
-	resources, err := loadResources(path, data)
+func ParseResources(ctx context.Context, path string, data map[string]interface{}) (Resources, error) {
+	resources, err := loadResources(ctx, path, data)
 	if err != nil {
 		return nil, err
 	}

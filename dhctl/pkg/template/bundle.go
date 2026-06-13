@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 
@@ -28,7 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -45,7 +46,7 @@ type saveFromTo struct {
 	ignorePaths map[string]struct{}
 }
 
-func logTemplatesData(name string, data map[string]interface{}) {
+func logTemplatesData(ctx context.Context, name string, data map[string]interface{}) {
 	dataForLog := make(map[string]interface{})
 	for k, v := range data {
 		switch k {
@@ -59,7 +60,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 
 	formattedData, _ := yaml.Marshal(dataForLog)
 
-	log.DebugF("Data %s\n%s", name, string(formattedData))
+	dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Data %s\n%s", name, string(formattedData)), "\n"))
 }
 
 func PrepareBundle(
@@ -73,11 +74,11 @@ func PrepareBundle(
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBundle")
 	defer span.End()
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP)
 	if err != nil {
 		return err
 	}
-	logTemplatesData("bashible", bashibleData)
+	logTemplatesData(ctx, "bashible", bashibleData)
 
 	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, globalOptions); err != nil {
 		return err
@@ -89,7 +90,7 @@ func PrepareBundle(
 	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
-	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("From %q to %q", bashboosterDir, bashibleDir))
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
@@ -130,20 +131,20 @@ func PrepareBashibleBundle(
 	}
 
 	for _, info := range saveInfo {
-		log.DebugF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("From %q to %q", info.from, info.to))
+		if err := templateController.RenderAndSaveTemplates(ctx, info.from, info.to, info.data, info.ignorePaths); err != nil {
 			return err
 		}
 	}
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
-	log.DebugF("Creating %q\n", firstRunFileFlag)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating %q", firstRunFileFlag))
 	if err := fs.CreateEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
 
 	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
-	log.InfoF("Creating %q\n", devicePathFile)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Creating %q", devicePathFile))
 
 	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }
@@ -228,14 +229,14 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	return nil
 }
 
-func PrepareControlPlaneManifests(templateController *Controller, cfg *config.ControlPlaneTemplateConfig, globalOptions *options.GlobalOptions) error {
+func PrepareControlPlaneManifests(ctx context.Context, templateController *Controller, cfg *config.ControlPlaneTemplateConfig, globalOptions *options.GlobalOptions) error {
 	saveInfo := saveFromTo{
 		from: filepath.Join(globalOptions.CandiDir, "control-plane"),
 		to:   filepath.Join(bashibleDir, "control-plane"),
 		data: cfg.ToMap(),
 	}
-	log.InfoF("From %q to %q\n", saveInfo.from, saveInfo.to)
-	if err := templateController.RenderAndSaveTemplates(saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("From %q to %q", saveInfo.from, saveInfo.to))
+	if err := templateController.RenderAndSaveTemplates(ctx, saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
 		return err
 	}
 	return nil

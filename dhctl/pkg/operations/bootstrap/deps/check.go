@@ -223,10 +223,10 @@ func (c *DependenciesChecker) runBinariesCheckScript(ctx context.Context) ([]byt
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
-			logger.DebugF("SSH exit code: %v\n", ee.ExitCode())
+			logger.DebugF("SSH exit code: %v", ee.ExitCode())
 		}
 		e := fmt.Errorf("remote dependency check failed: %w - %s", err, string(output))
-		logger.DebugF("Dependency check error: %v\n", e)
+		logger.DebugF("Dependency check error: %v", e)
 		return nil, e
 	}
 

@@ -27,9 +27,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
-func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
+func prepareAuthHTTPClient(ctx context.Context, metaConfig *config.MetaConfig) (*http.Client, error) {
 	registry := metaConfig.Registry.Settings.RemoteData
-	return registryutil.NewRegistryClient(string(registry.Scheme), registry.CA)
+	return registryutil.NewRegistryClient(ctx, string(registry.Scheme), registry.CA)
 }
 
 type registryAuthCheck struct {
@@ -57,7 +57,7 @@ func (c registryAuthCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("meta config is required")
 	}
 
-	client, err := prepareAuthHTTPClient(c.MetaConfig)
+	client, err := prepareAuthHTTPClient(ctx, c.MetaConfig)
 	if err != nil {
 		return err
 	}

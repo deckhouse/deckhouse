@@ -27,7 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 const (
@@ -37,7 +37,7 @@ const (
 
 type (
 	settingsStore map[string]settings.ProviderSettings
-	loader        func(logger log.Logger, infraVersionsFile string) (settingsStore, error)
+	loader        func(ctx context.Context, infraVersionsFile string) (settingsStore, error)
 )
 
 type SettingsProvider struct {
@@ -52,30 +52,30 @@ var (
 	fileToSettingsStore    = make(map[string]settingsStore)
 )
 
-func loadOrGetStore(logger log.Logger, infraVersionsFile string) (settingsStore, error) {
+func loadOrGetStore(ctx context.Context, infraVersionsFile string) (settingsStore, error) {
 	fileSettingsStoreMutex.Lock()
 	defer fileSettingsStoreMutex.Unlock()
 
 	store, ok := fileToSettingsStore[infraVersionsFile]
 	if ok {
-		logger.LogDebugF("Providers settings store for terraform versions file %s loaded from cache\n", infraVersionsFile)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Providers settings store for terraform versions file %s loaded from cache", infraVersionsFile))
 		return store, nil
 	}
 
-	store, err := loadTerraformVersionFileSettings(infraVersionsFile, logger)
+	store, err := loadTerraformVersionFileSettings(ctx, infraVersionsFile)
 	if err != nil {
 		return nil, err
 	}
 
 	fileToSettingsStore[infraVersionsFile] = store
 
-	logger.LogDebugF("Providers settings store for terraform versions file %s loaded from file and added to cache\n", infraVersionsFile)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Providers settings store for terraform versions file %s loaded from file and added to cache", infraVersionsFile))
 
 	return store, nil
 }
 
-func newSettingsProvider(logger log.Logger, infraVersionsFile string, loader loader) *SettingsProvider {
-	store, err := loader(logger, infraVersionsFile)
+func newSettingsProvider(ctx context.Context, infraVersionsFile string, loader loader) *SettingsProvider {
+	store, err := loader(ctx, infraVersionsFile)
 	if err != nil {
 		return &SettingsProvider{
 			initError: err,
@@ -131,7 +131,7 @@ func simpleFromMap(s any, terraformVersion, openTofuVersion string) (*settings.S
 	return &set, nil
 }
 
-func loadTerraformVersionFileSettings(filename string, logger log.Logger) (settingsStore, error) {
+func loadTerraformVersionFileSettings(ctx context.Context, filename string) (settingsStore, error) {
 	infrastructureProviders := make(map[string]interface{})
 
 	file, err := os.ReadFile(filename)
@@ -154,13 +154,13 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 			if !ok {
 				return nil, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for OpenTofu version setting", name)
 			}
-			logger.LogDebugF("Found opentofu version: %s\n", tofuVersion)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found opentofu version: %s", tofuVersion))
 		case terraformKey:
 			terraformVersion, ok = rawSettings.(string)
 			if !ok {
 				return nil, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for Terraform version setting", name)
 			}
-			logger.LogDebugF("Found terraform version: %s\n", terraformVersion)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found terraform version: %s", terraformVersion))
 		}
 	}
 
@@ -181,7 +181,7 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 
 	for name, rawSettings := range infrastructureProviders {
 		if _, ok := noneProviderKeys[name]; ok {
-			logger.LogDebugF("Found non-provider-name key %s\n", name)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found non-provider-name key %s", name))
 			continue
 		}
 
@@ -192,7 +192,7 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 
 		cloudName := strings.ToLower(set.CloudName())
 
-		logger.LogDebugF("Found provider settings for %s: %s\n", name, cloudName)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found provider settings for %s: %s", name, cloudName))
 
 		res[cloudName] = set
 	}

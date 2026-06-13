@@ -21,14 +21,13 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 // type -> type value
 type Conditions map[string]string
 
 type ByConditionsChecker struct {
-	loggerProvider     log.LoggerProvider
 	conditionsForCheck Conditions
 
 	waitAttempts int
@@ -37,9 +36,8 @@ type ByConditionsChecker struct {
 	readyIfNoStatusOrConditions bool
 }
 
-func NewByConditionsChecker(conditions Conditions, loggerProvider log.LoggerProvider) *ByConditionsChecker {
+func NewByConditionsChecker(conditions Conditions) *ByConditionsChecker {
 	return &ByConditionsChecker{
-		loggerProvider:     loggerProvider,
 		conditionsForCheck: conditions,
 		waitAttempts:       5,
 
@@ -67,20 +65,18 @@ func (c *ByConditionsChecker) WaitAttemptsBeforeCheck() int {
 	return c.waitAttempts
 }
 
-func (c *ByConditionsChecker) IsReady(_ context.Context, resource *unstructured.Unstructured, resourceName string) (bool, error) {
+func (c *ByConditionsChecker) IsReady(ctx context.Context, resource *unstructured.Unstructured, resourceName string) (bool, error) {
 	if len(c.conditionsForCheck) == 0 {
 		return false, fmt.Errorf("Internal error: no conditionsForCheck found for resource %s", resourceName)
 	}
-
-	logger := log.SafeProvideLogger(c.loggerProvider)
 
 	var logReadyOrNot castErrorFunc
 	castError := castErrorFuncForResource(resourceName, "")
 
 	if c.readyIfNoStatusOrConditions {
-		logReadyOrNot = notFoundFuncDebugLogReady(logger, resourceName)
+		logReadyOrNot = notFoundFuncDebugLogReady(ctx, resourceName)
 	} else {
-		logReadyOrNot = notFoundFuncDebugLogNotReady(logger, resourceName)
+		logReadyOrNot = notFoundFuncDebugLogNotReady(ctx, resourceName)
 	}
 
 	status := castKey[map[string]any](resource.Object, "status", logReadyOrNot, castError)
@@ -135,17 +131,17 @@ func (c *ByConditionsChecker) IsReady(_ context.Context, resource *unstructured.
 			returnFunc = debugLogAndReturnReady
 		}
 
-		return returnFunc(logger, resourceName, "conditions not found")
+		return returnFunc(ctx, resourceName, "conditions not found")
 	}
 
 	resOfCheck := true
 	falseConditions := make([]string, 0, conditionsLen)
 
 	for conditionType, res := range conditionsResults {
-		logger.LogDebugF("Condition %s for %s resource is %v\n", conditionType, resourceName, res)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Condition %s for %s resource is %v", conditionType, resourceName, res))
 		if res {
 			if !c.checkAllConditions {
-				return debugLogAndReturnReady(logger, resourceName, fmt.Sprintf("by condition %s", conditionType))
+				return debugLogAndReturnReady(ctx, resourceName, fmt.Sprintf("by condition %s", conditionType))
 			}
 
 			continue
@@ -156,9 +152,9 @@ func (c *ByConditionsChecker) IsReady(_ context.Context, resource *unstructured.
 	}
 
 	if resOfCheck {
-		return debugLogAndReturnReady(logger, resourceName, "by all conditions")
+		return debugLogAndReturnReady(ctx, resourceName, "by all conditions")
 	}
 
 	msg := fmt.Sprintf("next conditions not ready: %s", strings.Join(falseConditions, ","))
-	return debugLogAndReturnNotReady(logger, resourceName, msg)
+	return debugLogAndReturnNotReady(ctx, resourceName, msg)
 }

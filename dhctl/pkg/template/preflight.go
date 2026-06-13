@@ -15,10 +15,11 @@
 package template
 
 import (
+	"context"
 	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 var (
@@ -30,36 +31,38 @@ var (
 	preflightScriptDirPath            = "preflight"
 )
 
-func RenderAndSavePreflightCheckPortsScript(globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Rendering check ports script")
+func RenderAndSavePreflightCheckPortsScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check ports script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkPortsScriptPath)
 
-	return RenderAndSaveTemplate("check_ports.sh", scriptPath, map[string]interface{}{})
+	return RenderAndSaveTemplate(ctx, "check_ports.sh", scriptPath, map[string]interface{}{})
 }
 
-func RenderAndSavePreflightCheckDeckhouseUserScript(globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Rendering check user script")
+func RenderAndSavePreflightCheckDeckhouseUserScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check user script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkDeckhouseUserScriptPath)
 
-	return RenderAndSaveTemplate("check_deckhouse_user.sh", scriptPath, map[string]interface{}{})
+	return RenderAndSaveTemplate(ctx, "check_deckhouse_user.sh", scriptPath, map[string]interface{}{})
 }
 
-func RenderAndSavePreflightCheckLocalhostScript(globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Rendering check localhost script")
+func RenderAndSavePreflightCheckLocalhostScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check localhost script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkLocalhostScriptPath)
 
 	return RenderAndSaveTemplate(
+		ctx,
 		"check_localhost.sh",
 		scriptPath,
 		map[string]interface{}{},
 	)
 }
 
-func RenderAndSavePreflightReverseTunnelOpenScript(url string, globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Rendering proxy reverse tunnel open script")
+func RenderAndSavePreflightReverseTunnelOpenScript(ctx context.Context, url string, globalOptions *options.GlobalOptions) (string, error) {
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering proxy reverse tunnel open script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkProxyRevTunnelOpenScriptPath)
 
 	return RenderAndSaveTemplate(
+		ctx,
 		"check_reverse_tunnel_open.sh",
 		scriptPath,
 		map[string]interface{}{
@@ -68,11 +71,12 @@ func RenderAndSavePreflightReverseTunnelOpenScript(url string, globalOptions *op
 	)
 }
 
-func RenderAndSaveKillReverseTunnelScript(host, port string, globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Rendering kill reverse tunnel script")
+func RenderAndSaveKillReverseTunnelScript(ctx context.Context, host, port string, globalOptions *options.GlobalOptions) (string, error) {
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering kill reverse tunnel script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", killReverseTunnelPath)
 
 	return RenderAndSaveTemplate(
+		ctx,
 		"kill_reverse_tunnel.sh",
 		scriptPath,
 		map[string]interface{}{
@@ -83,14 +87,16 @@ func RenderAndSaveKillReverseTunnelScript(host, port string, globalOptions *opti
 }
 
 func RenderAndSavePreflightCheckScript(
+	ctx context.Context,
 	filename string,
 	params map[string]interface{},
 	globalOptions *options.GlobalOptions,
 ) (string, error) {
-	log.DebugLn("Rendering check localhost script")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check localhost script")
 	path := filepath.Join(globalOptions.CandiDir, "bashible", preflightScriptDirPath)
 
 	return RenderAndSaveTemplate(
+		ctx,
 		filename,
 		filepath.Join(path, filename),
 		params,

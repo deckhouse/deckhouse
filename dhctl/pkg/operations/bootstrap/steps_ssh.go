@@ -26,7 +26,7 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
@@ -52,12 +52,11 @@ func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path st
 }
 
 func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
-	extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 	p := retry.NewEmptyParams(
 		retry.WithName("Read remote file %s", path),
 		retry.WithAttempts(5),
 		retry.WithWait(3*time.Second),
-		retry.WithLogger(extLogger()),
+		retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
 	)
 	var value string
 	err := retry.NewLoopWithParams(p).
@@ -76,19 +75,17 @@ func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on master to become ready", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Wait for SSH on master to become ready", func(ctx context.Context) error {
 		availabilityCheck := sshClient.Check()
-		_ = log.ProcessCtx(ctx, "default", "Connection string", func(ctx context.Context) error {
-			log.InfoLn(availabilityCheck.String())
+		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Connection string", func(ctx context.Context) error {
+			dhlog.FromContext(ctx).InfoContext(ctx, availabilityCheck.String())
 			return nil
 		})
-
-		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
 			retry.WithWait(5*time.Second),
 			retry.WithAttempts(50),
-			retry.WithLogger(extLogger()),
+			retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}

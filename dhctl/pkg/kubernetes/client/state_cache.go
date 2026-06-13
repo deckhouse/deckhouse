@@ -30,7 +30,7 @@ import (
 	typedv1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	kuberetry "k8s.io/client-go/util/retry"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -166,11 +166,11 @@ func (c *StateCache) update(ctx context.Context, action func(map[string][]byte) 
 	})
 }
 
-func (c *StateCache) get(s *v1.Secret, key string) ([]byte, error) {
+func (c *StateCache) get(ctx context.Context, s *v1.Secret, key string) ([]byte, error) {
 	data := s.Data[key]
 	decodedData, err := base64.StdEncoding.DecodeString(string(data))
 	if err != nil {
-		log.ErrorF("Cannot decode cache %s val %v\n", key, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot decode cache %s val %v", key, err))
 		return nil, err
 	}
 
@@ -210,11 +210,11 @@ func (c *StateCache) SaveStruct(ctx context.Context, name string, v interface{})
 func (c *StateCache) Load(ctx context.Context, name string) ([]byte, error) {
 	s, err := c.getSecret(ctx)
 	if err != nil {
-		log.ErrorF("Cannot get secret %s val %v\n", name, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot get secret %s val %v", name, err))
 		return nil, err
 	}
 
-	return c.get(s, name)
+	return c.get(ctx, s, name)
 }
 
 func (c *StateCache) LoadStruct(ctx context.Context, name string, v interface{}) error {
@@ -236,7 +236,7 @@ func (c *StateCache) Delete(ctx context.Context, name string) {
 		},
 	)
 	if err != nil {
-		log.ErrorF("Cannot delete cache %s val %v\n", name, err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot delete cache %s val %v", name, err))
 	}
 }
 
@@ -261,7 +261,7 @@ func (c *StateCache) CleanWithExceptions(ctx context.Context, excludeKeys ...str
 		},
 	)
 	if err != nil {
-		log.ErrorF("Cannot clean cache %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot clean cache %v", err))
 	}
 }
 
@@ -293,7 +293,7 @@ func (c *StateCache) Iterate(ctx context.Context, action func(string, []byte) er
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		d, err := c.get(s, k)
+		d, err := c.get(ctx, s, k)
 		if err != nil {
 			return err
 		}

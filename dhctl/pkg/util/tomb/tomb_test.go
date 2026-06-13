@@ -160,9 +160,14 @@ func assertRunResult(t *testing.T, res, expected *testRunResult) {
 	require.Equal(t, expected.code, res.code, fmt.Sprintf("incorrect exit code. Need=%v, got=%v", expected.code, res.code))
 	require.Equal(t, len(expected.out), len(res.out), fmt.Sprintf("incorrect outputs len. Need=%v, got=%v: %v", len(expected.out), len(res.out), res.out))
 
+	// Migrated production code logs via slog, whose text handler decorates lines
+	// with time/level/attrs (e.g. `2026/.. WARN <msg> tty=true`). Bare lines
+	// printed via fmt.Printf (ready/work/shutdown) still arrive verbatim. Assert
+	// on substring containment, in order, so the test keeps verifying that the
+	// right messages happen in the right sequence without pinning slog's format.
 	for i, e := range expected.out {
 		r := res.out[i]
-		require.Equal(t, e, r, fmt.Sprintf("incorrect output line %v. Need=%v, got=%v", i, e, r))
+		require.Contains(t, r, e, fmt.Sprintf("incorrect output line %v. Need to contain=%v, got=%v", i, e, r))
 	}
 }
 

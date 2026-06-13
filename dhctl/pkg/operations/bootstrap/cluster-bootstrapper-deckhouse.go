@@ -21,12 +21,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
@@ -46,7 +45,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		),
 		&b.Options.Global,
 	)
@@ -58,45 +57,37 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
 	}
 
-	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
-	if interactive {
-		intLogger, ok := b.logger.(*log.InteractiveLogger)
-		if !ok {
-			return fmt.Errorf("logger is not interactive")
-		}
-		labelChan := intLogger.GetPhaseChan()
-		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Install Deckhouse", labelChan, phasesChan, intLogger.GetLogChan())
-
-		if err := progressbar.InitProgressBar(pbParam); err != nil {
+	body := func(_ chan phases.Progress) error {
+		if err := metaConfig.LoadInstallerVersion(); err != nil {
 			return err
 		}
 
-		defer progressbar.FinishDefaultProgressBar()
-	}
+		installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
+		if err != nil {
+			return err
+		}
 
-	if err := metaConfig.LoadInstallerVersion(); err != nil {
+		installConfig.KubeadmBootstrap = b.Options.Bootstrap.KubeadmBootstrap
+		installConfig.MasterNodeSelector = b.Options.Bootstrap.MasterNodeSelector
+
+		kubeCl, err := b.KubeProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+
+		_, err = InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installConfig, InstallDeckhouseParams{
+			BeforeDeckhouseTask: func() error { return nil },
+			State:               NewBootstrapState(cache.Global()),
+			DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
+		})
+
 		return err
 	}
 
-	installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
-	if err != nil {
-		return err
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	if interactive {
+		return runProgress(ctx, dhlog.FromContext(ctx), "Install Deckhouse", body)
 	}
 
-	installConfig.KubeadmBootstrap = b.Options.Bootstrap.KubeadmBootstrap
-	installConfig.MasterNodeSelector = b.Options.Bootstrap.MasterNodeSelector
-
-	kubeCl, err := b.KubeProvider.Client(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installConfig, InstallDeckhouseParams{
-		BeforeDeckhouseTask: func() error { return nil },
-		State:               NewBootstrapState(cache.Global()),
-		DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
-	})
-
-	return err
+	return body(nil)
 }

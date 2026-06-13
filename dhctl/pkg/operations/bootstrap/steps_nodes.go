@@ -27,7 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
@@ -40,7 +40,7 @@ func BootstrapTerraNodes(
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
 ) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Create CloudPermanent NG", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create CloudPermanent NG", func(ctx context.Context) error {
 		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions)
 	})
 }
@@ -55,12 +55,12 @@ func BootstrapAdditionalMasterNodes(
 	globalOptions *options.GlobalOptions,
 ) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
-		log.DebugF("Skipping additional master node bootstrap because replicas == 1")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping additional master node bootstrap because replicas == 1")
 		return nil
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Bootstrap additional master nodes", func(ctx context.Context) error {
-		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs, log.GetDefaultLogger())
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Bootstrap additional master nodes", func(ctx context.Context) error {
+		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs)
 		if err != nil {
 			return err
 		}

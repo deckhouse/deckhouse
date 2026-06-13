@@ -18,11 +18,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type ManifestTask struct {
@@ -37,7 +38,7 @@ type ManifestTask struct {
 // CreateOrUpdate tries to create resource with the CreateFunc. If resource is already
 // exists, it updates the resource with the UpdateFunc.
 func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
-	log.InfoF("Manifest for %s\n", task.Name)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Manifest for %s", task.Name))
 	manifest := task.Manifest()
 
 	err := task.CreateFunc(ctx, manifest)
@@ -45,19 +46,19 @@ func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
 		if !errors.IsAlreadyExists(err) {
 			return fmt.Errorf("create resource: %v", err)
 		}
-		log.InfoF("%s already exists. Trying to update ... ", task.Name)
+		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
-			log.ErrorLn("ERROR!")
+			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
 			return fmt.Errorf("update resource: %v", err)
 		}
-		log.InfoLn("OK!")
+		dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
 	}
 	return nil
 }
 
 func (task *ManifestTask) CreateOrUpdateSilent(ctx context.Context) error {
-	log.DebugF("Manifest for %s\n", task.Name)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Manifest for %s", task.Name))
 	manifest := task.Manifest()
 
 	err := task.CreateFunc(ctx, manifest)
@@ -65,19 +66,19 @@ func (task *ManifestTask) CreateOrUpdateSilent(ctx context.Context) error {
 		if !errors.IsAlreadyExists(err) {
 			return fmt.Errorf("create resource: %v", err)
 		}
-		log.DebugF("%s already exists. Trying to update ... ", task.Name)
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
-			log.ErrorLn("ERROR!")
+			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
 			return fmt.Errorf("update resource: %v", err)
 		}
-		log.DebugLn("OK!")
+		dhlog.FromContext(ctx).DebugContext(ctx, "OK!")
 	}
 	return nil
 }
 
 func (task *ManifestTask) Patch(ctx context.Context) error {
-	log.DebugF("Patch for %s\n", task.Name)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Patch for %s", task.Name))
 	patchData := task.PatchData()
 
 	patchBytes, err := json.Marshal(patchData)
@@ -94,7 +95,7 @@ func (task *ManifestTask) Patch(ctx context.Context) error {
 }
 
 func (task *ManifestTask) PatchOrCreate(ctx context.Context) error {
-	log.DebugF("Patch or create for %s\n", task.Name)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Patch or create for %s", task.Name))
 	patchData := task.PatchData()
 
 	patchBytes, err := json.Marshal(patchData)
@@ -111,7 +112,7 @@ func (task *ManifestTask) PatchOrCreate(ctx context.Context) error {
 		return fmt.Errorf("Apply patch for '%s': %v", task.Name, err)
 	}
 
-	log.DebugF("%s is not found. Trying to create ... \n", task.Name)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s is not found. Trying to create ... ", task.Name))
 	manifest := task.Manifest()
 	err = task.CreateFunc(ctx, manifest)
 	if err != nil {
