@@ -63,6 +63,9 @@ properties:
   policyAuditMode:
     description: |
       Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.
+  hostFirewallEnabled:
+    description: |
+      Включает Cilium Host Firewall.
   exclusiveCNIPlugin:
     description: |
       Предотвращает включение дополнительных CNI-плагинов на узлах кластера. Если [настройка модуля Istio `dataPlane.trafficRedirectionSetupMode`](/modules/istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) установлена в значение `CNIPlugin`, то данная опция автоматически будет установлена в значение `false`.
