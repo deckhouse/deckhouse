@@ -161,6 +161,8 @@ github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7 h1:vi6Wxo7djSckxxcK1oWiZfx7hfRqAbowR6rM0rozO/s=
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260613102451-63ca745f4997 h1:5M+QG/E9Q5WKUdrLELgyQ6zFeJrNTKjGMo1nXZl08zs=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260613102451-63ca745f4997/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/lib-connection v0.10.0 h1:pK7a9PL8QkFo5Q7G8oXkHrbonm1QYPq8Z7xhSJ/kCnw=
 github.com/deckhouse/lib-connection v0.10.0/go.mod h1:OjMW+EU3LZFO2huiBBOzO3XHa5FaSCSungSZeTeYRGw=
 github.com/deckhouse/lib-dhctl v0.18.2 h1:vGBDPmWjTy1OcMJ+eFBoteui+eDewkXV94j139ozJ5A=
