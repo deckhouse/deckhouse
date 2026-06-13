@@ -93,7 +93,7 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 	}
 
 	log.DebugF("Saving intermediate base infra in cluster...\n")
-	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 15, 3*time.Second).Run(
+	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 30, 1500*time.Millisecond).Run(
 		func() error {
 			return task.Patch(ctx)
 		},

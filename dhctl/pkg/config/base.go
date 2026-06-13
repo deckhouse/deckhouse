@@ -185,7 +185,7 @@ func ParseConfigFromCluster(
 	var err error
 
 	return metaConfig, log.ProcessCtx(ctx, "common", "Get cluster configuration", func(ctx context.Context) error {
-		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 10, 5*time.Second).
+		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 20, 2500*time.Millisecond).
 			RunContext(ctx, func() error {
 				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
 				return err

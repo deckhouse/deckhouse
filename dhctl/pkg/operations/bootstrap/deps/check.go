@@ -62,7 +62,7 @@ var (
 		"join", "cat", "ps", "kill",
 	}
 
-	checkDepsDefaultOpts = retry.AttemptsWithWaitOpts(10, 5*time.Second)
+	checkDepsDefaultOpts = retry.AttemptsWithWaitOpts(20, 2500*time.Millisecond)
 )
 
 func NewDependenciesChecker(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *DependenciesChecker {

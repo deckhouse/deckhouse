@@ -1064,7 +1064,7 @@ func createResources(
 
 		if len(resourcesToCreate) == 0 {
 			for _, task := range tasks {
-				return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
+				return retry.NewLoop(task.Title, 120, 2500*time.Millisecond).RunContext(ctx, func() error {
 					return task.Do(kubeCl)
 				})
 			}

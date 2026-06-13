@@ -157,7 +157,7 @@ func (t *TofuMigrationStateBackuper) getBaseInfraSecret(ctx context.Context) (*a
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = retry.NewLoop("Get base infrastructure state", 15, 5*time.Second).
+	err = retry.NewLoop("Get base infrastructure state", 30, 2500*time.Millisecond).
 		WithLogger(t.logger).
 		BreakIf(k8serrors.IsNotFound).
 		RunContext(ctx, func() error {
@@ -183,7 +183,7 @@ func (t *TofuMigrationStateBackuper) isBackupSecretExist(ctx context.Context, na
 	if err != nil {
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
-	err = retry.NewLoop(fmt.Sprintf("Check %s infrastructure backup state exists", name), 15, 5*time.Second).WithLogger(t.logger).
+	err = retry.NewLoop(fmt.Sprintf("Check %s infrastructure backup state exists", name), 30, 2500*time.Millisecond).WithLogger(t.logger).
 		RunContext(ctx, func() error {
 			_, err := kubeClient.CoreV1().Secrets(global.D8SystemNamespace).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
@@ -222,7 +222,7 @@ func (t *TofuMigrationStateBackuper) saveBackupSecret(ctx context.Context, proce
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save %s infrastructure backup state", processPrefix), 15, 5*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Save %s infrastructure backup state", processPrefix), 30, 2500*time.Millisecond).
 		WithLogger(t.logger).
 		RunContext(ctx, func() error {
 			var err error
@@ -246,7 +246,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 		return err
 	}
 
-	err = retry.NewLoop("Save base infrastructure backup state for commander", 1, 5*time.Second).
+	err = retry.NewLoop("Save base infrastructure backup state for commander", 2, 2500*time.Millisecond).
 		WithLogger(t.logger).
 		RunContext(ctx, func() error {
 			name := baseInfraBackupSecretName + ".terraform.backup"
@@ -270,7 +270,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 	for ngName, ng := range ngs {
 		err = t.logger.LogProcessCtx(ctx, "default", fmt.Sprintf("Save infrastructure backup node states for commander for node group %s", ngName), func(ctx context.Context) error {
 			for node, st := range ng.State {
-				err := retry.NewLoop(fmt.Sprintf("Save infrastructure backup state for node %s for commander", node), 1, 5*time.Second).
+				err := retry.NewLoop(fmt.Sprintf("Save infrastructure backup state for node %s for commander", node), 2, 2500*time.Millisecond).
 					WithLogger(t.logger).
 					RunContext(ctx, func() error {
 						name := "tf-" + node + ".terraform.backup"

@@ -49,7 +49,7 @@ func prepareDeckhouseDeploymentForUpdate(
 	manifestForUpdate *appsv1.Deployment,
 ) (*appsv1.Deployment, error) {
 	resDeployment := manifestForUpdate
-	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get deployment", 20, 1500*time.Millisecond).RunContext(ctx, func() error {
 		currentManifestInCluster, err := kubeCl.AppsV1().
 			Deployments(manifestForUpdate.GetNamespace()).
 			Get(ctx, manifestForUpdate.GetName(), metav1.GetOptions{})
@@ -107,7 +107,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 ) (*actions.ManifestTask, error) {
 	deckhouseDeploymentPresent := false
 
-	err := retry.NewLoop("Get deckhouse manifest", 10, 5*time.Second).RunContext(ctx, func() error {
+	err := retry.NewLoop("Get deckhouse manifest", 20, 2500*time.Millisecond).RunContext(ctx, func() error {
 		_, err := kubeCl.AppsV1().Deployments("d8-system").Get(ctx, "deckhouse", metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -159,7 +159,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 }
 
 func UnlockDeckhouseQueueAfterCreatingModuleConfigs(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Unlock Deckhouse controller queue", 15, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Unlock Deckhouse controller queue", 30, 2500*time.Millisecond).RunContext(ctx, func() error {
 		err := kubeCl.CoreV1().ConfigMaps("d8-system").
 			Delete(ctx, "deckhouse-bootstrap-lock", metav1.DeleteOptions{})
 
@@ -791,7 +791,7 @@ func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.D
 }
 
 func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 45, 5*time.Second).
+	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 90, 2500*time.Millisecond).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.Discovery().ServerVersion()
 			if err == nil {

@@ -35,7 +35,7 @@ import (
 func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
 	attempt := 0
 
-	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 200, 10*time.Second).RunContext(ctx, func() error {
 		attempt++
 
 		members, err := getEtcdMembers(ctx, client, "")
@@ -65,10 +65,10 @@ func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName s
 }
 
 func waitEtcdHasNoMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
-	const maxAttempts = 45
+	const maxAttempts = 90
 	attempt := 0
 
-	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to leave etcd", nodeName), maxAttempts, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to leave etcd", nodeName), maxAttempts, 2500*time.Millisecond).RunContext(ctx, func() error {
 		attempt++
 		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
 
