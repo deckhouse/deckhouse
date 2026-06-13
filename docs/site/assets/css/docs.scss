@@ -1128,6 +1128,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs ul p, .docs ol p {
     font-size: 14px;
+    line-height: 1.5;
 
     @include breakpoints.max-w(s) {
       font-size: 13px;
@@ -1674,7 +1675,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
   position: relative;
 }
 
-.docs pre {
+.docs pre.code__transfer {
     font-family: 'Source Code Pro', monospace;
     border-radius: 4px;
     padding: 10px;
