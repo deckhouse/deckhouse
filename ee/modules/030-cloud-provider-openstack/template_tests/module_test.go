@@ -182,6 +182,57 @@ const tolerationsAnyNodeWithUninitialized = `
 
 const moduleNamespace = "d8-cloud-provider-openstack"
 
+func decodeSecretData(secret object_store.KubeObject, key string) string {
+	data := secret.Field("data").Map()
+	encodedData, ok := data[key]
+	Expect(ok).To(BeTrue())
+
+	decodedData, err := base64.StdEncoding.DecodeString(encodedData.String())
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return string(decodedData)
+}
+
+func cloudControllerManagerConfig(f *Config) string {
+	secret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+	Expect(secret.Exists()).To(BeTrue())
+
+	return decodeSecretData(secret, "cloud-config")
+}
+
+func machineControllerManagerConfig(f *Config) string {
+	secret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-mcm", providerID))
+	Expect(secret.Exists()).To(BeTrue())
+
+	return decodeSecretData(secret, "config-for-machine-controller-manager.yaml")
+}
+
+func cloudDataDiscovererDeployment(f *Config) object_store.KubeObject {
+	return f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+}
+
+func cloudDataDiscovererEnvExists(f *Config, envName string) bool {
+	deployment := cloudDataDiscovererDeployment(f)
+	Expect(deployment.Exists()).To(BeTrue())
+
+	envs := deployment.Field("spec.template.spec.containers.0.env").Array()
+	for _, env := range envs {
+		if env.Map()["name"].String() == envName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func cloudDataDiscovererSecretFieldExists(f *Config, field string) bool {
+	secret := f.KubernetesResource("Secret", moduleNamespace, "cloud-data-discoverer")
+	Expect(secret.Exists()).To(BeTrue())
+
+	_, ok := secret.Field("data").Map()[field]
+	return ok
+}
+
 func openstackCheck(f *Config, k8sVer string) {
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, k8sVer, k8sVer))
@@ -298,6 +349,15 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
 		Expect(len(providerSpecificMCMSecretData) >= 1).To(BeTrue())
 		Expect(len(providerSpecificMCMSecretData["config-for-machine-controller-manager.yaml"].String()) > 0).To(BeTrue())
+		mcmConfig := machineControllerManagerConfig(f)
+		Expect(mcmConfig).To(ContainSubstring("username: "))
+		Expect(mcmConfig).To(ContainSubstring("password: "))
+		Expect(mcmConfig).To(ContainSubstring("domainName: "))
+		Expect(mcmConfig).To(ContainSubstring("tenantName: "))
+		Expect(mcmConfig).To(ContainSubstring("applicationCredentialId: "))
+		Expect(mcmConfig).To(ContainSubstring("applicationCredentialName: "))
+		Expect(mcmConfig).To(ContainSubstring("applicationCredentialSecret: "))
+		Expect(mcmConfig).To(ContainSubstring("token: "))
 
 		providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
 		Expect(providerSpecificBashibleStepsSecret.Exists()).ToNot(BeTrue())
@@ -591,26 +651,140 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
-	Context("Cloud data discoverer", func() {
-		deployment := func(f *Config) object_store.KubeObject {
-			return f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+	Context("Openstack connection authentication", func() {
+		renderWithConnection := func(connection string) {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection", connection)
+			f.HelmRender()
 		}
 
+		Context("with token", func() {
+			BeforeEach(func() {
+				renderWithConnection(`
+authURL: http://my.cloud.lalla/123/
+tenantName: mytenantname
+token: mytoken
+region: myreg
+`)
+			})
+
+			It("must render token auth only", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				ccmConfig := cloudControllerManagerConfig(f)
+				Expect(ccmConfig).To(ContainSubstring(`token = "mytoken"`))
+				Expect(ccmConfig).To(ContainSubstring(`tenant-name = "mytenantname"`))
+				Expect(ccmConfig).NotTo(ContainSubstring("domain-name ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("username ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("password ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("application-credential-"))
+
+				Expect(cloudDataDiscovererEnvExists(f, "OS_TOKEN")).To(BeTrue())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_TENANT_NAME")).To(BeTrue())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_DOMAIN_NAME")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_USERNAME")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_PASSWORD")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_APPLICATION_CREDENTIAL_SECRET")).To(BeFalse())
+
+				Expect(cloudDataDiscovererSecretFieldExists(f, "token")).To(BeTrue())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "tenantName")).To(BeTrue())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "domainName")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "username")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "password")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "applicationCredentialSecret")).To(BeFalse())
+			})
+		})
+
+		Context("with application credential id", func() {
+			BeforeEach(func() {
+				renderWithConnection(`
+authURL: http://my.cloud.lalla/123/
+applicationCredentialId: appcredid
+applicationCredentialSecret: appcredsecret
+region: myreg
+`)
+			})
+
+			It("must render application credential id auth only", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				ccmConfig := cloudControllerManagerConfig(f)
+				Expect(ccmConfig).To(ContainSubstring(`application-credential-id = "appcredid"`))
+				Expect(ccmConfig).To(ContainSubstring(`application-credential-secret = "appcredsecret"`))
+				Expect(ccmConfig).NotTo(ContainSubstring("domain-name ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("username ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("password ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("application-credential-name ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("token ="))
+
+				Expect(cloudDataDiscovererEnvExists(f, "OS_APPLICATION_CREDENTIAL_ID")).To(BeTrue())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_APPLICATION_CREDENTIAL_SECRET")).To(BeTrue())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_APPLICATION_CREDENTIAL_NAME")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_DOMAIN_NAME")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_USERNAME")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_PASSWORD")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_TOKEN")).To(BeFalse())
+
+				Expect(cloudDataDiscovererSecretFieldExists(f, "applicationCredentialId")).To(BeTrue())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "applicationCredentialSecret")).To(BeTrue())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "applicationCredentialName")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "domainName")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "username")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "password")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "token")).To(BeFalse())
+			})
+		})
+
+		Context("with application credential name", func() {
+			BeforeEach(func() {
+				renderWithConnection(`
+authURL: http://my.cloud.lalla/123/
+domainName: mydomain
+username: myuser
+applicationCredentialName: appcredname
+applicationCredentialSecret: appcredsecret
+region: myreg
+`)
+			})
+
+			It("must render application credential name auth only", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				ccmConfig := cloudControllerManagerConfig(f)
+				Expect(ccmConfig).To(ContainSubstring(`domain-name = "mydomain"`))
+				Expect(ccmConfig).To(ContainSubstring(`username = "myuser"`))
+				Expect(ccmConfig).To(ContainSubstring(`application-credential-name = "appcredname"`))
+				Expect(ccmConfig).To(ContainSubstring(`application-credential-secret = "appcredsecret"`))
+				Expect(ccmConfig).NotTo(ContainSubstring("password ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("application-credential-id ="))
+				Expect(ccmConfig).NotTo(ContainSubstring("token ="))
+
+				Expect(cloudDataDiscovererEnvExists(f, "OS_DOMAIN_NAME")).To(BeTrue())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_USERNAME")).To(BeTrue())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_APPLICATION_CREDENTIAL_NAME")).To(BeTrue())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_APPLICATION_CREDENTIAL_SECRET")).To(BeTrue())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_PASSWORD")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_APPLICATION_CREDENTIAL_ID")).To(BeFalse())
+				Expect(cloudDataDiscovererEnvExists(f, "OS_TOKEN")).To(BeFalse())
+
+				Expect(cloudDataDiscovererSecretFieldExists(f, "domainName")).To(BeTrue())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "username")).To(BeTrue())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "applicationCredentialName")).To(BeTrue())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "applicationCredentialSecret")).To(BeTrue())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "password")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "applicationCredentialId")).To(BeFalse())
+				Expect(cloudDataDiscovererSecretFieldExists(f, "token")).To(BeFalse())
+			})
+		})
+	})
+
+	Context("Cloud data discoverer", func() {
+		deployment := cloudDataDiscovererDeployment
+
 		assertEnv := func(f *Config, envName string) {
-			d := deployment(f)
-			Expect(d.Exists()).To(BeTrue())
-
-			envs := d.Field("spec.template.spec.containers.0.env").Array()
-
-			found := false
-			for _, e := range envs {
-				if e.Map()["name"].String() == envName {
-					found = true
-					break
-				}
-			}
-
-			Expect(found).To(BeTrue())
+			Expect(cloudDataDiscovererEnvExists(f, envName)).To(BeTrue())
 		}
 
 		assertSecretFieldExists := func(f *Config, field string) {

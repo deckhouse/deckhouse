@@ -8,11 +8,13 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-data-discoverer/s
     secretKeyRef:
       key: authURL
       name: cloud-data-discoverer
+  {{- if hasKey .Values.cloudProviderOpenstack.internal.connection "domainName" }}
 - name: OS_DOMAIN_NAME
   valueFrom:
     secretKeyRef:
       key: domainName
       name: cloud-data-discoverer
+  {{- end }}
   {{- if hasKey .Values.cloudProviderOpenstack.internal.connection "tenantID" }}
 - name: OS_TENANT_ID
   valueFrom:
@@ -31,16 +33,48 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-data-discoverer/s
 - name: OS_CACERT
   value: /etc/config/ca.crt
   {{- end }}
+  {{- if hasKey .Values.cloudProviderOpenstack.internal.connection "username" }}
 - name: OS_USERNAME
   valueFrom:
     secretKeyRef:
       key: username
       name: cloud-data-discoverer
+  {{- end }}
+  {{- if hasKey .Values.cloudProviderOpenstack.internal.connection "password" }}
 - name: OS_PASSWORD
   valueFrom:
     secretKeyRef:
       key: password
       name: cloud-data-discoverer
+  {{- end }}
+  {{- if hasKey .Values.cloudProviderOpenstack.internal.connection "applicationCredentialId" }}
+- name: OS_APPLICATION_CREDENTIAL_ID
+  valueFrom:
+    secretKeyRef:
+      key: applicationCredentialId
+      name: cloud-data-discoverer
+  {{- end }}
+  {{- if hasKey .Values.cloudProviderOpenstack.internal.connection "applicationCredentialName" }}
+- name: OS_APPLICATION_CREDENTIAL_NAME
+  valueFrom:
+    secretKeyRef:
+      key: applicationCredentialName
+      name: cloud-data-discoverer
+  {{- end }}
+  {{- if hasKey .Values.cloudProviderOpenstack.internal.connection "applicationCredentialSecret" }}
+- name: OS_APPLICATION_CREDENTIAL_SECRET
+  valueFrom:
+    secretKeyRef:
+      key: applicationCredentialSecret
+      name: cloud-data-discoverer
+  {{- end }}
+  {{- if hasKey .Values.cloudProviderOpenstack.internal.connection "token" }}
+- name: OS_TOKEN
+  valueFrom:
+    secretKeyRef:
+      key: token
+      name: cloud-data-discoverer
+  {{- end }}
 - name: OS_REGION
   valueFrom:
     secretKeyRef:
