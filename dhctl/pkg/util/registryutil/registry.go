@@ -47,7 +47,7 @@ func NewRegistryTransport(scheme, ca string) (*http.Transport, error) {
 
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
-		log.WarnF("Cannot get system CAs pool, fallback to custom CA pool only: %v\n", err)
+		log.WarnF("Cannot get system CAs pool, falling back to custom CA pool only: %v\n", err)
 		certPool = x509.NewCertPool()
 	}
 	if certPool == nil {

@@ -283,7 +283,7 @@ func (p *RegistryPackagesProxy) startProxy() error {
 }
 
 func (p *RegistryPackagesProxy) startTunnel(ctx context.Context, sshCl libcon.SSHClient) error {
-	p.debug("Up registry packages proxy tunnel...")
+	p.debug("Starting registry packages proxy tunnel...")
 
 	tunnel, err := p.upSingleTunnel(ctx, sshCl, p.localPort, p.remotePort, checkHTTPSHealthz)
 	if err != nil {
@@ -320,7 +320,7 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 
 	tun := sshCl.ReverseTunnel(addr)
 	if err := tun.Up(); err != nil {
-		return nil, fmt.Errorf("cannot up tunnel for registry packages proxy: %w", err)
+		return nil, fmt.Errorf("cannot bring up tunnel for registry packages proxy: %w", err)
 	}
 
 	checkURL := reverseTunnelCheckURL(check, listenAddress, remotePort)
@@ -347,5 +347,5 @@ func (p *RegistryPackagesProxy) debug(f string, args ...any) {
 }
 
 func upTunnelError(err error) error {
-	return fmt.Errorf("Cannot up registry packages proxy tunnel: %w", err)
+	return fmt.Errorf("Cannot bring up registry packages proxy tunnel: %w", err)
 }

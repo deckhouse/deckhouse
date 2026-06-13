@@ -114,15 +114,15 @@ func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(di *cloud.P
 	}
 
 	if di.VersionsContentProviderGetter != nil {
-		logger.LogDebugF("fs.GetDI provider our own VersionProviderGetter\n")
+		logger.LogDebugF("fs.GetDI provided our own VersionProviderGetter\n")
 		return nil
 	}
 
 	versionProviderGetter := cloud.DefaultVersionContentProvider
-	logMessage := "Use default VersionProviderGetter\n"
+	logMessage := "Using default VersionProviderGetter\n"
 
 	if p.VersionProviderGetter != nil {
-		logMessage = "Use custom VersionProviderGetter\n"
+		logMessage = "Using custom VersionProviderGetter\n"
 		versionProviderGetter = p.VersionProviderGetter
 	}
 
@@ -139,7 +139,7 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 	}
 
 	tmpDir := p.TmpDir
-	logMsg := "Use passed tmp dir."
+	logMsg := "Using passed tmp dir."
 	if tmpDir == "" {
 		tmpDir = options.DefaultTmpDir()
 		logMsg = "CloudProviderGetterParams tmp dir is empty. Using default."
@@ -150,7 +150,7 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 		return "", fmt.Errorf("Cannot prepare tmp dir %s: %w", tmpDir, err)
 	}
 
-	logger.LogDebugF("%s Before prepare '%s' Absolute path '%s'\n", logMsg, tmpDir, preparedTmpDir)
+	logger.LogDebugF("%s Before preparation: '%s', absolute path: '%s'\n", logMsg, tmpDir, preparedTmpDir)
 
 	return preparedTmpDir, nil
 }

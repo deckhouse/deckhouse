@@ -1,0 +1,24 @@
+diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
+index 8c57f7c1..b9d3f1f2 100644
+--- a/controllers/vcdmachine_controller.go
++++ b/controllers/vcdmachine_controller.go
+@@ -803,10 +803,19 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
+ 		log.Error(nil, fmt.Sprintf("Requeuing...; failed to get existing network connection information for vm [%s(%s)]: [%#v]. NetworkConnection[0] should not be nil",
+ 			vm.VM.Name, vm.VM.ID, vm.VM.NetworkConnectionSection))
+ 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+ 	}
+ 
+ 	if primaryNetwork.IPAddress == "" {
++		if strings.EqualFold(primaryNetwork.IPAddressAllocationMode, "DHCP") {
++			// In DHCP mode the lease may appear with delay after NIC attach/power-on.
++			// Requeue without escalating this as a hard provisioning error.
++			log.Info(fmt.Sprintf(
++				"Requeuing...; waiting for DHCP lease on vm [%s(%s)] network [%s], allocation mode [%s]",
++				vm.VM.Name, vm.VM.ID, primaryNetwork.Network, primaryNetwork.IPAddressAllocationMode,
++			))
++			return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
++		}
+ 		log.Error(nil, fmt.Sprintf("Requeuing...; NetworkConnection[0] IP Address should not be empty for vm [%s(%s)]: [%#v]",
+ 			vm.VM.Name, vm.VM.ID, *vm.VM.NetworkConnectionSection.NetworkConnection[0]))
+ 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+ 	}

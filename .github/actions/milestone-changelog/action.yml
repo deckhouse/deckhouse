@@ -28,7 +28,7 @@ runs:
     - name: Install changelog generator
       shell: bash
       env:
-        CHANGELOG_GENERATOR_VERSION: "v1.0.0"
+        CHANGELOG_GENERATOR_VERSION: "v1.0.1"
       run: |
         pip install --upgrade pip
         pip install "deckhouse-changelog-generator==${CHANGELOG_GENERATOR_VERSION}" \

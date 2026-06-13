@@ -5,8 +5,8 @@ index d422436..3af1a3d 100644
 @@ -1,6 +1,6 @@
  module github.com/grafana/mimir
  
--go 1.24.0
-+go 1.25.8
+-go 1.25.10
++go 1.25.10
  
  require (
  	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.4.0

@@ -22,7 +22,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -35,8 +35,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache gcc musl-dev jq-dev oniguruma-dev curl
+  - pm install jq oniguruma-devel curl
   install:
   - cd /src/upmeter
   - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
@@ -64,4 +63,4 @@ import:
   add: /upmeter
   to: /upmeter
   before: setup
-{{- include "image mount points" . }}  
+{{- include "image mount points" . }}

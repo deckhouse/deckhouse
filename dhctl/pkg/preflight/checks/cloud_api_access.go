@@ -195,8 +195,8 @@ var cloudAPIConfigsProviders = map[string]func(providerClusterConfig []byte) (*c
 }
 
 func wrapTunnelErr(err error) error {
-	return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
-Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
+	return fmt.Errorf(`cannot set up tunnel to the control-plane host: %w.
+Please check connectivity to the control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
 }
 
 func CloudAPIAccess(meta *config.MetaConfig, sshProvider libcon.SSHProvider, legacyMode bool) preflight.Check {

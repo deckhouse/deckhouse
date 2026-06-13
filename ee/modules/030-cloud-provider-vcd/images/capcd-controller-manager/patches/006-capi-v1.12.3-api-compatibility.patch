@@ -1,0 +1,614 @@
+diff --git a/api/v1beta2/vcdcluster_types.go b/api/v1beta2/vcdcluster_types.go
+index c6113dcd..3a1bd563 100644
+--- a/api/v1beta2/vcdcluster_types.go
++++ b/api/v1beta2/vcdcluster_types.go
+@@ -193,6 +193,16 @@ func (c *VCDCluster) GetConditions() clusterv1.Conditions {
+ func (c *VCDCluster) SetConditions(conditions clusterv1.Conditions) {
+ 	c.Status.Conditions = conditions
+ }
++
++// GetV1Beta1Conditions returns the set of conditions for this object (for deprecated v1beta1 compatibility).
++func (c *VCDCluster) GetV1Beta1Conditions() clusterv1.Conditions {
++	return c.Status.Conditions
++}
++
++// SetV1Beta1Conditions sets the conditions on this object (for deprecated v1beta1 compatibility).
++func (c *VCDCluster) SetV1Beta1Conditions(conditions clusterv1.Conditions) {
++	c.Status.Conditions = conditions
++}
+ func init() {
+ 	SchemeBuilder.Register(&VCDCluster{}, &VCDClusterList{})
+ }
+diff --git a/api/v1beta2/vcdcluster_webhook.go b/api/v1beta2/vcdcluster_webhook.go
+index 585a8303..0cfcd69e 100644
+--- a/api/v1beta2/vcdcluster_webhook.go
++++ b/api/v1beta2/vcdcluster_webhook.go
+@@ -17,10 +17,10 @@ limitations under the License.
+ package v1beta2
+ 
+ import (
++	"context"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+     "sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+ )
+ 
+@@ -37,38 +37,39 @@ func (r *VCDCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+ 
+ //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=mutation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Defaulter = &VCDCluster{}
++var _ admission.CustomDefaulter = &VCDCluster{}
+ 
+-// Default implements webhook.Defaulter so a webhook will be registered for the type
+-func (r *VCDCluster) Default() {
++// Default implements admission.CustomDefaulter so a webhook will be registered for the type
++func (r *VCDCluster) Default(ctx context.Context, obj runtime.Object) error {
+ 	vcdclusterlog.Info("default", "name", r.Name)
+ 
+ 	// TODO(user): fill in your defaulting logic.
++	return nil
+ }
+ 
+ // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+ //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdcluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdclusters,verbs=create;update,versions=v1beta2,name=validation.vcdcluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Validator = &VCDCluster{}
++var _ admission.CustomValidator = &VCDCluster{}
+ 
+-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDCluster) ValidateCreate() (admission.Warnings, error) {
++// ValidateCreate implements admission.CustomValidator so a webhook will be registered for the type
++func (r *VCDCluster) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+ 	vcdclusterlog.Info("validate create", "name", r.Name)
+ 
+ 	// TODO(user): fill in your validation logic upon object creation.
+ 	return nil, nil
+ }
+ 
+-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
++// ValidateUpdate implements admission.CustomValidator so a webhook will be registered for the type
++func (r *VCDCluster) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+ 	vcdclusterlog.Info("validate update", "name", r.Name)
+ 
+ 	// TODO(user): fill in your validation logic upon object update.
+ 	return nil, nil
+ }
+ 
+-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDCluster) ValidateDelete() (admission.Warnings, error) {
++// ValidateDelete implements admission.CustomValidator so a webhook will be registered for the type
++func (r *VCDCluster) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+ 	vcdclusterlog.Info("validate delete", "name", r.Name)
+ 
+ 	// TODO(user): fill in your validation logic upon object deletion.
+diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
+index 9ec3ce8c..fe501375 100644
+--- a/api/v1beta2/vcdmachine_types.go
++++ b/api/v1beta2/vcdmachine_types.go
+@@ -158,6 +158,17 @@ func (c *VCDMachine) GetConditions() clusterv1.Conditions {
+ func (c *VCDMachine) SetConditions(conditions clusterv1.Conditions) {
+ 	c.Status.Conditions = conditions
+ }
++
++// GetV1Beta1Conditions returns the set of conditions for this object (for deprecated v1beta1 compatibility).
++func (c *VCDMachine) GetV1Beta1Conditions() clusterv1.Conditions {
++	return c.Status.Conditions
++}
++
++// SetV1Beta1Conditions sets the conditions on this object (for deprecated v1beta1 compatibility).
++func (c *VCDMachine) SetV1Beta1Conditions(conditions clusterv1.Conditions) {
++	c.Status.Conditions = conditions
++}
++
+ func init() {
+ 	SchemeBuilder.Register(&VCDMachine{}, &VCDMachineList{})
+ }
+diff --git a/api/v1beta2/vcdmachine_webhook.go b/api/v1beta2/vcdmachine_webhook.go
+index d84b2c00..e1b52539 100644
+--- a/api/v1beta2/vcdmachine_webhook.go
++++ b/api/v1beta2/vcdmachine_webhook.go
+@@ -17,13 +17,13 @@ limitations under the License.
+ package v1beta2
+ 
+ import (
++	"context"
+ 	"fmt"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apimachinery/pkg/util/validation/field"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+     "sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+ )
+ 
+@@ -40,30 +40,31 @@ func (r *VCDMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
+ 
+ //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=mutation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Defaulter = &VCDMachine{}
++var _ admission.CustomDefaulter = &VCDMachine{}
+ 
+-// Default implements webhook.Defaulter so a webhook will be registered for the type
+-func (r *VCDMachine) Default() {
++// Default implements admission.CustomDefaulter so a webhook will be registered for the type
++func (r *VCDMachine) Default(ctx context.Context, obj runtime.Object) error {
+ 	vcdmachinelog.Info("default", "name", r.Name)
+ 
+ 	// TODO(user): fill in your defaulting logic.
++	return nil
+ }
+ 
+ // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+ //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=vcdmachines,verbs=create;update,versions=v1beta2,name=validation.vcdmachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+ 
+-var _ webhook.Validator = &VCDMachine{}
++var _ admission.CustomValidator = &VCDMachine{}
+ 
+-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDMachine) ValidateCreate() (admission.Warnings, error) {
++// ValidateCreate implements admission.CustomValidator so a webhook will be registered for the type
++func (r *VCDMachine) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+ 	vcdmachinelog.Info("validate create", "name", r.Name)
+ 
+ 	// TODO(user): fill in your validation logic upon object creation.
+ 	return nil, nil
+ }
+ 
+-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
++// ValidateUpdate implements admission.CustomValidator so a webhook will be registered for the type
++func (r *VCDMachine) ValidateUpdate(ctx context.Context, oldRaw, newRaw runtime.Object) (admission.Warnings, error) {
+ 	vcdmachinelog.Info("validate update", "name", r.Name)
+ 
+ 	old, ok := oldRaw.(*VCDMachine)
+@@ -79,8 +80,8 @@ func (r *VCDMachine) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings,
+ 	return nil, nil
+ }
+ 
+-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+-func (r *VCDMachine) ValidateDelete() (admission.Warnings, error) {
++// ValidateDelete implements admission.CustomValidator so a webhook will be registered for the type
++func (r *VCDMachine) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+ 	vcdmachinelog.Info("validate delete", "name", r.Name)
+ 
+ 	// TODO(user): fill in your validation logic upon object deletion.
+diff --git a/api/v1beta2/zz_generated.deepcopy.go b/api/v1beta2/zz_generated.deepcopy.go
+index aaa60729..1253b0f5 100644
+--- a/api/v1beta2/zz_generated.deepcopy.go
++++ b/api/v1beta2/zz_generated.deepcopy.go
+@@ -23,7 +23,7 @@ package v1beta2
+ import (
+ 	"k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+-	"sigs.k8s.io/cluster-api/api/core/v1beta2"
++	v1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ )
+ 
+ // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+diff --git a/controllers/capi_objects_utils.go b/controllers/capi_objects_utils.go
+index de6134c9..2cb4da1a 100644
+--- a/controllers/capi_objects_utils.go
++++ b/controllers/capi_objects_utils.go
+@@ -12,7 +12,7 @@ import (
+ 	v1 "k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/types"
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+-	"sigs.k8s.io/cluster-api/api/bootstrap/kubeadm/v1beta2"
++	v1beta1 "sigs.k8s.io/cluster-api/api/bootstrap/kubeadm/v1beta2"
+ 	kcpv1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta2"
+ 	addonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta2"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+@@ -332,10 +332,10 @@ func getAllCRSBindingForCluster(ctx context.Context, cli client.Client,
+ }
+ 
+ func getVCDMachineTemplateFromKCP(ctx context.Context, cli client.Client, kcp kcpv1.KubeadmControlPlane) (*infrav1.VCDMachineTemplate, error) {
+-	vcdMachineTemplateRef := kcp.Spec.MachineTemplate.InfrastructureRef
++	vcdMachineTemplateRef := kcp.Spec.MachineTemplate.Spec.InfrastructureRef
+ 	vcdMachineTemplate := &infrav1.VCDMachineTemplate{}
+ 	vcdMachineTemplateKey := types.NamespacedName{
+-		Namespace: vcdMachineTemplateRef.Namespace,
++		Namespace: kcp.Namespace,
+ 		Name:      vcdMachineTemplateRef.Name,
+ 	}
+ 	if err := cli.Get(ctx, vcdMachineTemplateKey, vcdMachineTemplate); err != nil {
+@@ -349,7 +349,7 @@ func getVCDMachineTemplateFromMachineDeployment(ctx context.Context, cli client.
+ 	vcdMachineTemplateRef := md.Spec.Template.Spec.InfrastructureRef
+ 	vcdMachineTemplate := &infrav1.VCDMachineTemplate{}
+ 	vcdMachineTemplateKey := client.ObjectKey{
+-		Namespace: vcdMachineTemplateRef.Namespace,
++		Namespace: md.Namespace,
+ 		Name:      vcdMachineTemplateRef.Name,
+ 	}
+ 	if err := cli.Get(ctx, vcdMachineTemplateKey, vcdMachineTemplate); err != nil {
+@@ -455,7 +455,7 @@ func getNodePoolList(ctx context.Context, cli client.Client, cluster clusterv1.C
+ 			StorageProfile:    vcdMachineTemplate.Spec.Template.Spec.StorageProfile,
+ 			DiskSizeMb:        int32(vcdMachineTemplate.Spec.Template.Spec.DiskSize.Value() / (1024 * 1024)),
+ 			DesiredReplicas:   desiredReplicasCount,
+-			AvailableReplicas: md.Status.ReadyReplicas,
++			AvailableReplicas: func() int32 { if md.Status.ReadyReplicas != nil { return *md.Status.ReadyReplicas }; return 0 }(),
+ 			NodeStatus:        nodeStatusMap,
+ 		}
+ 		nodePoolList = append(nodePoolList, nodePool)
+@@ -492,7 +492,7 @@ func getNodePoolList(ctx context.Context, cli client.Client, cluster clusterv1.C
+ 			StorageProfile:    vcdMachineTemplate.Spec.Template.Spec.StorageProfile,
+ 			DiskSizeMb:        int32(vcdMachineTemplate.Spec.Template.Spec.DiskSize.Value() / (1024 * 1024)),
+ 			DesiredReplicas:   desiredReplicaCount,
+-			AvailableReplicas: kcp.Status.ReadyReplicas,
++			AvailableReplicas: func() int32 { if kcp.Status.ReadyReplicas != nil { return *kcp.Status.ReadyReplicas }; return 0 }(),
+ 			NodeStatus:        nodeStatusMap,
+ 		}
+ 		nodePoolList = append(nodePoolList, nodePool)
+@@ -522,13 +522,31 @@ func getK8sClusterObjects(ctx context.Context, cli client.Client, cluster cluste
+ 
+ 	vcdMachineTemplateNameToObjRef := make(map[string]v1.ObjectReference)
+ 	for _, kcp := range kcpList.Items {
+-		vcdMachineTemplateNameToObjRef[kcp.Spec.MachineTemplate.InfrastructureRef.Name] = kcp.Spec.MachineTemplate.InfrastructureRef
++		ref := kcp.Spec.MachineTemplate.Spec.InfrastructureRef
++		vcdMachineTemplateNameToObjRef[ref.Name] = v1.ObjectReference{
++			APIVersion: ref.APIGroup + "/v1beta2",
++			Kind:       ref.Kind,
++			Name:       ref.Name,
++			Namespace:  kcp.Namespace,
++		}
+ 	}
+ 
+ 	kubeadmConfigTemplateNameToObjRef := make(map[string]*v1.ObjectReference)
+ 	for _, md := range mdList.Items {
+-		vcdMachineTemplateNameToObjRef[md.Spec.Template.Spec.InfrastructureRef.Name] = md.Spec.Template.Spec.InfrastructureRef
+-		kubeadmConfigTemplateNameToObjRef[md.Spec.Template.Spec.Bootstrap.ConfigRef.Name] = md.Spec.Template.Spec.Bootstrap.ConfigRef
++		infraRef := md.Spec.Template.Spec.InfrastructureRef
++		vcdMachineTemplateNameToObjRef[infraRef.Name] = v1.ObjectReference{
++			APIVersion: infraRef.APIGroup + "/v1beta2",
++			Kind:       infraRef.Kind,
++			Name:       infraRef.Name,
++			Namespace:  md.Namespace,
++		}
++		configRef := md.Spec.Template.Spec.Bootstrap.ConfigRef
++		kubeadmConfigTemplateNameToObjRef[configRef.Name] = &v1.ObjectReference{
++			APIVersion: configRef.APIGroup + "/v1beta2",
++			Kind:       configRef.Kind,
++			Name:       configRef.Name,
++			Namespace:  md.Namespace,
++		}
+ 	}
+ 
+ 	vcdMachineTemplates := make([]*infrav1.VCDMachineTemplate, 0)
+@@ -641,7 +659,7 @@ func hasClusterReconciledToDesiredK8Version(ctx context.Context, cli client.Clie
+ 			return false, fmt.Errorf("failed to fetch machines for the kubeadm control plane object [%s] for cluster [%s]: [%v]", kcp.Name, clusterName, err)
+ 		}
+ 		for _, machine := range machines {
+-			if machine.Spec.Version != nil && *machine.Spec.Version != expectedVersion {
++			if machine.Spec.Version != expectedVersion {
+ 				return false, nil
+ 			}
+ 		}
+@@ -653,7 +671,7 @@ func hasClusterReconciledToDesiredK8Version(ctx context.Context, cli client.Clie
+ 			return false, fmt.Errorf("failed to fetch machines for the machine deployment [%s] for cluster [%s]: [%v]", md.Name, clusterName, err)
+ 		}
+ 		for _, machine := range machineList.Items {
+-			if machine.Spec.Version != nil && *machine.Spec.Version != expectedVersion {
++			if machine.Spec.Version != expectedVersion {
+ 				return false, nil
+ 			}
+ 		}
+diff --git a/controllers/vcdcluster_controller.go b/controllers/vcdcluster_controller.go
+index 4df49db4..a63ec95e 100644
+--- a/controllers/vcdcluster_controller.go
++++ b/controllers/vcdcluster_controller.go
+@@ -35,7 +35,7 @@ import (
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ 	kcpv1 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta2"
+ 	"sigs.k8s.io/cluster-api/util"
+-	"sigs.k8s.io/cluster-api/util/conditions"
++	conditions "sigs.k8s.io/cluster-api/util/conditions/deprecated/v1beta1"
+ 	kcfg "sigs.k8s.io/cluster-api/util/kubeconfig"
+ 	"sigs.k8s.io/cluster-api/util/patch"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+@@ -157,9 +157,9 @@ func patchVCDCluster(ctx context.Context, patchHelper *patch.Helper, vcdCluster
+ 	return patchHelper.Patch(
+ 		ctx,
+ 		vcdCluster,
+-		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+-			clusterv1.ReadyCondition,
+-			LoadBalancerAvailableCondition,
++		patch.WithOwnedConditions{Conditions: []string{
++			string(clusterv1.ReadyCondition),
++			string(LoadBalancerAvailableCondition),
+ 		}},
+ 	)
+ }
+@@ -581,12 +581,16 @@ func (r *VCDClusterReconciler) reconcileRDE(ctx context.Context, cluster *cluste
+ 		for _, crsBinding := range crsBindingList.Items {
+ 			for _, crsSpecBindings := range crsBinding.Spec.Bindings {
+ 				for _, resource := range crsSpecBindings.Resources {
++					applied := false
++					if resource.Applied != nil {
++						applied = *resource.Applied
++					}
+ 					clusterResourceSetBindings = append(clusterResourceSetBindings,
+ 						rdeType.ClusterResourceSetBinding{
+ 							ClusterResourceSetName: crsSpecBindings.ClusterResourceSetName,
+ 							Kind:                   resource.Kind,
+ 							Name:                   resource.Name,
+-							Applied:                resource.Applied,
++							Applied:                applied,
+ 							LastAppliedTime:        resource.LastAppliedTime.Time.String(),
+ 						})
+ 				}
+@@ -607,7 +611,7 @@ func (r *VCDClusterReconciler) reconcileRDE(ctx context.Context, cluster *cluste
+ 	}
+ 
+ 	clusterApiStatusPhase := ClusterApiStatusPhaseNotReady
+-	if cluster.Status.ControlPlaneReady {
++	if conditions.IsTrue(cluster, clusterv1.ClusterControlPlaneAvailableCondition) {
+ 		clusterApiStatusPhase = ClusterApiStatusPhaseReady
+ 	}
+ 	controlPlanePort := vcdCluster.Spec.ControlPlaneEndpoint.Port
+@@ -1201,7 +1205,7 @@ func (r *VCDClusterReconciler) reconcileNormal(ctx context.Context, cluster *clu
+ 	// TODO Check if updating ovdcNetwork, Org and Vdc should be done somewhere earlier in the code.
+ 	vcdCluster.Status.Ready = true
+ 	conditions.MarkTrue(vcdCluster, LoadBalancerAvailableCondition)
+-	if cluster.Status.ControlPlaneReady {
++	if conditions.IsTrue(cluster, clusterv1.ClusterControlPlaneAvailableCondition) {
+ 		err = capvcdRdeManager.AddToEventSet(ctx, capisdk.ControlplaneReady, infraID, "", "", skipRDEEventUpdates)
+ 		if err != nil {
+ 			log.Error(err, "failed to add ControlPlaneReady event into RDE", "rdeID", infraID)
+diff --git a/controllers/vcdmachine_controller.go b/controllers/vcdmachine_controller.go
+index eff69f3f..a36bf04f 100644
+--- a/controllers/vcdmachine_controller.go
++++ b/controllers/vcdmachine_controller.go
+@@ -35,14 +35,16 @@ import (
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ 	"sigs.k8s.io/cluster-api/util"
+ 	"sigs.k8s.io/cluster-api/util/annotations"
+-	"sigs.k8s.io/cluster-api/util/conditions"
++	conditions "sigs.k8s.io/cluster-api/util/conditions/deprecated/v1beta1"
+ 	"sigs.k8s.io/cluster-api/util/patch"
+ 	"sigs.k8s.io/cluster-api/util/predicates"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 	"sigs.k8s.io/controller-runtime/pkg/controller"
+ 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
++	"sigs.k8s.io/controller-runtime/pkg/event"
+ 	"sigs.k8s.io/controller-runtime/pkg/handler"
++	"sigs.k8s.io/controller-runtime/pkg/predicate"
+ 	"sigs.k8s.io/controller-runtime/pkg/source"
+ 
+ 	infrav1 "github.com/vmware/cluster-api-provider-cloud-director/api/v1beta2"
+@@ -169,7 +171,7 @@ func (r *VCDMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request)
+ 
+ 	// If the machine is not being deleted, check if the infrastructure is ready. If not ready, return and wait for
+ 	// the cluster object to be updated
+-	if !machineBeingDeleted && !cluster.Status.InfrastructureReady {
++	if !machineBeingDeleted && !conditions.IsTrue(cluster, clusterv1.ClusterInfrastructureReadyCondition) {
+ 		log.Info("Waiting for VCDCluster Controller to create cluster infrastructure")
+ 		conditions.MarkFalse(vcdMachine, ContainerProvisionedCondition,
+ 			WaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
+@@ -197,10 +199,10 @@ func patchVCDMachine(ctx context.Context, patchHelper *patch.Helper, vcdMachine
+ 	return patchHelper.Patch(
+ 		ctx,
+ 		vcdMachine,
+-		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+-			clusterv1.ReadyCondition,
+-			ContainerProvisionedCondition,
+-			BootstrapExecSucceededCondition,
++		patch.WithOwnedConditions{Conditions: []string{
++			string(clusterv1.ReadyCondition),
++			string(ContainerProvisionedCondition),
++			string(BootstrapExecSucceededCondition),
+ 		}},
+ 	)
+ }
+@@ -320,7 +322,7 @@ func getVMIDFromProviderID(providerID *string) string {
+ func checkIfMachineNodeIsUnhealthy(machine *clusterv1.Machine) bool {
+ 	if conditions.IsUnknown(machine, clusterv1.MachineNodeHealthyCondition) || conditions.IsFalse(machine, clusterv1.MachineNodeHealthyCondition) {
+ 		switch conditions.GetReason(machine, clusterv1.MachineNodeHealthyCondition) {
+-		case clusterv1.NodeNotFoundReason, clusterv1.NodeConditionsFailedReason:
++		case clusterv1.NodeNotFoundV1Beta1Reason, clusterv1.NodeConditionsFailedV1Beta1Reason:
+ 			return true
+ 		default:
+ 			// handles the reasons clusterv1.WaitingForNodeRefReason and clusterv1.NodeProvisioningReason
+@@ -338,7 +340,7 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
+ 	log := ctrl.LoggerFrom(ctx, "machine", machine.Name, "cluster", vcdCluster.Name)
+ 
+ 	// To avoid spamming RDEs with updates, only update the RDE with events when machine creation is ongoing
+-	skipRDEEventUpdates := machine.Status.BootstrapReady
++	skipRDEEventUpdates := conditions.IsTrue(machine, clusterv1.MachineBootstrapConfigReadyCondition)
+ 
+ 	workloadVCDClient, err := createVCDClientFromSecrets(ctx, r.Client, vcdCluster)
+ 	if err != nil {
+@@ -387,11 +389,11 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
+ 
+ 	if machine.Spec.Bootstrap.DataSecretName == nil {
+ 		if !util.IsControlPlaneMachine(machine) && !conditions.IsTrue(cluster,
+-			clusterv1.ControlPlaneInitializedCondition) {
++			clusterv1.ClusterControlPlaneInitializedCondition) {
+ 
+ 			log.Info("Waiting for the control plane to be initialized")
+ 			conditions.MarkFalse(vcdMachine, ContainerProvisionedCondition,
+-				clusterv1.WaitingForControlPlaneAvailableReason, clusterv1.ConditionSeverityInfo, "")
++				clusterv1.WaitingForControlPlaneAvailableV1Beta1Reason, clusterv1.ConditionSeverityInfo, "")
+ 			return ctrl.Result{}, nil
+ 		}
+ 
+@@ -545,16 +547,10 @@ func (r *VCDMachineReconciler) reconcileNormal(ctx context.Context, cluster *clu
+ 		// In standard distros cloud-init checks OVF datasource first.
+ 		// CAPSVCD only passes arguments to Vmware cloud-init, so we need to modify cloud-init datasource order and reboot node to apply cloud-init changes.
+ 		log.Info("Adding infra VM for the machine")
+-		guestCustScript := `#!/usr/bin/env bash
+-cat > /etc/cloud/cloud.cfg.d/98-cse-vmware-datasource.cfg <<EOF
+-datasource_list: [ "VMware" ]
+-EOF
+-shutdown -r now
+-`
+ 		// vcda-4391 fixed
+ 		err = vdcManager.AddNewVM(vmName, vcdCluster.Name, 1,
+-			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, vcdMachine.Spec.PlacementPolicy,
+-			vcdMachine.Spec.SizingPolicy, vcdMachine.Spec.StorageProfile, guestCustScript, false)
++			vcdMachine.Spec.Catalog, vcdMachine.Spec.Template, "", vcdMachine.Spec.PlacementPolicy,
++			vcdMachine.Spec.SizingPolicy, vcdMachine.Spec.StorageProfile, false)
+ 		if err != nil {
+ 			err1 := capvcdRdeManager.AddToErrorSet(ctx, capisdk.VCDMachineCreationError, "", machine.Name, fmt.Sprintf("%v", err))
+ 			if err1 != nil {
+@@ -1377,7 +1373,7 @@ func (r *VCDMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
+ 	c, err := ctrl.NewControllerManagedBy(mgr).
+ 		For(&infrav1.VCDMachine{}).
+ 		WithOptions(options).
+-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
++		WithEventFilter(predicates.ResourceNotPaused(mgr.GetScheme(), ctrl.LoggerFrom(ctx))).
+ 		Watches(
+ 			&clusterv1.Machine{},
+ 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(
+@@ -1395,10 +1391,33 @@ func (r *VCDMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
+ 		return fmt.Errorf("unable to build controller for VCDMachine: [%v]", err)
+ 	}
+ 
++	// Create a typed wrapper for the cluster mapper
++	typedClusterMapper := func(ctx context.Context, cluster *clusterv1.Cluster) []ctrl.Request {
++		return clusterToVCDMachines(ctx, cluster)
++	}
++
++	// Create typed predicate wrappers for cluster predicates
++	basePredicate := predicates.ClusterUnpausedAndInfrastructureProvisioned(mgr.GetScheme(), ctrl.LoggerFrom(ctx))
++	typedClusterPredicate := predicate.TypedFuncs[*clusterv1.Cluster]{
++		CreateFunc: func(e event.TypedCreateEvent[*clusterv1.Cluster]) bool {
++			return basePredicate.Create(event.CreateEvent{Object: e.Object})
++		},
++		UpdateFunc: func(e event.TypedUpdateEvent[*clusterv1.Cluster]) bool {
++			return basePredicate.Update(event.UpdateEvent{ObjectOld: e.ObjectOld, ObjectNew: e.ObjectNew})
++		},
++		DeleteFunc: func(e event.TypedDeleteEvent[*clusterv1.Cluster]) bool {
++			return basePredicate.Delete(event.DeleteEvent{Object: e.Object})
++		},
++		GenericFunc: func(e event.TypedGenericEvent[*clusterv1.Cluster]) bool {
++			return basePredicate.Generic(event.GenericEvent{Object: e.Object})
++		},
++	}
++
+ 	if err = c.Watch(
+-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+-		handler.EnqueueRequestsFromMapFunc(clusterToVCDMachines),
+-		predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
++		source.Kind[*clusterv1.Cluster](mgr.GetCache(), &clusterv1.Cluster{},
++			handler.TypedEnqueueRequestsFromMapFunc(typedClusterMapper),
++			typedClusterPredicate,
++		),
+ 	); err != nil {
+ 		return fmt.Errorf("unable to add a watch for ready clusters: [%v]", err)
+ 	}
+@@ -1573,3 +1592,4 @@ func MergeJinjaToCloudInitScript(cloudInitConfig CloudInitScriptInput, jinjaConf
+ 
+ 	return out, nil
+ }
++
+diff --git a/go.mod b/go.mod
+index be3b6888..ada84481 100644
+--- a/go.mod
++++ b/go.mod
+@@ -21,6 +21,7 @@ require (
+ 	k8s.io/apimachinery v0.34.3
+ 	k8s.io/client-go v0.34.3
+ 	k8s.io/klog v1.0.0
++	k8s.io/klog/v2 v2.130.1
+ 	sigs.k8s.io/cluster-api v1.12.3
+ 	sigs.k8s.io/controller-runtime v0.22.5
+ 	sigs.k8s.io/yaml v1.6.0
+@@ -131,7 +132,6 @@ require (
+ 	k8s.io/apiserver v0.34.3 // indirect
+ 	k8s.io/cluster-bootstrap v0.34.2 // indirect
+ 	k8s.io/component-base v0.34.3 // indirect
+-	k8s.io/klog/v2 v2.130.1 // indirect
+ 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
+ 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
+ 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
+diff --git a/go.sum b/go.sum
+index db18087e..ab0cfb4c 100644
+--- a/go.sum
++++ b/go.sum
+@@ -271,6 +271,7 @@ github.com/prometheus/procfs v0.15.1/go.mod h1:fB45yRUv8NstnjriLhBQLuOUt+WW4BsoG
+ github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
+ github.com/rogpeppe/go-internal v1.11.0 h1:cWPaGQEPrBb5/AsnsZesgZZ9yb1OQ+GOISoDNXVBh4M=
+ github.com/rogpeppe/go-internal v1.11.0/go.mod h1:ddIwULY96R17DhadqLgMfk9H9tvdUzkipdSkR5nkCZA=
++github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
+ github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWNMNyH2VO9fmH0o=
+ github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
+ github.com/sethvargo/go-password v0.2.0 h1:BTDl4CC/gjf/axHMaDQtw507ogrXLci6XRiLc7i/UHI=
+diff --git a/main.go b/main.go
+index 7b1ce7fc..6c66532f 100644
+--- a/main.go
++++ b/main.go
+@@ -51,7 +51,7 @@ var (
+ 	probeAddr            string
+ 	syncPeriod           time.Duration
+ 	concurrency          int
+-	diagnosticsOptions   flags.DiagnosticsOptions
++	managerOptions       flags.ManagerOptions
+ 	port                 int
+ )
+ 
+@@ -82,7 +82,7 @@ func initFlags(fs *pflag.FlagSet) {
+ 	fs.IntVar(&port, "port", 4201,
+ 		"Webhook server port")
+ 
+-	flags.AddDiagnosticsOptions(fs, &diagnosticsOptions)
++	flags.AddManagerOptions(fs, &managerOptions)
+ 
+ 	return
+ }
+@@ -109,18 +109,25 @@ func main() {
+ 	}
+ 	setupLog.Info("CAPVCD version", "version", release.Version)
+ 
++	tlsOptionsFuncs, metricsOptions, err := flags.GetManagerOptions(managerOptions)
++	if err != nil {
++		setupLog.Error(err, "unable to parse manager options")
++		os.Exit(1)
++	}
++
+ 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+-		Scheme:                 myscheme,
+-		Metrics:                flags.GetDiagnosticsOptions(diagnosticsOptions),
++		Scheme:   myscheme,
++		Metrics:  *metricsOptions,
++		WebhookServer: webhook.NewServer(webhook.Options{
++			TLSOpts: tlsOptionsFuncs,
++			Port:    port,
++		}),
+ 		HealthProbeBindAddress: probeAddr,
+ 		LeaderElection:         enableLeaderElection,
+ 		LeaderElectionID:       "capvcd-controller-manager-leader-election",
+ 		Cache: cache.Options{
+ 			SyncPeriod: &syncPeriod,
+ 		},
+-		WebhookServer: webhook.NewServer((webhook.Options{
+-			Port: port,
+-		})),
+ 	})
+ 	if err != nil {
+ 		setupLog.Error(err, "unable to start manager")
+diff --git a/tests/e2e/utils/node_pool_scaling_utils.go b/tests/e2e/utils/node_pool_scaling_utils.go
+index 39857893..c91c9cd5 100644
+--- a/tests/e2e/utils/node_pool_scaling_utils.go
++++ b/tests/e2e/utils/node_pool_scaling_utils.go
+@@ -7,6 +7,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
++	conditions "sigs.k8s.io/cluster-api/util/conditions/deprecated/v1beta1"
+ 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+ 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+ 	"time"
+@@ -97,7 +98,7 @@ func WaitForClusterProvisioned(ctx context.Context, client runtimeclient.Client,
+ 		if err := client.Get(ctx, runtimeclient.ObjectKey{Namespace: clusterNameSpace, Name: clusterName}, cluster); err != nil {
+ 			return false, fmt.Errorf("failed to get cluster: %w", err)
+ 		}
+-		return cluster.Status.InfrastructureReady, nil
++		return conditions.IsTrue(cluster, clusterv1.ClusterInfrastructureReadyCondition), nil
+ 	}); err != nil {
+ 		return fmt.Errorf("cluster readiness check failed: %w", err)
+ 	}

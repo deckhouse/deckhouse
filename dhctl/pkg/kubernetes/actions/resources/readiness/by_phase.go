@@ -44,7 +44,7 @@ func (s *ByPhaseChecker) WaitAttemptsBeforeCheck() int {
 
 func (s *ByPhaseChecker) IsReady(_ context.Context, resource *unstructured.Unstructured, resourceName string) (bool, error) {
 	if len(s.phaseValues) == 0 {
-		return false, fmt.Errorf("Internal error. No phase for check defined for resource %s", resourceName)
+		return false, fmt.Errorf("Internal error. No check phase defined for resource %s", resourceName)
 	}
 
 	logger := log.SafeProvideLogger(s.loggerProvider)

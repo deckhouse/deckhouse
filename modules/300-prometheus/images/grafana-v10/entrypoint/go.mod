@@ -1,6 +1,6 @@
 module entrypoint
 
-go 1.24.6
+go 1.25.10
 
 require (
 	github.com/otiai10/copy v1.12.0
