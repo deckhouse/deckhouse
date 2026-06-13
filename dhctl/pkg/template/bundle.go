@@ -138,13 +138,13 @@ func PrepareBashibleBundle(
 	}
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create %q", firstRunFileFlag))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating %q", firstRunFileFlag))
 	if err := fs.CreateEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
 
 	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Create %q", devicePathFile))
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Creating %q", devicePathFile))
 
 	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }

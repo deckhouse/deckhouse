@@ -98,7 +98,7 @@ func (t *TofuMigrationStateBackuper) doBackupStates(ctx context.Context) error {
 			return err
 		}
 	} else {
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Backup secret %s for base infrastructure state exists. Skip backup.", baseInfraBackupSecretName))
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Backup secret %s for base infrastructure state exists. Skipping backup.", baseInfraBackupSecretName))
 	}
 
 	kubeClient, err := t.kubeProvider.KubeClientCtx(ctx)
@@ -113,7 +113,7 @@ func (t *TofuMigrationStateBackuper) doBackupStates(ctx context.Context) error {
 
 	for _, secret := range secrets {
 		if len(secret.Labels) > 0 && secret.Labels[tofuBackupLabelKey] == "true" {
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Skip backup secret %s", secret.Name))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Skipping backup secret %s", secret.Name))
 			continue
 		}
 
@@ -124,7 +124,7 @@ func (t *TofuMigrationStateBackuper) doBackupStates(ctx context.Context) error {
 		}
 
 		if exists {
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Backup secret %s for base infrastructure state exists. Skip backup.", nodeBackupSecretName))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Backup secret %s for base infrastructure state exists. Skipping backup.", nodeBackupSecretName))
 			continue
 		}
 
@@ -233,7 +233,7 @@ func (t *TofuMigrationStateBackuper) saveBackupSecret(ctx context.Context, proce
 
 func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Context) error {
 	if t.commanderMode == nil {
-		dhlog.FromContext(ctx).InfoContext(ctx, "Skip save backup for commander mode because is not commander")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Skipping backup save for commander mode because this is not the commander")
 		return nil
 	}
 
@@ -251,7 +251,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 				return err
 			}
 			if ok {
-				dhlog.FromContext(ctx).InfoContext(ctx, "Skip base infrastructure backup state for commander. Exists")
+				dhlog.FromContext(ctx).InfoContext(ctx, "Skipping base infrastructure backup state for commander. Already exists")
 				return nil
 			}
 
@@ -263,9 +263,9 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 	}
 
 	for ngName, ng := range ngs {
-		err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Save infrastructure backup nodes states for commander for node group %s", ngName), func(ctx context.Context) error {
+		err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Save infrastructure backup node states for commander for node group %s", ngName), func(ctx context.Context) error {
 			for node, st := range ng.State {
-				err := retry.NewLoop(fmt.Sprintf("Save infrastructure backup state for node %s states for commander", node), 1, 5*time.Second).
+				err := retry.NewLoop(fmt.Sprintf("Save infrastructure backup state for node %s for commander", node), 1, 5*time.Second).
 					RunContext(ctx, func() error {
 						name := "tf-" + node + ".terraform.backup"
 
@@ -274,7 +274,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 							return err
 						}
 						if ok {
-							dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Skip node %s infrastructure backup state for commander. Exists", node))
+							dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Skipping node %s infrastructure backup state for commander. Already exists", node))
 							return nil
 						}
 

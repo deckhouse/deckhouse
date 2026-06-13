@@ -45,7 +45,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 		l := logger.FromContext(ctx)
 
 		doneCh := make(chan struct{})
-		tomb.RegisterOnShutdown("wait kubernetes-api-connection to stop", func() {
+		tomb.RegisterOnShutdown("wait for kubernetes-api-connection to stop", func() {
 			<-doneCh
 		})
 
@@ -55,7 +55,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 			WithInitParams(client.AppKubernetesInitParams(&opts.Kube))
 
 		proxyClose := func() {
-			l.Info(fmt.Sprint("Press Ctrl+C to close proxy connection."))
+			l.Info(fmt.Sprint("Press Ctrl+C to close the proxy connection."))
 			ch := make(chan struct{})
 			<-ch
 		}

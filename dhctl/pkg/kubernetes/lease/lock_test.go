@@ -48,7 +48,7 @@ func TestTryRenewNilLease(t *testing.T) {
 			lease, err := lock.tryRenew(ctx, nil, true)
 			require.Nil(t, lease)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "Lease is nil")
+			require.Contains(t, err.Error(), "lease is nil")
 		})
 	})
 }

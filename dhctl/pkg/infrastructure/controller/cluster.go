@@ -80,7 +80,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.globalOptions == nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, "GlobalOption in nil!")
+		dhlog.FromContext(ctx).WarnContext(ctx, "GlobalOption is nil!")
 	}
 
 	if r.infrastructureContext == nil {

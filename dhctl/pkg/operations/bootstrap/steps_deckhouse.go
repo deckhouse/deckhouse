@@ -62,13 +62,13 @@ func InstallDeckhouse(
 
 		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
 		if err != nil {
-			return fmt.Errorf("Deckhouse create manifests: %w", err)
+			return fmt.Errorf("create Deckhouse manifests: %w", err)
 		}
 
 		res.ManifestResult = resManifests
 
 		if err := params.State.SaveManifestsCreated(ctx); err != nil {
-			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
+			return fmt.Errorf("set the manifests-in-cluster flag in the cache: %w", err)
 		}
 
 		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
@@ -120,7 +120,7 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	defer span.End()
 
 	if result == nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Skip post install tasks because result is nil")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping post-install tasks because result is nil")
 		return nil
 	}
 

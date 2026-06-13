@@ -742,7 +742,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 func (m *MetaConfig) LoadImagesDigests() error {
 	imagesDigests, err := digests.GetAllDigests()
 	if err != nil {
-		return fmt.Errorf("Cannot get images digests: %w", err)
+		return fmt.Errorf("Cannot get image digests: %w", err)
 	}
 
 	m.Images = imagesDigests
@@ -810,7 +810,7 @@ func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
 func getDNSAddress(ctx context.Context, serviceCIDR string) string {
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, "serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		dhlog.FromContext(ctx).DebugContext(ctx, "serviceSubnetCIDR is not a valid CIDR (should be validated with the openapi schema)")
 		return ""
 	}
 

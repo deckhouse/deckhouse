@@ -113,7 +113,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				return nil
 			},
 			func() error {
-				return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
+				return fmt.Errorf("No UUID found in the cache. Perhaps the cluster was already bootstrapped.")
 			},
 		)
 	}
@@ -137,7 +137,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Choice abort type", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Choose abort type", func(ctx context.Context) error {
 		ok, err := bootstrapState.IsManifestsCreated(ctx)
 		if err != nil {
 			return err
@@ -168,7 +168,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				return err
 			}
 
-			logMsg := "Deckhouse installation was not started before. Abort from cache"
+			logMsg := "Deckhouse installation has not started yet. Aborting from cache"
 			if forceAbortFromCache {
 				logMsg = "Force aborting from cache"
 			}
@@ -210,7 +210,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			return err
 		}
 
-		dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse installation was started before. Destroy cluster")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse installation has already started. Destroying cluster")
 		return nil
 	})
 	if err != nil {

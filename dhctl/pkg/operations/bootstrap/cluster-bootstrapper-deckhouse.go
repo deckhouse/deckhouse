@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -50,6 +51,10 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
+		return fmt.Errorf("apply cni bootstrap: %w", err)
 	}
 
 	body := func(_ chan phases.Progress) error {

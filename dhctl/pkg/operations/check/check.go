@@ -186,7 +186,7 @@ func checkClusterState(
 func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *dhctlstate.NodeGroupInfrastructureState, nodeName string, infrastructureContext *infrastructure.Context, opts CheckStateOptions) (int, plan.Plan, *plan.DestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		return plan.HasNoChanges, nil, nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skip %s", err, nodeName)
+		return plan.HasNoChanges, nil, nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeName)
 	}
 
 	cfg := metaConfig
@@ -242,7 +242,7 @@ type NodeStateCheckResult struct {
 func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeName string, infrastructureContext *infrastructure.Context, opts CheckStateOptions, noout bool) (*NodeStateCheckResult, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		return nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skip %s", err, nodeName)
+		return nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeName)
 	}
 
 	pipelineForMaster := nodeGroup.LayoutStep == infrastructure.MasterNodeStep
@@ -364,7 +364,7 @@ func CheckState(
 
 	nodeTemplates, err := entity.GetNodeGroupTemplates(ctx, kubeCl)
 	if err != nil {
-		allErrs = multierror.Append(allErrs, fmt.Errorf("node goups in Kubernetes cluster not found: %w", err))
+		allErrs = multierror.Append(allErrs, fmt.Errorf("node groups in Kubernetes cluster not found: %w", err))
 	}
 
 	// We have no nodeTemplate settings for master nodes

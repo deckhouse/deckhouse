@@ -158,7 +158,7 @@ func printGorutinesStackTrace(shouldAlwaysPrint bool, msg string) {
 	buf = buf[:l]
 	if shouldAlwaysPrint || input.IsTerminal() {
 		ctx := context.Background()
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("\n%sGorutines stack for debug:\n%s", msg, string(buf)))
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("\n%sGoroutines stack for debug:\n%s", msg, string(buf)))
 	}
 
 	buf = nil
@@ -224,7 +224,7 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 	go func() {
 		<-interruptCh
 
-		printGorutinesStackTrace(false, "Killed by signal twice. Probably dhctl have problems. ")
+		printGorutinesStackTrace(false, "Killed by signal twice. Probably dhctl has problems. ")
 
 		ctx := context.Background()
 		dhlog.FromContext(ctx).ErrorContext(ctx, "Killed by signal twice.")

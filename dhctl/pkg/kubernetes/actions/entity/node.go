@@ -333,7 +333,7 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 								var err error
 								ready, err = checker.IsReady(ctx, node.Name)
 								if err != nil {
-									dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("While doing check '%s' node %s has error: %v", checker.Name(), node.Name, err))
+									dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("While performing check '%s', node %s returned an error: %v", checker.Name(), node.Name, err))
 								} else if !ready {
 									dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Node %s is ready but %s is not ready", node.Name, checker.Name()))
 								}

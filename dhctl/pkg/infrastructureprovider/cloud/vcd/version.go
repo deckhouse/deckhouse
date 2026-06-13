@@ -101,11 +101,11 @@ func versionConstraintAction(ctx context.Context, apiVersion string, action func
 	}
 
 	if versionConstraint.Check(ver) {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Use legacy VCD version %s (%s). Use legacy mode as true", ver, versionConstraintStr))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using legacy VCD version %s (%s). Using legacy mode (true)", ver, versionConstraintStr))
 		return action(true)
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Use latest VCD version %s (%s)e", ver, versionConstraintStr))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using latest VCD version %s (%s)", ver, versionConstraintStr))
 	return action(false)
 }
 

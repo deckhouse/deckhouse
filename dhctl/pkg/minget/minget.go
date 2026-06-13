@@ -44,21 +44,21 @@ func Bytes(ctx context.Context) ([]byte, error) {
 	stat, err := os.Stat(binaryPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s not exists. Fallback to embedded minget", binaryPath))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s does not exist. Falling back to embedded minget", binaryPath))
 		} else {
-			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to stat %s: %v. Fallback to embedded minget", binaryPath, err), "\n"))
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to stat %s: %v. Falling back to embedded minget", binaryPath, err), "\n"))
 		}
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 
 	if stat.IsDir() {
-		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("%s stats as directory. Fallback to embedded minget", binaryPath), "\n"))
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("%s is a directory. Falling back to embedded minget", binaryPath), "\n"))
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 
 	file, err := os.ReadFile(binaryPath)
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to open %s: %v. Fallback to embedded minget", binaryPath, err), "\n"))
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("Failed to open %s: %v. Falling back to embedded minget", binaryPath, err), "\n"))
 		return mingetEmbeddedBinary.ReadFile(mingetEmbeddedPath)
 	}
 

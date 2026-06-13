@@ -75,7 +75,7 @@ func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
-	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Wait for SSH on Master become Ready", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Wait for SSH on master to become ready", func(ctx context.Context) error {
 		availabilityCheck := sshClient.Check()
 		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Connection string", func(ctx context.Context) error {
 			dhlog.FromContext(ctx).InfoContext(ctx, availabilityCheck.String())

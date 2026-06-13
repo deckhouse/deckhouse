@@ -56,7 +56,7 @@ func Edit(ctx context.Context, data []byte, globalOptions *options.GlobalOptions
 
 	err = os.WriteFile(tmpFile.Name(), data, 0o600)
 	if err != nil {
-		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't write write cluster configuration to the file %s: %s", tmpFile.Name(), err))
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't write cluster configuration to the file %s: %s", tmpFile.Name(), err))
 		return nil, err
 	}
 

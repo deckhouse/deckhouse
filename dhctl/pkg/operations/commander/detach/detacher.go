@@ -94,7 +94,7 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 
 		if op.OnCheckResult != nil {
 			if err := op.OnCheckResult(ctx, checkRes); err != nil {
-				return fmt.Errorf("oncheckResult callback failed: %w", err)
+				return fmt.Errorf("OnCheckResult callback failed: %w", err)
 			}
 		}
 		return nil

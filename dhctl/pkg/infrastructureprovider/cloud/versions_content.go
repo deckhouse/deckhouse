@@ -42,13 +42,13 @@ func DefaultVersionContentProvider(ctx context.Context, s settings.ProviderSetti
 		return versionContentProvider
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("No custom version choicer for provider %s. Use default", provider))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("No custom version choicer for provider %s. Using default", provider))
 
 	return func(_ context.Context, settings settings.ProviderSettings, _ *config.MetaConfig) ([]byte, string, error) {
 		versions := settings.Versions()
 		l := len(versions)
 		if l != 1 {
-			return nil, "", fmt.Errorf("No one version (%d) found for provider %s", l, provider)
+			return nil, "", fmt.Errorf("Expected exactly one version, but found %d for provider %s", l, provider)
 		}
 
 		v := versions[0]

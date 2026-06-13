@@ -53,7 +53,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 
 		if metaConfig.ProviderName == "" {
 			return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, func(ctx context.Context, clusterUUID string, _ *config.MetaConfig) (infrastructure.CloudProvider, error) {
-				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Returns DummyCloudProvider because provider name is empty. Probably it is static cluster: %s", clusterUUID))
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Returning DummyCloudProvider because provider name is empty. Probably it is a static cluster: %s", clusterUUID))
 				return infrastructure.NewDummyCloudProvider(), nil
 			})
 		}
@@ -104,7 +104,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			}
 
 			provider := cloud.NewProvider(p)
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cloud %s initialized and added in cache. Root dir is %s", provider.String(), provider.RootDir()))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Cloud %s initialized and added to cache. Root dir is %s", provider.String(), provider.RootDir()))
 
 			return provider, nil
 		})

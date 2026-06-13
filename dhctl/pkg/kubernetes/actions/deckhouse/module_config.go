@@ -73,7 +73,7 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 
 			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Create(ctx, m, metav1.CreateOptions{})
 			if err != nil {
-				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Do not create mc: %v", err))
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Not creating mc: %v", err))
 			}
 
 			return err
@@ -103,7 +103,7 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 				Dynamic().Resource(config.ModuleConfigGVR).
 				Update(ctx, newManifest, metav1.UpdateOptions{})
 			if err != nil {
-				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Do not updating mc: %v", err))
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Not updating mc: %v", err))
 			}
 
 			return err
@@ -151,12 +151,12 @@ func prepareDeckhouseMC(ctx context.Context, mc *config.ModuleConfig, res *Manif
 	// for preventing an updating deckhouse during bootstrap process
 	// for example, we are installing v1.66 tag but in release channel we have v1.67 tag
 
-	dhlog.FromContext(ctx).DebugContext(ctx, "Found deckhouse mc. Try to prepare...")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Found deckhouse mc. Trying to prepare...")
 
 	releaseChannel := ""
 	releaseChannelRaw, hasReleaseChannelKey := mc.Spec.Settings["releaseChannel"]
 	if rc, ok := releaseChannelRaw.(string); hasReleaseChannelKey && ok {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Found releaseChannel in mc deckhouse. Remove it from mc")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Found releaseChannel in mc deckhouse. Removing it from mc")
 		// we need set releaseChannel after bootstrapping process done
 		// to prevent update during bootstrap
 		delete(mc.Spec.Settings, "releaseChannel")
@@ -164,7 +164,7 @@ func prepareDeckhouseMC(ctx context.Context, mc *config.ModuleConfig, res *Manif
 	}
 
 	if releaseChannel == "" {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Not found releaseChannel in mc deckhouse. Finish preparing")
+		dhlog.FromContext(ctx).DebugContext(ctx, "releaseChannel not found in mc deckhouse. Finished preparing")
 		return
 	}
 
@@ -184,43 +184,43 @@ func prepareGlobalMC(ctx context.Context, mc *config.ModuleConfig, res *Manifest
 	// and deckhouse cannot found this secret and cloud permanent nodes will not bootstrap
 	// because deckhouse stuck in error and it cannot create manual-for-bootstrap secrets
 
-	dhlog.FromContext(ctx).DebugContext(ctx, "Found global mc. Try to prepare...")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Found global mc. Trying to prepare...")
 
 	var httpsSettings map[string]interface{}
 
 	modulesRaw, hasModules := mc.Spec.Settings["modules"]
 	if !hasModules {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Not found modules in global mc. Finish preparing")
+		dhlog.FromContext(ctx).DebugContext(ctx, "modules not found in global mc. Finished preparing")
 		return
 	}
 
 	modules, ok := modulesRaw.(map[string]interface{})
 	if !ok {
-		dhlog.FromContext(ctx).ErrorContext(ctx, "modules is not map in global mc. Finish preparing")
+		dhlog.FromContext(ctx).ErrorContext(ctx, "modules is not a map in global mc. Finished preparing")
 		return
 	}
 
 	HTTPSRaw, hasHTTPS := modules["https"]
 	if !hasHTTPS {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Not found https in global mc. Finish preparing")
+		dhlog.FromContext(ctx).DebugContext(ctx, "https not found in global mc. Finished preparing")
 		return
 	}
 
 	httpsSettings, ok = HTTPSRaw.(map[string]interface{})
 	if !ok {
-		dhlog.FromContext(ctx).ErrorContext(ctx, "https is not map in global mc. Finish preparing")
+		dhlog.FromContext(ctx).ErrorContext(ctx, "https is not a map in global mc. Finished preparing")
 		return
 	}
 
 	if httpsSettings == nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Not found httpsSettings in mc deckhouse. Finish preparing")
+		dhlog.FromContext(ctx).DebugContext(ctx, "httpsSettings not found in mc deckhouse. Finished preparing")
 		return
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, "Found https in global mc deckhouse. Remove it from mc")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Found https in global mc deckhouse. Removing it from mc")
 	delete(modules, "https")
 	if len(modules) == 0 {
-		dhlog.FromContext(ctx).DebugContext(ctx, "modules in global mc is empty. Remove it from mc")
+		dhlog.FromContext(ctx).DebugContext(ctx, "modules in global mc is empty. Removing it from mc")
 		delete(mc.Spec.Settings, "modules")
 	}
 

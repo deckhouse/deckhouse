@@ -92,9 +92,9 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 			c := input.NewConfirmation()
 
-			approve := c.WithMessage(fmt.Sprintf("Do you want to release lock:\n\n%s", info)).Ask()
+			approve := c.WithMessage(fmt.Sprintf("Do you want to release the lock:\n\n%s", info)).Ask()
 			if !approve {
-				return fmt.Errorf("Don't confirm release lock")
+				return fmt.Errorf("Lock release was not confirmed")
 			}
 
 			return nil

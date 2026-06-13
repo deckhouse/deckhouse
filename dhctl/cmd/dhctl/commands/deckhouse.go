@@ -68,7 +68,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 
-		return logger.RunProcess(ctx, l, "Remove Deckhouse️", func(ctx context.Context) error {
+		return logger.RunProcess(ctx, l, "Remove Deckhouse", func(ctx context.Context) error {
 			kube, err := kubeProvider.Client(ctx)
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %w", err)
@@ -88,7 +88,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	var dryRun bool
-	cmd.Flag("dry-run", "Output deployment yaml").BoolVar(&dryRun)
+	cmd.Flag("dry-run", "Output the deployment YAML").BoolVar(&dryRun)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)

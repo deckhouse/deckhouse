@@ -100,6 +100,6 @@ func castErrorFuncForResource(resourceName, additionalMsg string) castErrorFunc 
 			msg = fmt.Sprintf("%s (%s)", msg, additionalMsg)
 		}
 
-		return false, fmt.Errorf("Cannot check resource %s readiness because cannot cast %s to %s", resourceName, msg, kind)
+		return false, fmt.Errorf("Cannot check resource %s readiness because it cannot cast %s to %s", resourceName, msg, kind)
 	}
 }

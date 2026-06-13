@@ -6,7 +6,7 @@ index 76aa4a2..e5fb340 100644
  module github.com/prometheus/alertmanager
  
 -go 1.21
-+go 1.24.0
++go 1.25.10
  
  require (
  	github.com/alecthomas/kingpin/v2 v2.4.0

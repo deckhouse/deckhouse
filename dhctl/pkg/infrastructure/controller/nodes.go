@@ -72,7 +72,7 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 
 	nodeIndex, err := config.GetIndexFromNodeName(name)
 	if err != nil {
-		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't extract index from infrastructure state secret (%v), skip %s", err, name))
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, name))
 		return nil
 	}
 
@@ -90,7 +90,7 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 	}
 
 	if err := infrastructure.DestroyPipeline(ctx, nodeRunner, name); err != nil {
-		return fmt.Errorf("destroing of node %s failed: %v", name, err)
+		return fmt.Errorf("destruction of node %s failed: %v", name, err)
 	}
 
 	return nil

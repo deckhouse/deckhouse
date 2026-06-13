@@ -152,7 +152,7 @@ func (p *Provider) OutputExecutor(ctx context.Context) (infrastructure.OutputExe
 	executorID := p.executorID()
 
 	if !p.settings.UseOpenTofu() {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create terraform output executor for %s with id %s", p.String(), executorID))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating terraform output executor for %s with id %s", p.String(), executorID))
 		return terraform.NewOutputExecutor(terraform.OutputExecutorParams{
 			RunExecutorParams: terraform.RunExecutorParams{
 				RootDir:          rootDir,
@@ -163,7 +163,7 @@ func (p *Provider) OutputExecutor(ctx context.Context) (infrastructure.OutputExe
 		})
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create opentofu output executor for %s with id %s", p.String(), executorID))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating opentofu output executor for %s with id %s", p.String(), executorID))
 
 	return tofu.NewOutputExecutor(tofu.OutputExecutorParams{
 		RunExecutorParams: tofu.RunExecutorParams{
@@ -240,7 +240,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step) (infr
 	executorID := p.executorID()
 
 	if !p.settings.UseOpenTofu() {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create terraform executor for %s with step %s with id %s", p.String(), step, executorID))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating terraform executor for %s with step %s with id %s", p.String(), step, executorID))
 		return terraform.NewExecutor(terraform.ExecutorParams{
 			WorkingDir: stepDir,
 			PluginsDir: pluginsDir,
@@ -255,7 +255,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step) (infr
 		})
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create opentofu executor for %s with step %s with id %s", p.String(), step, executorID))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating opentofu executor for %s with step %s with id %s", p.String(), step, executorID))
 
 	return tofu.NewExecutor(tofu.ExecutorParams{
 		WorkingDir: stepDir,
@@ -310,7 +310,7 @@ func (p *Provider) logRootDir(ctx context.Context) {
 		return
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Entries (%d) which root dir %s have: %s", len(entries), p.rootDir, strings.Join(entries, ", ")))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Entries (%d) that root dir %s has: %s", len(entries), p.rootDir, strings.Join(entries, ", ")))
 }
 
 func doNotCheckSourceLink(string) error {
@@ -322,7 +322,7 @@ func getVersionsFile(root string) string {
 }
 
 func (p *Provider) createLinkToRootVersionsFileInModule(ctx context.Context, dir, rootVersionFile string) error {
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create link to root versions file %s for module %s for %s", rootVersionFile, dir, p.String()))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating link to root versions file %s for module %s for %s", rootVersionFile, dir, p.String()))
 
 	fullPath := getVersionsFile(dir)
 
@@ -350,7 +350,7 @@ Versions content SHA sum is %s
 	}
 
 	if os.IsNotExist(err) {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Root versions file %s for %s not found. Should write", versionsRootFile, p.String()))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Root versions file %s for %s not found. Should be written", versionsRootFile, p.String()))
 		return true, nil
 	}
 
@@ -379,15 +379,15 @@ Root versions file %s
 	}
 
 	if rewriteRootVersionsFile {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Root versions file %s for %s needs to rewrite", versionsRootFile, p.String()))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Root versions file %s for %s needs to be rewritten", versionsRootFile, p.String()))
 
 		err = os.WriteFile(versionsRootFile, versionContent, 0o644)
 		if err != nil {
 			return fmt.Errorf("Cannot write root versions %s file for %s: %w", versionsRootFile, p.String(), err)
 		}
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Root versions file %s for %s wrote", versionsRootFile, p.String()))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Root versions file %s for %s written", versionsRootFile, p.String()))
 	} else {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Root versions file %s for %s does not need to rewrite", versionsRootFile, p.String()))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Root versions file %s for %s does not need to be rewritten", versionsRootFile, p.String()))
 	}
 
 	if err := p.createLinkToRootVersionsFileInModule(ctx, stepDir, versionsRootFile); err != nil {
@@ -395,7 +395,7 @@ Root versions file %s
 	}
 
 	if !fsutils.IsDirExists(modulesDir) {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Modules dir %s for %s does not exist. Skip create links to root version file", modulesDir, p.String()))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Modules dir %s for %s does not exist. Skipping creation of links to root versions file", modulesDir, p.String()))
 		return nil
 	}
 
@@ -441,14 +441,14 @@ func (p *Provider) makeRootDir(ctx context.Context, errPrefix string) error {
 func (p *Provider) downloadModules(ctx context.Context, rootDir string) (string, error) {
 	destination := filepath.Join(rootDir, "modules")
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create modules destination %s for %s", destination, p.String()))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating modules destination %s for %s", destination, p.String()))
 
 	err := os.MkdirAll(destination, 0o777)
 	if err != nil {
 		return "", fmt.Errorf("Cannot create destination modules dir %s for %s: %w", destination, p.String(), err)
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Download modules config %s for %s", destination, p.String()))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Downloading modules config %s for %s", destination, p.String()))
 
 	err = p.di.ModulesProvider.DownloadModules(ctx, DownloadModulesParams{
 		ModulesParams{
@@ -473,7 +473,7 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 	// for windows
 	destinationDir = strings.TrimRight(destinationDir, "\\")
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Create plugins dir destination %s for %s version %s", destinationDir, p.String(), version))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Creating plugins dir destination %s for %s version %s", destinationDir, p.String(), version))
 
 	err := os.MkdirAll(destinationDir, 0o755)
 	if err != nil {
@@ -561,7 +561,7 @@ func (p *Provider) Cleanup() error {
 
 	if p.isDebug {
 		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf(
-			"Cloud %s was not cleaned up because you use debug mode. Root dir is: '%s'. If need cleanup manually.\n",
+			"Cloud %s was not cleaned up because you are using debug mode. Root dir is: '%s'. Clean up manually if needed.\n",
 			p.String(),
 			rootDir,
 		), "\n"))

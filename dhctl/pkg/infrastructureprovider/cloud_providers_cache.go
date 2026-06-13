@@ -37,7 +37,7 @@ func CleanupProvidersFromDefaultCache() {
 	ctx := context.Background()
 
 	for _, provider := range defaultProvidersCache.cloudProvidersCache {
-		logDebugF(ctx, "CleanupProvidersFromDefaultCache called. Cleanup provider %s from default cache\n", provider.String())
+		logDebugF(ctx, "CleanupProvidersFromDefaultCache called. Cleaning up provider %s from default cache\n", provider.String())
 		if err := provider.Cleanup(); err != nil {
 			logWarnF(ctx, "Failed to cleanup provider %s from default cache: %v\n", provider.String(), err)
 		}
@@ -85,14 +85,14 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 		}
 
 		if govalue.IsNil(provider) {
-			return nil, fmt.Errorf("Do not store nil provider for cluster %s in cache", clusterUUID)
+			return nil, fmt.Errorf("Will not store nil provider for cluster %s in cache", clusterUUID)
 		}
 
 		return provider, nil
 	}
 
 	if metaConfig.ProviderName == "" {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Do not store provider for empty provider for cluster %s probably it is static cluster and do not need any cleanup", clusterUUID))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Not storing provider for empty provider for cluster %s, probably it is a static cluster and does not need any cleanup", clusterUUID))
 		return create(ctx, clusterUUID, metaConfig)
 	}
 
@@ -102,7 +102,7 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 	cacheKey := getKey(clusterUUID, metaConfig)
 
 	if c.finalized {
-		return nil, fmt.Errorf("Cache finalized! Do not add provider for cluster wit key %s to finalized cache!", cacheKey)
+		return nil, fmt.Errorf("Cache finalized! Cannot add provider for cluster with key %s to a finalized cache!", cacheKey)
 	}
 
 	c.cloudProvidersCacheMutex.Lock()
@@ -110,7 +110,7 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 
 	cachedProvider, ok := c.cloudProvidersCache[cacheKey]
 	if ok {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found existing provider for cluster %s in cache by key %s. Returns from cache", cachedProvider.String(), cacheKey))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found existing provider for cluster %s in cache by key %s. Returning from cache", cachedProvider.String(), cacheKey))
 		return cachedProvider, nil
 	}
 
@@ -125,7 +125,7 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 
 		p, ok := c.cloudProvidersCache[cacheKey]
 		if !ok {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider with key %s not found. Skip cleaning", cacheKey))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider with key %s not found. Skipping cleanup", cacheKey))
 			return
 		}
 
@@ -140,7 +140,7 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 	provider.AddAfterCleanupFunc("zCloudProviderCacheCleaner", afterCleanup)
 
 	c.cloudProvidersCache[cacheKey] = provider
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Store %s in cache with key %s", provider.String(), cacheKey))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Storing %s in cache with key %s", provider.String(), cacheKey))
 
 	return provider, nil
 }
@@ -149,7 +149,7 @@ func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.Meta
 	ctx := context.Background()
 
 	if metaConfig.ProviderName == "" {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Do not store provider for cluster %s in cache with empty provider name", clusterUUID))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Not storing provider for cluster %s in cache with empty provider name", clusterUUID))
 		return nil, false, nil
 	}
 
@@ -159,7 +159,7 @@ func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.Meta
 	defer c.finalizedMutex.Unlock()
 
 	if c.finalized {
-		return nil, false, fmt.Errorf("Cache finalized! Do not get provider with key %s to finalized cache!", cacheKey)
+		return nil, false, fmt.Errorf("Cache finalized! Cannot get provider with key %s from a finalized cache!", cacheKey)
 	}
 
 	c.cloudProvidersCacheMutex.Lock()
@@ -176,7 +176,7 @@ func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.Meta
 		return nil, false, nil
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found existing provider for cluster %s in cache by key %s. Returns it.", provider.String(), cacheKey))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found existing provider for cluster %s in cache by key %s. Returning it.", provider.String(), cacheKey))
 
 	return provider, true, nil
 }
@@ -186,7 +186,7 @@ func (c *cloudProvidersMapCache) IterateOverCache(f CloudProvidersCacheIteratorF
 	defer c.finalizedMutex.Unlock()
 
 	if c.finalized {
-		return fmt.Errorf("Cache finalized! Do not iterate over cache!")
+		return fmt.Errorf("Cache finalized! Cannot iterate over a finalized cache!")
 	}
 
 	c.cloudProvidersCacheMutex.Lock()

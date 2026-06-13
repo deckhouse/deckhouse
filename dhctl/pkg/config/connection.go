@@ -99,10 +99,10 @@ func ParseConnectionConfig(
 	}
 
 	unmarshallError := func(err error, kind string, docNumber int) string {
-		return fmt.Sprintf("Cannot unmarshal to %s document %d: %v", kind, docNumber, err)
+		return fmt.Sprintf("Cannot unmarshal %s document %d: %v", kind, docNumber, err)
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Parsing connection config has %d documents", len(docs)))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Connection config has %d documents", len(docs)))
 
 	config := &ConnectionConfig{}
 
@@ -128,7 +128,7 @@ func ParseConnectionConfig(
 			Version: gvk.GroupVersion().String(),
 		}
 
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Process validate and parse connection config document %d for index %v", i, index))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Validating and parsing connection config document %d for index %v", i, index))
 
 		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
@@ -145,7 +145,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHConfig = &sshConfig
-			dhlog.FromContext(ctx).DebugContext(ctx, "SSHConfig added in result config")
+			dhlog.FromContext(ctx).DebugContext(ctx, "SSHConfig added to the result config")
 		case SSHConfigHostKind:
 			sshHostConfigDocsCount++
 			var sshHost SSHHost
@@ -154,7 +154,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHHosts = append(config.SSHHosts, sshHost)
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("SSHHost added in result config, host in result config %d", len(config.SSHHosts)))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("SSHHost added to the result config, hosts in result config %d", len(config.SSHHosts)))
 		default:
 			msg := fmt.Sprintf("Unknown kind, expected one of (%q, %q)", SSHConfigKind, SSHConfigHostKind)
 			appendValidationError(msg, i, &gvk, &obj)
@@ -227,7 +227,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 		keysPaths = append(keysPaths, fullPath)
 		if len(key.Passphrase) > 0 {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Passphrase for key %s added in map", fullPath))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Passphrase for key %s added to the map", fullPath))
 			pathToPassPhrase[fullPath] = key.Passphrase
 		}
 	}

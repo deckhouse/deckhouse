@@ -247,7 +247,7 @@ func (e *Executor) Show(ctx context.Context, opts infrastructure.ShowOpts) ([]by
 
 func (e *Executor) Stop() {
 	ctx := context.Background()
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Interrupt tofu process by pid: %d", e.cmd.Process.Pid))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Interrupting tofu process with pid: %d", e.cmd.Process.Pid))
 
 	// 1. Tofu exits immediately on SIGTERM, so SIGINT is used here
 	//    to interrupt it gracefully even when main process caught the SIGTERM.

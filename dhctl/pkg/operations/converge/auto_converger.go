@@ -48,11 +48,11 @@ func NewAutoConverger(runner *runner, params AutoConvergerParams) *AutoConverger
 }
 
 func (c *AutoConverger) Start(ctx *convergectx.Context) error {
-	defer dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Stop autoconverger fully")
+	defer dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Stopping autoconverger completely")
 
 	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Start exporter")
 	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprint("Address: ", c.params.ListenAddress))
-	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprint("Checks interval: ", c.params.CheckInterval))
+	dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprint("Check interval: ", c.params.CheckInterval))
 
 	// channels to stop converge loop
 	shutdownAllCh := make(chan struct{})
@@ -66,7 +66,7 @@ func (c *AutoConverger) Start(ctx *convergectx.Context) error {
 
 		err := httpServer.Shutdown(context.TODO())
 		if err != nil {
-			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), strings.TrimRight(fmt.Sprintf("Cannot shutdown http server %v", err), "\n"))
+			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), strings.TrimRight(fmt.Sprintf("Cannot shut down http server %v", err), "\n"))
 		}
 	})
 
@@ -108,7 +108,7 @@ func (c *AutoConverger) getHTTPServer() *http.Server {
 	indexPageContent := fmt.Sprintf(`<html>
              <head><title>CandI Auto converge</title></head>
              <body>
-             <h1>CandI Auto converge terrform state every %s</h1>
+             <h1>CandI Auto converge terraform state every %s</h1>
              </body>
              </html>`, c.params.CheckInterval.String())
 

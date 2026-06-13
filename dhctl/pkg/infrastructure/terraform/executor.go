@@ -133,7 +133,7 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 
 func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int, error) {
 	if opts.Target != "" {
-		return 1, fmt.Errorf("Cannot run plan with target '%s' for terraform. It does not support", opts.Target)
+		return 1, fmt.Errorf("Cannot run plan with target '%s' for terraform: targets are not supported", opts.Target)
 	}
 
 	args := []string{
@@ -204,7 +204,7 @@ func (e *Executor) Show(ctx context.Context, opts infrastructure.ShowOpts) ([]by
 
 func (e *Executor) Stop() {
 	ctx := context.Background()
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Interrupt terraform process by pid: %d", e.cmd.Process.Pid))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Interrupting terraform process with pid: %d", e.cmd.Process.Pid))
 
 	// 1. Terraform exits immediately on SIGTERM, so SIGINT is used here
 	//    to interrupt it gracefully even when main process caught the SIGTERM.

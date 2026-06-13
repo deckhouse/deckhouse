@@ -309,7 +309,7 @@ func (i *Attacher) scan(
 
 		clusterState, err := infrastructurestate.GetClusterStateFromCluster(ctx, kubeClient)
 		if err != nil {
-			return fmt.Errorf("unable get cluster tf state: %w", err)
+			return fmt.Errorf("unable to get cluster tf state: %w", err)
 		}
 
 		if err = stateCache.Save(ctx, "base-infrastructure.tfstate", clusterState); err != nil {

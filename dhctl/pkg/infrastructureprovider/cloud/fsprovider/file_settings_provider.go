@@ -69,7 +69,7 @@ func loadOrGetStore(ctx context.Context, infraVersionsFile string) (settingsStor
 
 	fileToSettingsStore[infraVersionsFile] = store
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Providers settings store for terraform versions file %s loaded from file and add to cache", infraVersionsFile))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Providers settings store for terraform versions file %s loaded from file and added to cache", infraVersionsFile))
 
 	return store, nil
 }
@@ -181,7 +181,7 @@ func loadTerraformVersionFileSettings(ctx context.Context, filename string) (set
 
 	for name, rawSettings := range infrastructureProviders {
 		if _, ok := noneProviderKeys[name]; ok {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found not provider name key %s", name))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found non-provider-name key %s", name))
 			continue
 		}
 

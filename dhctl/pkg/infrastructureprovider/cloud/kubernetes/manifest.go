@@ -32,13 +32,13 @@ func extractManifestKind(state map[string]interface{}) string {
 
 	v, ok := state["manifest"]
 	if !ok || v == nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, "State does not have a manifest. Returns empty kind")
+		dhlog.FromContext(ctx).DebugContext(ctx, "State does not have a manifest. Returning empty kind")
 		return ""
 	}
 
 	mv, ok := v.(map[string]any)
 	if !ok {
-		dhlog.FromContext(ctx).DebugContext(ctx, "manifest is not a map. Returns empty kind")
+		dhlog.FromContext(ctx).DebugContext(ctx, "manifest is not a map. Returning empty kind")
 		return ""
 	}
 	if kind, ok := mv["kind"].(string); ok {
@@ -46,6 +46,6 @@ func extractManifestKind(state map[string]interface{}) string {
 		return kind
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, "manifest does not have a kind. Returns empty kind")
+	dhlog.FromContext(ctx).DebugContext(ctx, "manifest does not have a kind. Returning empty kind")
 	return ""
 }

@@ -165,7 +165,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, isDebug bool) (int, error) {
 	if err != nil && exitCode != HasChangesExitCode {
 		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Error while process exit code: %v", err))
 		if isDebug {
-			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search in the output above for an error")
+			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search the output above for an error")
 		} else {
 			err = buildExitError(exitCode, &errBuf, stderrAll, stdoutAll)
 		}

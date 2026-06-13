@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sync/atomic"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,28 +49,28 @@ const (
 
 // ValidationWebhookReconciler reconciles a ValidationWebhook object
 type ValidationWebhookReconciler struct {
-	isReloadShellNeed *atomic.Bool
-	client            client.Client
-	scheme            *runtime.Scheme
-	logger            *log.Logger
-	pythonTemplate    string
+	reloadFn       func(ctx context.Context) error
+	client         client.Client
+	scheme         *runtime.Scheme
+	logger         *log.Logger
+	pythonTemplate string
 }
 
 // NewValidationWebhookReconciler creates a new ValidationWebhookReconciler.
-// The isReloadShellNeed flag is shared between reconcilers to signal shell-operator reload.
+// reloadFn is called when hooks change on disk to trigger shell-operator reload.
 func NewValidationWebhookReconciler(
 	k8sClient client.Client,
 	scheme *runtime.Scheme,
 	logger *log.Logger,
 	pythonTemplate string,
-	isReloadShellNeed *atomic.Bool,
+	reloadFn func(ctx context.Context) error,
 ) *ValidationWebhookReconciler {
 	return &ValidationWebhookReconciler{
-		isReloadShellNeed: isReloadShellNeed,
-		client:            k8sClient,
-		scheme:            scheme,
-		logger:            logger.Named("validation-webhook"),
-		pythonTemplate:    pythonTemplate,
+		reloadFn:       reloadFn,
+		client:         k8sClient,
+		scheme:         scheme,
+		logger:         logger.Named("validation-webhook"),
+		pythonTemplate: pythonTemplate,
 	}
 }
 
@@ -154,16 +153,29 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	webhookFile := r.webhookFilePath(vwh.Name)
 	isChanged := r.isWebhookFileChanged(webhookFile, buf.Bytes())
 	if !isChanged {
-		logger.Debug("webhook file not changed, skipping webhook file update")
-		return nil
+		// File unchanged on disk. If the finalizer is already set, the
+		// resource was fully processed on a previous reconcile — skip.
+		// Otherwise the file was written by a prior reconcile that failed
+		// before/during reload, so we must retry reloadFn.
+		if controllerutil.ContainsFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
+			logger.Debug("webhook file not changed, skipping webhook file update")
+			return nil
+		}
+		logger.Debug("webhook file not changed but finalizer missing, retrying reload")
+	} else {
+		if err := os.WriteFile(webhookFile, buf.Bytes(), validationWebhookFilePerms); err != nil {
+			logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
+			return fmt.Errorf("write file %s: %w", webhookFile, err)
+		}
 	}
 
-	if err := os.WriteFile(webhookFile, buf.Bytes(), validationWebhookFilePerms); err != nil {
-		logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
-		return fmt.Errorf("write file %s: %w", webhookFile, err)
+	// Reload shell-operator hooks to pick up the new webhook file.
+	// The error must be returned so the reconciler requeues: on the next
+	// reconcile isWebhookFileChanged returns false (file already written),
+	// so reloadFn would never be called again if we swallowed the error.
+	if err := r.reloadFn(ctx); err != nil {
+		return fmt.Errorf("reload shell-operator hooks: %w", err)
 	}
-
-	r.isReloadShellNeed.Store(true)
 
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
@@ -171,9 +183,6 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 		controllerutil.AddFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
 		if err := r.client.Update(ctx, vwh); err != nil {
-			if removeErr := os.Remove(webhookFile); removeErr != nil {
-				logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
-			}
 			return fmt.Errorf("add finalizer: %w", err)
 		}
 	}
@@ -187,11 +196,17 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 		return fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
 	}
 
-	r.isReloadShellNeed.Store(true)
+	// Reload shell-operator hooks to remove the webhook registration.
+	// Return the error so the reconciler retries: once the finalizer is removed
+	// the object is gone and no future reconcile can fix stale registrations.
+	if err := r.reloadFn(ctx); err != nil {
+		return fmt.Errorf("reload shell-operator hooks for %s: %w", vh.Name, err)
+	}
 
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
-		r.logger.Debug("remove finalizer")
+		logger := r.logger.With(slog.String("webhook", vh.Name))
+		logger.Debug("remove finalizer")
 		controllerutil.RemoveFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
 		if err := r.client.Update(ctx, vh); err != nil {

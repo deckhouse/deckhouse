@@ -178,7 +178,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		fmt.Print(string(data))
 
 		if provider.NeedToUseTofu() && needMigrationToTofu {
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Need migrate to tofu: %v", needMigrationToTofu), dhlog.ShowInCompacted())
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Need to migrate to tofu: %v", needMigrationToTofu), dhlog.ShowInCompacted())
 		}
 
 		return provider.Cleanup()

@@ -95,7 +95,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Nodes to delete %d. Starting update nodes", len(nodesToDeleteInfo)))
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Nodes to delete: %d. Starting to update nodes", len(nodesToDeleteInfo)))
 
 	if err := c.nodeGroup.beforeUpdateNodes(ctx); err != nil {
 		return err
@@ -106,7 +106,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "starting delete nodes")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "starting to delete nodes")
 
 	if err := c.switchClientBeforeDeleteNodesIfNeed(ctx, nodesToDeleteInfo); err != nil {
 		return err
@@ -122,7 +122,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Starting converge node template")
+	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Starting to converge node template")
 
 	if groupSpec != nil {
 		return c.tryUpdateNodeTemplate(ctx, groupSpec.NodeTemplate)
@@ -134,7 +134,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 func (c *NodeGroupController) switchClientBeforeDeleteNodesIfNeed(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	clientSwitcher := ctx.ClientSwitcher()
 	if govalue.IsNil(clientSwitcher) {
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Skip switch client before delete nodes. Got empty switcher")
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Skipping switch of client before deleting nodes. Got empty switcher")
 		return nil
 	}
 
@@ -157,7 +157,7 @@ func (c *NodeGroupController) tryDeleteNodes(ctx *context.Context, nodesToDelete
 	}
 
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprint("Skip delete nodes because destructive operations are disabled"))
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprint("Skipping node deletion because destructive operations are disabled"))
 		return nil
 	}
 
@@ -201,13 +201,13 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	var allErrs *multierror.Error
 	for _, nodeToDeleteInfo := range nodesToDeleteInfo {
 		if _, ok := c.excludedNodes[nodeToDeleteInfo.name]; ok {
-			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprintf("Skip delete excluded node %v", nodeToDeleteInfo.name))
+			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprintf("Skipping deletion of excluded node %v", nodeToDeleteInfo.name))
 			continue
 		}
 
 		nodeIndex, err := config.GetIndexFromNodeName(nodeToDeleteInfo.name)
 		if err != nil {
-			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skip %s", err, nodeToDeleteInfo.name))
+			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeToDeleteInfo.name))
 			return nil
 		}
 
@@ -268,7 +268,7 @@ func getNodeTemplateDiff(ctx gocontext.Context, fromNG, fromConfig map[string]an
 	// prevent compare nil and empty map
 	// this case generates diff for gcmp.Diff
 	if len(fromNG) == 0 && len(fromConfig) == 0 {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Node templates does not have keys. Returns no diff")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Node templates have no keys. Returning no diff")
 		return ""
 	}
 
@@ -295,7 +295,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 
 		diff := getNodeTemplateDiff(ctx.Ctx(), templateInCluster, nodeTemplate)
 		if diff == "" {
-			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), strings.TrimRight(fmt.Sprintf("Node template of the %s NodeGroup is not changed", c.name), "\n"))
+			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), strings.TrimRight(fmt.Sprintf("Node template of the %s NodeGroup has not changed", c.name), "\n"))
 			return nil
 		}
 
@@ -328,12 +328,12 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 
 func (c *NodeGroupController) tryDeleteNodeGroup(ctx *context.Context) error {
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Skip delete %s node group because destructive operations are disabled", c.name))
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Skipping deletion of %s node group because destructive operations are disabled", c.name))
 		return nil
 	}
 
 	if c.name == global.MasterNodeGroupName {
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Skip delete %s node group because it is master", c.name))
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Skipping deletion of %s node group because it is master", c.name))
 		return nil
 	}
 
@@ -385,7 +385,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 		err := dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), processTitle, func(gocontext.Context) error {
 			if _, ok := c.excludedNodes[nodeName]; ok {
-				dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprintf("Skip update excluded node %v", nodeName))
+				dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprintf("Skipping update of excluded node %v", nodeName))
 				return nil
 			}
 
@@ -422,7 +422,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 func getNodesToDeleteInfo(ctx gocontext.Context, desiredReplicas int, state map[string][]byte) ([]nodeToDeleteInfo, error) {
 	if desiredReplicas >= len(state) {
-		dhlog.FromContext(ctx).DebugContext(ctx, "desired replicas >= in state. skip nodes info")
+		dhlog.FromContext(ctx).DebugContext(ctx, "desired replicas >= replicas in state. skipping nodes info")
 		return nil, nil
 	}
 
@@ -444,7 +444,7 @@ func getNodesToDeleteInfo(ctx gocontext.Context, desiredReplicas int, state map[
 		count--
 
 		if count == desiredReplicas {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("stopping getting deletes nodes info. count %v", count))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("stopping collection of nodes-to-delete info. count %v", count))
 			break
 		}
 	}

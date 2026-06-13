@@ -1,0 +1,26 @@
+diff --git a/pkg/azclient/client-gen/go.mod b/pkg/azclient/client-gen/go.mod
+index 4887bc6..0203b84 100644
+--- a/pkg/azclient/client-gen/go.mod
++++ b/pkg/azclient/client-gen/go.mod
+@@ -15,7 +15,7 @@ require (
+ 	github.com/spf13/pflag v1.0.10 // indirect
+ 	golang.org/x/mod v0.31.0 // indirect
+ 	golang.org/x/sync v0.19.0 // indirect
+-	golang.org/x/sys v0.39.0 // indirect
++	golang.org/x/sys v0.40.0 // indirect
+ 	golang.org/x/tools v0.40.0 // indirect
+ 	gopkg.in/yaml.v2 v2.4.0 // indirect
+ 	k8s.io/apimachinery v0.36.0 // indirect
+diff --git a/pkg/azclient/client-gen/go.sum b/pkg/azclient/client-gen/go.sum
+index 3d43ba6..a5db0ac 100644
+--- a/pkg/azclient/client-gen/go.sum
++++ b/pkg/azclient/client-gen/go.sum
+@@ -36,6 +36,8 @@ golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBc
+ golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.39.0 h1:CvCKL8MeisomCi6qNZ+wbb0DN9E5AATixKsvNtMoMFk=
+ golang.org/x/sys v0.39.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
++golang.org/x/sys v0.40.0 h1:DBZZqJ2Rkml6QMQsZywtnjnnGvHza6BTfYFWY9kjEWQ=
++golang.org/x/sys v0.40.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
+ golang.org/x/text v0.33.0 h1:B3njUFyqtHDUI5jMn1YIr5B0IE2U0qck04r6d4KPAxE=
+ golang.org/x/text v0.33.0/go.mod h1:LuMebE6+rBincTi9+xWTY8TztLzKHc/9C1uBCG27+q8=
+ golang.org/x/tools v0.40.0 h1:yLkxfA+Qnul4cs9QA3KnlFu0lVmd8JJfoq+E41uSutA=

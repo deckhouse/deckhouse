@@ -2,8 +2,8 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-865d72013a3c26ee54a5a122ff23bd39f2f94de489a07c167aab7e3c3b28a6db",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2026-04-23T12:00:00.000000+03:00",
-  "version": 1,
+  "timestamp": "2026-06-02T15:00:00.000000+03:00",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -60,6 +60,48 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-33997 связана с обходом проверки привилегий при установке Docker-плагинов через команду 'docker plugin install'. Promxy использует исключительно клиентский SDK Docker (github.com/docker/docker/client) для запросов к Docker API с целью перечисления контейнеров и сервисов в рамках механизма service discovery. Promxy никогда не устанавливает, не управляет и не взаимодействует с Docker-плагинами. Уязвимый код находится в обработчике установки плагинов Docker-демона, который не компилируется и не вызывается в составе Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "timestamp": "2026-06-02T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41567 позволяет вредоносному образу выполнить произвольный код с привилегиями демона Docker (root на хосте) при загрузке сжатого архива в контейнер через 'docker cp' или endpoint 'PUT /containers/{id}/archive': при распаковке демон вызывает бинарники декомпрессии из файловой системы контейнера, а не хоста. Promxy использует исключительно клиентский SDK Docker (github.com/docker/docker/client) как транзитивную зависимость через prometheus/prometheus для service discovery Docker и Docker Swarm контейнеров и никогда не загружает архивы в контейнеры и не выполняет операции 'docker cp' / 'PUT /containers/{id}/archive'. Уязвимый код существует исключительно в бинарнике Docker-демона, который не компилируется и не выполняется в составе Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "timestamp": "2026-06-02T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42306 представляет собой состояние гонки (race condition) при настройке bind-монтирования во время операции 'docker cp' демона Docker, позволяющее вредоносному контейнеру через подмену символьной ссылки перенаправить целевую точку монтирования на произвольный путь хоста. Promxy использует исключительно клиентский SDK Docker (github.com/docker/docker/client) как транзитивную зависимость через prometheus/prometheus для service discovery Docker и Docker Swarm контейнеров и никогда не выполняет операции 'docker cp' / 'PUT /containers/{id}/archive'. Уязвимый код находится в логике настройки монтирования Docker-демона, который не компилируется и не вызывается в составе Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "timestamp": "2026-06-02T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41568 представляет собой состояние гонки (race condition) при создании точки монтирования во время операции 'docker cp' демона Docker, позволяющее вредоносному контейнеру через подмену символьной ссылки создавать пустые файлы или каталоги по произвольным путям на файловой системе хоста с правами root (отказ в обслуживании). Promxy использует исключительно клиентский SDK Docker (github.com/docker/docker/client) как транзитивную зависимость через prometheus/prometheus для service discovery Docker и Docker Swarm контейнеров и никогда не выполняет операции 'docker cp' / 'PUT /containers/{id}/archive'. Уязвимый код находится в функции createIfNotExists Docker-демона, который не компилируется и не вызывается в составе Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
     }
   ]
 }

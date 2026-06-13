@@ -91,7 +91,7 @@ func (p *MetaConfigPreparator) validateNodeGroups(ctx context.Context, metaConfi
 	yandexNodeGroups, err := dhctljson.UnmarshalToFromMessageMap[[]nodeGroupSpec](metaConfig.ProviderClusterConfig, "nodeGroups")
 	if err != nil {
 		if errors.Is(err, dhctljson.ErrNotFound) {
-			dhlog.FromContext(ctx).DebugContext(ctx, "nodeGroups not found in provider cluster configuration. Skip validation.")
+			dhlog.FromContext(ctx).DebugContext(ctx, "nodeGroups not found in provider cluster configuration. Skipping validation.")
 			return nil
 		}
 
@@ -112,12 +112,12 @@ func (p *MetaConfigPreparator) validateNodeGroups(ctx context.Context, metaConfi
 func (p *MetaConfigPreparator) validateWithNATInstanceLayout(ctx context.Context, metaConfig *config.MetaConfig) error {
 	// layout was prepared with strcase.ToKebab before calling preparator
 	if metaConfig.Layout != "with-nat-instance" {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skip validate WithNATInstance layout. Got layout %v", metaConfig.Layout))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skipping WithNATInstance layout validation. Got layout %v", metaConfig.Layout))
 		return nil
 	}
 
 	if !p.validateWithNATLayout {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Skip validate WithNATInstance layout. Validation disabled")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Skipping WithNATInstance layout validation. Validation disabled")
 		return nil
 	}
 

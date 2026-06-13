@@ -37,7 +37,7 @@ type GetCheckerParams struct {
 
 func GetCheckerByGvk(gvk *schema.GroupVersionKind, _ GetCheckerParams) (ResourceChecker, error) {
 	if gvk.Empty() {
-		return nil, fmt.Errorf("Cannot get check by gvk: cannot be empty")
+		return nil, fmt.Errorf("Cannot get checker by gvk: gvk cannot be empty")
 	}
 
 	kind := gvk.Kind

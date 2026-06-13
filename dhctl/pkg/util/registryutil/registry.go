@@ -48,7 +48,7 @@ func NewRegistryTransport(ctx context.Context, scheme, ca string) (*http.Transpo
 
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot get system CAs pool, fallback to custom CA pool only: %v", err))
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot get system CAs pool, falling back to custom CA pool only: %v", err))
 		certPool = x509.NewCertPool()
 	}
 	if certPool == nil {

@@ -91,13 +91,13 @@ func (r *InLockRunner) Run(ctx context.Context, action func() error) error {
 	}
 
 	defer func() {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Start unlock converge from Run")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Starting converge unlock from Run")
 		if r.unlockConverge != nil {
 			r.unlockConverge(true)
 			return
 		}
 
-		dhlog.FromContext(ctx).DebugContext(ctx, "unlockConverge is nil. Skip")
+		dhlog.FromContext(ctx).DebugContext(ctx, "unlockConverge is nil. Skipping")
 	}()
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "lock for Run method was set. Start action")
@@ -169,7 +169,7 @@ func GetLockLeaseConfig(ctx context.Context, identity, sshUser string) *lease.Le
 		RetryWaitDuration:    3 * time.Second,
 		AdditionalUserInfo:   additionalInfo,
 		OnRenewError: func(renewErr error) {
-			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Lease renew was failed. Send SIGINT and shutdown: %v", renewErr))
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Lease renewal failed. Sending SIGINT and shutting down: %v", renewErr))
 			p, err := os.FindProcess(os.Getpid())
 			if err != nil {
 				dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Cannot find pid: %v", err), "\n"))
@@ -211,11 +211,11 @@ func lockLease(
 	config *lease.LeaseLockConfig,
 	forceLock bool,
 ) (func(fullUnlock bool), error) {
-	dhlog.FromContext(ctx).DebugContext(ctx, "Create converge lock and mutex")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Creating converge lock and mutex")
 	mutex := &sync.Mutex{}
 	leaseLock := lease.NewLeaseLock(getter, *config)
 
-	dhlog.FromContext(ctx).DebugContext(ctx, "Try to lock converge")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Trying to lock converge")
 	err := leaseLock.Lock(ctx, forceLock)
 	if err != nil {
 		return nil, err
@@ -226,18 +226,18 @@ func lockLease(
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Try to release converge lock. Is it %v", leaseLock == nil), "\n"))
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Trying to release converge lock. Is it %v", leaseLock == nil), "\n"))
 
 		if leaseLock == nil {
-			dhlog.FromContext(ctx).DebugContext(ctx, "Lock was released. Skip")
+			dhlog.FromContext(ctx).DebugContext(ctx, "Lock was already released. Skipping")
 			return
 		}
 
 		if fullUnlock {
-			dhlog.FromContext(ctx).DebugContext(ctx, "Try to full release...")
+			dhlog.FromContext(ctx).DebugContext(ctx, "Trying to fully release...")
 			leaseLock.Unlock(ctx)
 		} else {
-			dhlog.FromContext(ctx).DebugContext(ctx, "Try to stop autorenew only...")
+			dhlog.FromContext(ctx).DebugContext(ctx, "Trying to stop auto-renew only...")
 			leaseLock.StopAutoRenew()
 		}
 
@@ -245,6 +245,6 @@ func lockLease(
 		dhlog.FromContext(ctx).DebugContext(ctx, "Lock was released")
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, "Lock converge successful")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Converge locked successfully")
 	return unlockConverge, nil
 }

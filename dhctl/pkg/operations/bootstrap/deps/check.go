@@ -51,7 +51,7 @@ type DependenciesChecker struct {
 }
 
 var (
-	ErrMissingDeps    = errors.New("Have missing dependencies")
+	ErrMissingDeps    = errors.New("Some dependencies are missing")
 	ErrShellIsNotBash = errors.New(
 		"Bashible requires /bin/bash as the user's login shell. Please change the user's shell",
 	)
@@ -239,7 +239,7 @@ func (c *DependenciesChecker) depsErrorBreakPredicate(err error) bool {
 	}
 
 	if errors.Is(err, ErrMissingDeps) {
-		c.loggerProvider().DebugF("Has missing deps error. Break cycle")
+		c.loggerProvider().DebugF("Has a missing-dependencies error. Breaking the loop")
 		return true
 	}
 
@@ -252,7 +252,7 @@ func (c *DependenciesChecker) shellErrorBreakPredicate(err error) bool {
 	}
 
 	if errors.Is(err, ErrShellIsNotBash) {
-		c.loggerProvider().DebugF("Has not bash error. Break cycle")
+		c.loggerProvider().DebugF("Has a non-bash shell error. Breaking the loop")
 		return true
 	}
 

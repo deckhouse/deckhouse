@@ -429,21 +429,21 @@ func (r *Runner) Apply(ctx context.Context) error {
 			return err
 		}
 		if skip {
-			dhlog.FromContext(ctx).InfoContext(ctx, "Skip infrastructure apply.")
+			dhlog.FromContext(ctx).InfoContext(ctx, "Skipping infrastructure apply.")
 			return nil
 		}
 
 		if !govalue.IsNil(r.stateChecker) {
 			err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure state check before apply...", func(ctx context.Context) error {
 				if r.statePath == "" {
-					dhlog.FromContext(ctx).InfoContext(ctx, "Infrastructure state path is empty. Skip infrastructure state check.")
+					dhlog.FromContext(ctx).InfoContext(ctx, "Infrastructure state path is empty. Skipping infrastructure state check.")
 					return nil
 				}
 
 				st, err := os.ReadFile(r.statePath)
 				if err != nil {
 					if os.IsNotExist(err) {
-						dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("File %s with state not found, Probably call apply with new resource. Skip check.", r.statePath))
+						dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("State file %s not found, probably applying with a new resource. Skipping check.", r.statePath))
 						return nil
 					}
 					return err
@@ -565,7 +565,7 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 
 	if destroy {
 		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf(
-			"Skip getting debug plan for destroy: passed step %s; executor step %s; target '%s'\n",
+			"Skipping debug plan for destroy: passed step %s; executor step %s; target '%s'\n",
 			step,
 			executorStep,
 			target,
@@ -575,7 +575,7 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 
 	if step != executorStep || target == "" {
 		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf(
-			"Skip getting debug plan for: passed step %s; executor step %s; target '%s'\n",
+			"Skipping debug plan: passed step %s; executor step %s; target '%s'\n",
 			step,
 			executorStep,
 			target,
@@ -633,7 +633,7 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 	}
 
 	if r.statePath == "" {
-		return nil, fmt.Errorf("No state found, try to run infastructure apply first")
+		return nil, fmt.Errorf("No state found, try running infrastructure apply first")
 	}
 
 	var result []byte
@@ -667,7 +667,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 	}
 
 	if r.statePath == "" {
-		return fmt.Errorf("No state found, try to run infrastructure apply first")
+		return fmt.Errorf("No state found, try running infrastructure apply first")
 	}
 
 	if r.changeSettings.AutoDismissChanges {
@@ -689,7 +689,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 		return 0, err
 	})
 	if err != nil {
-		return fmt.Errorf("Cannot prepare terrafrom destroy plan: %w", err)
+		return fmt.Errorf("Cannot prepare terraform destroy plan: %w", err)
 	}
 
 	if !r.changeSettings.AutoApprove {
@@ -801,7 +801,7 @@ func (r *Runner) Stop() {
 
 func (r *Runner) execInfrastructureUtility(ctx context.Context, executor func(ctx context.Context) (int, error)) (int, error) {
 	if r.checkInfrastructureUtilityIsRunning() {
-		return 0, fmt.Errorf("Infrastructure utility have been already executed.")
+		return 0, fmt.Errorf("Infrastructure utility has already been executed.")
 	}
 
 	r.switchInfrastructureUtilityIsRunning()

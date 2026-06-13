@@ -49,7 +49,7 @@ func ParseInternalBootstrapNodeGroupConfiguration(ctx context.Context, resources
 
 		index, err := yamlvalidation.ParseIndex(strings.NewReader(doc), yamlvalidation.ParseIndexWithoutCheckValid())
 		if err != nil {
-			dhlog.FromContext(logCtx).DebugContext(logCtx, fmt.Sprintf("Skip NodeGroupConfiguration probe for doc: %v", err))
+			dhlog.FromContext(logCtx).DebugContext(logCtx, fmt.Sprintf("Skipping NodeGroupConfiguration probe for doc: %v", err))
 			continue
 		}
 

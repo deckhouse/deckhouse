@@ -489,7 +489,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 
 	skipMessage := func(f string, args ...any) string {
 		m := fmt.Sprintf(f, args...)
-		return fmt.Sprintf("Skip debug plan for %s: %s", targetsStr, m)
+		return fmt.Sprintf("Skipping debug plan for %s: %s", targetsStr, m)
 	}
 
 	skipDebug := func(f string, args ...any) {
@@ -515,19 +515,19 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	}
 
 	if len(targets) == 0 {
-		skipDebug("pass empty targets with env %s", targetsEnv)
+		skipDebug("got empty targets from env %s", targetsEnv)
 		return
 	}
 
 	if destroy {
-		skipInfo("no out destroy plan, because it is produce only destroy changes")
+		skipInfo("no debug plan output for destroy, because it produces only destroy changes")
 		return
 	}
 
 	executorStep := string(r.GetStep())
 
 	if debugPlanStep != executorStep {
-		skipInfo("passed step %s not match with executor step %s", debugPlanStep, executorStep)
+		skipInfo("passed step %s does not match executor step %s", debugPlanStep, executorStep)
 		return
 	}
 
@@ -558,7 +558,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 
 	for target, output := range results {
 		fullPretty, forTarget := extractChangesStrings(ctx, target, output)
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Full debug output plan for %s:\n%s", targetStr(target), fullPretty))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Full debug plan output for %s:\n%s", targetStr(target), fullPretty))
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Changes in plan for %s:\n%s", targetStr(target), forTarget))
 	}
 }
@@ -588,13 +588,13 @@ func extractChanges(ctx context.Context, target string, mapOut map[string]any) s
 
 	changes, ok := changesRaw.([]any)
 	if !ok {
-		return fmt.Sprintf("Plan resource_changes key is not []any it is %T", changesRaw)
+		return fmt.Sprintf("Plan resource_changes key is not []any, it is %T", changesRaw)
 	}
 
 	for i, changeRaw := range changes {
 		change, ok := changeRaw.(map[string]any)
 		if !ok {
-			msg := fmt.Sprintf("Plan resource_changes key index %d for %s is not map[string]any it is %T", i, target, changesRaw)
+			msg := fmt.Sprintf("Plan resource_changes key index %d for %s is not map[string]any, it is %T", i, target, changesRaw)
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s", msg))
 			continue
 		}
@@ -608,7 +608,7 @@ func extractChanges(ctx context.Context, target string, mapOut map[string]any) s
 
 		addressStr, ok := address.(string)
 		if !ok {
-			msg := fmt.Sprintf("Plan resource_changes key index %d for %s address is not string it is %T", i, target, address)
+			msg := fmt.Sprintf("Plan resource_changes key index %d for %s address is not a string, it is %T", i, target, address)
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s", msg))
 			continue
 		}

@@ -119,7 +119,7 @@ func (c *Creator) createAll(ctx context.Context) error {
 
 	for indx, resource := range c.resources {
 		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s with index %% should skip to create in current iteration because namespace is not existed", resource.String()))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s with index %% should be skipped from creation in the current iteration because the namespace does not exist", resource.String()))
 			continue
 		}
 
@@ -162,7 +162,7 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 				// we can receive empty name space when user want to deploy in 'default' ns
 				// we keep it in our minds and skip verify therese resources because we think that
 				// default namespace always exist
-				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace is empty for resource %s. Skip ns checking", res.String()))
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace is empty for resource %s. Skipping ns check", res.String()))
 				continue
 			}
 
@@ -173,9 +173,9 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 					// if ns is existed then we will skip only
 					// if ns is not exists we should skip resource on current iteration and try to create on next iteration
 					resourcesToSkipInCurrentIteration[i] = struct{}{}
-					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace not found but processed for resource %s. Adding skip to create resource in current iteration", res.String()))
+					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace not found but already processed for resource %s. Skipping resource creation in the current iteration", res.String()))
 				}
-				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace was processed for resource %s. Skip ns checking", res.String()))
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Namespace was processed for resource %s. Skipping ns check", res.String()))
 				continue
 			}
 
@@ -403,7 +403,7 @@ func CreateResourcesLoop(
 				)
 			}
 
-			return fmt.Errorf("Creating resources failed after %s waiting", timeout)
+			return fmt.Errorf("Creating resources failed after waiting %s", timeout)
 		case <-ticker.C:
 		}
 		attempt++

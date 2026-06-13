@@ -23,7 +23,7 @@ shell:
     - rm -r .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -39,6 +39,8 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
+  beforeInstall:
+    - pm install git
   install:
     - cd /src
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
@@ -46,8 +48,8 @@ shell:
     - go mod vendor
     - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@latest
     - cp /patches/op_funcs_init.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/parser/op_funcs_init.go
-    - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/005-op-functions.patch
-    - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/006-printer-op-top-aggregate-string.patch
+    - git -C /src/vendor/github.com/prometheus/prometheus apply -p1 --verbose /patches/005-op-functions.patch
+    - git -C /src/vendor/github.com/prometheus/prometheus apply -p1 --verbose /patches/006-printer-op-top-aggregate-string.patch
     - cd /src/vendor/github.com/prometheus/prometheus/promql/parser && goyacc -l -o generated_parser.y.go generated_parser.y
     - cd /src
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")

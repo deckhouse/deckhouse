@@ -32,21 +32,21 @@ var (
 )
 
 func RenderAndSavePreflightCheckPortsScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
-	dhlog.FromContext(ctx).DebugContext(ctx, "Start render check ports script")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check ports script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkPortsScriptPath)
 
 	return RenderAndSaveTemplate(ctx, "check_ports.sh", scriptPath, map[string]interface{}{})
 }
 
 func RenderAndSavePreflightCheckDeckhouseUserScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
-	dhlog.FromContext(ctx).DebugContext(ctx, "Start render check user script")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check user script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkDeckhouseUserScriptPath)
 
 	return RenderAndSaveTemplate(ctx, "check_deckhouse_user.sh", scriptPath, map[string]interface{}{})
 }
 
 func RenderAndSavePreflightCheckLocalhostScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
-	dhlog.FromContext(ctx).DebugContext(ctx, "Start render check localhost script")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check localhost script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkLocalhostScriptPath)
 
 	return RenderAndSaveTemplate(
@@ -58,7 +58,7 @@ func RenderAndSavePreflightCheckLocalhostScript(ctx context.Context, globalOptio
 }
 
 func RenderAndSavePreflightReverseTunnelOpenScript(ctx context.Context, url string, globalOptions *options.GlobalOptions) (string, error) {
-	dhlog.FromContext(ctx).DebugContext(ctx, "Start render proxy reverse tunnel open script")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering proxy reverse tunnel open script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkProxyRevTunnelOpenScriptPath)
 
 	return RenderAndSaveTemplate(
@@ -72,7 +72,7 @@ func RenderAndSavePreflightReverseTunnelOpenScript(ctx context.Context, url stri
 }
 
 func RenderAndSaveKillReverseTunnelScript(ctx context.Context, host, port string, globalOptions *options.GlobalOptions) (string, error) {
-	dhlog.FromContext(ctx).DebugContext(ctx, "Start render kill reverse tunnel script")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering kill reverse tunnel script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", killReverseTunnelPath)
 
 	return RenderAndSaveTemplate(
@@ -92,7 +92,7 @@ func RenderAndSavePreflightCheckScript(
 	params map[string]interface{},
 	globalOptions *options.GlobalOptions,
 ) (string, error) {
-	dhlog.FromContext(ctx).DebugContext(ctx, "Start render check localhost script")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check localhost script")
 	path := filepath.Join(globalOptions.CandiDir, "bashible", preflightScriptDirPath)
 
 	return RenderAndSaveTemplate(

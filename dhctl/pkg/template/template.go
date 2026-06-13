@@ -43,7 +43,7 @@ func RenderAndSaveTemplate(ctx context.Context, outFileName, templatePath string
 		}
 		cnt := res.Bytes()
 		content = string(cnt)
-		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Render and save template content:\n%s", content), "\n"))
+		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Rendering and saving template content:\n%s", content), "\n"))
 	}
 
 	outFile, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("*-%s", outFileName))
@@ -53,7 +53,7 @@ func RenderAndSaveTemplate(ctx context.Context, outFileName, templatePath string
 
 	defer func() {
 		if err := outFile.Close(); err != nil {
-			dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Cannot close rendered %s %s:%v", outFileName, outFile.Name(), err), "\n"))
+			dhlog.FromContext(ctx).ErrorContext(ctx, strings.TrimRight(fmt.Sprintf("Cannot close rendered %s %s: %v", outFileName, outFile.Name(), err), "\n"))
 		}
 	}()
 

@@ -76,7 +76,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		apiServerURL := fmt.Sprintf("http://localhost:%s", apiServerPort)
 		if err := localKubeConfig(ctx, apiServerURL); err != nil {
-			return fmt.Errorf("error save kubeconfig: %v", err)
+			return fmt.Errorf("save kubeconfig: %v", err)
 		}
 
 		sigChan := make(chan os.Signal, 1)

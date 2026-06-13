@@ -93,7 +93,7 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 		},
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, "Intermediate save base infra in cluster...")
+	dhlog.FromContext(ctx).DebugContext(ctx, "Saving intermediate base infra in cluster...")
 	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 15, 3*time.Second).Run(
 		func() error {
 			return task.Patch(ctx)
@@ -168,7 +168,7 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 	}
 
 	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Intermediate save state for node %s in cluster...", s.nodeName))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Saving intermediate state for node %s in cluster...", s.nodeName))
 	err = retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(func() error {
 		return task.PatchOrCreate(ctx)
 	})

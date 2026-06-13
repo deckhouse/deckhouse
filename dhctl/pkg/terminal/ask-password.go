@@ -46,7 +46,7 @@ func AskPassword(prompt string) ([]byte, error) {
 	fd := int(os.Stdin.Fd())
 
 	if !terminal.IsTerminal(fd) {
-		return nil, fmt.Errorf("stdin is not a terminal, error reading password")
+		return nil, fmt.Errorf("stdin is not a terminal, cannot read password")
 	}
 
 	ctx := context.Background()

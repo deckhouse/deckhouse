@@ -296,7 +296,7 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 			}
 
 			if l.breakPredicate != nil && l.breakPredicate(err) {
-				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(l.prefix+"Client break loop with %v", err))
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(l.prefix+"Client broke the loop with %v", err))
 				return err
 			}
 

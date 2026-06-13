@@ -145,7 +145,7 @@ func (s *StateCache) CleanWithExceptions(ctx context.Context, excludeKeys ...str
 		return nil
 	})
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't getting keys to remove: %s ...", err))
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't get keys to remove: %s ...", err))
 		return
 	}
 

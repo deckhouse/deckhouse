@@ -118,7 +118,7 @@ func SecretEdit(
 					}
 
 					if editOpts.SanityCheck {
-						dhlog.FromContext(ctx).InfoContext(ctx, "Remove allow-unsafe annotation")
+						dhlog.FromContext(ctx).InfoContext(ctx, "Removing allow-unsafe annotation")
 						removeUnsafeAnnotation(config)
 
 						_, err = kubeCl.CoreV1().

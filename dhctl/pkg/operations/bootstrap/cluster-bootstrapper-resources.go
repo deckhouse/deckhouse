@@ -30,7 +30,7 @@ import (
 func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	resourcesToCreate := make(template.Resources, 0)
 	if b.Options.Bootstrap.ResourcesPath != "" {
-		dhlog.FromContext(ctx).WarnContext(ctx, "--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
+		dhlog.FromContext(ctx).WarnContext(ctx, "--resources flag is deprecated. Please use the --config flag multiple times for logical resource separation")
 		parsedResources, err := template.ParseResources(ctx, b.Options.Bootstrap.ResourcesPath, nil)
 		if err != nil {
 			return err
@@ -52,7 +52,7 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resources: %s", resourcesToCreate.String()))
 
 	if len(resourcesToCreate) == 0 {
-		dhlog.FromContext(ctx).WarnContext(ctx, "Resources to create were not found.")
+		dhlog.FromContext(ctx).WarnContext(ctx, "No resources to create were found.")
 		return nil
 	}
 

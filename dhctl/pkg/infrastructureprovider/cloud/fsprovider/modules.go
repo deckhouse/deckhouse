@@ -85,7 +85,7 @@ func (p *modulesProvider) copyDir(ctx context.Context, dir string, params cloud.
 	stat, err := os.Stat(sourceDir)
 	if err != nil {
 		if os.IsNotExist(err) && dir == infraModulesDir {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Coping loud-providers modules (dir %s) from %s to %s skipped. Not found", dir, sourceDir, destinationDir))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s skipped. Not found", dir, sourceDir, destinationDir))
 			return nil
 		}
 
@@ -93,20 +93,20 @@ func (p *modulesProvider) copyDir(ctx context.Context, dir string, params cloud.
 	}
 
 	if !stat.IsDir() {
-		return fmt.Errorf("Coping cloud-providers modules (dir %s) from %s to %s failed is not dir", dir, sourceDir, destinationDir)
+		return fmt.Errorf("Copying cloud-providers modules (dir %s) from %s to %s failed: not a dir", dir, sourceDir, destinationDir)
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copy cloud-providers modules (dir %s) from %s to %s", dir, sourceDir, destinationDir))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s", dir, sourceDir, destinationDir))
 
 	// todo replace with os.CopyFS with go 1.25
 	err = copyFS(destinationDir, os.DirFS(sourceDir), sourceDir)
 	if errors.Is(err, fs.ErrExist) {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Coping loud-providers modules (dir %s) from %s to %s skipped. Exists", dir, sourceDir, destinationDir))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s skipped. Exists", dir, sourceDir, destinationDir))
 		return nil
 	}
 
 	if err != nil {
-		return fmt.Errorf("Coping cloud-providers modules (dir %s) from %s to %s failed: %w", dir, sourceDir, destinationDir, err)
+		return fmt.Errorf("Copying cloud-providers modules (dir %s) from %s to %s failed: %w", dir, sourceDir, destinationDir, err)
 	}
 
 	return nil

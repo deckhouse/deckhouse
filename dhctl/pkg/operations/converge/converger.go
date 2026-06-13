@@ -110,7 +110,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 
 	if !c.CommanderMode {
 		if c.CacheID == "" {
-			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+			return fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")
 		}
 
 		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{Cache: c.Options.Cache})
@@ -211,7 +211,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	if !c.CommanderMode {
 		if c.CacheID == "" {
-			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+			return nil, fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")
 		}
 
 		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{Cache: c.Options.Cache})
@@ -397,7 +397,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}
 
 	if needAutomaticTofuMigrationForCommander {
-		dhlog.FromContext(ctx).WarnContext(ctx, "Need migrate to opentofu. Switch to migrator")
+		dhlog.FromContext(ctx).WarnContext(ctx, "Need to migrate to opentofu. Switching to migrator")
 		err = r.RunConvergeMigration(convergeCtx, true)
 	} else {
 		err = r.RunConverge(convergeCtx)
@@ -418,7 +418,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, checkInterval time.Duration) error {
 	if c.Options == nil || c.Options.AutoConverge.RunningNodeName == "" {
-		return fmt.Errorf("Need to pass running node name. It is may taints infrastructure state while converge")
+		return fmt.Errorf("Need to pass the running node name. It may taint the infrastructure state during converge")
 	}
 
 	// Preserve the non-cancelable base for the long-running auto-converge loop, but carry the

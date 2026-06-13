@@ -67,7 +67,7 @@ func getParentIndex(commandList []Command, name string) (int, error) {
 		}
 	}
 
-	return -1, fmt.Errorf("parrent command %s not found in command list", name)
+	return -1, fmt.Errorf("parent command %s not found in command list", name)
 }
 
 func getNestingDepth(cmd Command, commands []Command) (Command, int) {

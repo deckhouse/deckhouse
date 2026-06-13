@@ -32,7 +32,6 @@ import (
 )
 
 var terraformProviders = []string{
-	"openstack",
 	"aws",
 	gcp.ProviderName,
 	"azure",
@@ -46,6 +45,7 @@ var tofuProviders = []string{
 	dvp.ProviderName,
 	"vsphere",
 	"huaweicloud",
+	"openstack",
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {

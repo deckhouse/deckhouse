@@ -99,15 +99,15 @@ func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context) (*fsprovi
 
 func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(ctx context.Context, di *cloud.ProviderDI) error {
 	if di.VersionsContentProviderGetter != nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, "fs.GetDI provider our own VersionProviderGetter")
+		dhlog.FromContext(ctx).DebugContext(ctx, "fs.GetDI provided our own VersionProviderGetter")
 		return nil
 	}
 
 	versionProviderGetter := cloud.DefaultVersionContentProvider
-	logMessage := "Use default VersionProviderGetter"
+	logMessage := "Using default VersionProviderGetter"
 
 	if p.VersionProviderGetter != nil {
-		logMessage = "Use custom VersionProviderGetter"
+		logMessage = "Using custom VersionProviderGetter"
 		versionProviderGetter = p.VersionProviderGetter
 	}
 
@@ -119,7 +119,7 @@ func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(ctx context
 
 func (p *CloudProviderGetterParams) getTmpDir(ctx context.Context) (string, error) {
 	tmpDir := p.TmpDir
-	logMsg := "Use passed tmp dir."
+	logMsg := "Using passed tmp dir."
 	if tmpDir == "" {
 		tmpDir = options.DefaultTmpDir()
 		logMsg = "CloudProviderGetterParams tmp dir is empty. Using default."
@@ -130,7 +130,7 @@ func (p *CloudProviderGetterParams) getTmpDir(ctx context.Context) (string, erro
 		return "", fmt.Errorf("Cannot prepare tmp dir %s: %w", tmpDir, err)
 	}
 
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s Before prepare '%s' Absolute path '%s'", logMsg, tmpDir, preparedTmpDir))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s Before preparation: '%s', absolute path: '%s'", logMsg, tmpDir, preparedTmpDir))
 
 	return preparedTmpDir, nil
 }

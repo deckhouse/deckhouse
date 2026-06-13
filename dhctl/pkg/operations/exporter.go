@@ -206,7 +206,7 @@ func (c *ConvergeExporter) registerMetrics() {
 //
 //nolint:gocritic
 func (c *ConvergeExporter) Start(ctx context.Context) {
-	dhlog.FromContext(ctx).InfoContext(ctx, "Start exporter")
+	dhlog.FromContext(ctx).InfoContext(ctx, "Starting exporter")
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint("Address: ", c.ListenAddress))
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint("Metrics path: ", c.MetricsPath))
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint("Checks interval: ", c.CheckInterval))
@@ -256,7 +256,7 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 			statistic, hasTerraformState := c.getStatistic(ctx, clearTmp)
 			c.recordStatistic(ctx, statistic, hasTerraformState)
 		case <-ctx.Done():
-			dhlog.FromContext(ctx).ErrorContext(ctx, "Stop exporter...")
+			dhlog.FromContext(ctx).ErrorContext(ctx, "Stopping exporter...")
 			return
 		}
 	}
@@ -345,7 +345,7 @@ func (c *ConvergeExporter) recordStatistic(ctx context.Context, statistic *check
 		}
 
 		c.GaugeMetrics["cluster_status"].WithLabelValues(status).Set(0)
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cluster status: clean %s status", status))
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Cluster status: clearing %s status", status))
 	}
 
 	newExistedEntities := newPreviouslyExistedEntities()
@@ -359,7 +359,7 @@ func (c *ConvergeExporter) recordStatistic(ctx context.Context, statistic *check
 				continue
 			}
 			c.GaugeMetrics["node_status"].WithLabelValues(status, node.Group, node.Name).Set(0)
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v/%v: clean node status %v", node.Group, node.Name, status))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v/%v: clearing node status %v", node.Group, node.Name, status))
 		}
 	}
 
@@ -371,7 +371,7 @@ func (c *ConvergeExporter) recordStatistic(ctx context.Context, statistic *check
 				continue
 			}
 			c.GaugeMetrics["node_template_status"].WithLabelValues(status, template.Name).Set(0)
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v: node template clean status %v", template.Name, status))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v: clearing node template status %v", template.Name, status))
 		}
 	}
 
@@ -382,7 +382,7 @@ func (c *ConvergeExporter) recordStatistic(ctx context.Context, statistic *check
 		}
 		for _, status := range nodeStatuses {
 			c.GaugeMetrics["node_status"].WithLabelValues(status, nodeGroup, nodeName).Set(0)
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v/%v: clean missing node status %v", nodeGroup, nodeName, status))
+			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%v/%v: clearing missing node status %v", nodeGroup, nodeName, status))
 		}
 	}
 

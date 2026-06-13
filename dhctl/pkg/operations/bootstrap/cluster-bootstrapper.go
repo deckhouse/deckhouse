@@ -70,10 +70,10 @@ const (
 
 	bootstrapAbortInvalidCacheMessage = `Create cache %s:
 	Error: %v
-	Probably that Kubernetes cluster was successfully bootstrapped.
-	Use "dhctl destroy" command to delete the cluster.
+	The Kubernetes cluster was probably bootstrapped successfully.
+	Use the "dhctl destroy" command to delete the cluster.
 `
-	bootstrapPhaseBaseInfraNonCloudMessage = `It is impossible to create base-infrastructure for non-cloud Kubernetes cluster.
+	bootstrapPhaseBaseInfraNonCloudMessage = `It is impossible to create base infrastructure for a non-cloud Kubernetes cluster.
 You have to create it manually.
 `
 	bootstrapAbortCheckMessage = `You will be asked for approval multiple times.
@@ -82,7 +82,7 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 	cacheMessage = `Create cache %s:
 	Error: %v
 
-	Probably that Kubernetes cluster was successfully bootstrapped.
+	The Kubernetes cluster was probably bootstrapped successfully.
 	If you want to continue, please delete the cache folder manually.
 `
 )
@@ -162,7 +162,7 @@ func NewClusterBootstrapper(ctx context.Context, params *Params) *ClusterBootstr
 
 func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *config.MetaConfig) (func(), error) {
 	if b.InfrastructureContext == nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, "InfrastructureContext is nil. Skip cleanup.")
+		dhlog.FromContext(ctx).DebugContext(ctx, "InfrastructureContext is nil. Skipping cleanup.")
 		return func() {}, nil
 	}
 
@@ -174,7 +174,7 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 	return func() {
 		err = provider.Cleanup()
 		if err != nil {
-			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot cleanup provider: %v", err))
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot clean up provider: %v", err))
 		}
 	}, nil
 }
@@ -202,14 +202,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	defer span.End()
 
 	if b.Options.Bootstrap.PostBootstrapScriptPath != "" {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Have post bootstrap script: %s", b.Options.Bootstrap.PostBootstrapScriptPath))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found post-bootstrap script: %s", b.Options.Bootstrap.PostBootstrapScriptPath))
 		if err := ValidateScriptFile(ctx, b.Options.Bootstrap.PostBootstrapScriptPath); err != nil {
 			return err
 		}
 	}
 
 	if b.Options.Bootstrap.ResourcesPath != "" {
-		dhlog.FromContext(ctx).WarnContext(ctx, "--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
+		dhlog.FromContext(ctx).WarnContext(ctx, "--resources flag is deprecated. Please use the --config flag multiple times for logical resource separation")
 		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
 	}
 
@@ -292,6 +292,10 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "MetaConfig was loaded")
 
+	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
+		return fmt.Errorf("apply cni bootstrap: %w", err)
+	}
+
 	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	// Check if static cluster without ssh-host
@@ -300,7 +304,7 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 			confirmation := input.NewConfirmation().
 				WithMessage("Do you really want to bootstrap the cluster on the current host?")
 			if !confirmation.Ask() {
-				return fmt.Errorf("Bootstrap cancelled by user")
+				return fmt.Errorf("Bootstrap canceled by user")
 			}
 		} else {
 			return fmt.Errorf("Static cluster bootstrap requires --ssh-host option when not running in terminal. Please use --ssh-host option or pass --connection-config with SSHHost resource to bootstrap the cluster")
@@ -595,7 +599,7 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 			NodeIP string `json:"nodeIP"`
 		}
 		if err := json.Unmarshal(bctx.metaConfig.ClusterConfig["static"], &static); err != nil {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Static config missed: %s", err.Error()))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Static config is missing: %s", err.Error()))
 		}
 		bctx.nodeIP = static.NodeIP
 
@@ -870,7 +874,7 @@ func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *boots
 		})
 	}
 
-	dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse cluster was created successfully!", dhlog.ShowInCompacted())
+	dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse cluster created successfully!", dhlog.ShowInCompacted())
 
 	if bctx.metaConfig.ClusterType == config.CloudClusterType {
 		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Kubernetes Master Node addresses for SSH", func(ctx context.Context) error {
@@ -975,7 +979,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 		return err
 	}
 
-	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Waiting for Node Groups are ready", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Waiting for node groups to become ready", func(ctx context.Context) error {
 		ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster.WaitForNodesBecomeReady")
 		defer span.End()
 
@@ -1027,7 +1031,7 @@ func createResources(
 
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, "\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
+		dhlog.FromContext(ctx).WarnContext(ctx, "\nThe installation has completed successfully.\nTo finalize bootstrapping, please add at least one non-master node or remove the taints from your master node (in the case of a single-node installation).\n")
 
 		tasks = result.ManifestResult.WithResourcesMCTasks
 
