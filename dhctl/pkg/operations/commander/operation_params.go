@@ -14,6 +14,8 @@
 
 package commander
 
+import "github.com/deckhouse/deckhouse/dhctl/pkg/config"
+
 type CommanderModeParams struct {
 	ClusterConfigurationData         []byte
 	ProviderClusterConfigurationData []byte
@@ -28,6 +30,6 @@ func NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurati
 	}
 	return &CommanderModeParams{
 		ClusterConfigurationData:         clusterConfigurationData,
-		ProviderClusterConfigurationData: providerClusterConfigurationData,
+		ProviderClusterConfigurationData: config.PrepareProviderConfigYAML(providerClusterConfigurationData),
 	}
 }
