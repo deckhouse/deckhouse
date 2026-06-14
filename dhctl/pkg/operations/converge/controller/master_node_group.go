@@ -403,7 +403,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		if errors.Is(err, controlplane.ErrSingleMasterClusterInfrastructurePlanHasDestructiveChanges) {
 			confirmation := input.NewConfirmation().WithMessage("A single-master cluster has disruptive changes in the infrastructure plan. Trying to migrate to a multi-master cluster and back to a single-master cluster. Do you want to continue?")
 			if !ctx.ChangesSettings().AutoApprove && !confirmation.Ask() {
-				dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprint("Aborted"))
+				dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Aborted")
 				return nil
 			}
 

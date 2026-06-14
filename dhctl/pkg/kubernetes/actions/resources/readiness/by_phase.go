@@ -17,6 +17,7 @@ package readiness
 import (
 	"context"
 	"fmt"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"

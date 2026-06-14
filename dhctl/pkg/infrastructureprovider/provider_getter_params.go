@@ -47,7 +47,7 @@ type CloudProviderGetterParams struct {
 	GlobalOptions *options.GlobalOptions
 }
 
-func (p *CloudProviderGetterParams) getProvidersCache(ctx context.Context) (CloudProvidersCache, error) {
+func (p *CloudProviderGetterParams) getProvidersCache(ctx context.Context) CloudProvidersCache {
 	providersCache := p.ProvidersCache
 	providersCacheLogMessage := "Provider cache is not nil. Using custom"
 	if govalue.IsNil(providersCache) {
@@ -57,7 +57,7 @@ func (p *CloudProviderGetterParams) getProvidersCache(ctx context.Context) (Clou
 
 	dhlog.FromContext(ctx).DebugContext(ctx, providersCacheLogMessage)
 
-	return providersCache, nil
+	return providersCache
 }
 
 func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context) (*fsprovider.DIParams, error) {
@@ -97,10 +97,10 @@ func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context) (*fsprovi
 	return diDefaultParams, nil
 }
 
-func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(ctx context.Context, di *cloud.ProviderDI) error {
+func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(ctx context.Context, di *cloud.ProviderDI) {
 	if di.VersionsContentProviderGetter != nil {
 		dhlog.FromContext(ctx).DebugContext(ctx, "fs.GetDI provided our own VersionProviderGetter")
-		return nil
+		return
 	}
 
 	versionProviderGetter := cloud.DefaultVersionContentProvider
@@ -113,8 +113,6 @@ func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(ctx context
 
 	dhlog.FromContext(ctx).DebugContext(ctx, logMessage)
 	di.VersionsContentProviderGetter = versionProviderGetter
-
-	return nil
 }
 
 func (p *CloudProviderGetterParams) getTmpDir(ctx context.Context) (string, error) {

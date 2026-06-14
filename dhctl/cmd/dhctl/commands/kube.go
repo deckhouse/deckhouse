@@ -55,7 +55,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 			WithInitParams(client.AppKubernetesInitParams(&opts.Kube))
 
 		proxyClose := func() {
-			l.Info(fmt.Sprint("Press Ctrl+C to close the proxy connection."))
+			l.Info("Press Ctrl+C to close the proxy connection.")
 			ch := make(chan struct{})
 			<-ch
 		}

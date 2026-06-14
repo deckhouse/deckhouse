@@ -113,7 +113,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return err
 		}
 
-		l.Debug(fmt.Sprint("scp: start"))
+		l.Debug("scp: start")
 
 		success := false
 		if Direction == "up" {
@@ -148,7 +148,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		if !success {
-			l.Info(fmt.Sprint("unrecognized flags"))
+			l.Info("unrecognized flags")
 		}
 
 		return nil

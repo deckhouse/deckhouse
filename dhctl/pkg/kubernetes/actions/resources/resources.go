@@ -335,7 +335,7 @@ func CreateResourcesLoop(
 	}
 
 	_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resources to create", func(ctx context.Context) error {
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s", strings.Join(resourcesToCreate, "\n")))
+		dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(resourcesToCreate, "\n"))
 		return nil
 	})
 
@@ -392,7 +392,7 @@ func CreateResourcesLoop(
 		case <-endChannel:
 			if len(resources) > 0 {
 				_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Failed to create", func(ctx context.Context) error {
-					dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("%s", strings.Join(remained, "\n")))
+					dhlog.FromContext(ctx).WarnContext(ctx, strings.Join(remained, "\n"))
 					return nil
 				})
 				return fmt.Errorf(
@@ -420,7 +420,7 @@ func logResources(ctx context.Context, res map[string][]string) {
 				}
 			}
 			_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resource not ready", func(ctx context.Context) error {
-				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s", strings.Join(remained, "\n")))
+				dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(remained, "\n"))
 				return nil
 			})
 		}
@@ -433,7 +433,7 @@ func logResources(ctx context.Context, res map[string][]string) {
 				}
 			}
 			_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resource ready", func(ctx context.Context) error {
-				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s", strings.Join(created, "\n")))
+				dhlog.FromContext(ctx).InfoContext(ctx, strings.Join(created, "\n"))
 				return nil
 			})
 		}

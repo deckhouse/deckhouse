@@ -17,8 +17,9 @@ package readiness
 import (
 	"context"
 	"fmt"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"reflect"
+
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type (

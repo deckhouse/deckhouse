@@ -493,11 +493,11 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	}
 
 	skipDebug := func(f string, args ...any) {
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s", skipMessage(f, args...)))
+		dhlog.FromContext(ctx).DebugContext(ctx, skipMessage(f, args...))
 	}
 
 	skipInfo := func(f string, args ...any) {
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s", skipMessage(f, args...)))
+		dhlog.FromContext(ctx).InfoContext(ctx, skipMessage(f, args...))
 	}
 
 	if debugPlanStep == "" {
@@ -595,21 +595,21 @@ func extractChanges(ctx context.Context, target string, mapOut map[string]any) s
 		change, ok := changeRaw.(map[string]any)
 		if !ok {
 			msg := fmt.Sprintf("Plan resource_changes key index %d for %s is not map[string]any, it is %T", i, target, changesRaw)
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s", msg))
+			dhlog.FromContext(ctx).DebugContext(ctx, msg)
 			continue
 		}
 
 		address, ok := change["address"]
 		if !ok {
 			msg := fmt.Sprintf("Plan resource_changes key index %d for %s does not contain address key", i, target)
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s", msg))
+			dhlog.FromContext(ctx).DebugContext(ctx, msg)
 			continue
 		}
 
 		addressStr, ok := address.(string)
 		if !ok {
 			msg := fmt.Sprintf("Plan resource_changes key index %d for %s address is not a string, it is %T", i, target, address)
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s", msg))
+			dhlog.FromContext(ctx).DebugContext(ctx, msg)
 			continue
 		}
 

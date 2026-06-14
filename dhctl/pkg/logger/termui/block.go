@@ -93,7 +93,7 @@ func (b *Block) Start(title string) {
 	b.title = title
 	b.start = b.opts.now()
 	b.stop = make(chan struct{})
-	io.WriteString(b.w, ansiEnterAlt+ansiHideCur)
+	_, _ = io.WriteString(b.w, ansiEnterAlt+ansiHideCur)
 	b.repaintLocked()
 	b.startTickerLocked()
 	b.startResizeLocked()
@@ -127,16 +127,16 @@ func (b *Block) summarizeLocked() {
 	}
 	b.summarized = true
 	for _, bl := range b.banner {
-		io.WriteString(b.w, bl+"\n")
+		_, _ = io.WriteString(b.w, bl+"\n")
 	}
 	for _, m := range b.milestonesAll {
-		io.WriteString(b.w, m+"\n")
+		_, _ = io.WriteString(b.w, m+"\n")
 	}
 	for _, wln := range b.warnsAll {
-		io.WriteString(b.w, wln+"\n")
+		_, _ = io.WriteString(b.w, wln+"\n")
 	}
 	if b.connString != "" {
-		io.WriteString(b.w, b.connString+"\n")
+		_, _ = io.WriteString(b.w, b.connString+"\n")
 	}
 }
 
@@ -147,7 +147,7 @@ func (b *Block) restoreLocked() {
 	}
 	b.active = false
 	close(b.stop)
-	io.WriteString(b.w, ansiShowCur+ansiLeaveAlt)
+	_, _ = io.WriteString(b.w, ansiShowCur+ansiLeaveAlt)
 }
 
 // repaintLocked renders the current frame in place: home, write each line + clear-EOL,
@@ -162,7 +162,7 @@ func (b *Block) repaintLocked() {
 		sb.WriteString("\n")
 	}
 	sb.WriteString(ansiClearEOS)
-	io.WriteString(b.w, sb.String())
+	_, _ = io.WriteString(b.w, sb.String())
 	b.shownLines = len(lines)
 }
 
@@ -183,7 +183,7 @@ func (b *Block) SetBanner(lines []string) {
 // a y/n prompt — and Resume repaints the block fresh, consuming whatever was printed here. The
 // record is already captured by the always-on file sink, so the block loses nothing.
 func (b *Block) passthroughLocked(line string) {
-	io.WriteString(b.w, line+"\n")
+	_, _ = io.WriteString(b.w, line+"\n")
 }
 
 // SetConnString stores the SSH connection string and triggers a repaint.
@@ -332,7 +332,7 @@ func (b *Block) Pause() {
 		return
 	}
 	b.paused = true
-	io.WriteString(b.w, ansiHome+ansiClearEOS+ansiShowCur)
+	_, _ = io.WriteString(b.w, ansiHome+ansiClearEOS+ansiShowCur)
 }
 
 func (b *Block) Resume() {
@@ -342,7 +342,7 @@ func (b *Block) Resume() {
 		return
 	}
 	b.paused = false
-	io.WriteString(b.w, ansiHideCur)
+	_, _ = io.WriteString(b.w, ansiHideCur)
 	b.repaintLocked()
 }
 

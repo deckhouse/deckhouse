@@ -19,11 +19,12 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
-	"os"
-	"path/filepath"
 )
 
 // NewTempStateCache creates new cache instance under baseDir, namespaced by identity.

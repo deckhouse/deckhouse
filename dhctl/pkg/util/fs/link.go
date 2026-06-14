@@ -17,9 +17,10 @@ package fs
 import (
 	"context"
 	"fmt"
-	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"io/fs"
 	"os"
+
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type CheckLinkSource func(string) error

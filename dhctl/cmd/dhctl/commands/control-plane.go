@@ -75,9 +75,9 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		}
 
 		if ready {
-			l.Info(fmt.Sprintf("%s", "Control plane manager is ready"))
+			l.Info("Control plane manager is ready")
 		} else {
-			l.Warn(fmt.Sprint("Control plane manager is not ready"))
+			l.Warn("Control plane manager is not ready")
 		}
 
 		return nil
@@ -136,7 +136,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 			return fmt.Errorf("control plane node is not ready: %v", err)
 		}
 
-		l.Info(fmt.Sprint("Control plane manager node is ready"))
+		l.Info("Control plane manager node is ready")
 
 		return nil
 	})

@@ -46,10 +46,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Cannot get CloudProvider. clusterUUID must not be empty")
 		}
 
-		providersCache, err := params.getProvidersCache(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("Cannot get CloudProvider. providers cache get error: %w", err)
-		}
+		providersCache := params.getProvidersCache(ctx)
 
 		if metaConfig.ProviderName == "" {
 			return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, func(ctx context.Context, clusterUUID string, _ *config.MetaConfig) (infrastructure.CloudProvider, error) {
@@ -83,10 +80,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 				return nil, fmt.Errorf("Cannot get fs.GetDI: %w", err)
 			}
 
-			err = params.setVersionsContentProviderGetter(ctx, di)
-			if err != nil {
-				return nil, err
-			}
+			params.setVersionsContentProviderGetter(ctx, di)
 
 			set, err := di.SettingsProvider.GetSettings(ctx, metaConfig.ProviderName, params.AdditionalParams)
 			if err != nil {

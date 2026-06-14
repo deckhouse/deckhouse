@@ -54,13 +54,13 @@ func computeLayout(height, totalMile, totalWarn, bannerH, connLine int, c caps) 
 	// split allocates the milestones/logbox rows for a given banner height: milestones take priority
 	// (grow to their full count), the logbox fills whatever remains. ok is false when the region does
 	// not fit at all.
-	split := func(bann int) (mile, logbox int, ok bool) {
+	split := func(bann int) (int, int, bool) {
 		body := room - bann - w - connLine
 		if body < 1 {
 			return 0, 0, false
 		}
-		mile = min(totalMile, body) // milestones grow first
-		logbox = body - mile        // logbox fills the leftover (>= 0)
+		mile := min(totalMile, body) // milestones grow first
+		logbox := body - mile        // logbox fills the leftover (>= 0)
 		return mile, logbox, true
 	}
 

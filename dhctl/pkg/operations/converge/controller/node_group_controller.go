@@ -152,12 +152,12 @@ func (c *NodeGroupController) switchClientBeforeDeleteNodesIfNeed(ctx *context.C
 
 func (c *NodeGroupController) tryDeleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	if len(nodesToDeleteInfo) == 0 {
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprint("No nodes to delete"))
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "No nodes to delete")
 		return nil
 	}
 
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprint("Skipping node deletion because destructive operations are disabled"))
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Skipping node deletion because destructive operations are disabled")
 		return nil
 	}
 
@@ -302,7 +302,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 		msg := fmt.Sprintf("Node template diff:\n\n%s\n", diff)
 
 		if !ctx.ChangesSettings().AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
-			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), fmt.Sprint("Updating node group template was skipped"))
+			dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Updating node group template was skipped")
 			return nil
 		}
 

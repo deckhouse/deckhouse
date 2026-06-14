@@ -17,11 +17,12 @@ package template
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	"path/filepath"
 )
 
 const bootstrapDir = "/bootstrap"

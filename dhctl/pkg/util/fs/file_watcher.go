@@ -17,6 +17,7 @@ package fs
 import (
 	"context"
 	"fmt"
+
 	"github.com/fsnotify/fsnotify"
 
 	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
