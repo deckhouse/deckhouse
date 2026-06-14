@@ -39,6 +39,12 @@ type Config struct {
 	Force          bool
 	TempDir        string
 	InstalledStore string
+
+	RegistryDirect bool
+	RegistryRepo   string
+	RegistryAuth   string
+	RegistryCA     string
+	RegistryScheme string
 }
 
 type packageRef struct {
@@ -62,7 +68,7 @@ func (r packageRef) errorf(msg string, args ...any) error {
 
 type Client struct {
 	cfg            Config
-	httpClient     *httpClient
+	fetcher        fetcher
 	logger         *log.Logger
 	resultRecorder *ResultRecorder
 }
@@ -70,7 +76,7 @@ type Client struct {
 func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client {
 	return &Client{
 		cfg:            cfg,
-		httpClient:     newHTTPClient(cfg),
+		fetcher:        newFetcher(cfg),
 		logger:         logger,
 		resultRecorder: recorder,
 	}
@@ -104,9 +110,12 @@ func (c *Client) Classify(packages []string) ([]InstallStatus, error) {
 }
 
 func (c *Client) UpdateAuth(endpoints []string, token string) {
+	if c.cfg.RegistryDirect {
+		return
+	}
 	c.cfg.Endpoints = endpoints
 	c.cfg.Token = token
-	c.httpClient = newHTTPClient(c.cfg)
+	c.fetcher = newHTTPClient(c.cfg)
 }
 
 // installWorkerCount caps install parallelism at runtime.NumCPU because install
@@ -332,17 +341,17 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 
 func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 	start := time.Now()
-	response, err := c.httpClient.Get(ctx, ref.digest)
+	body, source, err := c.fetcher.Get(ctx, ref.digest)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer body.Close()
 	httpDur := time.Since(start)
 
 	bodyStart := time.Now()
-	n, err := writeResponseBody(ref.archivePath, response.Body)
+	n, err := writeResponseBody(ref.archivePath, body)
 	if err != nil {
-		return fmt.Errorf("write response body from %s: %w", response.Request.URL.String(), err)
+		return fmt.Errorf("write response body from %s: %w", source, err)
 	}
 	bodyDur := time.Since(bodyStart)
 
@@ -352,7 +361,7 @@ func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 		throughput = fmt.Sprintf(", %.2f MB/s", mbps)
 	}
 	c.logf(ref, "archive downloaded from %s: %d bytes, http=%s body=%s%s",
-		response.Request.URL.Host, n, httpDur.Truncate(time.Millisecond), bodyDur.Truncate(time.Millisecond), throughput)
+		source, n, httpDur.Truncate(time.Millisecond), bodyDur.Truncate(time.Millisecond), throughput)
 	return nil
 }
 

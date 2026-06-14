@@ -194,7 +194,7 @@ func TestInstallPackageRetriesAndSucceeds(t *testing.T) {
 	client.cfg.Token = token
 	client.cfg.RetryDelay = 0
 	client.cfg.Retries = 1
-	client.httpClient = newHTTPClient(client.cfg)
+	client.fetcher = newHTTPClient(client.cfg)
 	ref := mustPackageRef(t, client, "zeta:sha256:retrysuccess")
 
 	if err := client.installPackage(context.Background(), ref); err != nil {
@@ -230,7 +230,7 @@ func TestInstallPackageFailsAfterRetriesAndCleansUp(t *testing.T) {
 	client.cfg.Token = token
 	client.cfg.RetryDelay = 0
 	client.cfg.Retries = 1
-	client.httpClient = newHTTPClient(client.cfg)
+	client.fetcher = newHTTPClient(client.cfg)
 	ref := mustPackageRef(t, client, "eta:sha256:retryfail")
 
 	err := client.installPackage(context.Background(), ref)
@@ -319,7 +319,7 @@ func TestInstallAllReturnsErrorWhenOnePackageFails(t *testing.T) {
 	client.cfg.Token = token
 	client.cfg.RetryDelay = 0
 	client.cfg.Retries = 1
-	client.httpClient = newHTTPClient(client.cfg)
+	client.fetcher = newHTTPClient(client.cfg)
 
 	goodRef := mustPackageRef(t, client, "kappa:sha256:allgood3")
 	badRef := mustPackageRef(t, client, "lambda:sha256:allbad1")
