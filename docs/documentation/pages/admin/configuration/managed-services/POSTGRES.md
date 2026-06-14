@@ -4,27 +4,81 @@ permalink: en/admin/configuration/managed-services/postgres.html
 description: "Administering the managed PostgreSQL service in Deckhouse Kubernetes Platform"
 ---
 
-Managed PostgreSQL in Deckhouse Kubernetes Platform adds an API for creating and maintaining PostgreSQL instances in the cluster. This page describes service administration: enabling the [`managed-postgres`](/modules/managed-postgres/) module and preparing PostgresClass classes for users.
+Managed PostgreSQL in Deckhouse Kubernetes Platform adds an API for creating and maintaining PostgreSQL instances in the cluster. This page describes service administration: enabling the [`managed-postgres`](/modules/managed-postgres/) module and preparing PostgresClass resources for users.
 
 Before you enable [`managed-postgres`](/modules/managed-postgres/), meet the [installation requirements](/modules/managed-postgres/configuration.html#requirements). For user operations with PostgreSQL services, see [Using Managed PostgreSQL](../../../user/managed-services/postgres.html).
 
-## Basic Managed PostgreSQL configuration
+## Enabling the managed-postgres module
 
-To prepare Managed PostgreSQL for users:
+To enable the `managed-postgres` module, create a `module-config.yaml` file with the `managed-postgres` ModuleConfig manifest. If such a resource already exists, check that its `spec.enabled` parameter is set to `true`:
 
-1. [Enable the `managed-postgres` module](/modules/managed-postgres/configuration.html) using one of the methods described on the module configuration page in the "How to explicitly enable the module..." block.
-2. Check whether the limits and default values in the automatically created `default` PostgresClass are suitable.
-3. Select a PostgresClass for users:
-   - if the `default` PostgresClass is suitable for user Postgres resources, provide users with the `default` name;
-   - if you need a separate PostgreSQL configuration, prepare a custom PostgresClass manifest, apply it, and provide users with the name of the created PostgresClass.
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: managed-postgres
+spec:
+  enabled: true
+```
 
-The following sections describe what happens after the module is enabled and which settings are included in PostgresClass preparation.
+Apply the manifest:
 
-## After Enabling Managed PostgreSQL
+```shell
+d8 k apply -f module-config.yaml
+```
 
-The `managed-postgres` module automatically creates the `default` PostgresClass resource.
+Check that the module has transitioned to the `Ready` state:
 
-The controller is also deployed in the `d8-managed-postgres` system namespace. It reconciles the state of Postgres resources in all user namespaces.
+```shell
+d8 k get module managed-postgres
+```
+
+Example output:
+
+```console
+$ d8 k get module managed-postgres
+NAME               STAGE   SOURCE   PHASE   ENABLED   READY
+managed-postgres                    Ready   True      True
+```
+
+## Steps after enabling the module
+
+After the `managed-postgres` module transitions to the `Ready` state, check that Managed PostgreSQL resources and service components have appeared in the cluster.
+
+The module automatically creates a PostgresClass named `default`:
+
+```shell
+d8 k get postgresclass default
+```
+
+Example output:
+
+```console
+$ d8 k get postgresclass default
+NAME      AGE
+default   20s
+```
+
+The controller is also deployed in the `d8-managed-postgres` system namespace. It reconciles the state of Postgres resources in user namespaces:
+
+```shell
+d8 k -n d8-managed-postgres get pods
+```
+
+Example output:
+
+```console
+d8 k -n d8-managed-postgres get pods
+NAME                                         READY   STATUS    RESTARTS   AGE
+d8-cnpg-operator-79b448c5bf-zv8d9            1/1     Running   0          4m
+managed-postgres-operator-5dbcbf96b5-8mqqt   1/1     Running   0          4m
+```
+
+Next, prepare the PostgresClass that users will specify in the `spec.postgresClassName` parameter of Postgres resources:
+
+1. Check limits and default values in the automatically created PostgresClass `default`.
+1. If PostgresClass `default` is suitable for user Postgres resources, provide users with the `default` name.
+1. If a separate PostgreSQL configuration is required, create your own PostgresClass and provide users with its name.
 
 ## Prepare PostgresClass
 
@@ -46,7 +100,13 @@ d8 k get PostgresClass default -o yaml
 
 When reviewing the `default` PostgresClass, check topology, sizing policies, default PostgreSQL parameter values, the list of parameters users can override, validation rules, and pod scheduling parameters.
 
-If the `default` PostgresClass is suitable for your requirements, provide users with the `default` name; if you need a separate PostgreSQL configuration, prepare a custom manifest using the following sections. Examples show separate `spec` fragments; a complete manifest is provided at the end of the section.
+If the settings do not meet your requirements, edit PostgresClass `default` using the examples below:
+
+```shell
+d8 k edit PostgresClass default
+```
+
+Examples show separate `spec` fragments; the complete manifest is provided in the [complete PostgresClass manifest example](#complete-postgresclass-manifest-example).
 
 ### Configure topology
 
@@ -78,11 +138,18 @@ spec:
 
 ### Configure sizing policies
 
-Administrators can control PostgreSQL instance sizes available to users by defining CPU and memory ranges and allowed CPU fractions. This helps keep resource consumption within the selected PostgresClass limits and prevents configurations that do not meet service requirements.
+Use sizing policies to limit the compute resources available to users. Sizing policies define CPU and memory allocation rules for Postgres instances.
 
-Sizing policies are configured in the [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) parameter of the PostgresClass resource.
+Sizing policies are configured in the required [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) parameter of the PostgresClass resource.
 
 The `cores.min`–`cores.max` ranges must not overlap between policies.
+
+In each policy, specify:
+
+- `cores.min` and `cores.max`: the minimum and maximum number of CPUs;
+- `memory.min` and `memory.max`: the minimum and maximum amount of memory;
+- `memory.step`: the step for allowed memory values; the selected amount of memory must be divisible by this value without a remainder;
+- `coreFractions`: multipliers for calculating `requests` based on the configured CPU `limits`.
 
 Example:
 
@@ -166,6 +233,13 @@ After choosing which parameters users can override, administrators can define a 
 
 Default values are configured in [`spec.configuration`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-configuration). If a parameter is allowed in `spec.overridableConfiguration` and is set in the Postgres resource, the value from Postgres takes precedence.
 
+The operator sets the following default values:
+
+- `maxConnections`: `100`;
+- `sharedBuffers`: 25% of `memory.size`;
+- `workMem`: (`memory.size` - `sharedBuffers`) * 4 / `maxConnections`;
+- `walKeepSize`: `512Mi`.
+
 Example:
 
 ```yaml
@@ -174,13 +248,6 @@ spec:
     maxConnections: 100
     workMem: 100Mi
 ```
-
-The operator sets the following default values:
-
-- `maxConnections`: `100`;
-- `sharedBuffers`: 25% of `memory.size`;
-- `workMem`: (`memory.size` - `sharedBuffers`) * 4 / `maxConnections`;
-- `walKeepSize`: `512Mi`.
 
 ### Configure pod scheduling
 
