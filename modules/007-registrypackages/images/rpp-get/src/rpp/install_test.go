@@ -397,6 +397,29 @@ func TestUninstallAllWritesResultFile(t *testing.T) {
 	})
 }
 
+func TestInstallUsesPreExtracted(t *testing.T) {
+	client := newTestClient(t, nil) // no endpoints: any network fetch would fail
+	ref := mustPackageRef(t, client, "pre:sha256:abcdef")
+
+	marker := filepath.Join(t.TempDir(), "install-ran")
+
+	// Simulate `fetch --extract`: populate the extract dir directly, no archive.
+	assertNoError(t, os.MkdirAll(ref.extractDir, 0o755))
+	assertNoError(t, os.WriteFile(filepath.Join(ref.extractDir, "install"),
+		[]byte("#!/usr/bin/env bash\nset -e\necho ok > "+marker+"\n"), 0o755))
+	assertNoError(t, os.WriteFile(filepath.Join(ref.extractDir, "uninstall"),
+		[]byte("#!/usr/bin/env bash\nexit 0\n"), 0o755))
+
+	if err := client.installPackage(context.Background(), ref); err != nil {
+		t.Fatalf("installPackage() error = %v", err)
+	}
+
+	assertPathExists(t, marker)
+	assertFileContent(t, filepath.Join(ref.installedDir, "digest"), ref.digest+"\n")
+	assertPathExists(t, filepath.Join(ref.installedDir, "install"))
+	assertPathExists(t, filepath.Join(ref.installedDir, "uninstall"))
+}
+
 func newTestClient(t *testing.T, endpoints []string) *Client {
 	t.Helper()
 

@@ -282,23 +282,41 @@ func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
 	}
 	skipCheckDur := time.Since(t)
 
-	t = time.Now()
-	if err := c.ensureFetchedArchive(ctx, ref); err != nil {
-		return err
-	}
-	fetchDur := time.Since(t)
-
-	workDir, err := c.createWorkDir(ref)
+	preExtracted, err := c.isExtracted(ref)
 	if err != nil {
 		return err
 	}
-	defer c.cleanupWorkDir(ref, workDir)
 
-	t = time.Now()
-	if err := c.extractArchive(ctx, ref, workDir); err != nil {
-		return err
+	var (
+		workDir    string
+		fetchDur   time.Duration
+		extractDur time.Duration
+	)
+	if preExtracted && !c.cfg.Force {
+		// Prefetch (`fetch --extract`) already downloaded and decompressed this
+		// package; install straight from that directory and skip the download
+		// and extraction on the critical path.
+		workDir = ref.extractDir
+		c.logf(ref, "using pre-extracted package at %s", workDir)
+	} else {
+		t = time.Now()
+		if err := c.ensureFetchedArchive(ctx, ref); err != nil {
+			return err
+		}
+		fetchDur = time.Since(t)
+
+		workDir, err = c.createWorkDir(ref)
+		if err != nil {
+			return err
+		}
+
+		t = time.Now()
+		if err := c.extractArchive(ctx, ref, workDir); err != nil {
+			return err
+		}
+		extractDur = time.Since(t)
 	}
-	extractDur := time.Since(t)
+	defer c.cleanupWorkDir(ref, workDir)
 
 	t = time.Now()
 	if err := c.runInstallScript(ctx, ref, workDir); err != nil {
