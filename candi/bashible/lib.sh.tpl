@@ -421,13 +421,16 @@ bb-rpp-wait-fetched() {
   local digest="$2"
   local tempdir="${BB_RP_FETCHED_STORE:-/opt/deckhouse/tmp/registrypackages}"
   local archive="${tempdir}/${name}/${digest}.tar.gz"
+  # Prefetch with --extract decompresses ahead into a directory instead of saving
+  # the .tar.gz; either form counts as "fetched".
+  local extracted="${tempdir}/${name}/${digest}.extracted"
   local installed_digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/${name}/digest"
   local deadline=$((SECONDS + 600))
   local svc="rpp-prefetch.service"
   local svc_state
 
   while [ $SECONDS -lt $deadline ]; do
-    if [ -f "$archive" ]; then
+    if [ -f "$archive" ] || [ -d "$extracted" ]; then
       return 0
     fi
     # Package already installed at the requested digest (e.g. baked into the base

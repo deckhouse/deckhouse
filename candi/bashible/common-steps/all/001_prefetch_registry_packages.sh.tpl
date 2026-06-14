@@ -81,11 +81,52 @@ for var in PACKAGES_PROXY_ADDRESSES PACKAGES_PROXY_TOKEN PACKAGES_PROXY_KUBE_API
   fi
 done
 
+{{- if ne .registry.mode "Local" }}
+# Fetch packages straight from the registry (rpp-get --registry-direct) so the
+# prefetch does not depend on the rpp server / dhctl ssh tunnel. These vars are
+# confined to the prefetch env file: if the direct fetch fails, the prefetch unit
+# fails and the install steps fall back to inline `rpp-get install` over the rpp
+# proxy. Skipped for Local mode (the node has no reachable upstream registry).
+{{-   if eq .registry.mode "Proxy" }}
+{{-     with (.registry.bootstrap).proxy }}
+{
+  echo 'export REGISTRY_DIRECT=true'
+  echo {{ printf "export REGISTRY_REPO=%s/%s" .host .path | quote }}
+  echo {{ printf "export REGISTRY_SCHEME=%s" .scheme | quote }}
+  echo {{ printf "export REGISTRY_AUTH=%s" (printf "%s:%s" .username (.password | default "") | b64enc) | quote }}
+} >>"$env_file"
+{{-       if .ca }}
+printf '%s\n' {{ .ca | quote }} > /run/rpp-registry-ca.crt
+echo 'export REGISTRY_CA_FILE=/run/rpp-registry-ca.crt' >>"$env_file"
+{{-       end }}
+{{-     end }}
+{{-   else }}
+{{-     $host := .registry.imagesBase | splitList "/" | first }}
+{{-     with index .registry.hosts $host }}
+{{-       $mirror := index .mirrors 0 }}
+{
+  echo 'export REGISTRY_DIRECT=true'
+  echo {{ printf "export REGISTRY_REPO=%s" $.registry.imagesBase | quote }}
+  echo {{ printf "export REGISTRY_SCHEME=%s" $mirror.scheme | quote }}
+{{-         if $mirror.auth.username }}
+  echo {{ printf "export REGISTRY_AUTH=%s" (printf "%s:%s" $mirror.auth.username ($mirror.auth.password | default "") | b64enc) | quote }}
+{{-         else }}
+  echo {{ printf "export REGISTRY_AUTH=%s" $mirror.auth.auth | quote }}
+{{-         end }}
+} >>"$env_file"
+{{-         if $mirror.ca }}
+printf '%s\n' {{ $mirror.ca | quote }} > /run/rpp-registry-ca.crt
+echo 'export REGISTRY_CA_FILE=/run/rpp-registry-ca.crt' >>"$env_file"
+{{-         end }}
+{{-     end }}
+{{-   end }}
+{{- end }}
+
 if ! systemd-run \
     --unit="$unit" \
     --description="Prefetch deckhouse registry packages (parallel with bashible system prep)" \
     --collect \
-    /bin/bash -c ". \"$env_file\" && exec /opt/deckhouse/bin/rpp-get fetch \
+    /bin/bash -c ". \"$env_file\" && exec /opt/deckhouse/bin/rpp-get fetch --extract \
       \"d8:{{ .images.registrypackages.d8 }}\" \
       \"yq:{{ .images.registrypackages.yq4471 }}\" \
       \"curl:{{ .images.registrypackages.d8Curl891 }}\" \
