@@ -22,7 +22,7 @@ import (
 
 func TestNewRootWritesToFileSink(t *testing.T) {
 	var file bytes.Buffer
-	l := NewRoot(Options{FileWriter: &file, Debug: true})
+	l := NewRoot(Options{FileWriter: &file})
 	l.Info("root file record")
 	if !strings.Contains(file.String(), "root file record") {
 		t.Fatalf("file sink missing record: %q", file.String())
@@ -30,10 +30,9 @@ func TestNewRootWritesToFileSink(t *testing.T) {
 }
 
 func TestNewRootFileAlwaysCapturesDebug(t *testing.T) {
-	// The debug file is always complete regardless of the Debug flag (which only drives terminal
-	// verbosity now).
+	// The debug file is always complete: it captures DEBUG + Info unconditionally.
 	var file bytes.Buffer
-	l := NewRoot(Options{FileWriter: &file, Debug: false})
+	l := NewRoot(Options{FileWriter: &file})
 	l.Debug("debug detail")
 	l.Info("info line")
 	if !strings.Contains(file.String(), "debug detail") || !strings.Contains(file.String(), "info line") {
@@ -42,9 +41,9 @@ func TestNewRootFileAlwaysCapturesDebug(t *testing.T) {
 }
 
 func TestNewRootNormalModeTTYGating(t *testing.T) {
-	// Debug=false (normal): terminal shows only ShowInCompacted()-tagged records; the file gets both.
+	// Normal (not -v): terminal shows only ShowInCompacted()-tagged records; the file gets both.
 	var file, tty bytes.Buffer
-	l := NewRoot(Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true, Debug: false})
+	l := NewRoot(Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true})
 
 	l.Info("plain") // file only
 	l.Info("shown", ShowInCompacted())
@@ -70,30 +69,21 @@ func TestNewRootVerboseShowsEverythingOnTTY(t *testing.T) {
 	}
 }
 
-func TestNewRootVerboseAloneHidesDebugOnTTY(t *testing.T) {
-	// -v shows all Info+ on the terminal but NOT DEBUG; DEBUG needs Debug (DHCTL_DEBUG). File keeps both.
+func TestNewRootDebugNeverReachesTTY(t *testing.T) {
+	// The terminal floor is Info: DEBUG never reaches it, even under -v. The file keeps DEBUG.
+	// DHCTL_DEBUG only enriches the file, so the terminal is identical with or without it.
 	var file, tty bytes.Buffer
-	l := NewRoot(Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true, Verbose: true, Debug: false})
+	l := NewRoot(Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true, Verbose: true})
 	l.Debug("debug detail")
 	l.Info("info detail")
 	if strings.Contains(tty.String(), "debug detail") {
-		t.Fatalf("DEBUG must not reach tty without debug mode: %q", tty.String())
+		t.Fatalf("DEBUG must never reach tty: %q", tty.String())
 	}
 	if !strings.Contains(tty.String(), "info detail") {
 		t.Fatalf("verbose tty must show info: %q", tty.String())
 	}
 	if !strings.Contains(file.String(), "debug detail") {
 		t.Fatalf("file must keep DEBUG: %q", file.String())
-	}
-}
-
-func TestNewRootDebugModeShowsDebugOnTTY(t *testing.T) {
-	// Debug=true (DHCTL_DEBUG): DEBUG records reach the terminal. Implies verbose in production wiring.
-	var file, tty bytes.Buffer
-	l := NewRoot(Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true, Verbose: true, Debug: true})
-	l.Debug("debug detail")
-	if !strings.Contains(tty.String(), "debug detail") {
-		t.Fatalf("debug mode tty must show DEBUG: %q", tty.String())
 	}
 }
 

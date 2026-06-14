@@ -70,42 +70,13 @@ func Progress(ctx context.Context, l *slog.Logger, frac float64, title string) {
 }
 
 // progressEvent returns the progress_event value carried by r, or "" if absent.
-func progressEvent(r slog.Record) string {
-	var ev string
-	r.Attrs(func(a slog.Attr) bool {
-		if a.Key == attrKeyProgressEvent {
-			ev = a.Value.String()
-			return false
-		}
-		return true
-	})
-	return ev
-}
+func progressEvent(r slog.Record) string { return firstString(r, attrKeyProgressEvent) }
 
 // progressValue returns the progress_value carried by r and whether it was present.
-func progressValue(r slog.Record) (float64, bool) {
-	var v float64
-	var found bool
-	r.Attrs(func(a slog.Attr) bool {
-		if a.Key == attrKeyProgressValue {
-			v = a.Value.Float64()
-			found = true
-			return false
-		}
-		return true
-	})
-	return v, found
-}
+func progressValue(r slog.Record) (float64, bool) { return firstFloat(r, attrKeyProgressValue) }
 
 // progressTitle returns the progress_title carried by r, or "" if absent.
-func progressTitle(r slog.Record) string {
-	var t string
-	r.Attrs(func(a slog.Attr) bool {
-		if a.Key == attrKeyProgressTitle {
-			t = a.Value.String()
-			return false
-		}
-		return true
-	})
-	return t
-}
+func progressTitle(r slog.Record) string { return firstString(r, attrKeyProgressTitle) }
+
+// recordProgressName returns the progress_name value carried by r, or "" if absent.
+func recordProgressName(r slog.Record) string { return firstString(r, attrKeyProgressName) }

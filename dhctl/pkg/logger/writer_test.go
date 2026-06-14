@@ -37,6 +37,20 @@ func TestLineWriterEmitsOneRecordPerLine(t *testing.T) {
 	}
 }
 
+func TestFileOnlyLineWriterTagsFileOnly(t *testing.T) {
+	// shell-operator/klog capture must enrich the .log without ever reaching the terminal, so every
+	// line it writes carries FileOnly (routeToTTY then suppresses it on the compact terminal).
+	c := &capture{}
+	w := newFileOnlyLineWriter(newLoggerFromCapture(c))
+	_, _ = w.Write([]byte("shell-operator internal line\n"))
+	if len(c.records) != 1 {
+		t.Fatalf("want 1 record, got %d", len(c.records))
+	}
+	if !hasFileOnly(c.records[0]) {
+		t.Fatalf("file-only line writer must tag FileOnly, got %+v", c.records[0])
+	}
+}
+
 func TestLineWriterBuffersPartialLine(t *testing.T) {
 	c := &capture{}
 	w := NewLineWriter(newLoggerFromCapture(c))

@@ -21,6 +21,9 @@ import (
 	"os"
 
 	"github.com/mattn/go-isatty"
+	"github.com/pterm/pterm"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/logger/termui"
 )
 
 // TerminalUIHandler is a dual-sink slog.Handler.
@@ -30,61 +33,67 @@ type TerminalUIHandler struct {
 	file  slog.Handler
 	tty   slog.Handler // nil when not a TTY
 	level slog.Leveler
-	// verbose (the -v flag) makes the terminal sink show EVERY record (at or above ttyLevel), not
-	// just ShowInCompacted()-tagged ones. The file sink always receives everything regardless.
+	// verbose (the -v flag) makes the terminal sink show EVERY record at Info+, not just
+	// ShowInCompacted()-tagged ones. The file sink always receives everything regardless. DEBUG
+	// records never reach the terminal (the file sink keeps them); DHCTL_DEBUG only enriches the file.
 	verbose bool
-	// ttyLevel is the minimum level routed to the terminal. It is Info by default and Debug only
-	// when DHCTL_DEBUG is set, so DEBUG records reach the terminal solely in debug mode (the file
-	// sink always keeps them). Independent of verbose: -v shows all Info+ lines without DEBUG.
-	ttyLevel slog.Level
 	// compactTagged is true when a ShowInCompacted() marker was applied via WithAttrs (e.g. logger.With(ShowInCompacted())).
 	// Such handler-level tagging never reaches the record passed to Handle, so we track it here.
 	compactTagged bool
+	// interactiveBlock is true when the terminal sink is a live termui.Block (interactive + real
+	// terminal). In that mode ordinary detail (Info + FileOnly) is also forwarded to the tty sink so
+	// it feeds the block's ephemeral log box; the file sink keeps it regardless.
+	interactiveBlock bool
+	// block is the live termui.Block when interactiveBlock is true, nil otherwise. Held so that
+	// RestoreTerminal can leave the alternate screen on any exit path (signal, panic, normal).
+	block *termui.Block
 }
 
 func handlerOptions(level slog.Leveler) *slog.HandlerOptions {
 	return &slog.HandlerOptions{Level: level, ReplaceAttr: Sanitize}
 }
 
-// NewTerminalUIHandler builds a handler writing the file sink to out and, when out is a
-// TTY, a terminal sink to the same stream. Used by BufferLogger and similar callers.
-func NewTerminalUIHandler(out io.Writer) slog.Handler {
-	lv := new(slog.LevelVar)
-	lv.Set(slog.LevelDebug)
-	isTTY := false
-	if f, ok := out.(*os.File); ok {
-		isTTY = isatty.IsTerminal(f.Fd()) || isatty.IsCygwinTerminal(f.Fd())
-	}
-	var ttyW io.Writer
-	if isTTY {
-		ttyW = out
-	}
-	return newTerminalUIHandler(out, ttyW, isTTY, false /* interactive */, lv, false, slog.LevelInfo)
+// handlerConfig holds the parameters of newTerminalUIHandler. Grouping them into named fields —
+// especially the three bools (isTTY/interactive/verbose) — keeps call sites self-documenting.
+type handlerConfig struct {
+	fileW       io.Writer    // always-on file sink; required
+	ttyW        io.Writer    // terminal sink stream; nil disables the terminal sink
+	isTTY       bool         // ttyW is a terminal (enables the terminal sink at all)
+	interactive bool         // prefer the pinned live block when the terminal supports it
+	level       slog.Leveler // file-sink threshold (Debug in practice)
+	verbose     bool         // -v: terminal shows every record, not just curated output
 }
 
-func newTerminalUIHandler(fileW, ttyW io.Writer, isTTY, interactive bool, level slog.Leveler, verbose bool, ttyLevel slog.Level) *TerminalUIHandler {
+func newTerminalUIHandler(cfg handlerConfig) *TerminalUIHandler {
 	h := &TerminalUIHandler{
-		file:     slog.NewJSONHandler(fileW, handlerOptions(level)),
-		level:    level,
-		verbose:  verbose,
-		ttyLevel: ttyLevel,
+		file:    slog.NewJSONHandler(cfg.fileW, handlerOptions(cfg.level)),
+		level:   cfg.level,
+		verbose: cfg.verbose,
 	}
-	if isTTY && ttyW != nil {
-		// Use the progress-capable renderer as the terminal sink. The pinned pterm bar is only used
-		// when interactive AND the writer is a real terminal; otherwise (non-interactive -v dump, or
-		// any non-terminal writer like a bytes.Buffer in tests or a piped stdout) fall back to a plain
-		// progressUI that writes plain lines and never starts a pinned block or pterm's MultiPrinter.
-		real := isRealTerminal(ttyW)
-		var ui progressUI
-		if interactive && real {
-			ui = newTerminalProgressUI(ttyW)
+	if cfg.isTTY && cfg.ttyW != nil {
+		// Pick the terminal backend. The live termui block is only used when interactive AND the writer
+		// is a real terminal AND the terminal is tall enough; otherwise (non-interactive -v dump, a tiny
+		// terminal, or any non-terminal writer like a bytes.Buffer in tests or a piped stdout) fall back
+		// to plainSink, which prints plain logboek lines and has no pinned bar (bar stays nil).
+		real := isRealTerminal(cfg.ttyW)
+		rc := rendererConfig{out: cfg.ttyW, level: cfg.level, color: real}
+		if cfg.interactive && real && fitsLiveBlock() {
+			bl := termui.New(cfg.ttyW, termui.Options{Color: real})
+			rc.sink = bl
+			rc.bar = bl
+			h.interactiveBlock = true
+			h.block = bl
 		} else {
-			ui = newPlainProgressUI(ttyW)
+			rc.sink = newPlainSink(cfg.ttyW)
 		}
-		h.tty = newTTYRenderer(ttyW, ui, level, real, verbose)
+		h.tty = newTTYRenderer(rc)
 	}
 	return h
 }
+
+// fitsLiveBlock reports whether the terminal is tall enough to host the live block. A degenerate
+// 1-row terminal cannot draw a pinned multi-line block, so we fall back to plain lines there.
+func fitsLiveBlock() bool { return pterm.GetTerminalHeight() >= 2 }
 
 // isRealTerminal reports whether w is an *os.File backed by an interactive terminal.
 func isRealTerminal(w io.Writer) bool {
@@ -100,34 +109,55 @@ func (h *TerminalUIHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 func (h *TerminalUIHandler) Handle(ctx context.Context, r slog.Record) error {
+	// Redact once, before fan-out, so both sinks see the clean message and no render path can leak.
+	// r is a value copy; mutating its Message does not affect the caller's record.
+	r.Message = sanitizeMessage(r.Message)
 	// File sink first — it must never be lost.
 	if err := h.file.Handle(ctx, r); err != nil {
 		return err
 	}
-	// Terminal sink routing:
-	//   - verbose (-v): everything.
-	//   - control markers (progress/process): always — they drive the bar/current-action/boxes,
-	//     they are not visible text themselves.
-	//   - ShowInCompacted(): the curated compact-view text (successful phase transitions).
-	//   - Warn and above: always visible, so failures are never hidden in compact mode.
-	// DEBUG records reach the terminal only in debug mode (ttyLevel == Debug); the file keeps them always.
-	// FileOnly records (lib-connection streamed command output) stay off the compact terminal even at
-	// Error level — they would flood it; the user is pointed to the debug-log file. -v shows them.
-	if h.tty != nil && r.Level >= h.ttyLevel && !(hasFileOnly(r) && !h.verbose) &&
-		(h.verbose || isRendererMarker(r) || h.compactTagged || hasShowInCompacted(r) || r.Level >= slog.LevelWarn) {
+	if h.routeToTTY(r) {
 		// Terminal output errors are non-fatal for the record's persistence.
 		_ = h.tty.Handle(ctx, r)
 	}
 	return nil
 }
 
+// routeToTTY decides whether r reaches the terminal sink. The file sink always receives every
+// record (handled above); this gate only governs the curated/live terminal view.
+//
+//   - DEBUG records never reach the terminal (the file sink keeps them); the terminal floor is Info.
+//     DHCTL_DEBUG only enriches the file, so the terminal looks identical with or without it.
+//   - A live interactive block also wants ordinary detail (Info + FileOnly) to feed its ephemeral
+//     log box, so once past the level gate everything is forwarded; the file sink already captured it.
+//   - FileOnly records (lib-connection streamed command output) stay off the compact terminal even
+//     at Error level — they would flood it; the user is pointed to the debug-log file. -v shows them.
+//   - Otherwise a record reaches the terminal when: verbose (-v) shows everything; control markers
+//     (progress/process) always pass (they drive the bar/current-action/boxes, not visible text);
+//     ShowInCompacted() is the curated compact-view text; Warn and above is always visible so
+//     failures are never hidden in compact mode.
+func (h *TerminalUIHandler) routeToTTY(r slog.Record) bool {
+	if h.tty == nil || r.Level < slog.LevelInfo {
+		return false
+	}
+	if h.interactiveBlock {
+		return true
+	}
+	if hasFileOnly(r) && !h.verbose {
+		return false
+	}
+	return h.verbose || isRendererMarker(r) || h.compactTagged ||
+		hasShowInCompacted(r) || r.Level >= slog.LevelWarn
+}
+
 func (h *TerminalUIHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	n := &TerminalUIHandler{
-		file:          h.file.WithAttrs(attrs),
-		level:         h.level,
-		verbose:       h.verbose,
-		ttyLevel:      h.ttyLevel,
-		compactTagged: h.compactTagged || attrsContainShowInCompacted(attrs),
+		file:             h.file.WithAttrs(attrs),
+		level:            h.level,
+		verbose:          h.verbose,
+		compactTagged:    h.compactTagged || attrsContainShowInCompacted(attrs),
+		interactiveBlock: h.interactiveBlock,
+		block:            h.block,
 	}
 	if h.tty != nil {
 		n.tty = h.tty.WithAttrs(attrs)
@@ -137,16 +167,25 @@ func (h *TerminalUIHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 func (h *TerminalUIHandler) WithGroup(name string) slog.Handler {
 	n := &TerminalUIHandler{
-		file:          h.file.WithGroup(name),
-		level:         h.level,
-		verbose:       h.verbose,
-		ttyLevel:      h.ttyLevel,
-		compactTagged: h.compactTagged,
+		file:             h.file.WithGroup(name),
+		level:            h.level,
+		verbose:          h.verbose,
+		compactTagged:    h.compactTagged,
+		interactiveBlock: h.interactiveBlock,
+		block:            h.block,
 	}
 	if h.tty != nil {
 		n.tty = h.tty.WithGroup(name)
 	}
 	return n
+}
+
+// RestoreTerminal leaves the alternate screen if an interactive Block is active.
+// Safe to call multiple times and when no Block exists.
+func (h *TerminalUIHandler) RestoreTerminal() {
+	if h.block != nil {
+		h.block.Restore()
+	}
 }
 
 func attrsContainShowInCompacted(attrs []slog.Attr) bool {

@@ -43,14 +43,34 @@ func (f *fakeProgressUI) SetProgress(frac float64, title string) {
 	f.lastTitle = title
 }
 func (f *fakeProgressUI) SetAction(string) { f.calls = append(f.calls, "SetAction") }
-func (f *fakeProgressUI) WriteLine(s string) {
-	f.calls = append(f.calls, "WriteLine")
-	f.writtenLine += s // accumulate so multi-line renders (e.g. nested boxes) are fully captured
+func (f *fakeProgressUI) Milestone(status, text string) {
+	f.calls = append(f.calls, "Milestone")
+	f.writtenLine += status + " " + text + "\n"
+}
+
+// Warn and Log both feed writtenLine (accumulated, so multi-line renders such as nested boxes are
+// fully captured) so assertions can match on the rendered text regardless of which routed it.
+func (f *fakeProgressUI) Warn(line string) {
+	f.calls = append(f.calls, "Warn")
+	f.writtenLine += line + "\n"
+}
+func (f *fakeProgressUI) Log(line string) {
+	f.calls = append(f.calls, "Log")
+	f.writtenLine += line + "\n"
 }
 func (f *fakeProgressUI) Finish() { f.calls = append(f.calls, "Finish") }
 func (f *fakeProgressUI) Pause()  { f.calls = append(f.calls, "Pause") }
 func (f *fakeProgressUI) Resume() { f.calls = append(f.calls, "Resume") }
-func (f *fakeProgressUI) Resize() { f.calls = append(f.calls, "Resize") }
+func (f *fakeProgressUI) SetBanner(lines []string) {
+	f.calls = append(f.calls, "SetBanner")
+	for _, l := range lines {
+		f.writtenLine += l + "\n"
+	}
+}
+func (f *fakeProgressUI) SetConnString(s string) {
+	f.calls = append(f.calls, "SetConnString")
+	f.writtenLine += s + "\n"
+}
 
 func (f *fakeProgressUI) has(call string) bool {
 	for _, c := range f.calls {
@@ -83,7 +103,7 @@ func procEndRec(name string) slog.Record {
 
 func TestRendererStartOpensBar(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "p",
 		slog.String(attrKeyProgressEvent, string(progressStart)),
 		slog.String(attrKeyProgressName, "phase")))
@@ -94,7 +114,7 @@ func TestRendererStartOpensBar(t *testing.T) {
 
 func TestRendererProgressValueAdvancesBar(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "x",
 		slog.Float64(attrKeyProgressValue, 0.5), slog.String(attrKeyProgressTitle, "t")))
 	if !ui.has("SetProgress") || ui.lastFrac != 0.5 || ui.lastTitle != "t" {
@@ -104,7 +124,7 @@ func TestRendererProgressValueAdvancesBar(t *testing.T) {
 
 func TestRendererEndClosesBar(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "x",
 		slog.String(attrKeyProgressEvent, string(progressEnd))))
 	if !ui.has("Finish") {
@@ -113,12 +133,12 @@ func TestRendererEndClosesBar(t *testing.T) {
 }
 
 // --- process boxes ---
-// All rendered lines (boxes + ordinary text) go through ui.WriteLine, so the pinned progress
+// All rendered lines (boxes + ordinary detail text) go through ui.Log, so the pinned progress
 // block stays consistent regardless of which (possibly .With()-derived) logger emitted them.
 
 func TestRendererProcessOpensBox(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), procStartRec("deploy"))
 	if !strings.Contains(ui.writtenLine, boxOpen+" deploy") {
 		t.Fatalf("box-open not rendered: %q", ui.writtenLine)
@@ -130,7 +150,7 @@ func TestRendererProcessOpensBox(t *testing.T) {
 
 func TestRendererProcessClosesBoxWithDuration(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), procStartRec("deploy"))
 	_ = rdr.Handle(context.Background(), procEndRec("deploy"))
 	s := ui.writtenLine
@@ -144,7 +164,7 @@ func TestRendererProcessClosesBoxWithDuration(t *testing.T) {
 
 func TestRendererNestedProcessesIndent(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), procStartRec("outer"))
 	_ = rdr.Handle(context.Background(), procStartRec("inner"))
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "body"))
@@ -161,7 +181,7 @@ func TestRendererNestedProcessesIndent(t *testing.T) {
 
 func TestRendererMultiLineMessageIndentsEveryLine(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), procStartRec("ng")) // depth 1 → prefix "│ "
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "NAME\nmaster\nworker"))
 	for _, want := range []string{boxBody + "NAME", boxBody + "master", boxBody + "worker"} {
@@ -173,34 +193,34 @@ func TestRendererMultiLineMessageIndentsEveryLine(t *testing.T) {
 
 func TestRendererOrdinaryLineGoesThroughUI(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "plainmsg"))
-	if !ui.has("WriteLine") || !strings.Contains(ui.writtenLine, "plainmsg") {
+	if !ui.has("Log") || !strings.Contains(ui.writtenLine, "plainmsg") {
 		t.Fatalf("line not routed through ui: %q calls=%v", ui.writtenLine, ui.calls)
 	}
 }
 
 func TestRendererLineScrollsAboveActiveBar(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "hello"))
-	if !ui.has("WriteLine") || !strings.Contains(ui.writtenLine, "hello") {
+	if !ui.has("Log") || !strings.Contains(ui.writtenLine, "hello") {
 		t.Fatalf("line not scrolled above bar: %q calls=%v", ui.writtenLine, ui.calls)
 	}
 }
 
 func TestRendererBoxScrollsAboveActiveBar(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), procStartRec("deploy"))
-	if !ui.has("WriteLine") || !strings.Contains(ui.writtenLine, boxOpen+" deploy") {
+	if !ui.has("Log") || !strings.Contains(ui.writtenLine, boxOpen+" deploy") {
 		t.Fatalf("box not scrolled above bar: %q", ui.writtenLine)
 	}
 }
 
 func TestRendererPauseResume(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "x",
 		slog.String(attrKeyProgressEvent, string(progressPause))))
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "x",
@@ -211,7 +231,7 @@ func TestRendererPauseResume(t *testing.T) {
 }
 
 func TestRendererRespectsLevel(t *testing.T) {
-	rdr := newTTYRenderer(&bytes.Buffer{}, &fakeProgressUI{}, slog.LevelInfo, false, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: &fakeProgressUI{}, bar: &fakeProgressUI{}, level: slog.LevelInfo})
 	if rdr.Enabled(context.Background(), slog.LevelDebug) {
 		t.Fatal("debug should be disabled at info level")
 	}
@@ -226,7 +246,7 @@ func TestRendererRespectsLevel(t *testing.T) {
 // on the shared ui/stack and, in production, corrupts the pinned block (blink, eaten messages).
 func TestRendererConcurrentHandleIsSerialized(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, false, false)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelInfo, "start",
 		slog.String(attrKeyProgressEvent, string(progressStart)), slog.String(attrKeyProgressName, "p")))
 
@@ -251,7 +271,7 @@ func TestRendererConcurrentHandleIsSerialized(t *testing.T) {
 
 func TestRendererErrorStyledWithColor(t *testing.T) {
 	ui := &fakeProgressUI{}
-	rdr := newTTYRenderer(&bytes.Buffer{}, ui, slog.LevelDebug, true, true)
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug, color: true})
 	_ = rdr.Handle(context.Background(), newRecord(slog.LevelError, "boom"))
 	s := ui.writtenLine
 	if !strings.Contains(s, "boom") || !strings.Contains(s, "\x1b[") {

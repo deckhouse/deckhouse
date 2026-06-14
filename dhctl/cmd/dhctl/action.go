@@ -342,10 +342,12 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	//   - stdoutTTY: stdout is a terminal → enable the terminal sink at all.
 	//   - interactive: pinned progress bar; on only when a terminal AND not the -v linear dump.
 	//   - verbose (-v): show every Info+ record on the terminal.
-	//   - isDebug (DHCTL_DEBUG): also surface DEBUG records on the terminal.
+	// DHCTL_DEBUG (isDebug) deliberately does NOT touch the terminal — it only enriches the .log file
+	// (full DEBUG is always captured there, plus shell-operator/klog internals via BindShellOperator).
+	// So the terminal looks identical with or without DHCTL_DEBUG.
 	stdoutTTY := input.IsTerminal()
 	interactive := stdoutTTY && !i.opts.Global.ShowProgress
-	verbose := i.opts.Global.ShowProgress || i.params.isDebug
+	verbose := i.opts.Global.ShowProgress
 
 	commandName := getCommandName(c)
 
@@ -359,7 +361,6 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 			IsTTY:       stdoutTTY,
 			Interactive: interactive,
 			Verbose:     verbose,
-			Debug:       i.params.isDebug,
 		}))
 		return doNothingOnShutdownFunc, nil
 	}
@@ -387,7 +388,6 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 		IsTTY:       stdoutTTY,
 		Interactive: interactive,
 		Verbose:     verbose,
-		Debug:       i.params.isDebug,
 	}))
 
 	// cmd-level notice now goes through the slog root (terminal + file).

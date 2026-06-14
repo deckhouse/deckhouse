@@ -24,7 +24,7 @@ import (
 
 func TestRootWritesFileAndTTY(t *testing.T) {
 	var file, tty bytes.Buffer
-	root := logger.NewRoot(logger.Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true, Debug: true})
+	root := logger.NewRoot(logger.Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true})
 	root.Info("Debug log file: /tmp/x.log")
 
 	if !strings.Contains(file.String(), "Debug log file") {

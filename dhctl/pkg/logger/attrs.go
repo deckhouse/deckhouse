@@ -27,6 +27,14 @@ const (
 	// FailRetry) so the terminal renderer draws the legacy colored status badge before the title
 	// instead of level-plain text. Value is one of the badge* constants below.
 	attrKeyBadge = "badge"
+
+	// attrKeyBanner marks a record whose message is the startup ASCII banner. The terminal UI
+	// pins it at the top of the live canvas instead of scrolling it as a log line.
+	attrKeyBanner = "banner"
+
+	// attrKeyConnString marks a record whose message is the SSH connection string. The terminal
+	// UI pins it as a distinct milestone so it stays visible and is included in the closing summary.
+	attrKeyConnString = "conn_string"
 )
 
 // Badge status values carried by attrKeyBadge.
@@ -43,17 +51,7 @@ func BadgeFailed() slog.Attr  { return slog.String(attrKeyBadge, badgeFailed) }
 func BadgeWarning() slog.Attr { return slog.String(attrKeyBadge, badgeWarning) }
 
 // badgeStatus returns the badge value carried by r, or "" if absent.
-func badgeStatus(r slog.Record) string {
-	var status string
-	r.Attrs(func(a slog.Attr) bool {
-		if a.Key == attrKeyBadge {
-			status = a.Value.String()
-			return false
-		}
-		return true
-	})
-	return status
-}
+func badgeStatus(r slog.Record) string { return firstString(r, attrKeyBadge) }
 
 type processEvent string
 
@@ -72,42 +70,36 @@ const attrKeyFileOnly = "file_only"
 // ShowInCompacted returns the attribute that tags a record to appear in the compact view.
 func ShowInCompacted() slog.Attr { return slog.Bool(attrKeyCompact, true) }
 
+// Banner marks a record whose message is the startup ASCII banner. The terminal UI
+// pins it at the top of the live canvas instead of scrolling it as a log line.
+func Banner() slog.Attr { return slog.Bool(attrKeyBanner, true) }
+
+func hasBanner(r slog.Record) bool { return firstBool(r, attrKeyBanner) }
+
+// ConnectionString marks a record whose message is the SSH connection string. The
+// terminal UI pins it as a distinct milestone so it stays visible and is included
+// in the closing summary.
+func ConnectionString() slog.Attr { return slog.Bool(attrKeyConnString, true) }
+
+func hasConnectionString(r slog.Record) bool { return firstBool(r, attrKeyConnString) }
+
 // FileOnly tags a record to stay file-only on the terminal: suppressed in the compact view
 // regardless of level, shown only with -v.
 func FileOnly() slog.Attr { return slog.Bool(attrKeyFileOnly, true) }
 
-func hasFileOnly(r slog.Record) bool {
-	found := false
-	r.Attrs(func(a slog.Attr) bool {
-		if a.Key == attrKeyFileOnly && a.Value.Kind() == slog.KindBool && a.Value.Bool() {
-			found = true
-			return false
-		}
-		return true
-	})
-	return found
-}
+func hasFileOnly(r slog.Record) bool { return firstBool(r, attrKeyFileOnly) }
 
-func hasShowInCompacted(r slog.Record) bool {
-	found := false
-	r.Attrs(func(a slog.Attr) bool {
-		if a.Key == attrKeyCompact && a.Value.Kind() == slog.KindBool && a.Value.Bool() {
-			found = true
-			return false
-		}
-		return true
-	})
-	return found
-}
+func hasShowInCompacted(r slog.Record) bool { return firstBool(r, attrKeyCompact) }
 
 // isRendererMarker reports whether r carries a progress/process control marker. Such records are
 // not visible text — they drive the bar, the current-action line, and the process boxes — so the
 // handler always routes them to the terminal renderer regardless of compact/verbose mode.
+// Banner records are also included: the banner must reach the tty sink to be pinned.
 func isRendererMarker(r slog.Record) bool {
 	found := false
 	r.Attrs(func(a slog.Attr) bool {
 		switch a.Key {
-		case attrKeyProcessEvent, attrKeyProgressEvent, attrKeyProgressValue:
+		case attrKeyProcessEvent, attrKeyProgressEvent, attrKeyProgressValue, attrKeyBanner, attrKeyConnString:
 			found = true
 			return false
 		}
@@ -122,3 +114,9 @@ func processAttr(ev processEvent, name string) []slog.Attr {
 		slog.String(attrKeyProcessName, name),
 	}
 }
+
+// recordProcessEvent returns the process_event value carried by r, or "" if absent.
+func recordProcessEvent(r slog.Record) string { return firstString(r, attrKeyProcessEvent) }
+
+// recordProcessName returns the process_name value carried by r, or "" if absent.
+func recordProcessName(r slog.Record) string { return firstString(r, attrKeyProcessName) }

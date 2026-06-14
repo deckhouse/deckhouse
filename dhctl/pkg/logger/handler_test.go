@@ -42,7 +42,13 @@ func TestHandlerSanitizesSensitiveMessageOnBothSinks(t *testing.T) {
 func newTestHandler(file, tty *bytes.Buffer, isTTY bool) *TerminalUIHandler {
 	lv := new(slog.LevelVar)
 	lv.Set(slog.LevelDebug)
-	return newTerminalUIHandler(file, tty, isTTY, true /* interactive */, lv, false, slog.LevelInfo)
+	return newTerminalUIHandler(handlerConfig{
+		fileW:       file,
+		ttyW:        tty,
+		isTTY:       isTTY,
+		interactive: true,
+		level:       lv,
+	})
 }
 
 func TestHandlerFileGetsEveryRecord(t *testing.T) {
@@ -109,7 +115,9 @@ func TestHandlerVerboseShowsUntaggedOnTTY(t *testing.T) {
 	var file, tty bytes.Buffer
 	lv := new(slog.LevelVar)
 	lv.Set(slog.LevelDebug)
-	l := slog.New(newTerminalUIHandler(&file, &tty, true, true, lv, true, slog.LevelInfo)) // verbose
+	l := slog.New(newTerminalUIHandler(handlerConfig{
+		fileW: &file, ttyW: &tty, isTTY: true, interactive: true, level: lv, verbose: true,
+	})) // verbose
 	l.Info("untagged but verbose")
 	if !strings.Contains(tty.String(), "untagged but verbose") {
 		t.Fatalf("verbose tty should show untagged record: %q", tty.String())
@@ -134,7 +142,9 @@ func TestHandlerFileOnlyShownWhenVerbose(t *testing.T) {
 	var file, tty bytes.Buffer
 	lv := new(slog.LevelVar)
 	lv.Set(slog.LevelDebug)
-	l := slog.New(newTerminalUIHandler(&file, &tty, true, true, lv, true, slog.LevelInfo)) // verbose
+	l := slog.New(newTerminalUIHandler(handlerConfig{
+		fileW: &file, ttyW: &tty, isTTY: true, interactive: true, level: lv, verbose: true,
+	})) // verbose
 	l.LogAttrs(context.Background(), slog.LevelError, "verbose sees stream", FileOnly())
 	if !strings.Contains(tty.String(), "verbose sees stream") {
 		t.Fatalf("verbose must show file-only record: %q", tty.String())
@@ -145,7 +155,9 @@ func TestHandlerEnabledHonoursLevel(t *testing.T) {
 	var file, tty bytes.Buffer
 	lv := new(slog.LevelVar)
 	lv.Set(slog.LevelInfo)
-	h := newTerminalUIHandler(&file, &tty, true, true, lv, false, slog.LevelInfo)
+	h := newTerminalUIHandler(handlerConfig{
+		fileW: &file, ttyW: &tty, isTTY: true, interactive: true, level: lv,
+	})
 	if h.Enabled(context.Background(), slog.LevelDebug) {
 		t.Fatal("debug should be disabled at info level")
 	}

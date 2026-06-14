@@ -17,6 +17,7 @@ package logger
 import (
 	"io"
 	"log/slog"
+	"sync"
 )
 
 // Options configures the root logger.
@@ -31,29 +32,60 @@ type Options struct {
 	Interactive bool
 	// Verbose (-v) shows every Info+ record on the terminal, not just the curated compact output.
 	Verbose bool
-	// Debug (DHCTL_DEBUG) lowers the terminal threshold to include DEBUG records. The file sink
-	// always keeps DEBUG regardless.
-	Debug bool
+}
+
+// rootHandler is the *TerminalUIHandler created by the most recent NewRoot call, stored so the
+// no-arg RestoreTerminal can leave the alternate screen on any exit path (SIGINT/SIGTERM, panic,
+// normal) without threading the handle through the call stack. A CLI owns exactly one terminal, so
+// a single guarded slot is the right model. rootMu makes the slot safe against a signal-fired
+// RestoreTerminal racing a concurrent NewRoot rebind (action.go installs a fallback root, then
+// rebinds the real one). Nil until the first NewRoot.
+var (
+	rootMu      sync.Mutex
+	rootHandler *TerminalUIHandler
+)
+
+// setRootHandler records h as the current terminal owner for RestoreTerminal.
+func setRootHandler(h *TerminalUIHandler) {
+	rootMu.Lock()
+	rootHandler = h
+	rootMu.Unlock()
+}
+
+// RestoreTerminal leaves the alternate screen if the current root handler is using an interactive
+// Block. Safe to call before NewRoot, multiple times, and after the Block has already been
+// finished. Designed as a no-arg shutdown hook / defer (see cmd/dhctl/main.go).
+func RestoreTerminal() {
+	rootMu.Lock()
+	h := rootHandler
+	rootMu.Unlock()
+	if h != nil {
+		h.RestoreTerminal()
+	}
 }
 
 // NewRoot builds the application root logger. Replaces InitLogger / InitLoggerWithOptions /
 // WrapWithTeeLogger / NewLogToFile from the old package.
 func NewRoot(opts Options) *slog.Logger {
-	// The file sink always captures everything (full debug log), so the level stays at Debug
-	// regardless of the flag. The Debug flag instead drives terminal verbosity below.
+	// The file sink always captures everything (full debug log), so the level stays at Debug. The
+	// terminal floor is fixed at Info (DEBUG never reaches it); DHCTL_DEBUG only enriches the file.
 	lv := new(slog.LevelVar)
 	lv.Set(slog.LevelDebug)
 
 	// enableTTY turns on the terminal sink whenever stdout is a terminal — independent of verbosity,
 	// so -v never silences the terminal. The pinned pterm bar is used only when Interactive; otherwise
-	// (e.g. -v) the handler renders plain linear lines. verbose (-v / Debug) makes the terminal show
-	// every record; otherwise it shows only the curated ShowInCompacted()-tagged output (process
+	// (e.g. -v) the handler renders plain linear lines. verbose (-v) makes the terminal show every
+	// Info+ record; otherwise it shows only the curated ShowInCompacted()-tagged output (process
 	// boxes, step changes, status) — everything else goes to the debug file only.
 	enableTTY := opts.IsTTY && opts.TTYWriter != nil
-	// Terminal threshold: Info normally, Debug only in debug mode. The file sink stays at Debug (lv).
-	ttyLevel := slog.LevelInfo
-	if opts.Debug {
-		ttyLevel = slog.LevelDebug
-	}
-	return slog.New(newTerminalUIHandler(opts.FileWriter, opts.TTYWriter, enableTTY, opts.Interactive, lv, opts.Verbose, ttyLevel))
+	h := newTerminalUIHandler(handlerConfig{
+		fileW:       opts.FileWriter,
+		ttyW:        opts.TTYWriter,
+		isTTY:       enableTTY,
+		interactive: opts.Interactive,
+		level:       lv,
+		verbose:     opts.Verbose,
+	})
+	setRootHandler(h)
+	return slog.New(h)
 }

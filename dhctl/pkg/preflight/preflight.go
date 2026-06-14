@@ -163,11 +163,15 @@ func (p *Preflight) retry(ctx context.Context, check Check) error {
 		func() error { attempt++; return check.Run(ctx) },
 		bo,
 		func(err error, next time.Duration) {
+			// Per-attempt retry diagnostics stay at Debug: they enrich the .log file but never reach
+			// the terminal — not even with -v (the terminal floor is Info, which -v does not lower).
+			// The terminal stays quiet while a check is retrying; if every attempt fails, the returned
+			// error is what surfaces.
 			if !printedHeader {
-				dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("%s: %s", check.Name, check.Description))
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s: %s", check.Name, check.Description))
 				printedHeader = true
 			}
-			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("retry %d/%d in %s\nreason: %v", attempt, attempts, next, err))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("retry %d/%d in %s\nreason: %v", attempt, attempts, next, err))
 		},
 	)
 }

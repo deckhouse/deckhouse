@@ -913,9 +913,8 @@ func (b *ClusterBootstrapper) GetLastState() phases.DhctlState {
 
 func printBanner(ctx context.Context) {
 	l := dhlog.FromContext(ctx)
-	// Tagged for the compact view: the greeting logo must appear even without -v.
-	l.InfoContext(ctx, banner, dhlog.ShowInCompacted())
-	l.InfoContext(ctx, "", dhlog.ShowInCompacted())
+	// Tagged as banner: the terminal UI pins it at the top of the live canvas.
+	l.InfoContext(ctx, banner, dhlog.Banner())
 }
 
 func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, error) {

@@ -24,7 +24,7 @@ import (
 
 // TestNonTerminalTTYWriterStaysPlain proves that when the TTY writer is a non-terminal buffer
 // (isTTY=true but not a real *os.File terminal), ordinary ShowInCompacted()-tagged records render as plain
-// text with no ANSI escape sequences, because the handler picks the plain progressUI fallback.
+// text with no ANSI escape sequences, because the handler picks the plain sink fallback.
 func TestNonTerminalTTYWriterStaysPlain(t *testing.T) {
 	var file, tty bytes.Buffer
 	l := slog.New(newTestHandler(&file, &tty, true))
@@ -41,7 +41,7 @@ func TestNonTerminalTTYWriterStaysPlain(t *testing.T) {
 }
 
 // TestPlainProgressSequenceDoesNotCorrupt drives a full StartProgress -> Progress ->
-// FinishProgress sequence through the plain progressUI and asserts it neither panics nor
+// FinishProgress sequence through the plain sink and asserts it neither panics nor
 // corrupts the buffer with control codes; ordinary lines emitted during the session survive.
 func TestPlainProgressSequenceDoesNotCorrupt(t *testing.T) {
 	var file, tty bytes.Buffer
@@ -62,18 +62,16 @@ func TestPlainProgressSequenceDoesNotCorrupt(t *testing.T) {
 	}
 }
 
-// TestPlainProgressUIWriteLine confirms the plain UI writes lines verbatim to its writer.
-func TestPlainProgressUIWriteLine(t *testing.T) {
+// TestPlainSinkWritesLines confirms the plain sink writes Log/Warn/Milestone lines to its writer,
+// newline-terminated and with no ANSI control. The plain backend has no bar, so the renderer (not
+// the sink) absorbs progress markers — the sink itself only carries the line methods.
+func TestPlainSinkWritesLines(t *testing.T) {
 	var buf bytes.Buffer
-	ui := newPlainProgressUI(&buf)
-	ui.Start("x")
-	ui.SetProgress(0.3, "t")
-	ui.SetAction("doing")
-	ui.WriteLine("a line\n")
-	ui.Pause()
-	ui.Resume()
-	ui.Finish()
-	if buf.String() != "a line\n" {
-		t.Fatalf("plain UI corrupted output: %q", buf.String())
+	ui := newPlainSink(&buf)
+	ui.Log("a line")
+	ui.Warn("a warn")
+	ui.Milestone("SUCCESS", "done")
+	if buf.String() != "a line\na warn\nSUCCESS done\n" {
+		t.Fatalf("plain sink corrupted output: %q", buf.String())
 	}
 }

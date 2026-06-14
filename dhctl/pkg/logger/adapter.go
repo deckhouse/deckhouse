@@ -153,32 +153,10 @@ func (a *Adapter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// BufferLogger returns an Adapter writing every record to buffer as sanitized JSON. The buffer is
+// never a terminal, so this is a plain file-style sink (no progress UI).
 func (a *Adapter) BufferLogger(buffer *bytes.Buffer) libdhctl_log.Logger {
-	return NewAdapter(slog.New(NewTerminalUIHandler(buffer)))
-}
-
-func (a *Adapter) ProcessLogger() libdhctl_log.ProcessLogger {
-	return &AdapterProcessLogger{logger: a}
-}
-
-type AdapterProcessLogger struct {
-	logger *Adapter
-}
-
-func (ap *AdapterProcessLogger) ProcessStart(name string) {
-	// Emit a process-start marker so the terminal handler renders a framed box (┌), matching
-	// RunProcess. The matching ProcessEnd/Fail closes it.
-	emit(ap.logger.ctx, ap.logger.logger, slog.LevelInfo, "Starting: "+name, processAttr(processStart, name))
-}
-
-func (ap *AdapterProcessLogger) ProcessStep(name string) {
-	ap.logger.logger.InfoContext(ap.logger.ctx, name)
-}
-
-func (ap *AdapterProcessLogger) ProcessEnd() {
-	emit(ap.logger.ctx, ap.logger.logger, slog.LevelInfo, "Finished", processAttr(processEnd, ""))
-}
-
-func (ap *AdapterProcessLogger) ProcessFail() {
-	emit(ap.logger.ctx, ap.logger.logger, slog.LevelError, "Failed", processAttr(processFail, ""))
+	lv := new(slog.LevelVar)
+	lv.Set(slog.LevelDebug)
+	return NewAdapter(slog.New(slog.NewJSONHandler(buffer, handlerOptions(lv))))
 }

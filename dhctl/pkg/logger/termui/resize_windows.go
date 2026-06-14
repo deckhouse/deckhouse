@@ -14,10 +14,12 @@
 
 //go:build windows
 
-package logger
+package termui
 
-import "os"
+import "github.com/pterm/pterm"
 
-// notifyResize has no SIGWINCH equivalent on Windows; the bar still refreshes its width on the next
-// render tick. Returns nil so the watcher is never started.
-func notifyResize() <-chan os.Signal { return nil }
+func terminalWidth() int  { return pterm.GetTerminalWidth() }
+func terminalHeight() int { return pterm.GetTerminalHeight() }
+
+// Windows has no SIGWINCH; the resize channel never fires.
+func notifyResize(stop <-chan struct{}) <-chan struct{} { return make(chan struct{}) }

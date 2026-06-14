@@ -14,34 +14,44 @@
 
 package logger
 
-import "io"
+import (
+	"io"
+	"strings"
+)
 
-// plainProgressUI is a progressUI that never touches pterm. It writes ordinary lines straight
-// to the underlying writer and treats every progress/spinner method as a no-op. It is used as
-// the TTY sink's UI when the writer is not a real terminal (e.g. a bytes.Buffer in tests, or a
-// redirected/piped stdout), so non-terminal output never emits ANSI escape sequences and the
-// pterm MultiPrinter is never started.
-type plainProgressUI struct {
+// plainSink is a lineSink that never touches pterm. It writes the rendered lines (milestones,
+// warns, framed process boxes, banner, connection string) straight to the underlying writer — the
+// logboek-style dump. It is the backend when the writer is not a real terminal (a bytes.Buffer in
+// tests, or a redirected/piped stdout) or for the non-interactive -v dump, so output never emits
+// ANSI control sequences and no pinned block is started. It has no progress bar: the renderer holds
+// bar == nil for this backend, so the bar-cluster methods need not exist here.
+type plainSink struct {
 	w io.Writer
 }
 
-// newPlainProgressUI returns a progressUI that writes plain lines to w and no-ops everything else.
-func newPlainProgressUI(w io.Writer) progressUI {
-	return &plainProgressUI{w: w}
+// newPlainSink returns a lineSink that writes plain lines to w.
+func newPlainSink(w io.Writer) lineSink {
+	return &plainSink{w: w}
 }
 
-func (p *plainProgressUI) Start(string)                {}
-func (p *plainProgressUI) SetProgress(float64, string) {}
-func (p *plainProgressUI) SetAction(string)            {}
-
-func (p *plainProgressUI) WriteLine(s string) {
+func (p *plainSink) printf(s string) {
 	if p.w == nil {
 		return
+	}
+	if !strings.HasSuffix(s, "\n") {
+		s += "\n"
 	}
 	_, _ = io.WriteString(p.w, s)
 }
 
-func (p *plainProgressUI) Finish() {}
-func (p *plainProgressUI) Pause()  {}
-func (p *plainProgressUI) Resume() {}
-func (p *plainProgressUI) Resize() {}
+func (p *plainSink) Milestone(status, text string) { p.printf(status + " " + text) }
+func (p *plainSink) Warn(line string)              { p.printf(line) }
+func (p *plainSink) Log(line string)               { p.printf(line) }
+
+func (p *plainSink) SetBanner(lines []string) {
+	for _, l := range lines {
+		p.printf(l)
+	}
+}
+
+func (p *plainSink) SetConnString(s string) { p.printf(s) }

@@ -34,11 +34,7 @@ func RunProcess(ctx context.Context, l *slog.Logger, name string, fn func(contex
 func emit(ctx context.Context, l *slog.Logger, level slog.Level, msg string, attrs []slog.Attr) {
 	// Marker records carry only their process attrs; the handler routes them to the renderer via
 	// isRendererMarker (they are renderer control, not compact-view text).
-	args := make([]any, 0, len(attrs))
-	for _, a := range attrs {
-		args = append(args, a)
-	}
-	l.Log(ctx, level, msg, args...)
+	l.LogAttrs(ctx, level, msg, attrs...)
 }
 
 // Success logs a success line. It is NOT tagged for the compact view — only successful PHASE

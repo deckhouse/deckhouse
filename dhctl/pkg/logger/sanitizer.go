@@ -46,10 +46,19 @@ func Sanitize(_ []string, attr slog.Attr) slog.Attr {
 	if attr.Key != slog.MessageKey {
 		return attr
 	}
-	if kw := findSensitive(attr.Value.String()); kw != "" {
-		attr.Value = slog.StringValue(fmt.Sprintf("[FILTERED - %s]", kw))
-	}
+	attr.Value = slog.StringValue(sanitizeMessage(attr.Value.String()))
 	return attr
+}
+
+// sanitizeMessage redacts msg to a marker when it contains a sensitive keyword, else returns it
+// unchanged. It is the single redaction primitive: TerminalUIHandler.Handle applies it once before
+// fan-out so both sinks see the clean message, and Sanitize wires it into JSON/text handler options.
+// Idempotent — the marker carries no keyword, so a second pass is a no-op.
+func sanitizeMessage(msg string) string {
+	if kw := findSensitive(msg); kw != "" {
+		return fmt.Sprintf("[FILTERED - %s]", kw)
+	}
+	return msg
 }
 
 func findSensitive(msg string) string {

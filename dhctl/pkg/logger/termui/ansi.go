@@ -12,20 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !windows
+package termui
 
-package logger
-
-import (
-	"os"
-	"os/signal"
-	"syscall"
+const (
+	ansiEnterAlt = "\x1b[?1049h" // switch to the alternate screen buffer
+	ansiLeaveAlt = "\x1b[?1049l" // restore the original screen
+	ansiHideCur  = "\x1b[?25l"   // hide cursor
+	ansiShowCur  = "\x1b[?25h"   // show cursor
+	ansiHome     = "\x1b[H"      // move cursor to row 1, col 1
+	ansiClearEOL = "\x1b[K"      // clear from cursor to end of line
+	ansiClearEOS = "\x1b[J"      // clear from cursor to end of screen
 )
-
-// notifyResize returns a channel that receives a value whenever the terminal window is resized
-// (SIGWINCH). Returns nil on platforms without window-change signals.
-func notifyResize() <-chan os.Signal {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGWINCH)
-	return ch
-}

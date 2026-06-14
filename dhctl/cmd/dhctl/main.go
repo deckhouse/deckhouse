@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -295,6 +296,8 @@ func main() {
 	}
 
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
+	registerOnShutdown("Leave alternate screen if needed", logger.RestoreTerminal)
+	defer logger.RestoreTerminal()
 	registerOnShutdown("Stop kubernetes provider daemon", tofu.StopProviderDaemon)
 
 	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{

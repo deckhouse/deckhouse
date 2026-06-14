@@ -193,6 +193,9 @@ type Loop struct {
 	interruptable    bool
 	showError        bool
 	prefix           string
+	// silent keeps the loop off the compact terminal entirely: no framed process box and a
+	// Debug-level (file-only) success line, so internal retries don't clutter the live logbox.
+	silent bool
 }
 
 // NewLoop create Loop with features:
@@ -233,6 +236,7 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		interruptable: false,
 		showError:     true,
 		prefix:        fmt.Sprintf("[%s][%d] ", name, rand.Int()),
+		silent:        true,
 	}
 }
 
@@ -291,7 +295,12 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 			// Run task and return if everything is ok.
 			err = task()
 			if err == nil {
-				dhlog.FromContext(ctx).InfoContext(ctx, l.prefix+"Succeeded!")
+				// A silent loop keeps its success file-only (Debug); a verbose loop surfaces it.
+				if l.silent {
+					dhlog.FromContext(ctx).DebugContext(ctx, l.prefix+"Succeeded!")
+				} else {
+					dhlog.FromContext(ctx).InfoContext(ctx, l.prefix+"Succeeded!")
+				}
 				return nil
 			}
 
@@ -300,10 +309,10 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 				return err
 			}
 
-			// Per-attempt diagnostics are logged at Debug: they stay in the debug file and only
-			// appear on the terminal with -v. The terminal stays quiet during retries (even Warn/Error
-			// would surface in the compact view); the final exhaustion error (returned below) is what
-			// the caller surfaces if every attempt fails.
+			// Per-attempt diagnostics are logged at Debug: they enrich the debug file but never reach
+			// the terminal — not even with -v (the terminal floor is Info, which -v does not lower).
+			// The terminal stays quiet during retries; the final exhaustion error (returned below) is
+			// what the caller surfaces if every attempt fails.
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(l.prefix+attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
 			errorMsg := "\t%v\n\n"
 			if l.showError {
@@ -324,5 +333,11 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 		return fmt.Errorf("Timeout while %q: last error: %w", l.name, err)
 	}
 
+	// A silent loop runs without a process block: no framed box and nothing on the compact terminal
+	// (every per-attempt line is Debug → file-only). A verbose loop wraps the body in a process block
+	// so its start/finish renders a framed box.
+	if l.silent {
+		return loopBody(ctx)
+	}
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), l.name, loopBody)
 }

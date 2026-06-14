@@ -24,8 +24,9 @@ import (
 //
 // shell-operator uses github.com/deckhouse/deckhouse/pkg/log as its logger and emits klog/internal
 // lines through it. When debug is false, shell-operator is muted (fatal level); when debug is true,
-// its level is lowered to debug and its output is captured into l via a LineWriter, so each emitted
-// line becomes an slog record.
+// its level is lowered to debug and its output is captured into l via a file-only LineWriter, so each
+// emitted line becomes an slog record that enriches the .log file but never reaches the terminal.
+// That keeps the terminal identical with or without DHCTL_DEBUG.
 //
 // Note: this mutates the shell-operator global default logger (shlog.Default()).
 func BindShellOperator(l *slog.Logger, debug bool) {
@@ -34,6 +35,6 @@ func BindShellOperator(l *slog.Logger, debug bool) {
 	if debug {
 		// Enable shell-operator log, because it captures klog output, and wrap it with our logger.
 		shlog.Default().SetLevel(shlog.LevelDebug)
-		shlog.Default().SetOutput(NewLineWriter(l))
+		shlog.Default().SetOutput(newFileOnlyLineWriter(l))
 	}
 }
