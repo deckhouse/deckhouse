@@ -198,6 +198,65 @@ func TestDirectClientGet(t *testing.T) {
 	}
 }
 
+func TestDirectClientReusesToken(t *testing.T) {
+	const (
+		repoPath    = "deckhouse/ce"
+		layerDigest = "sha256:layer"
+		blobContent = "blob"
+		basicAuth   = "dXNlcjpwYXNz"
+	)
+	digests := []string{"sha256:first", "sha256:second"}
+
+	var serverURL string
+	var tokenHits int
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		tokenHits++
+		_, _ = w.Write([]byte(`{"token":"bearer-xyz"}`))
+	})
+	challenge := func(w http.ResponseWriter) {
+		w.Header().Set("WWW-Authenticate", `Bearer realm="`+serverURL+`/token",service="registry"`)
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+	for _, d := range digests {
+		mux.HandleFunc("/v2/"+repoPath+"/manifests/"+d, func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Bearer bearer-xyz" {
+				challenge(w)
+				return
+			}
+			_, _ = w.Write([]byte(`{"layers":[{"digest":"` + layerDigest + `"}]}`))
+		})
+	}
+	mux.HandleFunc("/v2/"+repoPath+"/blobs/"+layerDigest, func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer bearer-xyz" {
+			challenge(w)
+			return
+		}
+		_, _ = w.Write([]byte(blobContent))
+	})
+
+	server := httptest.NewServer(mux)
+	defer server.Close()
+	serverURL = server.URL
+
+	host := strings.TrimPrefix(server.URL, "http://")
+	client := newDirectClient(Config{
+		RegistryRepo:   host + "/" + repoPath,
+		RegistryAuth:   basicAuth,
+		RegistryScheme: "http",
+	})
+
+	for _, d := range digests {
+		body, _, err := client.Get(context.Background(), d)
+		require.NoError(t, err)
+		_, _ = io.ReadAll(body)
+		body.Close()
+	}
+
+	assert.Equal(t, 1, tokenHits, "token endpoint should be hit once across both Get calls")
+}
+
 func TestDirectClientGetNotFound(t *testing.T) {
 	const repoPath = "deckhouse/ce"
 	mux := http.NewServeMux()

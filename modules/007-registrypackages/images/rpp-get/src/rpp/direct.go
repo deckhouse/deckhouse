@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -143,6 +144,9 @@ type directClient struct {
 	repository string
 	auth       string
 	scheme     string
+
+	mu    sync.Mutex
+	token string // cached Bearer token, shared across manifest/blob requests
 }
 
 func newDirectClient(cfg Config) *directClient {
@@ -235,13 +239,15 @@ func (c *directClient) fetchBlob(ctx context.Context, host, repoPath, digest str
 }
 
 func (c *directClient) doRegistryGet(ctx context.Context, requestURL, accept string) (*http.Response, error) {
-	resp, err := c.sendGet(ctx, requestURL, accept, c.basicAuthHeader())
+	usedToken := c.cachedToken()
+
+	resp, err := c.sendGet(ctx, requestURL, accept, c.authorization(usedToken))
 	if err != nil {
 		return nil, err
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		token, tokenErr := c.fetchBearerToken(ctx, resp)
+		token, tokenErr := c.refreshToken(ctx, resp, usedToken)
 		resp.Body.Close()
 		if tokenErr != nil {
 			return nil, tokenErr
@@ -260,6 +266,44 @@ func (c *directClient) doRegistryGet(ctx context.Context, requestURL, accept str
 	}
 
 	return resp, nil
+}
+
+func (c *directClient) cachedToken() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.token
+}
+
+// authorization returns the header for an outgoing request: a cached Bearer
+// token if we have one, otherwise the Basic credentials used to bootstrap the
+// first token.
+func (c *directClient) authorization(token string) string {
+	if token != "" {
+		return "Bearer " + token
+	}
+	return c.basicAuthHeader()
+}
+
+// refreshToken exchanges the Basic credentials for a Bearer token using the 401
+// challenge, caches it, and returns it. usedToken is the token that just got
+// rejected; if another goroutine already refreshed past it, that token is
+// reused instead of fetching again. Holding the lock across the fetch serializes
+// concurrent refreshers so only one token request is made per challenge.
+func (c *directClient) refreshToken(ctx context.Context, challenge *http.Response, usedToken string) (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.token != "" && c.token != usedToken {
+		return c.token, nil
+	}
+
+	token, err := c.fetchBearerToken(ctx, challenge)
+	if err != nil {
+		return "", err
+	}
+
+	c.token = token
+	return token, nil
 }
 
 func (c *directClient) sendGet(ctx context.Context, requestURL, accept, authorization string) (*http.Response, error) {
