@@ -42,6 +42,12 @@ type config struct {
 	endpoints      []string
 	token          string
 	packages       []string
+
+	registryDirect bool
+	registryRepo   string
+	registryAuth   string
+	registryCA     string
+	registryScheme string
 }
 
 type cliConfig struct {
@@ -49,7 +55,13 @@ type cliConfig struct {
 	rppEndpoints           string
 	rppToken               string
 	kubeAPIServerEndpoints string
+	registryCAFile         string
 }
+
+var (
+	errRegistryRepoRequired = errors.New("--registry-direct requires --registry-repo (or REGISTRY_REPO)")
+	errRegistryAuthRequired = errors.New("--registry-direct requires --registry-auth (or REGISTRY_AUTH)")
+)
 
 func defaultConfig() config {
 	return config{
@@ -77,6 +89,11 @@ func parseConfig(args []string) (cliConfig, error) {
 	fs.StringVar(&cli.rppPath, "rpp-path", cli.rppPath, "RPP additional path")
 	fs.StringVar(&cli.kubeAPIServerEndpoints, "kube-apiserver-endpoints", "", "Comma-separated kube-apiserver endpoints for bootstrap-token mode")
 	fs.BoolVar(&cli.force, "force", cli.force, "Force download and install even if package is already present")
+	fs.BoolVar(&cli.registryDirect, "registry-direct", false, "Download packages directly from the registry, bypassing rpp server")
+	fs.StringVar(&cli.registryRepo, "registry-repo", "", "Full registry repository (host/path) for direct mode")
+	fs.StringVar(&cli.registryAuth, "registry-auth", "", "base64(user:password) registry auth for direct mode")
+	fs.StringVar(&cli.registryCAFile, "registry-ca-file", "", "Path to a PEM CA bundle for the registry (direct mode)")
+	fs.StringVar(&cli.registryScheme, "registry-scheme", "", "Registry scheme: https (default) or http (direct mode)")
 
 	if err := fs.Parse(args[1:]); err != nil {
 		return cliConfig{}, err
@@ -90,11 +107,68 @@ func parseConfig(args []string) (cliConfig, error) {
 
 	cli.packages = fs.Args()
 
+	if err := cli.finalizeRegistry(); err != nil {
+		return cliConfig{}, err
+	}
+
 	return cli, nil
+}
+
+func envOrFlag(flagValue, envKey string) string {
+	if v := strings.TrimSpace(flagValue); v != "" {
+		return v
+	}
+	return strings.TrimSpace(os.Getenv(envKey))
+}
+
+func resolveRegistryDirect(flagSet bool) bool {
+	if flagSet {
+		return true
+	}
+	v := strings.TrimSpace(os.Getenv("REGISTRY_DIRECT"))
+	return v == "true" || v == "1"
+}
+
+func (c *cliConfig) finalizeRegistry() error {
+	c.registryDirect = resolveRegistryDirect(c.registryDirect)
+	c.registryRepo = envOrFlag(c.registryRepo, "REGISTRY_REPO")
+	c.registryAuth = envOrFlag(c.registryAuth, "REGISTRY_AUTH")
+	c.registryScheme = envOrFlag(c.registryScheme, "REGISTRY_SCHEME")
+	caFile := envOrFlag(c.registryCAFile, "REGISTRY_CA_FILE")
+
+	if !c.registryDirect {
+		return nil
+	}
+
+	if c.registryRepo == "" {
+		return errRegistryRepoRequired
+	}
+	if c.registryAuth == "" {
+		return errRegistryAuthRequired
+	}
+	switch strings.ToLower(c.registryScheme) {
+	case "", "https", "http":
+	default:
+		return fmt.Errorf("invalid --registry-scheme %q, expected http or https", c.registryScheme)
+	}
+
+	if caFile != "" {
+		data, err := os.ReadFile(caFile)
+		if err != nil {
+			return fmt.Errorf("read registry CA file %q: %w", caFile, err)
+		}
+		c.registryCA = string(data)
+	}
+
+	return nil
 }
 
 func (c *cliConfig) resolve(ctx context.Context) error {
 	if c.mode == modeUninstall {
+		return nil
+	}
+
+	if c.registryDirect {
 		return nil
 	}
 
