@@ -37,6 +37,7 @@ type Config struct {
 	Retries        int
 	RetryDelay     time.Duration
 	Force          bool
+	Extract        bool
 	TempDir        string
 	InstalledStore string
 
@@ -52,6 +53,7 @@ type packageRef struct {
 	name         string
 	digest       string
 	archivePath  string
+	extractDir   string
 	installedDir string
 }
 
@@ -223,6 +225,7 @@ func (c *Client) newPackageRef(packageWithDigest string) (packageRef, error) {
 		name:         name,
 		digest:       digest,
 		archivePath:  filepath.Join(defaultFetchedStore(c.cfg.TempDir), name, digest+".tar.gz"),
+		extractDir:   filepath.Join(defaultFetchedStore(c.cfg.TempDir), name, digest+".extracted"),
 		installedDir: filepath.Join(c.cfg.InstalledStore, name),
 	}, nil
 }
@@ -374,7 +377,66 @@ func (c *Client) fetchPackage(ctx context.Context, ref packageRef) error {
 		return nil
 	}
 
+	if c.cfg.Extract {
+		return c.ensureExtracted(ctx, ref)
+	}
+
 	return c.ensureFetchedArchive(ctx, ref)
+}
+
+func (c *Client) ensureExtracted(ctx context.Context, ref packageRef) error {
+	if !c.cfg.Force {
+		extracted, err := c.isExtracted(ref)
+		if err != nil {
+			return err
+		}
+		if extracted {
+			c.logf(ref, "'%s' package already extracted", ref.raw)
+			return nil
+		}
+	}
+
+	c.logf(ref, "downloading and extracting '%s' to %s", ref.raw, ref.extractDir)
+	if err := c.retry(ctx, ref, c.cfg.Retries, shouldRetryFetch, func() error {
+		return c.downloadAndExtractOnce(ctx, ref)
+	}); err != nil {
+		return ref.errorf("download+extract %s: %w", ref.digest, err)
+	}
+	return nil
+}
+
+func (c *Client) isExtracted(ref packageRef) (bool, error) {
+	entries, err := os.ReadDir(ref.extractDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, ref.wrapErr("read extract dir", err)
+	}
+	return len(entries) > 0, nil
+}
+
+func (c *Client) downloadAndExtractOnce(ctx context.Context, ref packageRef) error {
+	if err := os.RemoveAll(ref.extractDir); err != nil {
+		return ref.wrapErr("clean extract dir", err)
+	}
+	if err := os.MkdirAll(ref.extractDir, 0o755); err != nil {
+		return ref.wrapErr("create extract dir", err)
+	}
+
+	start := time.Now()
+	body, source, err := c.fetcher.Get(ctx, ref.digest)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
+	if err := extractTarGzStream(ctx, body, ref.extractDir); err != nil {
+		return ref.errorf("stream extract %s: %w", ref.digest, err)
+	}
+
+	c.logf(ref, "downloaded+extracted from %s in %s", source, time.Since(start).Truncate(time.Millisecond))
+	return nil
 }
 
 func (c *Client) shouldSkipInstalled(ref packageRef) (bool, error) {

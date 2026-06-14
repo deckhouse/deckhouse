@@ -43,6 +43,30 @@ func extractTarGz(ctx context.Context, src, dst string) error {
 	return fmt.Errorf("%w: %s", err, message)
 }
 
+// extractTarGzStream extracts a gzip-compressed tar read from r into dst without
+// buffering the archive to disk first, so the gzip inflate runs concurrently
+// with the network read feeding r. gzip (-z) is forced because tar cannot
+// auto-detect compression from a non-seekable pipe; registry package layers are
+// always gzip (application/vnd.*.tar+gzip).
+func extractTarGzStream(ctx context.Context, r io.Reader, dst string) error {
+	ctx, cancel := context.WithTimeout(ctx, archiveExtractTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "tar", "-xz", "-f", "-", "-C", dst)
+	cmd.Stdin = r
+	output, err := cmd.CombinedOutput()
+	if err == nil {
+		return nil
+	}
+
+	message := strings.TrimSpace(string(output))
+	if message == "" {
+		return err
+	}
+
+	return fmt.Errorf("%w: %s", err, message)
+}
+
 func copyFile(src, dst string) error {
 	info, err := os.Stat(src)
 	if err != nil {

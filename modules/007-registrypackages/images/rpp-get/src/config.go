@@ -39,6 +39,7 @@ type config struct {
 	rppRepository  string
 	rppPath        string
 	force          bool
+	extract        bool
 	endpoints      []string
 	token          string
 	packages       []string
@@ -89,6 +90,7 @@ func parseConfig(args []string) (cliConfig, error) {
 	fs.StringVar(&cli.rppPath, "rpp-path", cli.rppPath, "RPP additional path")
 	fs.StringVar(&cli.kubeAPIServerEndpoints, "kube-apiserver-endpoints", "", "Comma-separated kube-apiserver endpoints for bootstrap-token mode")
 	fs.BoolVar(&cli.force, "force", cli.force, "Force download and install even if package is already present")
+	fs.BoolVar(&cli.extract, "extract", cli.extract, "In fetch mode, stream-extract the archive instead of saving the .tar.gz (overlaps decompression with download)")
 	fs.BoolVar(&cli.registryDirect, "registry-direct", false, "Download packages directly from the registry, bypassing rpp server")
 	fs.StringVar(&cli.registryRepo, "registry-repo", "", "Full registry repository (host/path) for direct mode")
 	fs.StringVar(&cli.registryAuth, "registry-auth", "", "base64(user:password) registry auth for direct mode")
