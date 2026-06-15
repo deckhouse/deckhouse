@@ -703,10 +703,12 @@ metadata:
 spec:
   virtualMachineClassName: %q
   runPolicy: AlwaysOn
+  bootLoader: UEFI
   cpu:
     cores: 1
+    coreFraction: 5%%
   memory:
-    size: 1Gi
+    size: 256Gi
   blockDeviceRefs:
     - kind: VirtualDisk
       name: %q
