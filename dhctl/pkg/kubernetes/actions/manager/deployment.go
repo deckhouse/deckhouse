@@ -67,11 +67,11 @@ func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.Ku
 			if err != nil {
 				return err
 			}
-			patch, err := json.Marshal(map[string]interface{}{
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"metadata": map[string]interface{}{
-							"annotations": map[string]interface{}{
+			patch, err := json.Marshal(map[string]any{
+				"spec": map[string]any{
+					"template": map[string]any{
+						"metadata": map[string]any{
+							"annotations": map[string]any{
 								"dhctl.deckhouse.io/restart-infra-deployment": time.Now().Format(time.RFC3339),
 							},
 						},

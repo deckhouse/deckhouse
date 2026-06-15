@@ -52,7 +52,7 @@ type logLine struct {
 	Component string    `json:"operator.component,omitempty"`
 	TaskID    string    `json:"task.id,omitempty"`
 	Source    string    `json:"source,omitempty"`
-	Time      time.Time `json:"time,omitempty"`
+	Time      time.Time `json:"time"`
 }
 
 func (l *logLine) String() string {

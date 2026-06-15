@@ -67,7 +67,6 @@ metadata:
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			err := ValidateResources(tt.config, validateOpts...)
 			if tt.errContains == "" {
@@ -166,7 +165,6 @@ metadata:
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			err := ValidateInitConfiguration(tt.config, newStore, validateOpts...)
 			if tt.errContains == "" {
@@ -259,7 +257,6 @@ clusterType: Static
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			clusterConfig, err := ValidateClusterConfiguration(tt.config, newStore, validateOpts...)
 			require.Equal(t, tt.expected, clusterConfig)
@@ -453,7 +450,6 @@ sshPublicKey: ssh-key`,
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			err := ValidateProviderSpecificClusterConfiguration(tt.config, tt.clusterConfig, newStore, validateOpts...)
 			if tt.errContains == "" {
@@ -517,7 +513,6 @@ internalNetworkCIDRs:
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			err := ValidateStaticClusterConfiguration(tt.config, newStore, validateOpts...)
 			if tt.errContains == "" {

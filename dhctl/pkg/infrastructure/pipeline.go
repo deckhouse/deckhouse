@@ -208,7 +208,7 @@ func CheckPipeline(
 type BaseInfrastructureDestructiveChanges struct {
 	plan.DestructiveChanges
 	OutputBrokenReason string           `json:"output_broken_reason,omitempty"`
-	OutputZonesChanged plan.ValueChange `json:"output_zones_changed,omitempty"`
+	OutputZonesChanged plan.ValueChange `json:"output_zones_changed"`
 }
 
 func CheckBaseInfrastructurePipeline(

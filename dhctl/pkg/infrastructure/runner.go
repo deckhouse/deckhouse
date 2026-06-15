@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -906,10 +907,8 @@ func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string)
 		return false, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
-	for _, action := range result {
-		if action == "delete" {
-			return true, nil
-		}
+	if slices.Contains(result, "delete") {
+		return true, nil
 	}
 
 	return false, nil

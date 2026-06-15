@@ -151,7 +151,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 
 		nodeLabels := node.GetLabels()
 
-		patchOperations := make([]map[string]interface{}, 0, len(labels))
+		patchOperations := make([]map[string]any, 0, len(labels))
 
 		for _, label := range labels {
 			// Check if the label exists on the node before trying to remove it
@@ -160,7 +160,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 				continue
 			}
 
-			patchOperations = append(patchOperations, map[string]interface{}{
+			patchOperations = append(patchOperations, map[string]any{
 				"op": "remove",
 				// JSON patch requires slashes to be escaped with ~1
 				"path": fmt.Sprintf("/metadata/labels/%s", strings.ReplaceAll(label, "/", "~1")),

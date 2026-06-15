@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/go-multierror"
@@ -320,12 +321,13 @@ func ParallelCreateNodeGroup(
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
 ) error {
-	msg := "Create NodeGroups "
+	var msg strings.Builder
+	msg.WriteString("Create NodeGroups ")
 	for _, group := range terraNodeGroups {
-		msg += fmt.Sprintf("%s (replicas: %v)️; ", group.Name, group.Replicas)
+		msg.WriteString(fmt.Sprintf("%s (replicas: %v)️; ", group.Name, group.Replicas))
 	}
 
-	return log.ProcessCtx(ctx, "converge", msg, func(ctx context.Context) error {
+	return log.ProcessCtx(ctx, "converge", msg.String(), func(ctx context.Context) error {
 		var (
 			mu sync.Mutex
 			wg sync.WaitGroup

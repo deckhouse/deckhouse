@@ -21,8 +21,6 @@ import (
 	"os"
 	"slices"
 	"sync"
-
-	"k8s.io/utils/ptr"
 )
 
 type OnProgressFunc func(Progress) error
@@ -179,10 +177,10 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 		}
 
 		if i <= lastCompletedPhaseIndex {
-			p.progress.Phases[i].Action = ptr.To(ProgressActionDefault)
+			p.progress.Phases[i].Action = new(ProgressActionDefault)
 			continue
 		}
-		p.progress.Phases[i].Action = ptr.To(ProgressActionSkip)
+		p.progress.Phases[i].Action = new(ProgressActionSkip)
 	}
 
 	// Check if the last completed phase was skipped
@@ -273,7 +271,7 @@ func calculatePhaseProgress(p Progress, completedPhase, currentPhase OperationPh
 		if idx > completedPhaseIndex {
 			for i := completedPhaseIndex + 1; i < idx; i++ {
 				if p.Phases[i].Action == nil {
-					p.Phases[i].Action = ptr.To(ProgressActionSkip)
+					p.Phases[i].Action = new(ProgressActionSkip)
 				}
 			}
 			currentPhaseIndex = idx

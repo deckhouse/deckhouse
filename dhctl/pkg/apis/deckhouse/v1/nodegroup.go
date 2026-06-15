@@ -41,7 +41,7 @@ type NodeGroup struct {
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// Spec defines the behavior of a node group.
 	Spec NodeGroupSpec `json:"spec"`
@@ -49,7 +49,7 @@ type NodeGroup struct {
 	// Most recently observed status of the node.
 	// Populated by the system.
 
-	Status NodeGroupStatus `json:"status,omitempty"`
+	Status NodeGroupStatus `json:"status"`
 }
 
 type NodeGroupSpec struct {
@@ -57,7 +57,7 @@ type NodeGroupSpec struct {
 	NodeType NodeType `json:"nodeType,omitempty"`
 
 	// cloudInstances. Optional.
-	CloudInstances CloudInstances `json:"cloudInstances,omitempty"`
+	CloudInstances CloudInstances `json:"cloudInstances"`
 }
 
 // CloudInstances is an extra parameters for NodeGroup with type Cloud.
@@ -84,7 +84,7 @@ type CloudInstances struct {
 	Standby *intstr.IntOrString `json:"standby,omitempty"`
 
 	// Settings for overprovisioned Node holder.
-	StandbyHolder StandbyHolder `json:"standbyHolder,omitempty"`
+	StandbyHolder StandbyHolder `json:"standbyHolder"`
 
 	// Reference to a ClassInstance resource. Required.
 	ClassReference ClassReference `json:"classReference"`
@@ -97,15 +97,15 @@ type StandbyHolder struct {
 	// Percent of the node-group's node capacity which will be overprovisioned with standby-holder pod.
 	OverprovisioningRate *int64 `json:"overprovisioningRate,omitempty"`
 	// Deprecated: Describes the amount of resources, that will not be held by standby holder.
-	NotHeldResources Resources `json:"notHeldResources,omitempty"`
+	NotHeldResources Resources `json:"notHeldResources"`
 }
 
 type Resources struct {
 	// Describes the amount of CPU that will not be held by standby holder on Nodes from this NodeGroup.
-	CPU intstr.IntOrString `json:"cpu,omitempty"`
+	CPU intstr.IntOrString `json:"cpu"`
 
 	// Describes the amount of memory that will not be held by standby holder on Nodes from this NodeGroup.
-	Memory intstr.IntOrString `json:"memory,omitempty"`
+	Memory intstr.IntOrString `json:"memory"`
 }
 
 type ClassReference struct {
@@ -148,7 +148,7 @@ type NodeGroupStatus struct {
 	LastMachineFailures []MachineFailure `json:"lastMachineFailures,omitempty"`
 
 	// Status' summary.
-	ConditionSummary ConditionSummary `json:"conditionSummary,omitempty"`
+	ConditionSummary ConditionSummary `json:"conditionSummary"`
 }
 
 type MachineFailure struct {
@@ -162,7 +162,7 @@ type MachineFailure struct {
 	OwnerRef string `json:"ownerRef,omitempty"`
 
 	// Last operation with machine.
-	LastOperation MachineOperation `json:"lastOperation,omitempty"`
+	LastOperation MachineOperation `json:"lastOperation"`
 }
 
 type MachineOperation struct {

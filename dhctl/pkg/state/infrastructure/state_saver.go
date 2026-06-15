@@ -69,7 +69,7 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 
 	task := actions.ManifestTask{
 		Name: `Secret "d8-cluster-terraform-state"`,
-		PatchData: func() interface{} {
+		PatchData: func() any {
 			return manifests.PatchWithInfrastructureState(outputs.InfrastructureState)
 		},
 		PatchFunc: func(ctx context.Context, patch []byte) error {
@@ -142,16 +142,16 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, s.nodeName),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.SecretWithNodeInfrastructureState(s.nodeName, s.nodeGroup, outputs.InfrastructureState, s.nodeGroupSettings)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
-		PatchData: func() interface{} {
+		PatchData: func() any {
 			return manifests.PatchWithNodeInfrastructureState(outputs.InfrastructureState)
 		},
 		PatchFunc: func(ctx context.Context, patchData []byte) error {

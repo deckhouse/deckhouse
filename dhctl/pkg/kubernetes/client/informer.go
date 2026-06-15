@@ -93,19 +93,19 @@ func (p *DeploymentInformer) CreateSharedInformer() error {
 	return nil
 }
 
-func (p *DeploymentInformer) OnAdd(obj interface{}, _ bool) {
+func (p *DeploymentInformer) OnAdd(obj any, _ bool) {
 	p.HandleWatchEvent(obj, "Added")
 }
 
-func (p *DeploymentInformer) OnUpdate(oldObj, newObj interface{}) {
+func (p *DeploymentInformer) OnUpdate(oldObj, newObj any) {
 	p.HandleWatchEvent(newObj, "Modified")
 }
 
-func (p *DeploymentInformer) OnDelete(obj interface{}) {
+func (p *DeploymentInformer) OnDelete(obj any) {
 	p.HandleWatchEvent(obj, "Deleted")
 }
 
-func (p *DeploymentInformer) HandleWatchEvent(object interface{}, eventType string) {
+func (p *DeploymentInformer) HandleWatchEvent(object any, eventType string) {
 	if staleObj, stale := object.(cache.DeletedFinalStateUnknown); stale {
 		object = staleObj.Obj
 	}
@@ -163,19 +163,19 @@ func (p *CRDInformer) CreateSharedInformer() error {
 	return nil
 }
 
-func (p *CRDInformer) OnAdd(obj interface{}, _ bool) {
+func (p *CRDInformer) OnAdd(obj any, _ bool) {
 	p.HandleWatchEvent(obj, "Added")
 }
 
-func (p *CRDInformer) OnUpdate(oldObj, newObj interface{}) {
+func (p *CRDInformer) OnUpdate(oldObj, newObj any) {
 	p.HandleWatchEvent(newObj, "Modified")
 }
 
-func (p *CRDInformer) OnDelete(obj interface{}) {
+func (p *CRDInformer) OnDelete(obj any) {
 	p.HandleWatchEvent(obj, "Deleted")
 }
 
-func (p *CRDInformer) HandleWatchEvent(object interface{}, eventType string) {
+func (p *CRDInformer) HandleWatchEvent(object any, eventType string) {
 	if staleObj, stale := object.(cache.DeletedFinalStateUnknown); stale {
 		object = staleObj.Obj
 	}

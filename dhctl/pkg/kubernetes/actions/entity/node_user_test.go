@@ -16,6 +16,7 @@ package entity
 
 import (
 	"context"
+	"maps"
 	"testing"
 	"time"
 
@@ -470,9 +471,7 @@ func testCreateTestControlPlaneNodeWithAdditionalLabels(name string, labels map[
 		"some-annotation": "test",
 	})
 
-	for k, v := range labels {
-		n.labels[k] = v
-	}
+	maps.Copy(n.labels, labels)
 
 	return n
 }
@@ -482,9 +481,7 @@ func testCreateTestWorkerNodeWithAdditionalLabels(name string, labels map[string
 		"some-annotation-worker": "test",
 	})
 
-	for k, v := range labels {
-		n.labels[k] = v
-	}
+	maps.Copy(n.labels, labels)
 
 	return n
 }

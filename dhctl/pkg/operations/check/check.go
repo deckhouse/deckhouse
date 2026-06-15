@@ -68,7 +68,7 @@ type NodeGroupCheckResult struct {
 type Statistics struct {
 	Node               []NodeCheckResult                     `json:"nodes,omitempty"`
 	NodeTemplates      []NodeGroupCheckResult                `json:"node_templates,omitempty"`
-	Cluster            ClusterCheckResult                    `json:"cluster,omitempty"`
+	Cluster            ClusterCheckResult                    `json:"cluster"`
 	InfrastructurePlan []plan.Plan                           `json:"terraform_plan,omitempty"`
 	TerraformVersion   *infrastructurestate.TerraformVersion `json:"terraform_version,omitempty"`
 }
@@ -515,7 +515,7 @@ func CheckState(
 
 func expectedNodeNames(cfg *config.MetaConfig, nodeGroupName string, replicas int) []string {
 	names := make([]string, 0, replicas)
-	for i := 0; i < replicas; i++ {
+	for i := range replicas {
 		names = append(names, fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, i))
 	}
 

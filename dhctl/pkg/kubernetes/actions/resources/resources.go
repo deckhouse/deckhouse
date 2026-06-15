@@ -260,14 +260,14 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
-			Manifest: func() interface{} { return nil },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return nil },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(ctx, docCopy, metav1.CreateOptions{})
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				content, err := docCopy.MarshalJSON()
 				if err != nil {
 					return err

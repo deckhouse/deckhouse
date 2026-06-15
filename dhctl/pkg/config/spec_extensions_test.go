@@ -111,7 +111,6 @@ key: |
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			content := []byte(tt.content)
 
