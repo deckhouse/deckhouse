@@ -121,10 +121,5 @@ func (r *Reconciler) isEtcdPodReady(ctx context.Context) (bool, error) {
 		}
 		return false, fmt.Errorf("get pod %s: %w", podName, err)
 	}
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true, nil
-		}
-	}
-	return false, nil
+	return isPodReady(pod), nil
 }
