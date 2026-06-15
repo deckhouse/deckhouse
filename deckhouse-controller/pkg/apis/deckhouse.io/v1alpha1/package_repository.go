@@ -57,7 +57,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
-// +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.syncTime
+// +kubebuilder:printcolumn:name=Scan,type=date,JSONPath=.status.lastScanTime
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
@@ -112,9 +112,18 @@ type PackageRepositorySpecRegistry struct {
 }
 
 type PackageRepositoryStatus struct {
-	// Last time the repository was synchronized.
+	// Time of the most recent scan of any outcome.
 	// +optional
-	SyncTime metav1.Time `json:"syncTime,omitempty"`
+	LastScanTime *metav1.Time `json:"lastScanTime,omitempty"`
+
+	// Time of the most recent scan that found at least one new version.
+	// Scans that found nothing new do not advance this timestamp.
+	// +optional
+	LastChangeTime *metav1.Time `json:"lastChangeTime,omitempty"`
+
+	// Number of new versions found by the most recent scan.
+	// Set to zero when the last scan found nothing new.
+	LastNewVersions int `json:"lastNewVersions"`
 
 	// List of packages available in this repository.
 	// +optional

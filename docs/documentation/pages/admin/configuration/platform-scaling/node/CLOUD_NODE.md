@@ -504,19 +504,31 @@ spec:
 
 ## Adding CloudPermanent nodes to a cloud cluster
 
-To add CloudPermanent nodes to a DKP cloud cluster:
+To add `CloudPermanent` nodes to a DKP cloud cluster:
 
-1. Make sure the cloud provider module is enabled. For example: [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), [`cloud-provider-aws`](/modules/cloud-provider-aws/), etc.
+1. Make sure that the corresponding cloud provider module is enabled, for example, [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), or [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
-   You can check this by running the following command:
+   You can check the status of a specific module using the following command:
 
    ```shell
-   d8 k -n d8-system get modules
+   d8 k -n d8-system get module <MODULE_NAME>
    ```
 
-   Or view it in the Deckhouse web interface.
+   For example:
 
-1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) object with the `CloudPermanent` type. Nodes of this type are managed via Terraform, which is integrated into DKP. The configuration for such nodes is located in the `(Provider)ClusterConfiguration` object. You edit this configuration using the `dhctl` utility from the installation container. Example:
+   ```shell
+   d8 k -n d8-system get module cloud-provider-yandex
+   ```
+
+1. Add a `CloudPermanent` node group to the `nodeGroups` section of the `(Provider)ClusterConfiguration` object. `CloudPermanent` nodes are managed by Terraform built into DKP.
+
+   To edit the configuration of a running cluster, use the following command:
+
+   ```shell
+   d8 system edit provider-cluster-configuration
+   ```
+
+   Example:
 
    ```yaml
    nodeGroups:
@@ -531,43 +543,59 @@ To add CloudPermanent nodes to a DKP cloud cluster:
        nova: ceph-ssd
    ```
 
-1. Specify the instance template parameters. The fields inside the `instanceClass` section depend on the specific cloud provider. Below is an example for OpenStack:
-   - `flavorName`: Instance type (resources: CPU, RAM).
-   - `imageName`: OS image.
-   - `rootDiskSize`: Size of the root disk (in GB).
-   - `mainNetwork`: Network name.
-   - If needed: etcd disk, zones, volume types, etc.
+1. Specify the instance template parameters. The fields inside `instanceClass` depend on the cloud provider. The following fields are used in the OpenStack example:
 
-   For other cloud providers, the field names and structure may differ. For specific fields, refer to the CRD definition or the documentation for the corresponding cloud provider.
+   - `flavorName` — instance type and its resources, such as CPU and RAM
+   - `imageName` — operating system image
+   - `rootDiskSize` — root disk size in GB
+   - `mainNetwork` — network name
+   - optionally: etcd disk, zones, volume types, and other parameters
 
-1. Apply the configuration using `dhctl converge`. After editing the `(Provider)ClusterConfiguration`, run:
+   Field names and structure may differ for other cloud providers. Refer to the `(Provider)ClusterConfiguration` specification or the documentation for the corresponding cloud provider, for example, [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration).
+
+1. Start the DKP installer container on your local computer or an administrative host. Use an image with the same edition and version as the cluster:
+
+   ```shell
+   docker run --pull=always --rm -it \
+     -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/<EDITION>/install:<VERSION> \
+     bash
+   ```
+
+1. In the installer container, check the Terraform state:
+
+   ```shell
+   dhctl terraform check \
+     --ssh-host <MASTER_NODE_IP> \
+     --ssh-user <USER_NAME> \
+     --ssh-agent-private-keys /tmp/.ssh/<KEY>
+   ```
+
+1. Apply the configuration. For the `--ssh-user` parameter, specify a user that can connect to the master node over SSH and execute commands using `sudo`:
 
    ```shell
    dhctl converge \
-     --ssh-host <master node IP> \
-     --ssh-user <username> \
-     --ssh-agent-private-keys /tmp/.ssh/<key>
+     --ssh-host <MASTER_NODE_IP> \
+     --ssh-user <USER_NAME> \
+     --ssh-agent-private-keys /tmp/.ssh/<KEY>
    ```
 
    This command will:
 
-   - Launch Terraform.
-   - Create the required virtual machines.
-   - Install DKP on them (using `bootstrap.sh`).
-   - Register the nodes in the cluster.
+   - run Terraform
+   - create the required virtual machines
+   - bootstrap and configure the new nodes
+   - register the nodes in the cluster
 
-1. Done — the new nodes will automatically appear in the cluster.  
-   You can view them by running:
+1. The new nodes will automatically appear in the cluster. You can check that the nodes have been added using the following command:
 
    ```shell
    d8 k get nodes
    ```
 
-   The list of newly created nodes is also available in the Deckhouse web interface.
+   The new nodes are also available in the Deckhouse web interface.
 
-Deckhouse Kubernetes Platform can run on top of Managed Kubernetes services (e.g., GKE and EKS).  
-In such cases, the [`node-manager`](/modules/node-manager/) module provides node configuration management and automation,  
-but its capabilities may be limited by the respective cloud provider's API.
+Deckhouse Kubernetes Platform can run on top of Managed Kubernetes services, such as GKE and EKS. In this case, the [`node-manager`](/modules/node-manager/) module manages node configuration and automates node-related operations, but some features may be limited by the API of the corresponding cloud provider.
 
 ## Adding a CloudStatic node to a cluster
 

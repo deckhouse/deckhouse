@@ -137,13 +137,13 @@ func PrepareBashibleBundle(
 	}
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
-	log.DebugF("Create %q\n", firstRunFileFlag)
+	log.DebugF("Creating %q\n", firstRunFileFlag)
 	if err := fs.CreateEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
 
 	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
-	log.InfoF("Create %q\n", devicePathFile)
+	log.InfoF("Creating %q\n", devicePathFile)
 
 	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }

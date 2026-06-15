@@ -21,6 +21,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"time"
@@ -34,15 +35,30 @@ import (
 type ExpirationOption func(*expirationOptions)
 
 type expirationOptions struct {
-	kubeconfigDir    string
-	files            []File
-	ignoreReadErrors bool
+	kubeconfigDir string
+	files         []File
 }
 
 type ClientCertificateExpiration struct {
 	File     File
 	Path     string
 	NotAfter time.Time
+}
+
+type KubeconfigExpirationReport struct {
+	Entries []KubeconfigExpirationEntry
+}
+
+type KubeconfigExpirationEntry struct {
+	ClientCertificateExpiration
+	Err error
+}
+
+func (r *KubeconfigExpirationReport) add(exp ClientCertificateExpiration, err error) {
+	r.Entries = append(r.Entries, KubeconfigExpirationEntry{
+		ClientCertificateExpiration: exp,
+		Err:                         err,
+	})
 }
 
 var defaultExpirationFiles = []File{
@@ -66,36 +82,28 @@ func WithFiles(files ...File) ExpirationOption {
 	}
 }
 
-// WithIgnoreReadErrors enables partial success and returns read failures as errors.Join(...).
-func WithIgnoreReadErrors() ExpirationOption {
-	return func(o *expirationOptions) {
-		o.ignoreReadErrors = true
-	}
-}
-
-func ListClientCertificateExpirations(opts ...ExpirationOption) ([]ClientCertificateExpiration, error) {
+// ListClientCertificateExpirations enumerates the selected kubeconfig files and returns a structured report.
+// The caller iterates report.Entries and decides per-entry what to do.
+func ListClientCertificateExpirations(opts ...ExpirationOption) KubeconfigExpirationReport {
 	options := newExpirationOptions(opts...)
 	files := expirationFiles(options)
 
-	result := make([]ClientCertificateExpiration, 0, len(files))
-	var errs []error
-
+	var report KubeconfigExpirationReport
 	for _, file := range files {
 		path := filepath.Join(options.kubeconfigDir, string(file))
-		expiration, err := clientCertificateExpiration(path)
-		if err != nil {
-			if !options.ignoreReadErrors {
-				return nil, err
-			}
 
-			errs = append(errs, err)
-			continue
+		exp, loadErr := clientCertificateExpiration(path)
+		switch {
+		case loadErr == nil:
+			report.add(exp, nil)
+		case errors.Is(loadErr, fs.ErrNotExist):
+			report.add(ClientCertificateExpiration{File: file, Path: path}, &MissingError{File: file})
+		default:
+			report.add(ClientCertificateExpiration{File: file, Path: path}, loadErr)
 		}
-
-		result = append(result, expiration)
 	}
 
-	return result, errors.Join(errs...)
+	return report
 }
 
 func GetClientCertificateExpiration(path string) (ClientCertificateExpiration, error) {

@@ -96,11 +96,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
-  internal:
-    modules:
-      resourcesRequests:
-        milliCpuControlPlane: 1024
-        memoryControlPlane: 536870912
   modules:
     placement: {}
   discovery:
@@ -126,6 +121,9 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     kubeSchedulerExtenders: []
     authn: {}
     selfSignedCA: {}
+    resourcesRequests:
+      milliCpuControlPlane: 1024
+      memoryControlPlane: 536870912
 `
 
 	const defaultAudience = "https://kubernetes.default.svc.cluster.local"
@@ -322,7 +320,9 @@ apiserver:
   authn: {}
 `
 	const (
-		eeModuleDir        = "/deckhouse/ee/modules/040-control-plane-manager"
+		// TODO change to "/deckhouse/ee/modules/040-control-plane-manager"
+		// after enable signature for ee and fe
+		eeModuleDir        = "/deckhouse/ee/cse/modules/040-control-plane-manager"
 		moduleDir          = "/deckhouse/modules/040-control-plane-manager"
 		valuesInModulePath = "openapi/values.yaml"
 	)
@@ -988,7 +988,7 @@ resources:
 	Context("webhook configuration in apiserver", func() {
 		const webhookTestValues = `
 internal:
-  effectiveKubernetesVersion: "1.31"
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1013,7 +1013,7 @@ apiserver:
 
 		const webhookAuthzMissingCATestValues = `
 internal:
-  effectiveKubernetesVersion: "1.31"
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:

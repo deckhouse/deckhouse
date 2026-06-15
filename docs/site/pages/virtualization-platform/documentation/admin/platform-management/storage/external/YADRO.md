@@ -32,10 +32,13 @@ d8 k get module csi-yadro-tatlin-unified -w
 
 In the output, you should see information about the module:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 si-yadro-tatlin-unified            Embedded  Available   True       True
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ## Connecting to the TATLIN.UNIFIED storage system
 

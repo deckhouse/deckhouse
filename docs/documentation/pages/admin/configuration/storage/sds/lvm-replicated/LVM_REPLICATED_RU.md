@@ -35,10 +35,13 @@ d8 k get modules sds-node-configurator -w
 
 В результате будет выведена информация о модуле [`sds-node-configurator`](/modules/sds-node-configurator/):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 sds-node-configurator              Embedded  Available   True       True
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Подключение DRBD
 
@@ -66,12 +69,15 @@ d8 k get modules sds-replicated-volume -w
 
 В результате будет выведена информация о модуле [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 sds-replicated-volume              Embedded  Available   True       True
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
-Чтобы проверить, что в пространствах имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
+Чтобы проверить, что в неймспейсах `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
 
 ```shell
 d8 k -n d8-sds-replicated-volume get pod -w
@@ -94,6 +100,7 @@ d8 k get bd
 
 В результате будет выведен список доступных блочных устройств:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                           NODE       CONSUMABLE   SIZE           PATH
 dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
@@ -103,6 +110,8 @@ dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140
 dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
 dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 В примере вывода перечислены шесть блочных устройств, расположенных на трёх узлах.
 
@@ -144,10 +153,13 @@ d8 k get lvg vg-on-worker-0 -w
 
 В результате будет выведена информация о состоянии ресурса:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
 vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`.
 
@@ -161,12 +173,15 @@ d8 k get lvg -w
 
 В результате будет выведен список созданных групп томов:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
 vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
 vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Создание реплицированных thick pool
 
@@ -197,10 +212,13 @@ d8 k get rsp data -w
 
 В результате будет выведена информация о состоянии созданного ресурса:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME         PHASE       TYPE   AGE
 thick-pool   Completed   LVM    87d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Создание реплицированных thin pool
 
@@ -257,10 +275,13 @@ d8 k get rsp data -w
 
 В результате будет выведена информация о состоянии созданного ресурса:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE       TYPE      AGE
 thin-pool   Completed   LVMThin   87d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ## Создание объектов StorageClass
 
@@ -298,10 +319,13 @@ d8 k get rsc replicated-storage-class -w
 
 В результате будет выведена информация о созданном [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                       PHASE     AGE
 replicated-storage-class   Created   1h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
 
@@ -311,9 +335,12 @@ d8 k get sc replicated-storage-class
 
 В результате будет выведена информация о созданном StorageClass:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Если StorageClass с именем `replicated-storage-class` появился, значит настройка модуля [`sds-replicated-volume`](/modules/sds-replicated-volume/) завершена. Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `replicated-storage-class`. При указанных выше настройках будет создаваться том с тремя репликами на разных узлах.

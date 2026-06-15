@@ -54,6 +54,21 @@ func Test_recordingRulesGroupManifest(t *testing.T) {
 	assert.Equal(t, "kube_namespace_created", rule["expr"])
 }
 
+func Test_recordingRulesGroupManifest_numericAgentID(t *testing.T) {
+	manifest := recordingRulesGroupManifest("7798", "test-ns", "recording-rules", "upmeter_metric")
+
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(manifest), &obj)
+	assert.NoError(t, err)
+
+	metadata := obj["metadata"].(map[string]interface{})
+	labels := metadata["labels"].(map[string]interface{})
+
+	value, ok := labels["upmeter-agent"].(string)
+	assert.True(t, ok, "upmeter-agent label must be a string, got %T", labels["upmeter-agent"])
+	assert.Equal(t, "7798", value)
+}
+
 func Test_alertRulesGroupManifest(t *testing.T) {
 	manifest := alertRulesGroupManifest(
 		"agent-01",
@@ -81,6 +96,78 @@ func Test_alertRulesGroupManifest(t *testing.T) {
 	assert.Equal(t, "abc-123", labels["upmeter_alert_id"])
 }
 
+func Test_alertRulesGroupManifest_numericValues(t *testing.T) {
+	manifest := alertRulesGroupManifest(
+		"7798",
+		"test-ns",
+		"alert-rules",
+		"UpmeterMiniE2E",
+		"upmeter_alert_id",
+		"123456",
+	)
+
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(manifest), &obj)
+	assert.NoError(t, err)
+
+	metadata := obj["metadata"].(map[string]interface{})
+	metaLabels := metadata["labels"].(map[string]interface{})
+	agentValue, ok := metaLabels["upmeter-agent"].(string)
+	assert.True(t, ok, "upmeter-agent label must be a string, got %T", metaLabels["upmeter-agent"])
+	assert.Equal(t, "7798", agentValue)
+
+	spec := obj["spec"].(map[string]interface{})
+	rule := spec["rules"].([]interface{})[0].(map[string]interface{})
+	ruleLabels := rule["labels"].(map[string]interface{})
+	alertIDValue, ok := ruleLabels["upmeter_alert_id"].(string)
+	assert.True(t, ok, "upmeter_alert_id label must be a string, got %T", ruleLabels["upmeter_alert_id"])
+	assert.Equal(t, "123456", alertIDValue)
+}
+
+func Test_alertRulesGroupManifest_quotedKeyParsesAsBareString(t *testing.T) {
+	manifest := alertRulesGroupManifest(
+		"agent-01",
+		"test-ns",
+		"alert-rules",
+		"UpmeterMiniE2E",
+		"upmeter_alert_id",
+		"abc-123",
+	)
+
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(manifest), &obj)
+	assert.NoError(t, err)
+
+	labels := obj["spec"].(map[string]interface{})["rules"].([]interface{})[0].(map[string]interface{})["labels"].(map[string]interface{})
+
+	_, bareOK := labels["upmeter_alert_id"]
+	assert.True(t, bareOK, "label key must be parsed as bare string `upmeter_alert_id`")
+
+	_, quotedLeaked := labels[`"upmeter_alert_id"`]
+	assert.False(t, quotedLeaked, "label key must NOT contain literal quote characters")
+}
+
+func Test_alertRulesGroupManifest_specialCharsAreEscaped(t *testing.T) {
+	manifest := alertRulesGroupManifest(
+		`hash"with"quotes`,
+		"test-ns",
+		"alert-rules",
+		"UpmeterMiniE2E",
+		"upmeter_alert_id",
+		`val\nwith\backslash`,
+	)
+
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(manifest), &obj)
+	assert.NoError(t, err, "manifest must be parseable YAML even with special chars in values")
+
+	metaLabels := obj["metadata"].(map[string]interface{})["labels"].(map[string]interface{})
+	assert.Equal(t, `hash"with"quotes`, metaLabels["upmeter-agent"])
+
+	ruleLabels := obj["spec"].(map[string]interface{})["rules"].([]interface{})[0].(map[string]interface{})["labels"].(map[string]interface{})
+	assert.Equal(t, `val\nwith\backslash`, ruleLabels["upmeter_alert_id"])
+}
+
 func Test_observabilitySilenceManifest(t *testing.T) {
 	startsAt := time.Date(2026, time.February, 27, 9, 0, 0, 0, time.UTC)
 	endsAt := startsAt.Add(10 * time.Minute)
@@ -106,6 +193,35 @@ func Test_observabilitySilenceManifest(t *testing.T) {
 	selector := spec["selector"].(map[string]interface{})
 	matchLabels := selector["matchLabels"].(map[string]interface{})
 	assert.Equal(t, "abc-123", matchLabels["upmeter_alert_id"])
+}
+
+func Test_observabilitySilenceManifest_numericValues(t *testing.T) {
+	startsAt := time.Date(2026, time.February, 27, 9, 0, 0, 0, time.UTC)
+	endsAt := startsAt.Add(10 * time.Minute)
+
+	manifest := observabilitySilenceManifest(
+		"7798",
+		"test-ns",
+		"silence-1",
+		"upmeter_alert_id",
+		"123456",
+		startsAt,
+		endsAt,
+	)
+
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(manifest), &obj)
+	assert.NoError(t, err)
+
+	metaLabels := obj["metadata"].(map[string]interface{})["labels"].(map[string]interface{})
+	agentValue, ok := metaLabels["upmeter-agent"].(string)
+	assert.True(t, ok, "upmeter-agent label must be a string, got %T", metaLabels["upmeter-agent"])
+	assert.Equal(t, "7798", agentValue)
+
+	matchLabels := obj["spec"].(map[string]interface{})["selector"].(map[string]interface{})["matchLabels"].(map[string]interface{})
+	alertIDValue, ok := matchLabels["upmeter_alert_id"].(string)
+	assert.True(t, ok, "matchLabels.upmeter_alert_id must be a string, got %T", matchLabels["upmeter_alert_id"])
+	assert.Equal(t, "123456", alertIDValue)
 }
 
 func Test_isMetricPresentInPrometheusResponse(t *testing.T) {

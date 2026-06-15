@@ -1,7 +1,7 @@
 properties:
   storageClass:
     description: |-
-      Имя StorageClass, который будет использоваться по умолчанию в кластере.
+      Имя StorageClass для хранения данных Upmeter (PVC).
 
       Если значение не указано, используется StorageClass существующей PVC. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
 

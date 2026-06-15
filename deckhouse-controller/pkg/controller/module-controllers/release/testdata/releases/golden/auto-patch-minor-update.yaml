@@ -4,7 +4,6 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: foxtrot-suitable
@@ -29,13 +28,12 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
-    status: superseded
+    status: deployed
   name: parca-1.26.2
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -43,7 +41,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: ""
-  resourceVersion: "1004"
+  resourceVersion: "1002"
 spec:
   moduleName: parca
   version: 1.26.2
@@ -51,26 +49,20 @@ spec:
 status:
   approved: true
   message: ""
-  phase: Superseded
+  phase: Deployed
   pullDuration: 0s
   size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: "2021-12-08T08:34:01Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
-    modules.deckhouse.io/isUpdating: "false"
-    modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
-  - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
-    modules.deckhouse.io/update-policy: ""
-    status: deployed
   name: parca-1.27.0
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -78,7 +70,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1006"
+  resourceVersion: "1001"
 spec:
   moduleName: parca
   version: 1.27.0
@@ -86,7 +78,7 @@ spec:
 status:
   approved: true
   message: ""
-  phase: Deployed
+  phase: Pending
   pullDuration: 0s
   size: 0
   transitionTime: null
@@ -94,7 +86,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
-  creationTimestamp: null
   name: parca
   resourceVersion: "1000"
 properties: {}

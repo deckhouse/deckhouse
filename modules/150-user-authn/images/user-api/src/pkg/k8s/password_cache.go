@@ -44,6 +44,7 @@ type PasswordCache struct {
 	informer      cache.SharedIndexInformer
 	logger        *slog.Logger
 	stopCh        chan struct{}
+	stopOnce      sync.Once
 	synced        bool
 	dynamicClient dynamic.Interface
 }
@@ -73,11 +74,13 @@ func NewPasswordCache(dynamicClient dynamic.Interface, logger *slog.Logger) *Pas
 
 	pc.informer = informerFactory.ForResource(gvr).Informer()
 
-	_, _ = pc.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	if _, err := pc.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    pc.onAdd,
 		UpdateFunc: pc.onUpdate,
 		DeleteFunc: pc.onDelete,
-	})
+	}); err != nil {
+		logger.Error("Failed to register password informer event handler", "error", err)
+	}
 
 	return pc
 }
@@ -90,6 +93,8 @@ func (pc *PasswordCache) Start(ctx context.Context) error {
 
 	pc.logger.Info("Waiting for password cache to sync")
 	if !cache.WaitForCacheSync(ctx.Done(), pc.informer.HasSynced) {
+		// Stop the informer goroutine started above so it doesn't leak.
+		pc.Stop()
 		return fmt.Errorf("failed to sync password cache")
 	}
 
@@ -101,9 +106,11 @@ func (pc *PasswordCache) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops the informer.
+// Stop stops the informer. It is safe to call multiple times.
 func (pc *PasswordCache) Stop() {
-	close(pc.stopCh)
+	pc.stopOnce.Do(func() {
+		close(pc.stopCh)
+	})
 }
 
 // IsLocalUser checks if the given username exists in the cache.

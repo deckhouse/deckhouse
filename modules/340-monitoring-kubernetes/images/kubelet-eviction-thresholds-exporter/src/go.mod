@@ -1,6 +1,6 @@
 module kubelet-eviction-thresholds-exporter
 
-go 1.24.0
+go 1.25.10
 
 require (
 	github.com/shirou/gopsutil/v3 v3.23.2

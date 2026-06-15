@@ -47,9 +47,10 @@ func TestSignatureMode(t *testing.T) {
 		return newTestSchemaStore("/deckhouse/modules/040-control-plane-manager/openapi/config-values.yaml")
 	}
 
-	eeSchemaStore := func() SchemaStore {
-		return newTestSchemaStore("/deckhouse/ee/modules/040-control-plane-manager/openapi/config-values.yaml")
-	}
+	// TODO uncomment here after enable signatures for ee and fe
+	// eeSchemaStore := func() SchemaStore {
+	// 	return newTestSchemaStore("/deckhouse/ee/modules/040-control-plane-manager/openapi/config-values.yaml")
+	// }
 
 	cseSchemaStore := func() SchemaStore {
 		return newTestSchemaStore("/deckhouse/ee/cse/modules/040-control-plane-manager/openapi/config-values.yaml")
@@ -74,7 +75,9 @@ func TestSignatureMode(t *testing.T) {
 	tests := make([]test, 0)
 
 	// not ee tests
-	for _, ed := range []string{"ce", "be", "se", "se-plus"} {
+	// TODO after enable signature for ee and fe after full ready sig-migrate
+	// remove ee and fe from here an uncomment below code
+	for _, ed := range []string{"ce", "be", "se", "se-plus", "ee", "fe"} {
 		suit := []test{
 			{
 				name:        fmt.Sprintf("not ee (%s) without mc", ed),
@@ -219,9 +222,11 @@ func TestSignatureMode(t *testing.T) {
 	}
 
 	// ee tests
-	for _, ed := range []string{"ee", "fe"} {
-		tests = append(tests, createEESuits(ed, "Rollback", eeSchemaStore())...)
-	}
+	// TODO after enable signature for ee and fe after full ready sig-migrate
+	// remove uncomment this code and remove ee and fe from not cse tests suit
+	// for _, ed := range []string{"ee", "fe"} {
+	// 	tests = append(tests, createEESuits(ed, "Rollback", eeSchemaStore())...)
+	// }
 
 	tests = append(tests, createEESuits("cse", "Migrate", cseSchemaStore())...)
 

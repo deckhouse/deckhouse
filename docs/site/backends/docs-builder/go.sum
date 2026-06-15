@@ -70,8 +70,8 @@ github.com/bep/godartsass/v2 v2.5.0 h1:tKRvwVdyjCIr48qgtLa4gHEdtRkPF8H1OeEhJAEv7
 github.com/bep/godartsass/v2 v2.5.0/go.mod h1:rjsi1YSXAl/UbsGL85RLDEjRKdIKUlMQHr6ChUNYOFU=
 github.com/bep/golibsass v1.2.0 h1:nyZUkKP/0psr8nT6GR2cnmt99xS93Ji82ZD9AgOK6VI=
 github.com/bep/golibsass v1.2.0/go.mod h1:DL87K8Un/+pWUS75ggYv41bliGiolxzDKWJAq3eJ1MA=
-github.com/bep/golocales v0.1.0 h1:rjWf1S4basIje+G+je5WMW8G+yzaoz4gEDFolrFVdvA=
-github.com/bep/golocales v0.1.0/go.mod h1:Hl78nje8mNL3LzLeJvYN9NsIZgyFJGrGfvgO9r1+mwE=
+github.com/bep/golocales v0.2.0 h1:4H1H5UPw3ainpj5zykeEfiMRQngyaIC/t+I4Dvn+fvE=
+github.com/bep/golocales v0.2.0/go.mod h1:Hl78nje8mNL3LzLeJvYN9NsIZgyFJGrGfvgO9r1+mwE=
 github.com/bep/goportabletext v0.2.0 h1:CZ9f8jADBWqHwBymQiJJPCTSV/tHSA+PYzlUf86Yze0=
 github.com/bep/goportabletext v0.2.0/go.mod h1:xDeA5+qcgKzJq6Q6XjAiBKtxLD3Yn7f6XP4joD3J3qU=
 github.com/bep/helpers v0.12.0 h1:tD6V2DQW0B+FUynF2etR/106S/TO9akm+vA/Hk24GxY=
@@ -175,8 +175,8 @@ github.com/gohugoio/hashstructure v0.6.0 h1:7wMB/2CfXoThFYhdWRGv3u3rUM761Cq29CxU
 github.com/gohugoio/hashstructure v0.6.0/go.mod h1:lapVLk9XidheHG1IQ4ZSbyYrXcaILU1ZEP/+vno5rBQ=
 github.com/gohugoio/httpcache v0.8.0 h1:hNdsmGSELztetYCsPVgjA960zSa4dfEqqF/SficorCU=
 github.com/gohugoio/httpcache v0.8.0/go.mod h1:fMlPrdY/vVJhAriLZnrF5QpN3BNAcoBClgAyQd+lGFI=
-github.com/gohugoio/hugo v0.162.0 h1:53tmaVTc6KTo41YRi7tOMcpHDkPqT3soxt+k6xyLs/o=
-github.com/gohugoio/hugo v0.162.0/go.mod h1:jQRZLi5aiQKwX1wYg1sgz374QGxuzMgJR8XssWySUhQ=
+github.com/gohugoio/hugo v0.162.1 h1:GjmVbhwMoh69+VN1hTXGFncDiDySwqGyr8yRYxnjT+8=
+github.com/gohugoio/hugo v0.162.1/go.mod h1:zdnn3irg2scM/ua3j96DmLNQu3X4BfOZrMX3Toz3La8=
 github.com/gohugoio/hugo-goldmark-extensions/extras v0.7.0 h1:I/n6v7VImJ3aISLnn73JAHXyjcQsMVvbguQPTk9Ehus=
 github.com/gohugoio/hugo-goldmark-extensions/extras v0.7.0/go.mod h1:9LJNfKWFmhEJ7HW0in5znezMwH+FYMBIhNZ3VWtRcRs=
 github.com/gohugoio/hugo-goldmark-extensions/passthrough v0.5.0 h1:p13Q0DBCrBRpJGtbtlgkYNCs4TnIlZJh8vHgnAiofrI=

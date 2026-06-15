@@ -31,7 +31,7 @@ import (
 )
 
 func NewErrClusterManagedByAnotherCommander(managedByCommanderUUID, requiredCommanderUUID uuid.UUID) error {
-	return fmt.Errorf("cluster managed by another commander %s unable to perform operations from your commander %s", managedByCommanderUUID.String(), requiredCommanderUUID.String())
+	return fmt.Errorf("cluster is managed by another commander %s; unable to perform operations from your commander %s", managedByCommanderUUID.String(), requiredCommanderUUID.String())
 }
 
 func doCheckShouldUpdateCommanderUUID(cm *v1.ConfigMap, requiredCommanderUUID uuid.UUID) (bool, error) {

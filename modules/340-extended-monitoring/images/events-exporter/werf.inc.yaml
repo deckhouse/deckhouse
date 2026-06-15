@@ -31,7 +31,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -44,9 +44,6 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY=$(cat /run/secrets/GOPROXY)

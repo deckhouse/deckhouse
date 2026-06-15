@@ -7,14 +7,8 @@ fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /src/scripts
-  stageDependencies:
-    setup:
-    - '**/*'
 - add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src/logpipe
-  stageDependencies:
-    setup:
-    - '**/*'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
 from: {{ index .Images "builder/scratch" }}

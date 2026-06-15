@@ -190,6 +190,9 @@ common:
   search_placeholder_text_filter:
     en: Enter a&nbsp;name
     ru: Введите название
+  search_placeholder_text_404:
+    en: Search Documentation
+    ru: Поиск по документации
   search_context_dkpdocs_and_modules:
     en: The search is performed throughout DKP documentation and modules.
     ru: Поиск выполняется по всей документации DKP и модулям.
@@ -199,6 +202,9 @@ common:
   search_context_only_product_docs:
     en: The search is performed throughout the product documentation, excluding modules.
     ru: Поиск выполняется по всей документации продукта, не включая модули.
+  modules_of_a_subsystem:
+    en: Subsystem modules
+    ru: Модули подсистемы
   module_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
@@ -211,6 +217,9 @@ common:
   parameter_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
+  subsystem:
+    en: Subsystem
+    ru: Подсистема
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -354,10 +363,10 @@ common:
     ru: пространства имен
   namespaces_used_by_modules:
     en: Namespaces in which modules of a scope operate
-    ru: Пространства имен используемых модулями области
+    ru: Неймспейсы, используемые модулями подсистемы
   all_namespaces:
     en: All namespaces
-    ru: Все пространства имен
+    ru: Все неймспейсы
   all_modules:
     en: All modules
     ru: Все модули

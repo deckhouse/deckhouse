@@ -2,7 +2,7 @@
 # <template: check_changelog_template>
 check_changelog:
   name: Check changelog
-  runs-on: "ubuntu-slim"
+  runs-on: "self-slim"
   steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
@@ -60,6 +60,22 @@ steps:
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{- if coll.Has $ctx "printGitContext" }!}
+  - name: Print git context
+    run: |
+      # Diagnostic: which commit werf will actually build from.
+      # GITHUB_SHA is the workflow run's commit (immutable, runner-injected);
+      # git HEAD is what actions/checkout left in the work tree (may differ
+      # for runs that override `ref`, e.g. reproducibility-check.yml).
+      echo "==== git context ===="
+      echo "GITHUB_SHA env:        ${GITHUB_SHA}"
+      echo "GITHUB_REF env:        ${GITHUB_REF}"
+      echo "git HEAD (full):       $(git rev-parse HEAD)"
+      echo "git HEAD (short):      $(git rev-parse --short HEAD)"
+      git log -1 --pretty='format:  commit:  %H%n  author:  %an <%ae>%n  date:    %ad%n  subject: %s'
+      echo
+      echo "====================="
+  {!{- end }!}
   {!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{- end }!}
@@ -76,6 +92,9 @@ steps:
     id: build
     env:
       WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+      WERF_DOCKER_REGISTRY_DEBUG: 1
+      WERF_TELEMETRY: "1"
+      WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}

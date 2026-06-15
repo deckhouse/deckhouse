@@ -57,6 +57,7 @@ spec:
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       storageClass:
+                        description: StorageClass name. On a running VM, changing this value triggers live PVC migration.
                         type: string
                     required:
                       - size
@@ -142,8 +143,7 @@ spec:
                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                   x-kubernetes-int-or-string: true
                 rootDiskStorageClass:
-                  description: RootDiskStorageClass holds the name of the StorageClass
-                    to use for bootable disk.
+                  description: StorageClass for the boot disk. On a running VM, changing this value triggers live PVC migration; see DiskStorageClassMigration condition.
                   type: string
                 runPolicy:
                   default: AlwaysOnUnlessStoppedManually

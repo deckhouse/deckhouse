@@ -485,6 +485,10 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	}
 	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
 
+	if tag := m.deckhouseImageTag(); tag != "" && registryContext.ImagesBase != "" {
+		configForBashibleBundleTemplate["deckhouseImageRef"] = fmt.Sprintf("%s:%s", registryContext.ImagesBase, tag)
+	}
+
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 	clusterMasterEndpoints := m.clusterMasterEndpointsBashibleContext()
@@ -738,7 +742,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 func (m *MetaConfig) LoadImagesDigests() error {
 	imagesDigests, err := digests.GetAllDigests()
 	if err != nil {
-		return fmt.Errorf("Cannot get images digests: %w", err)
+		return fmt.Errorf("Cannot get image digests: %w", err)
 	}
 
 	m.Images = imagesDigests
@@ -760,6 +764,17 @@ func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
 	}
 
 	return nil
+}
+
+// deckhouseImageTag returns the deckhouse-controller image tag for the bashible
+// prefetch: semver from the installer's version file, falling back to DevBranch.
+func (m *MetaConfig) deckhouseImageTag() string {
+	if m.VersionFilePath != "" {
+		if tag, ok := ReadVersionTagFromInstallerContainer(m.VersionFilePath, m.DownloadRootDir); ok {
+			return tag
+		}
+	}
+	return m.DeckhouseConfig.DevBranch
 }
 
 func (m *MetaConfig) LoadInstallerVersion() error {
@@ -795,7 +810,7 @@ func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
 func getDNSAddress(serviceCIDR string) string {
 	ip, ipnet, err := net.ParseCIDR(serviceCIDR)
 	if err != nil {
-		log.DebugLn("serviceSubnetCIDR is not valid CIDR (should be validated with openapi scheme)")
+		log.DebugLn("serviceSubnetCIDR is not a valid CIDR (should be validated with the openapi schema)")
 		return ""
 	}
 

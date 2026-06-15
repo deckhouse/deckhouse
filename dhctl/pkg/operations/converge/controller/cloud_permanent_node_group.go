@@ -120,7 +120,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, nodeName)
+		log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, nodeName)
 		return nil
 	}
 

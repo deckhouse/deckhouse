@@ -65,12 +65,14 @@ data:
 		policyA = `
 apiVersion: audit.k8s.io/v1
 kind: Policy
+metadata: {}
 rules:
 - level: Metadata
 `
 		policyB = `
 apiVersion: audit.k8s.io/v1
 kind: Policy
+metadata: {}
 rules:
 - level: Metadata
   omitStages:

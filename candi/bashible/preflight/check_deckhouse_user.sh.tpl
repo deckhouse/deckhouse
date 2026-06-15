@@ -42,5 +42,5 @@ if [ "$uid" != "$EXPECTED_ID" ] || [ "$gid" != "$EXPECTED_ID" ]; then
 fi
 
 if sudo -l -U deckhouse 2>/dev/null | grep -q "(ALL"; then
-    fail "deckhouse user has sudo privileges — this is a security risk"
+    fail "deckhouse user has sudo privileges, this is a security risk"
 fi

@@ -42,14 +42,14 @@ func DefineDeckhouseFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 
 // DefinePostBootstrapScriptFlags registers post-bootstrap script flags.
 func DefinePostBootstrapScriptFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
-	cmd.Flag("post-bootstrap-script-path", `Path to bash (or another interpreted language which installed on master node) script which will execute after bootstrap resources.
-All output of the script will be logged with Info level with prefix 'Post-bootstrap script result:'.
-If you want save to state cache on key 'post-bootstrap-result' you need to out result with prefix 'Result of post-bootstrap script:' in one line.
+	cmd.Flag("post-bootstrap-script-path", `Path to a bash (or other interpreted-language) script installed on the master node, which will be executed after the bootstrap resources.
+All output of the script will be logged at the Info level with the prefix 'Post-bootstrap script result:'.
+If you want to save to the state cache under the key 'post-bootstrap-result', you need to output the result with the prefix 'Result of post-bootstrap script:' on one line.
 Experimental. This feature may be deleted in the future.`).
 		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_PATH")).
 		StringVar(&o.PostBootstrapScriptPath)
 
-	cmd.Flag("post-bootstrap-script-timeout", "Timeout to execute after bootstrap resources script. Experimental. This feature may be deleted in the future.").
+	cmd.Flag("post-bootstrap-script-timeout", "Timeout for executing the after-bootstrap-resources script. Experimental. This feature may be deleted in the future.").
 		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_TIMEOUT")).
 		Default(o.PostBootstrapScriptTimeout.String()).
 		DurationVar(&o.PostBootstrapScriptTimeout)
@@ -58,7 +58,7 @@ Experimental. This feature may be deleted in the future.`).
 // DefineResourcesFlags registers --resources / --resources-timeout.
 func DefineResourcesFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions, isRequired bool) {
 	cmd.Flag("resources", `Path to a file with declared Kubernetes resources in YAML format.
-Deprecated. Please use --config flag multiple repeatedly for logical resources separation.
+Deprecated. Please use the --config flag repeatedly for logical separation of resources.
 `).
 		Envar(configEnvName("RESOURCES")).
 		StringVar(&o.ResourcesPath)
@@ -73,7 +73,7 @@ Deprecated. Please use --config flag multiple repeatedly for logical resources s
 
 // DefineAbortFlags registers --force-abort-from-cache.
 func DefineAbortFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
-	const help = `Skip 'use dhctl destroy command' error. It force bootstrap abortion from cache.
+	const help = `Skip the 'use dhctl destroy command' error. This forces bootstrap abortion from cache.
 Experimental. This feature may be deleted in the future.`
 	cmd.Flag("force-abort-from-cache", help).
 		Envar(configEnvName("FORCE_ABORT_FROM_CACHE")).

@@ -54,6 +54,10 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return err
 	}
 
+	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
+		return fmt.Errorf("apply cni bootstrap: %w", err)
+	}
+
 	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
 		intLogger, ok := b.logger.(*log.InteractiveLogger)
@@ -62,7 +66,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		}
 		labelChan := intLogger.GetPhaseChan()
 		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Install Deckhouse", labelChan, phasesChan)
+		pbParam := progressbar.NewPbParams(100, "Install Deckhouse", labelChan, phasesChan, intLogger.GetLogChan())
 
 		if err := progressbar.InitProgressBar(pbParam); err != nil {
 			return err

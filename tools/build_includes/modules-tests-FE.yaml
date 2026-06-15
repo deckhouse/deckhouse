@@ -814,17 +814,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/040-control-plane-manager/monitoring/prometheus-rules
-  to: /deckhouse/modules/040-control-plane-manager/monitoring/prometheus-rules
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   excludePaths:
@@ -978,6 +967,11 @@
         - '**/*'
 - add: /ee/modules/110-istio/crds/istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/istiomulticluster.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
   stageDependencies:
     install:
         - '**/*'
