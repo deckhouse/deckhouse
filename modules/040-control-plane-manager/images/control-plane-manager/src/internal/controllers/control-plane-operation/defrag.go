@@ -106,9 +106,9 @@ func defragEtcdIfNeeded(ctx context.Context, advertiseIP, pkiDir, kubeconfigDir 
 	return true, nil
 }
 
-// reconcileEtcdDefrag is the Reconciler-level implementation of the DefragEtcd step.
-// It checks that the etcd pod is ready, then defragments if fragmentation exceeds the threshold.
-func (r *Reconciler) reconcileEtcdDefrag(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error) {
+// defragEtcd is the Reconciler-level implementation of the DefragEtcd step.
+// It ensures the etcd pod is Ready, then defragments if fragmentation exceeds the threshold.
+func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error) {
 	if state.Raw().Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
 		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
@@ -151,3 +151,4 @@ func (r *Reconciler) reconcileEtcdDefrag(ctx context.Context, state *controlplan
 	}
 	return StepResult{Outcome: OutcomeCompleted, Message: "skipped: fragmentation below threshold"}, nil
 }
+
