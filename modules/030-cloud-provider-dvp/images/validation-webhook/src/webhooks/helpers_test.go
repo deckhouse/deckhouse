@@ -53,14 +53,38 @@ func TestResultToAdmission(t *testing.T) {
 		t.Fatalf("resultToAdmission() = (%v, %v), want (nil, nil)", warnings, err)
 	}
 
+	withWarnings := cpval.Result{}
+	withWarnings.AddWarning("spec.zone", "deprecated_zone", "zone is deprecated")
+	warnings, err = resultToAdmission(withWarnings)
+	if err != nil {
+		t.Fatalf("resultToAdmission() error = %v, want nil for warnings-only result", err)
+	}
+	if len(warnings) != 1 || warnings[0] != "spec.zone: zone is deprecated" {
+		t.Fatalf("resultToAdmission() warnings = %v, want formatted warning", warnings)
+	}
+
 	denied := cpval.Result{}
 	denied.AddError("", "denied", "denied")
-	_, err = resultToAdmission(denied)
+	warnings, err = resultToAdmission(denied)
 	if err == nil {
 		t.Fatal("resultToAdmission() error = nil, want denial")
 	}
 	if !apierrors.IsInvalid(err) {
 		t.Fatalf("resultToAdmission() error = %T, want Invalid", err)
+	}
+	if warnings != nil {
+		t.Fatalf("resultToAdmission() warnings = %v, want nil when only errors are present", warnings)
+	}
+
+	deniedWithWarnings := cpval.Result{}
+	deniedWithWarnings.AddError("spec.enabled", "disabled", "module must be enabled")
+	deniedWithWarnings.AddWarning("spec.settings", "legacy_setting", "setting is deprecated")
+	warnings, err = resultToAdmission(deniedWithWarnings)
+	if err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("resultToAdmission() error = %v, want Invalid", err)
+	}
+	if len(warnings) != 1 || warnings[0] != "spec.settings: setting is deprecated" {
+		t.Fatalf("resultToAdmission() warnings = %v, want warnings preserved on denial", warnings)
 	}
 }
 

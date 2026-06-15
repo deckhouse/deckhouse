@@ -34,8 +34,10 @@ func shouldSkipState(state *cpval.State) bool {
 }
 
 func resultToAdmission(result cpval.Result) (admission.Warnings, error) {
+	warnings := violationsToAdmissionWarnings(result.Warnings())
+
 	if !result.HasErrors() {
-		return nil, nil
+		return warnings, nil
 	}
 
 	errors := result.Errors()
@@ -44,7 +46,28 @@ func resultToAdmission(result cpval.Result) (admission.Warnings, error) {
 		fieldErrors = append(fieldErrors, field.Invalid(violationFieldPath(violation.Path), nil, violation.Message))
 	}
 
-	return nil, apierrors.NewInvalid(schema.GroupKind{}, "", fieldErrors)
+	return warnings, apierrors.NewInvalid(schema.GroupKind{}, "", fieldErrors)
+}
+
+func violationsToAdmissionWarnings(violations []cpval.Violation) admission.Warnings {
+	if len(violations) == 0 {
+		return nil
+	}
+
+	warningStrs := make(admission.Warnings, 0, len(violations))
+	for _, violation := range violations {
+		warningStrs = append(warningStrs, violationMessage(violation))
+	}
+
+	return warningStrs
+}
+
+func violationMessage(violation cpval.Violation) string {
+	if violation.Path == "" {
+		return violation.Message
+	}
+
+	return violation.Path + ": " + violation.Message
 }
 
 func violationFieldPath(path string) *field.Path {

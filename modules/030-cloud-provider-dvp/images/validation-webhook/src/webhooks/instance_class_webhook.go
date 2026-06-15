@@ -99,10 +99,11 @@ func (v *DVPInstanceClassValidator) validate(
 		result.Merge(deleteResult)
 	}
 
-	warnings, err := resultToAdmission(result)
-	if err != nil {
+	warnings, admissionErr := resultToAdmission(result)
+	if admissionErr != nil {
 		instanceClassLog.Info("validation denied", "violations", len(result.Errors()))
+		return warnings, admissionErr
 	}
 
-	return warnings, err
+	return warnings, nil
 }

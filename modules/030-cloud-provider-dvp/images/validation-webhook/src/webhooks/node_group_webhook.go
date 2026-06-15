@@ -113,12 +113,13 @@ func (v *NodeGroupValidator) validate(
 
 	result := dvpval.ValidateInvariants(state)
 
-	warnings, err := resultToAdmission(result)
-	if err != nil {
+	warnings, admissionErr := resultToAdmission(result)
+	if admissionErr != nil {
 		nodeGroupLog.Info("validation denied", "violations", len(result.Errors()))
+		return warnings, admissionErr
 	}
 
-	return warnings, err
+	return warnings, nil
 }
 
 func shouldValidateNodeGroup(obj runtime.Object) bool {

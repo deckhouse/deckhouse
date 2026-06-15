@@ -130,12 +130,13 @@ func (v *CredentialSecretValidator) validate(
 
 	result := dvpval.ValidateInvariants(state)
 
-	warnings, err := resultToAdmission(result)
-	if err != nil {
+	warnings, admissionErr := resultToAdmission(result)
+	if admissionErr != nil {
 		credentialSecretLog.Info("validation denied", "violations", len(result.Errors()))
+		return warnings, admissionErr
 	}
 
-	return warnings, err
+	return warnings, nil
 }
 
 func isManagedCredentialSecretName(name string) bool {
