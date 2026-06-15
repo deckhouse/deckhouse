@@ -260,12 +260,18 @@ properties:
             type: integer
             description: |
               The severity level of the alerts that will block the update.
+              The severity level is a number from 0 to 9, where 0 is the highest severity and 9 is the lowest severity.
             enum:
               - 0
               - 1
               - 2
               - 3
               - 4
+              - 5
+              - 6
+              - 7
+              - 8
+              - 9
             default: 4
   nodeSelector:
     type: object
