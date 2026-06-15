@@ -94,6 +94,30 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 	logger = logger.WithValues("dvp_machine", dvpMachine.Name, "dvp_machine_ns", dvpMachine.Namespace)
 
+	// Initialize the patch helper before branching into delete flow so we can
+	// persist finalizer/annotation updates even if related Cluster resources are already gone.
+	patchHelper, err := patch.NewHelper(dvpMachine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Migrate old CR's to v1beta2 conditions and always patch the dvpMachine when exiting this function,
+	// so we can persist any DeckhouseMachine changes.
+	defer func() {
+		normalizeLegacyConditions(dvpMachine)
+		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
+			result = ctrl.Result{}
+			reterr = err
+		}
+	}()
+
+	// Handle deleted machines before resolving owner Cluster/DeckhouseCluster.
+	// During destroy the infrastructure cluster object may already be gone, but
+	// we still must delete the backing VM and remove the machine finalizer.
+	if !dvpMachine.DeletionTimestamp.IsZero() {
+		return r.reconcileDeleteOperation(ctx, logger, dvpMachine)
+	}
+
 	machine, err := capiutil.GetOwnerMachine(ctx, r.Client, dvpMachine.ObjectMeta)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -127,27 +151,6 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if annotations.IsPaused(cluster, dvpMachine) {
 		logger.Info("DeckhouseMachine or linked Cluster is marked as paused. Will not reconcile.")
 		return ctrl.Result{}, nil
-	}
-
-	// Initialize the patch helper
-	patchHelper, err := patch.NewHelper(dvpMachine, r.Client)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Migrate old CR's to v1beta2 conditions and always patch the dvpMachine when exiting this function,
-	// so we can persist any DeckhouseMachine changes.
-	defer func() {
-		normalizeLegacyConditions(dvpMachine)
-		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
-			result = ctrl.Result{}
-			reterr = err
-		}
-	}()
-
-	// Handle deleted machines
-	if !dvpMachine.DeletionTimestamp.IsZero() {
-		return r.reconcileDeleteOperation(ctx, logger, dvpMachine)
 	}
 
 	// Handle other kinds of changes
