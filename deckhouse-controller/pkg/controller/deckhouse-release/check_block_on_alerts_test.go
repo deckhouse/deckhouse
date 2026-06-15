@@ -71,9 +71,11 @@ func TestCheckBlockOnAlerts(t *testing.T) {
 		require.NoError(t, rec.checkBlockOnAlerts(ctx, 4))
 	})
 
-	t.Run("alert severity equals threshold – not blocked", func(t *testing.T) {
+	t.Run("alert severity equals threshold – blocked", func(t *testing.T) {
 		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-eq", "4"))
-		require.NoError(t, rec.checkBlockOnAlerts(ctx, 4))
+		err := rec.checkBlockOnAlerts(ctx, 4)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "alert-eq")
 	})
 
 	t.Run("alert severity below threshold – not blocked", func(t *testing.T) {
@@ -89,11 +91,9 @@ func TestCheckBlockOnAlerts(t *testing.T) {
 		assert.Contains(t, err.Error(), "7")
 	})
 
-	t.Run("severityLevel stored as int64 – blocked", func(t *testing.T) {
+	t.Run("severityLevel stored as int64 – not blocked (unhandled type skipped)", func(t *testing.T) {
 		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-int", int64(9)))
-		err := rec.checkBlockOnAlerts(ctx, 4)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "alert-int")
+		require.NoError(t, rec.checkBlockOnAlerts(ctx, 4))
 	})
 
 	t.Run("severityLevel absent – alert is skipped, not blocked", func(t *testing.T) {
@@ -101,16 +101,18 @@ func TestCheckBlockOnAlerts(t *testing.T) {
 		require.NoError(t, rec.checkBlockOnAlerts(ctx, 4))
 	})
 
-	t.Run("zero threshold falls back to default 4 – severity 5 is blocked", func(t *testing.T) {
+	t.Run("zero threshold – severity 5 is blocked", func(t *testing.T) {
 		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-default", "5"))
 		err := rec.checkBlockOnAlerts(ctx, 0)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "5")
 	})
 
-	t.Run("zero threshold falls back to default 4 – severity 4 is not blocked", func(t *testing.T) {
+	t.Run("zero threshold – severity 4 is blocked", func(t *testing.T) {
 		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-default-eq", "4"))
-		require.NoError(t, rec.checkBlockOnAlerts(ctx, 0))
+		err := rec.checkBlockOnAlerts(ctx, 0)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "4")
 	})
 
 	t.Run("multiple alerts: one above threshold – blocked on first violator", func(t *testing.T) {

@@ -593,15 +593,9 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 	return ErrPreApplyCheckIsFailed
 }
 
-const defaultBlockOnAlertsSeverity = 4
-
 // checkBlockOnAlerts returns an error if there is at least one ClusterAlert
 // with severityLevel greater than the given threshold (default: 4).
 func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, severityThreshold int) error {
-	if severityThreshold == 0 {
-		severityThreshold = defaultBlockOnAlertsSeverity
-	}
-
 	alertList := &unstructured.UnstructuredList{}
 	alertList.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "deckhouse.io",
@@ -620,7 +614,7 @@ func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, sev
 
 		var alertSeverity int
 		switch v := rawVal.(type) {
-		case int64:
+		case int:
 			alertSeverity = int(v)
 		case string:
 			alertSeverity, err = strconv.Atoi(v)
@@ -631,7 +625,7 @@ func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, sev
 			continue
 		}
 
-		if alertSeverity > severityThreshold {
+		if alertSeverity >= severityThreshold {
 			return fmt.Errorf("release update is blocked by alert %q: severity %d exceeds threshold %d",
 				alert.GetName(), alertSeverity, severityThreshold)
 		}
