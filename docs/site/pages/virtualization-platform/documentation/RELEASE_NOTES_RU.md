@@ -4,6 +4,74 @@ permalink: ru/virtualization-platform/documentation/release-notes.html
 lang: ru
 ---
 
+## v1.9.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 10 июня 2026.
+</span>
+
+### Новые возможности
+
+- [vm] Перезагрузка больше не требуется для подключения и отключения виртуальных дисков и образов через спецификацию виртуальной машины `.spec.blockDeviceRefs`.
+  - Работает для новых виртуальных машин, начиная с версии v1.9.0.
+  - Для работы на созданных ранее виртуальных машинах нужно выполнить перезагрузку.
+- [vm] Добавлена возможность подключения дополнительных сетевых интерфейсов без перезагрузки через спецификацию виртуальной машины `.spec.networks`.
+- [vm] Добавлена возможность изменять `coreFraction` у работающей ВМ без перезагрузки. Новое значение применяется через живую миграцию.
+- [vm] В статус ВМ добавлено сообщение «No bootable device», если ВМ не может найти загрузочный диск для запуска.
+- [vm] Для ресурсов [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) добавлена колонка `Uptime`, показывающая время с момента запуска ВМ.
+- [vmop] Совместимые ресурсы [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) теперь могут заменять другую активную операцию над ВМ.
+- [usb] Для ресурса [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) добавлены условие `Attached` и колонка `ATTACHED`, отражающие состояние подключения USB-устройства в неймспейсе.
+
+### Исправления
+
+- [vm] Исправлено зависание ВМ в фазе `Starting`, если обновить класс хранения у диска с режимом `WaitForFirstConsumer`, пока ВМ была остановлена.
+- [vm] Исправлены проблемы с планированием (scheduling) ВМ после смены [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) в спецификации ВМ с типа `Discovery` на другой.
+- [vm] Исправлена отмена миграции ВМ, из-за которой новые миграции могли не запускаться.
+- [vm] Улучшена работа гостевых ОС Windows в кластерах с частыми изменениями частоты CPU.
+- [vd] Время в фазе `WaitForFirstConsumer` больше не включается в статусе `.status.stats.creationDuration.totalProvisioning` виртуальных дисков.
+- [module] Исправлена проблема, из-за которой некорректные настройки ModuleConfig модуля `virtualization` могли блокировать очередь Deckhouse.
+- [observability] Исправлено дублирование серий на дашборде `Virtualization / Overview`.
+
+### Прочее
+
+- [vm] Для утилиты `vlctl` добавлены подкоманды `domain jobs` и `block-jobs`.
+- [vmrestore] Удалён устаревший ресурс [VirtualMachineRestore](/modules/virtualization/cr.html#virtualmachinerestore). Вместо него используйте ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типом `Clone` или `Restore`, а также ресурс [VirtualMachineSnapshotOperation](/modules/virtualization/cr.html#virtualmachinesnapshotoperation).
+
+### Безопасность
+
+- [vm] Системные ресурсы виртуальной машины (поды с префиксами `d8v-hp-` и `d8v-vm-`) теперь работают от пользователя `deckhouse`, без root-прав.
+
+## v1.8.3
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 3 июня 2026.
+</span>
+
+### Исправления
+
+- [vm] Исправили проблему блокировки миграции ВМ с дополнительными интерфейсами.
+- [vm] Исправили проблему с дублированием служебных подов (`d8v-hp-*`) при отключении (hot unplug) дисков ВМ.
+
+## v1.8.2
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 20 мая 2026.
+</span>
+
+### Безопасность
+
+- [module] Исправлены уязвимости:
+  - CVE-2026-29181
+  - CVE-2026-33811
+  - CVE-2026-33814
+  - CVE-2026-39820
+  - CVE-2026-39823
+  - CVE-2026-39825
+  - CVE-2026-39826
+  - CVE-2026-39836
+  - CVE-2026-41520
+  - CVE-2026-42499
+
 ## v1.8.1
 
 <span style="opacity:0.6; font-style:italic; font-size:0.9em;">
@@ -28,7 +96,7 @@ lang: ru
 
 - [vm] Для операций [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) с типами `Evict` и `Migrate` в статус ресурса добавлено поле `progress`, отображающее прогресс выполнения операции. Соответствующая колонка `PROGRESS` выводится при вызове `d8 k get vmop`.
 - [vm] Добавлена возможность изменять количество CPU виртуальной машины без её ручной остановки — новое значение применяется через живую миграцию. Для включения функциональности добавьте `HotplugCPUWithLiveMigration` в `.spec.settings.featureGates` ModuleConfig модуля `virtualization`.
-- [vm] Добавлена начальная поддержка изменения памяти виртуальной машины без её ручной остановки — изменение `.spec.memory` применяется через живую миграцию. применяется через живую миграцию. Для включения функциональности добавьте `HotplugMemoryWithLiveMigration` в `.spec.settings.featureGates` ModuleConfig модуля `virtualization`.
+- [vm] Добавлена начальная поддержка изменения памяти виртуальной машины без её ручной остановки — изменение `.spec.memory` применяется через живую миграцию. Для включения функциональности добавьте `HotplugMemoryWithLiveMigration` в `.spec.settings.featureGates` ModuleConfig модуля `virtualization`.
 
 ### Исправления
 
@@ -56,6 +124,26 @@ lang: ru
   - CVE-2026-33186
   - CVE-2026-34040
   - CVE-2026-33997
+
+## v1.7.2
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Дата релиза: 20 мая 2026.
+</span>
+
+### Безопасность
+
+- [module] Исправлены уязвимости:
+  - CVE-2026-29181
+  - CVE-2026-33811
+  - CVE-2026-33814
+  - CVE-2026-39820
+  - CVE-2026-39823
+  - CVE-2026-39825
+  - CVE-2026-39826
+  - CVE-2026-39836
+  - CVE-2026-41520
+  - CVE-2026-42499
 
 ## v1.7.1
 
@@ -190,7 +278,7 @@ lang: ru
 
 ### Исправления
 
-- [vd] Исправлено зависание при создании виртуальных дисков в режиме `WaitForFirstConsumer` на узлах с taints.
+- [vd] Исправлено зависание при создании виртуальных дисков в режиме `WaitForFirstConsumer` на нодах с taints.
 - [vm] Если в `.spec.networks` указана только сеть `Main`, то больше не требуется включенный модуль `sdn`.
 - [vm] Исправлена миграция виртуальной машины с дисками, подключенными через [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) (hotplug): целевой под мог превысить лимиты по памяти (`OOMKilled`).
 - [vmbda] Исправлена некорректная фаза `Pending` ресурса [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) во время миграции виртуальной машины.
