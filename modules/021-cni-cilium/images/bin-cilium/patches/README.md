@@ -105,4 +105,4 @@ The feature is disabled by default and can be enabled with the Cilium agent conf
 
     enable-dvp-public-service-snat: "true"
 
-When enabled, the agent generates `ENABLE_DVP_PUBLIC_SERVICE_SNAT` in `node_config.h`. The BPF datapath then marks matching public service flows during service DNAT and performs SNAT later in the pod egress path, after CT/policy processing, with matching reverse SNAT for replies.
+When enabled, the agent generates `ENABLE_DVP_PUBLIC_SERVICE_SNAT` in `node_config.h`. The BPF datapath then marks matching public service flows during service DNAT and performs SNAT in a separate IPv4 egress delivery tail-call stage, after CT/policy processing, with matching reverse SNAT for replies.
