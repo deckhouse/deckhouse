@@ -548,8 +548,10 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 	defer span.End()
 
 	us := r.updateSettings.Get()
+	r.logger.Debug("checking block on alerts", slog.Bool("enabled", us.Update.BlockOnAlerts.Enabled), slog.Int("severity", us.Update.BlockOnAlerts.Severity))
 	if us.Update.BlockOnAlerts.Enabled {
 		if err := r.checkBlockOnAlerts(ctx, us.Update.BlockOnAlerts.Severity); err != nil {
+			r.logger.Error("release update is blocked by alert", slog.String("name", dr.GetName()), log.Err(err))
 			return err
 		}
 	}
@@ -595,6 +597,7 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 // checkBlockOnAlerts returns an error if there is at least one ClusterAlert
 // with severityLevel greater than the given threshold (default: 4).
 func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, severityThreshold int) error {
+	r.logger.Debug("checking block on alerts", slog.Int("severityThreshold", severityThreshold))
 	alertList := &unstructured.UnstructuredList{}
 	alertList.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "deckhouse.io",
@@ -605,9 +608,12 @@ func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, sev
 		return fmt.Errorf("list ClusterAlerts: %w", err)
 	}
 
+	r.logger.Debug("found alerts", slog.Int("count", len(alertList.Items)))
 	for _, alert := range alertList.Items {
 		rawVal, found, err := unstructured.NestedFieldNoCopy(alert.Object, "alert", "severityLevel")
+		r.logger.Debug("alert severity", slog.Any("rawVal", rawVal), slog.String("type", fmt.Sprintf("%T", rawVal)), slog.Bool("found", found))
 		if err != nil || !found {
+			r.logger.Debug("alert severity not found", slog.String("name", alert.GetName()), slog.String("error", err.Error()))
 			continue
 		}
 
@@ -625,6 +631,7 @@ func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, sev
 		}
 
 		if alertSeverity >= severityThreshold {
+			r.logger.Error("release update is blocked by alert", slog.String("name", alert.GetName()), slog.Int("severity", alertSeverity), slog.Int("threshold", severityThreshold))
 			return fmt.Errorf("release update is blocked by alert %q: severity %d exceeds threshold %d",
 				alert.GetName(), alertSeverity, severityThreshold)
 		}
