@@ -21,7 +21,7 @@ kubernetes:
     - istio
   jqFilter: |
     {
-      "multiclusterEnabled": .spec.settings.multicluster.enabled,
+      "multiclusterEnabled": .spec.settings.multicluster.enabled
     }
 kubernetesValidating:
 - name: istiomulticlusters.deckhouse.io

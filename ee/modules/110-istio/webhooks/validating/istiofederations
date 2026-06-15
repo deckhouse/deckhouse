@@ -21,7 +21,7 @@ kubernetes:
     - istio
   jqFilter: |
     {
-      "federationEnabled": .spec.settings.federation.enabled,
+      "federationEnabled": .spec.settings.federation.enabled
     }
 kubernetesValidating:
 - name: istiofederations.deckhouse.io
