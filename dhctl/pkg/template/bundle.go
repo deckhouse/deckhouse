@@ -166,6 +166,12 @@ func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEn
 // generatePKIArtifacts writes PKI and kubeconfigs for the local
 // control-plane node into artifactsDir. The function is decoupled from the
 // template Controller for testability.
+//
+// nodeIP and controlPlaneEndpoint may be a single address or a comma-separated
+// dual-stack list "v4,v6" (as produced by bashible's discovered-node-ip on
+// dual-stack clusters). The first address is used as the primary advertise
+// address; the rest are added to the apiserver SAN list so the certificate is
+// valid for both address families.
 func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *controlplane.TemplateConfig, artifactsDir string) error {
 	if nodeName == "" {
 		return fmt.Errorf("nodeName is empty")
@@ -177,9 +183,13 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 		return fmt.Errorf("artifactsDir is empty")
 	}
 
-	ip := net.ParseIP(nodeIP)
-	if ip == nil {
-		return fmt.Errorf("invalid node IP %q", nodeIP)
+	nodeIPs, err := parseNodeIPs(nodeIP)
+	if err != nil {
+		return fmt.Errorf("invalid node IP %q: %w", nodeIP, err)
+	}
+	endpointIPs, err := parseNodeIPs(controlPlaneEndpoint)
+	if err != nil {
+		return fmt.Errorf("invalid control plane endpoint %q: %w", controlPlaneEndpoint, err)
 	}
 
 	// TODO: read from cfg.Settings once serviceSubnetCIDR is migrated to ModuleConfig.
@@ -201,9 +211,13 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 
 	pkiDir := filepath.Join(artifactsDir, "pki")
 
-	if _, err := pki.CreatePKIBundle(nodeName, clusterDomain, ip, serviceSubnetCIDR,
-		pki.WithControlPlaneEndpoint(controlPlaneEndpoint),
+	primaryIP := nodeIPs[0]
+	extraSANs := extraIPSANs(nodeIPs, endpointIPs)
+
+	if _, err := pki.CreatePKIBundle(nodeName, clusterDomain, primaryIP, serviceSubnetCIDR,
+		pki.WithControlPlaneEndpoint(endpointIPs[0].String()),
 		pki.WithPKIDir(pkiDir),
+		pki.WithAPIServerCertSANs(extraSANs),
 		pki.WithEncryptionAlgorithmType(constants.EncryptionAlgorithmType(encryptionAlgorithm)),
 	); err != nil {
 		return fmt.Errorf("create PKI bundle: %w", err)
@@ -218,7 +232,7 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	}
 
 	if _, err := kubeconfig.CreateKubeconfigFiles(kubeconfigFiles,
-		kubeconfig.WithLocalAPIEndpoint(nodeIP),
+		kubeconfig.WithLocalAPIEndpoint(formatHost(primaryIP)),
 		kubeconfig.WithNodeName(nodeName),
 		kubeconfig.WithOutDir(filepath.Join(artifactsDir, "kubeconfig")),
 		kubeconfig.WithCertificatesDir(pkiDir),
@@ -228,6 +242,59 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	}
 
 	return nil
+}
+
+// parseNodeIPs parses a comma-separated dual-stack address list ("v4,v6") into
+// individual net.IP values. Surrounding whitespace and empty entries are
+// tolerated; at least one valid IP must be present.
+func parseNodeIPs(s string) ([]net.IP, error) {
+	var ips []net.IP
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		ip := net.ParseIP(part)
+		if ip == nil {
+			return nil, fmt.Errorf("%q is not a valid IP address", part)
+		}
+		ips = append(ips, ip)
+	}
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("no addresses provided")
+	}
+	return ips, nil
+}
+
+// extraIPSANs returns a deduplicated list of every IP from nodeIPs and
+// endpointIPs except the first nodeIP (which is already added as the
+// advertise address). The result is rendered as strings suitable for the
+// apiserver SAN list.
+func extraIPSANs(nodeIPs, endpointIPs []net.IP) []string {
+	seen := map[string]struct{}{nodeIPs[0].String(): {}}
+	var extras []string
+	add := func(list []net.IP) {
+		for _, ip := range list {
+			key := ip.String()
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			seen[key] = struct{}{}
+			extras = append(extras, key)
+		}
+	}
+	add(nodeIPs[1:])
+	add(endpointIPs)
+	return extras
+}
+
+// formatHost renders an IP suitable for embedding into a URL: IPv6 addresses
+// are wrapped in square brackets, IPv4 addresses are returned as-is.
+func formatHost(ip net.IP) string {
+	if ip.To4() == nil {
+		return "[" + ip.String() + "]"
+	}
+	return ip.String()
 }
 
 func PrepareControlPlaneManifests(ctx context.Context, templateController *Controller, cfg *controlplane.TemplateConfig, globalOptions *options.GlobalOptions) error {

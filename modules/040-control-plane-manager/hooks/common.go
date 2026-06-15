@@ -19,6 +19,7 @@ package hooks
 import (
 	"fmt"
 	"math"
+	"net"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -109,6 +110,21 @@ func syncEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.FilterResu
 
 func gb(n int64) int64 {
 	return n * 1024 * 1024 * 1024
+}
+
+// isIPv4 reports whether s is a textual IPv4 address.
+func isIPv4(s string) bool {
+	ip := net.ParseIP(s)
+	return ip != nil && ip.To4() != nil
+}
+
+// etcdEndpoint builds an https://host:2379 URL for an etcd endpoint, wrapping
+// IPv6 addresses in square brackets per RFC 3986.
+func etcdEndpoint(ip string) string {
+	if parsed := net.ParseIP(ip); parsed != nil && parsed.To4() == nil {
+		return fmt.Sprintf("https://[%s]:2379", ip)
+	}
+	return fmt.Sprintf("https://%s:2379", ip)
 }
 
 func gbFloat(n float64) int64 {

@@ -149,7 +149,7 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 	}
 
 	return &etcdInstance{
-		Endpoint:  fmt.Sprintf("https://%s:2379", ip),
+		Endpoint:  etcdEndpoint(ip),
 		MaxDbSize: curMaxDbSize,
 		PodName:   pod.GetName(),
 		Node:      pod.Spec.NodeName,

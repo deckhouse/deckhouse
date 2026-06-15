@@ -50,7 +50,50 @@ function __main__() {
   address=$(context::jq -r '.review.request.object.spec.address')
   credentialsName=$(context::jq -r '.review.request.object.spec.credentialsRef.name')
 
-  if instanceWithTheSameAddress="$(context::jq -er --arg name "$name" --arg address "$address" '.snapshots.instances[].filterResult | select(.name != $name) | select(.address == $address) | .name' 2>&1)"; then
+  # Compare addresses semantically (so e.g. 'fe80::1' and 'fe80:0:0:0:0:0:0:1' match).
+  # The script prints either:
+  #   - the name of an existing instance using the same address (duplicate found), or
+  #   - 'INVALID_ADDRESS' if $address itself cannot be parsed as an IP, or
+  #   - nothing (no duplicate).
+  instanceWithTheSameAddress=$(context::jq -c '.snapshots.instances[].filterResult' | python3 -c '
+import sys, json, ipaddress
+
+try:
+    target_ip = ipaddress.ip_address(sys.argv[1])
+except (ValueError, TypeError):
+    print("INVALID_ADDRESS")
+    sys.exit(0)
+
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        inst = json.loads(line)
+    except ValueError:
+        continue
+    if inst.get("name") == sys.argv[2]:
+        continue
+    other_address = inst.get("address")
+    if not other_address:
+        continue
+    try:
+        other_ip = ipaddress.ip_address(other_address)
+    except (ValueError, TypeError):
+        continue
+    if other_ip == target_ip:
+        print(inst.get("name"))
+        sys.exit(0)
+' "$address" "$name")
+
+  if [[ "$instanceWithTheSameAddress" == "INVALID_ADDRESS" ]]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"staticinstances.deckhouse.io \"$name\", spec.address \"$address\" is not a valid IPv4 or IPv6 address" }
+EOF
+    return 0
+  fi
+
+  if [[ -n "$instanceWithTheSameAddress" ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"staticinstances.deckhouse.io \"$name\", static instance \"$instanceWithTheSameAddress\" is already using the address \"$address\"" }
 EOF

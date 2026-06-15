@@ -43,6 +43,7 @@ type DeckhouseInstaller struct {
 	DevBranch                string
 	UUID                     string
 	KubeDNSAddress           string
+	KubeDNSAddressIPv6       string
 	ClusterConfig            []byte
 	ProviderClusterConfig    []byte
 	StaticClusterConfig      []byte
@@ -231,6 +232,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		Bundle:                bundle,
 		LogLevel:              logLevel,
 		KubeDNSAddress:        metaConfig.ClusterDNSAddress,
+		KubeDNSAddressIPv6:    metaConfig.ClusterDNSAddressIPv6,
 		ProviderClusterConfig: providerClusterConfig,
 		StaticClusterConfig:   staticClusterConfig,
 		ClusterConfig:         clusterConfig,
