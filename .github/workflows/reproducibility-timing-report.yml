@@ -38,6 +38,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
   actions: read
 
 jobs:
@@ -94,4 +95,5 @@ jobs:
         LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
         AVG_BUILD_TIME: ${{ steps.collect.outputs.avg_build_time }}
       run: |
-        bash ./.github/scripts/send-report.sh --webhook "ci_report" ":passport_control: **Average build time on the same commit is ${AVG_BUILD_TIME}** :passport_control:"
+        WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+        bash ./.github/scripts/send-report.sh --webhook "ci_report" ":passport_control: **Average build time on the same commit is [${AVG_BUILD_TIME}](${WORKFLOW_URL})** :passport_control:"
