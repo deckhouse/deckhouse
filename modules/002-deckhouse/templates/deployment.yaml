@@ -21,7 +21,7 @@ spec:
     kind: Deployment
     name: deckhouse
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: deckhouse
@@ -217,14 +217,21 @@ spec:
               value: "4223"
             - name: ADDON_OPERATOR_BATCHING_ENABLED
               value: "true"
+            # Disable client-side rate limiting; defer fairness to apiserver APF.
+            # QPS<0 makes client-go skip the limiter entirely (0 would fall back
+            # to the client-go default of 5, not disable).
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
-              value: "30"
+              value: "-1"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
-              value: "60"
+              value: "-1"
             - name: KUBE_CLIENT_QPS
-              value: "20"
+              value: "-1"
             - name: KUBE_CLIENT_BURST
-              value: "40"
+              value: "-1"
+            - name: HELM_MONITOR_KUBE_CLIENT_QPS
+              value: "-1"
+            - name: HELM_MONITOR_KUBE_CLIENT_BURST
+              value: "-1"
             - name: GOGC
               value: "50"
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
@@ -273,6 +280,18 @@ spec:
                 secretKeyRef:
                   name: d8-otlp-tracing
                   key: token
+                  optional: true
+            - name: TRACING_OTLP_TLS_SKIP_VERIFY
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: tlsSkipVerify
+                  optional: true
+            - name: TRACING_OTLP_INSECURE
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: insecure
                   optional: true
           ports:
             - containerPort: 4222

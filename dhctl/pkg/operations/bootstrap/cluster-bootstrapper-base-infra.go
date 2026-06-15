@@ -18,26 +18,39 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromConfig(
+		ctx,
+		b.loggerProvider(),
+		b.Options.Global.ConfigPaths,
+		b.Options.Registry.ImgBundlePath,
+	)
+	if err != nil {
+		return err
+	}
+	defer registryStop()
 
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
-	metaConfig, err := config.ParseConfig(
+	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
-		app.ConfigPaths,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		&b.Options.Global,
 	)
 	if err != nil {
 		return err
@@ -45,31 +58,34 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
+		GlobalOptions:    &b.Options.Global,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           b.logger,
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger).
+		WithUseTfCache(b.Options.Cache.UseTfCache).
+		WithDebug(b.Options.Global.IsDebug)
 
 	if metaConfig.ClusterType != config.CloudClusterType {
 		return fmt.Errorf("%s", bootstrapPhaseBaseInfraNonCloudMessage)
 	}
 
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
 
 	stateCache := cache.Global()
 
-	if app.DropCache {
-		stateCache.Clean()
-		stateCache.Delete(state.TombstoneKey)
+	if b.Options.Cache.DropCache {
+		stateCache.Clean(ctx)
+		stateCache.Delete(ctx, state.TombstoneKey)
 	}
 
-	clusterUUID, err := generateClusterUUID(stateCache)
+	clusterUUID, err := generateClusterUUID(ctx, stateCache)
 	if err != nil {
 		return err
 	}
@@ -82,13 +98,30 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	defer cleanup()
 
-	return log.Process("bootstrap", "Cloud infrastructure", func() error {
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	if interactive {
+		intLogger, ok := b.logger.(*log.InteractiveLogger)
+		if !ok {
+			return fmt.Errorf("logger is not interactive")
+		}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Base infrastructure", labelChan, phasesChan, intLogger.GetLogChan())
+
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			return err
+		}
+
+		defer progressbar.FinishDefaultProgressBar()
+	}
+
+	return log.ProcessCtx(ctx, "bootstrap", "Cloud infrastructure", func(ctx context.Context) error {
 		baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
 		if err != nil {
 			return err
 		}
 
-		_, err = infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
+		_, err = infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", &b.Options.Global, infrastructure.GetBaseInfraResult)
 		return err
 	})
 }

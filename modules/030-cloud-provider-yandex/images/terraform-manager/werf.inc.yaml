@@ -1,5 +1,7 @@
+{{- $version := include "get_oss_version_by_id" (list "terraform-provider-yandex" $) }}
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: base/scratch
+from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi
@@ -10,12 +12,17 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: terraform-provider-yandex
   add: /terraform-provider-yandex
   to: /terraform-manager/terraform-provider-yandex
   before: setup
-
+shell:
+  install:
+  - set -e
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -32,14 +39,14 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.yandex.version }} $(cat /run/secrets/SOURCE_REPO)/yandex-cloud/terraform-provider-yandex.git /src
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/yandex-cloud/terraform-provider-yandex.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 image: terraform-provider-yandex
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -51,13 +58,10 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags '-static' -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}" -o /terraform-provider-yandex .
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags '-static' -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ $version }}" -o /terraform-provider-yandex .
   - strip /terraform-provider-yandex
   - chmod -R 755 /terraform-provider-yandex
   - chown 64535:64535 /terraform-provider-yandex

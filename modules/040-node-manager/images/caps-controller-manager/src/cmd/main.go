@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ limitations under the License.
 
 package main
 
-//nolint:gci
 import (
 	"flag"
 	"os"
@@ -25,9 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/component-base/logs"
 	v1 "k8s.io/component-base/logs/api/v1"
@@ -35,7 +31,6 @@ import (
 	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -60,14 +55,13 @@ func init() {
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha2.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
+	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
-	var syncPeriod time.Duration
 	var leaderElectionLeaseDuration time.Duration
 	var leaderElectionRenewDeadline time.Duration
 	var leaderElectionRetryPeriod time.Duration
@@ -77,7 +71,6 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.DurationVar(&syncPeriod, "sync-period", 10*time.Minute, "The minimum interval at which watched resources are reconciled (e.g. 15m).")
 	flag.DurationVar(&leaderElectionLeaseDuration, "leader-elect-lease-duration", 15*time.Second,
 		"Interval at which non-leader candidates will wait to force acquire leadership (duration string)")
 
@@ -113,7 +106,7 @@ func main() {
 		Metrics:                metricsServerOptions,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "controller-leader-election-caps",
+		LeaderElectionID:       "caps-controller-leader.cluster.x-k8s.io",
 		LeaseDuration:          &leaderElectionLeaseDuration,
 		RenewDeadline:          &leaderElectionRenewDeadline,
 		RetryPeriod:            &leaderElectionRetryPeriod,
@@ -128,9 +121,6 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
-		Cache: cache.Options{
-			SyncPeriod: &syncPeriod,
-		},
 		WebhookServer: webhookserver,
 	})
 	if err != nil {
@@ -152,7 +142,7 @@ func main() {
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		Config:     mgr.GetConfig(),
-		HostClient: client.NewClient(recorder),
+		HostClient: client.NewClient(recorder, mgr.GetClient()),
 		Recorder:   recorder,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
@@ -193,7 +183,7 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticMachineTemplate")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
+	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

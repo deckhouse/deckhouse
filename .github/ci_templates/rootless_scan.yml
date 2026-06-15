@@ -1,0 +1,106 @@
+{!{ define "security_scan_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $scanType := index . 1 -}!}
+{!{- $withFailReport := false -}!}
+{!{- if gt (len .) 2 -}!}{!{- $withFailReport = (eq (index . 2) "with_fail_report") -}!}{!{- end -}!}
+{!{- /* PR mode: forward the changed-images filter to check-non-root.sh via ONLY_IMAGES. */ -}!}
+{!{- $withChangedImages := false -}!}
+{!{- if coll.Has $ctx "withChangedImages" -}!}{!{- $withChangedImages = (index $ctx "withChangedImages") -}!}{!{- end -}!}
+# <template: security_scan_template>
+steps:
+  {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
+  {!{- if $withFailReport -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+  {!{- end -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "link_bin_step"                     | strings.Indent 2 }!}
+{!{- if (eq $scanType "pr") }!}
+  - name: Set PR scan tag
+    id: scan_tag
+    run: |
+      PR_NUMBER="${{ github.event.pull_request.number }}"
+      REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+      if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+        TAG="pr${PR_NUMBER}"
+      else
+        TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+      fi
+      echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+{!{- end }!}
+  - name: Running default user validation on ${{env.TAG}}
+    env:
+{!{- if (eq $scanType "pr") }!}
+      TAG: ${{ steps.scan_tag.outputs.TAG }}
+{!{- else }!}
+      TAG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+{!{- end }!}
+      IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+      DECKHOUSE_PRIVATE_REPO: ${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}
+{!{- if $withChangedImages }!}
+      # PR mode: restrict scanning to the images that actually changed in this
+      # PR (computed by the `changed_images` job upstream). Empty list ("[]")
+      # makes check-non-root.sh fall back to the full scan (see the script).
+      ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
+{!{- end }!}
+    run: |
+      echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+{!{- if $withChangedImages }!}
+      echo "----------------------------------------------"
+      if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+        keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+        echo "🎯 Delta-scan mode: ONLY_IMAGES filter active (${keys_count} image key(s))."
+        jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+        echo "    ⚠️  If check-non-root.sh below still iterates every image, the"
+        echo "        script is an outdated revision without ONLY_IMAGES support."
+      else
+        echo "📋 Full-scan mode: ONLY_IMAGES is unset or empty."
+      fi
+      echo "----------------------------------------------"
+{!{- end }!}
+      make cve-base-images-check-default-user
+  {!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 2 }!}
+  {!{- if $withFailReport }!}
+  {!{ tmpl.Exec "send_fail_report" $ctx | strings.Indent 2 }!}
+  {!{- end }!}
+# </template: security_scan_template>
+{!{ end }!}
+
+{!{ define "set_security_rootless_requirement_status" }!}
+# <template: set_security_rootless_requirement_status>
+set_security_rootless_requirement_status:
+  name: Set commit status after security rootless scan run
+  runs-on: "ubuntu-slim"
+  needs:
+    - pull_request_info
+    - security_scan_images
+  if: ${{ always() }}
+  permissions:
+    contents: read
+    pull-requests: write
+  steps:
+    - name: Install GitHub CLI
+      run: sudo apt-get install gh -y
+    - name: Auth with GitHub CLI
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+    - name: Set PR Label
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GH_REPO: ${{ github.repository }}
+        RESULT: ${{ needs.security_scan_images.result }}
+      run: |
+        echo "PR Number: $PR_NUMBER | Result: $RESULT"
+        if [ "$RESULT" == "success" ]; then
+          gh pr edit "$PR_NUMBER" --add-label "security/rootless/success" --remove-label "security/rootless/failed"
+        elif [ "$RESULT" == "skipped" ]; then
+          gh pr edit "$PR_NUMBER" --remove-label "security/rootless/success" --remove-label "security/rootless/failed"
+        else
+          gh pr edit "$PR_NUMBER" --add-label "security/rootless/failed" --remove-label "security/rootless/success"
+        fi
+# </template: set_security_rootless_requirement_status>
+{!{- end -}!}

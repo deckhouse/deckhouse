@@ -25,9 +25,10 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -96,10 +97,10 @@ func ParseConnectionConfig(
 	}
 
 	unmarshallError := func(err error, kind string, docNumber int) string {
-		return fmt.Sprintf("Cannot unmarshal to %s document %d: %v", kind, docNumber, err)
+		return fmt.Sprintf("Cannot unmarshal %s document %d: %v", kind, docNumber, err)
 	}
 
-	log.DebugF("Parsing connection config has %d documents\n", len(docs))
+	log.DebugF("Connection config has %d documents\n", len(docs))
 
 	config := &ConnectionConfig{}
 
@@ -125,7 +126,7 @@ func ParseConnectionConfig(
 			Version: gvk.GroupVersion().String(),
 		}
 
-		log.DebugF("Process validate and parse connection config document %d for index %v\n", i, index)
+		log.DebugF("Validating and parsing connection config document %d for index %v\n", i, index)
 
 		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
 		if err != nil {
@@ -142,7 +143,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHConfig = &sshConfig
-			log.DebugF("SSHConfig added in result config\n")
+			log.DebugF("SSHConfig added to the result config\n")
 		case SSHConfigHostKind:
 			sshHostConfigDocsCount++
 			var sshHost SSHHost
@@ -151,7 +152,7 @@ func ParseConnectionConfig(
 				continue
 			}
 			config.SSHHosts = append(config.SSHHosts, sshHost)
-			log.DebugF("SSHHost added in result config, host in result config %d\n", len(config.SSHHosts))
+			log.DebugF("SSHHost added to the result config, hosts in result config %d\n", len(config.SSHHosts))
 		default:
 			msg := fmt.Sprintf("Unknown kind, expected one of (%q, %q)", SSHConfigKind, SSHConfigHostKind)
 			appendValidationError(msg, i, &gvk, &obj)
@@ -178,33 +179,39 @@ func ParseConnectionConfig(
 	return config, nil
 }
 
-type ConnectionConfigParser struct{}
-
-func NewConnectionConfigParser() *ConnectionConfigParser {
-	return &ConnectionConfigParser{}
+// ConnectionConfigParser parses an SSH connection config file and writes the
+// result back into the supplied options struct. The parser is invoked from
+// kingpin Action when --connection-config is set.
+type ConnectionConfigParser struct {
+	opts *options.Options
 }
 
-// ParseConnectionConfigFromFile parses SSH connection config from file (app.ConnectionConfigPath)
-// and fills app.SSH* variables with corresponding data.
+// NewConnectionConfigParser builds a parser that writes into the supplied opts.
+func NewConnectionConfigParser(opts *options.Options) *ConnectionConfigParser {
+	return &ConnectionConfigParser{opts: opts}
+}
+
+// ParseConnectionConfigFromFile parses SSH connection config from
+// p.opts.SSH.ConnectionConfigPath and fills the SSH/Become options with the result.
 func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
-	if p == nil {
-		return fmt.Errorf("ConnectionConfigParser is nil")
+	if p == nil || p.opts == nil {
+		return fmt.Errorf("ConnectionConfigParser is not initialized")
 	}
 
-	connectionConfigPath := app.ConnectionConfigPath
+	connectionConfigPath := p.opts.SSH.ConnectionConfigPath
 
 	log.DebugF("Connection config path: %s\n", connectionConfigPath)
 
-	cfg, err := parseConnectionConfigFromFile(connectionConfigPath)
+	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, &p.opts.Global)
 	if err != nil {
 		return fmt.Errorf("Parsing ssh config from file: %w", err)
 	}
 
-	pathToPassPhrase := make(app.PrivateKeyFileToPassphrase)
+	pathToPassPhrase := make(options.PrivateKeyFileToPassphrase)
 
 	keysPaths := make([]string, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
 	for _, key := range cfg.SSHConfig.SSHAgentPrivateKeys {
-		f, err := os.CreateTemp(app.TmpDirName, "ssh-key-*")
+		f, err := os.CreateTemp(p.opts.Global.TmpDir, "ssh-key-*")
 		if err != nil {
 			return fmt.Errorf("unable to create temp file: %w", err)
 		}
@@ -217,7 +224,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 		keysPaths = append(keysPaths, fullPath)
 		if len(key.Passphrase) > 0 {
-			log.DebugF("Passphrase for key %s added in map\n", fullPath)
+			log.DebugF("Passphrase for key %s added to the map\n", fullPath)
 			pathToPassPhrase[fullPath] = key.Passphrase
 		}
 	}
@@ -237,29 +244,33 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		port = strconv.Itoa(int(*cfg.SSHConfig.SSHPort))
 	}
 
-	app.SSHPrivateKeys = keysPaths
-	app.SSHBastionHost = cfg.SSHConfig.SSHBastionHost
-	app.SSHBastionPort = bastionPort
-	app.SSHBastionUser = cfg.SSHConfig.SSHBastionUser
-	app.BecomePass = cfg.SSHConfig.SudoPassword
-	app.SSHUser = cfg.SSHConfig.SSHUser
-	app.SSHHosts = hosts
-	app.SSHPort = port
-	app.SSHExtraArgs = cfg.SSHConfig.SSHExtraArgs
-	app.SSHBastionPass = cfg.SSHConfig.SSHBastionPassword
-	app.SSHLegacyMode = cfg.SSHConfig.LegacyMode
-	app.SSHModernMode = cfg.SSHConfig.ModernMode
+	p.opts.SSH.PrivateKeys = keysPaths
+	p.opts.SSH.BastionHost = cfg.SSHConfig.SSHBastionHost
+	p.opts.SSH.BastionPort = bastionPort
+	p.opts.SSH.BastionUser = cfg.SSHConfig.SSHBastionUser
+	p.opts.Become.BecomePass = cfg.SSHConfig.SudoPassword
+	p.opts.SSH.User = cfg.SSHConfig.SSHUser
+	p.opts.SSH.Hosts = hosts
+	p.opts.SSH.Port = port
+	p.opts.SSH.ExtraArgs = cfg.SSHConfig.SSHExtraArgs
+	p.opts.SSH.BastionPass = cfg.SSHConfig.SSHBastionPassword
+	p.opts.SSH.LegacyMode = cfg.SSHConfig.LegacyMode
+	p.opts.SSH.ModernMode = cfg.SSHConfig.ModernMode
 	// todo it is ugly solution
-	app.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
+	p.opts.SSH.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
 
 	return nil
 }
 
-func parseConnectionConfigFromFile(path string) (*ConnectionConfig, error) {
+func parseConnectionConfigFromFile(path string, globalOptions *options.GlobalOptions) (*ConnectionConfig, error) {
 	configData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading connection config file: %v", err)
 	}
 
-	return ParseConnectionConfig(string(configData), NewSchemaStore(), ValidateOptionValidateExtensions(true))
+	return ParseConnectionConfig(
+		string(configData),
+		NewSchemaStore(globalOptions),
+		ValidateOptionValidateExtensions(true),
+	)
 }

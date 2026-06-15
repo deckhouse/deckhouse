@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# bashible: parallel-group=install-systemd-units
+
 {{- $wrapperPkgName := "systemctl-power-commands-wrapper" }}
 {{- $wrapperIndex := "systemctlPowerCommandsWrapper" }}
 {{- $wrapperVersion := "0.2" | replace "." "" }}
 
-bb-package-install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperIndex $wrapperVersion) | toString }}"
+rpp-get install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperIndex $wrapperVersion) | toString }}"

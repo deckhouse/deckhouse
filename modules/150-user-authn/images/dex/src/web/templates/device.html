@@ -8,7 +8,7 @@
       Введите код
       {{ end }}
   </h2>
-  <form method="post" action="{{ .PostURL }}" method="get" class="grid">
+  <form method="post" action="{{ .PostURL }}" method="get" class="login-form">
     <div>
       {{ if( .UserCode  )}}
       <input tabindex="2" required id="user_code" name="user_code" type="text" class="input" autocomplete="off" value="{{.UserCode}}" {{ if .Invalid }} autofocus {{ end }}/>

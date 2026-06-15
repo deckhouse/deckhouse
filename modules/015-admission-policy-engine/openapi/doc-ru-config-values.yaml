@@ -32,12 +32,16 @@ properties:
       Настройки Trivy-провайдера.
 
       Trivy-провайдер запрещает создание ресурсов Pod, Deployment, StatefulSet и DaemonSet с образами, содержащими уязвимости, в неймспейсах с лейблом `security.deckhouse.io/trivy-provider: ""`.
+
+      **Устарело.** Эти настройки были перенесены в модуль `operator-trivy`. Пожалуйста, мигрируйте вашу конфигурацию.
     properties:
+      enabled:
+        description: Включить Trivy-провайдер.
       allowedSeverityLevels:
-        description: |-
+        description: |
           Список допустимых уровней критичности уязвимости.
-          
-          Образы контейнеров, содержащие только уязвимости указанных уровней, не будут запрещены.
+
+          Не будут запрещены образы контейнеров, содержащие только уязвимости указанных уровней.
       storageClass:
         description: |-
           Имя StorageClass, который используется Trivy-провайдером.
@@ -45,14 +49,12 @@ properties:
           Если значение не задано, будет использоваться StorageClass, заданный в [глобальном параметре `settings.modules.storageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
 
           Глобальный параметр `settings.modules.storageClass` применяется только при включении модуля. Изменение глобального параметра при включенном модуле не приведет к перезаказу диска.
-          
+
           > **Внимание.** Если указать значение, отличное от текущего StorageClass, используемого существующим PersistentVolumeClaim, диск будет перезаказан, и все данные удалятся.
 
           Если указать `false`, вместо PVC будет принудительно использоваться `emptyDir`.
-      enabled:
-        description: Включить Trivy-провайдер.
       registrySecrets:
         description: |
-          Список дополнительных секретов для доступа к приватным registry.
+          Список дополнительных секретов для доступа к приватным хранилищам образов контейнеров.
 
           По умолчанию для загрузки образов для сканирования используется секрет `deckhouse-registry`.

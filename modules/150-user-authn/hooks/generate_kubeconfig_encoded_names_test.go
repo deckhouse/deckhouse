@@ -54,6 +54,73 @@ var _ = Describe("User Authn hooks :: generate kubeconfig encoded names ::", fun
 			Expect(f.ValuesGet("userAuthn.internal.kubeconfigEncodedNames").String()).To(MatchJSON(`[
 "nn2wezldn5xgm2lhfvtwk3tfojqxi33sfuymx4u44scceizf", "nn2wezldn5xgm2lhfvtwk3tfojqxi33sfuy4x4u44scceizf"
 ]`))
+			Expect(f.ValuesGet("userAuthn.internal.kubeconfigClientEncodedNames").String()).To(MatchJSON(`[
+"nn2wezldn5xgm2lhfvvxkytfmnxw4ztjm4ww63tfzpzjzzeeeirsk", "nn2wezldn5xgm2lhfvvxkytfmnxw4ztjm4wxi53pzpzjzzeeeirsk"
+]`))
+			Expect(f.ValuesGet("userAuthn.internal.kubeconfigPublishAPIEncodedName").Exists()).To(BeFalse(),
+				"publishAPI encoded name must not be set when publishAPI is disabled")
+		})
+	})
+
+	Context("With publishAPI enabled and addKubeconfigGeneratorEntry", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("userAuthn.internal.publishAPI.enabled", true)
+			f.ValuesSet("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", true)
+			f.RunHook()
+		})
+
+		It("Should set kubeconfigPublishAPIEncodedName", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("userAuthn.internal.kubeconfigPublishAPIEncodedName").String()).To(Equal(
+				"nn2wezldn5xgm2lhfvyhkytmnfzwqllbobu4x4u44scceizf"))
+		})
+	})
+
+	Context("With colliding slug client_ids", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSetFromYaml("userAuthn.kubeconfigGenerator", []byte(`[
+{"id": "prod:eu", "masterURI": "https://a.master", "description": "a"},
+{"id": "prod-eu", "masterURI": "https://b.master", "description": "b"}
+]`))
+			f.RunHook()
+		})
+
+		It("Should fail with a clear error", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError).To(MatchError(ContainSubstring(`slugify to the same client_id "kubeconfig-prod-eu"`)))
+		})
+	})
+
+	Context("With id colliding with legacy kubeconfig-generator-N", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSetFromYaml("userAuthn.kubeconfigGenerator", []byte(`[
+{"id": "generator-1", "masterURI": "https://a.master", "description": "a"},
+{"id": "other", "masterURI": "https://b.master", "description": "b"}
+]`))
+			f.RunHook()
+		})
+
+		It("Should fail with a clear error", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError).To(MatchError(ContainSubstring(`reserved client_id "kubeconfig-generator-1"`)))
+		})
+	})
+
+	Context("With id colliding with publishAPI reserved client_id", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSetFromYaml("userAuthn.kubeconfigGenerator", []byte(`[
+{"id": "publish-api", "masterURI": "https://a.master", "description": "a"}
+]`))
+			f.RunHook()
+		})
+
+		It("Should fail with a clear error", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError).To(MatchError(ContainSubstring(`reserved client_id "kubeconfig-publish-api"`)))
 		})
 	})
 })

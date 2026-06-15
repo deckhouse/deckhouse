@@ -21,7 +21,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Cloud-provider-dvp architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dvp.png)
+![Cloud-provider-dvp architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-dvp.png)
 
 ## Module components
 
@@ -46,7 +46,7 @@ The module consists of the following components:
 
    * When creating a LoadBalancer Service resource in Kubernetes, it creates a load balancer in the cloud that routes traffic from outside into the cluster nodes.
 
-   For more details about cloud-controller-manager, refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/cloud-controller/)
+   For more details about cloud-controller-manager, refer to [the Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/cloud-controller/).
 
    It consists of a single container:
 

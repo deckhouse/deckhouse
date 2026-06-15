@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: read-only-root-filesystem
+spec:
+  testDirectory: read-only-root-filesystem
+  suite:
+    expectedTestBlockNames:
+      - security-policy
+      - security-policy-with-exception
+      - security-policy-spe-container

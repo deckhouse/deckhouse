@@ -15,8 +15,9 @@
     {{ else }}
     Отсканируйте QR-код в приложении для аутентификации
     {{ end }}
-    <br/>
-    <img src="data:image/png;base64, {{ .QRCode }}" style="display: block; margin: 0 auto;" alt="QR code"/>
+    <div class="qr-code-container">
+      <img src="data:image/png;base64, {{ .QRCode }}" alt="QR code"/>
+    </div>
   </div>
   {{ else }}
   <div class="content-text">
@@ -27,17 +28,9 @@
     {{ end }}
   </div>
   {{ end }}
-  <form method="post" action="{{ .PostURL }}">
-    <label for="totp" class="input-label">
-      {{- if eq (extra "lang") "en" }}
-      One-time password:
-      {{- else }}
-      Одноразовый пароль:
-      {{- end }}
-    </label>
-    <input tabindex="1" required id="totp" name="totp" type="password" class="input" {{ if .Invalid }} autofocus onfocusout="this.value = this.value.trim()" {{ end }}/>
+  <form method="post" action="{{ .PostURL }}" class="login-form">
+    <input tabindex="1" required id="totp" name="totp" type="password" placeholder="{{- if eq (extra "lang") "en" }}One-time password:{{- else }}Одноразовый пароль:{{- end }}" class="input" {{ if .Invalid }} autofocus onfocusout="this.value = this.value.trim()" {{ end }}/>
     {{ if .Invalid }}
-    <br/>
     <div id="login-error" class="form-error">
       {{- if eq (extra "lang") "en" }}
       Invalid or Expired User Code
@@ -46,14 +39,12 @@
       {{- end }}
     </div>
     {{ end }}
-    <br/>
     <button tabindex="2" id="submit-login" type="submit" class="btn btn-primary">
       {{ if eq (extra "lang") "en" }}
       Submit
       {{ else }}
       Отправить
       {{ end }}
-      <img src="{{ url $.ReqPath "static/img/next-icon.svg" }}" />
     </button>
   </form>
 </div>

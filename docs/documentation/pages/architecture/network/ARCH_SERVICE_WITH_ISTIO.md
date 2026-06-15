@@ -5,6 +5,10 @@ search: application architecture, istio
 description: Application service architecture with Istio enabled in Deckhouse Kubernetes Platform.
 ---
 
+{% alert level="info" %}
+Compatibility between Istio versions and Kubernetes versions is defined by the compatibility table [in the `istio` module documentation](/modules/istio/#compatibility-table-for-supported-versions). Before using Istio, refer to the current versions and their status in that section.
+{% endalert %}
+
 ## Architecture features
 
 * **Sidecar proxy**:

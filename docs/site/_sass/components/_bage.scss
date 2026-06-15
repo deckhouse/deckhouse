@@ -1,3 +1,7 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
 .beta-badge {
     display: inline-block;
     background-color: transparent;
@@ -14,4 +18,14 @@
     backface-visibility: hidden;
     transform: rotate(-10deg);
     transform-origin: center;
+
+    @include breakpoints.max-w(s) {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+
+    @include breakpoints.max-w(xs) {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
 }

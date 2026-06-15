@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,10 +22,12 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	otcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -39,8 +41,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -48,7 +50,21 @@ type destroyParams struct {
 	request      *pb.DestroyStart
 	switchPhase  phases.DefaultOnPhaseFunc
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.DestroyResponse
+}
+
+func (p *destroyParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *destroyParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.DestroyResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.DestroyResponse {
+			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
@@ -71,21 +87,6 @@ func (s *Service) Destroy(server pb.DHCTL_DestroyServer) error {
 		dataFunc: func(progress phases.Progress) *pb.DestroyResponse {
 			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.DestroyResponse {
-			return &pb.DestroyResponse{Message: &pb.DestroyResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.DestroyRequest, *pb.DestroyResponse](server, receiveCh, doneCh, internalErrCh)
@@ -116,11 +117,11 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.destroySafe(ctx, destroyParams{
+					result := s.destroySafe(ctx, &destroyParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
 				}()
@@ -158,7 +159,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.DestroyResult) {
+func (s *Service) destroySafe(ctx context.Context, p *destroyParams) (result *pb.DestroyResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -169,38 +170,36 @@ func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.
 	return s.destroy(ctx, p)
 }
 
-func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResult {
+func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResult {
+	ctx, span := telemetry.StartSpan(ctx, "grpc.destroy")
+	defer span.End()
+
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
+	loggerFor := initDhctlLogger(ctx, p)
 
-	loggerFor := log.GetDefaultLogger()
-
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
 			),
+			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -214,8 +213,9 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		return &pb.DestroyResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
+
 		var initialState phases.DhctlState
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
@@ -223,37 +223,37 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
 		}
+
 		err = cache.InitWithOptions(
+			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
+
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
 		}
+
 		return nil
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: err.Error()}
 	}
 
-	var sshClient node.SSHClient
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.params.SchemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	var sshProvider libcon.SSHProvider
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
+			return fmt.Errorf("creating provider: %w", err)
+		}
+
+		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ssh provider: %w", err)
 		}
 
 		return nil
@@ -270,8 +270,9 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		}
 	}
 
+	span.SetAttributes(opts.ToSpanAttributes()...)
+
 	destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
-		NodeInterface:  ssh.NewNodeInterfaceWrapper(sshClient),
 		StateCache:     cache.Global(),
 		OnPhaseFunc:    p.switchPhase,
 		OnProgressFunc: p.sendProgress,
@@ -284,15 +285,24 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		TmpDir:         s.params.TmpDir,
 		LoggerProvider: log.SimpleLoggerProvider(loggerFor),
 		IsDebug:        s.params.IsDebug,
+		SSHProvider:    sshProvider,
+		KubeProvider:   kubeProvider,
+		Options:        opts,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}
 	}
 
 	destroyErr := destroyer.DestroyCluster(ctx, true)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(destroyErr, stateErr)
+
+	if err != nil {
+		span.SetStatus(otcodes.Error, err.Error())
+	} else {
+		span.SetStatus(otcodes.Ok, "")
+	}
 
 	return &pb.DestroyResult{State: string(state), Err: util.ErrToString(err)}
 }

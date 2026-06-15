@@ -6,14 +6,13 @@ import:
   add: /src/registry-proxy-reloader
   to: /registry-proxy-reloader
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -41,3 +40,6 @@ git:
     stageDependencies:
       install:
         - '**/*'
+shell:
+  install:
+  - cd /src

@@ -14,7 +14,7 @@ shell:
   - rm -r /src/nginx/.git /src/openssl/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/alpine-3.21
+from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

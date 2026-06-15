@@ -14,19 +14,26 @@
 
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
+
+# d8 is the largest registrypackage. Step 004 deliberately skips it; the 001 prefetch
+# keeps downloading it in parallel with the rest of bashible. Wait + install happen
+# here, right before the first `d8` invocation below.
+bb-rpp-wait-fetched "d8" "{{ .images.registrypackages.d8 }}" || true
+bb-package-install "d8:{{ .images.registrypackages.d8 }}"
+
+bb-event-on 'bb-package-installed' 'post-install-kubelet'
+
+post-install-kubelet() {
+  local package="$1"
+
+  if [[ "${package}" == "kubelet" ]]; then
+    bb-flag-set kubelet-need-restart
+  fi
+}
+
 bb-package-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}"
 
-old_kubelet_hash=""
-if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest" ]; then
-  old_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest")
-fi
-
 bb-package-install "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}"
-
-new_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest")
-if [[ "${old_kubelet_hash}" != "${new_kubelet_hash}" ]]; then
-  bb-flag-set kubelet-need-restart
-fi
 
 if grep -qF '# "\e[5~": history-search-backward' /etc/inputrc; then
   sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
@@ -47,9 +54,6 @@ if ! grep -qF -- "$completion"  /root/.bashrc; then
   echo "$completion" >> /root/.bashrc
 fi
 
-# Install d8 with completion
-bb-package-install "d8:{{ .images.registrypackages.d8 }}"
-
 if [ ! -f "/etc/bash_completion.d/d8" ]; then
   mkdir -p /etc/bash_completion.d
   d8 completion bash > /etc/bash_completion.d/d8
@@ -60,7 +64,7 @@ fi
 # This need for correct Tab-completion in kubectl alias
 # Bash does not expand aliases during completion, so we
 # rewrite "kubectl" to "d8 k" and call d8 __complete directly
-cat <<'EOF' > /etc/bash_completion.d/d8_kubectl_completion
+cat <<'EOF' > /etc/bash_completion.d/kubectl_d8_completion
 __start_kubectl() {
     local cur prev words cword
     _init_completion -n =: || return

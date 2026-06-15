@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-prep
 
-bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater200225 }}"
+rpp-get install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater200225 }}"
 
 mkdir -p /opt/deckhouse/share/ca-certificates/
 

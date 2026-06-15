@@ -17,14 +17,16 @@ package preflightnew
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-func RunSuite(ctx context.Context, suite Suite, phase Phase) error {
+func RunSuite(ctx context.Context, suite Suite, phase Phase, preflightOpts *options.PreflightOptions) error {
 	if suite == nil || len(suite.Checks()) == 0 {
 		return nil
 	}
 	preflight := New(suite)
-	preflight.DisableChecks(app.DisabledPreflightChecks()...)
+	if preflightOpts != nil {
+		preflight.DisableChecks(preflightOpts.DisabledChecks()...)
+	}
 	return preflight.Run(ctx, phase)
 }

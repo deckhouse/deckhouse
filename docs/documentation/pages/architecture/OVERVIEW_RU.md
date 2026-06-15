@@ -35,7 +35,7 @@ DKP — это платформа для управления кластерам
 
 * кластер Kubernetes;
 * контроллер Deckhouse и управляемые им модули;
-* [Bashible](cluster-and-infrastructure/bashible.html) — агент, работающий на узлах кластера в виде службы, который запускает bash-скрипты для управления узлами.
+* [Bashible](cluster-and-infrastructure/node-management/bashible.html) — агент, работающий на узлах кластера в виде службы, который запускает bash-скрипты для управления узлами.
 
 Модули объединены в подсистемы в соответствии с их функциональным назначением. Контроллер Deckhouse тоже реализован в виде модуля и является единственным модулем, без которого не может функционировать платформа.
 
@@ -49,7 +49,7 @@ DKP — это платформа для управления кластерам
 
 * [`deckhouse`](/modules/deckhouse/) — контроллер Deckhouse;
 * [`control-plane-manager`](kubernetes-and-scheduling/control-plane-management.html) — управляет компонентами control plane кластера;
-* [`node-manager`](cluster-and-infrastructure/node-manager.html) — управляет узлами кластера.
+* [`node-manager`](cluster-and-infrastructure/node-management/node-manager.html) — управляет узлами кластера.
 
 {% alert level="info" %}
 При установке DKP в существующий Managed Kubernetes-кластер модули [`control-plane-manager`](/modules/control-plane-manager/) и [`node-manager`](/modules/node-manager/) не устанавливаются.

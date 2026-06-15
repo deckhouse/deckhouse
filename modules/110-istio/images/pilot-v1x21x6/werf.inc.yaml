@@ -24,7 +24,6 @@ import:
   owner: 1337
   group: 1337
   after: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -33,7 +32,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -58,3 +57,5 @@ shell:
   - strip /src/istio/out/pilot-discovery
   - chmod 0700 /src/istio/out/pilot-discovery
   - chown 1337:1337 /src/istio/out/pilot-discovery
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

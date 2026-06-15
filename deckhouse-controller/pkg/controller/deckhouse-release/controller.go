@@ -105,7 +105,7 @@ type MetricsUpdater interface {
 type deckhouseReleaseReconciler struct {
 	client client.Client
 	dc     dependency.Container
-	exts   *extenders.ExtendersStack
+	exts   extenders.IExtendersStack
 
 	logger        *log.Logger
 	moduleManager moduleManager
@@ -124,7 +124,7 @@ type deckhouseReleaseReconciler struct {
 	deckhouseVersion string
 }
 
-func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts *extenders.ExtendersStack,
+func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts extenders.IExtendersStack,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metricsstorage.Storage,
 	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
@@ -164,22 +164,18 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		go r.cleanupDeckhouseReleaseLoop(ctx)
 	}()
 
-	ctr, err := controller.New("deckhouse-release", mgr, controller.Options{
-		MaxConcurrentReconciles: 1,
-		CacheSyncTimeout:        3 * time.Minute,
-		NeedLeaderElection:      ptr.To(false),
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("new: %w", err)
-	}
-
 	r.logger.Info("Controller started")
 
 	if err := ctrl.NewControllerManagedBy(mgr).
+		Named(controllerName).
 		For(&v1alpha1.DeckhouseRelease{}).
 		WithEventFilter(logWrapper{r.logger, newEventFilter()}).
-		Complete(ctr); err != nil {
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 1,
+			CacheSyncTimeout:        3 * time.Minute,
+			NeedLeaderElection:      ptr.To(false),
+		}).
+		Complete(r); err != nil {
 		return fmt.Errorf("complete: %w", err)
 	}
 	return nil

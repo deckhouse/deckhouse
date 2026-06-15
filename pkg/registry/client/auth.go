@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 )
 
-func AuthFromDockerConfig(repo, dockerCfgBase64 string) (authn.Authenticator, error) {
+func authFromDockerConfig(repo, dockerCfgBase64 string) (authn.Authenticator, error) {
 	authConfig, err := readAuthConfig(repo, dockerCfgBase64)
 	if err != nil {
 		return nil, fmt.Errorf("read auth config: %w", err)

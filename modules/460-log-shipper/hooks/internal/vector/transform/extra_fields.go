@@ -36,13 +36,13 @@ const (
 	parsedDataField = "parsed_data"
 )
 
-// ExtraFieldTransform converts templated labels to values.
+// extraFieldTransform converts templated labels to values.
 // It generates valid VRL remaps from key-value pairs
 //
 //	Only required for Elasticsearch sinks.
 //	Example:
 //	  label_name: {{ values.app }} -> .label_name = .values.app
-func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
+func extraFieldTransform(extraFields map[string]string) *DynamicTransform {
 	keys := loglabels.SortedMapKeys(extraFields)
 	tmpFields := make([]string, 0, len(keys))
 

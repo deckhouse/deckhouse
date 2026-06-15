@@ -1,0 +1,56 @@
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index 20fad5afb..1dc1fb47c 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -1100,6 +1100,7 @@ func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
+ 		HSTSMaxAge:              cfg.HSTSMaxAge,
+ 		HSTSIncludeSubdomains:   cfg.HSTSIncludeSubdomains,
+ 		HSTSPreload:             cfg.HSTSPreload,
++		ProxyRealIPCIDR:         cfg.ProxyRealIPCIDR,
+ 	}
+ 	jsonCfg, err := json.Marshal(luaconfigs)
+ 	if err != nil {
+diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
+index f6816d70a..86f2c53d5 100644
+--- a/internal/ingress/controller/template/template.go
++++ b/internal/ingress/controller/template/template.go
+@@ -221,6 +221,7 @@ type LuaConfig struct {
+ 	HSTSMaxAge              string         `json:"hsts_max_age"`
+ 	HSTSIncludeSubdomains   bool           `json:"hsts_include_subdomains"`
+ 	HSTSPreload             bool           `json:"hsts_preload"`
++	ProxyRealIPCIDR         []string       `json:"proxy_real_ip_cidr"`
+ }
+ 
+ type LuaListenPorts struct {
+diff --git a/rootfs/etc/nginx/lua/lua_ingress.lua b/rootfs/etc/nginx/lua/lua_ingress.lua
+index a513928cf..5643ebf59 100644
+--- a/rootfs/etc/nginx/lua/lua_ingress.lua
++++ b/rootfs/etc/nginx/lua/lua_ingress.lua
+@@ -11,6 +11,7 @@ local string = string
+ local original_randomseed = math.randomseed
+ local string_format = string.format
+ local ngx_redirect = ngx.redirect
++local iputils = require("resty.iputils")
+ 
+ local _M = {}
+ 
+@@ -103,6 +104,10 @@ function _M.init_worker()
+ end
+ 
+ function _M.set_config(new_config)
++  if new_config.use_forwarded_headers then
++    iputils.enable_lrucache()
++    new_config.real_ip_from = iputils.parse_cidrs(new_config.proxy_real_ip_cidr)
++  end
+   config = new_config
+ end
+ 
+@@ -123,7 +128,7 @@ function _M.rewrite()
+ 
+   ngx.var.best_http_host = ngx.var.http_host or ngx.var.host
+ 
+-  if config.use_forwarded_headers then
++  if config.use_forwarded_headers and iputils.ip_in_cidrs(ngx.var.realip_remote_addr, config.real_ip_from) then
+     -- trust http_x_forwarded_proto headers correctly indicate ssl offloading
+     if ngx.var.http_x_forwarded_proto then
+       ngx.var.pass_access_scheme = ngx.var.http_x_forwarded_proto

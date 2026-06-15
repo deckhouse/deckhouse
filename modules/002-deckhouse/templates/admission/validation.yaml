@@ -86,7 +86,7 @@ webhooks:
         namespace: d8-system
         port: 4223
         path: /validate/v1alpha1/module-configs
-  - name: applicationss.deckhouse-webhook.deckhouse.io
+  - name: applications.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:
           - "deckhouse.io"

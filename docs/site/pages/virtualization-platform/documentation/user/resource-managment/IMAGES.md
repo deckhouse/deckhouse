@@ -100,10 +100,13 @@ d8 k get vi ubuntu-24-04
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE   CDROM   PROGRESS   AGE
 ubuntu-24-04   Ready   false   100%       23h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 After creation the `VirtualImage` resource can be in the following states (phases):
 
@@ -126,6 +129,7 @@ d8 k get vi ubuntu-24-04 -w
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
 ubuntu-24-04   Provisioning   false              4s
@@ -136,6 +140,8 @@ ubuntu-24-04   Provisioning   false   100.0%     10s
 ubuntu-24-04   Provisioning   false   100.0%     16s
 ubuntu-24-04   Ready          false   100%       18s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The `VirtualImage` resource description provides additional information about the downloaded image:
 
@@ -184,10 +190,13 @@ d8 k get vi ubuntu-24-04-pvc
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
 ubuntu-24-04-pvc  Ready   false   100%       23h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in module settings.
 
@@ -318,10 +327,13 @@ d8 k get vi some-image
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to upload an image from the command line in the web interface:
 

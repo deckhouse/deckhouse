@@ -104,12 +104,17 @@ spec:
         - name: INSTANCE_CLASS_NAME
           value: "{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"
         {{- end }}
+        - name: SHELL_OPERATOR_PROMETHEUS_METRICS_PREFIX
+          value: webhook_handler_
         ports:
           - containerPort: 9680
             name: validating-http
             protocol: TCP
           - containerPort: 9681
             name: conversion-http
+            protocol: TCP
+          - containerPort: 9115
+            name: metrics
             protocol: TCP
         livenessProbe:
           httpGet:
@@ -118,6 +123,14 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            port: 8081
+            path: /readyz
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

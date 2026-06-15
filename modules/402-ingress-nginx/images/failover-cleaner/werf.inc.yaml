@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: builder/src
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -10,9 +10,12 @@ git:
     - '**/*.go'
     - '**/*.sum'
     - '**/*.mod'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/failover-cleaner-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -32,13 +35,12 @@ shell:
   - chmod +x /failover-cleaner
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: base/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ .ModuleName }}/failover-cleaner-artifact
   add: /failover-cleaner
   to: /failover-cleaner
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

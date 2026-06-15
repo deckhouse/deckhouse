@@ -2,7 +2,7 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/alpine" }}
 final: false
 import:
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
@@ -25,110 +25,8 @@ shell:
     done
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: base/distroless
+from: {{ index $.Images "builder/distroless" }}
 import:
-- image: common-base-python-artifact
-  add: /lib/ld-musl-x86_64.so.1
-  to: /lib/ld-musl-x86_64.so.1
-  before: install
-- image: common-base-python-artifact
-  add: /usr
-  to: /usr
-  includePaths:
-  - bin/python*
-  - lib/python*
-  - lib/libc.so
-  before: install
-- image: tools/curl
-  add: /usr/bin/curl
-  to: /usr/bin/curl
-  before: install
-- image: tools/bash
-  add: /usr/bin/bash
-  to: /bin/bash
-  before: install
-- image: tools/jq
-  add: /usr/bin/jq
-  before: install
-- image: tools/yq
-  add: /usr/bin/yq
-  before: install
-- image: tools/sed
-  add: /usr/bin/sed
-  before: install
-- image: tools/grep
-  add: /usr/bin/grep
-  before: install
-- image: tools/gawk
-  add: /usr/bin
-  to: /usr/bin
-  includePaths:
-  - awk
-  - gawk
-  before: install
-- image: tools/procps
-  add: /bin
-  to: /bin
-  includePaths:
-  - free
-  - pgrep
-  - pidof
-  - pidwait
-  - pkill
-  - ps
-  - top
-  - uptime
-  - vmstat
-  - watch
-  before: install
-- image: tools/iproute2
-  add: /sbin
-  to: /sbin
-  includePaths:
-  - bridge
-  - ip
-  - ss
-  - tc
-  before: install
-- image: tools/findutils
-  add: /usr/bin/find
-  before: install
-- image: tools/coreutils
-  add: /usr/bin/*
-  to: /usr/bin
-  before: install
-- image: tools/openssl
-  add: /usr/lib
-  to: /usr/lib
-  includePaths:
-  - libcrypto.so*
-  - libssl.so*
-  - engines-3
-  - ossl-modules
-  before: install
-- image: tools/openssl
-  add: /usr/bin/openssl
-  to: /usr/bin/openssl
-  before: install
-- image: tools/vim
-  add: /usr
-  to: /usr
-  includePaths:
-  - bin/vim
-  - share/vim
-  before: install
-- image: tools/less
-  add: /usr/bin/less
-  to: /usr/bin/less
-  before: install
-- image: tools/ethtool
-  add: /usr/sbin/ethtool
-  to: /usr/bin/ethtool
-  before: install
-- image: tools/pwru
-  add: /usr/bin/pwru
-  to: /usr/bin/pwru
-  before: install
 - image: control-plane-manager/etcd
   add: /usr/bin
   to: /usr/bin
@@ -145,14 +43,16 @@ import:
   - iptables-*
   - ip6tables-*
   before: install
-- image: tools/util-linux
+- from: {{ index $.Images "tools/util-linux" }}
   add: /usr/bin/nsenter
   to: /usr/bin/nsenter
   before: install
 shell:
   install:
-  - /usr/bin/ln -s /var/run /run
-  - /usr/bin/ln -s /bin/bash /bin/sh
+    - pm install curl bash jq yq sed grep gawk procps iproute2 findutils coreutils openssl vim less ethtool pwru util-linux
+    - pm install gnu-glibc-locale -1
+    - /usr/bin/ln -fs /var/run /run
+    - /usr/bin/ln -fs /bin/bash /bin/sh
 imageSpec:
   config:
     env:

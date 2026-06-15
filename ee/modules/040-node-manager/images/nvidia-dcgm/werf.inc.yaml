@@ -1,6 +1,7 @@
 {{- $dcgm_version := "4.2.3" }}
 {{- $libs := "libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1 ld-linux-x86-64.so.2" }}
 {{- $dcgm_deb_base := "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64" }}
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -27,7 +28,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
 final: false
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -64,7 +65,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 final: false
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -148,7 +149,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
   add: /tmp/x86_64-linux-gnu
   before: install
-- image: libs/glibc
+- from: {{ index $.Images "libs/glibc" }}
   add: /
   to: /tmp/glibc
   includePaths:
@@ -214,3 +215,4 @@ import:
   - usr/*
   - lib64
   before: setup
+{{- end }}

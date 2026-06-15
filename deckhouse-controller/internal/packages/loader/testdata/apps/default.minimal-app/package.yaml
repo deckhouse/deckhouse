@@ -1,3 +1,4 @@
-name: minimal-app
+apiVersion: v1
 type: Application
+name: minimal-app
 version: v0.1.0

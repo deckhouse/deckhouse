@@ -65,11 +65,43 @@ pilotVx11x11x11x11: "old-pilot-img"
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.revision").String()).To(Equal("v1x22"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.imageSuffix").String()).To(Equal("V1x22x3"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.isReady").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.supportsAmbient").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.supportsOperator").Bool()).To(BeTrue())
 			// 1.55
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.fullVersion").String()).To(Equal("1.55.6"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.revision").String()).To(Equal("v1x55"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.imageSuffix").String()).To(Equal("V1x55x6"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.isReady").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.supportsAmbient").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.55.supportsOperator").Bool()).To(BeFalse())
+		})
+	})
+
+	Context("SupportsOperator boundary version 1.27.8", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.modulesImages.digests.istio", []byte(`pilotV1x27x8: "pilot-img"`))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("marks version as supporting operator", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.fullVersion").String()).To(Equal("1.27.8"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsOperator").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("SupportsOperator boundary version 1.27.9", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.modulesImages.digests.istio", []byte(`pilotV1x27x9: "pilot-img"`))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("does not mark version as supporting operator", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.fullVersion").String()).To(Equal("1.27.9"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsOperator").Bool()).To(BeFalse())
 		})
 	})
 

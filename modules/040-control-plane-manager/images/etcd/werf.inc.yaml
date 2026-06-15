@@ -36,14 +36,13 @@ import:
   - etcdctl
   - etcdutl
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/etcd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -58,8 +57,8 @@ secrets:
 shell:
   install:
     - cd /src/
-    - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOPROXY=$(cat /run/secrets/GOPROXY)
+    - go mod download
     - cd server
     - |
       {{- $buildContext := deepCopy $ -}}
@@ -69,3 +68,4 @@ shell:
     - cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

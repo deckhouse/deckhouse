@@ -1,3 +1,7 @@
+# WARNING!
+# Please evaluate to add changes to ee/cse/candi/openapi/cluster_configuration.yaml
+# After change this file!
+
 kind: ClusterConfiguration
 apiVersions:
 - apiVersion: deckhouse.io/v1
@@ -21,7 +25,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.31"
+      kubernetesVersion: "1.32"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -127,7 +131,7 @@ apiVersions:
           If `ContainerdV2` is set, `CgroupsV2` will be used (providing improved security and resource management). To use `ContainerdV2` as the container runtime, cluster nodes must meet the following requirements:
 
           - Support for `CgroupsV2`.
-          - Linux kernel version `5.8` or newer.
+          - Linux kernel version 5.8 or newer, except for the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS).
           - Systemd version `244` or newer.
           - Support for `erofs` kernel module.
         enum:
@@ -145,11 +149,11 @@ apiVersions:
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.31"
         - "1.32"
         - "1.33"
         - "1.34"
         - "1.35"
+        - "1.36"
         - "Automatic"
       encryptionAlgorithm:
         type: string

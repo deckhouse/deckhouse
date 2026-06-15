@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package ssh
 
 import (
 	"bufio"
+	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 )
 
 // Logger is a wrapper around logr.Logger that implements io.Writer.
@@ -44,7 +44,7 @@ func (l *Logger) Write(p []byte) (int, error) {
 	for {
 		advance, output, err := bufio.ScanLines(p, false)
 		if err != nil {
-			return 0, errors.Wrap(err, "failed to scan lines")
+			return 0, fmt.Errorf("failed to scan lines: %w", err)
 		}
 
 		if advance == 0 {
@@ -59,7 +59,7 @@ func (l *Logger) Write(p []byte) (int, error) {
 
 		l.line++
 
-		l.logger.V(1).Info("OpenSSH client output", "line", l.line, "output", string(output))
+		l.logger.Info("OpenSSH client output", "line", l.line, "output", string(output))
 
 		p = p[advance:]
 	}

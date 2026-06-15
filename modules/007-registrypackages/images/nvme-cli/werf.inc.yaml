@@ -2,7 +2,7 @@
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /relocate
@@ -42,7 +42,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/alt
+from: {{ index $.Images "builder/alt" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src

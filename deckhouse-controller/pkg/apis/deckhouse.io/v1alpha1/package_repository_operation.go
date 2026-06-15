@@ -17,35 +17,33 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+type PackageRepositoryOperationType string
+
 const (
 	PackageRepositoryOperationResource = "packagerepositoryoperations"
 	PackageRepositoryOperationKind     = "PackageRepositoryOperation"
-
-	PackageRepositoryOperationPhasePending    = "Pending"
-	PackageRepositoryOperationPhaseDiscover   = "Discover"
-	PackageRepositoryOperationPhaseProcessing = "Processing"
-	PackageRepositoryOperationPhaseCompleted  = "Completed"
 
 	// PackageRepositoryOperation condition types
 	PackageRepositoryOperationConditionCompleted = "Completed"
 
 	// PackageRepositoryOperation condition reasons
-	PackageRepositoryOperationReasonPackageRepositoryNotFound    = "PackageRepositoryNotFound"
-	PackageRepositoryOperationReasonRegistryClientCreationFailed = "RegistryClientCreationFailed"
-	PackageRepositoryOperationReasonPackageListingFailed         = "PackageListingFailed"
+	PackageRepositoryOperationReasonDiscover      = "Discover"
+	PackageRepositoryOperationReasonProcessing    = "Processing"
+	PackageRepositoryOperationReasonScanSucceeded = "ScanSucceeded"
+	PackageRepositoryOperationReasonScanFailed    = "ScanFailed"
 
 	// PackagesRepositoryOperationLabelRepository is the label used to identify PackageRepositoryOperations
 	// that belong to a specific PackageRepository
 	PackagesRepositoryOperationLabelRepository = "packages.deckhouse.io/repository"
 
-	PackagesRepositoryOperationLabelOperationType = "packages.deckhouse.io/operation-type"
-	PackageRepositoryOperationTypeUpdate          = "Update"
+	PackagesRepositoryOperationLabelOperationType                                = "packages.deckhouse.io/operation-type"
+	PackageRepositoryOperationTypeUpdate          PackageRepositoryOperationType = "Update"
 
 	PackagesRepositoryOperationLabelOperationTrigger = "packages.deckhouse.io/operation-trigger"
 	PackagesRepositoryTriggerManual                  = "manual"
@@ -71,10 +69,11 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=pro
 // +kubebuilder:printcolumn:name=Count,type=integer,JSONPath=.status.packages.total
 // +kubebuilder:printcolumn:name=Completed,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].status
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].message
+// +kubebuilder:printcolumn:name=CompletionTime,type=date,JSONPath=.status.completionTime
 
 // PackageRepositoryOperation represents an operation to scan/update a package repository.
 type PackageRepositoryOperation struct {
@@ -96,7 +95,10 @@ type PackageRepositoryOperationSpec struct {
 	PackageRepositoryName string `json:"packageRepositoryName"`
 
 	// Type of operation to perform.
-	Type string `json:"type"`
+	// +required
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=Update
+	Type PackageRepositoryOperationType `json:"type"`
 
 	// Configuration for update operations.
 	// +optional
@@ -114,10 +116,6 @@ type PackageRepositoryOperationUpdate struct {
 }
 
 type PackageRepositoryOperationStatus struct {
-	// Current phase of the operation.
-	// +optional
-	Phase string `json:"phase,omitempty"`
-
 	// Time when the operation started.
 	// +optional
 	StartTime *metav1.Time `json:"startTime,omitempty"`
@@ -134,7 +132,9 @@ type PackageRepositoryOperationStatus struct {
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
@@ -157,6 +157,14 @@ type PackageRepositoryOperationStatusPackages struct {
 	// Total number of packages found.
 	// +optional
 	Total int `json:"total,omitempty"`
+
+	// Total number of newly found versions across all packages in this operation.
+	// A version is counted as new if its ApplicationPackageVersion or
+	// ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
+	// only) existed with the "not in registry" mark and its image was found in the
+	// registry during this operation.
+	// +optional
+	NewVersionsOverall int `json:"newVersionsOverall,omitempty"`
 }
 
 type PackageRepositoryOperationStatusDiscoveredPackage struct {
@@ -176,8 +184,8 @@ type PackageRepositoryOperationStatusFailedPackageError struct {
 	// Version of the package that failed.
 	Version string `json:"version"`
 
-	// Error message.
-	Error string `json:"error"`
+	// Message of the error.
+	Message string `json:"message"`
 }
 
 type PackageRepositoryOperationStatusPackage struct {
@@ -187,30 +195,36 @@ type PackageRepositoryOperationStatusPackage struct {
 	// Type of the package.
 	// +optional
 	Type string `json:"type,omitempty"`
+
+	// Number of versions found during this operation.
+	// +optional
+	FoundVersions int `json:"foundVersions,omitempty"`
+
+	// Number of newly found versions during this operation.
+	// A version is counted as new if its ApplicationPackageVersion or
+	// ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
+	// only) existed with the "not in registry" mark and its image was found in the
+	// registry during this operation.
+	// +optional
+	NewVersions int `json:"newVersions,omitempty"`
 }
 
-type PackageRepositoryOperationStatusCondition struct {
-	// Type of operation condition.
-	Type string `json:"type"`
+func (o *PackageRepositoryOperation) GetStateByCondition() string {
+	cond := metautils.FindStatusCondition(o.Status.Conditions, PackageRepositoryOperationConditionCompleted)
+	if cond == nil {
+		return ""
+	}
 
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
+	return cond.Reason
+}
 
-	// Programmatic identifier indicating the reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
+func (o *PackageRepositoryOperation) IsCompleted() bool {
+	cond := metautils.FindStatusCondition(o.Status.Conditions, PackageRepositoryOperationConditionCompleted)
+	if cond == nil {
+		return false
+	}
 
-	// Human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition was probed.
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+	return cond.Status == metav1.ConditionTrue
 }
 
 // +kubebuilder:object:root=true

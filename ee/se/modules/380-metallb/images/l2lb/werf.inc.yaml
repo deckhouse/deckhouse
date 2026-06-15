@@ -25,7 +25,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -73,7 +73,6 @@ import:
   add: /configs/excludel2.yaml
   to: /etc/metallb/excludel2.yaml
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

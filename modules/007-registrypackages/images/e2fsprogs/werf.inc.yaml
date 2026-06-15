@@ -19,7 +19,7 @@ shell:
   - rm -rf /src/e2fsprogs/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/scripts
@@ -47,7 +47,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src

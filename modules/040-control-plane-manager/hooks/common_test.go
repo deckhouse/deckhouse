@@ -43,7 +43,7 @@ func testHelperSetETCDMembers(members []*etcdserverpb.Member) {
 		a := *member
 		mems[i] = &a
 	}
-	dependency.TestDC.EtcdClient.MemberListMock.Set(func(_ context.Context) (*clientv3.MemberListResponse, error) {
+	dependency.TestDC.EtcdClient.MemberListMock.Set(func(_ context.Context, _ ...clientv3.OpOption) (*clientv3.MemberListResponse, error) {
 		return &clientv3.MemberListResponse{
 			Members: mems,
 		}, nil

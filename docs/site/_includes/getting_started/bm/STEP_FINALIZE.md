@@ -72,20 +72,21 @@ sudo -i d8 k patch mc global --type merge \
   <li>
     <p>Create a <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
     
-<div class="tabs">
-        <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');
-                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');">
-        CAPS
-        </a>
-        <a id='tab_block_bootstrap' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');
-                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');">
-        Bootstrap script
-        </a>
-</div>
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id='tab_block_caps' href="javascript:void(0)" class="tabs__item tabs__item--title active"
+    onclick="openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__caps', 'block_bootstrap');
+              openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__bootstrap', 'block_caps');">
+    CAPS
+    </li>
+    <li id='tab_block_bootstrap' href="javascript:void(0)" class="tabs__item tabs__item--title"
+    onclick="openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__bootstrap', 'block_caps');
+              openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__caps', 'block_bootstrap');">
+    Bootstrap script
+    </li>
+  </ul>
 
-  <div id="block_bootstrap" class="tabs__bootstrap" style="display: none;">
+  <div id="block_bootstrap" class="tabs__container tabs__container--descr tabs__bootstrap" style="display: none;">
   <ul>
   <li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
@@ -119,7 +120,7 @@ echo <Base64-CODE> | base64 -d | bash
   </li>
   </ul>
   </div>
-  <div id="block_caps" class="tabs__caps">
+  <div id="block_caps" class="tabs__container tabs__container--descr tabs__caps">
   <ul>
 <li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
@@ -174,25 +175,8 @@ cat /dev/shm/caps-id.pub
   </li>
   <li>
     <p>Create the <code>caps</code> user on the <strong>virtual machine you have started</strong>. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:</p>
-{% offtopic title="If you are using CentOS or Rocky Linux…" %}
-In RHEL-based (Red Hat Enterprise Linux) operating systems, the caps user must be added to the wheel group. To do this, run the following command, specifying the public part of the SSH key obtained in the previous step:
-<div markdown="1">
-```bash
-# Specify the public part of the user SSH key.
-export KEY='<SSH-PUBLIC-KEY>'
-useradd -m -s /bin/bash caps
-usermod -aG wheel caps
-echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/caps/.ssh
-echo $KEY >> /home/caps/.ssh/authorized_keys
-chown -R caps:caps /home/caps
-chmod 700 /home/caps/.ssh
-chmod 600 /home/caps/.ssh/authorized_keys
-```
-</div>
-Next, go to the next step, **you do not need to run the command below**.
-{% endofftopic %}
-<div markdown="1">
+{% tabs os %}
+{% tab "For Ubuntu-based OS" %}
 ```bash
 # Specify the public part of the user SSH key.
 export KEY='<SSH-PUBLIC-KEY>'
@@ -205,7 +189,22 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
-</div>
+{% endtab %}
+{% tab "For CentOS or Rocky Linux (RHEL-based OS)" %}
+```bash
+# Specify the public part of the user SSH key.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG wheel caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+{% endtab %}
+{% endtabs %}
   </li>
   <li>
     <p>Create a <a href="/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
@@ -230,6 +229,7 @@ EOF
 </div>
   </li>
   </ul>
+  </div>
   </div>
   </li>
   <li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
@@ -344,12 +344,13 @@ sudo -i d8 k create -f $PWD/user.yml
 ```
 </div>
 </li>
-<li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:
-  <ul><li>Identify the public IP address of the node where the Ingress Controller is running:
-  <div class="highlight">
-  <pre class="highlight"><code>sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
-  </div>
-  </li>
+<li><strong>Create DNS records</strong> to organize access to the cluster web interfaces.
+
+{% alert type="info" %}
+If you use `sslip.io` or a similar wildcard DNS service as the cluster DNS name template, there is no need to create DNS records manually.
+{% endalert %}
+
+  <ul><li>Identify the public IP address of the node where the Ingress Controller is running.</li>
   <li>If you have the DNS server and you can add a DNS records:
   <ul>
     <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.

@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"net/http"
 	"os"
@@ -99,22 +100,39 @@ func main() {
 
 	logger.Info("stopping application")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Create a new context with timeout for graceful shutdown.
+	// The signal context (ctx) may already be canceled (e.g., if one of the goroutines failed).
+	// In that case, shutdown would immediately exit — which is not what we want.
+	// A separate context allows all shutdown goroutines to complete correctly,
+	// even if one of them fails — the error won't cancel the context for others.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err = lManager.Remove(ctx)
-	if err != nil {
+	// New errgroup for shutdown — the main eg may have already exited with an error
+	// (and consequently canceled its context). Reusing it for shutdown is not allowed.
+	shutdownEg, shutdownCtx := errgroup.WithContext(shutdownCtx)
+
+	shutdownEg.Go(func() error {
+		return srv.Shutdown(shutdownCtx)
+	})
+	shutdownEg.Go(func() error {
+		return metricsSrv.Shutdown(shutdownCtx)
+	})
+
+	waitErr := shutdownEg.Wait()
+	if waitErr != nil && !errors.Is(waitErr, context.Canceled) {
+		logger.Error("goroutine error", log.Err(waitErr))
+	}
+
+	// Remove the kubernetes lease to signal that this instance is no longer active.
+	// Uses its own context with a 5-second timeout to ensure it completes even if
+	// the shutdown context was already canceled. Do not remove this — the lease
+	// must be released so that another instance can take over, otherwise we'll have
+	// a split-brain situation where two instances think they are the leader.
+	removeCtx, removeCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer removeCancel()
+	if err := lManager.Remove(removeCtx); err != nil {
 		logger.Error("lease removing failed", log.Err(err))
-	}
-
-	err = srv.Shutdown(ctx)
-	if err != nil {
-		logger.Error("shutdown failed", log.Err(err))
-	}
-
-	err = eg.Wait()
-	if err != nil {
-		logger.Error("error due stopping application", log.Err(err))
 	}
 
 	logger.Info("application stopped")

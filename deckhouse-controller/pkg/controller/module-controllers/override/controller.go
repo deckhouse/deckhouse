@@ -75,20 +75,16 @@ func RegisterController(runtimeManager manager.Manager,
 		return fmt.Errorf("add preflight: %w", err)
 	}
 
-	pullOverrideController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		MaxConcurrentReconciles: maxConcurrentReconciles,
-		CacheSyncTimeout:        cacheSyncTimeout,
-		NeedLeaderElection:      ptr.To(false),
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("create controller: %w", err)
-	}
-
 	if err := ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&v1alpha2.ModulePullOverride{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(pullOverrideController); err != nil {
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: maxConcurrentReconciles,
+			CacheSyncTimeout:        cacheSyncTimeout,
+			NeedLeaderElection:      ptr.To(false),
+		}).
+		Complete(r); err != nil {
 		return fmt.Errorf("complete: %w", err)
 	}
 	return nil
@@ -367,9 +363,9 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 			values = addonutils.Values(settings)
 		}
 	}
-	if err = def.Validate(values, r.log); err != nil {
+	if err := def.Validate(values, r.log); err != nil {
 		mpo.Status.Message = fmt.Sprintf("Validation error: %v", err)
-		if err = r.updateModulePullOverrideStatus(ctx, mpo); err != nil {
+		if err := r.updateModulePullOverrideStatus(ctx, mpo); err != nil {
 			return fmt.Errorf("update mpo status: %w", err)
 		}
 

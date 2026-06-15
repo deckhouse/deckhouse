@@ -25,11 +25,11 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 )
 
-func BuildFromMapSlice(prefix, inputName string, sourceType string, transforms []apis.LogTransform) ([]apis.LogTransform, error) {
+func buildFromMapSlice(nameBase string, transforms []apis.LogTransform) []apis.LogTransform {
 	prevInput := ""
 
 	for i, transform := range transforms {
-		name := fmt.Sprintf("transform/%s/%s/%s/%02d_%s", sourceType, prefix, inputName, i, transform.GetName())
+		name := fmt.Sprintf("%s/%02d_%s", nameBase, i, transform.GetName())
 
 		transform.SetName(name)
 		if prevInput != "" {
@@ -40,7 +40,7 @@ func BuildFromMapSlice(prefix, inputName string, sourceType string, transforms [
 		transforms[i] = transform
 	}
 
-	return transforms, nil
+	return transforms
 }
 
 type CommonTransform struct {

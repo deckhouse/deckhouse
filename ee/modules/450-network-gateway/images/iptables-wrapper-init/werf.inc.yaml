@@ -4,14 +4,14 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: tools/coreutils
+- from: {{ index $.Images "tools/coreutils" }}
   add: /
   to: /
   before: setup
   includePaths:
   - usr/bin/rm
   - usr/bin/cp
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
@@ -30,8 +30,7 @@ import:
   add: /relocate
   to: /relocate
   before: setup
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
 final: false

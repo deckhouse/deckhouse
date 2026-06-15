@@ -93,6 +93,7 @@ discovery:
 const certManager = `
 enableCAInjector: true
 internal:
+  enableCAInjector: true
   selfSignedCA:
     cert: string
     key: string
@@ -100,6 +101,23 @@ internal:
     ca: string
     key: string
     crt: string
+`
+
+const certManagerWithoutCAInjector = `
+enableCAInjector: false
+internal:
+  enableCAInjector: false
+  selfSignedCA:
+    cert: string
+    key: string
+  webhookCert:
+    ca: string
+    key: string
+    crt: string
+`
+
+const certManagerGatewayAPI = `
+enableListenerSet: true
 `
 
 const cloudDNS = `
@@ -281,6 +299,22 @@ podAntiAffinity:
         app: cert-manager
     topologyKey: kubernetes.io/hostname
 `))
+		})
+	})
+
+	Context("CAInjector disabled by internal value", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManagerWithoutCAInjector)
+			f.HelmRender()
+		})
+
+		It("Should not render cainjector resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
+			Expect(cainjector.Exists()).To(BeFalse())
 		})
 	})
 
@@ -550,5 +584,52 @@ podAntiAffinity:
 
 		})
 
+	})
+
+	Context("<Gateway API and ListenerSet flags>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.discovery.gatewayAPIDefaultGateway", `
+name: shared-gateway
+namespace: d8-ingress-gateway
+`)
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["gateway.networking.k8s.io/v1/Gateway","gateway.networking.k8s.io/v1/HTTPRoute"]`)
+			f.ValuesSetFromYaml("certManager", certManager+certManagerGatewayAPI)
+			f.HelmRender()
+		})
+
+		It("should render gateway and listenerset arguments", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			certManagerDeployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			Expect(certManagerDeployment.Exists()).To(BeTrue())
+
+			args := certManagerDeployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
+			Expect(args).To(ContainSubstring("--enable-gateway-api=true"))
+			Expect(args).To(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
+	})
+
+	Context("<ListenerSet feature gate without Gateway API>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager+certManagerGatewayAPI)
+			f.HelmRender()
+		})
+
+		It("should enable ListenerSets feature gate only", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			certManagerDeployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			Expect(certManagerDeployment.Exists()).To(BeTrue())
+
+			args := certManagerDeployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api=true"))
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
 	})
 })

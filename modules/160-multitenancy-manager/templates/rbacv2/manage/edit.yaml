@@ -33,3 +33,16 @@ rules:
   - update
   - patch
   - delete
+# Cluster operators author the per-project availability policies. The registrations and reference paths
+# (grantableclusterresource{definitions,references}) are shipped by the module and are not creatable —
+# read-only via the view role. The catalog (availableclusterresources) is controller-rendered too.
+- apiGroups:
+  - multitenancy.deckhouse.io
+  resources:
+  - clusterresourcegrantpolicies
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection

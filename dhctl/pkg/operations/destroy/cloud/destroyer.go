@@ -41,6 +41,10 @@ type DestroyerParams struct {
 
 	CommanderMode bool
 	SkipResources bool
+
+	// SSHUser is recorded into the converge lock lease as the holder identity
+	// (informational only).
+	SSHUser string
 }
 
 type Destroyer struct {
@@ -66,7 +70,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 		return nil
 	}
 
-	locked, err := d.params.State.IsConvergeLocked()
+	locked, err := d.params.State.IsConvergeLocked(ctx)
 	if err != nil {
 		return err
 	}
@@ -80,7 +84,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 		return err
 	}
 
-	if err := d.params.State.SetConvergeLocked(); err != nil {
+	if err := d.params.State.SetConvergeLocked(ctx); err != nil {
 		// try to unlock because we cannot save in state
 		d.unlockConverge(true)
 		return err
@@ -92,7 +96,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 }
 
 func (d *Destroyer) AfterResourcesDelete(ctx context.Context) error {
-	_, err := d.params.StateLoader.PopulateMetaConfig(ctx)
+	_, err := d.params.StateLoader.PopulateMetaConfig(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -100,7 +104,7 @@ func (d *Destroyer) AfterResourcesDelete(ctx context.Context) error {
 	return err
 }
 
-func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
+func (d *Destroyer) CleanupBeforeDestroy(ctx context.Context) error {
 	// why only unwatch lock without request unlock
 	// user may not delete resources and converge still working in cluster
 	// all node groups removing may still in long time run and
@@ -108,7 +112,7 @@ func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
 	d.unlockConverge(false)
 
 	// stop ssh because master nodes will delete and we lost connection
-	d.params.KubeProvider.Cleanup(true)
+	d.params.KubeProvider.Cleanup(ctx, true)
 
 	return nil
 }
@@ -135,7 +139,7 @@ func (d *Destroyer) lockConverge(ctx context.Context) error {
 	}
 
 	// todo refactor lock converge with ctx
-	unlockConverge, err := lock.LockConverge(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
+	unlockConverge, err := lock.LockConverge(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer", d.params.SSHUser)
 	if err != nil {
 		return err
 	}

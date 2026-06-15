@@ -62,6 +62,7 @@ const (
 type ProviderClusterConfiguration struct {
 	Provider          Provider `json:"provider"`
 	Region            string   `json:"region"`
+	Zones             []string `json:"zones"`
 	RegionTagCategory string   `json:"regionTagCategory"`
 	ZoneTagCategory   string   `json:"zoneTagCategory"`
 }
@@ -113,10 +114,6 @@ func NewClient(config *ProviderClusterConfiguration) (Client, error) {
 }
 
 func (v *client) GetZonesDatastores() (*Output, error) {
-	var (
-		zoneTagCategoryName = v.config.ZoneTagCategory
-	)
-
 	dc, err := v.getDCByRegion(context.TODO())
 	if err != nil {
 		return nil, err
@@ -130,7 +127,7 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 		panic("no zonedDataStores returned")
 	}
 
-	zones, err := v.getZonesInDC(context.TODO(), dc, zoneTagCategoryName)
+	zones, err := v.getZonesInDC(context.TODO(), dc)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +261,7 @@ func (v *client) getDCByRegion(ctx context.Context) (*object.Datacenter, error) 
 	return datacenter, nil
 }
 
-func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter, zoneTagCategoryName string) ([]string, error) {
+func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter) ([]string, error) {
 	finder := find.NewFinder(v.client.Client, true)
 
 	clusters, err := finder.ClusterComputeResourceList(ctx, path.Join(datacenter.InventoryPath, "..."))
@@ -278,7 +275,7 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 
 	tagsClient := tags.NewManager(v.restClient)
 
-	zoneTagCategory, err := tagsClient.GetCategory(ctx, zoneTagCategoryName)
+	zoneTagCategory, err := tagsClient.GetCategory(ctx, v.config.ZoneTagCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -299,10 +296,19 @@ func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter
 		return nil, err
 	}
 
+	allowedZones := make(map[string]any, len(v.config.Zones))
+	for _, z := range v.config.Zones {
+		allowedZones[z] = struct{}{}
+	}
+
 	var matchingZonesMap = make(map[string]struct{})
 	for _, clusterTags := range clustersWithTags {
 		for _, clusterTag := range clusterTags.Tags {
-			if _, ok := tagsInCategoryMap[clusterTag.Name]; ok {
+			if _, ok := tagsInCategoryMap[clusterTag.Name]; !ok {
+				continue
+			}
+
+			if isZoneAllowed(allowedZones, clusterTag.Name) {
 				matchingZonesMap[clusterTag.Name] = struct{}{}
 			}
 		}
@@ -371,14 +377,24 @@ func (v *client) getDataStoresInDC(ctx context.Context, datacenter *object.Datac
 		return nil, err
 	}
 
+	allowedZones := make(map[string]any, len(v.config.Zones))
+	for _, z := range v.config.Zones {
+		allowedZones[z] = struct{}{}
+	}
+
 	zds := make([]ZonedDataStore, 0)
 	for _, attachedTags := range datastoresWithTags {
 		var dsZones []string
 		for _, tag := range attachedTags.Tags {
-			if tag.CategoryID == zoneTagCategory.ID {
+			if tag.CategoryID != zoneTagCategory.ID {
+				continue
+			}
+
+			if isZoneAllowed(allowedZones, tag.Name) {
 				dsZones = append(dsZones, tag.Name)
 			}
 		}
+
 		if len(dsZones) == 0 {
 			continue
 		}
@@ -517,4 +533,14 @@ func murmurHash(args ...string) string {
 
 func prepareHashArgs(args ...string) string {
 	return strings.Join(args, ":::")
+}
+
+func isZoneAllowed(allowedZones map[string]any, zone string) bool {
+	// If no allowed zones are specified, then we assume that all zones are allowed
+	if len(allowedZones) == 0 {
+		return true
+	}
+
+	_, allowed := allowedZones[zone]
+	return allowed
 }

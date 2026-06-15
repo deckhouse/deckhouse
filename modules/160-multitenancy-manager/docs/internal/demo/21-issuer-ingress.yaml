@@ -1,0 +1,45 @@
+# ClusterIssuer referenced from an Ingress via the cert-manager annotation.
+# Same allow-list (`selfsigned` only), no coerceToDefault.
+#
+# ALLOW  ing-ok   -> cert-manager.io/cluster-issuer: selfsigned
+# DENY   ing-bad  -> cert-manager.io/cluster-issuer: letsencrypt
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ing-ok
+  namespace: demo
+  annotations:
+    cert-manager.io/cluster-issuer: selfsigned
+spec:
+  rules:
+    - host: ok.demo.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ing-bad
+  namespace: demo
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt   # DENY: not available to the project
+spec:
+  rules:
+    - host: bad.demo.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 80

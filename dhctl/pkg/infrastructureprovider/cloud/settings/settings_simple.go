@@ -81,6 +81,7 @@ func (s *Simple) CloudName() string {
 
 	return *s.CloudNameVal
 }
+
 func (s *Simple) Versions() []string {
 	var versions []string
 	if s.VersionVal != nil {

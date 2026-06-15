@@ -39,7 +39,42 @@ import (
 const (
 	deckhouseDeploymentNamespace = "d8-system"
 	deckhouseDeploymentName      = "deckhouse"
+	deckhouseClusterNamespace    = "d8-cloud-instance-manager"
 )
+
+func isCAPIClusterUnsupportedErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.IsNotFound(err) {
+		return true
+	}
+
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "the server could not find the requested resource") ||
+		strings.Contains(msg, "no matches for kind")
+}
+
+func DeleteValidatingWebhookConfigurations(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete validating webhook configurations", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		vwcs, err := kubeCl.AdmissionregistrationV1().ValidatingWebhookConfigurations().List(ctx, metav1.ListOptions{
+			LabelSelector: "heritage=deckhouse",
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, vwc := range vwcs.Items {
+			err := kubeCl.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, vwc.Name, metav1.DeleteOptions{})
+			if err != nil && !errors.IsNotFound(err) {
+				return err
+			}
+			log.InfoF("ValidatingWebhookConfiguration/%s\n", vwc.Name)
+		}
+
+		return nil
+	})
+}
 
 func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
@@ -48,6 +83,28 @@ func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
+		return nil
+	})
+}
+
+func DeleteClusters(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete Clusters", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		clusters, err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if isCAPIClusterUnsupportedErr(err) {
+				return nil
+			}
+			return err
+		}
+
+		for _, cluster := range clusters.Items {
+			err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(cluster.GetNamespace()).Delete(ctx, cluster.GetName(), metav1.DeleteOptions{})
+			if err != nil && !errors.IsNotFound(err) {
+				return err
+			}
+			log.InfoF("%s/%s\n", cluster.GetNamespace(), cluster.GetName())
+		}
+
 		return nil
 	})
 }
@@ -239,6 +296,31 @@ func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.Kube
 	})
 }
 
+func WaitForClustersDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Wait for Clusters deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		resources, err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if isCAPIClusterUnsupportedErr(err) {
+				log.InfoLn("All Clusters are deleted from the cluster")
+				return nil
+			}
+			return err
+		}
+
+		count := len(resources.Items)
+		if count != 0 {
+			builder := strings.Builder{}
+			for _, item := range resources.Items {
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.GetNamespace(), item.GetName())
+			}
+			return fmt.Errorf("%d Clusters left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
+		}
+
+		log.InfoLn("All Clusters are deleted from the cluster")
+		return nil
+	})
+}
+
 func WaitForServicesDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Wait for Services deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		resources, err := kubeCl.CoreV1().Services(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
@@ -257,7 +339,7 @@ func WaitForServicesDeletion(ctx context.Context, kubeCl *client.KubernetesClien
 		if count != 0 {
 			builder := strings.Builder{}
 			for _, item := range filteredResources {
-				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.Namespace, item.Name))
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.Namespace, item.Name)
 			}
 			return fmt.Errorf("%d Services left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
@@ -289,16 +371,16 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 		if skipPVsCount != 0 {
 			skipPVsInfo := strings.Builder{}
 			for _, item := range skipPVs {
-				skipPVsInfo.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+				fmt.Fprintf(&skipPVsInfo, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
-			log.InfoF("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete was skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
+			log.InfoF("%d PersistentVolumes provided manually or with a reclaimPolicy other than Delete were skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
 		}
 
 		count := len(filteredResources)
 		if count != 0 {
 			remainingPVs := strings.Builder{}
 			for _, item := range filteredResources {
-				remainingPVs.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+				fmt.Fprintf(&remainingPVs, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
 			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(remainingPVs.String(), "\n"))
 		}
@@ -326,7 +408,7 @@ func WaitForPVCDeletion(ctx context.Context, kubeCl *client.KubernetesClient) er
 		if count != 0 {
 			builder := strings.Builder{}
 			for _, item := range resources.Items {
-				builder.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+				fmt.Fprintf(&builder, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
 			return fmt.Errorf("%d PersistentVolumeClaims left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
@@ -409,7 +491,7 @@ func WaitForMCMMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesCl
 		if count != 0 {
 			builder := strings.Builder{}
 			for _, item := range resources.Items {
-				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.GetNamespace(), item.GetName()))
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.GetNamespace(), item.GetName())
 			}
 			return fmt.Errorf("%d Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
@@ -545,7 +627,7 @@ func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesC
 		if count != 0 {
 			builder := strings.Builder{}
 			for _, item := range machines {
-				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.GetNamespace(), item.GetName()))
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.GetNamespace(), item.GetName())
 			}
 			return fmt.Errorf("%d CAPI Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}

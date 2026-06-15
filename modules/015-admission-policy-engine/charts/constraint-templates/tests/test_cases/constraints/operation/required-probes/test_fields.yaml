@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: required-probes
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].readinessProbe
+      level: container
+      description: Container must define readinessProbe when it is required by constraint parameters.
+      requiredScenarios: [positive, negative]
+    - path: spec.containers[].livenessProbe
+      level: container
+      description: Container must define livenessProbe when it is required by constraint parameters.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

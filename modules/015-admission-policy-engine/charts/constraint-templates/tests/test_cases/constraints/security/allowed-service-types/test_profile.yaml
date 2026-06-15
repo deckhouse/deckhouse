@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-service-types
+spec:
+  testDirectory: allowed-service-types
+  suite:
+    expectedTestBlockNames:
+      - security-policy

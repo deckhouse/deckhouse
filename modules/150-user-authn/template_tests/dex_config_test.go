@@ -35,6 +35,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "test")
 		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "testcert")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "testkey")
+		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "testCA")
 
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")

@@ -95,6 +95,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler
 		// We are forced to keep such a variable as a workaround in order to pass the tests during the build stage
 		// This variable (and this package) will be removed after the cloud provider modules are externalized
 		additionalOpenAPISchemasPaths := []string{
+			"/deckhouse/modules/030-cloud-provider-dvp/candi/openapi",
 			"/deckhouse/modules/030-cloud-provider-yandex/candi/openapi",
 			"/deckhouse/modules/030-cloud-provider-gcp/candi/openapi",
 			"/deckhouse/modules/030-cloud-provider-azure/candi/openapi",
@@ -105,13 +106,13 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler
 			if err != nil {
 				return fmt.Errorf("cannot unmarshal cloud-provider-discovery-data.json key: %v", err)
 			}
-			_, err = config.ValidateDiscoveryData(&discoveryDataJSON, additionalOpenAPISchemasPaths)
+			_, err = config.ValidateDiscoveryData(&discoveryDataJSON, additionalOpenAPISchemasPaths, nil)
 			if err != nil {
 				return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 			}
 		}
 		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
-			m, err := config.ParseConfigFromData(ctx, string(clusterConfigurationYAML), hookConfig.PreparatorProvider)
+			m, err := config.ParseConfigFromData(ctx, string(clusterConfigurationYAML), hookConfig.PreparatorProvider, nil)
 			if err != nil {
 				return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 			}

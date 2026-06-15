@@ -33,7 +33,7 @@ const (
 
 	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
 
-	PackageRepositoryConditionLastOperationScanFinished = "LastOperationScanFinished"
+	PackageRepositoryConditionLastScanSucceeded = "LastScanSucceeded"
 )
 
 var (
@@ -57,8 +57,8 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
-// +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.syncTime
-// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastOperationScanFinished')].message
+// +kubebuilder:printcolumn:name=Scan,type=date,JSONPath=.status.lastScanTime
+// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
 // PackageRepository is a source of packages for Deckhouse.
@@ -78,9 +78,9 @@ type PackageRepository struct {
 
 type PackageRepositorySpec struct {
 	// Interval for registry scan.
-	//
 	// Defines the frequency of checking the container registry for new packages.
 	// +optional
+	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
 	// Configuration for the package registry.
 	Registry PackageRepositorySpecRegistry `json:"registry"`
@@ -101,12 +101,29 @@ type PackageRepositorySpecRegistry struct {
 	// Certificate authority data for TLS verification.
 	// +optional
 	CA string `json:"ca,omitempty"`
+
+	// Login from the repository
+	// +optional
+	Login string `json:"login,omitempty"`
+
+	// Password from the repository
+	// +optional
+	Password string `json:"password,omitempty"`
 }
 
 type PackageRepositoryStatus struct {
-	// Last time the repository was synchronized.
+	// Time of the most recent scan of any outcome.
 	// +optional
-	SyncTime metav1.Time `json:"syncTime,omitempty"`
+	LastScanTime *metav1.Time `json:"lastScanTime,omitempty"`
+
+	// Time of the most recent scan that found at least one new version.
+	// Scans that found nothing new do not advance this timestamp.
+	// +optional
+	LastChangeTime *metav1.Time `json:"lastChangeTime,omitempty"`
+
+	// Number of new versions found by the most recent scan.
+	// Set to zero when the last scan found nothing new.
+	LastNewVersions int `json:"lastNewVersions"`
 
 	// List of packages available in this repository.
 	// +optional
@@ -129,6 +146,10 @@ type PackageRepositoryStatus struct {
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// PartialScanAvailable indicates whether the registry supports pagination for tag listing.
+	// +optional
+	PartialScanAvailable bool `json:"partialScanAvailable"`
 }
 
 type PackageRepositoryStatusPackage struct {

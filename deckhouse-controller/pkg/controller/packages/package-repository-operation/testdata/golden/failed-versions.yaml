@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/operation-trigger: manual
     packages.deckhouse.io/operation-type: Update
@@ -14,7 +13,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "7"
+  resourceVersion: "6"
 spec:
   packageRepositoryName: deckhouse
   type: Update
@@ -24,32 +23,34 @@ spec:
 status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: ScanSucceeded
     status: "True"
     type: Completed
   packages:
     failed:
     - errors:
-      - error: 'ensure package version: create application package version: simulated
+      - message: 'ensure package version: create application package version: simulated
           create error for v1.1.0'
         version: v1.1.0
-      - error: 'ensure package version: create application package version: simulated
+      - message: 'ensure package version: create application package version: simulated
           create error for v1.2.0'
         version: v1.2.0
       name: test-package
+    newVersionsOverall: 1
     processed:
-    - name: test-package
+    - foundVersions: 3
+      name: test-package
+      newVersions: 1
       type: Application
     processedOverall: 1
     total: 1
-  phase: Completed
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
@@ -72,7 +73,6 @@ status: {}
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "3"
 spec:
@@ -81,13 +81,16 @@ spec:
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: Successfully scanned repository, found 1 package(s)
-    reason: ""
+    message: ""
+    reason: ScanSucceeded
     status: "True"
-    type: LastOperationScanFinished
+    type: LastScanSucceeded
+  lastChangeTime: "2025-10-31T12:00:00Z"
+  lastNewVersions: 1
+  lastScanTime: "2025-10-31T12:00:00Z"
   packages:
   - name: test-package
     type: Application
   packagesCount: 1
+  partialScanAvailable: false
   phase: Active
-  syncTime: "2025-10-31T12:00:00Z"

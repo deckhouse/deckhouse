@@ -11,7 +11,7 @@ spec:
     - name: prometheus-metrics-adapter.d8-ingress-nginx
       rules:
         - record: kube_adapter_metric_d8_ingress_nginx_ds_cpu_utilization
-          expr: avg by (controller_name) (kube_controller_pod{controller_type="DaemonSet", namespace="d8-ingress-nginx"} * on (pod) group_right(controller_name) round(rate(container_cpu_usage_seconds_total{container!="POD"}[1m]) * 100))
+          expr: avg by (controller_name) (sum by (pod, controller_name) (kube_controller_pod{controller_type="DaemonSet", namespace="d8-ingress-nginx"} * on (pod) group_right(controller_name) (rate(container_cpu_usage_seconds_total{namespace="d8-ingress-nginx", container!="POD"}[3m]) * 100)))
 {{- end }}
 
 {{- define "ingress-controller-lb-hpa" }}
@@ -90,11 +90,13 @@ spec:
                     values:
                       - {{ $name }}
               topologyKey: kubernetes.io/hostname
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
         - name: hpa-scaler
           image: {{ include "helm_lib_module_common_image" (list $context "pause") }}
+      {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           resources:
             requests:
               cpu: "10m"

@@ -46,6 +46,7 @@ const labels = {
   'e2e/use/k8s/1.33': { type: 'e2e-use', ver: '1.33' },
   'e2e/use/k8s/1.34': { type: 'e2e-use', ver: '1.34' },
   'e2e/use/k8s/1.35': { type: 'e2e-use', ver: '1.35' },
+  'e2e/use/k8s/1.36': { type: 'e2e-use', ver: '1.36' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
   // E2E: use multimaster configuration
@@ -78,6 +79,9 @@ const labels = {
   'deploy/web/test5': { type: 'deploy-web', env: 'test5' },
   'deploy/web/test6': { type: 'deploy-web', env: 'test6' },
   'deploy/web/test7': { type: 'deploy-web', env: 'test7' },
+  'deploy/web/test8': { type: 'deploy-web', env: 'test8' },
+  'deploy/web/test9': { type: 'deploy-web', env: 'test9' },
+  'deploy/web/test10': { type: 'deploy-web', env: 'test10' },
   'deploy/web/stage': { type: 'deploy-web', env: 'stage' },
 
   // Edition for build-and-test workflow
@@ -89,11 +93,7 @@ const labels = {
   'edition/cse': { type: 'edition', edition: 'CSE' },
 
   // Enable operator-trivy to get CIS benchmark report
-  'e2e/use/cis': { type: 'e2e-use', cis: true },
-
-  // security validation for images
-  'security/rootless': { type: 'security', security: 'rootless' },
-  'security/cve': { type: 'security', security: 'cve' }
+  'e2e/use/cis': { type: 'e2e-use', cis: true }
 };
 module.exports.knownLabels = labels;
 

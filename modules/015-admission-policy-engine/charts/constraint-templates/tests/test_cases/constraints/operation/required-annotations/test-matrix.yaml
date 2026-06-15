@@ -1,0 +1,139 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: required-annotations
+spec:
+  suiteName: d8requiredannotations
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8requiredannotations
+      gatorBlock: d8requiredannotations
+      defaultObjectBase: ""
+      template: ../../templates/operation/required-annotations.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: pod-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.annotations.foo
+              scenario: positive
+            - path: metadata.annotations.bar
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: allowed
+                namespace: default
+                annotations:
+                  foo: bar
+                  bar: zcx.example.com
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+        - name: dep-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: metadata.annotations.foo
+              scenario: positive
+            - path: metadata.annotations.bar
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: allowed
+                namespace: default
+                annotations:
+                  foo: bar
+                  bar: xxx.example.com
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: foo
+                selector:
+                  matchLabels:
+                    foo: bar
+        - name: pod-disallowed
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: metadata.annotations.foo
+              scenario: positive
+            - path: metadata.annotations.bar
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                name: disallowed
+                namespace: default
+                annotations:
+                  foo: bar
+                  bar: xxx
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+        - name: dep-disallowed
+          violations: "yes"
+          assertionMessage: 'you must provide annotations: {"foo"}'
+          fields:
+            - path: metadata.annotations.foo
+              scenario: negative
+            - path: metadata.annotations.bar
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: disallowed-dep
+                namespace: default
+                annotations:
+                  bar: xxx.example.com
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: foo
+                selector:
+                  matchLabels:
+                    foo: bar

@@ -3,7 +3,7 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/bin-cilium-src-artifact
@@ -17,8 +17,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make git bash
+  - pm install make git bash
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
@@ -45,7 +44,6 @@ import:
   add: /out/linux/amd64/usr/bin/cilium-operator
   to: /usr/bin/cilium-operator
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

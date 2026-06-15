@@ -18,62 +18,46 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/name212/govalue"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type kubeClientProvider struct {
-	sshClientProvider sshclient.SSHProvider
-
-	sshClient node.SSHClient
-	kubeCl    *client.KubernetesClient
+	sshProvider  libcon.SSHProvider
+	kubeProvider libcon.KubeProvider
 }
 
-func newKubeClientProvider(sshClientProvider sshclient.SSHProvider) *kubeClientProvider {
+func newKubeClientProvider(kubeProvider libcon.KubeProvider, sshProvider libcon.SSHProvider) *kubeClientProvider {
 	return &kubeClientProvider{
-		sshClientProvider: sshClientProvider,
+		kubeProvider: kubeProvider,
+		sshProvider:  sshProvider,
 	}
 }
 
 func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
-	if !govalue.IsNil(p.kubeCl) {
-		return p.kubeCl, nil
+	if p.kubeProvider == nil {
+		return nil, fmt.Errorf("kube provider is nil")
 	}
-
-	if govalue.IsNil(p.sshClientProvider) {
-		return nil, fmt.Errorf("sshClientProvider did not pass")
-	}
-
-	sshClient, err := p.sshClientProvider.Client()
+	kubeCl, err := p.kubeProvider.Client(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	p.sshClient = sshClient
-
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
-	if err != nil {
-		return nil, err
-	}
-	p.kubeCl = kubeCl
-
-	return kubeCl, err
+	return &client.KubernetesClient{KubeClient: kubeCl}, nil
 }
 
-func (p *kubeClientProvider) Cleanup(stopSSH bool) {
-	if !govalue.IsNil(p.kubeCl) {
-		p.kubeCl.KubeProxy.StopAll()
-		p.kubeCl = nil
+func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
+	err := p.kubeProvider.Cleanup(ctx)
+	if err != nil {
+		log.WarnF("failed to clean up kube provider: %v", err)
 	}
 
-	if stopSSH && !govalue.IsNil(p.sshClient) {
-		p.sshClient.Stop()
-		p.sshClient = nil
+	if stopSSH {
+		err := p.sshProvider.Cleanup(ctx)
+		if err != nil {
+			log.WarnF("failed to clean up ssh provider: %v", err)
+		}
 	}
 }
 
@@ -86,7 +70,8 @@ func newKubeClientErrorProvider(msg string) *kubeClientErrorProvider {
 		msg: msg,
 	}
 }
+
 func (p *kubeClientErrorProvider) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	return nil, fmt.Errorf("Unable to get kube client: '%s'", p.msg)
 }
-func (p *kubeClientErrorProvider) Cleanup(bool) {}
+func (p *kubeClientErrorProvider) Cleanup(context.Context, bool) {}

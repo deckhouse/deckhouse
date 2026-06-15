@@ -155,23 +155,25 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 	executorID := p.executorID()
 
 	if !p.settings.UseOpenTofu() {
-		p.logger.LogDebugF("Create terraform output executor for %s with id %s\n", p.String(), executorID)
+		p.logger.LogDebugF("Creating terraform output executor for %s with id %s\n", p.String(), executorID)
 		return terraform.NewOutputExecutor(terraform.OutputExecutorParams{
 			RunExecutorParams: terraform.RunExecutorParams{
 				RootDir:          rootDir,
 				TerraformBinPath: infraUtilDestination,
 				ExecutorID:       executorID,
+				IsDebug:          p.isDebug,
 			},
 		}, logger)
 	}
 
-	p.logger.LogDebugF("Create opentofu output executor for %s with id %s\n", p.String(), executorID)
+	p.logger.LogDebugF("Creating opentofu output executor for %s with id %s\n", p.String(), executorID)
 
 	return tofu.NewOutputExecutor(tofu.OutputExecutorParams{
 		RunExecutorParams: tofu.RunExecutorParams{
 			RootDir:     rootDir,
 			TofuBinPath: infraUtilDestination,
 			ExecutorID:  executorID,
+			IsDebug:     p.isDebug,
 		},
 	}, logger)
 }
@@ -241,7 +243,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 	executorID := p.executorID()
 
 	if !p.settings.UseOpenTofu() {
-		p.logger.LogDebugF("Create terraform executor for %s with step %s with id %s\n", p.String(), step, executorID)
+		p.logger.LogDebugF("Creating terraform executor for %s with step %s with id %s\n", p.String(), step, executorID)
 		return terraform.NewExecutor(terraform.ExecutorParams{
 			WorkingDir: stepDir,
 			PluginsDir: pluginsDir,
@@ -249,13 +251,14 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 				RootDir:          infraRootDir,
 				TerraformBinPath: infraUtilDestination,
 				ExecutorID:       executorID,
+				IsDebug:          p.isDebug,
 			},
 			Step:           step,
 			VMChangeTester: p.IsVMChange,
 		}, logger)
 	}
 
-	p.logger.LogDebugF("Create opentofu executor for %s with step %s with id %s\n", p.String(), step, executorID)
+	p.logger.LogDebugF("Creating opentofu executor for %s with step %s with id %s\n", p.String(), step, executorID)
 
 	return tofu.NewExecutor(tofu.ExecutorParams{
 		WorkingDir: stepDir,
@@ -264,6 +267,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 			RootDir:     infraRootDir,
 			TofuBinPath: infraUtilDestination,
 			ExecutorID:  executorID,
+			IsDebug:     p.isDebug,
 		},
 		Step:           step,
 		VMChangeTester: p.IsVMChange,
@@ -304,13 +308,12 @@ func (p *Provider) logRootDir() {
 
 		return nil
 	})
-
 	if err != nil {
 		p.logger.LogDebugF("Failed to fully log root dir '%s' for %s: %v\n", p.rootDir, p.String(), err)
 		return
 	}
 
-	p.logger.LogDebugF("Entries (%d) which root dir %s have: %s\n", len(entries), p.rootDir, strings.Join(entries, ", "))
+	p.logger.LogDebugF("Entries (%d) that root dir %s has: %s\n", len(entries), p.rootDir, strings.Join(entries, ", "))
 }
 
 func doNotCheckSourceLink(string) error {
@@ -322,7 +325,7 @@ func getVersionsFile(root string) string {
 }
 
 func (p *Provider) createLinkToRootVersionsFileInModule(dir, rootVersionFile string) error {
-	p.logger.LogDebugF("Create link to root versions file %s for module %s for %s\n", rootVersionFile, dir, p.String())
+	p.logger.LogDebugF("Creating link to root versions file %s for module %s for %s\n", rootVersionFile, dir, p.String())
 
 	fullPath := getVersionsFile(dir)
 
@@ -350,7 +353,7 @@ Versions content SHA sum is %s
 	}
 
 	if os.IsNotExist(err) {
-		p.logger.LogDebugF("Root versions file %s for %s not found. Should write\n", versionsRootFile, p.String())
+		p.logger.LogDebugF("Root versions file %s for %s not found. Should be written\n", versionsRootFile, p.String())
 		return true, nil
 	}
 
@@ -379,15 +382,15 @@ Root versions file %s
 	}
 
 	if rewriteRootVersionsFile {
-		p.logger.LogDebugF("Root versions file %s for %s needs to rewrite\n", versionsRootFile, p.String())
+		p.logger.LogDebugF("Root versions file %s for %s needs to be rewritten\n", versionsRootFile, p.String())
 
-		err = os.WriteFile(versionsRootFile, versionContent, 0644)
+		err = os.WriteFile(versionsRootFile, versionContent, 0o644)
 		if err != nil {
 			return fmt.Errorf("Cannot write root versions %s file for %s: %w", versionsRootFile, p.String(), err)
 		}
-		p.logger.LogDebugF("Root versions file %s for %s wrote\n", versionsRootFile, p.String())
+		p.logger.LogDebugF("Root versions file %s for %s written\n", versionsRootFile, p.String())
 	} else {
-		p.logger.LogDebugF("Root versions file %s for %s does not need to rewrite\n", versionsRootFile, p.String())
+		p.logger.LogDebugF("Root versions file %s for %s does not need to be rewritten\n", versionsRootFile, p.String())
 	}
 
 	if err := p.createLinkToRootVersionsFileInModule(stepDir, versionsRootFile); err != nil {
@@ -395,7 +398,7 @@ Root versions file %s
 	}
 
 	if !fsutils.IsDirExists(modulesDir) {
-		p.logger.LogDebugF("Modules dir %s for %s does not exist. Skip create links to root version file\n", modulesDir, p.String())
+		p.logger.LogDebugF("Modules dir %s for %s does not exist. Skipping creation of links to root versions file\n", modulesDir, p.String())
 		return nil
 	}
 
@@ -421,7 +424,7 @@ Root versions file %s
 }
 
 func (p *Provider) makeDir(dir, errPrefix string) error {
-	err := os.MkdirAll(dir, 0777)
+	err := os.MkdirAll(dir, 0o777)
 	if err == nil {
 		return nil
 	}
@@ -441,14 +444,14 @@ func (p *Provider) makeRootDir(errPrefix string) error {
 func (p *Provider) downloadModules(ctx context.Context, rootDir string) (string, error) {
 	destination := filepath.Join(rootDir, "modules")
 
-	p.logger.LogDebugF("Create modules destination %s for %s\n", destination, p.String())
+	p.logger.LogDebugF("Creating modules destination %s for %s\n", destination, p.String())
 
-	err := os.MkdirAll(destination, 0777)
+	err := os.MkdirAll(destination, 0o777)
 	if err != nil {
 		return "", fmt.Errorf("Cannot create destination modules dir %s for %s: %w", destination, p.String(), err)
 	}
 
-	p.logger.LogDebugF("Download modules config %s for %s\n", destination, p.String())
+	p.logger.LogDebugF("Downloading modules config %s for %s\n", destination, p.String())
 
 	err = p.di.ModulesProvider.DownloadModules(ctx, DownloadModulesParams{
 		ModulesParams{
@@ -473,9 +476,9 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 	// for windows
 	destinationDir = strings.TrimRight(destinationDir, "\\")
 
-	p.logger.LogDebugF("Create plugins dir destination %s for %s version %s\n", destinationDir, p.String(), version)
+	p.logger.LogDebugF("Creating plugins dir destination %s for %s version %s\n", destinationDir, p.String(), version)
 
-	err := os.MkdirAll(destinationDir, 0755)
+	err := os.MkdirAll(destinationDir, 0o755)
 	if err != nil {
 		return "", fmt.Errorf("Cannot create plugins destination dir %s for %s: %w", destinationDir, p.String(), err)
 	}
@@ -496,7 +499,9 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 		p.String(),
 	)
 
-	err = p.di.InfraPluginProvider.DownloadPlugin(ctx, params, destination)
+	err = log.ProcessCtx(ctx, "Cloud infrastructure", "Download plugins", func(ctx context.Context) error {
+		return p.di.InfraPluginProvider.DownloadPlugin(ctx, params, destination, p.metaConfig)
+	})
 	if err != nil {
 		return "", fmt.Errorf("Cannot download plugin version %s to %s for %s: %w", version, destination, p.String(), err)
 	}
@@ -522,13 +527,16 @@ func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix str
 
 	var err error
 
-	if useTofu {
-		p.logger.LogDebugF("Downloading opentofu %s for %s\n", params.Version.String(), p.String())
-		err = p.di.InfraUtilProvider.DownloadOpenTofu(ctx, params, destination)
-	} else {
-		p.logger.LogDebugF("Downloading terraform %s for %s\n", params.Version.String(), p.String())
-		err = p.di.InfraUtilProvider.DownloadTerraform(ctx, params, destination)
-	}
+	_ = log.ProcessCtx(ctx, "Cloud infrastructure", "Preparing infrastructure util", func(ctx context.Context) error {
+		if useTofu {
+			p.logger.LogDebugF("Downloading opentofu %s for %s\n", params.Version.String(), p.String())
+			err = p.di.InfraUtilProvider.DownloadOpenTofu(ctx, params, destination, p.metaConfig)
+		} else {
+			p.logger.LogDebugF("Downloading terraform %s for %s\n", params.Version.String(), p.String())
+			err = p.di.InfraUtilProvider.DownloadTerraform(ctx, params, destination, p.metaConfig)
+		}
+		return nil
+	})
 
 	if err != nil {
 		return "", fmt.Errorf("%s. Cannot download infrastructure util to %s for %s: %w", errPrefix, destination, p.String(), err)
@@ -554,7 +562,7 @@ func (p *Provider) Cleanup() error {
 
 	if p.isDebug {
 		p.logger.LogInfoF(
-			"Cloud %s was not cleaned up because you use debug mode. Root dir is: '%s'. If need cleanup manually.\n",
+			"Cloud %s was not cleaned up because you are using debug mode. Root dir is: '%s'. Clean up manually if needed.\n",
 			p.String(),
 			rootDir,
 		)

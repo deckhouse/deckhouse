@@ -12,7 +12,6 @@ git:
     install:
     - go.mod
     - go.sum
-    setup:
     - "**/*.go"
 shell:
   install:
@@ -20,7 +19,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-1.25" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -45,7 +44,6 @@ import:
   add: /smoke-mini
   to: /smoke-mini
   before: setup
-git:
 {{- include "image mount points" . }}  
 imageSpec:
   config:

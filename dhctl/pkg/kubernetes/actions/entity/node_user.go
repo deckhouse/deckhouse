@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/selection"
 
+	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
@@ -35,9 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var (
-	createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(45, 10*time.Second)
-)
+var createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(45, 10*time.Second)
 
 func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser, loopParams retry.Params) error {
 	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
@@ -86,6 +85,42 @@ func DeleteNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 	})
 }
 
+func NodeUserExists(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, name string) (bool, error) {
+	kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	var exists bool
+
+	err = libretry.NewSilentLoopWithParamsOpts(
+		libretry.WithName("Check NodeUser %q exists", name),
+		libretry.WithAttempts(10),
+		libretry.WithWait(2*time.Second),
+	).RunContext(ctx, func() error {
+		timeoutCtx, cancel := defaultTimeoutCtx(ctx)
+		defer cancel()
+
+		_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(timeoutCtx, name, metav1.GetOptions{})
+		if err != nil {
+			if k8errors.IsNotFound(err) {
+				exists = false
+				return nil
+			}
+
+			return fmt.Errorf("Failed to get NodeUser %q: %w", name, err)
+		}
+
+		exists = true
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 type NodeUserPresentsChecker func(node corev1.Node) bool
 
 type NodeUserPresentsWaiter struct {
@@ -129,7 +164,6 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 				Vals:     nodeUser.NodeGroups,
 			},
 		})
-
 		if err != nil {
 			return err
 		}
@@ -150,7 +184,7 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 
 			if len(nodesForClient.Items) == 0 {
 				return fmt.Errorf(
-					"NodeUser '%s' is not present on nodes yet. No any node found for selector '%s'",
+					"NodeUser '%s' is not present on nodes yet. No node found for selector '%s'",
 					nodeUserName,
 					listOpts.LabelSelector,
 				)

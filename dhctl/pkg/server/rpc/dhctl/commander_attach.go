@@ -22,13 +22,11 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -37,14 +35,28 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type attachParams struct {
 	request      *pb.CommanderAttachStart
 	switchPhase  phases.OnPhaseFunc[attach.PhaseData]
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.CommanderAttachResponse
+}
+
+func (p *attachParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *attachParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CommanderAttachResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CommanderAttachResponse {
+			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
@@ -67,21 +79,6 @@ func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
 		dataFunc: func(progress phases.Progress) *pb.CommanderAttachResponse {
 			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.CommanderAttachResponse {
-			return &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.CommanderAttachRequest, *pb.CommanderAttachResponse](server, receiveCh, doneCh, internalErrCh)
@@ -112,11 +109,11 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderAttachSafe(ctx, attachParams{
+					result := s.commanderAttachSafe(ctx, &attachParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
 				}()
@@ -154,7 +151,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (result *pb.CommanderAttachResult) {
+func (s *Service) commanderAttachSafe(ctx context.Context, p *attachParams) (result *pb.CommanderAttachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -165,56 +162,40 @@ func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (resu
 	return s.commanderAttach(ctx, p)
 }
 
-func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.CommanderAttachResult {
+func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.CommanderAttachResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
+	loggerFor := initDhctlLogger(ctx, p)
 
-	loggerFor := log.GetDefaultLogger()
-
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
-	var sshClient node.SSHClient
+	var sshProvider libcon.SSHProvider
+	var kubeProvider libcon.KubeProvider
 	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.params.SchemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
+		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
+			return fmt.Errorf("creating provider: %w", err)
 		}
 
-		if !govalue.IsNil(sshClient) {
-			err = sshClient.Start()
-			if err != nil {
-				return fmt.Errorf("cannot start sshClient: %w", err)
-			}
+		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ssh provider: %w", err)
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -232,7 +213,8 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 	attacher := attach.NewAttacher(&attach.Params{
 		CommanderMode:  p.request.Options.CommanderMode,
 		CommanderUUID:  commanderUUID,
-		SSHClient:      sshClient,
+		SSHProvider:    sshProvider,
+		KubeProvider:   kubeProvider,
 		OnCheckResult:  onCheckResult,
 		OnPhaseFunc:    p.switchPhase,
 		OnProgressFunc: p.sendProgress,
@@ -244,11 +226,12 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		TmpDir:   s.params.TmpDir,
 		Logger:   loggerFor,
 		IsDebug:  s.params.IsDebug,
+		Options:  opts,
 	})
 
 	result, attachErr := attacher.Attach(ctx)
 	resultData, marshalResultErr := json.Marshal(result)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(attachErr, stateErr, marshalResultErr)
 

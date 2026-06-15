@@ -8,7 +8,11 @@ properties:
   username:
     type: string
     description: |
-      The login ID.
+      Username.
+
+      > **Warning.** Make sure to specify the username together with the domain, for example: `username@domain.local`.
+      >
+      > You can find the correct domain in the vCenter control panel.
   password:
     type: string
     description: |
@@ -28,7 +32,7 @@ properties:
   zoneTagCategory:
     type: string
     description: |
-      The name of the tag category used to identify the region (vSphere Cluster).
+      The name of the tag category used to identify the zone (vSphere Cluster).
   disableTimesync:
     type: boolean
     description: |

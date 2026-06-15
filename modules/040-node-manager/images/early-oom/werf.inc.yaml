@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -5,9 +6,15 @@ final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-node-manager/images/early-oom/src
   to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -36,3 +43,4 @@ import:
 imageSpec:
   config:
     entrypoint: ["/psi-monitor"]
+{{- end }}

@@ -35,5 +35,3 @@ The Cluster & Infrastructure subsystem also includes the following modules:
   * [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/)
   * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/)
   * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/)
-
-Only [`cloud-provider-dvp`](cloud-providers/cloud-provider-dvp.html) is currently described in this section. Documentation for the remaining cloud provider modules will be added as it becomes available.

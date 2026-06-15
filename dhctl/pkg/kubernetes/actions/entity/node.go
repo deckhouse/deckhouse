@@ -43,9 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var (
-	nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
-)
+var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 
 type NodeIP struct {
 	InternalIP string
@@ -65,7 +63,8 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
-	err := logger.LogProcess("default", name, func() error {
+
+	return cloudData, logger.LogProcessCtx(ctx, "default", name, func(ctx context.Context) error {
 		if showDeckhouseLogs {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -86,7 +85,7 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 
 		allPassedHosts := ""
 		if len(apiserverHosts) > 0 {
-			strings.Join(apiserverHosts, ",")
+			allPassedHosts = strings.Join(apiserverHosts, ",")
 		}
 
 		err := retry.NewSilentLoop(name, 45, 5*time.Second).RunContext(ctx, func() error {
@@ -145,7 +144,6 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 		logger.LogInfoLn("Cloud configuration found!")
 		return nil
 	})
-	return cloudData, err
 }
 
 func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, logger log.Logger, data map[string]interface{}) error {
@@ -238,18 +236,27 @@ func UpdateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 }
 
 func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for Node %s to become Ready", nodeName), 100, 20*time.Second).
+	// Poll every 1s: kubelet flips Node.Status.Ready in one tick once CNI signals
+	// itself initialised, so coarse 20s polling adds a full polling-cycle of dead
+	// time after the transition. Total budget unchanged (2000 × 1s = ~33 min).
+	return retry.NewLoop(fmt.Sprintf("Waiting for Node %s to become Ready", nodeName), 2000, 1*time.Second).
 		RunContext(ctx, func() error {
 			node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
 
-			for _, c := range node.Status.Conditions {
-				if c.Type == corev1.NodeReady {
-					if c.Status == corev1.ConditionTrue {
-						return nil
-					}
+			for _, cond := range node.Status.Conditions {
+				if cond.Type != corev1.NodeReady {
+					continue
+				}
+				if cond.Message != "" {
+					log.InfoF("Node %q Ready: %s (%s)\n", nodeName, cond.Status, cond.Message)
+				} else {
+					log.InfoF("Node %q Ready: %s\n", nodeName, cond.Status)
+				}
+				if cond.Status == corev1.ConditionTrue {
+					return nil
 				}
 			}
 
@@ -259,7 +266,7 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 
 func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupsMap map[string]int) error {
 	ngsName := slices.Collect(maps.Keys(nodeGroupsMap))
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeGroups %v to become Ready", ngsName), 100, 20*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Waiting for NodeGroups %v to become Ready", ngsName), 2000, 1*time.Second).
 		RunContext(ctx, func() error {
 			desiredReadyNodes := 0
 			for _, countNodes := range nodeGroupsMap {
@@ -327,7 +334,7 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 								var err error
 								ready, err = checker.IsReady(ctx, node.Name)
 								if err != nil {
-									log.InfoF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
+									log.InfoF("While performing check '%s', node %s returned an error: %v\n", checker.Name(), node.Name, err)
 								} else if !ready {
 									log.InfoF("Node %s is ready but %s is not ready\n", node.Name, checker.Name())
 								}
@@ -445,9 +452,7 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	return exists, err
 }
 
-var (
-	getMasterNodesIPsDefaultOpts = retry.AttemptsWithWaitOpts(5, 5*time.Second)
-)
+var getMasterNodesIPsDefaultOpts = retry.AttemptsWithWaitOpts(5, 5*time.Second)
 
 func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, loopParams retry.Params) ([]NodeIP, error) {
 	selector, err := kubernetes.GetMasterNodeGroupLabelSelector()

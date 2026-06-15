@@ -11,12 +11,17 @@ description: "Настройка Yandex Cloud для работы облачно
 
 ## Создание сервисного аккаунта
 
-Чтобы Deckhouse Kubernetes Platform могла управлять ресурсами в облаке Yandex Cloud, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Далее представлена краткая последовательность необходимых действий:
+Чтобы Deckhouse Kubernetes Platform (DKP) могла управлять ресурсами в облаке Yandex Cloud, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Далее представлена краткая последовательность необходимых действий:
 
-1. Создайте пользователя с именем `deckhouse`. В ответ вернутся параметры пользователя:
+1. Создайте пользователя с именем `deckhouse`:
 
-   ```yaml
+   ```shell
    yc iam service-account create --name deckhouse
+   ```
+
+   В ответ вернутся параметры пользователя:
+
+   ```console
    id: <userID>
    folder_id: <folderID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"
@@ -25,7 +30,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Назначьте необходимые роли вновь созданному пользователю для своего облака:
 
-   ```yaml
+   ```shell
    yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
@@ -33,7 +38,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будет происходить авторизация в облаке:
 
-   ```yaml
+   ```shell
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
    ```
 
@@ -53,6 +58,25 @@ description: "Настройка Yandex Cloud для работы облачно
 * Общий объем RAM виртуальных машин: 256 ГБ.
 
 ## Интеграция с Yandex Cloud
+
+{% alert level="warning" %}
+Начиная с версии DKP 1.76, в Yandex Cloud CNI `cilium` используется по умолчанию для новых кластеров.
+
+При использовании CentOS 8 необходимо явно включить модуль `cni-simple-bridge` в файле `config.yml`.
+
+{% offtopic title="Пример конфигурации CNI для CentOS 8 в Yandex Cloud..." %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-simple-bridge
+spec:
+  enabled: true
+```
+
+{% endofftopic %}
+{% endalert %}
 
 ### Настройка групп безопасности
 

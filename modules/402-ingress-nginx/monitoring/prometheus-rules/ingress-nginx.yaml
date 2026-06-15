@@ -210,22 +210,6 @@
         d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq -r '.items[] | select(.metadata.annotations."network.deckhouse.io/ingress-nginx-validation-suspended" != null) | "\(.metadata.name)"'
         ```
 
-  - alert: NginxIngressProfilingIsEnabled
-    expr: |
-      d8_ingress_nginx_controller_profiling_enabled == 1
-    for: 3m
-    labels:
-      severity_level: "4"
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      summary: |-
-        Warning: Profiling mode is enabled in the Ingress NGINX Controller "{{ $labels.controller_name }}".
-      description: |-
-        Profiling mode is enabled for the Ingress NGINX Controller **"{{ $labels.controller_name }}"**.
-        This may increase memory consumption, slow down request processing, and the process may run as root.
-        It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
-        To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
 
   - alert: GeoIPDownloadErrorDetectedFromMaxMind
     expr: max by (job, namespace, pod, edition) (geoip_download_error) > 0

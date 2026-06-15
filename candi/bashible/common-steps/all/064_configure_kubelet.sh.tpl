@@ -321,9 +321,6 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
   RotateKubeletServerCertificate: true
-{{- if eq $topologyManagerEnabled true }}
-  MemoryManager: true
-{{- end }}
 {{- if semverCompare "<=1.32" .kubernetesVersion }}
   InPlacePodVerticalScaling: true
 {{- end }}
@@ -338,16 +335,18 @@ featureGates:
 {{- if semverCompare ">=1.33" .kubernetesVersion }}
 {{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */}}
   DRAPartitionableDevices: true
+  KubeletEnsureSecretPulledImages: true
 {{- end }}
 {{- if semverCompare ">=1.34" .kubernetesVersion }}
-{{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations) */}}
+{{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */}}
   DRADeviceBindingConditions: true
   DRAConsumableCapacity: true
+  DRAExtendedResource: true
 {{- end }}
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true
 {{- end }}
-fileCheckFrequency: 20s
+fileCheckFrequency: 2s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
 imageGCLowThresholdPercent: 65
@@ -380,8 +379,8 @@ registryPullQPS: 10
 registryBurst: 20
 resolvConf: ${resolvConfPath}
 rotateCertificates: true
-runtimeRequestTimeout: 2m0s
-serializeImagePulls: true
+runtimeRequestTimeout: 4m0s
+serializeImagePulls: false
 syncFrequency: 1m0s
 {{- if eq $resourceReservationMode "Auto" }}
 systemReserved:

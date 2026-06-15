@@ -1,0 +1,36 @@
+cert-manager:
+  features:
+    - summary: Add alerts for ACME Challenges stuck in pending or error states
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18439
+ci:
+  fixes:
+    - summary: Use GITHUB_TOKEN for backport action and set required workflow permissions
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18703
+cilium-hubble:
+  fixes:
+    - summary: Fixed CVE-2026-33186 in the hubble-ui image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18657
+cni-cilium:
+  fixes:
+    - summary: >-
+        Fixed CVE-2026-33186, CVE-2026-27142, and CVE-2026-27139 by updating grpc dependency and Go
+        version, and resolved build compatibility issues.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18553
+common:
+  fixes:
+    - summary: Fixed CVE-2026-24051 in the CoreDNS image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18545
+dhctl:
+  fixes:
+    - summary: mitigate CVE-2026-33186
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18625
+docs:
+  features:
+    - summary: Add cloud providers dynamix, huaweicloud, and zvirt module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18568
+ingress-nginx:
+  fixes:
+    - summary: Nelm fixes are backported.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18632
+      impact: All Ingress-NGINX controller pods will be restarted.
+

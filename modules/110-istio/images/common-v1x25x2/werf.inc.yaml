@@ -37,4 +37,5 @@ git:
 shell:
   install:
   - cd /src/istio/ && git apply --verbose /patches/001-istio-gomod_gosum.patch
+  - cd /src/istio/ && git apply --verbose /patches/002-istio-multicluster-regenerate-token-timeout.patch
   - cd /src/kiali/ && git apply --verbose /patches/001-kiali-go-mod.patch

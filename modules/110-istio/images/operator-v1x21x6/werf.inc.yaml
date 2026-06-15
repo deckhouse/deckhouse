@@ -12,7 +12,7 @@ import:
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/istio/manifests
   to: /var/lib/istio/manifests
   after: setup
@@ -23,7 +23,13 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
@@ -40,6 +46,7 @@ shell:
   - apk add --no-cache bash git binutils
   install:
   - cd /src/istio/
+  - git apply --verbose /patches/001-disable-cluster-scope-manifests.patch
   - echo {{ $istioVersion }} > version
   - export GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'

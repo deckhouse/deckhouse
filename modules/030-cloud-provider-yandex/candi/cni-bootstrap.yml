@@ -1,0 +1,6 @@
+schemaVersion: 1
+name: cilium
+config:
+  default:
+    tunnelMode: VXLAN
+    masqueradeMode: BPF

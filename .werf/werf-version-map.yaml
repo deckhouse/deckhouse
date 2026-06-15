@@ -1,9 +1,9 @@
 ---
 image: version-map-artifact
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 final: false
 import:
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: install

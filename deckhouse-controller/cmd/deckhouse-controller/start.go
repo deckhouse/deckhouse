@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"os"
@@ -32,14 +33,16 @@ import (
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
+	"github.com/flant/shell-operator/pkg/executor"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
+	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"google.golang.org/grpc/credentials"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -82,8 +85,8 @@ func (r *reaperMutex) Release() {
 	r.Unlock()
 }
 
-func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
-	return func(_ *kingpin.ParseContext) error {
+func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args []string) error {
+	return func(_ *cobra.Command, _ []string) error {
 		if os.Getenv(skipEntrypointEnv) != "true" {
 			if err := entrypoint(logger); err != nil {
 				logger.Error("entrypoint run", log.Err(err))
@@ -91,7 +94,8 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 			}
 		}
 
-		shapp.AppStartMessage = version()
+		// addon-operator prints its own startup banner via its AppStartMessage.
+		aoapp.AppStartMessage = version()
 		shapp.KubeClientFieldManager = "deckhouse-hook"
 
 		ctx := context.Background()
@@ -106,11 +110,19 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 		)
 
 		// Initialize metric names with the configured prefix
-		shmetrics.InitMetrics(shapp.PrometheusMetricsPrefix)
+		shmetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
 		// Initialize addon-operator specific metrics
-		admetrics.InitMetrics(shapp.PrometheusMetricsPrefix)
+		admetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
 
-		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage, addonoperator.WithLogger(logger.Named("addon-operator")))
+		// Hand the fully-built *Config to addon-operator via WithConfig: it
+		// then calls app.ApplyConfig internally to populate its package
+		// globals and projects the relevant subset onto shell-operator's
+		// *Config (kube clients, listen addr, metric prefix), so no env vars
+		// are re-parsed downstream. See deckhouse-controller/pkg/envconfig.
+		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage,
+			addonoperator.WithConfig(cfg),
+			addonoperator.WithLogger(logger.Named("addon-operator")),
+		)
 
 		operator.StartAPIServer()
 
@@ -302,7 +314,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 }
 
 func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
-	telemetryShutdown := registerTelemetry(ctx)
+	telemetryShutdown := registerTelemetry(ctx, logger.Named("otlp-tracing"))
 
 	interruptCh := make(chan os.Signal, 5)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGCHLD)
@@ -353,9 +365,6 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					rm.Unlock()
 					go func() {
 						defer rm.Release()
-						// give some time to real parent processes to reap their children if any
-						time.Sleep(time.Second)
-
 						processes, err := process.Processes()
 						if err != nil {
 							logger.Debug("get processes", log.Err(err))
@@ -376,7 +385,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 									continue
 								}
 
-								if ppid == 1 {
+								if ppid == 1 && !executor.Tracker().IsActive(int(ps.Pid)) {
 									var status syscall.WaitStatus
 									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
 									if err != nil {
@@ -471,9 +480,11 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 	return nil
 }
 
-func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
+func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {
 	endpoint := os.Getenv("TRACING_OTLP_ENDPOINT")
 	authToken := os.Getenv("TRACING_OTLP_AUTH_TOKEN")
+	insecureTransport := os.Getenv("TRACING_OTLP_INSECURE") == "true"
+	tlsSkipVerify := os.Getenv("TRACING_OTLP_TLS_SKIP_VERIFY") == "true"
 
 	if endpoint == "" {
 		return func(_ context.Context) error {
@@ -484,7 +495,16 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 	opts := make([]otlptracegrpc.Option, 0, 1)
 
 	opts = append(opts, otlptracegrpc.WithEndpoint(endpoint))
-	opts = append(opts, otlptracegrpc.WithInsecure())
+
+	if insecureTransport {
+		opts = append(opts, otlptracegrpc.WithInsecure())
+	}
+	// TRACING_OTLP_TLS_SKIP_VERIFY replicates grpcurl -insecure: TLS is used
+	// but the server certificate is not verified. Useful when the ingress uses
+	// a self-signed or internally-signed cert that the pod does not trust.
+	if tlsSkipVerify {
+		opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
+	}
 
 	if authToken != "" {
 		opts = append(opts, otlptracegrpc.WithHeaders(map[string]string{
@@ -492,7 +512,20 @@ func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
 		}))
 	}
 
-	exporter, _ := otlptracegrpc.New(ctx, opts...)
+	exporter, err := otlptracegrpc.New(ctx, opts...)
+	if err != nil {
+		logger.Error("create OTLP trace exporter", log.Err(err))
+		return func(_ context.Context) error {
+			return nil
+		}
+	}
+
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(exportErr error) {
+		if exportErr == nil {
+			return
+		}
+		logger.Debug("OTLP trace export", log.Err(exportErr))
+	}))
 
 	resource := sdkresource.NewWithAttributes(
 		semconv.SchemaURL,

@@ -18,18 +18,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type LabelSelector struct {
@@ -40,7 +34,7 @@ type LabelSelector struct {
 
 func GetLabelSelector(selectors []LabelSelector) (string, error) {
 	if len(selectors) == 0 {
-		return "", fmt.Errorf("Pass empty label selectors to GetLabelSelector")
+		return "", fmt.Errorf("empty label selectors passed to GetLabelSelector")
 	}
 
 	requirements := make([]labels.Requirement, 0, len(selectors))
@@ -67,53 +61,18 @@ func GetLabelSelector(selectors []LabelSelector) (string, error) {
 }
 
 func GetMasterNodeGroupLabelSelector(selectors ...LabelSelector) (string, error) {
-	withNg := []LabelSelector{
-		{
-			Label:    global.NodeGroupLabel,
-			Operator: selection.Equals,
-			Vals:     []string{global.MasterNodeGroupName},
-		},
-	}
+	withNg := make([]LabelSelector, 0, 1+len(selectors))
+
+	withNg = append(withNg, LabelSelector{
+
+		Label:    global.NodeGroupLabel,
+		Operator: selection.Equals,
+		Vals:     []string{global.MasterNodeGroupName},
+	})
 
 	withNg = append(withNg, selectors...)
 
 	return GetLabelSelector(withNg)
-}
-
-func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (*client.KubernetesClient, error) {
-	var kubeCl *client.KubernetesClient
-	err := log.Process("common", "Connect to Kubernetes API", func() error {
-		if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
-			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(ctx); err != nil {
-				return fmt.Errorf("await master available: %v", err)
-			}
-		}
-
-		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).
-			RunContext(ctx, func() error {
-				kubeCl = client.NewKubernetesClient().WithNodeInterface(nodeInterface)
-				if err := kubeCl.InitContext(ctx, client.AppKubernetesInitParams()); err != nil {
-					return fmt.Errorf("open kubernetes connection: %v", err)
-				}
-				return nil
-			})
-		if err != nil {
-			return err
-		}
-
-		time.Sleep(50 * time.Millisecond) // tick to prevent first probable fail
-		err = deckhouse.WaitForKubernetesAPI(ctx, kubeCl)
-		if err != nil {
-			return fmt.Errorf("wait kubernetes api: %v", err)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("start kubernetes proxy: %v", err)
-	}
-
-	return kubeCl, nil
 }
 
 type KubeClientProvider interface {
@@ -125,8 +84,10 @@ type KubeClientProviderWithCtx interface {
 	KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error)
 }
 
-var _ KubeClientProvider = &SimpleKubeClientGetter{}
-var _ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}
+var (
+	_ KubeClientProvider        = &SimpleKubeClientGetter{}
+	_ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}
+)
 
 type SimpleKubeClientGetter struct {
 	kubeCl *client.KubernetesClient

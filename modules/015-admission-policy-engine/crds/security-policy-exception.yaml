@@ -13,6 +13,8 @@ spec:
     plural: securitypolicyexceptions
     singular: securitypolicyexception
     kind: SecurityPolicyException
+    shortNames:
+    - spe
   preserveUnknownFields: false
   versions:
     - name: v1alpha1

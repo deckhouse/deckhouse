@@ -78,58 +78,298 @@ All nodes placed in different zones must have access to shared datastores with m
 ## List of required privileges
 
 {% alert level="info" %}
-Read [the documentation](authorization.html#creating-and-assigning-a-role) on how to create and assign a role to a user.
+To create a role and assign it to a user, refer to [Configuration in vSphere Client](authorization.html#configuration-in-vsphere-client) and [Configuration with govc](authorization.html#configuration-with-govc) sections.
 {% endalert %}
 
-**A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:**
+A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
 
 <table>
   <thead>
     <tr>
-        <th>List of privileges</th>
-        <th>Purpose</th>
+      <th>Privilege category in UI</th>
+      <th>Privileges in UI</th>
+      <th>Privileges in API</th>
+      <th>Purpose in Deckhouse</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-        <td><code>Cns.Searchable</code><br><code>StorageProfile.View</code><br><code>Datastore.AllocateSpace</code><br><code>Datastore.Browse</code><br><code>Datastore.FileManagement</code></td>
-        <td>To provision disks when creating virtual machines and ordering <code>PersistentVolumes</code> in a cluster.</td>
+      <td>—</td>
+      <td>— (assigned by default when creating a role)</td>
+      <td>
+        <code>System.Anonymous</code><br/>
+        <code>System.Read</code><br/>
+        <code>System.View</code>
+      </td>
+      <td>Basic access to vSphere Inventory objects required for all Deckhouse vSphere integration components.</td>
     </tr>
     <tr>
-        <td><code>Global.GlobalTag</code><br><code>Global.SystemTag</code><br><code>InventoryService.Tagging.AttachTag</code><br><code>InventoryService.Tagging.CreateCategory</code><br><code>InventoryService.Tagging.CreateTag</code><br><code>InventoryService.Tagging.DeleteCategory</code><br><code>InventoryService.Tagging.DeleteTag</code><br><code>InventoryService.Tagging.EditCategory</code><br><code>InventoryService.Tagging.EditTag</code><br><code>InventoryService.Tagging.ModifyUsedByForCategory</code><br><code>InventoryService.Tagging.ModifyUsedByForTag</code><br><code>InventoryService.Tagging.ObjectAttachable</code></td>
-        <td>Deckhouse Kubernetes Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code> and <code>Datastore</code> objects available to it, as well as, to identify the virtual machines under its control.</td>
+      <td>Cns</td>
+      <td>Searchable</td>
+      <td><code>Cns.Searchable</code></td>
+      <td>Search and mapping of Container Native Storage objects when the CSI driver works with Kubernetes volumes.</td>
     </tr>
     <tr>
-        <td><code>Folder.Create</code><br><code>Folder.Delete</code><br><code>Folder.Move</code><br><code>Folder.Rename</code></td>
-        <td>To group a Deckhouse Kubernetes Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
-    </tr>
-<tr>
-        <td><code>Host.Cim.CimInteraction</code></td>
-        <td>Interaction with the Common Information Model (CIM) system for monitoring the status of server equipment through special interfaces without installing agents.</td>
-    </tr>
-    <tr>
-        <td><code>Host.Config.AdvancedConfig</code><br><code>Host.Config.AuthenticationStore</code><br><code>Host.Config.PciPassthru</code><br><code>Host.Config.Snmp</code><br><code>Host.Config.DateTime</code><br><code>Host.Config.Settings</code><br><code>Host.Config.Connection</code><br><code>Host.Config.Firmware</code><br><code>Host.Config.GuestStore</code><br><code>Host.Config.HyperThreading</code><br><code>Host.Config.Image</code><br><code>Host.Config.Maintenance</code><br><code>Host.Config.Memory</code><br><code>Host.Config.Nvdimm</code><br><code>Host.Config.Network</code><br><code>Host.Config.Power</code><br><code>Host.Config.ProductLocker</code><br><code>Host.Config.Quarantine</code><br><code>Host.Config.Patch</code><br><code>Host.Config.NetService</code><br><code>Host.Config.Storage</code><br><code>Host.Config.SystemManagement</code><br><code>Host.Config.Resources</code><br><code>Host.Config.AutoStart</code></td>
-        <td>Administration of ESXi host infrastructure for initial configuration, network topology changes, storage additions, and hypervisor fine-tuning.</td>
-    </tr>
-    <tr>
-        <td><code>Infraprofile.Read</code></td>
-        <td>Viewing vCenter server configurations.</td>
+      <td>Datastore</td>
+      <td>
+        Allocate space,<br/>
+        Browse datastore,<br/>
+        Low level file operations
+      </td>
+      <td>
+        <code>Datastore.AllocateSpace</code><br/>
+        <code>Datastore.Browse</code><br/>
+        <code>Datastore.FileManagement</code>
+      </td>
+      <td>Disk provisioning when creating virtual machines and ordering <code>PersistentVolumes</code> in the cluster.</td>
     </tr>
     <tr>
-        <td><code>Profile.Clear</code><br><code>Profile.Create</code><br><code>Profile.Delete</code><br><code>Profile.Edit</code><br><code>Profile.Export</code><br><code>Profile.View</code></td>
-        <td>Managing operations related to the creation, modification, and application of host configuration templates (Host Profiles).</td>
+      <td>Folder</td>
+      <td>
+        Create folder,<br/>
+        Delete folder,<br/>
+        Move folder,<br/>
+        Rename folder
+      </td>
+      <td>
+        <code>Folder.Create</code><br/>
+        <code>Folder.Delete</code><br/>
+        <code>Folder.Move</code><br/>
+        <code>Folder.Rename</code>
+      </td>
+      <td>Grouping a Deckhouse Kubernetes Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
     </tr>
     <tr>
-        <td><code>Network.Assign</code><br><code>Resource.ApplyRecommendation</code><br><code>Resource.AssignVAppToPool</code><br><code>Resource.AssignVMToPool</code><br><code>Resource.ColdMigrate</code><br><code>Resource.CreatePool</code><br><code>Resource.DeletePool</code><br><code>Resource.EditPool</code><br><code>Resource.HotMigrate</code><br><code>Resource.MovePool</code><br><code>Resource.QueryVMotion</code><br><code>Resource.RenamePool</code><br><code>VirtualMachine.Config.AddExistingDisk</code><br><code>VirtualMachine.Config.AddNewDisk</code><br><code>VirtualMachine.Config.AddRemoveDevice</code><br><code>VirtualMachine.Config.AdvancedConfig</code><br><code>VirtualMachine.Config.Annotation</code><br><code>VirtualMachine.Config.ChangeTracking</code><br><code>VirtualMachine.Config.CPUCount</code><br><code>VirtualMachine.Config.DiskExtend</code><br><code>VirtualMachine.Config.DiskLease</code><br><code>VirtualMachine.Config.EditDevice</code><br><code>VirtualMachine.Config.HostUSBDevice</code><br><code>VirtualMachine.Config.ManagedBy</code><br><code>VirtualMachine.Config.Memory</code><br><code>VirtualMachine.Config.MksControl</code><br><code>VirtualMachine.Config.QueryFTCompatibility</code><br><code>VirtualMachine.Config.QueryUnownedFiles</code><br><code>VirtualMachine.Config.RawDevice</code><br><code>VirtualMachine.Config.ReloadFromPath</code><br><code>VirtualMachine.Config.RemoveDisk</code><br><code>VirtualMachine.Config.Rename</code><br><code>VirtualMachine.Config.ResetGuestInfo</code><br><code>VirtualMachine.Config.Resource</code><br><code>VirtualMachine.Config.Settings</code><br><code>VirtualMachine.Config.SwapPlacement</code><br><code>VirtualMachine.Config.ToggleForkParent</code><br><code>VirtualMachine.Config.UpgradeVirtualHardware</code><br><code>VirtualMachine.GuestOperations.Execute</code><br><code>VirtualMachine.GuestOperations.Modify</code><br><code>VirtualMachine.GuestOperations.ModifyAliases</code><br><code>VirtualMachine.GuestOperations.Query</code><br><code>VirtualMachine.GuestOperations.QueryAliases</code><br><code>VirtualMachine.Hbr.ConfigureReplication</code><br><code>VirtualMachine.Hbr.MonitorReplication</code><br><code>VirtualMachine.Hbr.ReplicaManagement</code><br><code>VirtualMachine.Interact.AnswerQuestion</code><br><code>VirtualMachine.Interact.Backup</code><br><code>VirtualMachine.Interact.ConsoleInteract</code><br><code>VirtualMachine.Interact.CreateScreenshot</code><br><code>VirtualMachine.Interact.CreateSecondary</code><br><code>VirtualMachine.Interact.DefragmentAllDisks</code><br><code>VirtualMachine.Interact.DeviceConnection</code><br><code>VirtualMachine.Interact.DisableSecondary</code><br><code>VirtualMachine.Interact.DnD</code><br><code>VirtualMachine.Interact.EnableSecondary</code><br><code>VirtualMachine.Interact.GuestControl</code><br><code>VirtualMachine.Interact.MakePrimary</code><br><code>VirtualMachine.Interact.Pause</code><br><code>VirtualMachine.Interact.PowerOff</code><br><code>VirtualMachine.Interact.PowerOn</code><br><code>VirtualMachine.Interact.PutUsbScanCodes</code><br><code>VirtualMachine.Interact.Record</code><br><code>VirtualMachine.Interact.Replay</code><br><code>VirtualMachine.Interact.Reset</code><br><code>VirtualMachine.Interact.SESparseMaintenance</code><br><code>VirtualMachine.Interact.SetCDMedia</code><br><code>VirtualMachine.Interact.SetFloppyMedia</code><br><code>VirtualMachine.Interact.Suspend</code><br><code>VirtualMachine.Interact.SuspendToMemory</code><br><code>VirtualMachine.Interact.TerminateFaultTolerantVM</code><br><code>VirtualMachine.Interact.ToolsInstall</code><br><code>VirtualMachine.Interact.TurnOffFaultTolerance</code><br><code>VirtualMachine.Inventory.Create</code><br><code>VirtualMachine.Inventory.CreateFromExisting</code><br><code>VirtualMachine.Inventory.Delete</code><br><code>VirtualMachine.Inventory.Move</code><br><code>VirtualMachine.Inventory.Register</code><br><code>VirtualMachine.Inventory.Unregister</code><br><code>VirtualMachine.Namespace.Event</code><br><code>VirtualMachine.Namespace.EventNotify</code><br><code>VirtualMachine.Namespace.Management</code><br><code>VirtualMachine.Namespace.ModifyContent</code><br><code>VirtualMachine.Namespace.Query</code><br><code>VirtualMachine.Namespace.ReadContent</code><br><code>VirtualMachine.Provisioning.Clone</code><br><code>VirtualMachine.Provisioning.CloneTemplate</code><br><code>VirtualMachine.Provisioning.CreateTemplateFromVM</code><br><code>VirtualMachine.Provisioning.Customize</code><br><code>VirtualMachine.Provisioning.DeployTemplate</code><br><code>VirtualMachine.Provisioning.DiskRandomAccess</code><br><code>VirtualMachine.Provisioning.DiskRandomRead</code><br><code>VirtualMachine.Provisioning.FileRandomAccess</code><br><code>VirtualMachine.Provisioning.GetVmFiles</code><br><code>VirtualMachine.Provisioning.MarkAsTemplate</code><br><code>VirtualMachine.Provisioning.MarkAsVM</code><br><code>VirtualMachine.Provisioning.ModifyCustSpecs</code><br><code>VirtualMachine.Provisioning.PromoteDisks</code><br><code>VirtualMachine.Provisioning.PutVmFiles</code><br><code>VirtualMachine.Provisioning.ReadCustSpecs</code><br><code>VirtualMachine.State.CreateSnapshot</code><br><code>VirtualMachine.State.RemoveSnapshot</code><br><code>VirtualMachine.State.RenameSnapshot</code><br><code>VirtualMachine.State.RevertToSnapshot</code></td>
-        <td>To manage the virtual machines lifecycle in a Deckhouse Kubernetes Platform cluster.</td>
+      <td>Global</td>
+      <td>
+        Global tag,<br/>
+        System tag
+      </td>
+      <td>
+        <code>Global.GlobalTag</code><br/>
+        <code>Global.SystemTag</code>
+      </td>
+      <td>Access to global and system tags used by Deckhouse Kubernetes Platform when working with vSphere objects.</td>
     </tr>
     <tr>
-        <td><code>VApp.AssignVM</code><br><code>VApp.AssignResourcePool</code><br><code>VApp.AssignVApp</code><br><code>VApp.Clone</code><br><code>VApp.Create</code><br><code>VApp.Delete</code><br><code>VApp.Export</code><br><code>VApp.Import</code><br><code>VApp.Move</code><br><code>VApp.PowerOff</code><br><code>VApp.PowerOn</code><br><code>VApp.PullFromURL</code><br><code>VApp.Rename</code><br><code>VApp.Suspend</code><br><code>VApp.Unregister</code><br><code>VApp.ExtractOvfEnvironment</code><br><code>VApp.ApplicationConfig</code><br><code>VApp.InstanceConfig</code><br><code>VApp.ManagedByConfig</code><br><code>VApp.ResourceConfig</code></td>
-        <td>Manage operations related to vApp deployment and configuration.</td>
+      <td>vSphere Tagging</td>
+      <td>
+        Assign or Unassign vSphere Tag,<br/>
+        Assign or Unassign vSphere Tag on Object,<br/>
+        Create vSphere Tag,<br/>
+        Create vSphere Tag Category,<br/>
+        Delete vSphere Tag,<br/>
+        Delete vSphere Tag Category,<br/>
+        Edit vSphere Tag,<br/>
+        Edit vSphere Tag Category,<br/>
+        Modify UsedBy Field for Category,<br/>
+        Modify UsedBy Field for Tag
+      </td>
+      <td>
+        <code>InventoryService.Tagging.AttachTag</code><br/>
+        <code>InventoryService.Tagging.ObjectAttachable</code><br/>
+        <code>InventoryService.Tagging.CreateTag</code><br/>
+        <code>InventoryService.Tagging.CreateCategory</code><br/>
+        <code>InventoryService.Tagging.DeleteTag</code><br/>
+        <code>InventoryService.Tagging.DeleteCategory</code><br/>
+        <code>InventoryService.Tagging.EditTag</code><br/>
+        <code>InventoryService.Tagging.EditCategory</code><br/>
+        <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
+        <code>InventoryService.Tagging.ModifyUsedByForTag</code>
+      </td>
+      <td>Deckhouse Kubernetes Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code>, and <code>Datastore</code> objects available to it, as well as to identify the virtual machines under its control.</td>
     </tr>
     <tr>
-        <td><code>VcIdentityProviders.Read</code></td>
-        <td>Read access to the VcIdentityProviders API (vCenter Server identity providers).</td>
+      <td>Network</td>
+      <td>Assign network</td>
+      <td><code>Network.Assign</code></td>
+      <td>Connecting networks and port groups to Deckhouse Kubernetes Platform cluster virtual machines.</td>
+    </tr>
+    <tr>
+      <td>Resource</td>
+      <td>
+        Assign virtual machine to resource pool,<br/>
+        Create resource pool,<br/>
+        Modify resource pool,<br/>
+        Remove resource pool,<br/>
+        Rename resource pool
+      </td>
+      <td>
+        <code>Resource.AssignVMToPool</code><br/>
+        <code>Resource.CreatePool</code><br/>
+        <code>Resource.DeletePool</code><br/>
+        <code>Resource.EditPool</code><br/>
+        <code>Resource.RenamePool</code>
+      </td>
+      <td>Placement of Deckhouse Kubernetes Platform cluster virtual machines into the target resource pool and management of this pool.</td>
+    </tr>
+    <tr>
+      <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> in vSphere 7)</td>
+      <td>View VM storage policies (<em>Profile-driven storage view</em> in vSphere 7)</td>
+      <td><code>StorageProfile.View</code></td>
+      <td>Viewing storage policies used when creating virtual machines and dynamically provisioning volumes in the cluster.</td>
+    </tr>
+    <tr>
+      <td>vApp</td>
+      <td>
+        Add virtual machine,<br/>
+        Assign resource pool,<br/>
+        Create,<br/>
+        Delete,<br/>
+        Import,<br/>
+        Power Off,<br/>
+        Power On,<br/>
+        View OVF Environment,<br/>
+        vApp application configuration,<br/>
+        vApp instance configuration,<br/>
+        vApp resource configuration
+      </td>
+      <td>
+        <code>VApp.ApplicationConfig</code><br/>
+        <code>VApp.AssignResourcePool</code><br/>
+        <code>VApp.AssignVM</code><br/>
+        <code>VApp.Create</code><br/>
+        <code>VApp.Delete</code><br/>
+        <code>VApp.ExtractOvfEnvironment</code><br/>
+        <code>VApp.Import</code><br/>
+        <code>VApp.InstanceConfig</code><br/>
+        <code>VApp.PowerOff</code><br/>
+        <code>VApp.PowerOn</code><br/>
+        <code>VApp.ResourceConfig</code>
+      </td>
+      <td>Managing operations related to deployment and configuration of vApp and OVF templates used when creating virtual machines.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Change Configuration</td>
+      <td>
+        Add existing disk,<br/>
+        Add new disk,<br/>
+        Add or remove device,<br/>
+        Advanced configuration,<br/>
+        Set annotation,<br/>
+        Change CPU count,<br/>
+        Toggle disk change tracking,<br/>
+        Extend virtual disk,<br/>
+        Acquire disk lease,<br/>
+        Modify device settings,<br/>
+        Configure managedBy,<br/>
+        Change Memory,<br/>
+        Query unowned files,<br/>
+        Configure Raw device,<br/>
+        Reload from path,<br/>
+        Remove disk,<br/>
+        Rename,<br/>
+        Reset guest information,<br/>
+        Change resource,<br/>
+        Change Settings,<br/>
+        Change Swapfile placement,<br/>
+        Upgrade virtual machine compatibility
+      </td>
+      <td>
+        <code>VirtualMachine.Config.AddExistingDisk</code><br/>
+        <code>VirtualMachine.Config.AddNewDisk</code><br/>
+        <code>VirtualMachine.Config.AddRemoveDevice</code><br/>
+        <code>VirtualMachine.Config.AdvancedConfig</code><br/>
+        <code>VirtualMachine.Config.Annotation</code><br/>
+        <code>VirtualMachine.Config.CPUCount</code><br/>
+        <code>VirtualMachine.Config.ChangeTracking</code><br/>
+        <code>VirtualMachine.Config.DiskExtend</code><br/>
+        <code>VirtualMachine.Config.DiskLease</code><br/>
+        <code>VirtualMachine.Config.EditDevice</code><br/>
+        <code>VirtualMachine.Config.ManagedBy</code><br/>
+        <code>VirtualMachine.Config.Memory</code><br/>
+        <code>VirtualMachine.Config.QueryUnownedFiles</code><br/>
+        <code>VirtualMachine.Config.RawDevice</code><br/>
+        <code>VirtualMachine.Config.ReloadFromPath</code><br/>
+        <code>VirtualMachine.Config.RemoveDisk</code><br/>
+        <code>VirtualMachine.Config.Rename</code><br/>
+        <code>VirtualMachine.Config.ResetGuestInfo</code><br/>
+        <code>VirtualMachine.Config.Resource</code><br/>
+        <code>VirtualMachine.Config.Settings</code><br/>
+        <code>VirtualMachine.Config.SwapPlacement</code><br/>
+        <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
+      </td>
+      <td>Managing the lifecycle of Deckhouse Kubernetes Platform cluster virtual machines.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Edit Inventory</td>
+      <td>
+        Create new,<br/>
+        Create from existing,<br/>
+        Remove,<br/>
+        Move
+      </td>
+      <td>
+        <code>VirtualMachine.Inventory.Create</code><br/>
+        <code>VirtualMachine.Inventory.CreateFromExisting</code><br/>
+        <code>VirtualMachine.Inventory.Delete</code><br/>
+        <code>VirtualMachine.Inventory.Move</code>
+      </td>
+      <td>Creating, deleting, and moving Deckhouse Kubernetes Platform cluster virtual machines in vSphere Inventory.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Guest Operations</td>
+      <td>Guest Operation Queries</td>
+      <td><code>VirtualMachine.GuestOperations.Query</code></td>
+      <td>Retrieving information from the guest operating system of virtual machines.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Interaction</td>
+      <td>
+        Answer question,<br/>
+        Device connection,<br/>
+        Guest operating system management by VIX API,<br/>
+        Power Off,<br/>
+        Power On,<br/>
+        Reset,<br/>
+        Configure CD media,<br/>
+        Install VMware Tools
+      </td>
+      <td>
+        <code>VirtualMachine.Interact.AnswerQuestion</code><br/>
+        <code>VirtualMachine.Interact.DeviceConnection</code><br/>
+        <code>VirtualMachine.Interact.GuestControl</code><br/>
+        <code>VirtualMachine.Interact.PowerOff</code><br/>
+        <code>VirtualMachine.Interact.PowerOn</code><br/>
+        <code>VirtualMachine.Interact.Reset</code><br/>
+        <code>VirtualMachine.Interact.SetCDMedia</code><br/>
+        <code>VirtualMachine.Interact.ToolsInstall</code>
+      </td>
+      <td>Managing virtual machine power state, device connections, and interaction with the guest operating system.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Provisioning</td>
+      <td>
+        Clone virtual machine,<br/>
+        Customize guest,<br/>
+        Deploy template,<br/>
+        Allow virtual machine download,<br/>
+        Allow virtual machine files upload,<br/>
+        Read customization specifications
+      </td>
+      <td>
+        <code>VirtualMachine.Provisioning.Clone</code><br/>
+        <code>VirtualMachine.Provisioning.Customize</code><br/>
+        <code>VirtualMachine.Provisioning.DeployTemplate</code><br/>
+        <code>VirtualMachine.Provisioning.GetVmFiles</code><br/>
+        <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
+        <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
+      </td>
+      <td>Cloning virtual machine templates, customizing them, and deploying them when creating Deckhouse Kubernetes Platform cluster nodes.</td>
+    </tr>
+    <tr>
+      <td>Virtual Machine > Snapshot Management</td>
+      <td>
+        Create snapshot,<br/>
+        Remove Snapshot,<br/>
+        Rename Snapshot
+      </td>
+      <td>
+        <code>VirtualMachine.State.CreateSnapshot</code><br/>
+        <code>VirtualMachine.State.RemoveSnapshot</code><br/>
+        <code>VirtualMachine.State.RenameSnapshot</code>
+      </td>
+      <td>Managing snapshots of virtual machines and volumes in scenarios where this functionality is used by platform components.</td>
     </tr>
   </tbody>
 </table>

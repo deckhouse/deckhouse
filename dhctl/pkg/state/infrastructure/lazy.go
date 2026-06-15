@@ -18,12 +18,13 @@ import (
 	"context"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 type StateLoader interface {
-	PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, globalOptions *options.GlobalOptions) (*config.MetaConfig, error)
 	PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupInfrastructureState, error)
 }
 
@@ -42,13 +43,13 @@ func NewLazyTerraStateLoader(stateLoader StateLoader) *LazyTerraStateLoader {
 	}
 }
 
-func (l *LazyTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error) {
+func (l *LazyTerraStateLoader) PopulateMetaConfig(ctx context.Context, globalOptions *options.GlobalOptions) (*config.MetaConfig, error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	if l.metaConfig == nil {
 		var err error
-		l.metaConfig, err = l.stateLoader.PopulateMetaConfig(ctx)
+		l.metaConfig, err = l.stateLoader.PopulateMetaConfig(ctx, globalOptions)
 		if err != nil {
 			l.metaConfig = nil
 			return nil, err

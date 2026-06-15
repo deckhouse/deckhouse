@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -41,8 +44,8 @@ const (
 	// logger and telemetry name
 	nelmTracer = "nelm"
 
-	// LabelPackageChecksum release label for storing checksum
-	LabelPackageChecksum = "packageChecksum"
+	// ReleaseLabelPackageChecksum stores the rendered-manifests checksum on the release storage secret.
+	ReleaseLabelPackageChecksum = "packageChecksum"
 )
 
 var (
@@ -61,10 +64,13 @@ type Options struct {
 	// Timeout for Helm operations
 	Timeout time.Duration
 
-	// Labels to apply to Kubernetes resources
-	Labels map[string]string
-	// Annotations to apply to Kubernetes resources
-	Annotations map[string]string
+	// ResourcesLabels are stamped on every chart-rendered resource.
+	ResourcesLabels map[string]string
+	// ResourcesAnnotations are stamped on every chart-rendered resource.
+	ResourcesAnnotations map[string]string
+
+	// ReleaseAnnotations are stamped on Release.Info (visible via action.ReleaseList).
+	ReleaseAnnotations map[string]string
 }
 
 // Option is a functional option for configuring the nelm client
@@ -84,17 +90,24 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithLabels sets labels to be applied to all releases
-func WithLabels(labels map[string]string) Option {
+// WithResourcesLabels sets labels stamped on every chart-rendered resource.
+func WithResourcesLabels(labels map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.Labels, labels)
+		maps.Copy(o.ResourcesLabels, labels)
 	}
 }
 
-// WithAnnotations sets annotations to be applied to all releases
-func WithAnnotations(annotations map[string]string) Option {
+// WithResourcesAnnotations sets annotations stamped on every chart-rendered resource.
+func WithResourcesAnnotations(annotations map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.Annotations, annotations)
+		maps.Copy(o.ResourcesAnnotations, annotations)
+	}
+}
+
+// WithReleaseAnnotations sets annotations stamped on Release.Info.
+func WithReleaseAnnotations(annotations map[string]string) Option {
+	return func(o *Options) {
+		maps.Copy(o.ReleaseAnnotations, annotations)
 	}
 }
 
@@ -108,8 +121,8 @@ type Client struct {
 	logger *log.Logger
 }
 
-// New creates a new nelm client for the specified namespace
-// It initializes the nelm logger and applies any provided options
+// New creates a new nelm client.
+// It initializes the nelm logger and applies any provided options.
 func New(logger *log.Logger, opts ...Option) *Client {
 	// Set the default nelm logger to our custom adapter
 	one.Do(func() {
@@ -118,9 +131,11 @@ func New(logger *log.Logger, opts ...Option) *Client {
 
 	// Set default options with history limit of 10 revisions
 	defaultOpts := &Options{
-		HistoryMax:  10,
-		Annotations: make(map[string]string),
-		Labels:      make(map[string]string),
+		HistoryMax:           10,
+		ResourcesAnnotations: make(map[string]string),
+		ResourcesLabels:      make(map[string]string),
+		ReleaseAnnotations:   make(map[string]string),
+		Timeout:              3 * time.Minute,
 	}
 
 	// Apply any provided options
@@ -136,6 +151,58 @@ func New(logger *log.Logger, opts ...Option) *Client {
 
 		logger: logger.Named(nelmTracer),
 	}
+}
+
+// ReleaseRef identifies a nelm release (a logical install, not a specific revision).
+type ReleaseRef struct {
+	Namespace string
+	Name      string
+}
+
+// ListOptions contains options for listing Helm releases.
+type ListOptions struct {
+	// Selector filters releases by Release.Info annotations; all key/value
+	// pairs must match. Empty selector matches every release.
+	Selector map[string]string
+}
+
+// ListReleases returns nelm releases cluster-wide matching opts.Selector.
+// The filter is applied client-side — action.ReleaseList has no server-side selector.
+func (c *Client) ListReleases(ctx context.Context, opts ListOptions) ([]ReleaseRef, error) {
+	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "ListReleases")
+	defer span.End()
+
+	result, err := action.ReleaseList(ctx, action.ReleaseListOptions{
+		KubeConnectionOptions: common.KubeConnectionOptions{
+			KubeContextCurrent: c.kubeContext,
+		},
+		ReleaseStorageDriver: c.driver,
+		OutputNoPrint:        true,
+		ReleaseNamespace:     "", // cluster-wide
+	})
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("list nelm releases: %w", err)
+	}
+
+	refs := make([]ReleaseRef, 0, len(result.Releases))
+	for _, r := range result.Releases {
+		if !matchAll(r.Annotations, opts.Selector) {
+			continue
+		}
+		refs = append(refs, ReleaseRef{Namespace: r.Namespace, Name: r.Name})
+	}
+	return refs, nil
+}
+
+// matchAll reports whether all key/value pairs from selector are present in target.
+func matchAll(target, selector map[string]string) bool {
+	for k, v := range selector {
+		if target[k] != v {
+			return false
+		}
+	}
+	return true
 }
 
 // LastStatus returns the revision number and status of the latest release
@@ -175,7 +242,7 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 
 	// Try to get checksum from storage labels first
 	if res.Release != nil {
-		if checksum, ok := res.Release.StorageLabels[LabelPackageChecksum]; ok {
+		if checksum, ok := res.Release.StorageLabels[ReleaseLabelPackageChecksum]; ok {
 			return checksum, nil
 		}
 	}
@@ -187,9 +254,11 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
 	ValuesPaths []string // Paths to values files
-	ExtraValues string   // Extra values in json format
+	RootValues  string   // Values in JSON format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
+
+	ResourcesLabels map[string]string // Labels to apply to all resources
 
 	// OnTrackingEvent is an optional callback invoked with progress updates
 	// as Kubernetes resources are being tracked for readiness during install.
@@ -197,9 +266,16 @@ type InstallOptions struct {
 }
 
 // Install installs a Helm chart as a release
-func (c *Client) Install(ctx context.Context, namespace, releaseName string, opts InstallOptions) error {
+//
+//nolint:nonamedreturns // named returns required for defer/recover to modify return values
+func (c *Client) Install(ctx context.Context, namespace, releaseName string, opts InstallOptions) (err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Install")
 	defer span.End()
+	defer c.recoverPanic("Install", span, &err,
+		slog.String("release", releaseName),
+		slog.String("namespace", namespace),
+		slog.String("path", opts.Path),
+	)
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -207,21 +283,38 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
 	var valuesSet []string
-	if len(opts.ExtraValues) > 0 {
-		valuesSet = append(valuesSet, opts.ExtraValues)
+	if len(opts.RootValues) > 0 {
+		valuesSet = append(valuesSet, opts.RootValues)
+	}
+
+	labels := maps.Clone(c.opts.ResourcesLabels)
+	if len(opts.ResourcesLabels) > 0 {
+		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
 	// reportCh receives progress reports from nelm during resource tracking.
 	// A background goroutine converts each report into a tracking event and
-	// forwards it to the caller's callback. The channel is closed when the
-	// install operation completes.
+	// forwards it to the caller's callback.
+	//
+	// We must NOT close reportCh: when a Timeout is set, nelm's ReleaseInstall
+	// returns on ctx.Done() without joining the goroutine that actually runs
+	// the install. That detached goroutine keeps sending progress reports via
+	// sendNonBlocking, so closing the channel here would panic it with
+	// "send on closed channel" and crash the process. Instead we stop the
+	// forwarder via done and let the buffered channel be garbage-collected.
 	reportCh := make(chan progrep.ProgressReport, 1)
-	defer close(reportCh)
+	done := make(chan struct{})
+	defer close(done)
 
 	go func() {
-		for report := range reportCh {
-			if opts.OnTrackingEvent != nil {
-				opts.OnTrackingEvent(releaseName, report)
+		for {
+			select {
+			case <-done:
+				return
+			case report := <-reportCh:
+				if opts.OnTrackingEvent != nil {
+					opts.OnTrackingEvent(releaseName, report)
+				}
 			}
 		}
 	}()
@@ -243,11 +336,12 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
 		ReleaseInstallRuntimeOptions: common.ReleaseInstallRuntimeOptions{
-			ExtraLabels:             c.opts.Labels,
-			ExtraAnnotations:        c.opts.Annotations,
+			ExtraLabels:             labels,
+			ExtraAnnotations:        c.opts.ResourcesAnnotations,
 			NoInstallStandaloneCRDs: true,
 			ReleaseHistoryLimit:     int(c.opts.HistoryMax),
 			ReleaseLabels:           opts.ReleaseLabels,
+			ReleaseInfoAnnotations:  c.opts.ReleaseAnnotations,
 			ReleaseStorageDriver:    c.driver,
 			ForceAdoption:           true,
 		},
@@ -262,9 +356,16 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 
 // Render renders a nelm chart to YAML manifests without installing it
 // Returns the rendered manifests as a YAML string
-func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (string, error) {
+//
+//nolint:nonamedreturns // named returns required for defer/recover to modify return values
+func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (out string, err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Render")
 	defer span.End()
+	defer c.recoverPanic("Render", span, &err,
+		slog.String("release", releaseName),
+		slog.String("namespace", namespace),
+		slog.String("path", opts.Path),
+	)
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -272,8 +373,13 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
 	var valuesSet []string
-	if len(opts.ExtraValues) > 0 {
-		valuesSet = append(valuesSet, opts.ExtraValues)
+	if len(opts.RootValues) > 0 {
+		valuesSet = append(valuesSet, opts.RootValues)
+	}
+
+	labels := maps.Clone(c.opts.ResourcesLabels)
+	if len(opts.ResourcesLabels) > 0 {
+		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{
@@ -289,8 +395,8 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
-		ExtraLabels:            c.opts.Labels,
-		ExtraAnnotations:       c.opts.Annotations,
+		ExtraLabels:            labels,
+		ExtraAnnotations:       c.opts.ResourcesAnnotations,
 		ReleaseName:            releaseName,
 		ReleaseNamespace:       namespace,
 		ReleaseStorageDriver:   c.driver,
@@ -323,9 +429,15 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 
 // Delete uninstalls a nelm release
 // Returns nil if the release doesn't exist (idempotent)
-func (c *Client) Delete(ctx context.Context, namespace, releaseName string) error {
+//
+//nolint:nonamedreturns // named returns required for defer/recover to modify return values
+func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Delete")
 	defer span.End()
+	defer c.recoverPanic("Delete", span, &err,
+		slog.String("release", releaseName),
+		slog.String("namespace", namespace),
+	)
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -357,7 +469,14 @@ func (c *Client) Delete(ctx context.Context, namespace, releaseName string) erro
 
 // getRelease is a helper method to retrieve a release by name
 // Converts nelm's ReleaseNotFoundError to ErrReleaseNotFound for consistent error handling
-func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) (*action.ReleaseGetResultV1, error) {
+//
+//nolint:nonamedreturns // named returns required for defer/recover to modify return values
+func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) (result *action.ReleaseGetResultV1, err error) {
+	defer c.recoverPanic("getRelease", nil, &err,
+		slog.String("release", releaseName),
+		slog.String("namespace", namespace),
+	)
+
 	res, err := action.ReleaseGet(ctx, releaseName, namespace, action.ReleaseGetOptions{
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
@@ -376,4 +495,27 @@ func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) 
 	}
 
 	return res, nil
+}
+
+// recoverPanic converts a panic recovered from a deferred call into err,
+// logs it with stack trace and the supplied context fields, and marks span
+// (when non-nil) as failed. Must be deferred directly so recover() works.
+func (c *Client) recoverPanic(op string, span trace.Span, err *error, fields ...slog.Attr) {
+	r := recover()
+	if r == nil {
+		return
+	}
+
+	args := make([]any, 0, len(fields)+2)
+	args = append(args, slog.Any("panic", r))
+	for _, f := range fields {
+		args = append(args, f)
+	}
+	args = append(args, slog.String("stack", string(debug.Stack())))
+	c.logger.Error("panic in "+op, args...)
+
+	*err = fmt.Errorf("panic in %s: %v", op, r)
+	if span != nil {
+		span.SetStatus(codes.Error, (*err).Error())
+	}
 }

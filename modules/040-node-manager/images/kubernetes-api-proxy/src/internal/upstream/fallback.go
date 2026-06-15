@@ -50,6 +50,7 @@ func WithFileWatcher(filePath string) FallbackListOption {
 			func(upstreams []*Upstream) {
 				l.Reconcile(upstreams, false)
 			},
+			l.logger,
 		)
 
 		l.watcher = watcher

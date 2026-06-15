@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 )
 
 func validContext() *Context {
@@ -310,13 +310,34 @@ func TestContextToMap(t *testing.T) {
 			},
 		},
 		{
-			name: "With PKI",
+			name: "With Bootstrap",
 			input: func() Context {
 				ret := Context{
-					Init: init_secret.Config{
-						CA: &init_secret.CertKey{
-							Cert: "---cert---",
-							Key:  "---key---",
+					Bootstrap: &ContextBootstrap{
+						Init: initsecret.Config{
+							CA: initsecret.CertKey{
+								Cert: "---cert---",
+								Key:  "---key---",
+							},
+							ROUser: initsecret.User{
+								Name:         "ro_name",
+								Password:     "ro_password",
+								PasswordHash: "ro_password_hash",
+							},
+							RWUser: initsecret.User{
+								Name:         "rw_name",
+								Password:     "rw_password",
+								PasswordHash: "rw_password_hash",
+							},
+						},
+						Proxy: &ContextBootstrapProxy{
+							Host:     "example.com",
+							Path:     "/path",
+							Scheme:   "https",
+							Username: "user",
+							Password: "pass",
+							CA:       "---cert---",
+							TTL:      "5m",
 						},
 					},
 					RegistryModuleEnable: true,
@@ -341,10 +362,31 @@ func TestContextToMap(t *testing.T) {
 				toMap: func() map[string]any {
 
 					ret := map[string]any{
-						"init": map[string]any{
-							"ca": map[string]any{
-								"cert": "---cert---",
-								"key":  "---key---",
+						"bootstrap": map[string]any{
+							"init": map[string]any{
+								"ca": map[string]any{
+									"cert": "---cert---",
+									"key":  "---key---",
+								},
+								"ro_user": map[string]any{
+									"name":          "ro_name",
+									"password":      "ro_password",
+									"password_hash": "ro_password_hash",
+								},
+								"rw_user": map[string]any{
+									"name":          "rw_name",
+									"password":      "rw_password",
+									"password_hash": "rw_password_hash",
+								},
+							},
+							"proxy": map[string]any{
+								"host":     "example.com",
+								"path":     "/path",
+								"scheme":   "https",
+								"username": "user",
+								"password": "pass",
+								"ca":       "---cert---",
+								"ttl":      "5m",
 							},
 						},
 						"registryModuleEnable": true,

@@ -1,0 +1,164 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix high resource consumption for constraint d8denyexecheritage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19070
+candi:
+  fixes:
+    - summary: Fix containerd unmount for migration if /var/lib/containerd is mounted manually.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19179
+cert-manager:
+  fixes:
+    - summary: Disable SecurityPolicyExceptions for cert-manager namespace
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19184
+cloud-provider-aws:
+  fixes:
+    - summary: add information about AWS security group rules limits
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18819
+cloud-provider-dvp:
+  fixes:
+    - summary: >-
+        Suppress destructive changes when add/remove/change labels and annotations for cloud
+        resources via opentofu.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19080
+cloud-provider-vcd:
+  fixes:
+    - summary: fix vCD CCM TCP health monitors removal
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19089
+cni-cilium:
+  fixes:
+    - summary: Updated go-jose dependency to v4.1.4 to fix CVE-2026-34986.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18984
+      impact: Cilium agents will be restarted during the update.
+cni-flannel:
+  fixes:
+    - summary: Fixed CVE-2026-33186 by updating google.golang.org/grpc in flanneld.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18995
+      impact: This update triggers a rolling update of the flannel pods.
+cni-simple-bridge:
+  fixes:
+    - summary: Refactored python image source and pip exclusion.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19113
+common:
+  fixes:
+    - summary: >-
+        Removed Python completely from the debug-container image as it is no longer needed,
+        resolving corresponding CVEs, and silenced false positives for etcd binaries via VEX.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18810
+deckhouse:
+  fixes:
+    - summary: Return setting notified for mr.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19211
+    - summary: >-
+        Remove notified=false annotation reset from runReleaseDeploy in the module release
+        controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19169
+    - summary: Ensure heritage label on d8-system namespace via hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19134
+deckhouse-controller:
+  fixes:
+    - summary: Add new discoveryv1 scheme to deckhouse controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19135
+    - summary: added extra validation for kubernets version multiple downgrades scenario
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18794
+dhctl:
+  fixes:
+    - summary: Use internal node ip if bastion ip was passed in converge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18979
+docs:
+  features:
+    - summary: Respect nowrap default for code blocks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19249
+    - summary: Update sds-node-configuration module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19177
+    - summary: Add geoproxy and failover to ingress-nginx module architecture section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18832
+    - summary: Add csi-nfs module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18788
+    - summary: Add public cloud providers aws, azure, and gcp module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18696
+    - summary: Add cloud-provider-vsphere module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18694
+    - summary: Add cloud-provider-openstack module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18693
+  fixes:
+    - summary: Fix indented Liquid blocks in lists.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19255
+    - summary: Fix broken links.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19062
+    - summary: Improved title generation for module documentation pages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18938
+ingress-nginx:
+  fixes:
+    - summary: CVE-2025-15566 is fixed in 1.10 and 1.12 controllers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19205
+      impact: All pods of Ingress-NGINX controller of 1.10 and 1.12 versions will be restarted.
+    - summary: Added missing pod security context settings to hpa scaler pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19232
+      impact: HPA scaler pods will be restarted.
+    - summary: Kruise go dependencies are updated to mitigate latest CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19066
+      impact: Kruise controller will be restarted.
+    - summary: Added fix for CVE-2026-4342.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18923
+      impact: All Ingress-NGINX controller pods will be restated.
+istio:
+  fixes:
+    - summary: fixed CVE-2026-34986
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18972
+      impact: istio module pods will be restarted
+    - summary: added iptables wrapper in cni-v1x21x6
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18925
+      impact: istio-cni-nodes will be restarted
+keepalived:
+  fixes:
+    - summary: Excluded vulnerable pip-25.3 from keepalived final image to fix CVE-2026-1703
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19111
+kube-dns:
+  fixes:
+    - summary: >-
+        Refactored hook remove_old_coredns_deploy_and_svc — delegated deletion of original kube-dns
+        service to helm.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17361
+kube-proxy:
+  fixes:
+    - summary: Fixed CVE-2026-33186 and CVE-2026-24051 in kube-proxy dependencies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19002
+      impact: This update triggers a rolling update of the kube-proxy pods.
+network-gateway:
+  fixes:
+    - summary: Updated python image source and mitigated pip CVE-2026-1703
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19114
+network-policy-engine:
+  fixes:
+    - summary: >-
+        Fixed CVE-2026-34040, CVE-2026-33997, and CVE-2026-33186 in network-policy-engine
+        dependencies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19005
+      impact: This update triggers a rolling update of the network-policy-engine pods.
+node-manager:
+  fixes:
+    - summary: rollback inject capi conversion hook in crds as on-before-helm
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19137
+    - summary: optimize node-controller cache resources usage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19097
+registrypackages:
+  fixes:
+    - summary: Add vex for CVE-2026-39882
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19102
+    - summary: Remediated CVE-2026-32285 in crictl dependencies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19071
+terraform-manager:
+  features:
+    - summary: >-
+        Suppress destructive changes when add/remove/change labels and annotations for cloud
+        resources via opentofu.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19080
+      impact: >-
+        These changes prevent unnecessary or destructive plan updates that could occur when data
+        sources depend on changing labels and annotations. The behavior of other cloud providers is
+        not affected.
+
+        If you encounter unexpected converge plans or cluster bootstrap issues when using
+        OpenTofu-based providers (such as dvp, dynamics, zvirt, or yandex), please report them to
+        Deckhouse Technical Support.
+

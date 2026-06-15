@@ -1,6 +1,7 @@
+{{- $version := include "get_oss_version_by_id" (list "terraform-provider-vsphere" $) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: base/scratch
+from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi
@@ -11,31 +12,43 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: terraform-provider-vsphere
   add: /terraform-provider-vsphere
   to: /terraform-manager/terraform-provider-vsphere
   before: setup
-
+shell:
+  install:
+  - set -e
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 fromCacheVersion: "2025-02-05.03"
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.vsphere.version }}-flant.2 $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-terraform-provider-vsphere.git /src
+  - git clone --depth 1 --branch v{{ $version }}-flant.2 $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-terraform-provider-vsphere.git /src
   - cd /src
+  - git apply /patches/*.patch --verbose
   - rm -rf vendor
   - rm -rf .git
 ---
 image: terraform-provider-vsphere
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -50,7 +63,7 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-vsphere/version.ProviderVersion={{ .TF.vsphere.version }}" -o /terraform-provider-vsphere
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-vsphere/version.ProviderVersion={{ $version }}" -o /terraform-provider-vsphere
     - strip /terraform-provider-vsphere
     - chmod -R 755 /terraform-provider-vsphere
     - chown 64535:64535 /terraform-provider-vsphere

@@ -22,7 +22,7 @@ relatedLinks:
 {% alert %}
 В разделе {% if site.mode == 'module' %}[«Быстрый старт»]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Быстрый старт](/products/kubernetes-platform/gs/){% endif %} доступны пошаговые инструкции по установке Deckhouse Kubernetes Platform.
 
-Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install)! <span class="beta-badge">Beta</span>
+Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
 {% endalert %}
 
 На этой странице представлена обзорная информация по установке Deckhouse Kubernetes Platform (DKP).
@@ -60,6 +60,8 @@ relatedLinks:
 
 - При настройке интеграции с поддерживаемыми облаками: имеются необходимые квоты для создания ресурсов и подготовлены параметры доступа к облачной инфраструктуре (зависят от конкретного провайдера).
 
+- При наличии ограничений сетевого взаимодействия на уровне инфраструктуры соблюдены требования, описанные в разделе [«Сетевое взаимодействие компонентов платформы»](../reference/network_interaction.html).
+
 - Есть доступ к хранилищу образов контейнеров Deckhouse (к публичному — `registry.deckhouse.io` или `registry.deckhouse.ru`, либо к зеркалу).
 
 ## Подготовка конфигурации
@@ -88,7 +90,7 @@ relatedLinks:
 
    * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
    * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-   * [DynamixClusterConfiguration](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration) — Базис.DynamiX;
+   * [DynamixClusterConfiguration](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration) — Basis Dynamix;
    * [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration) — Deckhouse Virtualization Platform;
    * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
    * [HuaweiCloudClusterConfiguration](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration) — Huawei Cloud;
@@ -127,22 +129,8 @@ relatedLinks:
 
 {% offtopic title="Пример файла конфигурации установки..." %}
 
-<div class="tabs">
-  <a id='tab_variant_new_config'
-     href="javascript:void(0)"
-     class="tabs__btn tabs__btn_variant active"
-     onclick="openTabAndSaveStatus(event,'tabs__btn_variant','tabs__content_variant','block_variant_new_config');">
-     Конфигурация, применимая с версии 1.75 DKP
-  </a>
-  <a id='tab_variant_legacy_config'
-     href="javascript:void(0)"
-     class="tabs__btn tabs__btn_variant"
-     onclick="openTabAndSaveStatus(event,'tabs__btn_variant','tabs__content_variant','block_variant_legacy_config');">
-     Устаревший вариант конфигурации
-  </a>
-</div>
-
-<div id='block_variant_new_config' class="tabs__content tabs__content_variant active" markdown="1">
+{% tabs variant %}
+{% tab "Конфигурация, применимая с версии 1.75 DKP" %}
 В этом примере доступ к хранилищу образов DKP настраивается с помощью ModuleConfig `deckhouse`.
 
 ```yaml
@@ -296,10 +284,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
-
-<div id='block_variant_legacy_config' class="tabs__content tabs__content_variant" markdown="1">
-
+{% endtab %}
+{% tab "Устаревший вариант конфигурации" %}
 В этом примере доступ к хранилищу образов DKP настраивается с помощью InitConfiguration.
 
 ```yaml
@@ -451,7 +437,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
+{% endtab %}
+{% endtabs %}
 
 {% endofftopic %}
 
@@ -619,9 +606,14 @@ dhctl bootstrap \
        - поддержка `CgroupsV2`;
        - systemd версии `244`;
        - поддержка модуля ядра `erofs`.
-   - На сервере (ВМ) для master-узла установлен Python.
+   - На сервере (ВМ) для master-узла должен быть доступен Python (Python 3 или Python 2). Также должны быть доступны стандартные модули Python, используемые установщиком:
+     - для работы с HTTP-запросами: `urllib.request` (Python 3) или `urllib2` (Python 2);
+     - для обработки HTTP-ошибок: `urllib.error` (Python 3) или `urllib2` (Python 2);
+     - для работы с конфигурацией: `configparser` (Python 3) или `ConfigParser` (Python 2);
+     - для запуска HTTP-сервера: `http.server` (Python 3) или `SimpleHTTPServer` (Python 2);
+     - для работы с TCP-сервером: `http.server` (Python 3) или `SocketServer` (Python 2).
    - Хранилище образов доступно через прокси (если настройки прокси указаны в конфигурации установки).
-   - На сервере (ВМ) для master-узла и в хосте, на котором запущен установщик, свободны порты, необходимые для процесса установки.
+   - На сервере (ВМ) для master-узла и на хосте, с которого запускается установщик, должен быть доступен порт `22/TCP` (сетевой доступ от персонального компьютера), необходимый для процесса установки. Подробнее в разделе [«Сетевое взаимодействие компонентов платформы»](../reference/network_interaction.html).
    - DNS должен разрешать `localhost` в IP-адрес `127.0.0.1`.
    - На сервере (ВМ) пользователю доступна команда `sudo`.
    - Открыты необходимые порты для установки:
@@ -1073,7 +1065,7 @@ echo "$MYRESULTSTRING"
 ### Использование прокси-сервера
 
 {% alert level="warning" %}
-Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite, CSE Pro.
 {% endalert %}
 
 {% offtopic title="Пример шагов по настройке прокси-сервера на базе Squid..." %}

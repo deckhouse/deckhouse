@@ -16,12 +16,24 @@ package fsprovider
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
+	"github.com/name212/govalue"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
+)
+
+var (
+	terraformImageName = "baseTerraform"
+	opentofuImageName  = "baseOpentofu"
 )
 
 type InfrastructureUtilProvider struct {
@@ -38,16 +50,68 @@ func newInfrastructureUtilProvider(logger log.Logger, binariesDir string) *Infra
 	}
 }
 
-func (p *InfrastructureUtilProvider) DownloadTerraform(_ context.Context, _ cloud.InfrastructureUtilProviderParams, destination string) error {
+func (p *InfrastructureUtilProvider) DownloadTerraform(ctx context.Context, _ cloud.InfrastructureUtilProviderParams, destination string, conf *config.MetaConfig) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return fsutils.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "terraform"), checkIsExecFile, destination, p.logger)
+	_, err := os.Stat(filepath.Join(p.binariesDir, "terraform"))
+	if err == nil {
+		return fsutils.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "terraform"), checkIsExecFile, destination, p.logger)
+	}
+	if err = downloadImage(ctx, conf, terraformImageName, "terraformManager", conf.ShowProgress); err != nil {
+		return err
+	}
+
+	return fsutils.CreateLinkIfNotExists(filepath.Join(conf.DownloadRootDir, "terraform"), checkIsExecFile, destination, p.logger)
 }
 
-func (p *InfrastructureUtilProvider) DownloadOpenTofu(_ context.Context, _ cloud.InfrastructureUtilProviderParams, destination string) error {
+func (p *InfrastructureUtilProvider) DownloadOpenTofu(ctx context.Context, _ cloud.InfrastructureUtilProviderParams, destination string, conf *config.MetaConfig) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return fsutils.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "opentofu"), checkIsExecFile, destination, p.logger)
+	_, err := os.Stat(filepath.Join(p.binariesDir, "opentofu"))
+	if err == nil {
+		return fsutils.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "opentofu"), checkIsExecFile, destination, p.logger)
+	}
+	if err = downloadImage(ctx, conf, opentofuImageName, "terraformManager", conf.ShowProgress); err != nil {
+		return err
+	}
+
+	return fsutils.CreateLinkIfNotExists(filepath.Join(conf.DownloadRootDir, "opentofu"), checkIsExecFile, destination, p.logger)
+}
+
+func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string, showProgress bool) error {
+	var regConfig *image.RegistryConfig
+	var err error
+	var imageName string
+	if govalue.NotNil(conf.DeckhouseConfig) {
+		dc, err2 := image.DecodeDockerConfig(conf.DeckhouseConfig.RegistryDockerCfg)
+		if err2 != nil {
+			return err
+		}
+		scheme := "HTTPS"
+		if strings.ToUpper(conf.DeckhouseConfig.RegistryScheme) == "HTTP" || strings.ToUpper(conf.DeckhouseConfig.RegistryScheme) == "HTTPS" {
+			scheme = strings.ToUpper(conf.DeckhouseConfig.RegistryScheme)
+		}
+		regConfig, err = image.RegistryConfigFromDockerConfig(dc, scheme, conf.DeckhouseConfig.ImagesRepo)
+		imageName = conf.DeckhouseConfig.ImagesRepo + "@"
+	} else {
+		regConfig, err = image.NewRegistryConfig(string(conf.Registry.Settings.RemoteData.Scheme), conf.Registry.Settings.RemoteData.ImagesRepo, conf.Registry.Settings.RemoteData.Username, conf.Registry.Settings.RemoteData.Password, conf.Registry.Settings.RemoteData.CA)
+		imageName = conf.Registry.Settings.RemoteData.ImagesRepo + "@"
+	}
+
+	if govalue.IsNil(conf.ShowProgress) {
+		conf.ShowProgress = false
+	}
+
+	if err != nil {
+		return err
+	}
+	tfImage, err := digests.GetImage(section, name)
+	if err != nil {
+		return err
+	}
+	imageName += tfImage
+
+	return image.DownloadAndUnpackImage(ctx, imageName, conf.DownloadRootDir, conf.DownloadCacheDir, *regConfig, showProgress)
 }

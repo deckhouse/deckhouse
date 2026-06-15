@@ -1,7 +1,7 @@
 ---
 # base artifact to do relocate
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/alt
+from: {{ index $.Images "builder/alt" }}
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/binary_replace.sh

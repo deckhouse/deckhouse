@@ -36,6 +36,3 @@ extractedLinksMax: 0
   * [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/);
   * [`cloud-provider-yandex`](/modules/cloud-provider-yandex/);
   * [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/).
-
-В подразделе на данный момент описан только модуль [`cloud-provider-dvp`](cloud-providers/cloud-provider-dvp.html).
-Материалы по модулям остальных облачных провайдеров будут добавляться по мере готовности.

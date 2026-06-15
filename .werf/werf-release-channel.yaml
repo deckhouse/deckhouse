@@ -1,6 +1,7 @@
 ---
 image: release-channel-version-prebuild
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
+final: false
 dependencies:
 - image: dev
   before: setup
@@ -8,7 +9,7 @@ dependencies:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
 import:
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: install
@@ -22,6 +23,9 @@ shell:
     # update kubernetes auto version in the release file
     yq eval '.requirements.autoK8sVersion = "{{ .defaultKubernetesVersion }}"' -i /deckhouse/release.yaml
     yq eval '.requirements.k8s = "{{ .kubernetesVersions | first }}"' -i /deckhouse/release.yaml
+    {{- if eq $.Env "CSE" }}
+    yq eval '.requirements.migratedModules = .requirements.migratedModules + ",commander,commander-agent,console,csi-ceph,csi-nfs,csi-scsi-generic,csi-yadro-tatlin-unified,observability,prompp,sds-local-volume,sds-node-configurator,secrets-store-integration,snapshot-controller,storage-volume-data-manager,virtualization"' -i /deckhouse/release.yaml
+    {{- end }}
     yq eval '.version = env(version)' -i /deckhouse/release.yaml
     yq eval -j /deckhouse/release.yaml > version.json
     # changelog exists only for tags, we have to skip it for branches
@@ -44,7 +48,7 @@ git:
 
 ---
 image: release-channel-version
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: release-channel-version-prebuild
   add: /

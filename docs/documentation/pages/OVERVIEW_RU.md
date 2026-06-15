@@ -12,6 +12,14 @@ lang: ru
 
 {% include redirect-anchor.liquid anchors=anchors to="admin/configuration/" %}
 
+{% unless site.mode == "module" %}
+<div style="text-align: right">
+<a href="#" data-open-pdf-modal class="button button--outline">{{ site.data.i18n.common['pdf_download_button'][page.lang] }}</a>
+</div>
+
+{% include pdf_download_modal.html %}
+{%- endunless %}
+
 Приветствуем вас на главной странице документации Deckhouse Kubernetes Platform — платформы для управления Kubernetes-кластерами.
 {% if site.mode != 'module' %}Если вы еще не использовали платформу, рекомендуем начать с раздела [Быстрый старт](/products/kubernetes-platform/gs/), где вы найдете пошаговые инструкции по развёртыванию платформы на любой инфраструктуре.{% endif %}
 

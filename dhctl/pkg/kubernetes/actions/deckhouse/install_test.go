@@ -43,7 +43,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
-	log.InitLogger("json")
+	log.InitLogger("json", false)
 	fakeClient := client.NewFakeKubernetesClient()
 
 	tests := []struct {
@@ -122,7 +122,12 @@ func TestDeckhouseInstall(t *testing.T) {
 		{
 			"With bashible cfg",
 			func() error {
-				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
+				err := registry_mocks.CreatePKISecret(context.TODO(), fakeClient)
+				if err != nil {
+					return err
+				}
+
+				_, err = CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
 					Registry: registry_mocks.ConfigBuilder(
 						registry_mocks.WithModeUnmanaged(),
 					),

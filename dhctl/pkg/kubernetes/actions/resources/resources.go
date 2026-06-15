@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -29,42 +30,38 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were created")
 
-// apiResourceListGetter discovery and cache APIResources list for group version kind
+// apiResourceListGetter discovers APIResources for a group/version. It does NOT cache
+// across calls: CRDs can be installed by Deckhouse modules mid-bootstrap, and a cached
+// empty result for the GroupVersion would mask the new CRD forever. The underlying
+// k8s discovery client has its own short-lived cache that handles repeated calls fine.
 type apiResourceListGetter struct {
-	kubeCl             *client.KubernetesClient
-	gvkToResourcesList map[string]*metav1.APIResourceList
+	kubeCl *client.KubernetesClient
 }
 
 func newAPIResourceListGetter(kubeCl *client.KubernetesClient) *apiResourceListGetter {
-	return &apiResourceListGetter{
-		kubeCl:             kubeCl,
-		gvkToResourcesList: make(map[string]*metav1.APIResourceList),
-	}
+	return &apiResourceListGetter{kubeCl: kubeCl}
 }
 
 func (g *apiResourceListGetter) Get(ctx context.Context, gvk *schema.GroupVersionKind) (*metav1.APIResourceList, error) {
 	key := gvk.GroupVersion().String()
-	if resourcesList, ok := g.gvkToResourcesList[key]; ok {
-		return resourcesList, nil
-	}
 
 	var resourcesList *metav1.APIResourceList
-	var err error
-	err = retry.NewSilentLoop("Get resources list", 3, 1*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("Get resources list", 3, 1*time.Second).RunContext(ctx, func() error {
 		// ServerResourcesForGroupVersion does not return error if API returned NotFound (404) or Forbidden (403)
 		// https://github.com/kubernetes/client-go/blob/51a4fd4aee686931f6a53148b3f4c9094f80d512/discovery/discovery_client.go#L204
 		// and if CRD was not deployed method will return empty APIResources list
-		resourcesList, err = g.kubeCl.Discovery().ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+		var err error
+		resourcesList, err = g.kubeCl.Discovery().ServerResourcesForGroupVersion(key)
 		if err != nil {
 			return fmt.Errorf("can't get preferred resources '%s': %w", key, err)
 		}
@@ -122,7 +119,7 @@ func (c *Creator) createAll(ctx context.Context) error {
 
 	for indx, resource := range c.resources {
 		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
-			log.DebugF("Resource %s with index % should skip to create in current iteration because namespace is not existed\n", resource.String())
+			log.DebugF("Resource %s with index % should be skipped from creation in the current iteration because the namespace does not exist\n", resource.String())
 			continue
 		}
 
@@ -165,7 +162,7 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 				// we can receive empty name space when user want to deploy in 'default' ns
 				// we keep it in our minds and skip verify therese resources because we think that
 				// default namespace always exist
-				log.DebugF("Namespace is empty for resource %s. Skip ns checking\n", res.String())
+				log.DebugF("Namespace is empty for resource %s. Skipping ns check\n", res.String())
 				continue
 			}
 
@@ -176,9 +173,9 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 					// if ns is existed then we will skip only
 					// if ns is not exists we should skip resource on current iteration and try to create on next iteration
 					resourcesToSkipInCurrentIteration[i] = struct{}{}
-					log.DebugF("Namespace not found but processed for resource %s. Adding skip to create resource in current iteration\n", res.String())
+					log.DebugF("Namespace not found but already processed for resource %s. Skipping resource creation in the current iteration\n", res.String())
 				}
-				log.DebugF("Namespace was processed for resource %s. Skip ns checking\n", res.String())
+				log.DebugF("Namespace was processed for resource %s. Skipping ns check\n", res.String())
 				continue
 			}
 
@@ -201,7 +198,6 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 		}
 		return nil
 	})
-
 	if err != nil {
 		return make(map[int]struct{}), err
 	}
@@ -265,13 +261,13 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
 			Manifest: func() interface{} { return nil },
-			CreateFunc: func(manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest interface{}) error {
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(ctx, docCopy, metav1.CreateOptions{})
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 				content, err := docCopy.MarshalJSON()
 				if err != nil {
 					return err
@@ -284,14 +280,21 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 			},
 		}
 
-		err := manifestTask.CreateOrUpdateSilent()
+		err := manifestTask.CreateOrUpdateSilent(ctx)
 		if err != nil {
 			if strings.Contains(err.Error(), "the server could not find the requested resource") {
 				c.kubeCl.InvalidateDiscoveryCache()
 			}
 		}
+
 		return err
 	})
+}
+
+// invalidateDiscovery refreshes the underlying k8s discovery cache. Called between
+// createAll iterations so that newly-installed CRDs become visible.
+func (c *Creator) invalidateDiscovery() {
+	c.kubeCl.InvalidateDiscoveryCache()
 }
 
 func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfigTask) error {
@@ -301,8 +304,18 @@ func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfig
 	})
 }
 
-func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
-	endChannel := time.After(app.ResourcesTimeout)
+func CreateResourcesLoop(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	resources template.Resources,
+	checkers []Checker,
+	tasks []actions.ModuleConfigTask,
+	timeout time.Duration,
+) error {
+	ctx, span := telemetry.StartSpan(ctx, "CreateResourcesLoop")
+	defer span.End()
+
+	endChannel := time.After(timeout)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -321,7 +334,7 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 		}
 	}
 
-	_ = log.Process("Create Resources", "Resources to create", func() error {
+	_ = log.ProcessCtx(ctx, "Create Resources", "Resources to create", func(ctx context.Context) error {
 		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
 		return nil
 	})
@@ -329,13 +342,24 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 	attempt := 0
 	createdResources := make([]string, 0, len(resourceCreator.resources))
 	for {
-		err := resourceCreator.TryToCreate(ctx)
+		iterCtx, iterSpan := telemetry.StartSpan(ctx, "createResources.iteration")
+		iterSpan.SetAttributes(otattribute.Int("attempt", attempt))
+
+		// New CRDs may be installed by Deckhouse modules between iterations. Drop the
+		// k8s client-go discovery cache so they become visible to TryToCreate below.
+		if attempt > 0 {
+			resourceCreator.invalidateDiscovery()
+		}
+
+		err := resourceCreator.TryToCreate(iterCtx)
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
+			iterSpan.End()
 			return err
 		}
 
-		ready, res, remained, errWaiter := waiter.ReadyAllWithRes(ctx)
+		ready, res, remained, errWaiter := waiter.ReadyAllWithRes(iterCtx)
 		if errWaiter != nil {
+			iterSpan.End()
 			return errWaiter
 		}
 
@@ -343,22 +367,31 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 			createdResources = append(createdResources, res...)
 		}
 
+		iterSpan.SetAttributes(
+			otattribute.Int("pending_count", len(remained)),
+			otattribute.Int("created_count", len(createdResources)),
+			otattribute.Bool("all_ready", ready),
+		)
+
 		if len(remained) > 0 && attempt%10 == 0 {
 			msg := make(map[string][]string)
 			msg["remained"] = remained
 			if len(createdResources) > 0 {
 				msg["created"] = createdResources
 			}
-			logResources(msg)
+			logResources(iterCtx, msg)
 		}
+		iterSpan.End()
 		if ready && err == nil {
 			return nil
 		}
 
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-endChannel:
 			if len(resources) > 0 {
-				_ = log.Process("Create Resources", "Failed to create", func() error {
+				_ = log.ProcessCtx(ctx, "Create Resources", "Failed to create", func(ctx context.Context) error {
 					log.WarnF("%s\n", strings.Join(remained, "\n"))
 					return nil
 				})
@@ -366,19 +399,19 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 					"Creating resources timed out after %s: resources cannot become ready. "+
 						"This could be due to lack of worker nodes in the cluster. "+
 						"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
-					app.ResourcesTimeout,
+					timeout,
 				)
 			}
 
-			return fmt.Errorf("Creating resources failed after %s waiting", app.ResourcesTimeout)
+			return fmt.Errorf("Creating resources failed after waiting %s", timeout)
 		case <-ticker.C:
 		}
 		attempt++
 	}
 }
 
-func logResources(res map[string][]string) {
-	_ = log.Process("Create Resources", "Resource readiness check", func() error {
+func logResources(ctx context.Context, res map[string][]string) {
+	_ = log.ProcessCtx(ctx, "Create Resources", "Resource readiness check", func(ctx context.Context) error {
 		remained, ok := res["remained"]
 		if ok {
 			for i, s := range remained {
@@ -386,11 +419,12 @@ func logResources(res map[string][]string) {
 					remained = slices.Delete(remained, i, i+1)
 				}
 			}
-			_ = log.Process("Create Resources", "Resource not ready", func() error {
+			_ = log.ProcessCtx(ctx, "Create Resources", "Resource not ready", func(ctx context.Context) error {
 				log.InfoF("%s\n", strings.Join(remained, "\n"))
 				return nil
 			})
 		}
+
 		created, ok := res["created"]
 		if ok {
 			for i, s := range created {
@@ -398,7 +432,7 @@ func logResources(res map[string][]string) {
 					created = slices.Delete(created, i, i+1)
 				}
 			}
-			_ = log.Process("Create Resources", "Resource ready", func() error {
+			_ = log.ProcessCtx(ctx, "Create Resources", "Resource ready", func(ctx context.Context) error {
 				log.InfoF("%s\n", strings.Join(created, "\n"))
 				return nil
 			})

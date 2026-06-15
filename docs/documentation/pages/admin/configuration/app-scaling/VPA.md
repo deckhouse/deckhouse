@@ -10,7 +10,7 @@ Vertical Pod Autoscaler (VPA) automates container resource management and signif
 
 If the application load changes depending on time of day, user requests, or other factors, VPA automatically adjusts the allocated resources. This helps prevent outages due to lack of resources or excessive CPU and memory consumption.
 
-For details on VPA operating modes, its components and limitations, refer to [Architecture](../../../architecture/vpa.html).
+For details on VPA operating modes, its components and limitations, refer to [Architecture](../../../architecture/kubernetes-and-scheduling/vpa.html).
 
 ## How to enable or disable VPA
 

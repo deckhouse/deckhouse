@@ -8,14 +8,13 @@ import:
   owner: "64535"
   group: "64535"
   after: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/api-proxy"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

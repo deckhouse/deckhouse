@@ -1,0 +1,92 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: ConstraintTestProfile
+description: Schema for test_profile.yaml used by constraint_testgen verify/coverage checks.
+type: object
+required:
+  - apiVersion
+  - kind
+  - metadata
+  - spec
+properties:
+  apiVersion:
+    type: string
+    description: API version of the document.
+    minLength: 1
+  kind:
+    type: string
+    description: Document kind. Must be ConstraintTestProfile.
+    const: ConstraintTestProfile
+  metadata:
+    type: object
+    description: Standard Kubernetes-style metadata.
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        description: Constraint name, typically equal to constraint directory name.
+        minLength: 1
+    additionalProperties: true
+  spec:
+    type: object
+    description: Profile contract for generated suite structure and optional quality gates.
+    required:
+      - testDirectory
+      - suite
+    properties:
+      testDirectory:
+        type: string
+        description: Constraint test directory identifier used to bind this profile.
+        minLength: 1
+      checkedFields:
+        type: array
+        description: Optional list of field descriptors parsed by the tool for profile metadata.
+        items:
+          type: object
+          required:
+            - path
+          properties:
+            path:
+              type: string
+              description: Field path in object under test.
+              minLength: 1
+            type:
+              type: string
+              description: Optional field type/classification hint.
+            spePath:
+              type: string
+              description: Optional mapped SecurityPolicyException path.
+          additionalProperties: false
+      coverage:
+        type: object
+        description: Optional profile-level coverage checks.
+        properties:
+          minimumCasesPerBlock:
+            type: integer
+            description: Minimum number of cases required in each generated suite block.
+            minimum: 0
+          requiredPatterns:
+            type: object
+            description: Required case-name glob patterns keyed by track name.
+            additionalProperties:
+              type: array
+              items:
+                type: string
+        additionalProperties: false
+      suite:
+        type: object
+        description: Requirements for rendered test_suite.yaml blocks.
+        required:
+          - expectedTestBlockNames
+        properties:
+          expectedTestBlockNames:
+            type: array
+            description: Names of suite tests[].name that must exist in rendered/test_suite.yaml.
+            minItems: 1
+            items:
+              type: string
+              minLength: 1
+            uniqueItems: true
+        additionalProperties: false
+    additionalProperties: false
+additionalProperties: false

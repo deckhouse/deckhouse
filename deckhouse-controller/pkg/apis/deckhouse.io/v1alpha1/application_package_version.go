@@ -19,7 +19,7 @@ package v1alpha1
 import (
 	"slices"
 
-	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -106,11 +106,17 @@ type ApplicationPackageVersionStatus struct {
 	// +optional
 	PackageMetadata *ApplicationPackageVersionStatusMetadata `json:"packageMetadata,omitempty"`
 
+	// Schemas for validating settings and values passed to the package.
+	// +optional
+	PackageSchemas *ApplicationPackageVersionStatusSchemas `json:"packageSchemas,omitempty"`
+
 	// Conditions represent the latest available observations of the package version's state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []ApplicationPackageVersionCondition `json:"conditions,omitempty"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// Information about applications that are using this package version.
 	// +optional
@@ -121,6 +127,30 @@ type ApplicationPackageVersionStatus struct {
 	UsedByCount int `json:"usedByCount,omitempty"`
 }
 
+type ApplicationPackageVersionStatusSchemas struct {
+	// SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
+	// settings of the package. Stored as an opaque object because its contents
+	// form a recursive JSON schema that cannot be expressed structurally in a
+	// CRD; the controller validates this subtree in Go when loading package
+	// metadata.
+	// +optional
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Type=object
+	SettingsSchema *apiextensionsv1.CustomResourceValidation `json:"settingsSchema,omitempty"`
+
+	// ValuesSchema is the OpenAPI v3 schema used to validate the effective
+	// values (defaults merged with settings) passed to the package's hooks and
+	// charts. Stored as an opaque object because its contents form a recursive
+	// JSON schema that cannot be expressed structurally in a CRD; the
+	// controller validates this subtree in Go when loading package metadata.
+	// +optional
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Type=object
+	ValuesSchema *apiextensionsv1.CustomResourceValidation `json:"valuesSchema,omitempty"`
+}
+
 type ApplicationPackageVersionStatusInstance struct {
 	// Namespace where the application is installed.
 	// +optional
@@ -129,37 +159,6 @@ type ApplicationPackageVersionStatusInstance struct {
 	// Name of the application instance.
 	// +optional
 	Name string `json:"name,omitempty"`
-}
-
-type ApplicationPackageVersionCondition struct {
-	// Type of the condition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Type string `json:"type,omitempty"`
-
-	// Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human-readable message indicating details about last transition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Status of the condition.
-	// Can be True, False, Unknown.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	Status corev1.ConditionStatus `json:"status,omitempty"`
-
-	// Timestamp of when the condition was last probed.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 type ApplicationPackageVersionStatusMetadata struct {
@@ -252,18 +251,89 @@ type ApplicationPackageVersionList struct {
 	Items []ApplicationPackageVersion `json:"items"`
 }
 
+// PackageRequirements describes the platform and module dependencies of a package,
+// surfaced as part of the package version status.
 type PackageRequirements struct {
 	// Required Deckhouse version.
 	// +optional
-	Deckhouse string `json:"deckhouse,omitempty"`
+	Deckhouse *VersionConstraint `json:"deckhouse,omitempty"`
 
 	// Required Kubernetes version.
 	// +optional
-	Kubernetes string `json:"kubernetes,omitempty"`
+	Kubernetes *VersionConstraint `json:"kubernetes,omitempty"`
 
-	// Required versions of other modules.
+	// Required modules, partitioned into mandatory, conditional, and anyOf
+	// dependency buckets.
 	// +optional
-	Modules map[string]string `json:"modules,omitempty"`
+	Modules *PackageModulesRequirements `json:"modules,omitempty"`
+}
+
+// VersionConstraint wraps a single semver constraint expression (e.g. ">= 1.26").
+type VersionConstraint struct {
+	// Semver constraint expression.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+// PackageModulesRequirements groups module dependencies by how they affect startup.
+type PackageModulesRequirements struct {
+	// Mandatory dependencies — must be present (and satisfy the constraint, if any)
+	// for the package to start.
+	// +optional
+	Mandatory []PackageModuleDependency `json:"mandatory,omitempty"`
+
+	// Conditional dependencies — not required to be present, but if installed must
+	// satisfy the constraint for the package to function correctly. Replaces the
+	// legacy "!optional" suffix from the v1 requirements format.
+	// +optional
+	Conditional []PackageModuleDependency `json:"conditional,omitempty"`
+
+	// AnyOf groups of alternative dependencies — at least one member of each group
+	// must be installed (and satisfy its constraint, if any) for the package to
+	// start. Groups are checker-only and add no edges to the dependency graph.
+	// +optional
+	AnyOf []PackageModuleGroup `json:"anyOf,omitempty"`
+
+	// NoneOf groups of forbidden dependencies — no member of any group may be
+	// installed for the package to start. A member with no constraint is forbidden
+	// at any version; a member with a constraint is forbidden only at versions
+	// matching that constraint. Groups are checker-only and add no edges to the
+	// dependency graph.
+	// +optional
+	NoneOf []PackageModuleGroup `json:"noneOf,omitempty"`
+}
+
+// PackageModuleDependency is a single named module dependency with a semver
+// constraint. The constraint is required for entries in
+// PackageModulesRequirements.Conditional ("if installed, no version requirement"
+// is a no-op and rejected at parse time); for entries in
+// PackageModulesRequirements.Mandatory the constraint is optional and an empty
+// value means "any version".
+type PackageModuleDependency struct {
+	// Module name.
+	Name string `json:"name"`
+
+	// Semver constraint expression.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+// PackageModuleGroup is a named group of module dependencies. Group semantics
+// depend on the containing bucket: members of an anyOf group are alternatives
+// (at least one must be installed), members of a noneOf group are forbidden
+// (none may be installed). The Name is required and surfaces in scheduler
+// diagnostics; the Description is optional human-facing documentation.
+type PackageModuleGroup struct {
+	// Stable identifier used by the scheduler in diagnostics.
+	Name string `json:"name"`
+
+	// Human-readable description of the group's purpose.
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// Module dependencies in this group. The bucket containing the group
+	// (anyOf / noneOf) defines whether members are alternatives or forbidden.
+	Modules []PackageModuleDependency `json:"modules"`
 }
 
 type PackageDescription struct {

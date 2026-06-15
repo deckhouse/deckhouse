@@ -34,7 +34,7 @@ type VSphereProvider struct {
 	Insecure bool   `json:"insecure"`
 }
 
-type CloudApiConfig struct {
+type CloudAPIConfig struct {
 	URL      *url.URL
 	Insecure bool
 	CACert   string

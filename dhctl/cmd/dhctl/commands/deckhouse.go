@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,105 +22,117 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
-func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
 		if err != nil {
 			return err
 		}
 
-		err = log.Process("default", "Remove Deckhouse️", func() error {
-			kubeCl := client.NewKubernetesClient().
-				WithNodeInterface(
-					ssh.NewNodeInterfaceWrapper(sshClient),
-				)
-			// auto init
-			err = kubeCl.Init(client.AppKubernetesInitParams())
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+
+		return log.ProcessCtx(ctx, "default", "Remove Deckhouse", func(ctx context.Context) error {
+			kube, err := kubeProvider.Client(ctx)
 			if err != nil {
-				return fmt.Errorf("open kubernetes connection: %v", err)
+				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
 
-			err = deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
-			if err != nil {
-				return err
-			}
-			return nil
+			kubeCl := &client.KubernetesClient{KubeClient: kube}
+
+			return deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 		})
-		if err != nil {
-			return err
-		}
-
-		return nil
 	})
-
-	return cmd
 }
 
-func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineConfigFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineConfigFlags(cmd, &opts.Global)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
-	var DryRun bool
-	cmd.Flag("dry-run", "Output deployment yaml").
-		BoolVar(&DryRun)
+	var dryRun bool
+	cmd.Flag("dry-run", "Output the deployment YAML").BoolVar(&dryRun)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		logger := log.GetDefaultLogger()
-		ctx := context.Background()
 
-		// Load deckhouse config
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
+		if err != nil {
+			return err
+		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+
 		metaConfig, err := config.ParseConfig(
-			context.TODO(),
-			app.ConfigPaths,
+			ctx,
+			opts.Global.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
-			))
+			),
+			&opts.Global,
+		)
 		if err != nil {
 			return err
 		}
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &opts.Global)
 		if err != nil {
 			return err
 		}
 
-		installConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
-		if err != nil {
-			return err
-		}
-
-		if DryRun {
+		if dryRun {
 			manifest := deckhouse.CreateDeckhouseDeploymentManifest(installConfig)
 			out, err := yaml.Marshal(manifest)
 			if err != nil {
@@ -131,30 +143,23 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return nil
 		}
 
-		err = log.Process("bootstrap", "Create Deckhouse Deployment", func() error {
-			kubeCl := client.NewKubernetesClient().
-				WithNodeInterface(
-					ssh.NewNodeInterfaceWrapper(sshClient),
-				)
-			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-				return fmt.Errorf("open kubernetes connection: %v", err)
+		return log.ProcessCtx(ctx, "bootstrap", "Create Deckhouse Deployment", func(ctx context.Context) error {
+			kube, err := kubeProvider.Client(ctx)
+			if err != nil {
+				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
 
-			err = deckhouse.CreateDeckhouseDeployment(ctx, kubeCl, installConfig)
-			if err != nil {
+			kubeCl := &client.KubernetesClient{KubeClient: kube}
+
+			if err := deckhouse.CreateDeckhouseDeployment(ctx, kubeCl, installConfig); err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(ctx, kubeCl)
-			if err != nil {
+			if err := deckhouse.WaitForReadiness(ctx, kubeCl, opts.Bootstrap.DeckhouseTimeout); err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
+
 			return nil
 		})
-		if err != nil {
-			return err
-		}
-		return nil
 	})
-	return cmd
 }

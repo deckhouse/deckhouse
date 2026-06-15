@@ -17,6 +17,7 @@ limitations under the License.
 package service
 
 import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 )
@@ -58,7 +59,12 @@ func (s *Service) GetRoot() string {
 
 // PackagesService returns the packages service
 func (s *Service) PackagesService(registryURL string, dockerCFG string, ca string, userAgent string, scheme string) (*PackagesService, error) {
-	return s.packagesManager.Service(registryURL, dockerCFG, ca, userAgent, scheme)
+	return s.packagesManager.Service(registryURL, utils.RegistryConfig{
+		DockerConfig: dockerCFG,
+		CA:           ca,
+		Scheme:       scheme,
+		UserAgent:    userAgent,
+	})
 }
 
 // DeckhouseService returns the deckhouse service

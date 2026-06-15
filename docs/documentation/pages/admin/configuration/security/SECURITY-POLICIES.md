@@ -4,11 +4,227 @@ permalink: en/admin/configuration/security/policies.html
 description: "Configure security policies in Deckhouse Kubernetes Platform using Gatekeeper and Pod Security Standards. Policy enforcement, compliance, and cluster security management."
 ---
 
-Deckhouse Kubernetes Platform (DKP) lets you manage application security in the cluster using a set of policies
-that follow the [Kubernetes Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) model
-and can be extended with DKP's built-in mechanisms.
+Deckhouse Kubernetes Platform (DKP) lets you manage application security in the cluster using a set of admission policies.
+These are rules that apply to objects (such as Pods and Services) at the time of their creation and modification in the cluster (but not during their operation), based on the information provided in their manifests. These policies are designed to formalize the parameters that are permitted or prohibited in object manifests. Support for admission policies in the DKP cluster is implemented using the [`admission-policy-engine`](/modules/admission-policy-engine/) module.
 
-DKP implements security policies using [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
+In the DKP policies are divided into three categories:
+
+- [Pod Security Standards](#applying-pod-security-standards): Policies that comply with the relevant [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+- [Operational policies](#operational-policies): Policies for creating additional requirements for objects by validating the values of parameters that are **not directly related** to security (for example, a list of allowed prefixes for container images, an image download policy, a list of required container images, etc.).
+- [Security policies](#security-policies): Policies for creating additional requirements on objects by validating the values of security-related parameters (for example, container access to the host’s IPC or PID namespaces, privilege lists for containers, etc.).
+
+{% alert level="info" %}
+These policies complement each other. If multiple policies are applied to a single namespace, objects are validated against each of them. If even one policy is violated, the object will not be created.
+{% endalert %}
+
+## How validation failure messages are displayed
+
+Depending on how pods are created, there are differences in how the API generates messages regarding validation failures (violations of established policies):
+
+- If a pod is created directly, the validation error is returned in the API response indicating a validation failure (policy violation).
+- If pods are created via Deployment, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
+
+## Pod validation when policies are modified or added
+
+For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.
+
+In DKP, there are alerts (ClusterObservabilityAlert resources) for such cases, notifying you of pods in the namespace that violate policies after an existing policy is modified or a new one is added.
+
+To get a list of alerts, use the command:
+
+```bash
+d8 k get clusterobservabilityalerts
+```
+
+Output example:
+
+<!-- markdownlint-disable MD031 -->
+```console
+NAME                                                  SEVERITY   STATUS   DURATION   SUMMARY                          AGE
+SecurityPolicyViolation-f3a77d1dd2175402-1777370195   1          Firing   5h         Alerting PrometheusUnavailable   5h1m
+OperationPolicyViolation-9b21d0c871796913-1777370435  1          Firing   6h         Alerting PrometheusUnavailable   6h1m
+```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
+
+To view information about a specific alert, use the following command:
+
+```bash
+d8 k get clusterobservabilityalert OperationPolicyViolation-9b21d0c871796913-1777370435 -oyaml
+```
+
+{% offtopic title="Example of an alert for a violation of the Pod Security Standards policy..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: PodSecurityStandardsViolation-91e71759e048a397-1777369535
+  resourceVersion: "7454828154578800069"
+  creationTimestamp: 2026-04-28T09:45:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: PodSecurityStandardsViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: |-
+      You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
+
+      To identify violating pods:
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            violating_namespace=~".*",
+            violating_kind="Pod",
+            source_type="PSS"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one pod violates the configured cluster pod security standards.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="PSS",violating_kind="Pod",violating_namespace=~".*",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T09:45:35Z
+  resolvedAt: null
+  duration: 20h40m1.015261771s
+```
+
+{% endofftopic %}
+
+{% offtopic title="Example of an alert for a violation of an operational policy..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: OperationPolicyViolation-9b21d0c871796913-1777370435
+  resourceVersion: "7454831929456594373"
+  creationTimestamp: 2026-04-28T10:00:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: OperationPolicyViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: >-
+      You have configured operation policies for the cluster, and one or more
+      existing objects are violating these policies.
+
+
+      To identify violating objects:
+
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            source_type="OperationPolicy"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one object violates the configured cluster operation policies.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="OperationPolicy",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T10:00:35Z
+  resolvedAt: null
+  duration: 20h23m41.023025059s
+```
+
+{% endofftopic %}
+
+{% offtopic title="Example of an alert for a security policy violation..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: SecurityPolicyViolation-f3a77d1dd2175402-1777370195
+  resourceVersion: "7454830922622307781"
+  creationTimestamp: 2026-04-28T09:56:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: SecurityPolicyViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: >-
+      You have configured security policies for the cluster, and one or more
+      existing objects are violating these policies.
+
+
+      To identify violating objects:
+
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            source_type="SecurityPolicy"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one object violates the configured cluster security policies.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="SecurityPolicy",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T09:56:35Z
+  resolvedAt: null
+  duration: 20h29m21.015479019s
+```
+
+{% endofftopic %}
 
 ## Applying Pod Security Standards
 
@@ -18,6 +234,10 @@ DKP supports three security policy levels:
 - `baseline`: A minimally restrictive policy that prevents the most well-known and common privilege escalation techniques.
   Allows the use of a standard (minimally specified) Pod configuration.
 - `restricted`: A highly restrictive policy with the strictest requirements for Pods.
+
+{% alert level="info" %}
+In the Deckhouse Kubernetes Platform, these policies are implemented using Gatekeeper and enforced by the admission controllers of the `admission-policy-engine` module, rather than the Kubernetes [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) controller. Only the policy descriptions are taken from Kubernetes.
+{% endalert %}
 
 ### Default policy
 
@@ -73,7 +293,7 @@ by adding extra checks to the existing ones.
 
 To extend a policy:
 
-1. Create a validation template using a ConstraintTemplate.
+1. Create a validation template using a `ConstraintTemplate`.
 1. Apply the template to the `baseline` or `restricted` policy.
 
 Example template for validating the container image repository address:
@@ -600,7 +820,7 @@ Key data and checks for `CONNECT` validation:
 ## Image signature verification
 
 {% alert level="warning" %}
-Available in the following DKP editions: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Available in the following DKP editions: SE+, EE.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
@@ -642,10 +862,10 @@ To sign an image with Cosign, do the following:
 
 To enable container image signature verification in a DKP cluster:
 
-1. Use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
-of the SecurityPolicy, specifying the generated public key.
+1. Use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures)
+   parameter in SecurityPolicy and specify the generated public key.
 
-   Example SecurityPolicy configuration for verifying container image signatures:
+   Example SecurityPolicy configuration for verifying signatures of container images in `registry.private.ru`, located under `/labs/application/`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -658,7 +878,7 @@ of the SecurityPolicy, specifying the generated public key.
        namespaceSelector:
          labelSelector:
            matchLabels:
-             kubernetes.io/metadata.name: test-namespace
+             example-security-policy/enabled: true
      policies:
        allowHostIPC: true
        allowHostNetwork: true
@@ -672,10 +892,14 @@ of the SecurityPolicy, specifying the generated public key.
                -----BEGIN PUBLIC KEY-----
                ...
                -----END PUBLIC KEY-----
-           reference: registry.private.com/labs/application/*
+           reference: registry.private.ru/labs/application/*
    ```
 
-1. Create an [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) that restricts pod launches from third-party registries:
+   The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
+
+   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+
+1. Create an [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) that restricts running pods from third-party registries:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -683,34 +907,44 @@ of the SecurityPolicy, specifying the generated public key.
    metadata:
      name: test-operation-policy
    spec:
-    enforcementAction: Deny
-    match:
-      namespaceSelector:
-      labelSelector:
-        matchLabels:
-           operation-policy.deckhouse.io/enabled: "true"
-   policies:
-     allowedRepos:
-     - registry.private.com
+     enforcementAction: Deny
+     match:
+       namespaceSelector:
+         labelSelector:
+           matchLabels:
+             example-operation-policy/enabled: "true"
+     policies:
+       allowedRepos:
+       - registry.private.ru
    ```
 
-1. Add a label to the namespace where you want to enable signature verification with the command (specify the desired namespace):
+   The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
+
+   More details about selector usage are available in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+
+1. Add a label to the namespace where signature verification should be enabled (specify your namespace):
 
    ```shell
-   d8 k label ns <NAMESPACE> security.deckhouse.io/verify-image-test=
+   d8 k label ns <NAMESPACE> example-security-policy/enabled=true
    ```
 
-1. To test the image signing mechanism, deploy pods in a namespace with signed and unsigned images (specify the desired namespace):
+1. Add a label to the namespace where running pods from third-party registries should be restricted (specify your namespace):
 
    ```shell
-   d8 k  -n <NAMESPACE> run signed-pod --image=<SIGNED_IMAGE>
-   d8 k  -n <NAMESPACE> run unsigned-pod --image=<UNSIGNED_IMAGE>
+   d8 k label ns <NAMESPACE> example-operation-policy/enabled=true
    ```
 
-With this policy, if a container image address matches the value of the `reference` parameter
-and the image is unsigned or the signature does not match the specified keys, Pod creation will be denied.
+1. To verify how image signing works, deploy pods in the namespace with signed and unsigned images (specify your namespace):
 
-Example error output when creating a Pod with an unverified container image:
+   ```shell
+   d8 k -n <NAMESPACE> run signed-pod --image=<SIGNED_IMAGE>
+   d8 k -n <NAMESPACE> run unsigned-pod --image=<UNSIGNED_IMAGE>
+   ```
+
+According to this policy, if any container image address matches the `reference` parameter value and the image is unsigned,
+or the signature does not match the specified keys, pod creation will be denied.
+
+Example error output when creating a pod with an image that fails signature verification:
 
 ```console
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2

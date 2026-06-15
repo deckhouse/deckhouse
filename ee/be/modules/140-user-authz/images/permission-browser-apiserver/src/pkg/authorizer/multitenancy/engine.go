@@ -31,6 +31,25 @@ const (
 	namespaceLimitedAccessReason = "making cluster-scoped requests for namespaced resources is not allowed"
 )
 
+// privilegedGroups contains groups that bypass multi-tenancy restrictions.
+// Users in these groups are allowed full access even without ClusterAuthorizationRules.
+var privilegedGroups = map[string]struct{}{
+	"system:masters":         {},
+	"kubeadm:cluster-admins": {},
+	"superadmins":            {},
+}
+
+// isPrivilegedUser checks if the user belongs to any privileged group
+// that should bypass multi-tenancy restrictions.
+func isPrivilegedUser(groups []string) bool {
+	for _, group := range groups {
+		if _, ok := privilegedGroups[group]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // Engine implements the multi-tenancy authorization logic from user-authz webhook
 type Engine struct {
 	configPath      string
@@ -79,6 +98,15 @@ func (e *Engine) Authorize(ctx context.Context, attrs authorizer.Attributes) (au
 
 	dirEntriesAffected := e.affectedDirs(user.GetName(), user.GetGroups())
 	if len(dirEntriesAffected) == 0 {
+		// NOTE: We intentionally return NoOpinion here (not Deny) even for users without CAR.
+		// This method is part of the Kubernetes authorizer chain for API requests.
+		// NoOpinion means "I have no opinion, let RBAC decide".
+		// If we returned Deny here, users without CAR couldn't do ANYTHING,
+		// even with valid RBAC permissions (RoleBindings).
+		//
+		// The deny-by-default logic is applied only in IsNamespaceAllowed/GetAllowedNamespaces,
+		// which are used for filtering the accessiblenamespaces API response (data filtering),
+		// not for API request authorization.
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
@@ -121,14 +149,9 @@ func (e *Engine) authorizeNamespacedRequest(attrs authorizer.Attributes, entry *
 	}
 
 	// Check system namespaces restriction
-	if !denied && !entry.AllowAccessToSystemNamespaces {
-		for _, pattern := range systemNamespacesRegex {
-			if pattern.MatchString(namespace) {
-				denied = true
-				reason = noNamespaceAccessReason
-				break
-			}
-		}
+	if !denied && isSystemNamespace(namespace) && !systemNamespaceAllowed(entry, namespace) {
+		denied = true
+		reason = noNamespaceAccessReason
 	}
 
 	// Check namespace selectors
@@ -252,7 +275,9 @@ func (e *Engine) getPreferredGroupVersion(group, version string) (schema.GroupVe
 	return schema.GroupVersion{}, fmt.Errorf("API group %q not found in server groups", group)
 }
 
-// combineDirEntries combines multiple directory entries into one
+// combineDirEntries combines multiple directory entries into one.
+// AllowedSystemNamespaces is merged into a fresh map so the combined view does
+// not alias (and cannot mutate) the source entries stored in the directory.
 func (e *Engine) combineDirEntries(entries []DirectoryEntry) DirectoryEntry {
 	var combined DirectoryEntry
 
@@ -268,6 +293,13 @@ func (e *Engine) combineDirEntries(entries []DirectoryEntry) DirectoryEntry {
 			combined.LimitNamespaces = append(combined.LimitNamespaces, entry.LimitNamespaces...)
 		}
 		combined.NamespaceFiltersAbsent = combined.NamespaceFiltersAbsent || entry.NamespaceFiltersAbsent
+
+		for ns := range entry.AllowedSystemNamespaces {
+			if combined.AllowedSystemNamespaces == nil {
+				combined.AllowedSystemNamespaces = make(map[string]struct{}, len(entry.AllowedSystemNamespaces))
+			}
+			combined.AllowedSystemNamespaces[ns] = struct{}{}
+		}
 	}
 
 	return combined
@@ -363,18 +395,13 @@ func (e *Engine) renewDirectories() {
 	// Fill limited namespaces by subjects kinds/names
 	for _, crd := range config.CRDs {
 		for _, subject := range crd.Spec.Subjects {
-			name := subject.Name
-			namespace := subject.Namespace
-			kind := subject.Kind
+			kind, name := subjectDirectoryKey(subject.Kind, subject.Name, subject.Namespace, "")
 
-			if kind == "ServiceAccount" {
-				name = "system:serviceaccount:" + namespace + ":" + name
+			if _, ok := directory[kind]; !ok {
+				continue
 			}
 
-			dirEntry, ok := directory[kind][name]
-			if !ok {
-				dirEntry = DirectoryEntry{}
-			}
+			dirEntry := directory[kind][name]
 
 			// If there are neither LimitNamespaces nor NamespaceSelector options, it means all non-system namespaces are allowed
 			dirEntry.NamespaceFiltersAbsent = dirEntry.NamespaceFiltersAbsent || (len(crd.Spec.LimitNamespaces) == 0 && !isLabelSelectorApplied(crd.Spec.NamespaceSelector))
@@ -396,11 +423,66 @@ func (e *Engine) renewDirectories() {
 		}
 	}
 
+	applyAuthorizationRulesToDirectory(directory, config.ARs)
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	e.directory = directory
 	klog.Info("Multi-tenancy configuration was reloaded successfully")
+}
+
+// applyAuthorizationRulesToDirectory grants each AR's subjects access to the
+// AR's own namespace, so AR-only users aren't rejected by deny-by-default.
+// QuoteMeta keeps the namespace a literal even if config.json is tampered with.
+func applyAuthorizationRulesToDirectory(directory map[string]map[string]DirectoryEntry, ars []authorizationRule) {
+	for _, ar := range ars {
+		if ar.Namespace == "" {
+			continue
+		}
+
+		nsRegex, err := regexp.Compile(wrapRegex(regexp.QuoteMeta(ar.Namespace)))
+		if err != nil {
+			// Unreachable in practice because QuoteMeta + wrapRegex always yields a
+			// valid pattern, but we prefer logging over panicking in a config loader.
+			klog.Warningf("Skipping AuthorizationRule %q: cannot compile namespace pattern %q: %v", ar.Name, ar.Namespace, err)
+			continue
+		}
+
+		arInSystemNS := isSystemNamespace(ar.Namespace)
+
+		for _, subject := range ar.Spec.Subjects {
+			kind, name := subjectDirectoryKey(subject.Kind, subject.Name, subject.Namespace, ar.Namespace)
+
+			if _, ok := directory[kind]; !ok {
+				continue
+			}
+
+			dirEntry := directory[kind][name]
+			dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, nsRegex)
+			if arInSystemNS {
+				if dirEntry.AllowedSystemNamespaces == nil {
+					dirEntry.AllowedSystemNamespaces = make(map[string]struct{})
+				}
+				dirEntry.AllowedSystemNamespaces[ar.Namespace] = struct{}{}
+			}
+			directory[kind][name] = dirEntry
+		}
+	}
+}
+
+// subjectDirectoryKey returns the directory map key for a subject.
+// ServiceAccounts are canonicalized to "system:serviceaccount:<ns>:<name>";
+// defaultNamespace fills in subject.Namespace when it's empty (RBAC fallback).
+func subjectDirectoryKey(kind, name, subjectNamespace, defaultNamespace string) (string, string) {
+	if kind != "ServiceAccount" {
+		return kind, name
+	}
+	ns := subjectNamespace
+	if ns == "" {
+		ns = defaultNamespace
+	}
+	return kind, "system:serviceaccount:" + ns + ":" + name
 }
 
 // StartRenewConfigLoop periodically reads new config file
@@ -466,8 +548,15 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 
 	dirEntriesAffected := e.affectedDirs(userInfo.GetName(), userInfo.GetGroups())
 	if len(dirEntriesAffected) == 0 {
-		// No ClusterAuthorizationRules apply to this user, no MT restrictions
-		return true
+		// No ClusterAuthorizationRules apply to this user.
+		// Privileged users (system:masters, etc.) bypass MT restrictions.
+		// Non-privileged users without CAR get no access (deny-by-default).
+		if isPrivilegedUser(userInfo.GetGroups()) {
+			klog.V(4).Infof("IsNamespaceAllowed: user=%s is privileged, bypassing MT restrictions", userInfo.GetName())
+			return true
+		}
+		klog.V(4).Infof("IsNamespaceAllowed: user=%s has no CAR and is not privileged, denying access (deny-by-default)", userInfo.GetName())
+		return false
 	}
 
 	combinedDir := e.combineDirEntries(dirEntriesAffected)
@@ -492,13 +581,8 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 	}
 
 	// Check system namespaces restriction
-	if allowed && !combinedDir.AllowAccessToSystemNamespaces {
-		for _, pattern := range systemNamespacesRegex {
-			if pattern.MatchString(namespace) {
-				allowed = false
-				break
-			}
-		}
+	if allowed && isSystemNamespace(namespace) && !systemNamespaceAllowed(&combinedDir, namespace) {
+		allowed = false
 	}
 
 	// Check namespace selectors if denied by patterns
@@ -512,26 +596,93 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 	return allowed
 }
 
-// GetAllowedNamespaces returns a list of all namespaces the user is allowed to access
-// according to multi-tenancy rules. If mtEngine has no restrictions for the user,
-// returns nil (meaning all namespaces are allowed from MT perspective).
-// This is used by the namespace resolver for optimization.
-func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
+// GetNamespaceAccessType evaluates the user's namespace access and returns:
+//   - accessType: AllNamespacesAllowed, NoNamespacesAllowed, or FilteredAccess
+//   - filter: the combined directory entry for filtering (only valid when accessType == FilteredAccess)
+//
+// This method computes affectedDirs once and returns the filter for reuse,
+// avoiding redundant lookups when filtering multiple namespaces.
+func (e *Engine) GetNamespaceAccessType(userInfo user.Info) (NamespaceAccessType, *DirectoryEntry) {
 	if userInfo == nil {
-		return nil, false
+		return AllNamespacesAllowed, nil
 	}
 
 	dirEntriesAffected := e.affectedDirs(userInfo.GetName(), userInfo.GetGroups())
 	if len(dirEntriesAffected) == 0 {
-		// No restrictions, return nil to indicate "all allowed"
-		return nil, false
+		// No ClusterAuthorizationRules apply to this user.
+		// Privileged users (system:masters, etc.) bypass MT restrictions.
+		if isPrivilegedUser(userInfo.GetGroups()) {
+			klog.V(4).Infof("GetNamespaceAccessType: user=%s is privileged, all namespaces allowed", userInfo.GetName())
+			return AllNamespacesAllowed, nil
+		}
+		// Non-privileged users without CAR get no access (deny-by-default).
+		klog.V(4).Infof("GetNamespaceAccessType: user=%s has no CAR and is not privileged (deny-by-default)", userInfo.GetName())
+		return NoNamespacesAllowed, nil
 	}
 
 	combinedDir := e.combineDirEntries(dirEntriesAffected)
 	if !hasAnyFilters(&combinedDir) {
-		return nil, false
+		return AllNamespacesAllowed, nil
 	}
 
-	// User has restrictions - we need to filter
-	return nil, true
+	// User has restrictions - caller must filter each namespace
+	return FilteredAccess, &combinedDir
+}
+
+// IsNamespaceAllowedWithFilter checks if a namespace is allowed using a pre-computed filter.
+// Use this with the filter returned by GetNamespaceAccessType to avoid redundant affectedDirs lookups.
+func (e *Engine) IsNamespaceAllowedWithFilter(namespace string, filter *DirectoryEntry) bool {
+	if filter == nil {
+		return true
+	}
+
+	allowed := true
+
+	// Check limitNamespaces patterns
+	if !filter.NamespaceFiltersAbsent {
+		allowed = false
+		for _, pattern := range filter.LimitNamespaces {
+			if pattern.MatchString(namespace) {
+				allowed = true
+				break
+			}
+		}
+	}
+
+	// Check system namespaces restriction
+	if allowed && isSystemNamespace(namespace) && !systemNamespaceAllowed(filter, namespace) {
+		allowed = false
+	}
+
+	// Check namespace selectors if denied by patterns
+	if !allowed && len(filter.NamespaceSelectors) > 0 {
+		match, err := e.namespaceLabelsMatchSelector(namespace, filter.NamespaceSelectors)
+		if err == nil && match {
+			allowed = true
+		}
+	}
+
+	return allowed
+}
+
+// GetAllowedNamespaces is a convenience wrapper around GetNamespaceAccessType.
+//
+// Deprecated: Use GetNamespaceAccessType for better clarity and to get the filter for reuse.
+//
+// Return values:
+//   - (nil, false): all namespaces allowed (privileged user or no filters)
+//   - (nil, true): user has restrictions, caller must filter using IsNamespaceAllowed
+//   - ([]string{}, true): no namespaces allowed (non-privileged user without CAR)
+func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
+	accessType, _ := e.GetNamespaceAccessType(userInfo)
+	switch accessType {
+	case AllNamespacesAllowed:
+		return nil, false
+	case NoNamespacesAllowed:
+		return []string{}, true
+	case FilteredAccess:
+		return nil, true
+	default:
+		return nil, false
+	}
 }

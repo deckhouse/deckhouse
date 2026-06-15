@@ -66,13 +66,13 @@ func getNgMetaConfig(ctx context.Context, clusterMetaConfig *config.MetaConfig, 
 
 func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, name string, nodeState []byte, autoApprove bool) error {
 	stateName := fmt.Sprintf("%s.tfstate", name)
-	if err := saveInCacheIfNotExists(r.stateCache, stateName, nodeState); err != nil {
+	if err := saveInCacheIfNotExists(ctx, r.stateCache, stateName, nodeState); err != nil {
 		return err
 	}
 
 	nodeIndex, err := config.GetIndexFromNodeName(name)
 	if err != nil {
-		log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, name)
+		log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, name)
 		return nil
 	}
 
@@ -90,7 +90,7 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 	}
 
 	if err := infrastructure.DestroyPipeline(ctx, nodeRunner, name); err != nil {
-		return fmt.Errorf("destroing of node %s failed: %v", name, err)
+		return fmt.Errorf("destruction of node %s failed: %v", name, err)
 	}
 
 	return nil

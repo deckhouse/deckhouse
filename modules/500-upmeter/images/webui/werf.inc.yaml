@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -26,7 +27,7 @@ shell:
   - apk add --no-cache python3 python2 vips make build-base
   install:
   - cd /src
-  - yarn install
+  - npm_config_nodedir=/usr/local yarn install
   - yarn run build
   - chown -R 64535:64535 /src/dist
 ---
@@ -37,8 +38,8 @@ import:
   add: /src/dist
   to: /opt/nginx-static/html
   before: setup
-git:  
 {{- include "image mount points" . }}  
 imageSpec:
   config:
     entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
+{{- end }}

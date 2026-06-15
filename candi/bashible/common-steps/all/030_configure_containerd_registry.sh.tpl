@@ -46,6 +46,8 @@
 # - Remove old directories (based on information from deckhouse_hosts_state.json)
 # - Save the new state to deckhouse_hosts_state.json
 
+
+# Need for bootstrap Local and Proxy registry modes
 discovered_node_ip="$(bb-d8-node-ip)"
 
 {{- range $host_name, $host_values := .registry.hosts }}
@@ -59,7 +61,7 @@ mkdir -p "/etc/containerd/registry.d/{{ $host_name }}"
 {{- range $mirror := $host_values.mirrors }}
   {{- $mirror_ca_file_path := printf "/etc/containerd/registry.d/%s/%s-%s-ca.crt" $host_name $mirror.scheme $mirror.host }}
   {{- if $mirror.ca }}
-bb-sync-file {{ $mirror_ca_file_path | quote }} - << EOF
+bb-sync-file {{ $mirror_ca_file_path | quote }} - << "EOF"
 {{ $mirror.ca }}
 EOF
   {{- end }}
@@ -84,11 +86,10 @@ bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
     {{- with $mirror.auth }}
       {{- if or .auth .username }}
     [host.{{ $mirror_host_with_scheme | quote }}.auth]
-        {{- if .auth }}
-      auth = {{ .auth | quote }}
+        {{- if .username }}
+      auth = {{ printf "%s:%s" .username ( .password | default "" ) | b64enc | quote }}
         {{- else }}
-      username = {{ .username | quote }}
-      password = {{ .password | default "" | quote }}
+      auth = {{ .auth | quote }}
         {{- end }}
       {{- end }}
     {{- end }}
@@ -110,7 +111,7 @@ EOF
 
 # Sync module sources host.toml and ca.crt
 mkdir -p "/etc/containerd/registry.d/{{ $host_name }}"
-bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/ca.crt" - << EOF
+bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/ca.crt" - << "EOF"
 {{ $CA }}
 EOF
 

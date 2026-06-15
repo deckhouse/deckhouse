@@ -68,7 +68,7 @@ func TestProcessLoggers(t *testing.T) {
 		name   string
 	}{
 		{
-			logger: newWrappedProcessLogger(&SilentLogger{}),
+			logger: newWrappedProcessLogger(NewSilentLogger()),
 			name:   "wrapped logger",
 		},
 

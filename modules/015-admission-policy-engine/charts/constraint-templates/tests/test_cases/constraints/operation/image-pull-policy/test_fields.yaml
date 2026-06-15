@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: image-pull-policy
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].imagePullPolicy
+      level: container
+      description: Container imagePullPolicy must match required policy value.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,56 +15,64 @@
 package commands
 
 import (
-	"context"
+	"errors"
 	"fmt"
 
-	"github.com/name212/govalue"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
-		if err != nil {
-			return err
-		}
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		tmpDir := app.TmpDirName
 		logger := log.GetDefaultLogger()
-		isDebug := app.IsDebug
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+		)
+		if err != nil {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
+				return err
+			}
+		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-			TmpDir:           tmpDir,
+			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
-			IsDebug:          isDebug,
+			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
-			SSHClient: sshClient,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 			ChangesSettings: infrastructure.ChangeActionSettings{
 				SkipChangesOnDeny: false,
 				AutomaticSettings: infrastructure.AutomaticSettings{
@@ -75,45 +83,103 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 					},
 				},
 			},
-			ProviderGetter: providerGetter,
-			TmpDir:         tmpDir,
-			Logger:         logger,
-			IsDebug:        isDebug,
-
+			ProviderGetter:     providerGetter,
+			TmpDir:             opts.Global.TmpDir,
+			Logger:             logger,
+			IsDebug:            opts.Global.IsDebug,
+			Options:            opts,
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
-		_, err = converger.Converge(ctx)
 
+		cacheIdentity := ""
+		if opts.Kube.InCluster {
+			cacheIdentity = "in-cluster"
+		}
+
+		if sshProviderInitializer != nil {
+			if sshProviderInitializer.CheckHosts() {
+				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+
+				cacheIdentity = sshClient.Check().String()
+			}
+		}
+
+		if opts.Kube.Config != "" {
+			cacheIdentity = statecache.GetCacheIdentityFromKubeconfig(
+				opts.Kube.Config,
+				opts.Kube.ConfigContext,
+			)
+		}
+
+		converger.CacheID = cacheIdentity
+
+		_, err = converger.Converge(ctx)
 		if err != nil {
 			msg := fmt.Sprintf("Converge failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+
 			return err
 		}
 
 		return nil
 	})
-	return cmd
 }
 
-func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineAutoConvergeFlags(cmd)
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineAutoConvergeFlags(cmd, &opts.AutoConverge)
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		tmpDir := app.TmpDirName
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
+		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
+		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
+		// but in exporter and autoconverger we do not need it
+		// and we reset it here
+		// unfortianally global params parsed in place when we do no have command
+		// that user ran
+		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		logger := log.GetDefaultLogger()
-		isDebug := app.IsDebug
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+		)
+		if err != nil {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
+				return err
+			}
+		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-			TmpDir:           tmpDir,
+			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
-			IsDebug:          isDebug,
+			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 			ChangesSettings: infrastructure.ChangeActionSettings{
 				SkipChangesOnDeny: true,
 				AutomaticSettings: infrastructure.AutomaticSettings{
@@ -125,52 +191,67 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				},
 			},
 			ProviderGetter: providerGetter,
-			TmpDir:         tmpDir,
+			TmpDir:         opts.Global.TmpDir,
 			Logger:         logger,
-			IsDebug:        isDebug,
+			IsDebug:        opts.Global.IsDebug,
+			Options:        opts,
 		})
-		return converger.AutoConverge(app.AutoConvergeListenAddress, app.ApplyInterval)
+
+		return converger.AutoConverge(ctx, opts.AutoConverge.ListenAddress, opts.AutoConverge.ApplyInterval)
 	})
-	return cmd
 }
 
-func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
-	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd)
+func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd, &opts.Converge)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
+		logger := log.GetDefaultLogger()
+
+		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
+		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
+		// but in exporter and autoconverger we do not need it
+		// and we reset it here
+		// unfortianally global params parsed in place when we do no have command
+		// that user ran
+		// converge migration also can run as sidecar of auto-converger pod
+		opts.Global = opts.Global.RecheckNeedDownload(options.ConvergerPodsSpiCheckPaths...)
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+		)
 		if err != nil {
-			return err
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
+				return err
+			}
 		}
 
-		if govalue.IsNil(sshClient) {
-			sshClient = nil
-		}
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
-		tmpDir := app.TmpDirName
 		loggerFor := log.GetDefaultLogger()
-		isDebug := app.IsDebug
 
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-			TmpDir:           tmpDir,
+			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           loggerFor,
-			IsDebug:          isDebug,
+			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
-			SSHClient: sshClient,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 			ChangesSettings: infrastructure.ChangeActionSettings{
 				AutomaticSettings: infrastructure.AutomaticSettings{
 					AutoDismissDestructive: true,
@@ -181,20 +262,50 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				},
 				SkipChangesOnDeny: true,
 			},
-			CheckHasTerraformStateBeforeMigration: app.CheckHasTerraformStateBeforeMigrateToTofu,
+			CheckHasTerraformStateBeforeMigration: opts.Converge.CheckHasTerraformStateBeforeMigrateToTofu,
 			ProviderGetter:                        providersGetter,
-			TmpDir:                                tmpDir,
+			TmpDir:                                opts.Global.TmpDir,
 			Logger:                                loggerFor,
-			IsDebug:                               isDebug,
+			IsDebug:                               opts.Global.IsDebug,
+			Options:                               opts,
 		})
-		err = converger.ConvergeMigration(ctx)
-		if err != nil {
+
+		cacheIdentity := ""
+		if opts.Kube.InCluster {
+			cacheIdentity = "in-cluster"
+		}
+
+		if sshProviderInitializer != nil {
+			if sshProviderInitializer.CheckHosts() {
+				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+
+				cacheIdentity = sshClient.Check().String()
+			}
+		}
+
+		if opts.Kube.Config != "" {
+			cacheIdentity = statecache.GetCacheIdentityFromKubeconfig(
+				opts.Kube.Config,
+				opts.Kube.ConfigContext,
+			)
+		}
+		converger.CacheID = cacheIdentity
+
+		if err := converger.ConvergeMigration(ctx); err != nil {
 			msg := fmt.Sprintf("ConvergeMigration failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+
 			return err
 		}
 
 		return nil
 	})
-	return cmd
 }

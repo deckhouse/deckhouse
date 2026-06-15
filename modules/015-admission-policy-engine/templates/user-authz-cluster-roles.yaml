@@ -1,0 +1,242 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+  name: d8:user-authz:admission-policy-engine:user
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - operationpolicies
+  - securitypolicies
+  - securitypolicyexceptions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - config.gatekeeper.sh
+  resources:
+  - configs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - connection.gatekeeper.sh
+  resources:
+  - connections
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - expansion.gatekeeper.sh
+  resources:
+  - expansiontemplate
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - externaldata.gatekeeper.sh
+  resources:
+  - providers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - mutations.gatekeeper.sh
+  resources:
+  - assign
+  - assignimage
+  - assignmetadata
+  - modifyset
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - status.gatekeeper.sh
+  resources:
+  - configpodstatuses
+  - connectionpodstatuses
+  - constraintpodstatuses
+  - constrainttemplatepodstatuses
+  - expansiontemplatepodstatuses
+  - mutatorpodstatuses
+  - providerpodstatuses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - syncset.gatekeeper.sh
+  resources:
+  - syncsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - templates.gatekeeper.sh
+  resources:
+  - constrainttemplates
+  verbs:
+  - get
+  - list
+  - watch
+{{/*
+  constraints.gatekeeper.sh group is populated at runtime per ConstraintTemplate.
+  Resource names are not statically known; keep group-scoped wildcard.
+*/}}
+- apiGroups:
+  - constraints.gatekeeper.sh
+  resources:
+  - "*"
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Admin
+  name: d8:user-authz:admission-policy-engine:admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - securitypolicyexceptions
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterAdmin
+  name: d8:user-authz:admission-policy-engine:cluster-admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - operationpolicies
+  - securitypolicies
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - config.gatekeeper.sh
+  resources:
+  - configs
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - connection.gatekeeper.sh
+  resources:
+  - connections
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - expansion.gatekeeper.sh
+  resources:
+  - expansiontemplate
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - externaldata.gatekeeper.sh
+  resources:
+  - providers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - mutations.gatekeeper.sh
+  resources:
+  - assign
+  - assignimage
+  - assignmetadata
+  - modifyset
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - status.gatekeeper.sh
+  resources:
+  - configpodstatuses
+  - connectionpodstatuses
+  - constraintpodstatuses
+  - constrainttemplatepodstatuses
+  - expansiontemplatepodstatuses
+  - mutatorpodstatuses
+  - providerpodstatuses
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - syncset.gatekeeper.sh
+  resources:
+  - syncsets
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - templates.gatekeeper.sh
+  resources:
+  - constrainttemplates
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - constraints.gatekeeper.sh
+  resources:
+  - "*"
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update

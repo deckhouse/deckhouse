@@ -24,11 +24,9 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/ptr"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -37,15 +35,28 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type abortParams struct {
 	request      *pb.AbortStart
 	switchPhase  phases.DefaultOnPhaseFunc
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.AbortResponse
+}
+
+func (p *abortParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *abortParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.AbortResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.AbortResponse {
+			return &pb.AbortResponse{Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
@@ -68,21 +79,6 @@ func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 		dataFunc: func(progress phases.Progress) *pb.AbortResponse {
 			return &pb.AbortResponse{Message: &pb.AbortResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.AbortResponse {
-			return &pb.AbortResponse{Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.AbortRequest, *pb.AbortResponse](server, receiveCh, doneCh, internalErrCh)
@@ -113,11 +109,11 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, abortParams{
+					result := s.abortSafe(ctx, &abortParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
@@ -155,7 +151,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.AbortResult) {
+func (s *Service) abortSafe(ctx context.Context, p *abortParams) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -166,26 +162,20 @@ func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.Abor
 	return s.abort(ctx, p)
 }
 
-func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
+func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
+	loggerFor := initDhctlLogger(ctx, p)
 
-	loggerFor := log.GetDefaultLogger()
-
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -195,7 +185,8 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		configPath  string
 		cleanup     func() error
 	)
-	err = loggerFor.LogProcess("default", "Preparing configuration", func() error {
+
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing configuration", func(ctx context.Context) error {
 		for _, cfg := range []string{
 			p.request.ClusterConfig,
 			p.request.InitConfig,
@@ -223,7 +214,7 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	}
 
 	var initialState phases.DhctlState
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
@@ -236,24 +227,14 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		return &pb.AbortResult{Err: err.Error()}
 	}
 
-	var sshClient node.SSHClient
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.params.SchemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
 		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
+			return fmt.Errorf("preparing providers: %w", err)
 		}
-
-		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
 
 		return nil
 	})
@@ -269,26 +250,25 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		}
 	}
 
+	opts.Global.ConfigPaths = configPaths
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		ConfigPaths:       configPaths,
-		InitialState:      initialState,
-		NodeInterface:     ssh.NewNodeInterfaceWrapper(sshClient),
-		UseTfCache:        ptr.To(true),
-		AutoApprove:       ptr.To(true),
-		ResourcesTimeout:  p.request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:  p.request.Options.DeckhouseTimeout.AsDuration(),
-		ResetInitialState: true,
-		OnPhaseFunc:       p.switchPhase,
-		OnProgressFunc:    p.sendProgress,
-		CommanderMode:     p.request.Options.CommanderMode,
-		CommanderUUID:     commanderUUID,
-		Logger:            loggerFor,
-		IsDebug:           s.params.IsDebug,
-		TmpDir:            s.params.TmpDir,
+		InitialState:           initialState,
+		ResetInitialState:      true,
+		OnPhaseFunc:            p.switchPhase,
+		OnProgressFunc:         p.sendProgress,
+		CommanderMode:          p.request.Options.CommanderMode,
+		CommanderUUID:          commanderUUID,
+		Logger:                 loggerFor,
+		IsDebug:                s.params.IsDebug,
+		TmpDir:                 s.params.TmpDir,
+		SSHProviderInitializer: sshProviderInitializer,
+		KubeProvider:           kubeProvider,
+		Options:                opts,
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 	err = errors.Join(abortErr, stateErr)
 
 	return &pb.AbortResult{State: string(state), Err: util.ErrToString(err)}

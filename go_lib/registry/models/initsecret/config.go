@@ -16,31 +16,72 @@ limitations under the License.
 
 package initsecret
 
+import (
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+)
+
 type CertKey struct {
 	Cert string `json:"cert" yaml:"cert"`
 	Key  string `json:"key" yaml:"key"`
 }
 
+func (c CertKey) ToMap() map[string]any {
+	m := make(map[string]any)
+
+	m["cert"] = c.Cert
+	m["key"] = c.Key
+	return m
+}
+
+func (c CertKey) Validate() error {
+	return validation.ValidateStruct(&c,
+		validation.Field(&c.Cert, validation.Required),
+		validation.Field(&c.Key, validation.Required),
+	)
+}
+
+type User struct {
+	Name         string `json:"name" yaml:"name"`
+	Password     string `json:"password" yaml:"password"`
+	PasswordHash string `json:"password_hash" yaml:"password_hash"`
+}
+
+func (u User) ToMap() map[string]any {
+	m := make(map[string]any)
+
+	m["name"] = u.Name
+	m["password"] = u.Password
+	m["password_hash"] = u.PasswordHash
+	return m
+}
+
+func (u User) Validate() error {
+	return validation.ValidateStruct(&u,
+		validation.Field(&u.Name, validation.Required),
+		validation.Field(&u.Password, validation.Required),
+		validation.Field(&u.PasswordHash, validation.Required),
+	)
+}
+
 type Config struct {
-	CA *CertKey `json:"ca,omitempty" yaml:"ca,omitempty"`
+	CA     CertKey `json:"ca" yaml:"ca"`
+	ROUser User    `json:"ro_user" yaml:"ro_user"`
+	RWUser User    `json:"rw_user" yaml:"rw_user"`
 }
 
 func (c Config) ToMap() map[string]any {
-	result := make(map[string]any)
+	m := make(map[string]any)
 
-	if c.CA != nil {
-		if c.CA.Cert != "" || c.CA.Key != "" {
-			caMap := make(map[string]any)
+	m["ca"] = c.CA.ToMap()
+	m["ro_user"] = c.ROUser.ToMap()
+	m["rw_user"] = c.RWUser.ToMap()
+	return m
+}
 
-			if c.CA.Cert != "" {
-				caMap["cert"] = c.CA.Cert
-			}
-			if c.CA.Key != "" {
-				caMap["key"] = c.CA.Key
-			}
-
-			result["ca"] = caMap
-		}
-	}
-	return result
+func (c Config) Validate() error {
+	return validation.ValidateStruct(&c,
+		validation.Field(&c.CA, validation.Required),
+		validation.Field(&c.ROUser, validation.Required),
+		validation.Field(&c.RWUser, validation.Required),
+	)
 }

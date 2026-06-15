@@ -6,6 +6,14 @@ description: Deckhouse Kubernetes Platform Documentation.
 
 {% include redirect-anchor.liquid anchors="deckhouse-configuration,modifying-cluster-configuration,viewing-current-configuration,configuring-the-module,enabling-and-disabling-the-module,accessing-documentation-for-the-current-version,managing-placement-of-deckhouse-components,module-features-that-depend-on-its-type,advanced-scheduling,module-bundles" to="admin/configuration/" %}
 
+{% unless site.mode == "module" %}
+<div style="text-align: right">
+<a href="#" data-open-pdf-modal class="button button--outline">{{ site.data.i18n.common['pdf_download_button'][page.lang] }}</a>
+</div>
+
+{% include pdf_download_modal.html %}
+{%- endunless %}
+
 Welcome to the home page of the Deckhouse Kubernetes Platform documentation.
 {% if site.mode != 'module' %}We recommend starting with the [Getting started](/products/kubernetes-platform/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.{% endif %}
 

@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,18 +20,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
 
 	"github.com/google/uuid"
+	otcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
@@ -43,6 +43,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -50,7 +52,21 @@ type convergeParams struct {
 	request      *pb.ConvergeStart
 	switchPhase  phases.DefaultOnPhaseFunc
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.ConvergeResponse
+}
+
+func (p *convergeParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *convergeParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.ConvergeResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.ConvergeResponse {
+			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
@@ -73,21 +89,6 @@ func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 		dataFunc: func(progress phases.Progress) *pb.ConvergeResponse {
 			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.ConvergeResponse {
-			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.ConvergeRequest, *pb.ConvergeResponse](server, receiveCh, doneCh, internalErrCh)
@@ -118,11 +119,11 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.convergeSafe(ctx, convergeParams{
+					result := s.convergeSafe(ctx, &convergeParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
 				}()
@@ -160,7 +161,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *pb.ConvergeResult) {
+func (s *Service) convergeSafe(ctx context.Context, p *convergeParams) (result *pb.ConvergeResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -171,38 +172,36 @@ func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *p
 	return s.converge(ctx, p)
 }
 
-func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeResult {
+func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeResult {
+	ctx, span := telemetry.StartSpan(ctx, "grpc.converge")
+	defer span.End()
+
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
+	loggerFor := initDhctlLogger(ctx, p)
 
-	loggerFor := log.GetDefaultLogger()
-
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
+			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -216,7 +215,7 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if p.request.State != "" {
@@ -226,8 +225,9 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 			}
 		}
 		err = cache.InitWithOptions(
+			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
@@ -242,12 +242,15 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           tmpDir,
+		GlobalOptions:    s.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
 	})
 
-	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor)
+	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+		WithUseTfCache(opts.Cache.UseTfCache).
+		WithDebug(s.params.IsDebug)
 
 	var commanderUUID uuid.UUID
 	if p.request.Options.CommanderUuid != "" {
@@ -256,6 +259,8 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 			return &pb.ConvergeResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
 	}
+
+	span.SetAttributes(opts.ToSpanAttributes()...)
 
 	checkParams := &check.Params{
 		StateCache:    cache.Global(),
@@ -270,6 +275,7 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		TmpDir:                tmpDir,
 		Logger:                loggerFor,
 		InfrastructureContext: infrastructureContext,
+		Options:               opts,
 	}
 
 	convergeParams := &converge.Params{
@@ -298,36 +304,30 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		TmpDir:                     tmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		Options:                    opts,
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
-		CommanderMode: p.request.Options.CommanderMode,
-		APIServerURL:  p.request.Options.ApiServerUrl,
-		APIServerOptions: helper.APIServerOptions{
-			Token:                    p.request.Options.ApiServerToken,
-			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
-			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
-		},
-		SchemaStore:         s.params.SchemaStore,
-		SSHConnectionConfig: p.request.ConnectionConfig,
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
+		var cleanup func() error
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		cleanuper.Add(cleanup)
+		if err != nil {
+			return fmt.Errorf("creating provider: %w", err)
+		}
+
+		return nil
 	})
-	cleanuper.Add(cleanup)
+
 	if err != nil {
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
-		err = sshClient.Start()
-		if err != nil {
-			return &pb.ConvergeResult{Err: err.Error()}
-		}
-	}
+	checkParams.KubeProvider = kubeProvider
 
-	checkParams.KubeClient = kubeClient
-	checkParams.SSHClient = sshClient
-
-	convergeParams.KubeClient = kubeClient
-	convergeParams.SSHClient = sshClient
+	convergeParams.KubeProvider = kubeProvider
+	convergeParams.SSHProviderInitializer = sshProviderInitializer
 
 	checker := check.NewChecker(checkParams)
 	convergeParams.Checker = checker
@@ -335,9 +335,15 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 
 	result, convergeErr := converger.Converge(ctx)
 	resultData, marshalResultErr := json.Marshal(result)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(convergeErr, stateErr, marshalResultErr)
+
+	if err != nil {
+		span.SetStatus(otcodes.Error, err.Error())
+	} else {
+		span.SetStatus(otcodes.Ok, "")
+	}
 
 	return &pb.ConvergeResult{State: string(state), Result: string(resultData), Err: util.ErrToString(err)}
 }

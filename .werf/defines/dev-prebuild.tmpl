@@ -1,11 +1,9 @@
 # render git imports include paths
 {{- define "dev_prebuild_git_imports_include_paths" }}
 - candi
-- modules
 - global-hooks
 - shell_lib.sh
 - shell_lib
-- deckhouse-controller/entrypoint.sh
 - deckhouse-controller/crds/*.yaml
 - jq_lib
 - helm_lib
@@ -34,19 +32,19 @@
   includePaths:
   - deckhouse-controller
   - caps-deckhouse-controller
-- image: libs/ncurses
+- from: {{ index $.Images "libs/ncurses" }}
   add: /usr/share/terminfo
   to: /usr/share/terminfo
   before: install
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
-- image: tools/erofs-utils
+- from: {{ index $.Images "tools/erofs-utils" }}
   add: /usr/bin/mkfs.erofs
   to: /usr/bin/mkfs.erofs
   after: setup
-- image: tools/cryptsetup
+- from: {{ index $.Images "tools/cryptsetup" }}
   add: /usr/sbin/veritysetup
   to: /usr/sbin/veritysetup
   after: setup
@@ -72,12 +70,6 @@ EOD
 cat <<"EOD" > /deckhouse/edition
 {{ $context.Env | default "unknown"}}
 EOD
-# Override deckhouse entrypoint to use tini as supervisor
-cat <<"EOD" > /deckhouse/deckhouse
-#!/bin/bash
-exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
-EOD
-chmod +x /deckhouse/deckhouse
 # Create symlink to grant entrypoint.sh write permission
 ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
 # Run deckhouse from dedicated user
@@ -105,6 +97,10 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+- from: {{ index $.Images "minget" }}
+  add: /usr/bin/minget
+  to: /deckhouse/candi/bashible/bootstrap/minget
+  after: setup
 git:
 - add: /tools/mounts/mountdir
   to: /.kube
@@ -127,4 +123,35 @@ git:
   stageDependencies:
     install:
     - "**/*"
+shell:
+  install:
+  - set -e
+{{- end }}
+
+#  render create ln part of setup script
+# . is dict with keys:
+#   TF - $.TF
+#   Editions - $.Editions
+{{- define "dev_prebuild_setup_ln_node_manager" }}
+{{- $context := . -}}
+# Add capi and cloud-providers
+{{- $providers := list }}
+{{- range $_, $edition := $context.Editions }}
+  {{- if $edition.terraformProviders }}
+    {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $tf := index $context.TF $tfProvider }}
+        {{- $cloudName := lower $tf.cloudName }}
+        {{- $providers = append $providers $cloudName }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+rm /deckhouse/modules/040-node-manager/capi/* /deckhouse/modules/040-node-manager/cloud-providers/*
+for item in {{ join " " $providers }}; do
+  if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then
+    ln -s /deckhouse/modules/030-cloud-provider-${item}/capi /deckhouse/modules/040-node-manager/capi/${item}
+  fi
+  if [ -d /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager ]; then
+    ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager/ /deckhouse/modules/040-node-manager/cloud-providers/${item}
+  fi
+done
 {{- end }}

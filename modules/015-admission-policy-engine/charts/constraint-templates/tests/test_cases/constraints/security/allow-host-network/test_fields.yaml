@@ -1,0 +1,39 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allow-host-network
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.hostNetwork
+      level: pod
+
+      description: Whether the pod uses the host network namespace
+      requiredScenarios: [positive, negative, absent]
+    - path: spec.containers[].ports[].hostPort
+      level: container
+
+      description: Host port mapping for container
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: spec.containers[].ports[].protocol
+      level: container
+
+      description: Protocol for host port
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+  speFields:
+    - path: spec.network.hostNetwork.allowedValue
+      level: pod
+      description: SPE override for hostNetwork
+      requiredScenarios: [speMatch, speMismatch, speAbsent]
+    - path: spec.network.hostPorts[].port
+      level: pod
+      description: SPE allowed host port
+      requiredScenarios: [speMatch, speMismatch, speAbsent]
+    - path: spec.network.hostPorts[].protocol
+      level: pod
+      description: SPE allowed host port protocol
+      requiredScenarios: [speMatch, speMismatch, speAbsent]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: false

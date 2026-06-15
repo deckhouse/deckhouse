@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 {{- $version := include "get_oss_version_by_id" (list "amazon-ec2-utils" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
@@ -20,7 +21,7 @@ shell:
   - cp /src/amazon-ec2-utils/ebsnvme-id /ebsnvme-id
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/amazon-ec2-utils/ebsnvme-id
@@ -38,3 +39,4 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
+{{- end }}

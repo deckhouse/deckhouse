@@ -8,7 +8,7 @@ import:
   owner: "64535"
   group: "64535"
   after: setup
-- image: tools/curl-curl-8_18_0
+- from: {{ index $.Images "tools/curl-curl-8_18_0" }}
   add: /usr/bin/curl-static
   to: /usr/bin/curl
   owner: "64535"
@@ -19,7 +19,7 @@ imageSpec:
     entrypoint: ["/metadata-exporter"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -41,7 +41,7 @@ shell:
   setup:
   - cd /src
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - go build -ldflags="-s -w" -o /src/metadata-exporter main.go exporter.go models.go
+  - go build -ldflags="-s -w" -o /src/metadata-exporter main.go exporter.go models.go metrics.go
   - chmod 0500 /src/metadata-exporter
   - chown -R 64535:64535 /src/metadata-exporter
 ---

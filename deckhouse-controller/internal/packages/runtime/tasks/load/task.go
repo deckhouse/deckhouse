@@ -16,11 +16,8 @@ package load
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -34,20 +31,18 @@ const (
 )
 
 var (
-	embeddedDeployedDir  = "modules"
-	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
-	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "modules")
-	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
-	appsDeployedDir      = filepath.Join(appsDownloadedDir, "deployed")
+	embeddedDeployedDir = "modules"
+
+	downloadedDir = d8env.GetDownloadedModulesDir()
+
+	modulesDownloadedDir = filepath.Join(downloadedDir, "modules")
+	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "deployed")
+
+	appsDownloadedDir = filepath.Join(downloadedDir, "apps")
+	appsDeployedDir   = filepath.Join(appsDownloadedDir, "deployed")
 )
 
 type loader func(ctx context.Context, repo registry.Remote, path string) (string, error)
-
-type statusService interface {
-	SetConditionTrue(name string, condition status.ConditionType)
-	HandleError(name string, err error)
-	SetVersion(name string, version string)
-}
 
 type task struct {
 	name       string
@@ -55,14 +50,14 @@ type task struct {
 	repository registry.Remote
 
 	loader loader
-	status statusService
+	status *status.Service
 
 	logger *log.Logger
 }
 
 // NewAppTask creates a Load task for an Application package.
 // The deployed path points to apps/deployed/{name} where the package is mounted.
-func NewAppTask(name string, repo registry.Remote, loader loader, status statusService, logger *log.Logger) queue.Task {
+func NewAppTask(name string, repo registry.Remote, loader loader, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:       name,
 		deployed:   filepath.Join(appsDeployedDir, name),
@@ -75,7 +70,7 @@ func NewAppTask(name string, repo registry.Remote, loader loader, status statusS
 
 // NewModuleTask creates a Load task for a Module package.
 // The deployed path points to modules/{name} where the module is mounted.
-func NewModuleTask(name string, repo registry.Remote, loader loader, status statusService, logger *log.Logger) queue.Task {
+func NewModuleTask(name string, repo registry.Remote, loader loader, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:       name,
 		deployed:   filepath.Join(modulesDeployedDir, name),
@@ -88,7 +83,7 @@ func NewModuleTask(name string, repo registry.Remote, loader loader, status stat
 
 // NewEmbeddedTask creates a Load task for an embedded Module package.
 // The deployed path points to modules/{name} where the module is stored.
-func NewEmbeddedTask(name string, loader loader, status statusService, logger *log.Logger) queue.Task {
+func NewEmbeddedTask(name string, loader loader, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:     name,
 		deployed: filepath.Join(embeddedDeployedDir, name),
@@ -107,27 +102,11 @@ func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("load package")
 	version, err := t.loader(ctx, t.repository, t.deployed)
 	if err != nil {
-		t.status.HandleError(t.name, err)
+		t.status.HandleError(t.name, status.ConditionLoaded, err)
 		return fmt.Errorf("load package: %w", err)
 	}
 
-	t.status.SetVersion(t.name, version)
-
-	// Signal that package is loaded and waiting for the scheduler to enable it.
-	// The WaitConverge condition indicates the package is ready but not yet running.
-	t.status.HandleError(t.name, &status.Error{
-		Err: errors.New("wait for converge done"),
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionWaitConverge,
-				Status:  metav1.ConditionTrue,
-				Reason:  "WaitConverge",
-				Message: "wait for converge done",
-			},
-		},
-	})
-
-	t.status.SetConditionTrue(t.name, status.ConditionReadyInRuntime)
+	t.status.UpdateVersion(t.name, version)
 
 	return nil
 }

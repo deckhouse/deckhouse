@@ -40,7 +40,7 @@ shell:
   - rm -rf hack/tools .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -61,7 +61,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -75,9 +75,6 @@ secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make
   setup:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src/cri-tools

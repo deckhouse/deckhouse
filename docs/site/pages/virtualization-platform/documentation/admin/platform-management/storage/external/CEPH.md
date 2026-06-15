@@ -112,11 +112,14 @@ d8 k get cephstorageclass
 
 In the output, you should see information about the created [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass) resources:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          PHASE     AGE
 ceph-rbd-sc   Created   1h
 ceph-fs-sc    Created   1h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Check the created StorageClass using the following command:
 
@@ -126,11 +129,14 @@ d8 k get sc
 
 In the output, you should see information about the created StorageClass:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 If the StorageClass objects appear, it means the `csi-ceph` module configuration is complete. Users can now create PersistentVolumes by specifying the created StorageClass objects.
 

@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "documentation" }}
 fromImage: common/distroless
 {{ else }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 {{ end }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -17,6 +17,9 @@ import:
     - embedded_modules.json
     - editions.json
   before: setup
+{{- if ne .ModuleName "website-docs" }}
+{{- include "image mount points" . }}
+{{- end }}
 imageSpec:
   config:
     workingDir: "/app"
@@ -31,12 +34,11 @@ git:
     - data/dkp/editions.json
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
     to: /app/hugo-init/config/production/hugo.yaml
-{{- include "image mount points" . | nindent 2 }}
 {{ end }}
 
 ---
 image: d8-docs-artifacts
-from: {{ .Images.BASE_ALPINE }}
+from: {{ index $.Images "builder/alpine" }}
 final: false
 shell:
   setup:
@@ -92,11 +94,11 @@ shell:
     {{ .Files.Get (printf "%sdocs/documentation/werf-editions-convert-partials.inc.yaml" .ModulePath) | indent 4 }}
     cp /rawdata/docs/editions.json /export/editions.json
 import:
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup
@@ -130,7 +132,7 @@ git:
   - editions-addition.json
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

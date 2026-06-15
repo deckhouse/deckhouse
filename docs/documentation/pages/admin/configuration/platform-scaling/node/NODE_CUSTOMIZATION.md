@@ -324,6 +324,50 @@ spec:
 
 After the configurations are applied, bootstrap and reboot the nodes to apply the settings and install the drivers.
 
+### MIG in a single-node cluster
+
+{% alert level="info" %}
+General information about preparing GPU nodes, installing drivers, and verifying GPU operation is provided in the [How do I work with GPU nodes](/modules/node-manager/faq.html#how-do-i-work-with-gpu-nodes) section.
+{% endalert %}
+
+In a single-node cluster that uses the `MIG` strategy, the MIG configuration must be reapplied manually after each node reboot.
+
+This limitation applies to the current MIG implementation, which uses the `nvidia-mig-manager` component.
+
+After each node reboot, perform the following steps:
+
+1. Add the service annotation to the node:
+
+   ```bash
+   d8 k annotate node <node_name> update.node.deckhouse.io/drained=""
+   ```
+
+1. Restart the `nvidia-mig-manager` component:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu delete pod -l component=nvidia-mig-manager
+   ```
+
+1. Wait until the MIG configuration is reapplied by checking the `nvidia-mig-manager` logs:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu logs -f -l component=nvidia-mig-manager
+   ```
+
+   Successful configuration application is confirmed by a log entry similar to:
+
+   ```console
+   Successfully updated to MIG config: <partedConfig>
+   ```
+
+   where `<partedConfig>` is the value of the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in the NodeGroup resource (for example, `all-1g.10gb`).
+
+1. After the MIG configuration has been successfully applied, return the node to the schedulable state:
+
+   ```bash
+   d8 k uncordon <node_name>
+   ```
+
 ### Verifying successful installation
 
 Create the following Job in your cluster:

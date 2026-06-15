@@ -9,8 +9,8 @@ git:
   stageDependencies:
     install:
       - '**/*'
-{{- include "image mount points" . }}
 import:
+{{- include "image mount points" . }}
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
   add: /src/ovpn-admin
   to: /app/ovpn-admin
@@ -31,6 +31,9 @@ import:
   add: /relocate
   to: /
   before: setup
+shell:
+  install:
+  - set -e
 imageSpec:
   config:
     workingDir: "/app"
@@ -60,7 +63,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src

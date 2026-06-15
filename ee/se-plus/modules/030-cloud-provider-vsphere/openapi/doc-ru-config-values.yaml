@@ -5,7 +5,11 @@ properties:
       Доменное имя сервера vCenter.
   username:
     description: |
-      Login ID.
+      Имя пользователя.
+
+      > **Внимание.** Всегда указывайте имя пользователя вместе с доменом, например: `username@domain.local`.
+      >
+      > Уточнить домен можно в панели управления vCenter.
   password:
     description: |
       Пароль.

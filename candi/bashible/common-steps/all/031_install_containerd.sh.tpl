@@ -14,6 +14,15 @@
 
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 
+__sec_start=$(date +%s.%N)
+__sec() {
+  local now dur
+  now=$(date +%s.%N)
+  dur=$(awk -v s="$__sec_start" -v e="$now" 'BEGIN{printf "%.3f", e-s}')
+  echo "[bashible-timing] step=031_install_containerd.sh section=$1 dur=${dur}s"
+  __sec_start=$now
+}
+
 bb-event-on 'bb-package-installed' 'post-install'
 
 # This handler triggered by 'bb-event-fire "bb-package-installed" "${PACKAGE}"'
@@ -66,11 +75,19 @@ if bb-is-distro-like? "rhel"; then
   fi
 fi
 
-{{- $containerd := "containerd1730"}}
+{{- $containerd := "containerd1732"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd216" }}
+  {{- $containerd = "containerd224" }}
 bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
 {{- end }}
 
+# Block on the packages this step needs (prefetched by 001_prefetch_registry_packages).
+# If the prefetch never ran or timed out, bb-package-install below will fetch inline.
+bb-rpp-wait-fetched "containerd" "{{ index $.images.registrypackages $containerd }}" || true
+bb-rpp-wait-fetched "crictl" "{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" || true
+bb-rpp-wait-fetched "toml-merge" "{{ .images.registrypackages.tomlMerge01 }}" || true
+__sec wait_prefetch
+
 bb-package-install "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
+__sec pkg_install
 {{- end }}

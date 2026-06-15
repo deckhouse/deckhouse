@@ -28,12 +28,6 @@ editions:
   buildIncludes:
     # skipping write build includes candi-%s.yaml file for edition
     skipCandi: true
-    # skipping write build includes files:
-    #   modules-%s.yaml
-    #   modules-with-exclude-%s.yaml
-    #	modules-with-dependencies-%s.yaml
-    # for edition
-    skipModules: true
 
 - name: BE
   modulesDir: "ee/be/modules"
@@ -69,4 +63,50 @@ editions:
   modulesDir: "ee/fe/modules"
 
 - name: CSE
+  versionMapFile: "ee/cse/candi/version_map.yml"
   modulesDir: "ee/cse/modules"
+  AvailableModules:
+  - admission-policy-engine
+  - cert-manager
+  - chrony
+  - cilium-hubble
+  - cloud-provider-dvp
+  - cni-cilium
+  - common
+  - control-plane-manager
+  - deckhouse
+  - deckhouse-tools
+  - descheduler
+  - documentation
+  - extended-monitoring
+  - ingress-nginx
+  - istio
+  - kube-dns
+  - local-path-provisioner
+  - log-shipper
+  - loki
+  - metallb
+  - monitoring-custom
+  - monitoring-deckhouse
+  - monitoring-kubernetes
+  - monitoring-kubernetes-control-plane
+  - monitoring-ping
+  - multitenancy-manager
+  - namespace-configurator
+  - node-local-dns
+  - node-manager
+  - operator-prometheus
+  - priority-class
+  - prometheus
+  - prometheus-metrics-adapter
+  - registry
+  - registrypackages
+  - registry-packages-proxy
+  - sds-local-volume
+  - secret-copier
+  - service-with-healthchecks
+  - terraform-manager
+  - upmeter
+  - user-authn
+  - user-authz
+  - vertical-pod-autoscaler

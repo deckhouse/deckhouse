@@ -23,7 +23,7 @@ shell:
 ---
 image: {{ .ModuleName }}/build-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -44,18 +44,15 @@ shell:
   - chmod 0700 /descheduler
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: base/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
-  - image: {{ .ModuleName }}/build-artifact
-    add: /descheduler
-    to: /descheduler
-    before: setup
-git:
+- image: {{ .ModuleName }}/build-artifact
+  add: /descheduler
+  to: /descheduler
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/descheduler"]
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
-
-

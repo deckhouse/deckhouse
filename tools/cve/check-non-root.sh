@@ -20,13 +20,11 @@ RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
+# Example:
+#  ["istio pilotV1x19x7"]="1337:1337"
+#  ["istio pilotV1x21x6"]="1337:1337"
 declare -A allowed_users=(
-  ["istio operatorV1x21x6"]="1337:1337"
-  ["istio operatorV1x16x2"]="1337:1337"
-  ["istio operatorV1x19x7"]="1337:1337"
-  ["istio pilotV1x16x2"]="1337:1337"
-  ["istio pilotV1x19x7"]="1337:1337"
-  ["istio pilotV1x21x6"]="1337:1337"
+
 )
 
 declare -A allowed_components=(
@@ -40,7 +38,29 @@ declare -A skip_components=(
 )
 declare -A skip_components_images=(
   ["d8ShutdownInhibitor"]="skip"
+  ["terraformManager"]="skip"
+  ["baseTerraform"]="skip"
+  ["baseOpentofu"]="skip"
+  ["candi"]="skip"
+  ["debugContainer"]="skip"
 )
+
+# Optional allow-list of "<module>.<image>" keys to scan. Passed via the
+# ONLY_IMAGES env var as a JSON array of strings — exactly the format the
+# `changed_images` CI job emits in its `changed_compact` output. Example:
+#   ONLY_IMAGES='["common.distroless","nodeManager.bashibleApiserver"]'
+# When ONLY_IMAGES is unset, empty, or "[]", the script behaves as before
+# (scans every image in images_digests.json).
+#
+# ONLY_IMAGES_SET   — full "module.image" keys (used by the inner image loop).
+# ONLY_MODULES_SET  — distinct module names derived from ONLY_IMAGES_SET; lets
+#                     the outer loop skip whole modules whose images did not
+#                     change, avoiding noisy "Module: X" log lines and any
+#                     `crane config` calls inside such modules.
+declare -A ONLY_IMAGES_SET=()
+declare -A ONLY_MODULES_SET=()
+ONLY_IMAGES_ENABLED=0
+
 # Function to get skip components
 function get_skip_components() {
   local component=$1
@@ -78,7 +98,7 @@ function check_user() {
   allowed_component=$(get_allowed_components "$user")
   allowed_user=$(get_allowed_users "$image_report_name")
 
-  if [ "$user" == "null" ] || [ "$user" == "root" ] || [ "$user" == "0:0" ]; then
+  if [ "$user" == "null" ] || [ "$user" == "root" ] || [ "$user" == "root:root" ] || [ "$user" == "0:0" ]; then
     result="ERROR"
     if [ "$user" == "null" ]; then
       user="root"
@@ -96,6 +116,22 @@ function __main__() {
   echo "----------------------------------------------"
   echo ""
 
+  # Convert the CI-supplied list (JSON array of "<module>.<image>" strings)
+  # into the internal lookup sets used by the outer (module) and inner (image)
+  # loops.
+  if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+    while IFS= read -r key; do
+      [[ -z "$key" ]] && continue
+      ONLY_IMAGES_SET["$key"]=1
+      ONLY_MODULES_SET["${key%%.*}"]=1
+    done < <(jq -r '.[]' <<< "${ONLY_IMAGES}")
+    ONLY_IMAGES_ENABLED=1
+    echo "ONLY_IMAGES filter active: ${#ONLY_IMAGES_SET[@]} image(s) across ${#ONLY_MODULES_SET[@]} module(s) will be scanned"
+  else
+    echo "ONLY_IMAGES not set; scanning every image in images_digests.json"
+  fi
+  echo ""
+
   docker pull "$IMAGE:$TAG"
   digests=$(docker run --rm "$IMAGE:$TAG" cat /deckhouse/modules/images_digests.json)
   IMAGE_REPORT_NAME="deckhouse $(echo "$IMAGE:$TAG" | sed 's/^.*\/\(.*\)/\1/')"
@@ -104,6 +140,13 @@ function __main__() {
 
   for module in $(jq -rc 'to_entries[]' <<< "$digests"); do
     MODULE_NAME=$(jq -rc '.key' <<< "$module")
+    # Module-level fast path for delta-scan: when ONLY_IMAGES is set, skip
+    # entire modules that have no matching images in the allow-list. This
+    # avoids descending into the inner loop just to `continue` on every image.
+    if [[ ${ONLY_IMAGES_ENABLED} -eq 1 ]] && [[ -z "${ONLY_MODULES_SET[$MODULE_NAME]:-}" ]]; then
+      continue
+    fi
+
     if [[ $(get_skip_components "$MODULE_NAME") == "skip" ]]; then
           echo "=============================================="
           echo "🛰 Module: $MODULE_NAME skipped due to validation exclude"
@@ -114,6 +157,15 @@ function __main__() {
 
     for module_image in $(jq -rc '.value | to_entries[]' <<<"$module"); do
       IMAGE_NAME=$(jq -rc '.key' <<< "$module_image")
+      # ONLY_IMAGES allow-list (applied on top of the local skip lists): inside
+      # an allowed module, still scan only the images that actually changed.
+      if [[ ${ONLY_IMAGES_ENABLED} -eq 1 ]] && [[ -z "${ONLY_IMAGES_SET["${MODULE_NAME}.${IMAGE_NAME}"]:-}" ]]; then
+        continue
+      fi
+      echo "----------------------------------------------"
+      echo "👾 Image: $IMAGE_NAME"
+      echo ""
+
       if [[ "$IMAGE_NAME" == "trivy" ]]; then
         continue
       fi
@@ -122,9 +174,6 @@ function __main__() {
             echo "🛰 Image: $IMAGE_NAME skipped due to validation exclude"
             continue
       fi
-      echo "----------------------------------------------"
-      echo "👾 Image: $IMAGE_NAME"
-      echo ""
 
       IMAGE_HASH="$(jq -rc '.value' <<< "$module_image")"
       IMAGE_REPORT_NAME="$MODULE_NAME $IMAGE_NAME"

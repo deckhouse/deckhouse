@@ -29,7 +29,7 @@ shell:
     - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-1.25" }}
 final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

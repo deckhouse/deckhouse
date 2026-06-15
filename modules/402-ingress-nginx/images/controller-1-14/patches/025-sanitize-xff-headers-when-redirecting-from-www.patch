@@ -1,0 +1,27 @@
+diff --git a/rootfs/etc/nginx/lua/nginx/ngx_srv_redirect.lua b/rootfs/etc/nginx/lua/nginx/ngx_srv_redirect.lua
+index 4b9445d00..6c0fcf5fd 100644
+--- a/rootfs/etc/nginx/lua/nginx/ngx_srv_redirect.lua
++++ b/rootfs/etc/nginx/lua/nginx/ngx_srv_redirect.lua
+@@ -12,11 +12,18 @@ local redirectScheme = ngx.var.scheme
+ local redirectPort = ngx.var.server_port
+ 
+ if use_forwarded_headers then
+-    if ngx.var.http_x_forwarded_proto then
+-        redirectScheme = ngx.var.http_x_forwarded_proto
++    local proto = ngx.var.http_x_forwarded_proto
++    if proto == "http" or proto == "https" then
++        redirectScheme = proto
+     end
+-    if ngx.var.http_x_forwarded_port then
+-        redirectPort = ngx.var.http_x_forwarded_port
++
++    local port = tonumber(ngx.var.http_x_forwarded_port)
++    if port and port > 0 and port <= 65535 then
++        redirectPort = tostring(port)
++    elseif redirectScheme == "https" then
++        redirectPort = "443"
++    elseif redirectScheme == "http" then
++        redirectPort = "80"
+     end
+ end
+ 

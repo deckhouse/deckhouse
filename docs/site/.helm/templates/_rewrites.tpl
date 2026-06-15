@@ -13,7 +13,7 @@ rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-overvi
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/supported_versions.html$ /products/kubernetes-platform/documentation$2/reference/supported_versions.html redirect;
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/installing/configuration.html$ /products/kubernetes-platform/documentation$2/installing/ redirect;
 rewrite ^/documentation/(.*)$ /products/kubernetes-platform/documentation/$1 permanent;
-rewrite ^/products/kubernetes-platform/documentation/(?<doc_path>(?!v[0-9]+/|v[0-9]+\.[0-9]+/|latest/).*)$ /products/kubernetes-platform/documentation/v1/$doc_path redirect;
+rewrite ^/products/kubernetes-platform/documentation/(?<doc_path>(?!v[0-9]+/|v[0-9]+\.[0-9]+/|v[0-9]+\.[0-9]+-cse|latest/).*)$ /products/kubernetes-platform/documentation/v1/$doc_path redirect;
 rewrite ^/gs/(.*)$ /products/kubernetes-platform/gs/$1 permanent;
 rewrite ^/guides/(.*)$ /products/kubernetes-platform/guides/$1 permanent;
 rewrite ^/products/kubernetes-platform/documentation$ /products/kubernetes-platform/documentation/ permanent;

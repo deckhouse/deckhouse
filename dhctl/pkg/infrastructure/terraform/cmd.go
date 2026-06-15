@@ -29,6 +29,7 @@ type RunExecutorParams struct {
 	RootDir          string
 	TerraformBinPath string
 	ExecutorID       string
+	IsDebug          bool
 }
 
 func (p *RunExecutorParams) validateRunParams() error {

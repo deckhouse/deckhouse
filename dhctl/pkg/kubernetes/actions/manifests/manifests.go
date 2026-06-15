@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -55,25 +54,12 @@ type DeckhouseDeploymentParams struct {
 	KubeadmBootstrap   bool
 }
 
-type imagesDigests map[string]map[string]interface{}
-
-func loadImagesDigests(imagesDigestsJSONFile []byte) (imagesDigests, error) {
+func getDeckhouseInitImage() (string, error) {
 	if val, ok := os.LookupEnv("DHCTL_TEST"); ok && val == "yes" {
-		return map[string]map[string]interface{}{
-			"deckhouse": {
-				"init": "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882",
-			},
-		}, nil
+		return "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882", nil
 	}
 
-	var imagesDigestsDict imagesDigests
-
-	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigestsDict)
-	if err != nil {
-		return imagesDigestsDict, fmt.Errorf("unmarshal: %v", err)
-	}
-
-	return imagesDigestsDict, nil
+	return digests.GetImage("deckhouse", "init")
 }
 
 func GetDeckhouseDeployTime(deployment *appsv1.Deployment) time.Time {
@@ -166,17 +152,13 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 
 func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	initContainerImage := params.Registry
-	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
-	if err != nil {
-		log.ErrorLn(err)
-	}
 
-	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSONFIle)
+	initImage, err := getDeckhouseInitImage()
 	if err != nil {
-		log.ErrorLn(err)
+		log.ErrorF("Cannot get init image: %v\n", err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["deckhouse"]["init"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], initImage)
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
@@ -219,6 +201,12 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			DNSPolicy:                    apiv1.DNSDefault,
 			ServiceAccountName:           "deckhouse",
 			AutomountServiceAccountToken: ptr.To(true),
+			// system-cluster-critical: protects the bootstrap pod from eviction
+			// under any node pressure while the cluster is being assembled, and
+			// gives it scheduling priority over everything else. The helm chart
+			// applies the same class, so when deckhouse later replaces this
+			// Deployment with its own, priority does not change.
+			PriorityClassName: "system-cluster-critical",
 			SecurityContext: &apiv1.PodSecurityContext{
 				RunAsUser:    ptr.To(int64(0)),
 				RunAsGroup:   ptr.To(int64(0)),
@@ -274,7 +262,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseContainer := apiv1.Container{
 		Name:            "deckhouse",
 		Image:           params.Registry,
-		ImagePullPolicy: apiv1.PullAlways,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command: []string{
 			"/usr/bin/deckhouse-controller",
 			"start",
@@ -334,7 +322,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseInitContainer := apiv1.Container{
 		Name:            "init-downloaded-modules",
 		Image:           initContainerImage,
-		ImagePullPolicy: apiv1.PullAlways,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command: []string{
 			"sh", "-c", `mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
@@ -389,8 +377,56 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "3",
 		},
 		{
+			// GC trigger: a cycle runs once the heap grows GOGC% over the live set.
+			// The in-cluster deckhouse runs GOGC=50 (fires at +50%) for steady-state
+			// RSS frugality, and helm restores that on the post-converge Deployment.
+			// The first converge is allocation-heavy — LoadModulesFromFS parses ~60
+			// OpenAPI schemas, helm renders charts, hundreds of CRDs are applied — so
+			// 50 collects ~twice as often, and Go's concurrent GC steals CPU from the
+			// converge on a 2-vCPU master also running etcd/apiserver. 100 (the Go
+			// default) roughly halves those cycles; the extra heap is bounded by the
+			// GOMEMLIMIT backstop below.
 			Name:  "GOGC",
-			Value: "50",
+			Value: "100",
+		},
+		{
+			// Soft heap ceiling — a backstop, not a speedup. With GOGC=100 the heap
+			// may grow to ~2x live size and this pod carries no memory limit, so an
+			// absolute cap keeps a pathological spike from eating the master VM's RAM
+			// (shared with etcd/apiserver/kubelet during bootstrap). It only engages
+			// near the limit; in the common case peak heap stays well below it.
+			Name:  "GOMEMLIMIT",
+			Value: "1400MiB",
+		},
+		{
+			// Disable client-side rate limiting during bootstrap. The bootstrap
+			// incarnation installs hundreds of CRDs + runs initial kube-binding
+			// Synchronization against a fresh, idle apiserver; the default client QPS
+			// (5/10) serialized that into tens of seconds (client-side throttling).
+			// QPS<0 makes client-go skip the rate limiter entirely (QPS=0 would fall
+			// back to the 5 default, not disable) and defer fairness to apiserver APF.
+			Name:  "KUBE_CLIENT_QPS",
+			Value: "-1",
+		},
+		{
+			Name:  "KUBE_CLIENT_BURST",
+			Value: "-1",
+		},
+		{
+			Name:  "OBJECT_PATCHER_KUBE_CLIENT_QPS",
+			Value: "-1",
+		},
+		{
+			Name:  "OBJECT_PATCHER_KUBE_CLIENT_BURST",
+			Value: "-1",
+		},
+		{
+			Name:  "HELM_MONITOR_KUBE_CLIENT_QPS",
+			Value: "-1",
+		},
+		{
+			Name:  "HELM_MONITOR_KUBE_CLIENT_BURST",
+			Value: "-1",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",

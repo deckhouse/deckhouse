@@ -156,7 +156,7 @@ func run() error {
 	}
 
 	slices.SortFunc(d8Alerts, func(a, b moduleAlert) int {
-		return cmp.Compare(strings.ToLower(fmt.Sprintf("%s %s %s %s", a.Name, a.Module, a.Severity, a.Description)), strings.ToLower(fmt.Sprintf("%s %s %s %s", b.Name, b.Module, b.Severity, b.Description)))
+		return cmp.Compare(strings.ToLower(fmt.Sprintf("%s %s %s %s %s", a.Name, a.Module, a.Severity, a.Description, a.SourceFile)), strings.ToLower(fmt.Sprintf("%s %s %s %s %s", b.Name, b.Module, b.Severity, b.Description, b.SourceFile)))
 	})
 	sort.Strings(d8ModulesWithAlerts)
 

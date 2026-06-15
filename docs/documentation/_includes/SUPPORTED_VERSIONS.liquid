@@ -9,6 +9,18 @@
 {%- assign partially_supported_img_url = '/images/icons/intermediate_v2.svg' %}
 {%- assign notes_img_url = '/images/icons/note_v2.svg' %}
 {%- assign not_supported_img_url = '/images/icons/not_supported_v2.svg' %}
+{%- capture supported_img_inline -%}
+<svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ supported_img_url }}" width="32" height="32" /></svg>
+{%- endcapture %}
+{%- capture partially_supported_img_inline -%}
+<svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ partially_supported_img_url }}" width="32" height="32" /></svg>
+{%- endcapture %}
+{%- capture notes_img_inline -%}
+<svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ notes_img_url }}" width="32" height="32" /></svg>
+{%- endcapture %}
+{%- capture not_supported_img_inline -%}
+<svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ not_supported_img_url }}" width="32" height="32" /></svg>
+{%- endcapture %}
 
 ## Linux
 
@@ -48,7 +60,7 @@
     {%- assign osVersionsList = osData.versions | default: osItem[1] %}
     {%- assign langSupport = site.data.supported_versions.osDistributions[osKey][langSupportKey] %}
     {%- if langSupport == false %}{% continue %}{% endif %}
-    {%- include partials/supported-table-line.liquid osItem=osItem osName=osName osKey=osKey osVersions=osVersionsList supported_img_url=supported_img_url partially_supported_img_url=partially_supported_img_url notes_img_url=notes_img_url not_supported_img_url=not_supported_img_url %}
+    {%- include partials/supported-table-line.liquid osItem=osItem osName=osName osKey=osKey osVersions=osVersionsList supported_img_inline=supported_img_inline partially_supported_img_inline=partially_supported_img_inline notes_img_inline=notes_img_inline not_supported_img_inline=not_supported_img_inline %}
     {% endfor %}
     </tbody>
   </table>
@@ -71,10 +83,13 @@
     {%- for k8sItem in k8sVersions %}
     {%- assign k8sStatus = k8sItem[1].status | default: 'preview' %}
     {%- assign iconStatus = k8sStatus| append: '.svg' | prepend: '/images/icons/' %}
+    {%- capture iconStatusInline -%}
+    <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ iconStatus }}" width="32" height="32" /></svg>
+    {%- endcapture %}
     <tr {%- if k8sItem[1].default %} class="highlight-default"{% endif %}>
       <td style="text-align: center">
         <div class="icon">
-          <img src="{{ iconStatus }}" alt="" />
+          {{ iconStatusInline }}
         </div>
       </td>
       <td style="text-align: center; font-weight:bold">{{ k8sItem[0] }}</td>

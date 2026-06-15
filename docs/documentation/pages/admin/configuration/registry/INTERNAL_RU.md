@@ -13,7 +13,7 @@ lang: ru
 
 [Модуль `registry`](/modules/registry/), реализующий внутреннее хранилище, работает в следующих режимах:
 
-- `Direct` — использование внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html). Переключение выполняется автоматически (подробнее — в примерах переключения ниже). Архитектура режима описана в разделе [«Архитектура режима Direct»](../../../architecture/registry-direct-mode.html).
+- `Direct` — использование внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html). Переключение выполняется автоматически (подробнее — в примерах переключения ниже). Архитектура режима описана в разделе [«Архитектура режима Direct»](../../../architecture/deckhouse/registry-direct-mode.html).
 - `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется напрямую к внешнему registry.
   Существует 2 вида режима `Unmanaged`:
   - Конфигурируемый — режим, управляемый с помощью модуля `registry`. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (подробнее — в примерах переключения ниже).
@@ -65,10 +65,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Убедитесь, что все master-узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`. Для этого используйте следующую команду:
 
@@ -78,21 +81,27 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready    control-plane,master  ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
@@ -165,10 +174,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 

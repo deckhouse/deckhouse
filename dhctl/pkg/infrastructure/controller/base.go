@@ -37,7 +37,7 @@ func NewBaseInfraController(metaConfig *config.MetaConfig, stateCache state.Cach
 }
 
 func (r *BaseInfraController) Destroy(ctx context.Context, clusterState []byte, autoApprove bool) error {
-	if err := saveInCacheIfNotExists(r.stateCache, "base-infrastructure.tfstate", clusterState); err != nil {
+	if err := saveInCacheIfNotExists(ctx, r.stateCache, "base-infrastructure.tfstate", clusterState); err != nil {
 		return err
 	}
 

@@ -1,9 +1,8 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-git:
-{{- include "image mount points" . }}
 import:
+{{- include "image mount points" . }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /dvp-csi-driver
   to: /dvp-csi-driver
@@ -24,7 +23,7 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-- image: tools/util-linux
+- from: {{ index $.Images "tools/util-linux" }}
   add: /bin/lsblk
   to: /bin/lsblk
   before: setup
@@ -63,7 +62,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang" }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -92,4 +91,3 @@ shell:
   - apt-get install -y e2fsprogs xfsprogs parted btrfs-progs nvme udev
   install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
-

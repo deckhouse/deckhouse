@@ -6,7 +6,6 @@ import:
   add: /app/alerts-receiver
   to: /alerts-receiver
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -21,9 +20,12 @@ git:
   stageDependencies:
     install:
     - '**/*'
+shell:
+  install:
+  - set -e
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-1.25" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

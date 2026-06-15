@@ -1,32 +1,50 @@
+{{- $providerID := "aws" }}
+{{- define "registration_values" }}
+{{- $context := index . 0 }}
+# obligatory
+type: {{ b64enc "aws" | quote }}
+region: {{ $context.Values.cloudProviderAws.internal.region | b64enc | quote }}
+zones: {{ $context.Values.cloudProviderAws.internal.zones | toJson | b64enc | quote }}
+instanceClassKind: {{ b64enc "AWSInstanceClass" | quote }}
+machineClassKind: {{ b64enc "AWSMachineClass" | quote }}
+# AWS
+{{- $awsValues := dict }}
+{{- $_ := set $awsValues "providerAccessKeyId" $context.Values.cloudProviderAws.internal.providerAccessKeyId }}
+{{- $_ := set $awsValues "providerSecretAccessKey" $context.Values.cloudProviderAws.internal.providerSecretAccessKey }}
+{{- $_ := set $awsValues "region" $context.Values.cloudProviderAws.internal.region }}
+{{- $_ := set $awsValues "instances" dict }}
+{{- $_ := set $awsValues.instances "ami" $context.Values.cloudProviderAws.internal.instances.ami }}
+{{- $_ := set $awsValues.instances "additionalSecurityGroups" $context.Values.cloudProviderAws.internal.instances.additionalSecurityGroups }}
+{{- $_ := set $awsValues.instances "associatePublicIPAddress" $context.Values.cloudProviderAws.internal.instances.associatePublicIPAddress }}
+{{- $_ := set $awsValues.instances "iamProfileName" $context.Values.cloudProviderAws.internal.instances.iamProfileName }}
+{{- $_ := set $awsValues "internal" dict }}
+{{- $_ := set $awsValues.internal "zoneToSubnetIdMap" $context.Values.cloudProviderAws.internal.zoneToSubnetIdMap }}
+{{- $_ := set $awsValues "loadBalancerSecurityGroup" $context.Values.cloudProviderAws.internal.loadBalancerSecurityGroup }}
+{{- $_ := set $awsValues "keyName" $context.Values.cloudProviderAws.internal.keyName }}
+{{- $_ := set $awsValues "tags" $context.Values.cloudProviderAws.internal.tags }}
+aws: {{ $awsValues | toJson | b64enc | quote }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: d8-node-manager-cloud-provider
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/registration" ""
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
 type: Opaque
-data:
-  # obligatory
-  type: {{ b64enc "aws" | quote }}
-  region: {{ .Values.cloudProviderAws.internal.region | b64enc | quote }}
-  zones: {{ .Values.cloudProviderAws.internal.zones | toJson | b64enc | quote }}
-  instanceClassKind: {{ b64enc "AWSInstanceClass" | quote }}
-  machineClassKind: {{ b64enc "AWSMachineClass" | quote }}
-
-  # AWS
-  {{- $awsValues := dict }}
-  {{- $_ := set $awsValues "providerAccessKeyId" .Values.cloudProviderAws.internal.providerAccessKeyId }}
-  {{- $_ := set $awsValues "providerSecretAccessKey" .Values.cloudProviderAws.internal.providerSecretAccessKey }}
-  {{- $_ := set $awsValues "region" .Values.cloudProviderAws.internal.region }}
-  {{- $_ := set $awsValues "instances" dict }}
-  {{- $_ := set $awsValues.instances "ami" .Values.cloudProviderAws.internal.instances.ami }}
-  {{- $_ := set $awsValues.instances "additionalSecurityGroups" .Values.cloudProviderAws.internal.instances.additionalSecurityGroups }}
-  {{- $_ := set $awsValues.instances "associatePublicIPAddress" .Values.cloudProviderAws.internal.instances.associatePublicIPAddress }}
-  {{- $_ := set $awsValues.instances "iamProfileName" .Values.cloudProviderAws.internal.instances.iamProfileName }}
-  {{- $_ := set $awsValues "internal" dict }}
-  {{- $_ := set $awsValues.internal "zoneToSubnetIdMap" .Values.cloudProviderAws.internal.zoneToSubnetIdMap }}
-  {{- $_ := set $awsValues "loadBalancerSecurityGroup" .Values.cloudProviderAws.internal.loadBalancerSecurityGroup }}
-  {{- $_ := set $awsValues "keyName" .Values.cloudProviderAws.internal.keyName }}
-  {{- $_ := set $awsValues "tags" .Values.cloudProviderAws.internal.tags }}
-  aws: {{ $awsValues | toJson | b64enc | quote }}
+data: {{- include "registration_values" (list . ) | nindent 2 }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ printf "d8-node-manager-cloud-provider-%s" $providerID }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/registration" ""
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
+type: Opaque
+data: {{- include "registration_values" (list . ) | nindent 2 }}

@@ -56,7 +56,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Name:   "d8_admission_policy_engine_pss_default_policy",
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(3.0),
+				Value:  ptr.To(policyCode("Restricted")),
 				Labels: map[string]string{},
 			}))
 		})
@@ -67,9 +67,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should have the default policy set to Privileged", func() {
+		It("should have the default policy set to Baseline", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
+			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssBaselinePolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
@@ -80,7 +80,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Name:   "d8_admission_policy_engine_pss_default_policy",
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(1.0),
+				Value:  ptr.To(policyCode("Baseline")),
 				Labels: map[string]string{},
 			}))
 		})
@@ -92,9 +92,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should have the default policy set to Privileged", func() {
+		It("should have the default policy set to Baseline", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
+			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssBaselinePolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
@@ -105,7 +105,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Name:   "d8_admission_policy_engine_pss_default_policy",
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(1.0),
+				Value:  ptr.To(policyCode("Baseline")),
 				Labels: map[string]string{},
 			}))
 		})
@@ -117,9 +117,9 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should have the default policy set to Privileged", func() {
+		It("should have the default policy set to Baseline", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
+			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssBaselinePolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
@@ -130,7 +130,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Name:   "d8_admission_policy_engine_pss_default_policy",
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(1.0),
+				Value:  ptr.To(policyCode("Baseline")),
 				Labels: map[string]string{},
 			}))
 		})
@@ -155,7 +155,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Name:   "d8_admission_policy_engine_pss_default_policy",
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(1.0),
+				Value:  ptr.To(policyCode("Privileged")),
 				Labels: map[string]string{},
 			}))
 		})
@@ -180,7 +180,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Name:   "d8_admission_policy_engine_pss_default_policy",
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(2.0),
+				Value:  ptr.To(policyCode("Baseline")),
 				Labels: map[string]string{},
 			}))
 		})
@@ -205,7 +205,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Name:   "d8_admission_policy_engine_pss_default_policy",
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(2.0),
+				Value:  ptr.To(policyCode("Baseline")),
 				Labels: map[string]string{},
 			}))
 		})

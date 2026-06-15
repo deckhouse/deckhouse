@@ -51,6 +51,8 @@ Before installation, ensure the following:
 - For bare-metal clusters (including hybrid clusters) and installations in unsupported clouds: the server runs an OS from the [supported OS list](../reference/supported_versions.html) (or a compatible version) and is accessible via SSH with a key.
 
 - For supported clouds: the required resource quotas are available and access credentials to the cloud infrastructure are prepared (provider-specific).
+
+- If there are infrastructure-level restrictions on network communication, ensure that the requirements described in the [Network interaction of the platform components](../reference/network_interaction.html) section are met.
   
 - There is access to the Deckhouse container registry (official `registry.deckhouse.io`, or a mirror).
 
@@ -118,22 +120,8 @@ Required and optional objects/resources that may be needed in the installation c
 
 {% offtopic title="An example of the installation config..." %}
 
-<div class="tabs">
-  <a id='tab_variant_new_config'
-     href="javascript:void(0)"
-     class="tabs__btn tabs__btn_variant active"
-     onclick="openTabAndSaveStatus(event,'tabs__btn_variant','tabs__content_variant','block_variant_new_config');">
-     Configuration applicable since DKP 1.75
-  </a>
-  <a id='tab_variant_legacy_config'
-     href="javascript:void(0)"
-     class="tabs__btn tabs__btn_variant"
-     onclick="openTabAndSaveStatus(event,'tabs__btn_variant','tabs__content_variant','block_variant_legacy_config');">
-     Legacy configuration
-  </a>
-</div>
-
-<div id='block_variant_new_config' class="tabs__content tabs__content_variant active" markdown="1">
+{% tabs variant %}
+{% tab "Configuration applicable since DKP 1.75" %}
 In this example, access to the DKP container registry is configured using ModuleConfig `deckhouse`.
 
 ```yaml
@@ -287,10 +275,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
-
-<div id='block_variant_legacy_config' class="tabs__content tabs__content_variant" markdown="1">
-
+{% endtab %}
+{% tab "Legacy configuration" %}
 In this example, access to the DKP container registry is configured using InitConfiguration.
 
 ```yaml
@@ -442,7 +428,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
+{% endtab %}
+{% endtabs %}
 
 {% endofftopic %}
 
@@ -609,9 +596,14 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
         - Support for `CgroupsV2`.
         - Systemd version `244`.
         - Support for the `erofs` kernel module.
-   - Python is installed on the master node server (VM).
+   - Python (Python 3 or Python 2) must be available on the server (VM) intended for the master node. The standard Python modules used by the installer must also be available:
+     - For HTTP request handling: `urllib.request` (Python 3) or `urllib2` (Python 2)
+     - For HTTP error handling: `urllib.error` (Python 3) or `urllib2` (Python 2)
+     - For working with configuration files: `configparser` (Python 3) or `ConfigParser` (Python 2)
+     - For HTTP server: `http.server` (Python 3) or `SimpleHTTPServer` (Python 2)
+     - For TCP server: `http.server` (Python 3) or `SocketServer` (Python 2)
    - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
-   - Required installation ports are free on the master node server (VM) and on the host running the installer.
+   - On the server (VM) intended for the master node and on the host from which the installer is launched, port `22/TCP` (network access from a personal computer) must be accessible, as it is required for the installation process. For details, see the [Network interaction of the platform components](../reference/network_interaction.html) section.
    - DNS must resolve `localhost` to IP address `127.0.0.1`.
    - The user has `sudo` privileges on the server (VM).
    - Required ports for the installation must be open:

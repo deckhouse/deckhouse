@@ -51,6 +51,11 @@ function __on_conversion::v2alpha1_to_v1() {
         applicationDomain: .spec.applications[0].domain,
         applicationIngressClassName: .spec.applications[0].ingressClassName,
         applicationIngressCertificateSecretName: (.spec.applications[0].ingressSecretName // null),
+        gatewayAPI: {
+	  applicationHTTPRouteListenerSetName: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetName // null),
+          applicationHTTPRouteListenerSetNamespace: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetNamespace // null),
+	  applicationHTTPRouteListenerSetSectionName: (.spec.applications[0].gatewayAPI?.httpRouteListenerSetSectionName // null),
+        },
         signOutURL: (.spec.applications[0].signOutURL // null),
         whitelistSourceRanges: (.spec.applications[0].whitelistSourceRanges // null),
         additionalApplications: (
@@ -116,13 +121,18 @@ function __on_conversion::v1_to_v2alpha1() {
       .spec.sendAuthorizationHeader = .spec.sendAuthorizationHeader |
       .spec.applications = [{
         domain: .spec.applicationDomain,
-        ingressClassName: .spec.applicationIngressClassName
+        ingressClassName: .spec.applicationIngressClassName,
+        gatewayAPI: {
+	  httpRouteListenerSetName: .spec.gatewayAPI?.applicationHTTPRouteListenerSetName,
+	  httpRouteListenerSetNamespace: .spec.gatewayAPI?.applicationHTTPRouteListenerSetNamespace,
+	  httpRouteListenerSetSectionName: .spec.gatewayAPI?.applicationHTTPRouteListenerSetSectionName
+        }
       } +
       (if .spec.applicationIngressCertificateSecretName then {ingressSecretName: .spec.applicationIngressCertificateSecretName} else {} end) +
       (if .spec.signOutURL then {signOutURL: .spec.signOutURL} else {} end) +
       (if .spec.whitelistSourceRanges then {whitelistSourceRanges: .spec.whitelistSourceRanges} else {} end)] +
       (.spec.additionalApplications // []) |
-      del(.spec.applicationDomain, .spec.applicationIngressClassName, .spec.applicationIngressCertificateSecretName, .spec.additionalApplications, .spec.signOutURL, .spec.whitelistSourceRanges)
+      del(.spec.applicationDomain, .spec.applicationIngressClassName, .spec.gatewayAPI, .spec.applicationIngressCertificateSecretName, .spec.additionalApplications, .spec.signOutURL, .spec.whitelistSourceRanges)
     else
       .
     end

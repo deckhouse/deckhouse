@@ -76,11 +76,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   applyDexUserExpireFilter,
 		},
+		{
+			Name:                         "groups",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "Group",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   applyDexGroupFilter,
+		},
 	},
 }, expireDexUsers)
 
 func expireDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	now := time.Now()
+	expiredUsers := make(map[string]struct{})
 
 	for dexUserExpire, err := range sdkobjectpatch.SnapshotIter[DexUserExpire](input.Snapshots.Get("users")) {
 		if err != nil {
@@ -89,7 +98,49 @@ func expireDexUsers(_ context.Context, input *go_hook.HookInput) error {
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {
 			input.PatchCollector.Delete("deckhouse.io/v1", "User", "", dexUserExpire.Name)
+			expiredUsers[dexUserExpire.Name] = struct{}{}
 		}
 	}
+
+	if len(expiredUsers) == 0 {
+		return nil
+	}
+
+	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](input.Snapshots.Get("groups")) {
+		if err != nil {
+			return fmt.Errorf("cannot convert group: cannot iterate over 'groups' snapshot: %v", err)
+		}
+
+		members, removedUsers := removeUsersFromGroupMembers(group.Spec.Members, expiredUsers)
+		if len(removedUsers) == 0 {
+			continue
+		}
+
+		input.Logger.Info("Removing expired users from group members", "group", group.Name, "users", removedUsers)
+		input.PatchCollector.PatchWithMerge(map[string]any{
+			"spec": map[string]any{
+				"members": members,
+			},
+		}, "deckhouse.io/v1alpha1", "Group", "", group.Name)
+	}
+
 	return nil
+}
+
+func removeUsersFromGroupMembers(members []DexGroupMember, expiredUsers map[string]struct{}) ([]DexGroupMember, []string) {
+	newMembers := make([]DexGroupMember, 0, len(members))
+	removedUsers := make([]string, 0)
+
+	for _, member := range members {
+		if member.Kind == "User" {
+			if _, shouldRemove := expiredUsers[member.Name]; shouldRemove {
+				removedUsers = append(removedUsers, member.Name)
+				continue
+			}
+		}
+
+		newMembers = append(newMembers, member)
+	}
+
+	return newMembers, removedUsers
 }

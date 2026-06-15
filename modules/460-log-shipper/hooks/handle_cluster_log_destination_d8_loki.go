@@ -31,6 +31,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 const (
@@ -43,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cluster_log_destination",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1alpha2",
 			Kind:       "ClusterLogDestination",
 			FilterFunc: filterClusterLogDestination,
 		},
@@ -82,7 +83,7 @@ func handleClusterLogDestinationD8Loki(_ context.Context, input *go_hook.HookInp
 
 	input.MetricsCollector.Expire(lokiAuthorizationRequiredGroup)
 
-	for destination, err := range sdkobjectpatch.SnapshotIter[v1alpha1.ClusterLogDestination](destinationSnapshots) {
+	for destination, err := range sdkobjectpatch.SnapshotIter[v1alpha2.ClusterLogDestination](destinationSnapshots) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'cluster_log_destination' snapshots: %w", err)
 		}

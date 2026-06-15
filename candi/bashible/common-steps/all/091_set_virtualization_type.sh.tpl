@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# bashible: parallel-group=light-labels
+
 {{- if eq .runType "Normal" }}
 # If there is no kubelet.conf than node is not bootstrapped and there is nothing to do
 kubeconfig="/etc/kubernetes/kubelet.conf"
@@ -36,13 +38,13 @@ fi
 max_attempts=5
 node=$(bb-d8-node-name)
 
-until bb-kubectl --kubeconfig $kubeconfig annotate --overwrite=true node "$node" node.deckhouse.io/virtualization="$virtualization"; do
+until bb-curl-helper-patch-node-metadata "$node" "annotations" "node.deckhouse.io/virtualization=$virtualization"; do
   attempt=$(( attempt + 1 ))
   if [ "$attempt" -gt "$max_attempts" ]; then
-    bb-log-error "failed to annotate node $node after $max_attempts attempts"
+    bb-log-error "Failed to annotate node $node after $max_attempts attempts"
     exit 1
   fi
-  echo "Waiting for annotate node $node (attempt $attempt of $max_attempts)..."
+  echo "Retrying to set virtualization annotation on node $node (attempt $attempt of $max_attempts)"
   sleep 5
 done
 {{- end  }}

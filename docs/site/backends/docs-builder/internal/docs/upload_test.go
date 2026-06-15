@@ -78,6 +78,91 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			true,
 		},
 		{
+			"crds",
+			"/app/hugo/data/modules/moduleName/stable/crds",
+			true,
+		},
+		{
+			"./crds/object.yaml",
+			"/app/hugo/data/modules/moduleName/stable/crds/object.yaml",
+			true,
+		},
+		{
+			"crds/object.yml",
+			"/app/hugo/data/modules/moduleName/stable/crds/object.yml",
+			true,
+		},
+		{
+			"crds/object.json",
+			"/app/hugo/data/modules/moduleName/stable/crds/object.json",
+			true,
+		},
+		// The docs templates treat crds/ as a flat map (one file == one CRD).
+		// Subdirectories must be rejected regardless of what's inside, so the
+		// CRD section renders correctly and no garbage is loaded into data/.
+		{
+			"crds/native",
+			"",
+			false,
+		},
+		{
+			"crds/native/object.yaml",
+			"",
+			false,
+		},
+		{
+			"crds/cert-manager/cert.yaml",
+			"",
+			false,
+		},
+		{
+			"crds/gatekeeper/templates/template.yaml",
+			"",
+			false,
+		},
+		// Non-data files at the top level of crds/ must be rejected too — Hugo's
+		// data loader cannot unmarshal them and fails the whole module build
+		// with `unmarshal of format "" is not supported`.
+		{
+			"crds/README.md",
+			"",
+			false,
+		},
+		{
+			"crds/pull_dex_crds.sh",
+			"",
+			false,
+		},
+		{
+			"crds/x-pull-crds.sh",
+			"",
+			false,
+		},
+		// And the same files under subdirectories — rejected by the no-subdir
+		// rule above, but kept here as regression cases for the original bug
+		// (operator-trivy: crds/native/README.md).
+		{
+			"crds/native/README.md",
+			"",
+			false,
+		},
+		{
+			"crds/gatekeeper/README.md",
+			"",
+			false,
+		},
+		{
+			"crds/native/update.sh",
+			"",
+			false,
+		},
+		// Paths that merely start with the literal "crds" must not be matched.
+		{
+			"crdsxxx/object.yaml",
+			"",
+			false,
+		},
+		{
 			"openapi/doc-ru-config-values.yaml",
 			"/app/hugo/data/modules/moduleName/stable/openapi/doc-ru-config-values.yaml",
 			true,

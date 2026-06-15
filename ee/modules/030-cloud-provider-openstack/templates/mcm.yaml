@@ -1,0 +1,13 @@
+{{- $providerID := "openstack" -}}
+{{- $mcm := .Files.Glob "cloud-instance-manager/**" -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ printf "d8-cloud-provider-%s-mcm" $providerID }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/ephemeral-nodes-templates" "mcm"
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
+data: {{ $mcm.AsSecrets | nindent 2 }}

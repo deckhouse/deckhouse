@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: protected-deployment
+  namespace: d8-descheduler
+  labels:
+    e2e-test: exclude-namespaces-protected
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      e2e-test: exclude-namespaces-protected
+  template:
+    metadata:
+      labels:
+        e2e-test: exclude-namespaces-protected
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi

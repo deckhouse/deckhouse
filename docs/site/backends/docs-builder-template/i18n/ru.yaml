@@ -90,6 +90,7 @@ module_release_channel_details_content: |
   Для смены канала обновлений модуля воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#как-сменить-канал-обновлений-для-модуля).
 module_versions: Версии модуля
 module_version: Версия модуля
+embedded_in_dkp: Встроенный в DKP
 module_crd_warning_1: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
 ossPageBlock1: |
   <h2>Внешние компоненты</h2>
@@ -113,6 +114,7 @@ tags_filter_all_selected: Все теги
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_for_alert: У модуля есть [требования](/modules/%s/configuration.html#требования) для установки
 requirements_title: Требования
 requirements_deckhouse_title: К версии Deckhouse
 requirements_kubernetes_title: К версии Kubernetes
@@ -136,6 +138,7 @@ currency_sign: "₽"
 commercial: Доступно в некоторых коммерческих редакциях.
 notAvailableInThisEdition: Доступно в других коммерческих редакциях.
 default_value: по умолчанию
+default_empty_string_value: ‘’
 platform: платформа
 example: пример
 examples: примеры
@@ -147,12 +150,12 @@ max_length: максимальная длина
 moduleLinkTitleADVANCED_USAGE: Расширенная конфигурация
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры
-moduleLinkTitleCONFIGURATION: Настройка
+moduleLinkTitleCONFIGURATION: Настройки
 moduleLinkTitleUSAGE: Примеры использования
 moduleLinkTitleSETUP: Настройка
 moduleLinkTitleFAQ: FAQ
-moduleLinkTitleCRD: Custom Resources
-moduleLinkTitleCR: Custom Resources
+moduleLinkTitleCRD: Кастомные ресурсы
+moduleLinkTitleCR: Кастомные ресурсы
 module_is_available_in_ee_only: Модуль доступен только в Deckhouse Enterprise Edition.
 module_available_editions_prefix: Доступно в редакциях
 module_available_with_limitations_prefix: Доступно с ограничениями в редакциях

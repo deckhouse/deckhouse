@@ -12,7 +12,6 @@ git:
       install:
         - go.mod
         - go.sum
-      setup:
         - "**/*.go"
 shell:
   install:
@@ -20,7 +19,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
 final: false
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:

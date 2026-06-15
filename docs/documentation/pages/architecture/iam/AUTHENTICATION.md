@@ -34,7 +34,7 @@ Each user is allowed a maximum of 20 login attempts. Once this limit is reached,
    This may be optional for some applications, such as Upmeter, where other authorization mechanisms are used.  
    However, for applications like the Kubernetes Dashboard, this behavior is critical, as the Dashboard forwards the `ID token` to access the Kubernetes API on behalf of the user.
 
-## Flant extensions
+## DKP-specific Dex extensions
 
 DKP uses a modified version of Dex that supports:
 

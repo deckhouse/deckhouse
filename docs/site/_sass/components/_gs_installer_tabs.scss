@@ -210,6 +210,10 @@ select:focus {
   color: white;
 }
 
+.gs-installer-page__manual {
+    margin-top: 32px;
+}
+
 .main-tabs-container {
     font-family: Arial, sans-serif;
     width: 100%;
@@ -237,8 +241,41 @@ select:focus {
     background-color: white;
 }
 
+a.main-tab {
+    text-decoration: none;
+    display: inline-block;
+    box-sizing: border-box;
+}
+
+a.main-tab:hover,
+a.main-tab:focus,
+a.main-tab:focus-visible,
+a.main-tab.active:hover,
+a.main-tab.active:focus,
+a.main-tab.active:focus-visible {
+    text-decoration: none;
+}
+
+// .docs a:hover { text-decoration: underline } in docs.scss — higher cascade order
+.docs a.main-tab:hover,
+.docs a.main-tab:focus,
+.docs a.main-tab:focus-visible,
+.docs a.main-tab.active:hover,
+.docs a.main-tab.active:focus,
+.docs a.main-tab.active:focus-visible {
+    text-decoration: none !important;
+}
+
+a.main-tab:visited:not(.active) {
+    color: #0064ff;
+}
+
 .main-tab.active {
     background-color: #0064ff;
+    color: white;
+}
+
+a.main-tab.active:visited {
     color: white;
 }
 

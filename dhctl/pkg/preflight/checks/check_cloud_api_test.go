@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
@@ -77,7 +78,7 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
 `
-			metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfigYAML, config.DummyPreparatorProvider())
+			metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfigYAML, config.DummyPreparatorProvider(), &options.New().Global)
 			s.NoError(err)
 			metaConfig.ProviderName = tt.providerName
 			metaConfig.ProviderClusterConfig = map[string]json.RawMessage{

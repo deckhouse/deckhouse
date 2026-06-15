@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// nolint:gci
 package controller
 
 import (
@@ -23,8 +22,7 @@ import (
 	"net/url"
 	"strconv"
 
-	dvpapi "dvp-common/api"
-
+	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -33,7 +31,10 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	dvpapi "dvp-common/api"
 
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 )
@@ -41,9 +42,10 @@ import (
 // DeckhouseClusterReconciler reconciles a DeckhouseCluster object
 type DeckhouseClusterReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Config *rest.Config
-	DVP    *dvpapi.DVPCloudAPI
+	Scheme      *runtime.Scheme
+	Config      *rest.Config
+	DVP         *dvpapi.DVPCloudAPI
+	ClusterUUID string
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=deckhouseclusters,verbs=get;list;watch;create;update;patch;delete
@@ -76,31 +78,43 @@ func (r *DeckhouseClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
-	// Handle deleted cluster
-	if !dvpCluster.ObjectMeta.DeletionTimestamp.IsZero() {
-		return ctrl.Result{}, nil
-	}
-
-	return r.reconcile(ctx, dvpCluster)
-}
-
-func (r *DeckhouseClusterReconciler) reconcile(
-	ctx context.Context,
-	dvpCluster *infrastructurev1a1.DeckhouseCluster,
-) (ctrl.Result, error) {
 	patchHelper, err := patch.NewHelper(dvpCluster, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
+	// Handle deleted cluster
+	if !dvpCluster.ObjectMeta.DeletionTimestamp.IsZero() {
+		if err := r.reconcileDelete(ctx, logger, dvpCluster); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		if controllerutil.AddFinalizer(dvpCluster, infrastructurev1a1.ClusterFinalizer) {
+			return ctrl.Result{}, patchHelper.Patch(ctx, dvpCluster)
+		}
+
+		if err := r.reconcile(dvpCluster); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if err := patchHelper.Patch(ctx, dvpCluster); err != nil {
+		logger.Error(err, "failed to patch DeckhouseCluster")
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *DeckhouseClusterReconciler) reconcile(dvpCluster *infrastructurev1a1.DeckhouseCluster) error {
 	controlPlaneEndpointURL, err := url.Parse(r.Config.Host)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to parse api server host: %w", err)
+		return fmt.Errorf("failed to parse api server host: %w", err)
 	}
 
 	port, err := strconv.ParseInt(controlPlaneEndpointURL.Port(), 10, 32)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to parse api server port: %w", err)
+		return fmt.Errorf("failed to parse api server port: %w", err)
 	}
 
 	infraReady := true
@@ -110,11 +124,37 @@ func (r *DeckhouseClusterReconciler) reconcile(
 		Port: int32(port),
 	}
 
-	if err = patchHelper.Patch(ctx, dvpCluster); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to patch DeckhouseCluster: %w", err)
+	return nil
+}
+
+func (r *DeckhouseClusterReconciler) reconcileDelete(
+	ctx context.Context,
+	logger logr.Logger,
+	dvpCluster *infrastructurev1a1.DeckhouseCluster,
+) error {
+	if !controllerutil.ContainsFinalizer(dvpCluster, infrastructurev1a1.ClusterFinalizer) {
+		return nil
 	}
 
-	return ctrl.Result{}, nil
+	if err := r.cleanup(ctx, logger, dvpCluster); err != nil {
+		return err
+	}
+
+	controllerutil.RemoveFinalizer(dvpCluster, infrastructurev1a1.ClusterFinalizer)
+	return nil
+}
+
+func (r *DeckhouseClusterReconciler) cleanup(
+	ctx context.Context,
+	logger logr.Logger,
+	_ *infrastructurev1a1.DeckhouseCluster,
+) error {
+	if r.ClusterUUID == "" {
+		return fmt.Errorf("cluster UUID is empty")
+	}
+
+	logger.Info("Cleaning up DVP cluster resources", "clusterUUID", r.ClusterUUID)
+	return r.DVP.CleanupClusterResources(ctx, r.ClusterUUID)
 }
 
 // SetupWithManager sets up the controller with the Manager.

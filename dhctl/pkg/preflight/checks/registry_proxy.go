@@ -24,16 +24,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type RegistryProxyCheck struct {
-	MetaConfig *config.MetaConfig
-	Node       node.Interface
+	MetaConfig             *config.MetaConfig
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	// LegacyMode reflects whether the SSH client used here runs the legacy
+	// clissh backend (true) or modern gossh (false). Set at suite
+	// construction from sshclient.Config.IsLegacyMode().
+	LegacyMode bool
 }
 
 var ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
@@ -63,11 +69,14 @@ func (RegistryProxyCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c RegistryProxyCheck) Run(ctx context.Context) error {
-	wrapper, ok := c.Node.(*ssh.NodeInterfaceWrapper)
+	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
+	}
+	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil
 	}
-
 	proxyURL, noProxy, err := utils.GetProxyFromMetaConfig(c.MetaConfig)
 	if err != nil {
 		return fmt.Errorf("get proxy config: %w", err)
@@ -82,10 +91,10 @@ func (c RegistryProxyCheck) Run(ctx context.Context) error {
 		return nil
 	}
 
-	tun, err := utils.SetupSSHTunnelToProxyAddr(wrapper.Client(), proxyURL)
+	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, wrapper.Client(), proxyURL, c.LegacyMode)
 	if err != nil {
-		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
-Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
+		return fmt.Errorf(`Cannot set up tunnel to the control-plane host: %w.
+Please check connectivity to the control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
 	}
 	defer tun.Stop()
 
@@ -106,7 +115,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	httpCl := utils.BuildHTTPClientWithLocalhostProxy(proxyURL)
 	resp, err := httpCl.Do(req)
 	if err != nil {
-		return fmt.Errorf(`Container registry API connectivity check was failed with error: %w.
+		return fmt.Errorf(`Container registry API connectivity check failed with error: %w.
 Please check connectivity from the control-plane node to the proxy and from the proxy to the container registry.`, err)
 	}
 
@@ -121,7 +130,7 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
 		return fmt.Errorf(
 			"%w: got %d status code from the container registry API, this is not a valid registry API response.\n"+
-				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured.",
+				"Check that the container registry address is correct and that there are no misconfigured reverse proxies.",
 			ErrRegistryUnreachable,
 			resp.StatusCode,
 		)
@@ -130,7 +139,7 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
 		return fmt.Errorf(
 			"%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\n"+
-				"Check if container registry address is correct and if there is any reverse proxies that might be misconfigured",
+				"Check that the container registry address is correct and that there are no misconfigured reverse proxies",
 			ErrRegistryUnreachable,
 		)
 	}
@@ -138,8 +147,8 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	return nil
 }
 
-func RegistryProxy(meta *config.MetaConfig, nodeInterface node.Interface) preflight.Check {
-	check := RegistryProxyCheck{MetaConfig: meta, Node: nodeInterface}
+func RegistryProxy(meta *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer, legacyMode bool) preflight.Check {
+	check := RegistryProxyCheck{MetaConfig: meta, SSHProviderInitializer: sshProviderInitializer, LegacyMode: legacyMode}
 	return preflight.Check{
 		Name:        RegistryProxyCheckName,
 		Description: check.Description(),

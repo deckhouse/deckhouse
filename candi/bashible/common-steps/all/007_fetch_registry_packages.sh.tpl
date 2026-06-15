@@ -1,4 +1,4 @@
-# Copyright 2023 Flant JSC
+# Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
-{{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
-
-{{- $containerd := "containerd1730"}}
-{{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd216" }}
-{{- end }}
-
-bb-package-fetch "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}" "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}" "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}" "d8:{{ .images.registrypackages.d8 }}" "pause:{{ .images.registrypackages.pause }}" "kubernetes-api-proxy:{{ .images.registrypackages.kubernetesApiProxy }}"
-
+# Step intentionally a no-op.
+#
+# Registry packages are prefetched in the background by step
+# `001_prefetch_registry_packages.sh` (systemd-run unit `rpp-prefetch.service`).
+# Each install step (031_install_containerd, 034_ctr_import_local_images,
+# 035_install_kubelet, ...) calls `bb-rpp-wait-fetched <name> <digest>` to block
+# only on its own package, so an install starts as soon as its package finishes
+# downloading instead of waiting for the whole batch.
+#
+# Kept as a deliberate stub (rather than deleted) so anyone reading the bundle
+# steps in numeric order has a pointer to the new architecture.
+:

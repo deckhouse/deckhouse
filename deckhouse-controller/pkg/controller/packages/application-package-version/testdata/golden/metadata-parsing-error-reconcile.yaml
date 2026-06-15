@@ -2,25 +2,21 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
-  finalizers:
-  - applicationpackageversion.deckhouse.io/used-by-application
   labels:
     packages.deckhouse.io/draft: "true"
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.0
-  resourceVersion: "3"
+  resourceVersion: "2"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.0
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to fetch package metadata: unmarshal package yaml failed: yaml:
-      mapping values are not allowed in this context'
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'fetch package metadata: unmarshal package definition: error converting
+      YAML to JSON: yaml: mapping values are not allowed in this context'
     reason: FetchingReleaseError
     status: "False"
     type: MetadataLoaded
@@ -28,7 +24,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -38,4 +33,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
-  syncTime: null
+  lastNewVersions: 0
+  partialScanAvailable: false

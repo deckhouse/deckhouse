@@ -21,30 +21,33 @@ import (
 	"strings"
 	"time"
 
-	flantkubeclient "github.com/flant/kube-client/client"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type HookForDestroyPipeline struct {
-	getter            kubernetes.KubeClientProvider
+	getter            kubernetes.KubeClientProviderWithCtx
+	sshProvider       libcon.SSHProvider
 	nodeToDestroy     string
 	oldMasterIPForSSH string
 	commanderMode     bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
+		sshProvider:   sshProvider,
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
 	}
@@ -58,7 +61,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	// in restart operation we will get error with strict getting
 	outputs, err := infrastructure.GetMasterNodeResultNoStrict(ctx, runner)
 	if err != nil {
-		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
+		return false, fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
 
 	// no need to switch client because we try to switch before delete nodes
@@ -66,32 +69,37 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
-		log.InfoF("Got empty master IP for ssh for node %s. Skip removing control-plane from node.\n", h.nodeToDestroy)
+		log.InfoF("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.\n", h.nodeToDestroy)
 		return false, nil
 	}
 
 	h.oldMasterIPForSSH = masterIP
 
-	err = removeControlPlaneRoleFromNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, h.commanderMode)
+	kubeClient, err := h.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToDestroy, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
 
-	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, kubeClient, h.nodeToDestroy)
 	if err != nil {
-		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
+		return false, fmt.Errorf("failed to delete node object '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
 
 	return false, nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(_ context.Context, runner infrastructure.RunnerInterface) error {
+func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	if h.commanderMode {
 		return nil
 	}
 
-	cl := h.getter.KubeClient().NodeInterfaceAsSSHClient()
-	if cl == nil {
+	cl, err := h.sshProvider.Client(ctx)
+	if err != nil {
 		log.DebugLn("Node interface is not ssh")
 		return nil
 	}
@@ -117,9 +125,9 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 		return fmt.Errorf("failed to remove labels from node '%s': %v", nodeName, err)
 	}
 
-	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(*flantkubeclient.Client), nodeName)
+	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(libcon.KubeClient), nodeName)
 	if err != nil {
-		return fmt.Errorf("failed to check etcd has no member '%s': %v", nodeName, err)
+		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
 	}
 
 	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true})
@@ -135,7 +143,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 		node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
+				log.InfoF("Node '%s' has been deleted. Skipping\n", nodeName)
 				return nil
 			}
 			return err

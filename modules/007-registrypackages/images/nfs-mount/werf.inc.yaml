@@ -2,7 +2,7 @@
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 fromCacheVersion: "2025-06-24 13:00"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
@@ -24,9 +24,9 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 import:
-- image: tools/nfs-utils-nfs-utils-{{ $image_version }}
+- from: {{ index $.Images (printf "tools/nfs-utils-nfs-utils-%s" $image_version) }}
   add: /
   to: /src
   includePaths:
@@ -58,4 +58,4 @@ shell:
   - cd /opt/deckhouse/lib
   - find . -type f -name "*.la" -exec rm -f \{} \;
   - find . -type f -name "*.a" -exec rm -f \{} \;
-  - chown -R 64535:64535 /opt/deckhouse
+  - chown -R 0:0 /opt/deckhouse

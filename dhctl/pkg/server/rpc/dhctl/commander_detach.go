@@ -20,18 +20,17 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/detach"
@@ -43,14 +42,28 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 type detachParams struct {
 	request      *pb.CommanderDetachStart
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.CommanderDetachResponse
+}
+
+func (p *detachParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *detachParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CommanderDetachResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CommanderDetachResponse {
+			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
@@ -70,21 +83,6 @@ func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 		dataFunc: func(progress phases.Progress) *pb.CommanderDetachResponse {
 			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.CommanderDetachResponse {
-			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, receiveCh, doneCh, internalErrCh)
@@ -115,10 +113,10 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderDetachSafe(ctx, detachParams{
+					result := s.commanderDetachSafe(ctx, &detachParams{
 						request:      message.Start,
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
@@ -138,7 +136,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (result *pb.CommanderDetachResult) {
+func (s *Service) commanderDetachSafe(ctx context.Context, p *detachParams) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -149,38 +147,33 @@ func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (resu
 	return s.commanderDetach(ctx, p)
 }
 
-func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.CommanderDetachResult {
+func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.CommanderDetachResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
+	loggerFor := initDhctlLogger(ctx, p)
 
-	loggerFor := log.GetDefaultLogger()
-
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
+			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -194,8 +187,9 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
+
 		var initialState phases.DhctlState
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
@@ -203,49 +197,46 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
 		}
+
 		err = cache.InitWithOptions(
+			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
 		}
+
 		return nil
 	})
 	if err != nil {
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
-	var sshClient node.SSHClient
+	var sshProvider libcon.SSHProvider
+	var kubeProvider libcon.KubeProvider
 	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.params.SchemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
+		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
+			return fmt.Errorf("creating provider: %w", err)
 		}
 
-		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
-			err = sshClient.Start()
-			if err != nil {
-				return fmt.Errorf("cannot start sshClient: %w", err)
-			}
+		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ssh provider: %w", err)
 		}
+
 		return nil
 	})
 	if err != nil {
 		return &pb.CommanderDetachResult{Err: err.Error()}
+	}
+
+	if kubeProvider == nil {
+		return &pb.CommanderDetachResult{Err: "kubernetes provider is not initialized"}
 	}
 
 	var commanderUUID uuid.UUID
@@ -260,13 +251,14 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           s.params.TmpDir,
+		GlobalOptions:    s.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
 	})
 
 	checker := check.NewChecker(&check.Params{
-		SSHClient:     sshClient,
+		KubeProvider:  kubeProvider,
 		StateCache:    stateCache,
 		CommanderMode: p.request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
@@ -274,14 +266,17 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor),
-		TmpDir:                s.params.TmpDir,
-		Logger:                loggerFor,
-		IsDebug:               s.params.IsDebug,
-		Embedded:              true,
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+			WithUseTfCache(opts.Cache.UseTfCache).
+			WithDebug(s.params.IsDebug),
+		TmpDir:   s.params.TmpDir,
+		Logger:   loggerFor,
+		IsDebug:  s.params.IsDebug,
+		Embedded: true,
+		Options:  opts,
 	})
 
-	detacher := detach.NewDetacher(checker, sshClient, &detach.Params{
+	detacher := detach.NewDetacher(checker, sshProvider, &detach.Params{
 		CreateDetachResources: detach.DetachResources{
 			Template: p.request.CreateResourcesTemplate,
 			Values:   p.request.CreateResourcesValues.AsMap(),
@@ -290,13 +285,14 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 			Template: p.request.DeleteResourcesTemplate,
 			Values:   p.request.DeleteResourcesValues.AsMap(),
 		},
-		OnCheckResult:  onCheckResult,
-		OnPhaseFunc:    func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
-		OnProgressFunc: p.sendProgress,
+		OnCheckResult:    onCheckResult,
+		OnPhaseFunc:      func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc:   p.sendProgress,
+		ResourcesTimeout: opts.Bootstrap.ResourcesTimeout,
 	})
 
 	detachErr := detacher.Detach(ctx)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(detachErr, stateErr)
 

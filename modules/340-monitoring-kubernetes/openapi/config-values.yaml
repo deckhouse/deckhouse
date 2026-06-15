@@ -1,12 +1,13 @@
+x-config-version: 2
 type: object
 properties:
-  ebpfExporterEnabled:
+  oomKillsExporterEnabled:
     type: boolean
     default: true
     x-examples:
     - false
     description: |
-      Set to 'false' to disable ebpf_exporter in case it behaves incorrectly.
+      Set to 'false' to disable oom-kills-exporter in case it behaves incorrectly.
   highAvailability:
     type: boolean
     x-examples: [true, false]

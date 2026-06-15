@@ -535,6 +535,56 @@ spec:
 
 {% endraw %}
 
+### Операции над локальным пользователем
+
+Для административных действий над локальными пользователями используйте команды `d8 iam user`. Они создают ресурс [UserOperation](cr.html#useroperation), дожидаются выполнения операции и выводят результат.
+
+При выполнении операций `ResetPassword`, `Reset2FA` и `Lock` удаляются объекты Dex OfflineSessions и RefreshToken, принадлежащие пользователю. Это завершает активные offline-сессии пользователя и требует повторной аутентификации.
+
+Пример интерактивного сброса пароля:
+
+```shell
+d8 iam user reset-password admin
+```
+
+Пример сброса пароля с чтением нового пароля из stdin:
+
+```shell
+echo "N3wPa$$wo#d" | d8 iam user reset-password admin --password-stdin
+```
+
+Пример сброса пароля с автоматической генерацией нового пароля:
+
+```shell
+d8 iam user reset-password admin --generate-password
+```
+
+Если пароль уже захеширован, передайте bcrypt-хеш без кодирования в Base64:
+
+```shell
+d8 iam user reset-password admin --password-hash '$2y$10$abcdef...'
+```
+
+Пример сброса 2FA:
+
+```shell
+d8 iam user reset2fa admin
+```
+
+Пример блокировки пользователя на 30 минут:
+
+```shell
+d8 iam user lock admin 30m
+```
+
+Пример разблокировки пользователя:
+
+```shell
+d8 iam user unlock admin
+```
+
+По умолчанию команды ожидают завершения операции. Чтобы только создать UserOperation и вывести его имя, используйте флаг `--wait=false`.
+
 ### Добавление пользователя в группу
 
 Пользователи могут быть объединены в группы для управления правами доступа. Пример манифеста ресурса Group для группы:
@@ -586,13 +636,45 @@ spec:
 
 Описание полей:
 
-* `complexityLevel` — уровень сложности пароля;
+* `complexityLevel` — уровень сложности пароля: `None`, `Low`, `Fair`, `Good`, `Excellent` или `Custom`;
+* `custom` — пользовательские правила сложности (используются только при `complexityLevel: Custom`):
+  * `custom.minLength` — минимальное количество символов в пароле;
+  * `custom.specialCharacters` — если `true`, требуется хотя бы один специальный символ;
+  * `custom.numbers` — если `true`, требуется хотя бы одна цифра;
+  * `custom.capitalized` — если `true`, требуется хотя бы одна заглавная буква;
+  * `custom.repeatedChars` — если `true`, запрещается более 2 одинаковых символов подряд;
 * `passwordHistoryLimit` — число предыдущих паролей, которые хранит система, чтобы предотвратить их повторное использование;
 * `lockout` — настройки блокировки при превышении лимита неудачных попыток входа:
   * `lockout.maxAttempts` — лимит неудачных попыток;
   * `lockout.lockDuration` — длительность блокировки пользователя;
 * `rotation` — настройки ротации паролей:
   * `rotation.interval` — период обязательной смены пароля.
+
+Пример с пользовательскими правилами сложности:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Custom
+      custom:
+        minLength: 10
+        specialCharacters: true
+        numbers: false
+        capitalized: true
+        repeatedChars: false
+      passwordHistoryLimit: 10
+```
+
+{% endraw %}
 
 ### Двухфакторная аутентификация (2FA)
 

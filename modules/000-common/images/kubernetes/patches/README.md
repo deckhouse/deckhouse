@@ -63,3 +63,32 @@ See issues:
 ### set-usage-GOPROXY.patch
 
 Removes GOPROXY=off from the build so that our value is used when building the image.
+
+### 010-x-kubernetes-sensitive-data.patch
+x-kubernetes-sensitive-data marks a field as containing sensitive data (e.g. passwords, API keys).
+When set the API server will: encrypt the value at rest in etcd (using the same transformer as Secrets) hide the field from get/list/watch responses unless the caller has RBAC permissions to access the sensitive subresource and unconditionally mask the value in audit logs.
+See our KEP:
+- https://github.com/kubernetes/enhancements/pull/5937
+- https://github.com/kubernetes/enhancements/issues/5933
+
+### 011-fix-stale-token-metrics.patch
+
+Patch enhances the observability of stale ServiceAccount tokens by adding namespace and name labels to the `serviceaccount_stale_tokens_total` metric.
+
+Why it is needed:
+Previously, the `serviceaccount_stale_tokens_total` metric was a simple counter without any labels. While it indicated that some clients were using outdated tokens (past their warnafter threshold), it provided no information about which ServiceAccounts were responsible
+
+### fix-scheduler-node-graceful-shutdown.patch
+
+Patch prevents the scheduler from placing new pods on nodes that are in graceful shutdown.
+
+Why it is needed:
+During graceful node shutdown, kubelet reports the shutdown state through the `NodeReady` condition. The scheduler must treat such nodes as unschedulable and react to `NodeReady` condition updates so pods can be queued again when the shutdown state is cleared.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/139249
+
+### short-del-timeout-for-mirror.patch
+Added a 5s timeout context wrapping the Delete call in DeleteMirrorPod, that kubelet can proceed immediately after the API call times out or succeeds, restoring normal static pod re-creation latency.
+
+See issues:
+- https://github.com/kubernetes/kubernetes/issues/139502

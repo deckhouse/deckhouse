@@ -4,7 +4,6 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/module-exists
   name: test-source-1
@@ -32,7 +31,6 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/change-cause: check release (LTS channel - direct release)
-  creationTimestamp: null
   labels:
     module: testmodule
     modules.deckhouse.io/update-policy: test-lts
@@ -62,7 +60,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   labels:
     module: testmodule
     modules.deckhouse.io/update-policy: test-lts

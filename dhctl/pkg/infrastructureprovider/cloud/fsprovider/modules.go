@@ -87,7 +87,7 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 	stat, err := os.Stat(sourceDir)
 	if err != nil {
 		if os.IsNotExist(err) && dir == infraModulesDir {
-			p.logger.LogDebugF("Coping loud-providers modules (dir %s) from %s to %s skipped. Not found\n", dir, sourceDir, destinationDir)
+			p.logger.LogDebugF("Copying cloud-providers modules (dir %s) from %s to %s skipped. Not found\n", dir, sourceDir, destinationDir)
 			return nil
 		}
 
@@ -95,20 +95,20 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 	}
 
 	if !stat.IsDir() {
-		return fmt.Errorf("Coping cloud-providers modules (dir %s) from %s to %s failed is not dir", dir, sourceDir, destinationDir)
+		return fmt.Errorf("Copying cloud-providers modules (dir %s) from %s to %s failed: not a dir", dir, sourceDir, destinationDir)
 	}
 
-	p.logger.LogDebugF("Copy cloud-providers modules (dir %s) from %s to %s\n", dir, sourceDir, destinationDir)
+	p.logger.LogDebugF("Copying cloud-providers modules (dir %s) from %s to %s\n", dir, sourceDir, destinationDir)
 
 	// todo replace with os.CopyFS with go 1.25
 	err = copyFS(destinationDir, os.DirFS(sourceDir), sourceDir)
 	if errors.Is(err, fs.ErrExist) {
-		p.logger.LogDebugF("Coping loud-providers modules (dir %s) from %s to %s skipped. Exists\n", dir, sourceDir, destinationDir)
+		p.logger.LogDebugF("Copying cloud-providers modules (dir %s) from %s to %s skipped. Exists\n", dir, sourceDir, destinationDir)
 		return nil
 	}
 
 	if err != nil {
-		return fmt.Errorf("Coping cloud-providers modules (dir %s) from %s to %s failed: %w", dir, sourceDir, destinationDir, err)
+		return fmt.Errorf("Copying cloud-providers modules (dir %s) from %s to %s failed: %w", dir, sourceDir, destinationDir, err)
 	}
 
 	return nil

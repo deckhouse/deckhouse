@@ -19,8 +19,104 @@ package initsecret
 import (
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestContextBootstrapProxy_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   Config
+		wantErr bool
+	}{
+		// Valid
+		{
+			name: "valid with all fields",
+			input: Config{
+				CA: CertKey{
+					Cert: "cert",
+					Key:  "key",
+				},
+				ROUser: User{
+					Name:         "ro_name",
+					Password:     "ro_password",
+					PasswordHash: "ro_password_hash",
+				},
+				RWUser: User{
+					Name:         "rw_name",
+					Password:     "rw_password",
+					PasswordHash: "rw_password_hash",
+				},
+			},
+			wantErr: false,
+		},
+		// Invalid
+		{
+			name: "missing CA",
+			input: Config{
+				ROUser: User{
+					Name:         "ro_name",
+					Password:     "ro_password",
+					PasswordHash: "ro_password_hash",
+				},
+				RWUser: User{
+					Name:         "rw_name",
+					Password:     "rw_password",
+					PasswordHash: "rw_password_hash",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing RO user",
+			input: Config{
+				CA: CertKey{
+					Cert: "cert",
+					Key:  "key",
+				},
+				RWUser: User{
+					Name:         "rw_name",
+					Password:     "rw_password",
+					PasswordHash: "rw_password_hash",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing RW user",
+			input: Config{
+				CA: CertKey{
+					Cert: "cert",
+					Key:  "key",
+				},
+				ROUser: User{
+					Name:         "ro_name",
+					Password:     "ro_password",
+					PasswordHash: "ro_password_hash",
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.Validate()
+			if err != nil {
+				if e, ok := err.(validation.InternalError); ok {
+					assert.Fail(t, "Internal validation error: %w", e.InternalError())
+				}
+			}
+
+			if tt.wantErr {
+				assert.Error(t, err, "Expected errors but got none")
+			} else {
+				assert.NoError(t, err, "Expected no errors but got some")
+			}
+		})
+	}
+}
 
 func TestContextToMap(t *testing.T) {
 	tests := []struct {
@@ -31,9 +127,19 @@ func TestContextToMap(t *testing.T) {
 		{
 			name: "with all fields",
 			input: Config{
-				CA: &CertKey{
+				CA: CertKey{
 					Cert: "cert",
 					Key:  "key",
+				},
+				ROUser: User{
+					Name:         "ro_name",
+					Password:     "ro_password",
+					PasswordHash: "ro_password_hash",
+				},
+				RWUser: User{
+					Name:         "rw_name",
+					Password:     "rw_password",
+					PasswordHash: "rw_password_hash",
 				},
 			},
 			result: map[string]any{
@@ -41,13 +147,17 @@ func TestContextToMap(t *testing.T) {
 					"cert": "cert",
 					"key":  "key",
 				},
+				"ro_user": map[string]any{
+					"name":          "ro_name",
+					"password":      "ro_password",
+					"password_hash": "ro_password_hash",
+				},
+				"rw_user": map[string]any{
+					"name":          "rw_name",
+					"password":      "rw_password",
+					"password_hash": "rw_password_hash",
+				},
 			},
-		},
-
-		{
-			name:   "without optional fields",
-			input:  Config{},
-			result: map[string]any{},
 		},
 	}
 	for _, tt := range tests {

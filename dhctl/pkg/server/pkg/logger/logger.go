@@ -31,6 +31,7 @@ type loggerCtxKey struct{}
 type Options struct {
 	DebugWriter   io.Writer
 	DefaultWriter io.Writer
+	Width         int
 }
 
 // NewLogger returns initialized slog logger

@@ -114,6 +114,9 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		logger.Fatal("Cannot get REGION env")
 	}
 
+	zonesRaw := os.Getenv("ZONES")
+	zones := strings.Split(zonesRaw, ",")
+
 	regionTagCategory := os.Getenv("REGION_TAG_CATEGORY")
 	if regionTagCategory == "" {
 		logger.Fatal("Cannot get REGION_TAG_CATEGORY env")
@@ -131,6 +134,7 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 
 	config := &vsphere.ProviderClusterConfiguration{
 		Region:            region,
+		Zones:             zones,
 		RegionTagCategory: regionTagCategory,
 		ZoneTagCategory:   zoneTagCategory,
 		Provider: vsphere.Provider{

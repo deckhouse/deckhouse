@@ -37,6 +37,9 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis"
 	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta1"
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
@@ -49,8 +52,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/testssh"
 )
 
 const (
@@ -115,9 +116,7 @@ provider:
 	inputUser   = "notexists"
 )
 
-var (
-	inputPrivateKeys = []string{"/tmp/fake_ssh/input_private_key_1", "/tmp/fake_ssh/input_private_key_2"}
-)
+var inputPrivateKeys = []string{"/tmp/fake_ssh/input_private_key_1", "/tmp/fake_ssh/input_private_key_2"}
 
 type testCreatedResource struct {
 	name         string
@@ -703,6 +702,7 @@ func newFakeKubeClientProvider(kubeCl *client.KubernetesClient) *fakeKubeClientP
 		kubeCl: kubeCl,
 	}
 }
+
 func (p *fakeKubeClientProvider) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	if p.cleaned {
 		return nil, fmt.Errorf("already cleaned")
@@ -710,7 +710,8 @@ func (p *fakeKubeClientProvider) KubeClientCtx(context.Context) (*client.Kuberne
 
 	return p.kubeCl, nil
 }
-func (p *fakeKubeClientProvider) Cleanup(stopSSH bool) {
+
+func (p *fakeKubeClientProvider) Cleanup(_ context.Context, stopSSH bool) {
 	p.cleaned = true
 	p.stopSSH = stopSSH
 }
@@ -810,7 +811,7 @@ func (ts *baseTest) stateCacheKeys(t *testing.T) []string {
 
 	keys := make([]string, 0)
 
-	err := ts.stateCache.Iterate(func(k string, _ []byte) error {
+	err := ts.stateCache.Iterate(t.Context(), func(k string, _ []byte) error {
 		keys = append(keys, k)
 		return nil
 	})
@@ -838,7 +839,7 @@ func (ts *baseTest) clean(t *testing.T) {
 func (ts *baseTest) setResourcesDestroyed(t *testing.T) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	err := deckhouse.NewState(ts.stateCache).SetResourcesDestroyed()
+	err := deckhouse.NewState(ts.stateCache).SetResourcesDestroyed(t.Context())
 	require.NoError(t, err, "resources destroyed should save in cache")
 }
 
@@ -846,14 +847,14 @@ func (ts *baseTest) saveMetaConfigToCache(t *testing.T) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 	require.False(t, govalue.IsNil(ts.metaConfig))
 
-	err := ts.stateCache.SaveStruct(metaConfigKey, ts.metaConfig)
+	err := ts.stateCache.SaveStruct(t.Context(), metaConfigKey, ts.metaConfig)
 	require.NoError(t, err, "metaconfig should be saved in cache")
 }
 
 func (ts *baseTest) assertHasMetaConfigInCache(t *testing.T, saved bool) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	inCache, err := ts.stateCache.InCache(metaConfigKey)
+	inCache, err := ts.stateCache.InCache(t.Context(), metaConfigKey)
 
 	if !saved {
 		require.NoError(t, err, "metaconfig should not save in cache")
@@ -867,12 +868,12 @@ func (ts *baseTest) assertHasMetaConfigInCache(t *testing.T, saved bool) {
 func (ts *baseTest) assertResourcesSetDestroyedInCache(t *testing.T, destroyed bool) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	destroyedInCache, err := deckhouse.NewState(ts.stateCache).IsResourcesDestroyed()
+	destroyedInCache, err := deckhouse.NewState(ts.stateCache).IsResourcesDestroyed(t.Context())
 	require.NoError(t, err, "resources destroyed flag should be set")
 	require.Equal(t, destroyed, destroyedInCache, "resources destroyed should be set correct flag")
 }
 
-func (ts *baseTest) assertKubeProviderCleaned(t *testing.T, cleaned bool, shouldStop bool) {
+func (ts *baseTest) assertKubeProviderCleaned(t *testing.T, cleaned, shouldStop bool) {
 	require.False(t, govalue.IsNil(ts.kubeProvider))
 
 	kubeProvider, ok := ts.kubeProvider.(*fakeKubeClientProvider)
@@ -932,16 +933,16 @@ const (
 func testAddCloudStatesToCache(t *testing.T, stateCache dhctlstate.Cache, uuid string) {
 	require.False(t, govalue.IsNil(stateCache))
 
-	err := stateCache.Save(uuidKey, []byte(uuid))
+	err := stateCache.Save(t.Context(), uuidKey, []byte(uuid))
 	require.NoError(t, err, "uuid should save")
 
-	err = stateCache.Save(baseInfraKey, []byte(`{}`))
+	err = stateCache.Save(t.Context(), baseInfraKey, []byte(`{}`))
 	require.NoError(t, err, "base infra should save")
 
-	err = stateCache.Save(nodeBackupStateKey, []byte(`{"a": "b"}`))
+	err = stateCache.Save(t.Context(), nodeBackupStateKey, []byte(`{"a": "b"}`))
 	require.NoError(t, err, "backup should save")
 
-	err = stateCache.Save(nodeStateKey, []byte(`{}`))
+	err = stateCache.Save(t.Context(), nodeStateKey, []byte(`{}`))
 	require.NoError(t, err, "master state should save")
 }
 

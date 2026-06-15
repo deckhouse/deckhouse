@@ -19,6 +19,7 @@ package registry
 import (
 	"archive/tar"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log/slog"
@@ -28,7 +29,6 @@ import (
 	"strings"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	registryhelpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -107,7 +108,7 @@ func (s *Service) GetImageReader(ctx context.Context, remote Remote, packageName
 		slog.String("digest", digest.String()),
 		slog.Int64("size", size))
 
-	return mutate.Extract(img), nil
+	return cr.Extract(img)
 }
 
 // GetImageDigest downloads package image and returns its digest
@@ -130,17 +131,7 @@ func (s *Service) GetImageDigest(ctx context.Context, remote Remote, packageName
 	}
 
 	// get <registry>/<packageName>:<tag>
-	img, err := cli.Image(ctx, tag)
-	if err != nil {
-		return "", fmt.Errorf("get image: %w", err)
-	}
-
-	digest, err := img.Digest()
-	if err != nil {
-		return "", fmt.Errorf("get package image digest: %w", err)
-	}
-
-	return digest.String(), nil
+	return cli.Digest(ctx, tag)
 }
 
 // GetImageRootHash downloads package manifest to parse rootHash from manifest annotations
@@ -230,7 +221,10 @@ func (s *Service) Download(ctx context.Context, remote Remote, out, packageName,
 
 // download copies tar to path
 func (s *Service) download(_ context.Context, img crv1.Image, output string) error {
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return fmt.Errorf("extract image: %w", err)
+	}
 	defer rc.Close()
 
 	if err := os.MkdirAll(output, 0o700); err != nil {
@@ -314,6 +308,8 @@ type Remote struct {
 	Name         string `json:"name" yaml:"name"`
 	Repository   string `json:"repository" yaml:"repository"`
 	DockerConfig string `json:"dockercfg" yaml:"dockercfg"`
+	Login        string `json:"login" yaml:"login"`
+	Password     string `json:"password" yaml:"password"`
 	Scheme       string `json:"scheme" yaml:"scheme"`
 	CA           string `json:"ca" yaml:"ca"`
 }
@@ -329,10 +325,20 @@ func BuildRemote[T *v1alpha1.ModuleSource | *v1alpha1.PackageRepository](reg T) 
 			Scheme:       v.Spec.Registry.Scheme,
 		}
 	case *v1alpha1.PackageRepository:
+		dockerCFG := v.Spec.Registry.DockerCFG
+		// Application charts read .Application.Package.Registry.dockercfg to build imagePullSecrets;
+		// synthesize one from login/password so charts work regardless of which auth method the spec uses.
+		if dockerCFG == "" && v.Spec.Registry.Login != "" {
+			if raw, err := registryhelpers.DockerCfgFromCreds(v.Spec.Registry.Login, v.Spec.Registry.Password, v.Spec.Registry.Repo); err == nil {
+				dockerCFG = base64.StdEncoding.EncodeToString(raw)
+			}
+		}
 		return Remote{
 			Name:         v.Name,
 			Repository:   v.Spec.Registry.Repo,
-			DockerConfig: v.Spec.Registry.DockerCFG,
+			DockerConfig: dockerCFG,
+			Login:        v.Spec.Registry.Login,
+			Password:     v.Spec.Registry.Password,
 			CA:           v.Spec.Registry.CA,
 			Scheme:       v.Spec.Registry.Scheme,
 		}
@@ -343,11 +349,18 @@ func BuildRemote[T *v1alpha1.ModuleSource | *v1alpha1.PackageRepository](reg T) 
 
 func (s *Service) buildRegistryClient(remote Remote, segment string) (cr.Client, error) {
 	opts := []cr.Option{
-		cr.WithAuth(remote.DockerConfig),
+		cr.WithDockerCfgAuth(remote.DockerConfig),
+		cr.WithUserPasswordAuth(remote.Login, remote.Password),
 		cr.WithUserAgent(s.clusterUUID),
 		cr.WithCA(remote.CA),
 		cr.WithInsecureSchema(strings.ToLower(remote.Scheme) == "http"),
 	}
+
+	s.logger.Debug("build registry client",
+		slog.Bool("with_docker_config", remote.DockerConfig != "" && remote.Login == "" && remote.Password == ""),
+		slog.Bool("with_credentials", remote.Login != "" && remote.Password != ""),
+		slog.Bool("without_auth", remote.DockerConfig == "" && remote.Login == "" && remote.Password == ""),
+		slog.String("cluster_uuid", s.clusterUUID))
 
 	cli, err := s.dc.GetRegistryClient(filepath.Join(remote.Repository, segment), opts...)
 	if err != nil {

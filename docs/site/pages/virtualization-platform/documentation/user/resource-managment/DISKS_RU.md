@@ -46,6 +46,7 @@ d8 k get storageclass
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                 PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 i-sds-replicated-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
@@ -58,6 +59,8 @@ rv-thin-r1 (default)                 replicated.csi.storage.deckhouse.io   Delet
 rv-thin-r2                           replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 С полным описанием параметров конфигурации дисков можно ознакомиться [в документации ресурса VirtualDisk](/modules/virtualization/cr.html#virtualdisk).
 
@@ -86,21 +89,25 @@ spec:
 EOF
 ```
 
-После создания ресурс `VirtualDisk` может находиться в следующих состояниях (фазах):
+После создания ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) может находиться в следующих состояниях (`Phase`):
 
 - `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания диска;
 - `Provisioning` — идет процесс создания диска;
 - `Resizing` — идет процесс изменения размера диска;
 - `WaitForFirstConsumer` — диск ожидает создания виртуальной машины, которая будет его использовать;
-- `WaitForUserUpload` — диск ожидает от пользователя загрузки образа (type: Upload);
+- `WaitForUserUpload` — диск ожидает от пользователя загрузки образа (`type: Upload`);
 - `Ready` — диск создан и готов для использования;
-- `Migrating` — живая миграция диска;
-- `Exporting` - идет процесс экспорта диска;
+- `Migrating` — выполняется живая миграция диска;
+- `Exporting` — идет процесс экспорта диска;
 - `Failed` — произошла ошибка в процессе создания;
 - `PVCLost` — системная ошибка, PVC с данными утерян;
 - `Terminating` — идет процесс удаления диска. Диск может «зависнуть» в данном состоянии, если он еще подключен к виртуальной машине.
 
-До тех пор, пока диск не перешёл в фазу `Ready`, можно изменять любые поля блока `.spec`. При изменении процесс создания диска будет запущен заново.
+До тех пор, пока диск не перешёл в состояние `Ready`, можно изменять любые поля блока `.spec`. При изменении процесс создания диска будет запущен заново.
+
+{% alert level="info" %}
+После перехода диска в состояние `Ready` по-прежнему можно менять [`.spec.persistentVolumeClaim.size`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-size) и [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-storageclassname). Остальные поля `.spec` будут неизменяемы.
+{% endalert %}
 
 Диагностика проблем с ресурсом осуществляется путем анализа информации в блоке `.status.conditions`.
 
@@ -114,10 +121,13 @@ d8 k get vd blank-disk
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE   CAPACITY   AGE
 blank-disk   Ready   100Mi      1m2s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Как создать пустой диск в веб-интерфейсе (данный шаг можно пропустить и выполнить при создании ВМ):
 
@@ -144,10 +154,13 @@ d8 k get vi ubuntu-24-04 -o wide
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
 ubuntu-24-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-24-04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Искомый размер указан в колонке **UNPACKEDSIZE** и равен 2.5Gi.
 
@@ -205,11 +218,14 @@ d8 k get vd
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE   CAPACITY   AGE
 linux-vm-root    Ready   10Gi       7m52s
 linux-vm-root-2  Ready   2590Mi     7m15s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Как создать диск из образа в веб-интерфейсе (данный шаг можно пропустить и выполнить при создании ВМ):
 
@@ -288,10 +304,13 @@ d8 k get vd linux-vm-root
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   10Gi       10m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Примените изменения:
 
@@ -311,10 +330,13 @@ d8 k get vd linux-vm-root
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   11Gi       12m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Как изменить размер диска в веб-интерфейсе:
 

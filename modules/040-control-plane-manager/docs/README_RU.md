@@ -11,7 +11,7 @@ description: Deckhouse управляет компонентами control plane
 - **Настройка компонентов**. Автоматически создает необходимые конфигурации и манифесты компонентов `control-plane`.
 - **Upgrade/downgrade компонентов**. Поддерживает в кластере одинаковые версии компонентов.
 - **Управление конфигурацией etcd-кластера** и его членов. Масштабирует master-узлы, выполняет миграцию из single-master в multi-master и обратно.
-- **Настройка kubeconfig**. Обеспечивает всегда актуальную конфигурацию для работы kubectl. Генерирует, продлевает, обновляет kubeconfig с правами cluster-admin и создает symlink пользователю root, чтобы kubeconfig использовался по умолчанию.
+- **Настройка kubeconfig**. Обеспечивает актуальные файлы kubeconfig на узлах control-plane. Генерирует, продлевает и обновляет kubeconfig для компонентов control-plane и admin kubeconfig (`admin.conf`). По умолчанию создаёт символическую ссылку для root-пользователя (`/root/.kube/config` -> `admin.conf`). При включённом модуле [user-authz](/modules/user-authz/) символическую ссылку можно отключить параметром `rootKubeconfigSymlink` в модуле **control-plane-manager** (см. [FAQ](faq.html#модель-административного-доступа-к-кластеру)). Также ужесточает права доступа к файлам `admin.conf` и `super-admin.conf`.
 - **Расширение работы планировщика**, за счет подключения внешних плагинов через вебхуки. Управляется ресурсом [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration). Позволяет использовать более сложную логику при решении задач планирования нагрузки в кластере. Например:
   - размещение подов приложений организации хранилища данных ближе к самим данным,
   - приоритизация узлов в зависимости от их состояния (сетевой нагрузки, состояния подсистемы хранения и т. д.),
@@ -76,11 +76,37 @@ description: Deckhouse управляет компонентами control plane
 Эта функция применяется только в средах, где параметр `--terminated-pod-gc-threshold` можно настраивать. В управляемых Kubernetes-кластерах, таких как EKS, GKE, AKS, это значение контролируется провайдером.
 {% endalert %}
 
+## Настройка ресурсных запросов control plane
+
+Модуль позволяет задать суммарные ресурсные запросы CPU и памяти для компонентов control plane на каждом master-узле: `kube-apiserver`, `etcd`, `kube-controller-manager` и `kube-scheduler`.
+
+Для настройки используйте параметр [`resourcesRequests`](configuration.html#parameters-resourcesrequests) в ModuleConfig `control-plane-manager`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    resourcesRequests:
+      cpu: 1000m
+      memory: 500Mi
+```
+
+Указанные значения используются как общий бюджет запросов для компонентов control plane на каждом master-узле. Deckhouse Kubernetes Platform (DKP) распределяет этот бюджет между статическими подами control plane при формировании их манифестов.
+
+{% alert level="info" %}
+Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например в GKE, AKS или EKS.
+{% endalert %}
+
 ## Управление версиями
 
-Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.
+Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии DKP. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов control plane (например, с `1.31.*` на `1.32.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 Обновление control plane выполняется безопасно и для single-master-, и для multi-master-кластеров. Во время обновления может быть кратковременная недоступность API-сервера. На работу приложений в кластере обновление не влияет и может выполняться без выделения окна для регламентных работ.
 
@@ -89,17 +115,43 @@ description: Deckhouse управляет компонентами control plane
 - Общие замечания:
   - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NogeGroup узлы обновляются последовательно, по одному.
 - При upgrade:
-  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.31 -> 1.32, 1.32 -> 1.33, 1.33 -> 1.34.
+  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.32 -> 1.33, 1.33 -> 1.34, 1.35 -> 1.36.
   - На каждом этапе сначала обновляется версия control plane, затем происходит обновление kubelet на узлах кластера.  
 - При downgrade (не поддерживается для редакций CSE):
   - Успешное понижение версии гарантируется только на одну версию вниз от максимальной минорной версии control plane, когда-либо использовавшейся в кластере.
   - Сначала на узлах кластера выполняется понижение версии kubelet, после чего производится понижение версии компонентов control plane.
 
+## Публикация API kubernetes
+
+Компонент kube-apiserver без дополнительных настроек доступен только во внутренней сети кластера. Этот модуль решает проблему простого и безопасного доступа к API Kubernetes извне кластера.
+
+### Через Ingress
+
+Указанием параметров [`apiserver.publishAPI.ingress`](configuration.html#parameters-apiserver-publishapi-ingress) можно опубликовать API-сервер на специальном домене (подробнее см. [раздел о служебных доменах в документации](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+При настройке можно указать:
+
+* перечень сетевых адресов и подсетей, с которых разрешено подключение;
+* Ingress-контроллер, на котором производится публикация;
+* Использовать ли вручную заданный, полученный через cert-manager или автоматический самоподписанный сертификат TLS.
+
+По умолчанию будет сгенерирован специальный сертификат ЦС (CA) и автоматически настроен генератор kubeconfig.
+
+### Через сервис с типом LoadBalancer
+
+Указанием параметров [`apiserver.publishAPI.loadBalancer`](configuration.html#parameters-apiserver-publishapi-loadbalancer) можно создать сервис с типом LoadBalancer `kube-system/d8-control-plane-apiserver`.
+
+При настройке можно указать:
+
+* перечень сетевых адресов и подсетей, с которых разрешено подключение;
+* внешний порт сервиса;
+* аннотации на сервис для настроек провайдера балансировки.
+
 ## Аудит
 
 Если требуется журналировать операции с API или отдебажить неожиданное поведение, для этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/). Его можно настроить путем создания правил [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy), а результатом работы аудита будет лог-файл `/var/log/kube-audit/audit.log` со всеми интересующими операциями.
 
-В установках Deckhouse по умолчанию созданы базовые политики, которые отвечают за логирование событий, которые:
+В установках DKP по умолчанию созданы базовые политики, которые отвечают за логирование событий, которые:
 
 - связаны с операциями создания, удаления и изменения ресурсов;
 - совершаются от имен сервисных аккаунтов из системных Namespace `kube-system`, `d8-*`;
@@ -128,7 +180,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     enabledFeatureGates:
@@ -145,3 +197,48 @@ spec:
 Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Защита чувствительных полей кастомных ресурсов
+
+Feature gate `CRDSensitiveData` обеспечивает защиту чувствительных данных на уровне полей в ресурсах, помеченных маркером `x-kubernetes-sensitive-data: true`. Функция реализована в виде патча к `kube-apiserver` (`apiextensions-apiserver`)
+и поддерживается, начиная с версии Kubernetes 1.31.
+
+Маркер `x-kubernetes-sensitive-data` проверяется `kube-apiserver` при применении ресурса:
+
+- маркер требует, чтобы был включен feature gate `CRDSensitiveData`. Он включается по умолчанию, его не следует указывать вручную;
+- маркер не допускается устанавливать на корне схемы (на самом узле `openAPIV3Schema`). Чтобы защитить все поля ресурса, добавьте маркер на свойство `spec` (или на поддерево ниже него), а не на корень схемы — на корне также находятся системные поля (`apiVersion`, `kind`, `metadata`), которые невозможно зашифровать;
+- тип поля должен быть одним из типов OpenAPI v3: `string`, `integer`, `number`, `boolean`, `object` или `array`. Маркер на `object` или `array` делает чувствительным всё поддерево;
+- поддерживаются поля, объявленные как `x-kubernetes-int-or-string: true`;
+- маркер запрещён внутри веток `anyOf`, `oneOf`, `allOf` и `not` (это проверяет валидатор структурной схемы).
+
+Если хотя бы одно поле в схеме ресурса помечено `x-kubernetes-sensitive-data: true`, ко всем кастомным ресурсам этого типа применяются следующие меры защиты:
+
+- **Шифрование в etcd** — весь ресурс шифруется с помощью того же механизма, что и Kubernetes Secrets.
+  Требует включения параметра `apiserver.encryptionEnabled`.
+- **Фильтрация полей на основе RBAC** — при выполнении запросов `get`, `list`, или `watch` чувствительные поля удаляются из ответа API, если у вызывающей стороны нет прав `get`, `list` или `watch` на субресурс `<resource>/sensitive`.
+- **Маскировка в журнале аудита** — значения чувствительных полей всегда заменяются на `"******"` в журнале аудита, независимо от прав RBAC и уровня аудита.
+
+Чтобы добавить к защите чувствительных полей шифрование в etcd, установите [параметр `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в `true`.
+Feature gate `CRDSensitiveData` включается по умолчанию, его не следует указывать вручную:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+```
+
+{% alert level="warning" %}
+Включение `encryptionEnabled` необратимо и приводит к перезапуску `kube-apiserver`.
+{% endalert %}
+
+За подробностями обратитесь к следующим разделам:
+
+- [«FAQ»](faq.html#как-защитить-чувствительные-поля-кастомных-ресурсов) — инструкция по включению защиты чувствительных полей;
+- [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями) — примеры конфигурации и результатов.

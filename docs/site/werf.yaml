@@ -36,9 +36,9 @@ build:
 # Files.Get prefix
 {{- $_ := set . "prefix" "" }}
 ---
-# Base Images
-{{- include "parse_base_images_map" . }}
----
+# Base Images not cached
+{{- $_ := include "parse_base_images_map" . -}}
+
 {{- $context := . }}
 {{- $_ := set $context "ModuleName" "website-docs" }}
 {{- $_ := set $context "ImageName" "builder" }}

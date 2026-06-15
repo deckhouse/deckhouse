@@ -1,4 +1,4 @@
-// Copyright 2022 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -34,7 +35,7 @@ func CheckPreventBreakAnotherBootstrappedCluster(
 	kubeCl *client.KubernetesClient,
 	config *config.DeckhouseInstaller,
 ) error {
-	return retry.NewSilentLoop("Check prevent break another bootstrapped", 15, 3*time.Second).RunContext(ctx, func() error {
+	return retry.NewSilentLoop("Check to prevent breaking another bootstrapped cluster", 15, 3*time.Second).RunContext(ctx, func() error {
 		var uuidInCluster string
 		cmInCluster, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifests.ClusterUUIDCm, metav1.GetOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -44,7 +45,7 @@ func CheckPreventBreakAnotherBootstrappedCluster(
 		if err == nil {
 			uuidInCluster = cmInCluster.Data[manifests.ClusterUUIDCmKey]
 			if uuidInCluster == "" {
-				return fmt.Errorf("Cluster UUID config map found, but UUID is empty")
+				return fmt.Errorf("Cluster UUID config map found, but the UUID is empty")
 			}
 		}
 
@@ -53,9 +54,9 @@ func CheckPreventBreakAnotherBootstrappedCluster(
 		}
 
 		if uuidInCluster != config.UUID {
-			return fmt.Errorf(`Cluster UUID's not equal in the cluster (%s) and in the cache (%s).
-Probably you are trying bootstrap cluster on node with previous created cluster.
-Please check hostname.`, uuidInCluster, config.UUID)
+			return fmt.Errorf(`Cluster UUIDs are not equal in the cluster (%s) and in the cache (%s).
+You are probably trying to bootstrap a cluster on a node with a previously created cluster.
+Please check the hostname.`, uuidInCluster, config.UUID)
 		}
 
 		return nil
@@ -63,6 +64,9 @@ Please check hostname.`, uuidInCluster, config.UUID)
 }
 
 func WaitForFirstMasterNodeBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	ctx, span := telemetry.StartSpan(ctx, "WaitForFirstMasterNodeBecomeReady")
+	defer span.End()
+
 	var nodeName string
 	err := retry.NewSilentLoop("Get master node name", 45, 3*time.Second).RunContext(ctx, func() error {
 		nodes, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{})

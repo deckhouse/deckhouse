@@ -1,0 +1,37 @@
+candi:
+  fixes:
+    - summary: >-
+        Added a Netplan override to force the secondary NIC to use the main routing table, fixing
+        cloud-init PBR conflicts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19448
+common:
+  fixes:
+    - summary: Fixed an issue where Trivy could not detect VEX files in coredns images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19297
+deckhouse:
+  fixes:
+    - summary: Overwrite currentReleaseImageName on mismatch.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19412
+    - summary: Allow updating scanInterval on the deckhouse ModuleSource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19277
+docs:
+  features:
+    - summary: Add a Jekyll plugin for tabbed content in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19293
+istio:
+  features:
+    - summary: Allow custom ports in metadataEndpoint URLs for IstioFederation and IstioMulticluster CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19247
+  fixes:
+    - summary: fixed CVEs in module images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19364
+      impact: module pods will be restarted
+service-with-healthchecks:
+  fixes:
+    - summary: Correct RBACv2 is provided.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19347
+terraform-manager:
+  fixes:
+    - summary: Fix opentofu patches build after pull request 19080.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19453
+

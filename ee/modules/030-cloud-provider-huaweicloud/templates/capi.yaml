@@ -1,0 +1,13 @@
+{{- $providerID := "huaweicloud" -}}
+{{- $capi := .Files.Glob "capi/**" -}}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ printf "d8-cloud-provider-%s-capi" $providerID }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/ephemeral-nodes-templates" "capi"
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
+data: {{ $capi.AsSecrets | nindent 2 }}

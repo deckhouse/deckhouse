@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 {{- $mig_manager_version := "0.12.3" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $image_version := toString $key | replace "." "-" }}
@@ -40,11 +41,11 @@ import:
   add: /usr/bin/nvidia-ctk
   to: /usr/bin/nvidia-ctk
   before: setup
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
   to: /usr/bin/bash
   before: setup
-- image: tools/coreutils
+- from: {{ index $.Images "tools/coreutils" }}
   add: /
   to: /
   includePaths:
@@ -54,7 +55,7 @@ import:
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
   before: setup
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
@@ -93,4 +94,5 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make PREFIX=/usr/bin/ cmds
   - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager
+{{- end }}
 {{- end }}

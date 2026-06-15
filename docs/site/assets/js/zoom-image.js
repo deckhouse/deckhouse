@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const ZOOM_STEP = 0.25;
   const ZOOM_MIN = 1;
   const ZOOM_MAX = 4;
+  const DESKTOP_BREAKPOINT = 1024;
 
   function stopEvent(e) {
     e.preventDefault();
@@ -31,6 +32,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }, cb, 60);
   }
 
+  function isDesktopViewport() {
+    return window.innerWidth > DESKTOP_BREAKPOINT;
+  }
+
   function isSvgUrl(url) {
     return /\.svg(?:[?#]|$)/i.test(url || '');
   }
@@ -40,10 +45,33 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function getState(container) {
-    if (!container.__zoomImageState) {
-      container.__zoomImageState = { scale: 1, x: 0, y: 0, dragging: false };
+    if (!container.zoomImageState) {
+      container.zoomImageState = { scale: 1, x: 0, y: 0, dragging: false };
     }
-    return container.__zoomImageState;
+    return container.zoomImageState;
+  }
+
+  function updateAltOverlayVisibility(container) {
+    const altOverlay = container.zoomImageAltOverlay;
+    if (!altOverlay) return;
+    const hasText = container.zoomImageAltText;
+    altOverlay.style.display = hasText ? 'block' : 'none';
+  }
+
+  function addAltOverlay(container, sourceImg) {
+    const altText = sourceImg && sourceImg.alt ? sourceImg.alt.trim() : '';
+    container.zoomImageAltText = altText;
+    if (!altText) {
+      container.zoomImageAltOverlay = null;
+      return;
+    }
+
+    const altOverlay = document.createElement('div');
+    altOverlay.className = 'zoom-image-alt';
+    altOverlay.textContent = altText;
+    document.body.appendChild(altOverlay);
+    container.zoomImageAltOverlay = altOverlay;
+    updateAltOverlayVisibility(container);
   }
 
   function applyTransform(container) {
@@ -59,6 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
       img.style.cursor = 'pointer';
     }
     img.draggable = false;
+    updateAltOverlayVisibility(container);
   }
 
   function clampPan(container) {
@@ -171,6 +200,9 @@ document.addEventListener('DOMContentLoaded', function () {
       stopEvent(e);
       document.body.style.cursor = '';
       closeBtn.click();
+      if (container.zoomImageAltOverlay && container.zoomImageAltOverlay.parentNode) {
+        container.zoomImageAltOverlay.parentNode.removeChild(container.zoomImageAltOverlay);
+      }
       if (toolbar.parentNode) toolbar.parentNode.removeChild(toolbar);
     });
 
@@ -186,6 +218,9 @@ document.addEventListener('DOMContentLoaded', function () {
       cleanupTries += 1;
       if (!document.body.contains(container)) {
         document.body.style.cursor = '';
+        if (container.zoomImageAltOverlay && container.zoomImageAltOverlay.parentNode) {
+          container.zoomImageAltOverlay.parentNode.removeChild(container.zoomImageAltOverlay);
+        }
         if (toolbar.parentNode) toolbar.parentNode.removeChild(toolbar);
         return;
       }
@@ -199,7 +234,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!img || img.dataset.zoomImageBound === '1') return;
     img.dataset.zoomImageBound = '1';
 
+    const isDesktop = isDesktopViewport();
     const state = getState(container);
+    const closeBtn = container.querySelector('.gclose');
+    const wrapper = img.closest('.gslide-inner-content');
     let pointerId = null;
     let startX = 0;
     let startY = 0;
@@ -273,12 +311,22 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
+    function clickWrapperToClose(e) {
+      if (!closeBtn) return;
+      if (e.target === img || (e.target.closest && e.target.closest('.zoom-image-toolbar'))) return;
+      stopEvent(e);
+      closeBtn.click();
+    }
+
     img.addEventListener('pointerdown', pointerDown, true);
     img.addEventListener('pointermove', pointerMove, true);
     img.addEventListener('pointerup', pointerUp, true);
     img.addEventListener('pointercancel', pointerUp, true);
-    img.addEventListener('click', clickZoom, true);
-    img.addEventListener('wheel', wheelZoom, { passive: false });
+    if (isDesktop) {
+      img.addEventListener('click', clickZoom, true);
+      img.addEventListener('wheel', wheelZoom, { passive: false });
+    }
+    if (wrapper) wrapper.addEventListener('click', clickWrapperToClose, true);
 
     applyTransform(container);
   }
@@ -301,12 +349,13 @@ document.addEventListener('DOMContentLoaded', function () {
     img.addEventListener('click', function (e) {
       e.preventDefault();
       const url = img.currentSrc || img.src;
+      const isDesktop = isDesktopViewport();
       const lb = GLightbox({
         elements: [{ href: url, type: 'image' }],
-        touchNavigation: false,
+        touchNavigation: !isDesktop,
         loop: false,
         zoomable: false,
-        draggable: false,
+        draggable: !isDesktop,
         closeButton: true,
         openEffect: 'zoom',
         closeEffect: 'fade'
@@ -319,21 +368,12 @@ document.addEventListener('DOMContentLoaded', function () {
           return imgInSlide && closeInSlide;
         }, function () {
           fitSvgToViewport(container, img, url);
+          addAltOverlay(container, img);
           addToolbar(container);
           enablePanAndWheelZoom(container);
           applyTransform(container);
         }, 80);
       });
     });
-
-    const parent = img.parentElement;
-    if (!parent) return;
-    
-    if (parent.classList.contains('zoom-image-wrap')) return;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'zoom-image-wrap';
-    parent.insertBefore(wrapper, img);
-    wrapper.appendChild(img);
   });
 });

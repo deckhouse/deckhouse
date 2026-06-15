@@ -6,7 +6,7 @@ index 1ed02b8..2a58ea8 100644
  module github.com/jacksontj/promxy
  
 -go 1.24
-+go 1.24.0
++go 1.25.10
  
  require (
  	github.com/Azure/go-autorest/autorest v0.11.30

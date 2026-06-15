@@ -183,16 +183,17 @@ func (a *Application) addHooks(found ...hooks.Hook) error {
 }
 
 // RuntimeValues holds runtime values that are not part of schema.
-// These values are passed to helm templates under .Runtime prefix.
+// These values are passed to helm templates under .Application prefix.
 type RuntimeValues struct {
 	Instance addonutils.Values `json:"Instance"`
 	Package  addonutils.Values `json:"Package"`
+	Settings addonutils.Values `json:"Settings"`
 }
 
-// GetRuntimeValues returns values that are not part of schema.
+// getRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
-func (a *Application) GetRuntimeValues() RuntimeValues {
+func (a *Application) getRuntimeValues() RuntimeValues {
 	images := make(map[string]string, len(a.digests))
 	for name, tag := range a.digests {
 		image := fmt.Sprintf("%s/%s@%s", a.repository.Repository, a.definition.Name, tag)
@@ -210,12 +211,13 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 			"Registry": a.repository,
 			"Version":  a.definition.Version,
 		},
+		Settings: a.values.GetSettings(),
 	}
 }
 
-// GetExtraNelmValues returns runtime values in string format
-func (a *Application) GetExtraNelmValues() string {
-	runtimeValues := a.GetRuntimeValues()
+// GetRuntimeValues returns runtime values in string format
+func (a *Application) GetRuntimeValues() string {
+	runtimeValues := a.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
 	return fmt.Sprintf("Application=%s", marshalled)
@@ -287,20 +289,20 @@ func (a *Application) GetValuesChecksum() string {
 // GetSettingsChecksum returns a checksum of the current config values.
 // Used to detect if settings changed.
 func (a *Application) GetSettingsChecksum() string {
-	return a.values.GetConfigChecksum()
+	return a.values.GetSettingsChecksum()
 }
 
 // ValidateSettings validates settings against openAPI and call setting check if exists
 func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
-	if err := a.values.ValidateConfigValues(settings); err != nil {
+	if err := a.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
 	// apply defaults from config values spec
-	settings = a.values.ApplyDefaultsConfigValues(settings)
+	settings = a.values.ApplySettingsDefaults(settings)
 
 	// no need to call the settings check if nothing changed
-	if a.values.GetConfigChecksum() == settings.Checksum() {
+	if a.values.GetSettingsChecksum() == settings.Checksum() {
 		return settingscheck.Result{Valid: true}, nil
 	}
 
@@ -313,14 +315,20 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 	}, nil
 }
 
-// GetValues returns values for rendering
+// GetValues returns values for hook rendering
 func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 
 // ApplySettings applies settings values to application
 func (a *Application) ApplySettings(settings addonutils.Values) error {
-	return a.values.ApplyConfigValues(settings)
+	return a.values.ApplySettings(settings)
+}
+
+// GetSettings returns the effective settings: user config merged with
+// config-schema defaults. Same payload exposed to templates as .Application.Settings.
+func (a *Application) GetSettings() addonutils.Values {
+	return a.values.GetSettings()
 }
 
 // GetConstraints returns scheduler checks, their determine if an app should be enabled/disabled
@@ -375,7 +383,7 @@ func (a *Application) DisableHooks() {
 	kubeHooks := a.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeHooks {
 		if hook.GetHookController() != nil {
-			hook.GetHookController().StopMonitors()
+			hook.GetHookController().DisableKubernetesBindings()
 		}
 	}
 
@@ -471,7 +479,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	span.SetAttributes(attribute.String("hook", h.GetName()))
 	span.SetAttributes(attribute.String("name", a.GetName()))
 
-	hookConfigValues := a.values.GetConfigValues()
+	hookConfigValues := a.values.GetSettings()
 	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 

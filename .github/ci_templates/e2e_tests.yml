@@ -21,7 +21,7 @@
 {!{ end -}!}
 
 {!{- define "e2e_kubernetes_default_version" -}!}
-1.33
+1.34
 {!{- end -}!}
 
 # job for set e2e requirement status
@@ -195,6 +195,7 @@ run: |
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
   -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+  -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
   -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e CRI=${CRI} \
@@ -204,6 +205,7 @@ run: |
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e WERF_ENV=${WERF_ENV} \
   -e USER_RUNNER_ID=${user_runner_id} \
   -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v $(pwd)/testing:/deckhouse/testing \
@@ -222,6 +224,7 @@ run: |
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e WERF_ENV=${WERF_ENV} \
   -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v "$PWD/config.yml:/config.yml" \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -240,6 +243,8 @@ run: |
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
   -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+  -e CI_COMMIT_TAG=${CI_COMMIT_TAG} \
+  -e WERF_ENV=${WERF_ENV} \
   -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e CRI=${CRI} \
@@ -411,7 +416,7 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 # <template: check_e2e_labels_job>
 check_e2e_labels:
   name: Check e2e labels
-  runs-on: "regular"
+  runs-on: "self-slim"
   permissions:
     contents: read
     issues: write
@@ -560,9 +565,6 @@ check_e2e_labels:
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_stage_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
-{!{ if not (has $commanderProviders $provider) }!}
-  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
-{!{- end }!}
 
     - name: Setup
       id: setup
@@ -575,6 +577,7 @@ check_e2e_labels:
         INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
         MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
         MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+        DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
       run: |
         # Calculate unique prefix for e2e test.
         # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -618,20 +621,23 @@ check_e2e_labels:
           REPO_SUFFIX=
         fi
 
-        # Use rw-registry for Git tags.
-        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-
-        if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
-          # Use stage-registry for release branches.
-          BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-        else
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+        # workflow_dispatch may pass prXXX slug while ci_commit_branch holds the real release ref.
+        IMAGE_TAG_REF="${CI_COMMIT_REF_SLUG}"
+        if [[ -n "${CI_COMMIT_TAG}" ]]; then
+          IMAGE_TAG_REF="${CI_COMMIT_TAG}"
+        elif [[ "${CI_COMMIT_BRANCH:-}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          IMAGE_TAG_REF="${CI_COMMIT_BRANCH}"
         fi
+
+        # Branches (main, pr*, release-X.Y, release-X.Y-ee) use dev-registry.
+        BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+
+        # Semver tags (vX.Y.Z) use stage-registry/deckhouse/{fe|ee|ce} — see install block below.
+        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
         if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
           # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-          # Use dev-regisry for branches and Github Container Registry for semver tags.
+          # Use dev-registry for branches and Github Container Registry for semver tags.
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
         fi
 
@@ -643,13 +649,18 @@ check_e2e_labels:
         # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
         INITIAL_IMAGE_TAG=
         if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-          INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+            # Semver tags in stage-registry have no edition suffix in the tag name.
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}
+          else
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
         fi
 
         # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-        # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+        # IMAGE_TAG_REF is a 'prNUM' for dev branches, 'main', release-X.Y or vX.Y.Z for release refs.
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+        IMAGE_TAG=${IMAGE_TAG_REF}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
         INSTALL_IMAGE_NAME=
 {!{- if eq $provider "eks" }!}
@@ -662,20 +673,30 @@ check_e2e_labels:
           TERRAFORM_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}
 {!{- end }!}
         fi
-        if [[ -n ${CI_COMMIT_TAG} ]] ; then
+        if [[ -n ${CI_COMMIT_TAG} ]] || [[ "${IMAGE_TAG_REF}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${IMAGE_TAG_REF}
 {!{- if eq $provider "eks" }!}
-          TERRAFORM_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks:${CI_COMMIT_REF_SLUG}
+          TERRAFORM_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks:${IMAGE_TAG_REF}
 {!{- end }!}
         fi
         if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-          INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+          if [[ ${INITIAL_REF_SLUG} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${INITIAL_REF_SLUG}
 {!{- if eq $provider "eks" }!}
-          TERRAFORM_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${INITIAL_IMAGE_TAG}
+            TERRAFORM_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks:${INITIAL_REF_SLUG}
 {!{- end }!}
-          git fetch origin ${INITIAL_REF_SLUG}
-          git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+            git fetch origin tag ${INITIAL_REF_SLUG}
+            git checkout ${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          else
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+{!{- if eq $provider "eks" }!}
+            TERRAFORM_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${INITIAL_IMAGE_TAG}
+{!{- end }!}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
         fi
         SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
         echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
@@ -737,6 +758,7 @@ check_e2e_labels:
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
+        CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
 {!{- end }!}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
@@ -974,7 +996,6 @@ check_e2e_labels:
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_stage_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
 
     - name: Setup
       id: setup
@@ -996,11 +1017,6 @@ check_e2e_labels:
           mkdir -p "${TMP_DIR_PATH}"
         fi
 
-        if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-          # Use stage-registry for release branches.
-          DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-        fi
-
         INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
         SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -1014,11 +1030,7 @@ check_e2e_labels:
         DECKHOUSE_IMAGE_TAG="${arrPath[1]}"
 {!{- if eq $provider "eks" }!}
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-        if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-          BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-        else
-          BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-        fi
+        BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
         TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-opentofu-eks:${DECKHOUSE_IMAGE_TAG}"
 {!{- end }!}
 
@@ -1043,7 +1055,7 @@ check_e2e_labels:
 {!{ if not (has $commanderProviders $provider) }!}
     - name: "Download state"
       id: download_artifact_with_state
-      uses: dawidd6/action-download-artifact@v2.23.0
+      uses: dawidd6/action-download-artifact@v21
       with:
         github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run_id: ${{github.event.inputs.run_id}}

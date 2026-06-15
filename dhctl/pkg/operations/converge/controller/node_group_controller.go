@@ -26,6 +26,7 @@ import (
 	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -49,13 +50,16 @@ type NodeGroupController struct {
 	cloudConfig     string
 	desiredReplicas int
 	layoutStep      infrastructure.Step
+
+	globalOptions *options.GlobalOptions
 }
 
-func NewNodeGroupController(name string, state state.NodeGroupInfrastructureState, excludeNodes map[string]bool) *NodeGroupController {
+func NewNodeGroupController(name string, state state.NodeGroupInfrastructureState, excludeNodes map[string]bool, globalOptions *options.GlobalOptions) *NodeGroupController {
 	controller := &NodeGroupController{
 		excludedNodes: excludeNodes,
 		name:          name,
 		state:         state,
+		globalOptions: globalOptions,
 	}
 
 	return controller
@@ -63,7 +67,12 @@ func NewNodeGroupController(name string, state state.NodeGroupInfrastructureStat
 
 func (c *NodeGroupController) Run(ctx *context.Context) error {
 	// we hide deckhouse logs because we always have config
-	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -84,7 +93,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("Nodes to delete %d. Starting update nodes\n", len(nodesToDeleteInfo))
+	log.DebugF("Nodes to delete: %d. Starting to update nodes\n", len(nodesToDeleteInfo))
 
 	if err := c.nodeGroup.beforeUpdateNodes(ctx); err != nil {
 		return err
@@ -95,7 +104,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("starting delete nodes\n")
+	log.DebugF("starting to delete nodes\n")
 
 	if err := c.switchClientBeforeDeleteNodesIfNeed(ctx, nodesToDeleteInfo); err != nil {
 		return err
@@ -111,7 +120,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 		return err
 	}
 
-	log.DebugF("Starting converge node template\n")
+	log.DebugF("Starting to converge node template\n")
 
 	if groupSpec != nil {
 		return c.tryUpdateNodeTemplate(ctx, groupSpec.NodeTemplate)
@@ -123,7 +132,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 func (c *NodeGroupController) switchClientBeforeDeleteNodesIfNeed(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	clientSwitcher := ctx.ClientSwitcher()
 	if govalue.IsNil(clientSwitcher) {
-		log.DebugF("Skip switch client before delete nodes. Got empty switcher\n")
+		log.DebugF("Skipping switch of client before deleting nodes. Got empty switcher\n")
 		return nil
 	}
 
@@ -146,7 +155,7 @@ func (c *NodeGroupController) tryDeleteNodes(ctx *context.Context, nodesToDelete
 	}
 
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		log.DebugLn("Skip delete nodes because destructive operations are disabled")
+		log.DebugLn("Skipping node deletion because destructive operations are disabled")
 		return nil
 	}
 
@@ -182,16 +191,21 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		}
 	}
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	var allErrs *multierror.Error
 	for _, nodeToDeleteInfo := range nodesToDeleteInfo {
 		if _, ok := c.excludedNodes[nodeToDeleteInfo.name]; ok {
-			log.InfoF("Skip delete excluded node %v\n", nodeToDeleteInfo.name)
+			log.InfoF("Skipping deletion of excluded node %v\n", nodeToDeleteInfo.name)
 			continue
 		}
 
 		nodeIndex, err := config.GetIndexFromNodeName(nodeToDeleteInfo.name)
 		if err != nil {
-			log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, nodeToDeleteInfo.name)
+			log.ErrorF("can't extract index from infrastructure state secret (%v), skipping %s\n", err, nodeToDeleteInfo.name)
 			return nil
 		}
 
@@ -229,17 +243,17 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			return allErrs.ErrorOrNil()
 		}
 
-		if err := entity.DeleteNode(ctx.Ctx(), ctx.KubeClient(), nodeToDeleteInfo.name); err != nil {
+		if err := entity.DeleteNode(ctx.Ctx(), kubeClient, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
 
-		if err := infrastructurestate.DeleteNodeInfrastructureStateFromCache(nodeToDeleteInfo.name, ctx.StateCache()); err != nil {
+		if err := infrastructurestate.DeleteNodeInfrastructureStateFromCache(ctx.Ctx(), nodeToDeleteInfo.name, ctx.StateCache()); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to delete node %s infrastructure state from cache: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
 
-		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
+		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), kubeClient, fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -248,11 +262,11 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	return allErrs.ErrorOrNil()
 }
 
-func getNodeTemplateDiff(fromNG map[string]any, fromConfig map[string]any) string {
+func getNodeTemplateDiff(fromNG, fromConfig map[string]any) string {
 	// prevent compare nil and empty map
 	// this case generates diff for gcmp.Diff
 	if len(fromNG) == 0 && len(fromConfig) == 0 {
-		log.DebugF("Node templates does not have keys. Returns no diff\n")
+		log.DebugF("Node templates have no keys. Returning no diff\n")
 		return ""
 	}
 
@@ -261,8 +275,13 @@ func getNodeTemplateDiff(fromNG map[string]any, fromConfig map[string]any) strin
 
 func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTemplate map[string]any) error {
 	nodeTemplatePath := []string{"spec", "nodeTemplate"}
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	for {
-		ng, err := entity.GetNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name)
+		ng, err := entity.GetNodeGroup(ctx.Ctx(), kubeClient, c.name)
 		if err != nil {
 			return err
 		}
@@ -274,7 +293,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 
 		diff := getNodeTemplateDiff(templateInCluster, nodeTemplate)
 		if diff == "" {
-			log.DebugF("Node template of the %s NodeGroup is not changed", c.name)
+			log.DebugF("Node template of the %s NodeGroup has not changed", c.name)
 			return nil
 		}
 
@@ -290,7 +309,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 			return err
 		}
 
-		err = entity.UpdateNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name, ng)
+		err = entity.UpdateNodeGroup(ctx.Ctx(), kubeClient, c.name, ng)
 
 		if err == nil {
 			return nil
@@ -307,17 +326,22 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 
 func (c *NodeGroupController) tryDeleteNodeGroup(ctx *context.Context) error {
 	if ctx.ChangesSettings().AutoDismissDestructive {
-		log.DebugF("Skip delete %s node group because destructive operations are disabled\n", c.name)
+		log.DebugF("Skipping deletion of %s node group because destructive operations are disabled\n", c.name)
 		return nil
 	}
 
 	if c.name == global.MasterNodeGroupName {
-		log.DebugF("Skip delete %s node group because it is master\n", c.name)
+		log.DebugF("Skipping deletion of %s node group because it is master\n", c.name)
 		return nil
 	}
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
-		return entity.DeleteNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name)
+		return entity.DeleteNodeGroup(ctx.Ctx(), kubeClient, c.name)
 	})
 }
 
@@ -349,12 +373,17 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 		return err
 	}
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	for _, nodeName := range nodeNames {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
 		err := log.Process("converge", processTitle, func() error {
 			if _, ok := c.excludedNodes[nodeName]; ok {
-				log.InfoF("Skip update excluded node %v\n", nodeName)
+				log.InfoF("Skipping update of excluded node %v\n", nodeName)
 				return nil
 			}
 
@@ -364,7 +393,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			}
 
 			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
+			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
 			if err != nil {
 				return err
 			}
@@ -391,7 +420,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 
 func getNodesToDeleteInfo(desiredReplicas int, state map[string][]byte) ([]nodeToDeleteInfo, error) {
 	if desiredReplicas >= len(state) {
-		log.DebugF("desired replicas >= in state. skip nodes info\n")
+		log.DebugF("desired replicas >= replicas in state. skipping nodes info\n")
 		return nil, nil
 	}
 
@@ -413,7 +442,7 @@ func getNodesToDeleteInfo(desiredReplicas int, state map[string][]byte) ([]nodeT
 		count--
 
 		if count == desiredReplicas {
-			log.DebugF("stopping getting deletes nodes info. count %v\n", count)
+			log.DebugF("stopping collection of nodes-to-delete info. count %v\n", count)
 			break
 		}
 	}

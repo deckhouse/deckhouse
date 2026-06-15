@@ -21,18 +21,34 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"github.com/deckhouse/deckhouse/pkg/registry"
+	registryClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 const (
 	tracerName = "registry-client"
 )
 
+// Client is a wrapper around the underlying registry client, adding tracing support.
 type Client struct {
 	wrapped registry.Client
 }
 
-func NewClient(wrapped registry.Client) *Client {
+// New creates a new wrapped internal registry client with options.
+// It mirrors the public pkg registry client builder style.
+func New(host string, opts ...registryClient.Option) registry.Client {
+	wrapped := registryClient.New(host, opts...)
 	return &Client{wrapped: wrapped}
+}
+
+// NewClientFromWrapped retains old behavior for explicit wrapping from an existing low-level client.
+func NewClientFromWrapped(wrapped *registryClient.Client) registry.Client {
+	return &Client{wrapped: wrapped}
+}
+
+// NewFromRegistryClient wraps any registry.Client as an internal registry Interface.
+// This is useful for testing with fake or mock implementations of registry.Client.
+func NewFromRegistryClient(c registry.Client) registry.Client {
+	return &Client{wrapped: c}
 }
 
 func (c *Client) WithSegment(segments ...string) registry.Client {
@@ -97,4 +113,39 @@ func (c *Client) ListRepositories(ctx context.Context, opts ...registry.ListRepo
 	defer span.End()
 
 	return c.wrapped.ListRepositories(ctx, opts...)
+}
+
+func (c *Client) PushIndex(ctx context.Context, tag string, idx v1.ImageIndex, opts ...registry.ImagePushOption) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "PushIndex")
+	defer span.End()
+
+	return c.wrapped.PushIndex(ctx, tag, idx, opts...)
+}
+
+func (c *Client) DeleteTag(ctx context.Context, tag string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "DeleteTag")
+	defer span.End()
+
+	return c.wrapped.DeleteTag(ctx, tag)
+}
+
+func (c *Client) DeleteByDigest(ctx context.Context, digest v1.Hash) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "DeleteByDigest")
+	defer span.End()
+
+	return c.wrapped.DeleteByDigest(ctx, digest)
+}
+
+func (c *Client) TagImage(ctx context.Context, sourceTag, destTag string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "TagImage")
+	defer span.End()
+
+	return c.wrapped.TagImage(ctx, sourceTag, destTag)
+}
+
+func (c *Client) CopyImage(ctx context.Context, srcTag string, dest registry.Client, destTag string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "CopyImage")
+	defer span.End()
+
+	return c.wrapped.CopyImage(ctx, srcTag, dest, destTag)
 }
