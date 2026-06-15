@@ -41,7 +41,7 @@ func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]int
 		}
 		cnt := res.Bytes()
 		content = string(cnt)
-		log.DebugF("Render and save template content:\n%s", content)
+		log.DebugF("Rendering and saving template content:\n%s", content)
 	}
 
 	outFile, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("*-%s", outFileName))
@@ -51,7 +51,7 @@ func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]int
 
 	defer func() {
 		if err := outFile.Close(); err != nil {
-			log.ErrorF("Cannot close rendered %s %s:%v", outFileName, outFile.Name(), err)
+			log.ErrorF("Cannot close rendered %s %s: %v", outFileName, outFile.Name(), err)
 		}
 	}()
 

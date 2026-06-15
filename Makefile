@@ -7,7 +7,7 @@ FORMATTING_END = \033[0m
 FOCUS =
 
 MDLINTER_IMAGE = ghcr.io/igorshubovych/markdownlint-cli@sha256:2e22b4979347f70e0768e3fef1a459578b75d7966e4b1a6500712b05c5139476
-SPELLCHECKER_IMAGE = registry.deckhouse.io/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
+SPELLCHECKER_IMAGE = registry.deckhouse.ru/base_images/hunspell:1.7.0-r1-alpine@sha256:f419f1dc5b55cd9c0038ece60612549e64333bb0a0e7d4764d45ed94336dec9c
 
 # Explicitly set architecture on arm, since werf currently does not support building of images for any other platform
 # besides linux/amd64 (e.g. relevant for mac m1).
@@ -271,7 +271,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs generate-werf
+generate: generate-kubernetes generate-tools generate-docs dmt-gen generate-werf 
 
 .PHONY: generate-tools
 generate-tools: yq
@@ -439,6 +439,36 @@ update-base-images-versions:
 	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
 	$(MAKE) render-workflow
 
+BASE_LIMIT_KEYS := REGISTRY_PATH \
+                builder/distroless \
+                builder/golang-1.25 \
+                builder/golang-1.26 \
+                builder/golang \
+                minget-0.1 \
+                minget
+
+.PHONY: update-container-factory
+update-container-factory: ## Download container-factory digests and update candi/alt_base_images.yml
+	@set -e; \
+	test -n "$(version)" || (echo 'Err: version is required. Example: make update-container-factory version=v1.0.37' >&2; exit 1); \
+	ver="$(version)"; \
+	case "$$ver" in \
+	  v[0-9]*.[0-9]*.[0-9]*) ;; \
+	  [0-9]*.[0-9]*.[0-9]*) ver="v$$ver" ;; \
+	esac; \
+	cd candi; \
+	URL="https://fox.flant.com/api/v4/projects/deckhouse%2Fcontainer-base%2Fbase-images/packages/generic/base_images/$$ver/base_images.yml"; \
+	curl --fail -sSL "$$URL" -o .alt_base_images.full.yml; \
+	{ \
+	  echo "# version=$$ver"; \
+	  for key in $(BASE_LIMIT_KEYS); do \
+	    line=$$(grep -F "$${key}:" .alt_base_images.full.yml | head -n1); \
+	    echo "$$line"; \
+	  done; \
+	} > alt_base_images.yml; \
+	rm -f .alt_base_images.full.yml; \
+	echo "Updated candi/alt_base_images.yml to version $$ver"
+
 ##@ Build
 .PHONY: build
 set-build-envs:
@@ -576,9 +606,10 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.30.12
-CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CODE_GENERATOR_VERSION ?= v0.33.8
+DECKHOUSE_CLI_VERSION ?= v0.31.0
+DMT_VERSION ?= 0.1.78
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
+CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
 GOTESTSUM_VERSION ?= v1.13.0
 
@@ -593,6 +624,13 @@ generate-werf: yq ## Generate changes in werf files.
 		echo "No GOLANGCI_LINT_VERSION specified. Skipping update."; \
 	fi
 
+
+## Generate dmt version in dmt-lint.sh
+.PHONY: dmt-gen
+dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
+  ##~ Options: DMT_VERSION=X.Y.Z
+	@sed -i 's/DMT_VERSION=[0-9.]\+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh
+	@echo "Updated DMT_VERSION to $(DMT_VERSION) in tools/dmt-lint.sh"
 
 ## Generate tools documentation
 .PHONY: generate-docs

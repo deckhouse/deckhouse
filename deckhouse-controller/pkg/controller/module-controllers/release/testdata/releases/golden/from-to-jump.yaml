@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: test-source
@@ -24,7 +23,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -53,7 +51,6 @@ metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -78,7 +75,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -107,7 +103,6 @@ metadata:
     modules.deckhouse.io/approved: "true"
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
@@ -137,7 +132,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
-  creationTimestamp: null
   name: demo
   resourceVersion: "1002"
 properties: {}

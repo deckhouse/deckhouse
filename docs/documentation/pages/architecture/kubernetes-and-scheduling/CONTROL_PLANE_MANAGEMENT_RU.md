@@ -10,6 +10,16 @@ description: Архитектура и функции модуля control-plane
 
 Управление компонентами control plane кластера осуществляется с помощью модуля [`control-plane-manager`](/modules/control-plane-manager/), который запускается на всех master-узлах кластера (узлах с лейблом `node-role.kubernetes.io/control-plane: ""`).
 
+Модуль работает со следующими кастомными ресурсами:
+
+- [ControlPlaneNode](/modules/control-plane-manager/cr.html#controlplanenode) — описывает параметры и состояние узлов control plane кластера (master-узлов). Используется для управления жизненным циклом и конфигурацией компонентов control plane;
+- [ControlPlaneOperation](/modules/control-plane-manager/cr.html#controlplaneoperation) — определяет операции над компонентами control plane (обновление, настройка, добавление или удаление компонентов), позволяет отслеживать и управлять выполнением этих операций на уровне кластера;
+- [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration) — описывает параметры и логику подключения внешних вебхуков к компоненту `kube-scheduler` для расширения его функциональности.
+
+{% alert level="warning" %}
+Кастомные ресурсы ControlPlaneNode и ControlPlaneOperation доступны пользователям исключительно для чтения. Полный цикл управления этими ресурсами осуществляет только модуль `control-plane-manager`.
+{% endalert %}
+
 Функции управления control plane:
 
 * **Управление сертификатами** — выпуск, продление и обновление сертификатов, необходимых для работы control plane. Позволяет автоматически поддерживать безопасную конфигурацию control plane и оперативно добавлять дополнительные альтернативные имена субъекта (Subject Alternative Name, SAN) для организации защищенного доступа к API Kubernetes.
@@ -31,19 +41,33 @@ description: Архитектура и функции модуля control-plane
 Для упрощения схемы приняты следующие допущения:
 
 * На схеме показано, что контейнеры разных подов взаимодействуют друг с другом напрямую. Фактически они взаимодействуют через соответствующие сервисы Kubernetes (внутренние балансировщики). Названия сервисов не указываются, если они очевидны из контекста. В остальных случаях название сервиса указано над стрелкой.
-* Поды могут быть запущены в нескольких репликах. однако на схеме все поды изображены в одной реплике.
+* Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
 Архитектура модуля [`control-plane-manager`](/modules/control-plane-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля control-plane-manager](../../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.ru.png)
+![Архитектура модуля control-plane-manager](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.ru.png)
 
 ### Компоненты модуля
 
 Модуль состоит из следующих компонентов:
 
-1. **d8-control-plane-manager** (DaemonSet) — управляет компонентами control plane кластера и запускается на всех master-узлах. Состоит из следующих контейнеров:
+1. **d8-control-plane-manager** (DaemonSet) — управляет компонентами control plane кластера и запускается на всех master-узлах.
+
+   Контроллер **d8-control-plane-manager** выполняет следующие действия:
+
+   - отслеживает Secret `d8-control-plane-manager-config` и `d8-pki` и, на основе информации в них, создаёт или обновляет кастомный ресурс ControlPlaneNode для каждого master-узла;
+
+   - в случае, если требуемая конфигурация узла отличается от текущей, создаёт ресурс ControlPlaneOperation для выполнения операций по актуализации конфигурации узла;
+
+   - принимает решение, в каком порядке выполнять запрошенные операции (ControlPlaneOperation), чтобы сохранить требуемую отказоустойчивость кластера в момент обновления;
+
+   - отслеживает выполнение операций, указанных в ресурсе ControlPlaneOperation;
+
+   - после завершения запрошенных операций обновляет текущее состояние master-узла в ресурсе ControlPlaneNode.
+
+   Состоит из следующих контейнеров:
 
    * **control-plane-manager** — основной контейнер. Является разработкой компании «Флант».
 
@@ -62,7 +86,7 @@ description: Архитектура и функции модуля control-plane
 
 3. **d8-etcd-backup** (CronJob) — периодически выполняет резервное копирование базы данных **etcd** кластера. Состоит из контейнера:
 
-   * **backup** — контейнер с shell-скриптом, который через утилиту `etcdctl` создает снимок базы данных и сохраняет его в каталог `/var/lib/etcd` на master-узле (каталог по умолчанию, может быть изменен через [параметры модуля](/modules/control-plane-manager/configuration.html#parameters-etcd-backup)).
+   * **backup** — контейнер с shell-скриптом, который через утилиту `etcdctl` создаёт снимок базы данных и сохраняет его в каталог `/var/lib/etcd` на master-узле (каталог по умолчанию, может быть изменен через [параметры модуля](/modules/control-plane-manager/configuration.html#parameters-etcd-backup)).
 
 ### Взаимодействия модуля
 
@@ -70,7 +94,9 @@ description: Архитектура и функции модуля control-plane
 
 1. **kube-apiserver**:
 
-   * управление компонентами control-plane кластера;
+   * управление компонентами control plane кластера;
+   * работа с кастомными ресурсами ControlPlaneNode и ControlPlaneOperation;
+   * отслеживание изменений в Secret `d8-control-plane-manager-config` и `d8-pki`;
    * проксирование и балансировка запросов к **kube-apiserver**, отправляемых на адрес `localhost`.
 
 2. **etcd**:
@@ -103,11 +129,11 @@ description: Архитектура и функции модуля control-plane
 
 ### Взаимодействия компонента control-plane-proxy
 
-Control-plane-proxy взаимодействует со следующими компонентами:
+Компонент control-plane-proxy взаимодействует со следующими компонентами:
 
 1. **kube-apiserver** — авторизация запросов на получение метрик.
 
-2. Компоненты control plane кластера — **control-plane-proxy** пересылает авторизованные запросы на метрики до:
+2. Компоненты control plane кластера — **control-plane-proxy** пересылает авторизованные запросы на получение метрик к следующим компонентам:
 
    * **kube-controller-manager**;
    * **kube-scheduler**;

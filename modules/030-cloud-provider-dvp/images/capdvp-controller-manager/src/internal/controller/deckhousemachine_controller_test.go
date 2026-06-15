@@ -18,14 +18,18 @@ package controller
 
 import (
 	"context"
+	"testing"
+	"time"
 
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
 )
@@ -82,3 +86,158 @@ var _ = Describe("DeckhouseMachine Controller", func() {
 		})
 	})
 })
+
+func TestEvaluateDiskStorageClassMigration(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	started := now.Add(-10 * time.Minute)
+	timeout := 2 * time.Hour
+
+	tests := []struct {
+		name       string
+		in         diskSCMigrationEvalInput
+		wantStep   diskSCMigrationStep
+		wantErr    bool
+		wantErrSub string
+	}{
+		{
+			name: "returns wait when disk is provisioning",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskProvisioning,
+				DesiredSC: "fast",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep: diskSCStepWait,
+		},
+		{
+			name: "returns error when disk failed",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskFailed,
+				DesiredSC: "fast",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep:   diskSCStepComplete,
+			wantErr:    true,
+			wantErrSub: "Failed",
+		},
+		{
+			name: "returns complete when spec and status match desired",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskReady,
+				SpecSC:    "fast",
+				StatusSC:  "fast",
+				DesiredSC: "fast",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep: diskSCStepComplete,
+		},
+		{
+			name: "returns wait when spec patched and status lags",
+			in: diskSCMigrationEvalInput{
+				Phase:               v1alpha2.DiskReady,
+				SpecSC:              "fast",
+				StatusSC:            "slow",
+				DesiredSC:           "fast",
+				HasMigrationStarted: true,
+				MigrationStartedAt:  started,
+				Now:                 now,
+				Timeout:             timeout,
+			},
+			wantStep: diskSCStepWait,
+		},
+		{
+			name: "returns error when migration times out",
+			in: diskSCMigrationEvalInput{
+				Phase:               v1alpha2.DiskReady,
+				SpecSC:              "fast",
+				StatusSC:            "slow",
+				DesiredSC:           "fast",
+				HasMigrationStarted: true,
+				MigrationStartedAt:  now.Add(-3 * time.Hour),
+				Now:                 now,
+				Timeout:             timeout,
+			},
+			wantStep:   diskSCStepComplete,
+			wantErr:    true,
+			wantErrSub: "timed out",
+		},
+		{
+			name: "returns apply patch when spec differs from desired",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskReady,
+				SpecSC:    "slow",
+				StatusSC:  "slow",
+				DesiredSC: "fast",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep: diskSCStepApplyPatch,
+		},
+		{
+			name: "returns complete for legacy disk with empty status and no migration marker",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskReady,
+				SpecSC:    "fast",
+				StatusSC:  "",
+				DesiredSC: "fast",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep: diskSCStepComplete,
+		},
+		{
+			name: "returns error when desired storage class is empty and migration is needed",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskReady,
+				SpecSC:    "slow",
+				StatusSC:  "slow",
+				DesiredSC: "",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep:   diskSCStepComplete,
+			wantErr:    true,
+			wantErrSub: "must not be empty",
+		},
+		{
+			name: "returns complete when desired storage class is empty and disk already matches",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskReady,
+				SpecSC:    "",
+				StatusSC:  "",
+				DesiredSC: "",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep: diskSCStepComplete,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			step, err := evaluateDiskStorageClassMigration(tt.in)
+			require.Equal(t, tt.wantStep, step)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.wantErrSub != "" {
+					assert.Contains(t, err.Error(), tt.wantErrSub)
+				}
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestDiskMigrationStartedAnnotationKey(t *testing.T) {
+	key := diskMigrationStartedAnnotationKey("worker-1-boot")
+	assert.Equal(t, "dvp.deckhouse.io/disk-migration-started-worker-1-boot", key)
+
+	startedAt, ok := parseDiskMigrationStartedAt(map[string]string{
+		key: "2026-05-19T10:00:00Z",
+	}, "worker-1-boot")
+	require.True(t, ok)
+	assert.Equal(t, 2026, startedAt.Year())
+}

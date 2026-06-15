@@ -32,7 +32,7 @@ function bb-patch-instance-condition() {
   bb-curl-kube "/apis/deckhouse.io/v1alpha2/instances/${instanceName}/status?fieldManager=${fieldManager}&force=true" \
     -X PATCH \
     -H "Content-Type: application/apply-patch+yaml" \
-    --data-binary @- <<EOF || true
+    --data-binary @- >/dev/null <<EOF || true
 apiVersion: deckhouse.io/v1alpha2
 kind: Instance
 metadata:
@@ -309,10 +309,10 @@ bb-rpp-get-install() {
       echo "$digest" > "$digest_file"
       return 0
     done
-    >&2 echo "rpp-get-install failed (${attempt}/30), retrying in 5 seconds"
+    >&2 echo "Failed to install rpp-get (attempt ${attempt} of 30), retrying in 5 seconds"
     sleep 5
   done
-  >&2 echo "rpp-get-install failed after 30 attempts"
+  >&2 echo "Failed to install rpp-get after 30 attempts"
   rm -f "$tmp"
   return 1
 }
@@ -421,12 +421,20 @@ bb-rpp-wait-fetched() {
   local digest="$2"
   local tempdir="${BB_RP_FETCHED_STORE:-/opt/deckhouse/tmp/registrypackages}"
   local archive="${tempdir}/${name}/${digest}.tar.gz"
+  local installed_digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/${name}/digest"
   local deadline=$((SECONDS + 600))
   local svc="rpp-prefetch.service"
   local svc_state
 
   while [ $SECONDS -lt $deadline ]; do
     if [ -f "$archive" ]; then
+      return 0
+    fi
+    # Package already installed at the requested digest (e.g. baked into the base
+    # image — curl, jq). The prefetch skips such packages, so their archive is never
+    # written; without this check the wait blocks until the whole prefetch service
+    # finishes (~3 min on the first master), defeating the per-package wait.
+    if [ -f "$installed_digest_file" ] && [ "$(cat "$installed_digest_file" 2>/dev/null)" = "$digest" ]; then
       return 0
     fi
     if command -v systemctl >/dev/null 2>&1; then
@@ -458,7 +466,7 @@ fetch_bootstrap() {
     -H "Authorization: Bearer $token" \
     --cacert "$BOOTSTRAP_DIR/ca.crt" \
     -o "$out" -w '%{http_code}') || {
-      >&2 echo "Error fetching bootstrap from ${url}"
+      >&2 echo "Failed to fetch bootstrap from ${url}"
       return 3
   }
   case "$code" in
@@ -466,11 +474,11 @@ fetch_bootstrap() {
       jq -er '.bootstrap' "$out"
       ;;
     401)
-      >&2 echo "Bootstrap-token expired."
+      >&2 echo "Bootstrap token expired"
       return 2
       ;;
     *)
-      >&2 echo "HTTP $code: $(head -c 255 "$out" 2>/dev/null)"
+      >&2 echo "Bootstrap request returned HTTP $code: $(head -c 255 "$out" 2>/dev/null)"
       return 1
       ;;
   esac
@@ -497,7 +505,7 @@ get_phase2() {
           return 1
         fi
       else
-        >&2 echo "failed to get bootstrap from ${url} (exit code $rc)"
+        >&2 echo "Failed to get bootstrap from ${url} (exit code $rc)"
       fi
     done
     sleep 10
@@ -518,7 +526,7 @@ function get_pods() {
       then
       return 0
       else
-        >&2 echo "failed to get $resource $name with curl https://$server..."
+        >&2 echo "Failed to list pods in $namespace from $server"
       fi
     done
     sleep 10
@@ -536,5 +544,27 @@ function get_rpp_address() {
     ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
     echo "$ips_csv"
   fi
+}
+{{- end }}
+
+{{- define "bb-telemetry" -}}
+bb-telemetry-start-span() {
+  [[ "${DHCTL_TELEMETRY_ENABLED}" != "true" ]] && return
+  local span_name="$1" trace_id span_id
+  trace_id=$(od -vAn -N16 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')
+  trace_id=${trace_id:-$(printf '%032x' $RANDOM$RANDOM$RANDOM)}
+  span_id=$(od -vAn -N8 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')
+  span_id=${span_id:-$(printf '%016x' $RANDOM$RANDOM)}
+  echo "${trace_id}:${span_id}:$(date +%s%N)"
+}
+
+bb-telemetry-end-span() {
+  [[ "${DHCTL_TELEMETRY_ENABLED}" != "true" ]] && return
+  IFS=':' read -r trace_id span_id start_time <<< "$1"
+  local end_time=$(date +%s%N) curl_cmd=curl
+  command -v d8-curl &>/dev/null && curl_cmd=d8-curl
+  local endpoint="${BB_TELEMETRY_ENDPOINT:-${OTEL_RELAY_ADDRESS:-http://127.0.0.1:4318}/v1/traces}"
+  local payload="{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"bashible\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"bashbooster\"},\"spans\":[{\"traceId\":\"${trace_id}\",\"spanId\":\"${span_id}\",\"name\":\"${2}\",\"kind\":1,\"startTimeUnixNano\":\"${start_time}\",\"endTimeUnixNano\":\"${end_time}\"}]}]}]}"
+  $curl_cmd -s -S -X POST -H "Content-Type: application/json" -d "$payload" "$endpoint" 2>/dev/null || true
 }
 {{- end }}

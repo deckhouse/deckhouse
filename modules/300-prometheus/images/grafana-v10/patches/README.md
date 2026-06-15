@@ -2,18 +2,13 @@
 
 ### 001-go-mod.patch
 
-Update dependencies to fix CVEs
+Update dependencies to fix CVEs and bump the `go` directive to `1.25.10`.
 - [CVE-2025-47914](https://github.com/advisories/GHSA-f6x5-jh6r-wrfv)
 - [CVE-2025-58181](https://github.com/advisories/GHSA-j5w8-q4qc-rx2x)
 
-### 002-nodejs.patch
-
-Update dependencies to fix CVEs
-- [CVE-2025-68470](https://github.com/advisories/GHSA-9jcx-v3wj-wh4m)
-
 ### 003-cve-go-mod.patch
 
-Update Go dependencies to fix CVEs
+Update Go dependencies to fix CVEs and keep the final `go` directive at `1.25.10`.
 - [CVE-2026-33186](https://github.com/advisories/GHSA-p77j-4mvh-x3m3) — `google.golang.org/grpc` bumped to `v1.80.0`
 - [CVE-2026-24051](https://github.com/advisories/GHSA-9h8m-3fm2-qjrq) — `go.opentelemetry.io/otel/sdk` bumped to `v1.43.0`
 - [CVE-2026-39883](https://github.com/advisories/GHSA-hfvc-g4fc-pqhx) — `go.opentelemetry.io/otel/sdk` bumped to `v1.43.0`

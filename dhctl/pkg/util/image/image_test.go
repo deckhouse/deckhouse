@@ -130,7 +130,7 @@ func TestRegistryConfigFromDockerConfig(t *testing.T) {
 				registry:      "registry.io",
 				scheme:        "HTTPS",
 				wantErr:       true,
-				err:           "docker config doesn't contains registry.io registry credentials",
+				err:           "docker config doesn't contain registry.io registry credentials",
 			},
 			{
 				title: "Invalid auth, failure",

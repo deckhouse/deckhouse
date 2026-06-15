@@ -22,7 +22,7 @@ description: Архитектура модуля cloud-provider-zvirt в Deckhou
 Архитектура модуля [`cloud-provider-zvirt`](/modules/cloud-provider-zvirt/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля cloud-provider-zvirt](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-zvirt.ru.png)
+![Архитектура модуля cloud-provider-zvirt](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-zvirt.ru.png)
 
 ## Компоненты модуля
 

@@ -80,11 +80,15 @@ The module provides two access level for administrators:
 
 Each DKP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
 
-For example, for the `networking` subsystem, there are the following manage roles that can be used in `ClusterRoleBinding`: 
+For example, for the `networking` subsystem, there are the following manage roles that can be used in `ClusterRoleBinding`:
+
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-The subsystem of the role restricts its action to all system namespaces of the cluster (subsystem `all`) or to those namespaces in which the area modules operate (see the table of area compositions).
+The scope of a role depends on which subsystem it belongs to:
+
+- The scope of roles from the `all` subsystem is all system namespaces (starting with `d8-` or `kube-`) in the cluster.
+- The scope of roles from other subsystems includes the namespaces in which the subsystem’s modules operate (see the subsystem composition table), as well as all cluster-wide objects of the subsystem’s modules.
 
 Role-based model subsystems composition table.
 
@@ -142,6 +146,7 @@ To view the permissions created by source modules, use the [command](#get_rules)
 
 ```text
 read:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -155,7 +160,6 @@ read:
     - batch/jobs
     - cert-manager.io/certificaterequests
     - cert-manager.io/certificates
-    - cert-manager.io/challenges
     - cert-manager.io/clusterissuers
     - cert-manager.io/issuers
     - cilium.io/ciliumclusterwidenetworkpolicies
@@ -255,6 +259,7 @@ read:
     - limitranges
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
+    - multitenancy.deckhouse.io/availableclusterresources
     - mutations.gatekeeper.sh/assign
     - mutations.gatekeeper.sh/assignimage
     - mutations.gatekeeper.sh/assignmetadata
@@ -384,10 +389,10 @@ write:
 create,patch,update:
     - pods
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apps/replicasets
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
     - extensions/replicasets
 read:
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -419,9 +424,9 @@ write:
 
 ```text
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
 patch,update:
     - nodes
 read:
@@ -431,6 +436,8 @@ read:
     - deckhouse.io/istiomulticlusters
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
     - install.istio.io/istiooperators
+    - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
+    - multitenancy.deckhouse.io/grantableclusterresourcereferences
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - sailoperator.io/istiocnis
@@ -445,6 +452,7 @@ read-write:
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - deckhouse.io/upmeterremotewrites
+    - multitenancy.deckhouse.io/clusterresourcegrantpolicies
 write:
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets

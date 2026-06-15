@@ -22,7 +22,7 @@ description: Архитектура модуля sds-local-volume в Deckhouse K
 Архитектура модуля [`sds-local-volume`](/modules/sds-local-volume/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля sds-local-volume](../../../images/architecture/storage/c4-l2-sds-local-volume.ru.png)
+![Архитектура модуля sds-local-volume](../../images/architecture/storage/c4-l2-sds-local-volume.ru.png)
 
 ## Компоненты модуля
 

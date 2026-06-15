@@ -211,7 +211,7 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		oneDay,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to generate TLS certificate for registry proxy: %v", err)
+		return fmt.Errorf("failed to generate TLS certificate for registry proxy: %w", err)
 	}
 
 	addr := net.JoinHostPort(localhost, p.localPort)
@@ -219,14 +219,14 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		Certificates: []tls.Certificate{*cert},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to listen registry proxy socket: %v", err)
+		return fmt.Errorf("failed to listen registry proxy socket: %w", err)
 	}
 
 	bootstrapAddr := net.JoinHostPort(localhost, p.bootstrapLocalPort)
 	bootstrapListener, err := net.Listen("tcp", bootstrapAddr)
 	if err != nil {
 		_ = listener.Close()
-		return fmt.Errorf("failed to listen rpp-get socket: %v", err)
+		return fmt.Errorf("failed to listen rpp-get socket: %w", err)
 	}
 
 	srv := &http.Server{}
@@ -264,7 +264,7 @@ func (p *RegistryPackagesProxy) startProxy() error {
 }
 
 func (p *RegistryPackagesProxy) startTunnel(ctx context.Context, sshCl libcon.SSHClient) error {
-	p.debug("Up registry packages proxy tunnel...")
+	p.debug("Starting registry packages proxy tunnel...")
 
 	tunnel, err := p.upSingleTunnel(ctx, sshCl, p.localPort, p.remotePort, true)
 	if err != nil {
@@ -287,7 +287,7 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 
 	tun := sshCl.ReverseTunnel(addr)
 	if err := tun.Up(); err != nil {
-		return nil, fmt.Errorf("cannot up tunnel for registry packages proxy: %w", err)
+		return nil, fmt.Errorf("cannot bring up tunnel for registry packages proxy: %w", err)
 	}
 
 	if !healthCheck {
@@ -298,13 +298,13 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, p.opts)
 	if err != nil {
 		tun.Stop()
-		return nil, fmt.Errorf("cannot render reverse tunnel checking script: %v", err)
+		return nil, fmt.Errorf("cannot render reverse tunnel checking script: %w", err)
 	}
 
 	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, remotePort, p.opts)
 	if err != nil {
 		tun.Stop()
-		return nil, fmt.Errorf("cannot render kill reverse tunnel script: %v", err)
+		return nil, fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}
 
 	checker := utils.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
@@ -319,5 +319,5 @@ func (p *RegistryPackagesProxy) debug(f string, args ...any) {
 }
 
 func upTunnelError(err error) error {
-	return fmt.Errorf("Cannot up registry packages proxy tunnel: %w", err)
+	return fmt.Errorf("Cannot bring up registry packages proxy tunnel: %w", err)
 }

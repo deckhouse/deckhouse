@@ -22,7 +22,7 @@ import (
 
 // DefineDestroyResourcesFlags registers --skip-resources.
 func DefineDestroyResourcesFlags(cmd *kingpin.CmdClause, o *options.DestroyOptions) {
-	cmd.Flag("skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").
+	cmd.Flag("skip-resources", "Do not wait for deletion of resources (pv, loadbalancers, machines) from the cluster.").
 		Default("false").
 		Envar(configEnvName("SKIP_RESOURCES")).
 		BoolVar(&o.SkipResources)

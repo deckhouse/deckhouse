@@ -61,7 +61,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	// in restart operation we will get error with strict getting
 	outputs, err := infrastructure.GetMasterNodeResultNoStrict(ctx, runner)
 	if err != nil {
-		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
+		return false, fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
 
 	// no need to switch client because we try to switch before delete nodes
@@ -69,7 +69,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
-		log.InfoF("Got empty master IP for ssh for node %s. Skip removing control-plane from node.\n", h.nodeToDestroy)
+		log.InfoF("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.\n", h.nodeToDestroy)
 		return false, nil
 	}
 
@@ -87,7 +87,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 
 	err = infra_utils.DeleteNodeObjectFromCluster(ctx, kubeClient, h.nodeToDestroy)
 	if err != nil {
-		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
+		return false, fmt.Errorf("failed to delete node object '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
 
 	return false, nil
@@ -127,7 +127,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 
 	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(libcon.KubeClient), nodeName)
 	if err != nil {
-		return fmt.Errorf("failed to check etcd has no member '%s': %v", nodeName, err)
+		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
 	}
 
 	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true})
@@ -143,7 +143,7 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 		node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
+				log.InfoF("Node '%s' has been deleted. Skipping\n", nodeName)
 				return nil
 			}
 			return err

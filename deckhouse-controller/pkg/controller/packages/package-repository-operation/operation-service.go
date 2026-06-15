@@ -343,7 +343,7 @@ func latestVersionString(versions []*semver.Version) string {
 
 // ProcessPackageVersions processes a single package: lists version tags from <package>/version,
 // detects type (Application/Module) via detectPackageType, creates APV/MPV resources.
-// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN).
+// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN) or has no semver tags on a full scan.
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
@@ -361,13 +361,25 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		slog.Int("versions", len(foundTags)),
 	)
 
-	// /version path exists but no new semver tags to process
+	// /version path exists but no new semver tags to process.
+	//
+	// On a full scan an empty foundTags means /version has no semver tags
+	// for this package. Treat this identically to "no /version path at all":
+	// fall back to /release (legacy v1alpha1 module). The downstream error
+	// surface ("neither /version nor /release" / "no semver release tags
+	// found for legacy module") is therefore the same in both cases.
+	//
+	// On an incremental scan, an empty foundTags only means "no new versions
+	// since lastVersion" - /version itself may still be populated. Do NOT
+	// fall back in that case: it would needlessly hit /release on every
+	// already-fully-processed package.
 	if len(foundTags) == 0 {
 		if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
 			s.logger.Warn(
-				"no release images found for package",
+				"no semver tags found in /version path for package, falling back to /release",
 				slog.String("package", packageName),
 			)
+			return s.handleMissingVersionPath(ctx, packageName)
 		}
 
 		return &PackageProcessResult{}, nil
@@ -439,12 +451,12 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	}, nil
 }
 
-// handleMissingVersionPath - fallback when <package>/version doesn't exist (NAME_UNKNOWN).
-// Checks the <package>/release path for legacy module (v1alpha1) version tags.
+// handleMissingVersionPath - fallback when <package>/version is absent (NAME_UNKNOWN) or
+// has no semver tags. Checks the <package>/release path for legacy module (v1alpha1) version tags.
 // Creates ModulePackageVersion resources with legacy=true label.
 func (s *OperationService) handleMissingVersionPath(ctx context.Context, packageName string) (*PackageProcessResult, error) {
 	s.logger.Info(
-		"package has no /version path, checking /release for legacy module (v1alpha1)",
+		"no semver tags in /version path, checking /release for legacy module (v1alpha1)",
 		slog.String("package", packageName),
 	)
 
@@ -695,7 +707,7 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 
 	// err - apierrors.IsNotFound
 	if err != nil {
-		// Create new ApplicationPackage
+		// Create new ApplicationPackage with this repository as a non-controller owner.
 		pkg = &v1alpha1.ApplicationPackage{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
@@ -708,13 +720,20 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 				},
 			},
 		}
-
-		// Add owner reference to PackageRepository
-		s.setOwnerReference(pkg)
+		s.ensureSharedOwnerReference(pkg)
 
 		err = s.client.Create(ctx, pkg)
 		if err != nil {
 			return fmt.Errorf("create application package: %w", err)
+		}
+	} else {
+		// Existing — make sure we are listed as an owner so a single repo deletion
+		// does not cascade-delete a package that other repositories still contribute.
+		original := pkg.DeepCopy()
+		if s.ensureSharedOwnerReference(pkg) {
+			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+				return fmt.Errorf("sync application package owner refs: %w", err)
+			}
 		}
 	}
 
@@ -801,7 +820,7 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 
 	// err - apierrors.IsNotFound
 	if err != nil {
-		// Create new ModulePackage
+		// Create new ModulePackage with this repository as a non-controller owner.
 		pkg = &v1alpha1.ModulePackage{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1alpha1.ModulePackageGVK.GroupVersion().String(),
@@ -814,13 +833,20 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 				},
 			},
 		}
-
-		// Add owner reference to PackageRepository
-		s.setOwnerReference(pkg)
+		s.ensureSharedOwnerReference(pkg)
 
 		err = s.client.Create(ctx, pkg)
 		if err != nil {
 			return fmt.Errorf("create module package: %w", err)
+		}
+	} else {
+		// Existing — make sure we are listed as an owner so a single repo deletion
+		// does not cascade-delete a package that other repositories still contribute.
+		original := pkg.DeepCopy()
+		if s.ensureSharedOwnerReference(pkg) {
+			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+				return fmt.Errorf("sync module package owner refs: %w", err)
+			}
 		}
 	}
 
@@ -840,6 +866,38 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 	}
 
 	return nil
+}
+
+// ensureSharedOwnerReference appends s.repo as a non-controller owner of obj if it is not
+// already present. ApplicationPackage / ModulePackage CRs can be contributed by several
+// repositories, so no single repository should be the sole controller-owner — otherwise
+// Kubernetes GC would cascade-delete the package when that one repo is removed, even if
+// other repos still contribute it. Returns true if obj.OwnerReferences was modified.
+func (s *OperationService) ensureSharedOwnerReference(obj client.Object) bool {
+	refs := obj.GetOwnerReferences()
+	for _, ref := range refs {
+		if ref.Kind != v1alpha1.PackageRepositoryKind {
+			continue
+		}
+		// Match by UID when both sides have one (real cluster); otherwise fall back
+		// to Name (PackageRepository names are cluster-unique, and UIDs may be empty
+		// in test fixtures).
+		if ref.UID != "" && ref.UID == s.repo.UID {
+			return false
+		}
+		if ref.Name == s.repo.Name {
+			return false
+		}
+	}
+	refs = append(refs, metav1.OwnerReference{
+		APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+		Kind:       v1alpha1.PackageRepositoryKind,
+		Name:       s.repo.Name,
+		UID:        s.repo.UID,
+		Controller: &[]bool{false}[0],
+	})
+	obj.SetOwnerReferences(refs)
+	return true
 }
 
 func (s *OperationService) setOwnerReference(obj client.Object) {

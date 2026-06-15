@@ -105,16 +105,6 @@
       "cse-lite",
       "cse-pro"
     ],
-    "editionsWithRestrictions": [
-      "ce",
-      "be"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "The system part of Deckhouse is read-only in the web UI",
-        "ru": "Системная часть Deckhouse доступна в веб-интерфейсе только для чтения"
-      }
-    },
     "external": "true",
     "path": "/modules/console/",
     "tags": [

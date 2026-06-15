@@ -15,6 +15,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -529,3 +530,154 @@ internalNetworkCIDRs:
 }
 
 var validateOpts = []ValidateOption{ValidateOptionCommanderMode(true)}
+
+func TestValidationError_Append_SetsReasonAndTopLevelKind(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"bad apiVersion"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind)
+	require.Len(t, ve.Errors, 1)
+	require.Equal(t, ErrKindValidationFailed, ve.Errors[0].Reason)
+}
+
+// Domain-specific reasons (CNI*) bucket to ValidationFailed at the top level.
+// Per-Error Reason retains the precise kind for fine-grained rendering.
+func TestValidationError_Append_DomainReasonBucketsToValidationFailed(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni mismatch"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind, "top-level must bucket CNI* into ValidationFailed")
+	require.Equal(t, ErrKindCNIMismatch, ve.Errors[0].Reason, "per-Error Reason must keep the precise kind")
+}
+
+func TestValidationError_Append_CNISettingsBucketsToValidationFailed(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNISettingsMismatch, Error{Messages: []string{"settings mismatch"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind)
+	require.Equal(t, ErrKindCNISettingsMismatch, ve.Errors[0].Reason)
+}
+
+func TestValidationError_Append_MixedReasons(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni"}})
+	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"bad"}})
+	ve.Append(ErrKindCNISettingsMismatch, Error{Messages: []string{"cni s"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind, "all reasons bucket to ValidationFailed → top-level is ValidationFailed")
+	require.Equal(t, ErrKindCNIMismatch, ve.Errors[0].Reason)
+	require.Equal(t, ErrKindValidationFailed, ve.Errors[1].Reason)
+	require.Equal(t, ErrKindCNISettingsMismatch, ve.Errors[2].Reason)
+}
+
+// InvalidYAML (legacy, value 3) wins over CNI (bucket to ValidationFailed,
+// value 2) on top-level via plain max. Preserves stop-semantics for clients
+// that key on InvalidYAML.
+func TestValidationError_Append_InvalidYAMLWinsOverCNI(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni"}})
+	ve.Append(ErrKindInvalidYAML, Error{Messages: []string{"bad yaml"}})
+
+	require.Equal(t, ErrKindInvalidYAML, ve.Kind)
+
+	// Order-invariance.
+	ve2 := &ValidationError{}
+	ve2.Append(ErrKindInvalidYAML, Error{Messages: []string{"bad yaml"}})
+	ve2.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni"}})
+	require.Equal(t, ErrKindInvalidYAML, ve2.Kind)
+}
+
+func TestValidationError_Append_KindMonotonicity(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"a"}})
+	ve.Append(ErrKindChangesValidationFailed, Error{Messages: []string{"b"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind, "lower reason must not lower top-level Kind")
+}
+
+func TestValidationError_Merge(t *testing.T) {
+	a := &ValidationError{}
+	a.Append(ErrKindValidationFailed, Error{Messages: []string{"a1"}})
+
+	b := &ValidationError{}
+	b.Append(ErrKindCNIMismatch, Error{Messages: []string{"b1"}})
+	b.Append(ErrKindInvalidYAML, Error{Messages: []string{"b2"}})
+
+	a.Merge(b)
+
+	require.Equal(t, ErrKindInvalidYAML, a.Kind)
+	require.Len(t, a.Errors, 3)
+	require.Equal(t, ErrKindValidationFailed, a.Errors[0].Reason)
+	require.Equal(t, ErrKindCNIMismatch, a.Errors[1].Reason)
+	require.Equal(t, ErrKindInvalidYAML, a.Errors[2].Reason)
+}
+
+func TestValidationError_Merge_NilNoop(t *testing.T) {
+	a := &ValidationError{}
+	a.Append(ErrKindValidationFailed, Error{Messages: []string{"a"}})
+	a.Merge(nil)
+	require.Len(t, a.Errors, 1)
+	require.Equal(t, ErrKindValidationFailed, a.Kind)
+}
+
+func TestError_JSONOmitemptyAllFields(t *testing.T) {
+	// All fields are omitempty: zero values disappear from the wire.
+	// Keeps CNI/domain errors compact (no Index/Group/Version/Kind/Name noise).
+	e := Error{Index: nil, Group: "", Version: "", Kind: "", Name: "", Messages: nil}
+	b, err := json.Marshal(e)
+	require.NoError(t, err)
+	require.JSONEq(t, `{}`, string(b))
+}
+
+func TestError_JSONOmitemptyKeepsNonZeroFields(t *testing.T) {
+	idx := 2
+	e := Error{
+		Reason:   ErrKindValidationFailed,
+		Index:    &idx,
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Kind:     "ModuleConfig",
+		Name:     "cni-cilium",
+		Messages: []string{"bad"},
+	}
+	b, err := json.Marshal(e)
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+		"Reason": 2,
+		"Index": 2,
+		"Group": "deckhouse.io",
+		"Version": "v1alpha1",
+		"Kind": "ModuleConfig",
+		"Name": "cni-cilium",
+		"Messages": ["bad"]
+	}`, string(b))
+}
+
+func TestError_JSON_CNIErrorCarriesResourceIdentity(t *testing.T) {
+	// CNI errors point at the offending user MC: GVK + Name are populated
+	// so commander UI can navigate to the resource. Index is unset (we don't
+	// re-derive doc position in the filtered payload).
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNIMismatch, Error{
+		Group:    ModuleConfigGroup,
+		Version:  ModuleConfigVersion,
+		Kind:     ModuleConfigKind,
+		Name:     "cni-simple-bridge",
+		Messages: []string{`user configured "cni-simple-bridge", provider recommends "cni-cilium"`},
+	})
+	b, err := json.Marshal(ve)
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+		"Kind": 2,
+		"Errors": [
+			{
+				"Reason": 4,
+				"Group": "deckhouse.io",
+				"Version": "v1alpha1",
+				"Kind": "ModuleConfig",
+				"Name": "cni-simple-bridge",
+				"Messages": ["user configured \"cni-simple-bridge\", provider recommends \"cni-cilium\""]
+			}
+		]
+	}`, string(b))
+}
