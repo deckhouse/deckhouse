@@ -255,6 +255,15 @@ const tolerationsAnyNodeWithUninitialized = `
 
 const moduleNamespace = "d8-cloud-provider-dvp"
 
+const validationWebhookName = "validation-webhook"
+
+var validationWebhookArgs = []string{
+	"--webhook-port=8443",
+	"--webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs",
+	"--metrics-bind-address=127.0.0.1:8081",
+	"--health-probe-bind-address=127.0.0.1:8082",
+}
+
 var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -702,6 +711,183 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			// User-authz ClusterRole must be present.
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-dvp:user")
 			Expect(userAuthzUser.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("validation webhook", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
+			f.HelmRender()
+		})
+
+		It("renders deployment with hostNetwork and webhook container", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
+			Expect(deploy.Exists()).To(BeTrue())
+			Expect(deploy.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(deploy.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(deploy.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+			Expect(deploy.Field("spec.template.spec.serviceAccountName").String()).To(Equal(validationWebhookName))
+
+			containers := deploy.Field("spec.template.spec.containers").Array()
+			Expect(containers).To(HaveLen(1))
+			Expect(deploy.Field("spec.template.spec.containers.0.name").String()).To(Equal(validationWebhookName))
+			for _, arg := range validationWebhookArgs {
+				Expect(deploy.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring(arg))
+			}
+			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.containerPort").Int()).To(Equal(int64(8443)))
+			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.name").String()).To(Equal("https"))
+			Expect(deploy.Field("spec.template.spec.containers.0.volumeMounts.0.name").String()).To(Equal("cert"))
+			Expect(deploy.Field("spec.template.spec.volumes.0.secret.secretName").String()).To(Equal("validation-webhook-tls"))
+		})
+
+		It("renders VPA and PDB", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, validationWebhookName)
+			Expect(vpa.Exists()).To(BeTrue())
+			Expect(vpa.Field("spec.targetRef.kind").String()).To(Equal("Deployment"))
+			Expect(vpa.Field("spec.targetRef.name").String()).To(Equal(validationWebhookName))
+			Expect(vpa.Field("spec.resourcePolicy.containerPolicies.0.containerName").String()).To(Equal(validationWebhookName))
+
+			pdb := f.KubernetesResource("PodDisruptionBudget", moduleNamespace, validationWebhookName)
+			Expect(pdb.Exists()).To(BeTrue())
+			Expect(pdb.Field("spec.maxUnavailable").Int()).To(Equal(int64(1)))
+		})
+
+		It("renders Service and TLS Secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			svc := f.KubernetesResource("Service", moduleNamespace, validationWebhookName)
+			Expect(svc.Exists()).To(BeTrue())
+			Expect(svc.Field("spec.ports.0.port").Int()).To(Equal(int64(443)))
+			Expect(svc.Field("spec.ports.0.targetPort").String()).To(Equal("https"))
+			Expect(svc.Field("spec.selector.app").String()).To(Equal(validationWebhookName))
+
+			secret := f.KubernetesResource("Secret", moduleNamespace, "validation-webhook-tls")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field("type").String()).To(Equal("kubernetes.io/tls"))
+			Expect(secret.Field("data.tls\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dGVzdC1jcnQ="))))
+			Expect(secret.Field("data.tls\\.key").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dGVzdC1rZXk="))))
+		})
+
+		It("renders ValidatingWebhookConfiguration with four webhooks", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			vwc := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-cloud-provider-dvp-validation-webhook")
+			Expect(vwc.Exists()).To(BeTrue())
+
+			webhooks := vwc.Field("webhooks").Array()
+			Expect(webhooks).To(HaveLen(4))
+
+			expectedCA := base64.StdEncoding.EncodeToString([]byte("dGVzdC1jYQ=="))
+			for i := range webhooks {
+				index := fmt.Sprintf("%d", i)
+				Expect(vwc.Field("webhooks."+index+".failurePolicy").String()).To(Equal("Fail"))
+				Expect(vwc.Field("webhooks."+index+".clientConfig.service.name").String()).To(Equal(validationWebhookName))
+				Expect(vwc.Field("webhooks."+index+".clientConfig.service.namespace").String()).To(Equal(moduleNamespace))
+				Expect(vwc.Field("webhooks."+index+".clientConfig.service.port").Int()).To(Equal(int64(443)))
+				Expect(vwc.Field("webhooks."+index+".clientConfig.caBundle").String()).To(Equal(expectedCA))
+			}
+
+			Expect(vwc.Field("webhooks.0.name").String()).To(Equal("moduleconfigs.cloud-provider-dvp.deckhouse.io"))
+			Expect(vwc.Field("webhooks.0.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1alpha1-moduleconfig"))
+
+			Expect(vwc.Field("webhooks.1.name").String()).To(Equal("secrets.cloud-provider-dvp.deckhouse.io"))
+			Expect(vwc.Field("webhooks.1.clientConfig.service.path").String()).To(Equal("/validate--v1-secret"))
+			Expect(vwc.Field("webhooks.1.namespaceSelector.matchLabels.kubernetes\\.io/metadata\\.name").String()).To(Equal(moduleNamespace))
+
+			Expect(vwc.Field("webhooks.2.name").String()).To(Equal("nodegroups.cloud-provider-dvp.deckhouse.io"))
+			Expect(vwc.Field("webhooks.2.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1-nodegroup"))
+
+			Expect(vwc.Field("webhooks.3.name").String()).To(Equal("dvpinstanceclasses.cloud-provider-dvp.deckhouse.io"))
+			Expect(vwc.Field("webhooks.3.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1alpha1-dvpinstanceclass"))
+		})
+
+		It("renders RBAC for validation webhook", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("ServiceAccount", moduleNamespace, validationWebhookName).Exists()).To(BeTrue())
+
+			role := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-dvp:validation-webhook")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dvpinstanceclasses
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list`))
+
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-dvp:validation-webhook").Exists()).To(BeTrue())
+		})
+
+		It("does not render SecurityPolicyException without admission-policy-engine-crd", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
+			Expect(deploy.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, validationWebhookName).Exists()).To(BeFalse())
+		})
+	})
+
+	Context("validation webhook :: admission-policy-engine compatibility", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
+			f.ValuesSet("global.enabledModules", []string{
+				"vertical-pod-autoscaler",
+				"vertical-pod-autoscaler-crd",
+				"admission-policy-engine-crd",
+				"cloud-provider-dvp",
+			})
+			f.HelmRender()
+		})
+
+		It("renders SecurityPolicyException for hostNetwork and webhook port", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
+			Expect(deploy.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).
+				To(Equal(validationWebhookName))
+
+			spe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, validationWebhookName)
+			Expect(spe.Exists()).To(BeTrue())
+			Expect(spe.Field("metadata.namespace").String()).To(Equal(moduleNamespace))
+			Expect(spe.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(spe.Field("spec.network.hostPorts.0.port").Int()).To(Equal(int64(8443)))
+			Expect(spe.Field("spec.network.hostPorts.0.protocol").String()).To(Equal("TCP"))
 		})
 	})
 })
