@@ -87,6 +87,7 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	c.settings.Update.Windows = settings.Update.Windows
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
 	c.settings.Update.NotificationConfig = settings.Update.NotificationConfig
+	c.settings.Update.BlockOnAlerts = settings.Update.BlockOnAlerts
 
 	allowExperimentalModules := 0.
 
