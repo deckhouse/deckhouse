@@ -56,13 +56,8 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 }
 
 func prepare(_ context.Context, input dhctlproto.PrepareInput) (*dhctlproto.PrepareResult, error) {
-	cpVars := input.Vars
-	if cpVars == nil {
-		cpVars = input.Vars
-	}
-
 	return &dhctlproto.PrepareResult{
-		Vars:                  cpVars,
+		Vars:                  input.Vars,
 		ProviderClusterConfig: input.ProviderClusterConfig,
 	}, nil
 }
