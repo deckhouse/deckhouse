@@ -96,3 +96,13 @@ The patch removes `*.key` files from the state directory copy before archiving.
 - Released in cilium v1.17.15 / v1.18.9 / v1.19.3.
 
 **Remove this patch when the base cilium version in `modules/021-cni-cilium/oss.yaml` is bumped to v1.17.15 or newer** — the fix is then already in the upstream sources and this patch will fail to apply.
+
+## 019-dvp-public-service-snat.patch
+
+Adds optional BPF SNAT for pod traffic to LoadBalancer and ExternalIP service frontends. The patch is intended for DVP nested-cluster scenarios where a backend VM pod can reply directly to the client pod and bypass service reverse NAT, causing asymmetric traffic.
+
+The feature is disabled by default and can be enabled with the Cilium agent config option:
+
+    enable-dvp-public-service-snat: "true"
+
+When enabled, the agent generates `ENABLE_DVP_PUBLIC_SERVICE_SNAT` in `node_config.h`. The BPF datapath then marks matching public service flows during service DNAT and performs SNAT later in the pod egress path, after CT/policy processing, with matching reverse SNAT for replies.
