@@ -44,9 +44,24 @@ func main() {
 	kpApp.HelpFlag.Short('h')
 
 	serverConfig := cpwebhook.DefaultServerConfig()
+	logConfig := cpwebhook.DefaultLogConfig()
 	cpwebhook.InitFlags(kpApp, &serverConfig)
+	cpwebhook.InitLogFlags(kpApp, &logConfig)
 
 	kpApp.Action(func(_ *kingpin.ParseContext) error {
+		if err := cpwebhook.SetupLogger(logConfig); err != nil {
+			return fmt.Errorf("setup logger: %w", err)
+		}
+
+		setupLog := ctrl.Log.WithName("setup")
+		setupLog.Info(
+			"starting validation webhook",
+			"webhookPort", serverConfig.WebhookPort,
+			"webhookCertDir", serverConfig.WebhookCertDir,
+			"metricsBindAddress", serverConfig.MetricsBindAddress,
+			"healthProbeBindAddress", serverConfig.HealthProbeBindAddress,
+		)
+
 		scheme := clientgoscheme.Scheme
 		utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 		utilruntime.Must(cpwebhook.RegisterUnstructuredGVKs(
@@ -60,6 +75,7 @@ func main() {
 
 		server, err := cpwebhook.NewServer(cfg, scheme, serverConfig)
 		if err != nil {
+			setupLog.Error(err, "failed to initialize webhook server")
 			return fmt.Errorf("init webhook server: %w", err)
 		}
 
@@ -81,13 +97,19 @@ func main() {
 
 		for _, registrar := range registrars {
 			if err := server.Register(registrar); err != nil {
+				setupLog.Error(err, "failed to register validation webhook")
 				return fmt.Errorf("register validation webhook: %w", err)
 			}
 		}
 
+		setupLog.Info("validation webhook server is starting")
+
 		if err := server.Start(ctrl.SetupSignalHandler()); err != nil {
+			setupLog.Error(err, "validation webhook server stopped with error")
 			return fmt.Errorf("start webhook server: %w", err)
 		}
+
+		setupLog.Info("validation webhook server stopped")
 
 		return nil
 	})

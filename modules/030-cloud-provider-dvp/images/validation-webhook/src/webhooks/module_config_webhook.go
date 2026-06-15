@@ -20,6 +20,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
@@ -35,6 +36,8 @@ type ModuleConfigValidator struct {
 var (
 	_ admission.CustomValidator = (*ModuleConfigValidator)(nil)
 	_ cpwebhook.Registrar       = (*ModuleConfigValidator)(nil)
+
+	moduleConfigLog = logf.Log.WithName("module-config")
 )
 
 func NewModuleConfigValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *ModuleConfigValidator {
@@ -68,20 +71,37 @@ func (v *ModuleConfigValidator) validate(
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (admission.Warnings, error) {
-	if objectName(obj) != dvpval.ModuleName {
+	name := objectName(obj)
+	if name != dvpval.ModuleName {
+		moduleConfigLog.V(2).Info("skipping validation", "reason", "not cloud-provider module", "name", name)
 		return nil, nil
 	}
 
+	moduleConfigLog.Info(
+		"validating resource",
+		"operation", operation,
+		"resource", "ModuleConfig",
+		"name", name,
+		"namespace", objectNamespace(obj),
+	)
+
 	state, err := v.builder.BuildForModuleConfig(ctx, operation, obj)
 	if err != nil {
+		moduleConfigLog.Error(err, "failed to build validation state", "name", name)
 		return nil, internalBuildError(err)
 	}
 
 	if shouldSkipState(state) {
+		moduleConfigLog.V(1).Info("skipping validation during migration")
 		return nil, nil
 	}
 
 	result := dvpval.ValidateInvariants(state)
 
-	return resultToAdmission(result)
+	warnings, err := resultToAdmission(result)
+	if err != nil {
+		moduleConfigLog.Info("validation denied", "violations", len(result.Errors()))
+	}
+
+	return warnings, err
 }

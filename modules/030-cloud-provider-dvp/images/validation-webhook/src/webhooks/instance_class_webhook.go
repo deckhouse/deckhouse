@@ -20,6 +20,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
@@ -36,6 +37,8 @@ type DVPInstanceClassValidator struct {
 var (
 	_ admission.CustomValidator = (*DVPInstanceClassValidator)(nil)
 	_ cpwebhook.Registrar       = (*DVPInstanceClassValidator)(nil)
+
+	instanceClassLog = logf.Log.WithName("instance-class")
 )
 
 func NewDVPInstanceClassValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *DVPInstanceClassValidator {
@@ -69,21 +72,37 @@ func (v *DVPInstanceClassValidator) validate(
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (admission.Warnings, error) {
+	name := objectName(obj)
+	instanceClassLog.Info(
+		"validating resource",
+		"operation", operation,
+		"resource", dvpval.InstanceClassKind,
+		"name", name,
+		"namespace", objectNamespace(obj),
+	)
+
 	state, deletedClass, err := v.builder.BuildForInstanceClass(ctx, operation, obj)
 	if err != nil {
+		instanceClassLog.Error(err, "failed to build validation state", "name", name)
 		return nil, internalBuildError(err)
 	}
 
 	if shouldSkipState(state) {
+		instanceClassLog.V(1).Info("skipping validation during migration")
 		return nil, nil
 	}
 
 	result := dvpval.ValidateInvariants(state)
 
 	if operation == admissionv1.Delete {
-		deleteResult := cpval.ValidateInstanceClassDelete(state, objectName(obj), deletedClass)
+		deleteResult := cpval.ValidateInstanceClassDelete(state, name, deletedClass)
 		result.Merge(deleteResult)
 	}
 
-	return resultToAdmission(result)
+	warnings, err := resultToAdmission(result)
+	if err != nil {
+		instanceClassLog.Info("validation denied", "violations", len(result.Errors()))
+	}
+
+	return warnings, err
 }

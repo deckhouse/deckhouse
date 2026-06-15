@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -42,6 +43,8 @@ type CredentialSecretValidator struct {
 var (
 	_ admission.CustomValidator = (*CredentialSecretValidator)(nil)
 	_ cpwebhook.Registrar       = (*CredentialSecretValidator)(nil)
+
+	credentialSecretLog = logf.Log.WithName("credential-secret")
 )
 
 func NewCredentialSecretValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *CredentialSecretValidator {
@@ -87,31 +90,52 @@ func (v *CredentialSecretValidator) validate(
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (admission.Warnings, error) {
-	if objectNamespace(obj) != dvpval.Namespace {
+	namespace := objectNamespace(obj)
+	name := objectName(obj)
+
+	if namespace != dvpval.Namespace {
+		credentialSecretLog.V(2).Info("skipping validation", "reason", "not module namespace", "namespace", namespace, "name", name)
 		return nil, nil
 	}
 
 	if !isManagedCredentialSecretObject(obj) {
+		credentialSecretLog.V(2).Info("skipping validation", "reason", "not managed credential secret", "name", name)
 		return nil, nil
 	}
 
+	credentialSecretLog.Info(
+		"validating resource",
+		"operation", operation,
+		"resource", "Secret",
+		"name", name,
+		"namespace", namespace,
+	)
+
 	secret, err := asSecret(obj)
 	if err != nil {
+		credentialSecretLog.Error(err, "failed to build validation state", "name", name, "namespace", namespace)
 		return nil, internalBuildError(err)
 	}
 
 	state, err := v.builder.BuildForCredentialSecret(ctx, operation, secret)
 	if err != nil {
+		credentialSecretLog.Error(err, "failed to build validation state", "name", name, "namespace", namespace)
 		return nil, internalBuildError(err)
 	}
 
 	if shouldSkipState(state) {
+		credentialSecretLog.V(1).Info("skipping validation during migration")
 		return nil, nil
 	}
 
 	result := dvpval.ValidateInvariants(state)
 
-	return resultToAdmission(result)
+	warnings, err := resultToAdmission(result)
+	if err != nil {
+		credentialSecretLog.Info("validation denied", "violations", len(result.Errors()))
+	}
+
+	return warnings, err
 }
 
 func isManagedCredentialSecretName(name string) bool {

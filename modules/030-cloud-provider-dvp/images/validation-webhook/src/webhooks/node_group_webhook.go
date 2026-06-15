@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -40,6 +41,8 @@ type NodeGroupValidator struct {
 var (
 	_ admission.CustomValidator = (*NodeGroupValidator)(nil)
 	_ cpwebhook.Registrar       = (*NodeGroupValidator)(nil)
+
+	nodeGroupLog = logf.Log.WithName("node-group")
 )
 
 func NewNodeGroupValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *NodeGroupValidator {
@@ -58,6 +61,7 @@ func (v *NodeGroupValidator) Register(manager ctrl.Manager) error {
 
 func (v *NodeGroupValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	if !shouldValidateNodeGroup(obj) {
+		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup", "name", objectName(obj))
 		return nil, nil
 	}
 
@@ -66,6 +70,7 @@ func (v *NodeGroupValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 
 func (v *NodeGroupValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	if !shouldValidateNodeGroupUpdate(oldObj, newObj) {
+		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup update", "name", objectName(newObj))
 		return nil, nil
 	}
 
@@ -74,6 +79,7 @@ func (v *NodeGroupValidator) ValidateUpdate(ctx context.Context, oldObj, newObj 
 
 func (v *NodeGroupValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	if !shouldValidateNodeGroup(obj) {
+		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup delete", "name", objectName(obj))
 		return nil, nil
 	}
 
@@ -85,18 +91,34 @@ func (v *NodeGroupValidator) validate(
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (admission.Warnings, error) {
+	name := objectName(obj)
+	nodeGroupLog.Info(
+		"validating resource",
+		"operation", operation,
+		"resource", "NodeGroup",
+		"name", name,
+		"namespace", objectNamespace(obj),
+	)
+
 	state, err := v.builder.BuildForNodeGroup(ctx, operation, obj)
 	if err != nil {
+		nodeGroupLog.Error(err, "failed to build validation state", "name", name)
 		return nil, internalBuildError(err)
 	}
 
 	if shouldSkipState(state) {
+		nodeGroupLog.V(1).Info("skipping validation during migration")
 		return nil, nil
 	}
 
 	result := dvpval.ValidateInvariants(state)
 
-	return resultToAdmission(result)
+	warnings, err := resultToAdmission(result)
+	if err != nil {
+		nodeGroupLog.Info("validation denied", "violations", len(result.Errors()))
+	}
+
+	return warnings, err
 }
 
 func shouldValidateNodeGroup(obj runtime.Object) bool {
