@@ -256,36 +256,11 @@ func syncAnnotationsOnly(component controlplanev1alpha1.OperationComponent, anno
 // defragEtcdStep defragments the local etcd data store if fragmentation exceeds the threshold.
 // No-op for non-Etcd components. Requires the etcd pod to be Ready before running.
 type defragEtcdStep struct {
-	isEtcdPodReady func(ctx context.Context) (bool, error)
+	defragEtcd func(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error)
 }
 
 func (c *defragEtcdStep) Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
-	if env.State.Raw().Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
-		return StepResult{Outcome: OutcomeCompleted}, nil
-	}
-
-	ready, err := c.isEtcdPodReady(ctx)
-	if err != nil {
-		return StepResult{}, fmt.Errorf("check etcd pod readiness: %w", err)
-	}
-	if !ready {
-		logger.Info("etcd pod not ready, will retry before defragmentation")
-		return StepResult{
-			Outcome:      OutcomePending,
-			Message:      "waiting for etcd pod to be ready before defragmentation",
-			RequeueAfter: requeueWaitPod,
-		}, nil
-	}
-
-	defragged, err := defragEtcdIfNeeded(ctx, env.Node.AdvertiseIP, constants.KubernetesPkiPath, env.Node.KubeconfigDir, logger)
-	if err != nil {
-		return StepResult{}, err
-	}
-
-	if defragged {
-		return StepResult{Outcome: OutcomeCompleted, Message: "defragmented"}, nil
-	}
-	return StepResult{Outcome: OutcomeCompleted, Message: "skipped: fragmentation below threshold"}, nil
+	return c.defragEtcd(ctx, env.State, logger)
 }
 
 // waitPodReadyStep waits for the static pod to become ready with the expected checksum annotations.

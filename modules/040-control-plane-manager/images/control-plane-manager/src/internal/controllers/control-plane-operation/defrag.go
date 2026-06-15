@@ -106,8 +106,13 @@ func defragEtcdIfNeeded(ctx context.Context, advertiseIP, pkiDir, kubeconfigDir 
 	return true, nil
 }
 
-// isEtcdPodReady checks whether the local etcd static pod has the Ready condition.
-func (r *Reconciler) isEtcdPodReady(ctx context.Context) (bool, error) {
+// reconcileEtcdDefrag is the Reconciler-level implementation of the DefragEtcd step.
+// It checks that the etcd pod is ready, then defragments if fragmentation exceeds the threshold.
+func (r *Reconciler) reconcileEtcdDefrag(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error) {
+	if state.Raw().Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
+		return StepResult{Outcome: OutcomeCompleted}, nil
+	}
+
 	podName := fmt.Sprintf("%s-%s",
 		controlplanev1alpha1.OperationComponentEtcd.PodComponentName(),
 		r.node.Name)
@@ -117,9 +122,32 @@ func (r *Reconciler) isEtcdPodReady(ctx context.Context) (bool, error) {
 		Namespace: constants.KubeSystemNamespace,
 	}, pod); err != nil {
 		if apierrors.IsNotFound(err) {
-			return false, nil
+			logger.Info("etcd pod not found, will retry before defragmentation")
+			return StepResult{
+				Outcome:      OutcomePending,
+				Message:      "waiting for etcd pod to be ready before defragmentation",
+				RequeueAfter: requeueWaitPod,
+			}, nil
 		}
-		return false, fmt.Errorf("get pod %s: %w", podName, err)
+		return StepResult{}, fmt.Errorf("get pod %s: %w", podName, err)
 	}
-	return isPodReady(pod), nil
+
+	if !isPodReady(pod) {
+		logger.Info("etcd pod not ready, will retry before defragmentation")
+		return StepResult{
+			Outcome:      OutcomePending,
+			Message:      "waiting for etcd pod to be ready before defragmentation",
+			RequeueAfter: requeueWaitPod,
+		}, nil
+	}
+
+	defragged, err := defragEtcdIfNeeded(ctx, r.node.AdvertiseIP, constants.KubernetesPkiPath, r.node.KubeconfigDir, logger)
+	if err != nil {
+		return StepResult{}, err
+	}
+
+	if defragged {
+		return StepResult{Outcome: OutcomeCompleted, Message: "defragmented"}, nil
+	}
+	return StepResult{Outcome: OutcomeCompleted, Message: "skipped: fragmentation below threshold"}, nil
 }
