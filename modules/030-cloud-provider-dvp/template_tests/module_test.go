@@ -724,12 +724,12 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			f.HelmRender()
 		})
 
-		It("renders deployment with hostNetwork and webhook container", func() {
+		It("renders deployment without hostNetwork when cluster is bootstrapped", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
 			Expect(deploy.Exists()).To(BeTrue())
-			Expect(deploy.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(deploy.Field("spec.template.spec.hostNetwork").Exists()).To(BeFalse())
 			Expect(deploy.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(deploy.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 			Expect(deploy.Field("spec.template.spec.serviceAccountName").String()).To(Equal(validationWebhookName))
@@ -744,6 +744,16 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.name").String()).To(Equal("webhook-server"))
 			Expect(deploy.Field("spec.template.spec.containers.0.volumeMounts.0.name").String()).To(Equal("cert"))
 			Expect(deploy.Field("spec.template.spec.volumes.0.secret.secretName").String()).To(Equal("validation-webhook-tls"))
+		})
+
+		It("renders deployment with hostNetwork during bootstrap", func() {
+			f.ValuesSet("global.clusterIsBootstrapped", false)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
+			Expect(deploy.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(deploy.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
 		})
 
 		It("renders VPA and PDB", func() {
