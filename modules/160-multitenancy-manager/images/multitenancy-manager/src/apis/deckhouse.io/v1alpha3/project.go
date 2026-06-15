@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha3
 
 import (
+	"bytes"
+	"encoding/json"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
@@ -200,6 +202,32 @@ type NamespaceStatus struct {
 	Name string `json:"name"`
 	// Kind of the namespace: Main or Additional.
 	Kind string `json:"kind,omitempty"`
+}
+
+// UnmarshalJSON keeps backward compatibility with projects whose status.namespaces was stored by
+// older controllers as a list of plain namespace-name strings (e.g. ["foo","foo-bar"]). Without this
+// the typed client fails to decode such objects on LIST/WATCH ("cannot unmarshal string into ...
+// NamespaceStatus"), which prevents the cache from syncing and crashes the controller at startup.
+func (n *NamespaceStatus) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) > 0 && trimmed[0] == '"' {
+		var name string
+		if err := json.Unmarshal(trimmed, &name); err != nil {
+			return err
+		}
+		n.Name = name
+		n.Kind = ""
+		return nil
+	}
+
+	// Use an alias to avoid recursing into this method for the object form.
+	type alias NamespaceStatus
+	var decoded alias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*n = NamespaceStatus(decoded)
+	return nil
 }
 
 type ProjectStatus struct {
