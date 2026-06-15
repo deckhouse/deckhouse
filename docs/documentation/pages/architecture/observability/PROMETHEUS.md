@@ -46,7 +46,7 @@ The module consists of the following components:
 
    For more details about the working of Prometheus Operator, refer to [the `operator-prometheus` module documentation](/modules/operator-prometheus/) section.
 
-   For more details about the prometheus-main operation, refer to [the Architecture of the monitoring in DKP](/modules/operator-prometheus/) section.
+   For more details about the prometheus-main operation, refer to [the Architecture of the monitoring in DKP](monitoring.html#prometheus) section.
 
    Prometheus-main consists of the following containers:
 
@@ -72,7 +72,7 @@ The module consists of the following components:
    * **grafana**: Main container. It is an [open-source project](https://github.com/grafana/grafana).
    * **kube-rbac-proxy**: Sidecar container providing authorized access to controller metrics and status (described above).
 
-4. **Aggregating-proxy**: Component that performs metrics caching, data collection from two Prometheus (if they are in High Availability mode), data deduplication, and query calculation.
+4. **Aggregating-proxy**: Component that performs metrics caching, data collection from several Prometheus instances (if they are in High Availability mode), data deduplication, and query calculation.
 
    It consists of the following containers:
 
@@ -131,4 +131,4 @@ The following external components interact with the module:
 
 The [`prometheus`](/modules/prometheus/) module provides built-in fault tolerance for all its key components. All monitoring services (Prometheus servers, storage systems, proxies, and other important components) are deployed in multiple copies by default. This ensures that in the event of a failure of a separate instance, the service will continue to work without loss of data and availability.
 
-Prometheus, the main component of metric collection, runs in at least two copies (if there are enough nodes in the cluster). Both Prometheus instances use the same configuration and receive the same data. To ensure seamless operation in case of failure of one of the copies, a special component, the aggregation proxy, is used to access Prometheus. It allows you to combine metrics from both Prometheus instances and always return the most complete and up-to-date data, even if one of the copies is temporarily unavailable.
+Prometheus, the main component of metric collection, runs in at least two copies (if there are enough nodes in the cluster). All Prometheus instances use the same configuration and receive the same data. To ensure seamless operation in case of failure of one of the copies, a special component, the aggregation proxy, is used to access Prometheus. It allows you to combine metrics from both Prometheus instances and always return the most complete and up-to-date data, even if one of the copies is temporarily unavailable.
