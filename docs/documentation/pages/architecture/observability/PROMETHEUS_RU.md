@@ -1,6 +1,6 @@
 ---
 title: Модуль prometheus
-permalink: ru/architecture/storage/prometheus.html
+permalink: ru/architecture/observability/prometheus.html
 lang: ru
 search: prometheus module, monitoring architecture, monitoring components, monitoring, metrics, архитектура мониторинга, компоненты мониторинга, мониторинг, метрики
 description: Архитектура модуля prometheus в Deckhouse Kubernetes Platform.
@@ -22,7 +22,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 Архитектура модуля [`prometheus`](/modules/prometheus/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля prometheus](../../../images/architecture/observability/c4-l2-prometheus.ru.png)
+![Архитектура модуля prometheus](../../../images/architecture/observability/c4-l2-prometheus.ru.svg)
 
 ## Компоненты модуля
 
