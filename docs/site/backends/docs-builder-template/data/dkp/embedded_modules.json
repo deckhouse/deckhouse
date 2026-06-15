@@ -1413,40 +1413,6 @@
       }
     },
     {
-      "title": "The monitoring-deckhouse module",
-      "description": "Monitoring of Deckhouse Kubernetes Platform components and services.",
-      "module": "monitoring-deckhouse",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "monitoring-deckhouse/",
-      "ru": {
-        "title": "Модуль monitoring-deckhouse",
-        "description": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "monitoring-deckhouse",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "descriptions": {
-          "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
-          "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
-        },
-        "requirements": {
-          "modules": {
-            "prometheus": ">= 0.0.0"
-          }
-        },
-        "oss": []
-      }
-    },
-    {
       "title": "The monitoring-kubernetes module",
       "description": "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform.",
       "module": "monitoring-kubernetes",

@@ -87,7 +87,6 @@ editions:
   - loki
   - metallb
   - monitoring-custom
-  - monitoring-deckhouse
   - monitoring-kubernetes
   - monitoring-kubernetes-control-plane
   - monitoring-ping

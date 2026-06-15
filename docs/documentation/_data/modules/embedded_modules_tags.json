@@ -170,10 +170,6 @@
     "observability",
     "ssdlc"
   ],
-  "monitoring-deckhouse": [
-    "observability",
-    "ssdlc"
-  ],
   "monitoring-kubernetes": [
     "observability",
     "ssdlc"
