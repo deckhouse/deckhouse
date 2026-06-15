@@ -37,7 +37,7 @@ func TestInitLogFlagsPopulatesConfig(t *testing.T) {
 		t.Fatalf("Parse() error = %v", err)
 	}
 
-	if cfg.options.Format != "json" || cfg.verbosity != 2 {
+	if cfg.format != "json" || cfg.verbosity != 2 {
 		t.Fatalf("InitLogFlags() cfg = %#v, want format=json verbosity=2", cfg)
 	}
 }
@@ -46,7 +46,7 @@ func TestSetupLogger(t *testing.T) {
 	t.Parallel()
 
 	cfg := DefaultLogConfig()
-	cfg.options.Format = "text"
+	cfg.format = "text"
 	cfg.verbosity = 0
 
 	if err := SetupLogger(cfg); err != nil {
