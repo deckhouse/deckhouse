@@ -3,8 +3,6 @@ title: "USB devices"
 permalink: en/virtualization-platform/documentation/user/resource-management/usb-devices.html
 ---
 
-## USB Devices
-
 {% alert level="warning" %}
 USB device passthrough is available only in the **Enterprise Edition (EE)** of the Deckhouse Virtualization Platform.
 {% endalert %}
@@ -17,14 +15,14 @@ USB device passthrough requires:
 - [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) version 1.34 or higher.
 - [Deckhouse Kubernetes Platform (DKP)](https://releases.deckhouse.io/) version 1.75 or higher.
 
-### Overview
+## Overview
 
 DVP provides two custom resources for managing USB devices:
 
 - [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) (cluster-wide resource) — represents a USB device discovered on a specific node.Add a comment on  line R3796Add diff commentMarkdown input:  edit mode selected.WritePreviewAdd a suggestionHeadingBoldItalicQuoteCodeLinkUnordered listNumbered listTask listMentionReferenceMore Formatting tools items 0Saved repliesAdd FilesPaste, drop, or click to add filesCancelCommentStart a review
 - [USBDevice](/modules/virtualization/cr.html#usbdevice) (namespaced resource) — represents a USB device available for attachment to virtual machines in a given namespace.
 
-### How It Works
+## How it works
 
 USB device passthrough follows a defined lifecycle — from device discovery on a node to attachment to a virtual machine:
 
@@ -36,7 +34,7 @@ USB device passthrough follows a defined lifecycle — from device discovery on 
 
 1. The [USBDevice](/modules/virtualization/cr.html#usbdevice) is attached to a virtual machine by adding it to the `.spec.usbDevices` resource field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
-### Quick Start
+## Quick start
 
 The following steps describe the minimal workflow for attaching a USB device to a virtual machine:
 
@@ -81,7 +79,7 @@ The following steps describe the minimal workflow for attaching a USB device to 
    EOF
    ```
 
-### NodeUSBDevice
+## NodeUSBDevice
 
 [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource reflects the state of a physical USB device detected on a cluster node. It is a cluster-wide resource that represents a physical USB device on a node.
 
@@ -102,7 +100,7 @@ logitech-webcam     node-2         True    True      my-project   15m
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-#### NodeUSBDevice Conditions
+### NodeUSBDevice conditions
 
 The status of a [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource is represented by a set of conditions that describe its availability and assignment state:
 
@@ -116,7 +114,7 @@ The status of a [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) r
   - `Available`: No namespace is assigned for the device.
   - `InProgress`: Device connection to namespace is in progress.
 
-#### Assigning a Namespace
+### Assigning a namespace
 
 Before a USB device can be attached to a virtual machine, it must be exposed to a specific namespace. To make a USB device available in a specific namespace, set the `.spec.assignedNamespace` resource field:
 
@@ -133,7 +131,7 @@ EOF
 
 After assigning the namespace, a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is automatically created in the specified namespace.
 
-### USBDevice
+## USBDevice
 
 When the related [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) has the `.spec.assignedNamespace` resource field set, a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is created in that namespace. It is a namespaced resource that represents a USB device available for attachment to virtual machines within a given namespace.
 
@@ -153,7 +151,7 @@ logitech-webcam    node-2   Logitech       Webcam C920         ABC123456   False
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-#### USBDevice Attributes
+### USBDevice attributes
 
 The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource exposes detailed information about the physical USB device. These attributes are available in `.status.attributes`:
 
@@ -166,7 +164,7 @@ The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource exposes deta
 - `product`: Device product name.
 - `name`: Device name.
 
-#### USBDevice Conditions
+### USBDevice conditions
 
 The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource provides status conditions that reflect its readiness and attachment state.
 
@@ -180,7 +178,7 @@ The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource provides sta
   - `Available`: Device is available for attachment.
   - `NoFreeUSBIPPort`: Device is requested by a VM but cannot be attached because there are no free USBIP ports on the target node. In this case, `Attached=False`.
 
-### Attaching USB Device to VM
+## Attaching USB device to VM
 
 After the [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is available in a namespace, it can be attached to a virtual machine. To attach a USB device to a virtual machine, add the device to the `.spec.usbDevices` resource field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource specification:
 
@@ -207,7 +205,7 @@ The virtual machine must be running on the same node where the USB device is phy
 During VM migration, the USB device briefly disconnects and reconnects on the new node when the VM switches to it. If migration fails, the device will remain on the original node.
 {% endalert %}
 
-### Viewing USB Device Details
+## Viewing USB device details
 
 To view detailed information about a USB device:
 
@@ -258,7 +256,7 @@ If a USB device is physically disconnected from the node, the `Attached` conditi
 Both `USBDevice` and `NodeUSBDevice` resources update their status conditions to indicate that the device is no longer present on the host.
 {% endalert %}
 
-### Requirements and Limitations
+## Requirements and limitations
 
 USB device passthrough has several operational requirements and limitations that must be considered before use:
 
