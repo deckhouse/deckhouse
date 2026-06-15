@@ -192,7 +192,7 @@ def main() -> int:
     )
 
     print()
-    print("| Дата | Время выполнения сборки | Ссылка на джобу |")
+    print("| Date | Build job duration | Job link |")
     print("|---|---|---|")
     for r in rows:
         print(f"| {r['date']} | {r['dur_human']} | {r['url']} |")
@@ -202,13 +202,13 @@ def main() -> int:
         avg_seconds = sum(durations) / len(durations)
         avg_build_time = fmt_duration(avg_seconds)
         print(
-            f"Среднее время пересборки за последние {days} дней "
-            f"({len(durations)} успешных запусков): {avg_build_time}"
+            f"Average rebuild time over the last {days} days "
+            f"({len(durations)} successful run(s)): {avg_build_time}"
         )
     else:
         avg_seconds = 0.0
         avg_build_time = "n/a"
-        print(f"Успешных джоб сборки за последние {days} дней не найдено.")
+        print(f"No successful build jobs found over the last {days} days.")
 
     write_summary(os.environ.get("GITHUB_STEP_SUMMARY"), days, rows, durations, avg_build_time)
     write_outputs(
