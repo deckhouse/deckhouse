@@ -2021,7 +2021,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs img {
-    max-width: 100%;
+    max-width: 60%;
+
+    @include breakpoints.max-w(l) {
+      max-width: 100%;
+    }
 }
 
 .docs .clickable-header {
@@ -2204,17 +2208,27 @@ ul .resources__prop_name.deprecated {
 
 .pdf-slider {
   &__canvas {
+    max-width: 70%;
     border: 1px solid rgba(241, 243, 244, .949);
+
+    @include breakpoints.max-w(l) {
+      max-width: 100%;
+    }
   }
 
   &__nav {
     display: flex;
     align-items: center;
     box-sizing:  border-box;
+    max-width: 70%;
     margin-top: -4px;
     padding: 2px 8px;
     background: rgba(241, 243, 244, .949);
     box-shadow: none;
+
+    @include breakpoints.max-w(l) {
+      max-width: 100%;
+    }
   }
 
   &__nav--button {
