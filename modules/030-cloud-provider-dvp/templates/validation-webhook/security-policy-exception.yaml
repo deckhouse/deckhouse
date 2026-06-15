@@ -4,7 +4,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
 metadata:
   name: validation-webhook
-  namespace: d8-cloud-provider-vcd
+  namespace: d8-cloud-provider-dvp
 spec:
   network:
     hostNetwork:
