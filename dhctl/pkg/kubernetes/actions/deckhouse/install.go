@@ -602,7 +602,7 @@ func CreateDeckhouseManifests(
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Service "kube-dns"`,
 			Manifest: func() interface{} {
-				return manifests.KubeDNSService(cfg.KubeDNSAddress)
+				return manifests.KubeDNSService(cfg.KubeDNSAddress, cfg.KubeDNSAddressIPv6)
 			},
 			CreateFunc: func(ctx context.Context, manifest interface{}) error {
 				_, err := kubeCl.

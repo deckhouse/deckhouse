@@ -49,6 +49,9 @@ discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
   kubernetesVersion: "1.21.16"
+  podSubnet: "10.111.0.0/16"
+  serviceSubnet: "10.222.0.0/16"
+  clusterDNSAddress: "10.222.0.10"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
