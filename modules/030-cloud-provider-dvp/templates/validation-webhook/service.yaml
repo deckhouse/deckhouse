@@ -10,4 +10,4 @@ spec:
   ports:
     - name: https
       port: 443
-      targetPort: https
+      targetPort: webhook-server

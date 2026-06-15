@@ -14,10 +14,10 @@ spec:
           Allow host network access for validation webhook server.
           The DVP validation webhook server requires host network access to continue infrastructure reconciliation even if the CNI or pod network is unavailable.
     hostPorts:
-      - port: 8443
+      - port: 4330
         protocol: TCP
         metadata:
           description: |
-            Allow binding TCP port 8443 for the validation webhook server.
+            Allow binding TCP port 4330 for the validation webhook server.
             This port is used by validation-webhook to serve admission webhooks via validation-webhook service.
 {{- end }}

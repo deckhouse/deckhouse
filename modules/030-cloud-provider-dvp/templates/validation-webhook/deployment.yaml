@@ -9,10 +9,10 @@ security.deckhouse.io/security-policy-exception: validation-webhook
 {{- end -}}
 
 {{- define "dvp_validation_webhook_args" -}}
-- --webhook-port=8443
+- --webhook-port=4330
 - --webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs
-- --metrics-bind-address=127.0.0.1:8081
-- --health-probe-bind-address=127.0.0.1:8082
+- --metrics-bind-address=0
+- --health-probe-bind-address=0.0.0.0:4332
 {{- end -}}
 
 {{- define "dvp_validation_webhook_resources" -}}
@@ -102,17 +102,17 @@ spec:
         args:
           {{- include "dvp_validation_webhook_args" . | nindent 10 }}
         ports:
-          - name: https
-            containerPort: 8443
+          - name: webhook-server
+            containerPort: 4330
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8082
+            port: 4332
             scheme: HTTP
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 8082
+            port: 4332
             scheme: HTTP
         volumeMounts:
           - name: cert

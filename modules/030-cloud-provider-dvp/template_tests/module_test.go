@@ -258,10 +258,10 @@ const moduleNamespace = "d8-cloud-provider-dvp"
 const validationWebhookName = "validation-webhook"
 
 var validationWebhookArgs = []string{
-	"--webhook-port=8443",
+	"--webhook-port=4330",
 	"--webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs",
-	"--metrics-bind-address=127.0.0.1:8081",
-	"--health-probe-bind-address=127.0.0.1:8082",
+	"--metrics-bind-address=0",
+	"--health-probe-bind-address=0.0.0.0:4332",
 }
 
 var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
@@ -740,8 +740,8 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			for _, arg := range validationWebhookArgs {
 				Expect(deploy.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring(arg))
 			}
-			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.containerPort").Int()).To(Equal(int64(8443)))
-			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.name").String()).To(Equal("https"))
+			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.containerPort").Int()).To(Equal(int64(4330)))
+			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.name").String()).To(Equal("webhook-server"))
 			Expect(deploy.Field("spec.template.spec.containers.0.volumeMounts.0.name").String()).To(Equal("cert"))
 			Expect(deploy.Field("spec.template.spec.volumes.0.secret.secretName").String()).To(Equal("validation-webhook-tls"))
 		})
@@ -766,7 +766,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			svc := f.KubernetesResource("Service", moduleNamespace, validationWebhookName)
 			Expect(svc.Exists()).To(BeTrue())
 			Expect(svc.Field("spec.ports.0.port").Int()).To(Equal(int64(443)))
-			Expect(svc.Field("spec.ports.0.targetPort").String()).To(Equal("https"))
+			Expect(svc.Field("spec.ports.0.targetPort").String()).To(Equal("webhook-server"))
 			Expect(svc.Field("spec.selector.app").String()).To(Equal(validationWebhookName))
 
 			secret := f.KubernetesResource("Secret", moduleNamespace, "validation-webhook-tls")
@@ -886,7 +886,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(spe.Exists()).To(BeTrue())
 			Expect(spe.Field("metadata.namespace").String()).To(Equal(moduleNamespace))
 			Expect(spe.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
-			Expect(spe.Field("spec.network.hostPorts.0.port").Int()).To(Equal(int64(8443)))
+			Expect(spe.Field("spec.network.hostPorts.0.port").Int()).To(Equal(int64(4330)))
 			Expect(spe.Field("spec.network.hostPorts.0.protocol").String()).To(Equal("TCP"))
 		})
 	})
