@@ -97,12 +97,16 @@ func TestReconcile_FansOutToAllNamespaces(t *testing.T) {
 }
 
 func TestReconcile_PrunesStaleRoleBindings(t *testing.T) {
-	// a stale service RoleBinding exists in a namespace no longer part of the project
+	// a stale service RoleBinding exists in a namespace no longer part of the project; it carries
+	// the project label, just like every RoleBinding the controller fans out.
 	stale := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rolebinding.PRBServiceName("viewers"),
 			Namespace: "proj-gone",
-			Labels:    map[string]string{v1alpha3.ResourceLabelOwnedByPRB: "viewers"},
+			Labels: map[string]string{
+				v1alpha3.ResourceLabelOwnedByPRB: "viewers",
+				v1alpha3.ResourceLabelProject:    "proj",
+			},
 		},
 	}
 	binding := prb("viewers", "proj", "d8:project:viewer")
@@ -117,4 +121,67 @@ func TestReconcile_PrunesStaleRoleBindings(t *testing.T) {
 
 	// the live one exists
 	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: rolebinding.PRBServiceName("viewers")}, &rbacv1.RoleBinding{}))
+}
+
+// TestReconcile_PruneIsProjectScoped guards against cross-project deletion: two projects each have a
+// PRB named "viewers"; reconciling one must not delete the other project's service RoleBinding.
+func TestReconcile_PruneIsProjectScoped(t *testing.T) {
+	// service RoleBinding belonging to project "other" (same PRB name, different project)
+	otherRB := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rolebinding.PRBServiceName("viewers"),
+			Namespace: "other",
+			Labels: map[string]string{
+				v1alpha3.ResourceLabelOwnedByPRB: "viewers",
+				v1alpha3.ResourceLabelProject:    "other",
+			},
+		},
+	}
+	binding := prb("viewers", "proj", "d8:project:viewer")
+	r, c := newReconciler(t, binding, project("proj", "proj"), otherRB)
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}})
+	assert.NoError(t, err)
+
+	// the other project's RoleBinding must survive
+	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "other", Name: rolebinding.PRBServiceName("viewers")}, &rbacv1.RoleBinding{}),
+		"reconciling project 'proj' must not prune project 'other' bindings")
+}
+
+// TestReconcile_RecreatesOnRoleRefChange verifies the immutable roleRef is handled by delete+recreate.
+func TestReconcile_RecreatesOnRoleRefChange(t *testing.T) {
+	// an existing service RoleBinding pointing at the old role
+	old := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rolebinding.PRBServiceName("viewers"),
+			Namespace: "proj",
+			Labels: map[string]string{
+				v1alpha3.ResourceLabelOwnedByPRB: "viewers",
+				v1alpha3.ResourceLabelProject:    "proj",
+			},
+		},
+		RoleRef: rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "d8:project:viewer"},
+	}
+	binding := prb("viewers", "proj", "d8:project:admin")
+	r, c := newReconciler(t, binding, project("proj", "proj"), old)
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}})
+	assert.NoError(t, err)
+
+	rb := &rbacv1.RoleBinding{}
+	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: rolebinding.PRBServiceName("viewers")}, rb))
+	assert.Equal(t, "d8:project:admin", rb.RoleRef.Name, "roleRef must be updated to the new role")
+}
+
+// TestReconcile_ForbiddenRoleIsNotFannedOut verifies defense-in-depth: a disallowed role is cleaned
+// up and never propagated, even if it slipped past the webhook.
+func TestReconcile_ForbiddenRoleIsNotFannedOut(t *testing.T) {
+	binding := prb("escalation", "proj", "cluster-admin")
+	r, c := newReconciler(t, binding, project("proj", "proj"))
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "escalation"}})
+	assert.NoError(t, err)
+
+	err = c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: rolebinding.PRBServiceName("escalation")}, &rbacv1.RoleBinding{})
+	assert.Error(t, err, "a forbidden role must not be fanned out")
 }

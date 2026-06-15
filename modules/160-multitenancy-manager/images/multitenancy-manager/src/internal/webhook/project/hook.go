@@ -38,6 +38,7 @@ import (
 	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
 	"controller/internal/validate"
+	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
@@ -50,7 +51,7 @@ type validator struct {
 	helmClient *helm.Client
 }
 
-func (v *validator) Handle(_ context.Context, req admission.Request) admission.Response {
+func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	project := new(v1alpha3.Project)
 	if err := yaml.Unmarshal(req.Object.Raw, project); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
@@ -67,7 +68,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		}
 
 		namespaces := new(corev1.NamespaceList)
-		if err := v.client.List(context.Background(), namespaces); err != nil {
+		if err := v.client.List(ctx, namespaces); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		for _, namespace := range namespaces.Items {
@@ -85,7 +86,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		// of an existing project, so neither "foo-bar" (when "foo" exists) nor "foo" (when "foo-bar"
 		// exists) may be created.
 		projects := new(v1alpha3.ProjectList)
-		if err := v.client.List(context.Background(), projects); err != nil {
+		if err := v.client.List(ctx, projects); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		for _, existing := range projects.Items {
@@ -111,15 +112,21 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	}
 
 	if req.Operation == admissionv1.Update {
+		// Only the controller/Deckhouse may request a sync that skips re-validation. Gating this on
+		// the user prevents a tenant from setting the annotation themselves to bypass validation.
+		privileged := req.UserInfo.Username == rolebindingwebhook.ControllerServiceAccount ||
+			req.UserInfo.Username == rolebindingwebhook.DeckhouseServiceAccount
+
 		// pass triggered projects
-		if annotations := project.Annotations; annotations != nil {
-			require, ok := annotations[v1alpha3.ProjectAnnotationRequireSync]
-			if ok && require == "true" {
-				return admission.Allowed("")
+		if privileged {
+			if annotations := project.Annotations; annotations != nil {
+				if require, ok := annotations[v1alpha3.ProjectAnnotationRequireSync]; ok && require == "true" {
+					return admission.Allowed("")
+				}
 			}
 		}
 
-		// pass error projects
+		// pass error projects (the status subresource is controller-managed)
 		if project.Status.State == v1alpha3.ProjectStateError {
 			return admission.Allowed("").WithWarnings("The project skip validation due to the status")
 		}
@@ -130,7 +137,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 		return admission.Allowed("")
 	}
 
-	template, err := v.projectTemplateByName(context.Background(), project.Spec.ProjectTemplateName)
+	template, err := v.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}

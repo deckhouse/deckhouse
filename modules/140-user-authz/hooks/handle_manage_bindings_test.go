@@ -83,6 +83,43 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 		})
 	})
 
+	Context("There`s a SystemRoleBinding to a superadmin role (three aggregation levels)", func() {
+		BeforeEach(func() {
+			// d8:system:superadmin -> d8:subsystem:security:superadmin ->
+			// d8:subsystem:security:manager -> capability (carries the namespace).
+			// The namespaced capability sits three levels below the bound role.
+			resources := []string{
+				systemCapability("d8:system-capability:test:edit", "security", "sec-ns"),
+				manageRoleWith("d8:subsystem:security:manager", "subsystem", "admin",
+					map[string]string{"rbac.deckhouse.io/aggregate-to-security-as": "manager"},
+					map[string]string{
+						"rbac.deckhouse.io/subsystem":                "security",
+						"rbac.deckhouse.io/aggregate-to-security-as": "superadmin",
+						"rbac.deckhouse.io/aggregate-to-system-as":   "manager",
+					}),
+				manageRoleWith("d8:subsystem:security:superadmin", "subsystem", "superadmin",
+					map[string]string{"rbac.deckhouse.io/aggregate-to-security-as": "superadmin"},
+					map[string]string{
+						"rbac.deckhouse.io/subsystem":              "security",
+						"rbac.deckhouse.io/aggregate-to-system-as": "superadmin",
+					}),
+				manageRoleWith("d8:system:superadmin", "system", "superadmin",
+					map[string]string{"rbac.deckhouse.io/aggregate-to-system-as": "superadmin"},
+					nil),
+				manageBinding("test", "d8:system:superadmin"),
+			}
+			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
+			f.RunHook()
+		})
+
+		It("fans out the namespaced binding through all aggregation levels", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			roleBinding := f.KubernetesResource("RoleBinding", "sec-ns", "d8:namespace:superadmin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:namespace:superadmin:binding:test"))
+			Expect(roleBinding.Field("roleRef.name").Str).To(Equal("d8:namespace:superadmin"))
+		})
+	})
+
 	Context("A namespace drops out of a manage binding", func() {
 		BeforeEach(func() {
 			resources := []string{
@@ -161,6 +198,37 @@ func systemRole(name, scope, lineage string) string {
 	if scope == "subsystem" {
 		role.Labels["rbac.deckhouse.io/subsystem"] = lineage
 		role.Labels["rbac.deckhouse.io/aggregate-to-system-as"] = "manager"
+	}
+	marshaled, _ := yaml.Marshal(&role)
+	return string(marshaled)
+}
+
+// manageRoleWith builds a manage ClusterRole (kind=role) with an explicit scope,
+// use-role, the aggregation selector labels it matches (selects), and any extra
+// labels it carries so higher-tier roles can aggregate it (carries).
+func manageRoleWith(name, scope, useRole string, selects, carries map[string]string) string {
+	labels := map[string]string{
+		"rbac.deckhouse.io/use-role": useRole,
+		"rbac.deckhouse.io/kind":     "role",
+		"rbac.deckhouse.io/scope":    scope,
+	}
+	for k, v := range carries {
+		labels[k] = v
+	}
+	selectors := make([]metav1.LabelSelector, 0, len(selects))
+	for k, v := range selects {
+		selectors = append(selectors, metav1.LabelSelector{MatchLabels: map[string]string{k: v}})
+	}
+	role := rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRole",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+		AggregationRule: &rbacv1.AggregationRule{ClusterRoleSelectors: selectors},
 	}
 	marshaled, _ := yaml.Marshal(&role)
 	return string(marshaled)

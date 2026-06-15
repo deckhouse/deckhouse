@@ -173,18 +173,20 @@ func useBindingKey(namespace, name string) string {
 }
 
 func roleAndNamespacesByBinding(manageRoles []pkg.Snapshot, roleName string) (string, map[string]bool, error) {
-	var useRole string
-	var found *filteredManageRole
+	// Materialize the manage roles/capabilities once so we can walk the
+	// aggregation graph to arbitrary depth without re-iterating the snapshot.
+	roles := make([]filteredManageRole, 0, len(manageRoles))
 	for role, err := range sdkobjectpatch.SnapshotIter[filteredManageRole](manageRoles) {
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to iterate over 'manageRoles' snapshot: %w", err)
 		}
-		if role.Name == roleName {
-			found = &role
-			var ok bool
-			if useRole, ok = found.Labels["rbac.deckhouse.io/use-role"]; !ok {
-				return "", nil, nil
-			}
+		roles = append(roles, role)
+	}
+
+	var found *filteredManageRole
+	for i := range roles {
+		if roles[i].Name == roleName {
+			found = &roles[i]
 			break
 		}
 	}
@@ -192,33 +194,45 @@ func roleAndNamespacesByBinding(manageRoles []pkg.Snapshot, roleName string) (st
 		return "", nil, nil
 	}
 
-	var namespaces = make(map[string]bool)
-	for role, err := range sdkobjectpatch.SnapshotIter[filteredManageRole](manageRoles) {
-		if err != nil {
-			return "", nil, fmt.Errorf("failed to iterate over 'manageRoles' snapshot: %w", err)
-		}
-
-		if matchAggregationRule(found.Rule, role.Labels) {
-			if role.Rule == nil {
-				if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
-					namespaces[namespace] = true
-				}
-				continue
-			}
-			for nested, err := range sdkobjectpatch.SnapshotIter[filteredManageRole](manageRoles) {
-				if err != nil {
-					return "", nil, fmt.Errorf("failed to iterate over 'manageRoles' snapshot: %w", err)
-				}
-				if matchAggregationRule(role.Rule, nested.Labels) {
-					if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
-						namespaces[namespace] = true
-					}
-				}
-			}
-		}
+	useRole, ok := found.Labels["rbac.deckhouse.io/use-role"]
+	if !ok {
+		return "", nil, nil
 	}
 
+	// Walk the whole aggregation chain (bound role -> roles/capabilities it
+	// aggregates -> ... -> leaf capabilities) collecting every
+	// rbac.deckhouse.io/namespace label reachable from the bound role. A
+	// fixed-depth descent misses tiers that sit more than one level above the
+	// namespaced capabilities, e.g. d8:system:superadmin ->
+	// d8:subsystem:<s>:superadmin -> d8:subsystem:<s>:manager -> capability.
+	namespaces := make(map[string]bool)
+	visited := map[string]bool{found.Name: true}
+	collectManageNamespaces(found, roles, namespaces, visited)
+
 	return useRole, namespaces, nil
+}
+
+// collectManageNamespaces descends into every manage role/capability whose labels
+// match node's aggregationRule, recording the rbac.deckhouse.io/namespace label of
+// each reached object. The visited set guards against cycles and repeated work.
+func collectManageNamespaces(node *filteredManageRole, roles []filteredManageRole, namespaces, visited map[string]bool) {
+	if node.Rule == nil {
+		return
+	}
+	for i := range roles {
+		child := &roles[i]
+		if !matchAggregationRule(node.Rule, child.Labels) {
+			continue
+		}
+		if namespace, ok := child.Labels["rbac.deckhouse.io/namespace"]; ok {
+			namespaces[namespace] = true
+		}
+		if visited[child.Name] {
+			continue
+		}
+		visited[child.Name] = true
+		collectManageNamespaces(child, roles, namespaces, visited)
+	}
 }
 
 func matchAggregationRule(rule *rbacv1.AggregationRule, roleLabels map[string]string) bool {

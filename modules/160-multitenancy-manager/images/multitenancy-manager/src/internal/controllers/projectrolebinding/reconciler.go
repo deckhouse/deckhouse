@@ -20,9 +20,11 @@ package projectrolebinding
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Cleanup path: the binding is being deleted, or its project is gone/terminating.
 	if !prb.DeletionTimestamp.IsZero() || !projectFound || !project.DeletionTimestamp.IsZero() {
-		if err := r.cleanup(ctx, prb.Name); err != nil {
+		if err := r.cleanup(ctx, prb.Name, req.Namespace); err != nil {
 			return ctrl.Result{}, err
 		}
 		if controllerutil.ContainsFinalizer(prb, v1alpha3.ProjectRoleBindingFinalizer) {
@@ -87,17 +89,38 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
+	// Defense in depth: the admission webhook already restricts roleRef, but never fan out a
+	// forbidden role even if the webhook was bypassed or the role was disabled after binding.
+	if !rolebinding.IsRoleAllowed(prb.Spec.RoleRef.Name) {
+		log.Info("roleRef is not allowed for project bindings, cleaning up", "roleRef", prb.Spec.RoleRef.Name)
+		if err := r.cleanup(ctx, prb.Name, prb.Namespace); err != nil {
+			return ctrl.Result{}, err
+		}
+		setNotReady(&prb.Status.Conditions, fmt.Sprintf("roleRef %q is not allowed for project bindings", prb.Spec.RoleRef.Name))
+		if err := r.Status().Update(ctx, prb); err != nil {
+			return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+		}
+		return ctrl.Result{}, nil
+	}
+
 	target := rolebinding.ProjectNamespaceNames(project)
 	related := fmt.Sprintf("%s/%s", prb.Namespace, prb.Name)
 
+	// Fan out into every namespace, accumulating per-namespace errors so a single bad namespace
+	// does not block the rest of the project (relevant at scale).
+	var errs []error
 	for _, ns := range target {
 		if err := r.upsertRoleBinding(ctx, prb, ns, related); err != nil {
-			return ctrl.Result{}, err
+			errs = append(errs, err)
 		}
 	}
 
-	if err := r.pruneRoleBindings(ctx, prb.Name, target); err != nil {
-		return ctrl.Result{}, err
+	if err := r.pruneRoleBindings(ctx, prb.Name, prb.Namespace, target); err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		return ctrl.Result{}, errors.Join(errs...)
 	}
 
 	prb.Status.ObservedGeneration = prb.Generation
@@ -111,8 +134,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) upsertRoleBinding(ctx context.Context, prb *v1alpha3.ProjectRoleBinding, ns, related string) error {
-	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: rolebinding.PRBServiceName(prb.Name), Namespace: ns}}
+	name := rolebinding.PRBServiceName(prb.Name)
 	project := prb.Namespace
+
+	// roleRef is immutable in the Kubernetes API: if the binding's role changed, the existing
+	// service RoleBinding must be recreated rather than updated.
+	existing := &rbacv1.RoleBinding{}
+	switch err := r.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, existing); {
+	case err == nil:
+		if existing.RoleRef.Name != prb.Spec.RoleRef.Name {
+			if err := r.Delete(ctx, existing); err != nil && !k8serrors.IsNotFound(err) {
+				return fmt.Errorf("recreate RoleBinding %s/%s on roleRef change: %w", ns, name, err)
+			}
+		}
+	case !k8serrors.IsNotFound(err):
+		return fmt.Errorf("get RoleBinding %s/%s: %w", ns, name, err)
+	}
+
+	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns}}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
 		if rb.Labels == nil {
 			rb.Labels = map[string]string{}
@@ -144,15 +183,19 @@ func (r *Reconciler) upsertRoleBinding(ctx context.Context, prb *v1alpha3.Projec
 }
 
 // pruneRoleBindings deletes service RoleBindings of this PRB in namespaces that are no longer part
-// of the target set.
-func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target []string) error {
+// of the target set. It is scoped to the project (PRB names are only unique within a project
+// namespace), so it never touches bindings of an identically named PRB in another project.
+func (r *Reconciler) pruneRoleBindings(ctx context.Context, name, project string, target []string) error {
 	keep := make(map[string]struct{}, len(target))
 	for _, ns := range target {
 		keep[ns] = struct{}{}
 	}
 
 	list := &rbacv1.RoleBindingList{}
-	if err := r.List(ctx, list, client.MatchingLabels{v1alpha3.ResourceLabelOwnedByPRB: name}); err != nil {
+	if err := r.List(ctx, list, client.MatchingLabels{
+		v1alpha3.ResourceLabelOwnedByPRB: name,
+		v1alpha3.ResourceLabelProject:    project,
+	}); err != nil {
 		return fmt.Errorf("list service RoleBindings: %w", err)
 	}
 	for i := range list.Items {
@@ -166,22 +209,32 @@ func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target 
 	return nil
 }
 
-// cleanup removes every service RoleBinding fanned out by the named PRB.
-func (r *Reconciler) cleanup(ctx context.Context, name string) error {
-	return r.pruneRoleBindings(ctx, name, nil)
+// cleanup removes every service RoleBinding fanned out by the named PRB within its project.
+func (r *Reconciler) cleanup(ctx context.Context, name, project string) error {
+	return r.pruneRoleBindings(ctx, name, project, nil)
 }
 
 func setReady(conditions *[]v1alpha3.Condition) {
+	setCondition(conditions, corev1.ConditionTrue, "")
+}
+
+func setNotReady(conditions *[]v1alpha3.Condition, message string) {
+	setCondition(conditions, corev1.ConditionFalse, message)
+}
+
+func setCondition(conditions *[]v1alpha3.Condition, status corev1.ConditionStatus, message string) {
 	for i := range *conditions {
 		if (*conditions)[i].Type == v1alpha3.ProjectRoleBindingConditionReady {
-			(*conditions)[i].Status = "True"
+			(*conditions)[i].Status = status
+			(*conditions)[i].Message = message
 			(*conditions)[i].LastProbeTime = metav1.Now()
 			return
 		}
 	}
 	*conditions = append(*conditions, v1alpha3.Condition{
 		Type:               v1alpha3.ProjectRoleBindingConditionReady,
-		Status:             "True",
+		Status:             status,
+		Message:            message,
 		LastProbeTime:      metav1.Now(),
 		LastTransitionTime: metav1.Now(),
 	})
@@ -193,6 +246,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// a project change enqueues all PRBs in its main namespace
 		list := &v1alpha3.ProjectRoleBindingList{}
 		if err := r.List(ctx, list, client.InNamespace(obj.GetName())); err != nil {
+			ctrllog.FromContext(ctx).Error(err, "list ProjectRoleBindings for project watch", "project", obj.GetName())
 			return nil
 		}
 		reqs := make([]reconcile.Request, 0, len(list.Items))

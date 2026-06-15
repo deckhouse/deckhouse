@@ -79,8 +79,13 @@ func (m *Manager) Handle(ctx context.Context, namespace *corev1.Namespace) (ctrl
 	namespace.SetLabels(labels)
 
 	// set adopt annotations
-	namespace.Annotations[helm.ResourceAnnotationReleaseName] = namespace.GetName()
-	namespace.Annotations[helm.ResourceAnnotationReleaseNamespace] = ""
+	annotations := namespace.GetAnnotations()
+	if len(annotations) == 0 {
+		annotations = make(map[string]string)
+	}
+	annotations[helm.ResourceAnnotationReleaseName] = namespace.GetName()
+	annotations[helm.ResourceAnnotationReleaseNamespace] = ""
+	namespace.SetAnnotations(annotations)
 
 	if err := m.client.Update(ctx, namespace); err != nil {
 		m.logger.Error(err, "failed to update the namespace", "namespace", namespace.GetName())

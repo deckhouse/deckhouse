@@ -54,6 +54,12 @@ const (
 	ResourceLabelManagedBy = "app.kubernetes.io/managed-by"
 )
 
+// structs.DefaultTagName is a process-wide global in fatih/structs. Set it once at package load so
+// buildValues stays read-only and free of data races under concurrent reconciles.
+func init() {
+	structs.DefaultTagName = "yaml"
+}
+
 type Client struct {
 	conf      *action.Configuration
 	templates map[string][]byte
@@ -71,7 +77,7 @@ func New(namespace, templatesPath string, logger logr.Logger) (*Client, error) {
 	cli := &Client{
 		opts: &options{
 			HistoryMax: 3,
-			Timeout:    time.Duration(15 * float64(time.Second)),
+			Timeout:    15 * time.Second,
 		},
 		conf: &action.Configuration{
 			Capabilities: chartutil.DefaultCapabilities,
@@ -269,7 +275,6 @@ func buildValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) 
 		Parameters:   mergeWithDefaults(schema, project.Spec.Parameters),
 	}
 
-	structs.DefaultTagName = "yaml"
 	return map[string]interface{}{
 		"projectTemplate": structs.Map(template.Spec),
 		"project":         structs.Map(preparedProject),
@@ -353,7 +358,7 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 	uninstall.IgnoreNotFound = true
 
 	if _, err := uninstall.Run(releaseName); err != nil {
-		return fmt.Errorf("uninstall the '%s' release: %v", releaseName, err)
+		return fmt.Errorf("uninstall the '%s' release: %w", releaseName, err)
 	}
 
 	c.logger.Info("the release deleted", "release", releaseName)

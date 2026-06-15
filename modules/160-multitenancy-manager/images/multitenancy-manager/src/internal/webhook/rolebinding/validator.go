@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -51,6 +52,8 @@ const (
 type Input struct {
 	RoleRefKind string
 	RoleRefName string
+	// Subjects are the binding subjects (validated for kind and, for ServiceAccounts, namespace).
+	Subjects []rbacv1.Subject
 	// Namespace is the request namespace for a ProjectRoleBinding; empty for a ClusterProjectRoleBinding.
 	Namespace string
 	// ManagedBy is the value of the projects.deckhouse.io/managed-by label on the object (or its old version on delete).
@@ -77,6 +80,10 @@ func Validate(ctx context.Context, c client.Client, req admission.Request, in In
 		return admission.Denied("roleRef.kind must be ClusterRole")
 	}
 
+	if denied := validateSubjects(in.Subjects, in.Namespace); denied != "" {
+		return admission.Denied(denied)
+	}
+
 	if !rolebinding.IsRoleAllowed(in.RoleRefName) {
 		return admission.Denied(fmt.Sprintf(
 			"ClusterRole %q cannot be granted via a project role binding; allowed: d8:project:*, d8:namespace:*, their capabilities and d8:custom:*",
@@ -86,7 +93,15 @@ func Validate(ctx context.Context, c client.Client, req admission.Request, in In
 	clusterRole := &rbacv1.ClusterRole{}
 	if err := c.Get(ctx, client.ObjectKey{Name: in.RoleRefName}, clusterRole); err != nil {
 		if apierrors.IsNotFound(err) {
-			return admission.Allowed("").WithWarnings(fmt.Sprintf("ClusterRole %q does not exist", in.RoleRefName))
+			// Fail closed: a non-privileged user must not be able to pre-create a binding to a
+			// not-yet-existing role and thus skip the scope/label and privilege-escalation checks
+			// below. Only the controller/Deckhouse may reference an absent role.
+			if privileged {
+				return admission.Allowed("").WithWarnings(fmt.Sprintf("ClusterRole %q does not exist", in.RoleRefName))
+			}
+			return admission.Denied(fmt.Sprintf(
+				"ClusterRole %q does not exist; it must exist before it can be granted via a project role binding",
+				in.RoleRefName))
 		}
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -95,7 +110,7 @@ func Validate(ctx context.Context, c client.Client, req admission.Request, in In
 		return admission.Denied(fmt.Sprintf("ClusterRole %q is disabled for direct use in projects", in.RoleRefName))
 	}
 
-	if len(in.RoleRefName) >= len(customRolePrefix) && in.RoleRefName[:len(customRolePrefix)] == customRolePrefix {
+	if strings.HasPrefix(in.RoleRefName, customRolePrefix) {
 		kind := clusterRole.Labels[LabelRBACKind]
 		if kind != "custom-role" && kind != "custom-capability" {
 			return admission.Denied(fmt.Sprintf("ClusterRole %q must have label %s in {custom-role, custom-capability}", in.RoleRefName, LabelRBACKind))
@@ -117,6 +132,34 @@ func Validate(ctx context.Context, c client.Client, req admission.Request, in In
 	}
 
 	return admission.Allowed("")
+}
+
+// validateSubjects checks subject kinds and constrains ServiceAccount subjects to the project.
+// projectNamespace is the project's main namespace for a ProjectRoleBinding, or empty for a
+// cluster-scoped ClusterProjectRoleBinding (which spans all projects and cannot be constrained here).
+func validateSubjects(subjects []rbacv1.Subject, projectNamespace string) string {
+	for _, s := range subjects {
+		if s.Name == "" {
+			return "subject name must not be empty"
+		}
+		switch s.Kind {
+		case rbacv1.UserKind, rbacv1.GroupKind:
+		case rbacv1.ServiceAccountKind:
+			if s.Namespace == "" {
+				return fmt.Sprintf("ServiceAccount subject %q must set a namespace", s.Name)
+			}
+			// For a ProjectRoleBinding the ServiceAccount must belong to the project: its main
+			// namespace (== project name) or one of its additional "<project>-*" namespaces.
+			if projectNamespace != "" &&
+				s.Namespace != projectNamespace &&
+				!strings.HasPrefix(s.Namespace, projectNamespace+"-") {
+				return fmt.Sprintf("ServiceAccount subject namespace %q must belong to project %q", s.Namespace, projectNamespace)
+			}
+		default:
+			return fmt.Sprintf("subject %q has invalid kind %q: must be User, Group or ServiceAccount", s.Name, s.Kind)
+		}
+	}
+	return ""
 }
 
 func canBind(ctx context.Context, c client.Client, req admission.Request, in Input) (bool, string, error) {

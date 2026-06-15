@@ -352,6 +352,51 @@ func TestLegacyResourcesFiltered(t *testing.T) {
 	assert.True(t, hasCM, "regular resources must be kept")
 }
 
+// TestListWrapperCannotBypassFilter guards H5: a filtered kind (ResourceQuota) smuggled inside a
+// kind: List must still be dropped, while a sibling ConfigMap inside the same List is kept.
+func TestListWrapperCannotBypassFilter(t *testing.T) {
+	manifest := `
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: sneaky
+    spec:
+      hard:
+        pods: "10"
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: keep-me
+    data:
+      a: b
+`
+	project := &v1alpha3.Project{}
+	project.Name = "test"
+
+	post := newPostRenderer(project, nil, ctrl.Log.WithName("test"), true)
+	out, err := post.Run(bytes.NewBufferString(manifest))
+	assert.Nil(t, err)
+	assert.True(t, post.filtered, "ResourceQuota inside a List must be filtered out")
+
+	renderedMap := make(map[string]*unstructured.Unstructured)
+	for _, raw := range releaseutil.SplitManifests(out.String()) {
+		object, ok, parseErr := parseManifest(raw)
+		assert.Nil(t, parseErr)
+		if !ok {
+			continue
+		}
+		renderedMap[fmt.Sprintf("%s.%s", object.GetKind(), object.GetName())] = object
+	}
+
+	_, hasRQ := renderedMap["ResourceQuota.sneaky"]
+	assert.False(t, hasRQ, "ResourceQuota smuggled in a List must be filtered out")
+	_, hasCM := renderedMap["ConfigMap.keep-me"]
+	assert.True(t, hasCM, "ConfigMap inside the List must be kept")
+}
+
 func read[T any](path string) (*T, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

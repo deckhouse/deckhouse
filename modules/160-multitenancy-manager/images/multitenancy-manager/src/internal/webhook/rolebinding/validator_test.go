@@ -102,6 +102,42 @@ func TestValidate_ClusterRoleMissing(t *testing.T) {
 	assert.NotEmpty(t, resp.Warnings)
 }
 
+func TestValidate_ClusterRoleMissingFailsClosedForUser(t *testing.T) {
+	c := newClient(t)
+	// non-privileged user, allowed prefix, role does not exist -> denied (fail closed)
+	resp := Validate(context.Background(), c, request(admissionv1.Create, "alice"),
+		Input{RoleRefKind: "ClusterRole", RoleRefName: "d8:project:viewer"})
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "does not exist")
+}
+
+func TestValidate_Subjects(t *testing.T) {
+	c := newClient(t, clusterRole("d8:project:viewer", nil, nil))
+	base := func(subjects ...rbacv1.Subject) Input {
+		return Input{RoleRefKind: "ClusterRole", RoleRefName: "d8:project:viewer", Namespace: "proj", Subjects: subjects}
+	}
+
+	// invalid subject kind is rejected
+	resp := Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount),
+		base(rbacv1.Subject{Kind: "Robot", Name: "x"}))
+	assert.False(t, resp.Allowed)
+
+	// ServiceAccount without namespace is rejected
+	resp = Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount),
+		base(rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "sa"}))
+	assert.False(t, resp.Allowed)
+
+	// ServiceAccount from a foreign namespace is rejected
+	resp = Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount),
+		base(rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "sa", Namespace: "other"}))
+	assert.False(t, resp.Allowed)
+
+	// ServiceAccount from the project's main / additional namespace is accepted
+	resp = Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount),
+		base(rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "sa", Namespace: "proj-extra"}))
+	assert.True(t, resp.Allowed)
+}
+
 func TestValidate_DisabledForProjects(t *testing.T) {
 	c := newClient(t, clusterRole("d8:project:viewer", nil, map[string]string{AnnotationDisabledForProjects: "true"}))
 	resp := Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount),

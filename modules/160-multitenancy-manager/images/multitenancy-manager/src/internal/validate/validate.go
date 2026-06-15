@@ -55,7 +55,9 @@ func LoadSchema(properties map[string]interface{}) (*spec.Schema, error) {
 	if err != nil {
 		var jsonErr *json.SyntaxError
 		if errors.As(err, &jsonErr) {
-			problemPart := marshaled[jsonErr.Offset-10 : jsonErr.Offset+10]
+			start := max(int(jsonErr.Offset)-10, 0)
+			end := min(int(jsonErr.Offset)+10, len(marshaled))
+			problemPart := marshaled[start:end]
 			err = fmt.Errorf("%w ~ error near '%s' (offset %d)", err, problemPart, jsonErr.Offset)
 		}
 		return nil, fmt.Errorf("json marshal spec.openAPI: %w", err)

@@ -105,7 +105,7 @@ func ensureDictBindings(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to iterate over 'dictBindings' snapshot: %w", err)
 		}
 
-		if parsed.Subjects == nil {
+		if len(parsed.Subjects) == 0 {
 			continue
 		}
 

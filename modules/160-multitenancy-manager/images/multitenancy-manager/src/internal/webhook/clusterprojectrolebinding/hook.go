@@ -54,6 +54,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	return rolebindingwebhook.Validate(ctx, v.client, req, rolebindingwebhook.Input{
 		RoleRefKind: cprb.Spec.RoleRef.Kind,
 		RoleRefName: cprb.Spec.RoleRef.Name,
+		Subjects:    cprb.Spec.Subjects,
 		Namespace:   "",
 		ManagedBy:   cprb.Labels[v1alpha3.ResourceLabelManagedBy],
 	})

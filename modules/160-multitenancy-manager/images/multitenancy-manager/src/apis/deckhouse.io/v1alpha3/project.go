@@ -86,6 +86,8 @@ type ProjectList struct {
 	Items           []Project `json:"items"`
 }
 
+var _ runtime.Object = &ProjectList{}
+
 func (p *ProjectList) DeepCopyObject() runtime.Object {
 	return p.DeepCopy()
 }
@@ -164,7 +166,7 @@ type ProjectSpec struct {
 	// Values for resource templates from ProjectTemplate
 	// in helm values format that map to the open-api specification
 	// from the ValuesSchema ProjectTemplate field
-	Parameters map[string]interface{} `json:"parameters,omitempty"`
+	Parameters map[string]any `json:"parameters,omitempty"`
 }
 
 func (p *ProjectSpec) DeepCopy() *ProjectSpec {
@@ -185,10 +187,10 @@ func (p *ProjectSpec) DeepCopyInto(newObj *ProjectSpec) {
 		newObj.Quota = p.Quota.DeepCopy()
 	}
 	if p.Parameters != nil {
-		newObj.Parameters = make(map[string]interface{}, len(p.Parameters))
-		for key, value := range p.Parameters {
-			newObj.Parameters[key] = value
-		}
+		// Parameters hold arbitrary JSON (nested maps/slices) from the template values, so a
+		// shallow per-key copy would share nested references with the cached object. DeepCopyJSON
+		// performs a full recursive copy.
+		newObj.Parameters = runtime.DeepCopyJSON(p.Parameters)
 	}
 }
 

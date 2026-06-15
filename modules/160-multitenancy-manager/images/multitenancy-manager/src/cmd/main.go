@@ -88,28 +88,28 @@ func main() {
 	// initialize runtime manager
 	runtimeManager, err := setupRuntimeManager(logger)
 	if err != nil {
-		panic(err)
+		fatal(logger, err, "set up runtime manager")
 	}
 
 	// initialize helm client
 	helmClient, err := helm.New(helmNamespace, helmTemplatesPath, logger)
 	if err != nil {
-		panic(err)
+		fatal(logger, err, "initialize helm client")
 	}
 
 	// register project controller
 	if err = projectcontroller.Register(runtimeManager, helmClient, logger); err != nil {
-		panic(err)
+		fatal(logger, err, "register project controller")
 	}
 
 	// register template controller
 	if err = templatecontroller.Register(runtimeManager, templatesPath, logger); err != nil {
-		panic(err)
+		fatal(logger, err, "register template controller")
 	}
 
 	// register namespace controller
 	if err = namespacecontroller.Register(runtimeManager, logger); err != nil {
-		panic(err)
+		fatal(logger, err, "register namespace controller")
 	}
 
 	// register project webhook
@@ -129,13 +129,13 @@ func main() {
 		Client: runtimeManager.GetClient(),
 		Mapper: runtimeManager.GetRESTMapper(),
 	}).SetupWithManager(runtimeManager); err != nil {
-		panic(err)
+		fatal(logger, err, "set up grant project reconciler")
 	}
 	if err = (&grantcontrollers.ReferenceReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
-		panic(err)
+		fatal(logger, err, "set up grant reference reconciler")
 	}
 	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
-		panic(err)
+		fatal(logger, err, "set up grant definition reconciler")
 	}
 	// Use the direct (uncached) API reader for the admission webhooks: a cache-backed read lazily
 	// starts an informer and blocks on its sync inside the request, which can exceed the webhook
@@ -146,10 +146,10 @@ func main() {
 
 	// register the project role binding reconcilers
 	if err = (&projectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
-		panic(err)
+		fatal(logger, err, "set up project role binding reconciler")
 	}
 	if err = (&clusterprojectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
-		panic(err)
+		fatal(logger, err, "set up cluster project role binding reconciler")
 	}
 
 	// register the project role binding webhooks
@@ -158,8 +158,15 @@ func main() {
 
 	// start runtime manager
 	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {
-		panic(err)
+		fatal(logger, err, "start runtime manager")
 	}
+}
+
+// fatal logs the error with context and terminates the process; used for unrecoverable startup
+// failures instead of panicking.
+func fatal(logger logr.Logger, err error, msg string) {
+	logger.Error(err, msg)
+	os.Exit(1)
 }
 
 func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {

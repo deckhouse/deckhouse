@@ -148,7 +148,7 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha3.Pro
 
 			existingProject.Status = project.Status
 
-			return m.client.Status().Update(ctx, project)
+			return m.client.Status().Update(ctx, existingProject)
 		})
 	})
 }

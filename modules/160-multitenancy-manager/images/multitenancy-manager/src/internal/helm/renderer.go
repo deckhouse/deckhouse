@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -83,87 +84,9 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 			continue
 		}
 
-		// drop resources that are now managed by the controller from the Project spec
-		// (ResourceQuota via spec.quota, AuthorizationRule via spec.administrators).
-		if _, ok := filteredKinds[object.GetKind()]; ok {
-			r.filtered = true
-			r.logger.Info("the resource is managed by the project spec and was filtered out", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
-			continue
+		if err := r.processObject(object, &core, &builder); err != nil {
+			return renderedManifests, err
 		}
-
-		// skip resource that not present in the cluster
-		if r.versions != nil {
-			version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
-			if _, ok := r.versions[version]; !ok {
-				r.project.AddResource(object, false)
-				r.logger.Info("the resource skipped during render project", "project", r.project.Name, "resource", object.GetName(), "version", version)
-				continue
-			}
-		}
-
-		labels := object.GetLabels()
-		if len(labels) == 0 {
-			labels = make(map[string]string)
-		}
-
-		// check if resource should be excluded from management
-		isUnmanaged := false
-		if _, ok := labels[v1alpha3.ResourceLabelUnmanaged]; ok {
-			isUnmanaged = true
-			// Include unmanaged resources only on first install to create them once
-			// On subsequent upgrades, skip them so they won't be updated
-			if !r.isFirstInstall {
-				r.logger.Info("the resource is unmanaged and will be skipped (not first install)", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
-				continue
-			}
-			// On first install, include unmanaged resources but mark them to not be tracked
-			r.logger.Info("the resource is unmanaged but will be created on first install", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
-			// Add Helm resource-policy annotation to prevent deletion on release uninstall
-			annotations := object.GetAnnotations()
-			if len(annotations) == 0 {
-				annotations = make(map[string]string)
-			}
-			annotations["helm.sh/resource-policy"] = "keep"
-			object.SetAnnotations(annotations)
-		}
-
-		// inject multitenancy-manager labels
-		// For unmanaged resources, only add project and template labels, not heritage
-		// For other resources, skip heritage label if ResourceLabelSkipHeritage is set
-		if !isUnmanaged {
-			if _, skipHeritage := labels[v1alpha3.ResourceLabelSkipHeritage]; !skipHeritage {
-				labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
-			}
-		}
-		labels[v1alpha3.ResourceLabelProject] = r.project.Name
-		labels[v1alpha3.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
-
-		object.SetLabels(labels)
-
-		if object.GetKind() == "Namespace" {
-			// skip other namespaces
-			if object.GetName() == r.project.Name {
-				r.project.AddResource(object, true)
-				core = object
-			}
-
-			continue
-		}
-
-		if len(object.GetNamespace()) > 1 && object.GetNamespace() != r.project.Name {
-			r.warning = ErrNamespaceOverride
-		}
-
-		object.SetNamespace(r.project.Name)
-
-		// Track resource in project status only if it's not unmanaged
-		// Unmanaged resources are created once but not tracked/updated
-		if _, isUnmanaged := labels[v1alpha3.ResourceLabelUnmanaged]; !isUnmanaged {
-			r.project.AddResource(object, true)
-		}
-
-		data, _ := yaml.Marshal(object.Object)
-		builder.WriteString("\n---\n" + string(data))
 	}
 
 	buf := bytes.NewBuffer(nil)
@@ -172,13 +95,117 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 	if core == nil {
 		buf.WriteString("\n---\n" + string(r.newNamespace(r.project.Name)))
 	} else {
-		data, _ := yaml.Marshal(core.Object)
+		data, err := yaml.Marshal(core.Object)
+		if err != nil {
+			return renderedManifests, fmt.Errorf("marshal core namespace: %w", err)
+		}
 		buf.WriteString("\n---\n" + string(data))
 	}
 
 	buf.WriteString(builder.String())
 
 	return buf, nil
+}
+
+// processObject renders a single object into builder, applying the managed-by filter and label
+// injection. List wrappers (kind: List) are expanded recursively because Helm flattens lists after
+// post-rendering: without this, a filtered kind smuggled inside a List would slip past the filter.
+func (r *postRenderer) processObject(object *unstructured.Unstructured, core **unstructured.Unstructured, builder *strings.Builder) error {
+	if object.IsList() {
+		return object.EachListItem(func(item runtime.Object) error {
+			nested, ok := item.(*unstructured.Unstructured)
+			if !ok {
+				return nil
+			}
+			return r.processObject(nested, core, builder)
+		})
+	}
+
+	// drop resources that are now managed by the controller from the Project spec
+	// (ResourceQuota via spec.quota, AuthorizationRule via spec.administrators).
+	if _, ok := filteredKinds[object.GetKind()]; ok {
+		r.filtered = true
+		r.logger.Info("the resource is managed by the project spec and was filtered out", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
+		return nil
+	}
+
+	// skip resource that not present in the cluster
+	if r.versions != nil {
+		version := fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())
+		if _, ok := r.versions[version]; !ok {
+			r.project.AddResource(object, false)
+			r.logger.Info("the resource skipped during render project", "project", r.project.Name, "resource", object.GetName(), "version", version)
+			return nil
+		}
+	}
+
+	labels := object.GetLabels()
+	if len(labels) == 0 {
+		labels = make(map[string]string)
+	}
+
+	// check if resource should be excluded from management
+	isUnmanaged := false
+	if _, ok := labels[v1alpha3.ResourceLabelUnmanaged]; ok {
+		isUnmanaged = true
+		// Include unmanaged resources only on first install to create them once
+		// On subsequent upgrades, skip them so they won't be updated
+		if !r.isFirstInstall {
+			r.logger.Info("the resource is unmanaged and will be skipped (not first install)", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
+			return nil
+		}
+		// On first install, include unmanaged resources but mark them to not be tracked
+		r.logger.Info("the resource is unmanaged but will be created on first install", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
+		// Add Helm resource-policy annotation to prevent deletion on release uninstall
+		annotations := object.GetAnnotations()
+		if len(annotations) == 0 {
+			annotations = make(map[string]string)
+		}
+		annotations["helm.sh/resource-policy"] = "keep"
+		object.SetAnnotations(annotations)
+	}
+
+	// inject multitenancy-manager labels
+	// For unmanaged resources, only add project and template labels, not heritage
+	// For other resources, skip heritage label if ResourceLabelSkipHeritage is set
+	if !isUnmanaged {
+		if _, skipHeritage := labels[v1alpha3.ResourceLabelSkipHeritage]; !skipHeritage {
+			labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
+		}
+	}
+	labels[v1alpha3.ResourceLabelProject] = r.project.Name
+	labels[v1alpha3.ResourceLabelTemplate] = r.project.Spec.ProjectTemplateName
+
+	object.SetLabels(labels)
+
+	if object.GetKind() == "Namespace" {
+		// skip other namespaces
+		if object.GetName() == r.project.Name {
+			r.project.AddResource(object, true)
+			*core = object
+		}
+
+		return nil
+	}
+
+	if object.GetNamespace() != "" && object.GetNamespace() != r.project.Name {
+		r.warning = ErrNamespaceOverride
+	}
+
+	object.SetNamespace(r.project.Name)
+
+	// Track resource in project status only if it's not unmanaged
+	// Unmanaged resources are created once but not tracked/updated
+	if _, isUnmanaged := labels[v1alpha3.ResourceLabelUnmanaged]; !isUnmanaged {
+		r.project.AddResource(object, true)
+	}
+
+	data, err := yaml.Marshal(object.Object)
+	if err != nil {
+		return fmt.Errorf("marshal rendered object %s/%s: %w", object.GetKind(), object.GetName(), err)
+	}
+	builder.WriteString("\n---\n" + string(data))
+	return nil
 }
 
 func (r *postRenderer) newNamespace(name string) []byte {

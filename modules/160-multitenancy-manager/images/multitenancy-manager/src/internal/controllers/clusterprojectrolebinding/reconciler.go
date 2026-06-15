@@ -20,8 +20,10 @@ package clusterprojectrolebinding
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,13 +78,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
+	// Defense in depth: the admission webhook already restricts roleRef, but never fan out a
+	// forbidden role even if the webhook was bypassed or the role was disabled after binding.
+	if !rolebinding.IsRoleAllowed(cprb.Spec.RoleRef.Name) {
+		log.Info("roleRef is not allowed for project bindings, cleaning up", "roleRef", cprb.Spec.RoleRef.Name)
+		if err := r.cleanup(ctx, cprb.Name); err != nil {
+			return ctrl.Result{}, err
+		}
+		cprb.Status.BoundProjects = 0
+		setNotReady(&cprb.Status.Conditions, fmt.Sprintf("roleRef %q is not allowed for project bindings", cprb.Spec.RoleRef.Name))
+		if err := r.Status().Update(ctx, cprb); err != nil {
+			return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+		}
+		return ctrl.Result{}, nil
+	}
+
 	projects := &v1alpha3.ProjectList{}
 	if err := r.List(ctx, projects); err != nil {
 		return ctrl.Result{}, fmt.Errorf("list projects: %w", err)
 	}
 
 	// target maps each namespace that must carry the binding to its owning project.
-	target := map[string]string{}
+	target := make(map[string]string, len(projects.Items))
 	boundProjects := 0
 	for i := range projects.Items {
 		project := &projects.Items[i]
@@ -98,18 +115,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
+	// Fan out into every namespace, accumulating per-namespace errors so a single bad namespace
+	// does not block the rest of the cluster (CPRB can span thousands of namespaces).
+	var errs []error
 	for ns, project := range target {
 		if err := r.upsertRoleBinding(ctx, cprb, ns, project); err != nil {
-			return ctrl.Result{}, err
+			errs = append(errs, err)
 		}
 	}
 
 	if err := r.pruneRoleBindings(ctx, cprb.Name, target); err != nil {
-		return ctrl.Result{}, err
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		return ctrl.Result{}, errors.Join(errs...)
 	}
 
 	cprb.Status.ObservedGeneration = cprb.Generation
-	cprb.Status.BoundProjects = int32(boundProjects)
+	cprb.Status.BoundProjects = int32(min(boundProjects, 1<<31-1))
 	setReady(&cprb.Status.Conditions)
 	if err := r.Status().Update(ctx, cprb); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update status: %w", err)
@@ -120,7 +144,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) upsertRoleBinding(ctx context.Context, cprb *v1alpha3.ClusterProjectRoleBinding, ns, project string) error {
-	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: rolebinding.CPRBServiceName(cprb.Name), Namespace: ns}}
+	name := rolebinding.CPRBServiceName(cprb.Name)
+
+	// roleRef is immutable in the Kubernetes API: if the binding's role changed, the existing
+	// service RoleBinding must be recreated rather than updated.
+	existing := &rbacv1.RoleBinding{}
+	switch err := r.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, existing); {
+	case err == nil:
+		if existing.RoleRef.Name != cprb.Spec.RoleRef.Name {
+			if err := r.Delete(ctx, existing); err != nil && !k8serrors.IsNotFound(err) {
+				return fmt.Errorf("recreate RoleBinding %s/%s on roleRef change: %w", ns, name, err)
+			}
+		}
+	case !k8serrors.IsNotFound(err):
+		return fmt.Errorf("get RoleBinding %s/%s: %w", ns, name, err)
+	}
+
+	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns}}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
 		if rb.Labels == nil {
 			rb.Labels = map[string]string{}
@@ -167,16 +207,26 @@ func (r *Reconciler) cleanup(ctx context.Context, name string) error {
 }
 
 func setReady(conditions *[]v1alpha3.Condition) {
+	setCondition(conditions, corev1.ConditionTrue, "")
+}
+
+func setNotReady(conditions *[]v1alpha3.Condition, message string) {
+	setCondition(conditions, corev1.ConditionFalse, message)
+}
+
+func setCondition(conditions *[]v1alpha3.Condition, status corev1.ConditionStatus, message string) {
 	for i := range *conditions {
 		if (*conditions)[i].Type == v1alpha3.ClusterProjectRoleBindingConditionReady {
-			(*conditions)[i].Status = "True"
+			(*conditions)[i].Status = status
+			(*conditions)[i].Message = message
 			(*conditions)[i].LastProbeTime = metav1.Now()
 			return
 		}
 	}
 	*conditions = append(*conditions, v1alpha3.Condition{
 		Type:               v1alpha3.ClusterProjectRoleBindingConditionReady,
-		Status:             "True",
+		Status:             status,
+		Message:            message,
 		LastProbeTime:      metav1.Now(),
 		LastTransitionTime: metav1.Now(),
 	})
@@ -188,6 +238,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	enqueueAll := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
 		list := &v1alpha3.ClusterProjectRoleBindingList{}
 		if err := r.List(ctx, list); err != nil {
+			ctrllog.FromContext(ctx).Error(err, "list ClusterProjectRoleBindings for project watch")
 			return nil
 		}
 		reqs := make([]reconcile.Request, 0, len(list.Items))

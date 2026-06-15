@@ -43,7 +43,7 @@ type validator struct {
 	client         client.Client
 }
 
-func (v *validator) Handle(_ context.Context, req admission.Request) admission.Response {
+func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	template := new(v1alpha1.ProjectTemplate)
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 		if err := yaml.Unmarshal(req.Object.Raw, template); err != nil {
@@ -62,7 +62,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 		// cannot delete template if it is used
 		projects := new(v1alpha3.ProjectList)
-		if err := v.client.List(context.Background(), projects, client.MatchingLabels{v1alpha3.ResourceLabelTemplate: template.Name}); err != nil {
+		if err := v.client.List(ctx, projects, client.MatchingLabels{v1alpha3.ResourceLabelTemplate: template.Name}); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if len(projects.Items) > 0 {

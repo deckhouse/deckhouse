@@ -117,6 +117,8 @@ type ProjectRoleBindingList struct {
 	Items           []ProjectRoleBinding `json:"items"`
 }
 
+var _ runtime.Object = &ProjectRoleBindingList{}
+
 func (p *ProjectRoleBindingList) DeepCopyObject() runtime.Object { return p.DeepCopy() }
 func (p *ProjectRoleBindingList) DeepCopy() *ProjectRoleBindingList {
 	if p == nil {
@@ -203,6 +205,8 @@ type ClusterProjectRoleBindingList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClusterProjectRoleBinding `json:"items"`
 }
+
+var _ runtime.Object = &ClusterProjectRoleBindingList{}
 
 func (p *ClusterProjectRoleBindingList) DeepCopyObject() runtime.Object { return p.DeepCopy() }
 func (p *ClusterProjectRoleBindingList) DeepCopy() *ClusterProjectRoleBindingList {
