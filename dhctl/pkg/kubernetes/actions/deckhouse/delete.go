@@ -312,7 +312,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 			for _, item := range skipPVs {
 				fmt.Fprintf(&skipPVsInfo, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
-			log.InfoF("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete was skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
+			log.InfoF("%d PersistentVolumes provided manually or with a reclaimPolicy other than Delete were skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
 		}
 
 		count := len(filteredResources)

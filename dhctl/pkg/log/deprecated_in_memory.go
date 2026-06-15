@@ -49,7 +49,7 @@ func (m *Match) IsValid() error {
 	}
 
 	if len(m.Prefix) == 0 && len(m.Suffix) == 0 {
-		return fmt.Errorf("Invalid Match: must pass Regex or Prefix or/and Suffix")
+		return fmt.Errorf("Invalid Match: must pass Regex, or Prefix and/or Suffix")
 	}
 
 	return nil

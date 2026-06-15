@@ -22,7 +22,7 @@ description: Архитектура модулей Deckhouse Kubernetes Platform
 Архитектура модуля [`console`](/modules/console/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля console](../../../images/architecture/deckhouse/c4-l2-deckhouse-console.ru.png)
+![Архитектура модуля console](../../images/architecture/deckhouse/c4-l2-deckhouse-console.ru.png)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компонентам `frontend`, `backend` и `nginx`.
@@ -86,7 +86,7 @@ description: Архитектура модулей Deckhouse Kubernetes Platform
 Архитектура модуля [`documentation`](/modules/documentation/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля documentation](../../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.ru.png)
+![Архитектура модуля documentation](../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.ru.png)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компоненту `web`:
@@ -142,7 +142,7 @@ description: Архитектура модулей Deckhouse Kubernetes Platform
 Архитектура модуля [`deckhouse-tools`](/modules/deckhouse-tools/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля deckhouse-tools](../../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.ru.png)
+![Архитектура модуля deckhouse-tools](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.ru.png)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компоненту `web`.

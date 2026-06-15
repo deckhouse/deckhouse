@@ -55,7 +55,7 @@ func (c *SSHCredentialCheck) Run(ctx context.Context) error {
 		return nil
 	}
 	if err := wrapper.Client().Check().CheckAvailability(ctx); err != nil {
-		return fmt.Errorf("ssh %w. Please check ssh credential and try again. Error: %w", ErrAuthSSHFailed, err)
+		return fmt.Errorf("ssh %w. Please check your ssh credentials and try again. Error: %w", ErrAuthSSHFailed, err)
 	}
 	return nil
 }

@@ -36,7 +36,7 @@ func connectionFlags(parent *kingpin.CmdClause, opts *options.Options) {
 }
 
 func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, secret, dataKey string) *kingpin.CmdClause {
-	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
+	cmd := parent.Command(name, fmt.Sprintf("Edit %s in the Kubernetes cluster.", name))
 	app.DefineEditorConfigFlags(cmd, &opts.Render)
 	app.DefineSanityFlags(cmd, &opts.Global)
 

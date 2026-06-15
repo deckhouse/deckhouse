@@ -55,7 +55,7 @@ func NewSettingsExtractor(cfg *config.MetaConfig, schemaStore SchemaStore, editi
 // if not cse returns NoSignatureMode
 func (e *SettingsExtractor) SignatureMode() (string, error) {
 	if govalue.IsNil(e.cfg) {
-		return "", fmt.Errorf("Internal error: meta config did not pass to control-plane settings extractor")
+		return "", fmt.Errorf("Internal error: meta config was not passed to control-plane settings extractor")
 	}
 
 	logger := e.loggerProvider()
@@ -65,7 +65,7 @@ func (e *SettingsExtractor) SignatureMode() (string, error) {
 	// and after change fix config_test.go (see TODO comments)
 	if !config.IsCSEdition(e.edition) {
 		// TODO fix cse to ee after enable in ee and fe
-		logger.DebugF("Got not cse edition '%s'. Returns no signature mode", e.edition)
+		logger.DebugF("Got non-cse edition '%s'. Returning no signature mode", e.edition)
 		return NoSignatureMode, nil
 	}
 
@@ -76,13 +76,13 @@ func (e *SettingsExtractor) SignatureMode() (string, error) {
 
 	defaultMode := e.findDefaultSignatureMode(schema)
 
-	logger.DebugF("Got ee edition try to extract signature mode")
+	logger.DebugF("Got ee edition, trying to extract signature mode")
 
 	mc := e.cfg.FindModuleConfig(moduleName)
 
 	logAndReturnDefaultMode := func(msg string, args ...any) (string, error) {
 		msg = fmt.Sprintf(msg, args...)
-		logger.DebugF("%s. Returns mode '%s'", msg, defaultMode)
+		logger.DebugF("%s. Returning mode '%s'", msg, defaultMode)
 
 		return defaultMode, nil
 	}
@@ -118,7 +118,7 @@ func (e *SettingsExtractor) findDefaultSignatureMode(schema *spec.Schema) string
 	logger := e.loggerProvider()
 
 	returnDefault := func(msg string) string {
-		logger.DebugF("%s return %s", msg, defaultSignatureMode)
+		logger.DebugF("%s, returning %s", msg, defaultSignatureMode)
 		return defaultSignatureMode
 	}
 
@@ -135,12 +135,12 @@ func (e *SettingsExtractor) findDefaultSignatureMode(schema *spec.Schema) string
 	signatureProps := signature.SchemaProps
 
 	if !signatureProps.Type.Contains("string") {
-		return returnDefault("property apiserver.signature is not string")
+		return returnDefault("property apiserver.signature is not a string")
 	}
 
 	res, ok := signatureProps.Default.(string)
 	if !ok {
-		return returnDefault("property apiserver.signature default is not string")
+		return returnDefault("property apiserver.signature default is not a string")
 	}
 
 	return res

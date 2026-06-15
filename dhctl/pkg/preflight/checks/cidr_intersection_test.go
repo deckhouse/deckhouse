@@ -98,7 +98,7 @@ func TestCidrIntersects(t *testing.T) {
 			cidr1:       "10.0.0.0/8",
 			cidr2:       "10.0.1.0/24",
 			expectError: true,
-			errorMsg:    "CIDRs 10.0.0.0/8 and 10.0.1.0/24 are intersects",
+			errorMsg:    "CIDRs 10.0.0.0/8 and 10.0.1.0/24 intersect",
 		},
 		{
 			cidr1:       "10.0.0.0/8",
@@ -167,7 +167,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "are intersects")
+				return assert.ErrorContains(t, err, "intersect")
 			},
 		},
 		{
@@ -269,7 +269,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "are intersects")
+				return assert.ErrorContains(t, err, "intersect")
 			},
 		},
 		{
@@ -284,7 +284,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
-				return assert.ErrorContains(t, err, "are intersects")
+				return assert.ErrorContains(t, err, "intersect")
 			},
 		},
 		{
