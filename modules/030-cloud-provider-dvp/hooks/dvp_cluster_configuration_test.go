@@ -548,4 +548,173 @@ metadata:
 			Expect(migrationCM.Exists()).To(BeTrue())
 		})
 	})
+
+	// ===========================================================================
+	// Discovery data source combinations
+	// ===========================================================================
+	// Four scenarios for the discovery data secret sources:
+	//   1. Only PCC secret (d8-provider-cluster-configuration) — legacy path
+	//   2. Only candi secret (d8-candi-cloud-provider-discovery-data) — new path, no PCC
+	//   3. Both secrets present — candi takes priority
+	//   4. Neither secret — hybrid install (no terraform-managed VMs), no blocking
+	// ===========================================================================
+
+	var (
+		// zones is the only reliable differentiator: both discovery sources have the field
+		// in the schema (additionalProperties: false, layout is not in DVP schema).
+		candiDiscoveryData = `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DVPCloudDiscoveryData",
+  "zones": ["candi-zone"]
+}
+`
+		pccOnlyDiscoveryData = `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DVPCloudDiscoveryData",
+  "zones": ["pcc-zone"]
+}
+`
+	)
+
+	candiSecretState := func(discoveryJSON string) string {
+		return fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-candi-cloud-provider-discovery-data
+  namespace: kube-system
+data:
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(discoveryJSON)))
+	}
+
+	pccStateWithDiscovery := func(discoveryJSON string) string {
+		return fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration1)), base64.StdEncoding.EncodeToString([]byte(discoveryJSON)))
+	}
+
+	// ---- Discovery source 1: only PCC secret (no candi) ----
+	Context("Discovery: only PCC secret present (no candi secret) — State B", func() {
+		dPCC := HookExecutionConfigInit(emptyValues, `{}`)
+		dPCC.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		dPCC.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		dPCC.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			dPCC.KubeStateSet(pccStateWithDiscovery(pccOnlyDiscoveryData))
+			dPCC.BindingContexts.Set(dPCC.GenerateBeforeHelmContext())
+			dPCC.RunHook()
+		})
+
+		It("should use discovery data from PCC secret as fallback", func() {
+			Expect(dPCC).To(ExecuteSuccessfully())
+			Expect(dPCC.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["pcc-zone"]`))
+		})
+	})
+
+	// ---- Discovery source 2: only candi secret (no PCC) — State A ----
+	Context("Discovery: only candi secret present, no PCC — State A", func() {
+		dCandi := HookExecutionConfigInit(emptyValues, `{}`)
+		dCandi.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		dCandi.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		dCandi.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			dCandi.KubeStateSet(candiSecretState(candiDiscoveryData))
+			dCandi.BindingContexts.Set(dCandi.GenerateBeforeHelmContext())
+			dCandi.RunHook()
+		})
+
+		It("should use discovery data from candi secret", func() {
+			Expect(dCandi).To(ExecuteSuccessfully())
+			Expect(dCandi.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["candi-zone"]`))
+		})
+	})
+
+	// ---- Discovery source 3: both secrets present — candi wins ----
+	Context("Discovery: both candi and PCC secrets present — candi takes priority", func() {
+		dBoth := HookExecutionConfigInit(emptyValues, `{}`)
+		dBoth.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		dBoth.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		dBoth.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			bothState := pccStateWithDiscovery(pccOnlyDiscoveryData) + "\n---\n" + candiSecretState(candiDiscoveryData)
+			dBoth.KubeStateSet(bothState)
+			dBoth.BindingContexts.Set(dBoth.GenerateBeforeHelmContext())
+			dBoth.RunHook()
+		})
+
+		It("should use candi discovery data, ignoring PCC discovery data", func() {
+			Expect(dBoth).To(ExecuteSuccessfully())
+			// candi-zone must win over pcc-zone
+			Expect(dBoth.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["candi-zone"]`))
+		})
+	})
+
+	// ---- Discovery source 4: neither secret present — hybrid install ----
+	// Hybrid installations have no terraform-managed VMs; neither PCC nor candi
+	// discovery secret exists. The hook must succeed with defaults and not block.
+	Context("Discovery: neither PCC nor candi secret present — hybrid install (State A)", func() {
+		dNone := HookExecutionConfigInit(emptyValues, `{}`)
+		dNone.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		dNone.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		dNone.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			dNone.KubeStateSet(``)
+			dNone.BindingContexts.Set(dNone.GenerateBeforeHelmContext())
+			dNone.RunHook()
+		})
+
+		It("should succeed with default discovery data and not block the queue", func() {
+			Expect(dNone).To(ExecuteSuccessfully())
+			// Defaults must be applied: apiVersion, kind, zones.
+			Expect(dNone.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(dNone.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.kind").String()).To(Equal("DVPCloudDiscoveryData"))
+			Expect(dNone.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["default"]`))
+		})
+	})
+
+	// ---- Discovery source 4b: only PCC present but without discovery data key ----
+	// PCC exists (State B migration), but cloud-provider-discovery-data.json key is absent.
+	// Hybrid migration case: PCC has cluster config but no terraform discovery output yet.
+	Context("Discovery: PCC present but without discovery data key — hybrid migration", func() {
+		dPCCNoDiscovery := HookExecutionConfigInit(emptyValues, `{}`)
+		dPCCNoDiscovery.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		dPCCNoDiscovery.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		dPCCNoDiscovery.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			// PCC secret without the discovery data key
+			pccNoDiscovery := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration1)))
+			dPCCNoDiscovery.KubeStateSet(pccNoDiscovery)
+			dPCCNoDiscovery.BindingContexts.Set(dPCCNoDiscovery.GenerateBeforeHelmContext())
+			dPCCNoDiscovery.RunHook()
+		})
+
+		It("should succeed with defaults and not block the queue", func() {
+			Expect(dPCCNoDiscovery).To(ExecuteSuccessfully())
+			Expect(dPCCNoDiscovery.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(dPCCNoDiscovery.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["default"]`))
+		})
+	})
 })
