@@ -58,6 +58,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			&namespaceRepo{k},
 			&virtualMachineRepo{k},
 			&virtualDiskRepo{k},
+			&virtualImageRepo{k},
 			&upmeterHookProbeRepo{k},
 		}
 
@@ -222,6 +223,12 @@ var virtualDiskGVR = schema.GroupVersionResource{
 	Resource: "virtualdisks",
 }
 
+var virtualImageGVR = schema.GroupVersionResource{
+	Group:    "virtualization.deckhouse.io",
+	Version:  "v1alpha2",
+	Resource: "virtualimages",
+}
+
 type virtualMachineRepo struct {
 	k k8s.Client
 }
@@ -272,6 +279,33 @@ func (r *virtualDiskRepo) Delete(ctx context.Context, qualifiedName string) erro
 	}
 	return r.k.Dynamic().
 		Resource(virtualDiskGVR).
+		Namespace(namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type virtualImageRepo struct {
+	k k8s.Client
+}
+
+func (r *virtualImageRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(virtualImageGVR).
+		Namespace(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
+	}
+	return qualifiedGarbageObjects(list.Items), nil
+}
+
+func (r *virtualImageRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.Dynamic().
+		Resource(virtualImageGVR).
 		Namespace(namespace).
 		Delete(ctx, name, metav1.DeleteOptions{})
 }

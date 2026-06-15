@@ -74,8 +74,8 @@ type DynamicConfig struct {
 }
 
 type VirtualizationProbeConfig struct {
-	ClusterImageName string
-	ClusterImageURL  string
+	VirtualImageName string
+	VirtualImageURL  string
 	VMClassName      string
 }
 

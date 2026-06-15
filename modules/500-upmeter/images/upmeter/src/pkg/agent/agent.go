@@ -66,8 +66,8 @@ type DynamicProbesConfig struct {
 }
 
 type VirtualizationProbeConfig struct {
-	ClusterImageName string
-	ClusterImageURL  string
+	VirtualImageName string
+	VirtualImageURL  string
 	VMClassName      string
 }
 
@@ -114,8 +114,8 @@ func (a *Agent) Start(ctx context.Context) error {
 			AllowedTasksPerTimeInterval: a.config.DynamicProbes.Converge.AllowedTasksPerTimeInterval,
 		},
 		VirtualizationProbe: probe.VirtualizationProbeConfig{
-			ClusterImageName: a.config.DynamicProbes.VirtualizationProbe.ClusterImageName,
-			ClusterImageURL:  a.config.DynamicProbes.VirtualizationProbe.ClusterImageURL,
+			VirtualImageName: a.config.DynamicProbes.VirtualizationProbe.VirtualImageName,
+			VirtualImageURL:  a.config.DynamicProbes.VirtualizationProbe.VirtualImageURL,
 			VMClassName:      a.config.DynamicProbes.VirtualizationProbe.VMClassName,
 		},
 	}

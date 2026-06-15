@@ -238,7 +238,7 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe 
 		},
 	}
 
-	if virtProbe.ClusterImageName != "" {
+	if virtProbe.VirtualImageName != "" {
 		runners = append(runners, runnerConfig{
 			group:  groupExtensions,
 			probe:  "virtualization",
@@ -254,12 +254,12 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe 
 				}),
 				AgentID:          run.ID(),
 				Namespace:        run.StaticIdentifier("upmeter-vm"),
-				ClusterImageName: virtProbe.ClusterImageName,
-				ClusterImageURL:  virtProbe.ClusterImageURL,
+				VirtualImageName: virtProbe.VirtualImageName,
+				VirtualImageURL:  virtProbe.VirtualImageURL,
 				VMClassName:      virtProbe.VMClassName,
 
 				RequestTimeout:              5 * time.Second,
-				WaitClusterImageTimeout:     15 * time.Minute,
+				WaitVirtualImageTimeout:     15 * time.Minute,
 				WaitVirtualDiskTimeout:      3 * time.Minute,
 				WaitVirtualMachineTimeout:   5 * time.Minute,
 				WaitDeletionTimeout:         2 * time.Minute,

@@ -23,9 +23,10 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func Test_clusterVirtualImageManifest(t *testing.T) {
-	manifest := clusterVirtualImageManifest(
+func Test_virtualImageManifest(t *testing.T) {
+	manifest := virtualImageManifest(
 		"agent-01",
+		"test-ns",
 		"alpine-3-23-bios-base",
 		"https://example.com/alpine.qcow2",
 	)
@@ -36,6 +37,7 @@ func Test_clusterVirtualImageManifest(t *testing.T) {
 
 	metadata := obj["metadata"].(map[string]interface{})
 	assert.Equal(t, "alpine-3-23-bios-base", metadata["name"])
+	assert.Equal(t, "test-ns", metadata["namespace"])
 
 	spec := obj["spec"].(map[string]interface{})
 	dataSource := spec["dataSource"].(map[string]interface{})
@@ -57,7 +59,7 @@ func Test_virtualDiskManifest(t *testing.T) {
 	spec := obj["spec"].(map[string]interface{})
 	dataSource := spec["dataSource"].(map[string]interface{})
 	objectRef := dataSource["objectRef"].(map[string]interface{})
-	assert.Equal(t, "ClusterVirtualImage", objectRef["kind"])
+	assert.Equal(t, "VirtualImage", objectRef["kind"])
 	assert.Equal(t, "upmeter-probe", objectRef["name"])
 }
 

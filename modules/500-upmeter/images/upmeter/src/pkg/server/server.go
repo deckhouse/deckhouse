@@ -80,8 +80,8 @@ type DynamicProbesConfig struct {
 }
 
 type VirtualizationProbeConfig struct {
-	ClusterImageName string
-	ClusterImageURL  string
+	VirtualImageName string
+	VirtualImageURL  string
 	VMClassName      string
 }
 
@@ -269,8 +269,8 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 		IngressNginxControllers: dynamic.IngressControllers,
 		NodeGroups:              dynamic.NodeGroups,
 		VirtualizationProbe: probe.VirtualizationProbeConfig{
-			ClusterImageName: dynamic.VirtualizationProbe.ClusterImageName,
-			ClusterImageURL:  dynamic.VirtualizationProbe.ClusterImageURL,
+			VirtualImageName: dynamic.VirtualizationProbe.VirtualImageName,
+			VirtualImageURL:  dynamic.VirtualizationProbe.VirtualImageURL,
 			VMClassName:      dynamic.VirtualizationProbe.VMClassName,
 		},
 	}

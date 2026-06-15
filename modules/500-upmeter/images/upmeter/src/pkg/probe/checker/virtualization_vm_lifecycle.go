@@ -43,10 +43,10 @@ const (
 )
 
 var (
-	clusterVirtualImageGVR = schema.GroupVersionResource{
+	virtualImageGVR = schema.GroupVersionResource{
 		Group:    "virtualization.deckhouse.io",
 		Version:  "v1alpha2",
-		Resource: "clustervirtualimages",
+		Resource: "virtualimages",
 	}
 	virtualDiskGVR = schema.GroupVersionResource{
 		Group:    "virtualization.deckhouse.io",
@@ -68,12 +68,12 @@ type VirtualMachineLifecycle struct {
 
 	AgentID          string
 	Namespace        string
-	ClusterImageName string
-	ClusterImageURL  string
+	VirtualImageName string
+	VirtualImageURL  string
 	VMClassName      string
 
 	RequestTimeout              time.Duration
-	WaitClusterImageTimeout     time.Duration
+	WaitVirtualImageTimeout     time.Duration
 	WaitVirtualDiskTimeout      time.Duration
 	WaitVirtualMachineTimeout   time.Duration
 	WaitDeletionTimeout         time.Duration
@@ -88,12 +88,12 @@ func (c VirtualMachineLifecycle) Checker() check.Checker {
 		logger:           c.Logger,
 		agentID:          fallbackString(c.AgentID, "unknown"),
 		namespace:        c.Namespace,
-		clusterImageName: c.ClusterImageName,
-		clusterImageURL:  c.ClusterImageURL,
+		virtualImageName: c.VirtualImageName,
+		virtualImageURL:  c.VirtualImageURL,
 		vmClassName:      fallbackString(c.VMClassName, "generic"),
 
 		requestTimeout:              fallbackDuration(c.RequestTimeout, 5*time.Second),
-		waitClusterImageTimeout:     fallbackDuration(c.WaitClusterImageTimeout, 15*time.Minute),
+		waitVirtualImageTimeout:     fallbackDuration(c.WaitVirtualImageTimeout, 15*time.Minute),
 		waitVirtualDiskTimeout:      fallbackDuration(c.WaitVirtualDiskTimeout, 3*time.Minute),
 		waitVirtualMachineTimeout:   fallbackDuration(c.WaitVirtualMachineTimeout, 5*time.Minute),
 		waitDeletionTimeout:         fallbackDuration(c.WaitDeletionTimeout, 2*time.Minute),
@@ -110,12 +110,12 @@ type virtualMachineLifecycleChecker struct {
 
 	agentID          string
 	namespace        string
-	clusterImageName string
-	clusterImageURL  string
+	virtualImageName string
+	virtualImageURL  string
 	vmClassName      string
 
 	requestTimeout              time.Duration
-	waitClusterImageTimeout     time.Duration
+	waitVirtualImageTimeout     time.Duration
 	waitVirtualDiskTimeout      time.Duration
 	waitVirtualMachineTimeout   time.Duration
 	waitDeletionTimeout         time.Duration
@@ -158,20 +158,20 @@ func (c *virtualMachineLifecycleChecker) preflight() check.Error {
 }
 
 func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.Error {
-	if err := c.runStep("ensuring ClusterVirtualImage", func() error {
-		return c.ensureClusterVirtualImageReady(ctx)
+	if err := c.runStep("creating namespace", func() error { return c.createNamespace(ctx) }); err != nil {
+		return lifecycleStepError("creating namespace", err)
+	}
+
+	if err := c.runStep("ensuring VirtualImage", func() error {
+		return c.ensureVirtualImageReady(ctx)
 	}); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail(
-				"verification: ClusterVirtualImage %q is not Ready",
-				c.clusterImageName,
+				"verification: VirtualImage %q is not Ready",
+				c.virtualImageName,
 			)
 		}
-		return lifecycleStepError("ensuring ClusterVirtualImage", err)
-	}
-
-	if err := c.runStep("creating namespace", func() error { return c.createNamespace(ctx) }); err != nil {
-		return lifecycleStepError("creating namespace", err)
+		return lifecycleStepError("ensuring VirtualImage", err)
 	}
 
 	if err := c.runStep("creating VirtualDisk", func() error { return c.createVirtualDisk(ctx) }); err != nil {
@@ -236,6 +236,25 @@ func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.
 		return lifecycleStepError("waiting for VirtualDisk deletion", err)
 	}
 
+	if err := c.runStep("deleting VirtualImage", func() error {
+		err := c.deleteVirtualImage(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return lifecycleStepError("deleting VirtualImage", err)
+	}
+
+	if err := c.runStep("waiting for VirtualImage deletion", func() error {
+		return c.waitVirtualImageAbsent(ctx)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: VirtualImage was not deleted")
+		}
+		return lifecycleStepError("waiting for VirtualImage deletion", err)
+	}
+
 	return nil
 }
 
@@ -288,34 +307,36 @@ func (c *virtualMachineLifecycleChecker) deleteNamespace(ctx context.Context) er
 	return c.access.Kubernetes().CoreV1().Namespaces().Delete(ctx, c.namespace, metav1.DeleteOptions{})
 }
 
-func (c *virtualMachineLifecycleChecker) ensureClusterVirtualImageReady(ctx context.Context) error {
-	if err := c.createClusterVirtualImageIfMissing(ctx); err != nil {
+func (c *virtualMachineLifecycleChecker) ensureVirtualImageReady(ctx context.Context) error {
+	if err := c.createVirtualImageIfMissing(ctx); err != nil {
 		return err
 	}
-	return c.waitClusterVirtualImageReady(ctx)
+	return c.waitVirtualImageReady(ctx)
 }
 
-func (c *virtualMachineLifecycleChecker) createClusterVirtualImageIfMissing(ctx context.Context) error {
+func (c *virtualMachineLifecycleChecker) createVirtualImageIfMissing(ctx context.Context) error {
 	_, err := c.access.Kubernetes().Dynamic().
-		Resource(clusterVirtualImageGVR).
-		Get(ctx, c.clusterImageName, metav1.GetOptions{})
+		Resource(virtualImageGVR).
+		Namespace(c.namespace).
+		Get(ctx, c.virtualImageName, metav1.GetOptions{})
 	if err == nil {
 		return nil
 	}
 	if !apierrors.IsNotFound(err) {
 		return err
 	}
-	if c.clusterImageURL == "" {
-		return fmt.Errorf("ClusterVirtualImage %q not found and clusterImageURL is not configured", c.clusterImageName)
+	if c.virtualImageURL == "" {
+		return fmt.Errorf("VirtualImage %q not found and virtualImageURL is not configured", c.virtualImageName)
 	}
 
-	manifest := clusterVirtualImageManifest(c.agentID, c.clusterImageName, c.clusterImageURL)
+	manifest := virtualImageManifest(c.agentID, c.namespace, c.virtualImageName, c.virtualImageURL)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
 		return err
 	}
 	_, err = c.access.Kubernetes().Dynamic().
-		Resource(clusterVirtualImageGVR).
+		Resource(virtualImageGVR).
+		Namespace(c.namespace).
 		Create(ctx, obj, metav1.CreateOptions{})
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
@@ -323,16 +344,17 @@ func (c *virtualMachineLifecycleChecker) createClusterVirtualImageIfMissing(ctx 
 	return nil
 }
 
-func (c *virtualMachineLifecycleChecker) waitClusterVirtualImageReady(ctx context.Context) error {
+func (c *virtualMachineLifecycleChecker) waitVirtualImageReady(ctx context.Context) error {
 	return waitForCondition(
-		c.waitClusterImageTimeout,
-		pollingInterval(c.waitClusterImageTimeout),
+		c.waitVirtualImageTimeout,
+		pollingInterval(c.waitVirtualImageTimeout),
 		func() (bool, error) {
 			obj, err := c.access.Kubernetes().Dynamic().
-				Resource(clusterVirtualImageGVR).
-				Get(ctx, c.clusterImageName, metav1.GetOptions{})
+				Resource(virtualImageGVR).
+				Namespace(c.namespace).
+				Get(ctx, c.virtualImageName, metav1.GetOptions{})
 			if apierrors.IsNotFound(err) {
-				return false, fmt.Errorf("ClusterVirtualImage %q not found", c.clusterImageName)
+				return false, fmt.Errorf("VirtualImage %q not found", c.virtualImageName)
 			}
 			if err != nil {
 				return false, err
@@ -343,7 +365,7 @@ func (c *virtualMachineLifecycleChecker) waitClusterVirtualImageReady(ctx contex
 }
 
 func (c *virtualMachineLifecycleChecker) createVirtualDisk(ctx context.Context) error {
-	manifest := virtualDiskManifest(c.agentID, c.namespace, virtualizationDiskName, c.clusterImageName)
+	manifest := virtualDiskManifest(c.agentID, c.namespace, virtualizationDiskName, c.virtualImageName)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
 		return err
@@ -374,6 +396,17 @@ func (c *virtualMachineLifecycleChecker) waitVirtualDiskReady(ctx context.Contex
 
 func (c *virtualMachineLifecycleChecker) waitVirtualDiskAbsent(ctx context.Context) error {
 	return c.waitResourceAbsent(ctx, virtualDiskGVR, virtualizationDiskName, c.waitDeletionTimeout)
+}
+
+func (c *virtualMachineLifecycleChecker) deleteVirtualImage(ctx context.Context) error {
+	return c.access.Kubernetes().Dynamic().
+		Resource(virtualImageGVR).
+		Namespace(c.namespace).
+		Delete(ctx, c.virtualImageName, metav1.DeleteOptions{})
+}
+
+func (c *virtualMachineLifecycleChecker) waitVirtualImageAbsent(ctx context.Context) error {
+	return c.waitResourceAbsent(ctx, virtualImageGVR, c.virtualImageName, c.waitDeletionTimeout)
 }
 
 func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Context) error {
@@ -494,6 +527,20 @@ func (c *virtualMachineLifecycleChecker) virtualDiskExists(ctx context.Context) 
 	return true, nil
 }
 
+func (c *virtualMachineLifecycleChecker) virtualImageExists(ctx context.Context) (bool, error) {
+	_, err := c.access.Kubernetes().Dynamic().
+		Resource(virtualImageGVR).
+		Namespace(c.namespace).
+		Get(ctx, c.virtualImageName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (c *virtualMachineLifecycleChecker) hasGarbage(ctx context.Context) (bool, error) {
 	if exists, err := namespaceExists(ctx, c.access, c.namespace); err != nil {
 		return false, err
@@ -508,6 +555,12 @@ func (c *virtualMachineLifecycleChecker) hasGarbage(ctx context.Context) (bool, 
 	}
 
 	if exists, err := c.virtualDiskExists(ctx); err != nil {
+		return false, err
+	} else if exists {
+		return true, nil
+	}
+
+	if exists, err := c.virtualImageExists(ctx); err != nil {
 		return false, err
 	} else if exists {
 		return true, nil
@@ -547,6 +600,20 @@ func (c *virtualMachineLifecycleChecker) cleanup(ctx context.Context) error {
 	}); err != nil {
 		errs = append(errs, fmt.Errorf("wait VirtualDisk deletion: %w", err))
 	}
+	if err := c.runStep("cleanup: delete VirtualImage", func() error {
+		err := c.deleteVirtualImage(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("delete VirtualImage: %w", err))
+	}
+	if err := c.runStep("cleanup: wait VirtualImage deletion", func() error {
+		return c.waitVirtualImageAbsent(ctx)
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("wait VirtualImage deletion: %w", err))
+	}
 	if err := c.runStep("cleanup: delete namespace", func() error {
 		err := c.deleteNamespace(ctx)
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -579,10 +646,10 @@ func unstructuredNestedString(obj map[string]interface{}, fields ...string) stri
 	return value
 }
 
-func clusterVirtualImageManifest(agentID, name, imageURL string) string {
+func virtualImageManifest(agentID, namespace, name, imageURL string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: ClusterVirtualImage
+kind: VirtualImage
 metadata:
   labels:
     heritage: upmeter
@@ -590,16 +657,17 @@ metadata:
     upmeter-group: extensions
     upmeter-probe: virtualization
   name: %q
+  namespace: %q
 spec:
   storage: ContainerRegistry
   dataSource:
     type: HTTP
     http:
       url: %q
-`, agentID, name, imageURL)
+`, agentID, name, namespace, imageURL)
 }
 
-func virtualDiskManifest(agentID, namespace, name, clusterImageName string) string {
+func virtualDiskManifest(agentID, namespace, name, virtualImageName string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualDisk
@@ -615,9 +683,9 @@ spec:
   dataSource:
     type: ObjectRef
     objectRef:
-      kind: ClusterVirtualImage
+      kind: VirtualImage
       name: %q
-`, agentID, name, namespace, clusterImageName)
+`, agentID, name, namespace, virtualImageName)
 }
 
 func virtualMachineManifest(agentID, namespace, name, diskName, vmClassName string) string {

@@ -244,18 +244,18 @@ properties:
     type: object
     default: {}
     properties:
-      clusterImageName:
+      virtualImageName:
         type: string
-        default: alpine-3-23-bios-base
+        default: alpine-3-23-uefi-minimal
         description: |
-          ClusterVirtualImage name used by the virtualization VM lifecycle probe.
-          Created automatically when missing if clusterImageURL is set.
+          VirtualImage name used by the virtualization VM lifecycle probe.
+          Created automatically in the probe namespace when missing if virtualImageURL is set.
           When empty, only the virtualization-controller pod probe runs.
-      clusterImageURL:
+      virtualImageURL:
         type: string
-        default: https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/alpine/alpine-3-23-bios-base.qcow2
+        default: https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter-vm/alpine-3-23-uefi-minimal.qcow
         description: |
-          HTTP URL of the VM image used to create ClusterVirtualImage when it does not exist.
+          HTTP URL of the VM image used to create VirtualImage when it does not exist.
       vmClassName:
         type: string
         default: generic

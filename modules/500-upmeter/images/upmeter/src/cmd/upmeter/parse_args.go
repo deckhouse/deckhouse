@@ -70,15 +70,15 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 	cmd.Flag("dynamic-probe-nodegroup", "Node Group name tracked by probes").
 		StringsVar(&config.DynamicProbes.NodeGroups)
 
-	cmd.Flag("virtualization-probe-cluster-image", "ClusterVirtualImage name for virtualization VM lifecycle probe").
-		Envar("UPMETER_VIRTUALIZATION_PROBE_CLUSTER_IMAGE").
-		Default("alpine-3-23-bios-base").
-		StringVar(&config.DynamicProbes.VirtualizationProbe.ClusterImageName)
+	cmd.Flag("virtualization-probe-virtualimage", "VirtualImage name for virtualization VM lifecycle probe").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE").
+		Default("alpine-3-23-uefi-minimal").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageName)
 
-	cmd.Flag("virtualization-probe-cluster-image-url", "HTTP URL used to create ClusterVirtualImage when missing").
-		Envar("UPMETER_VIRTUALIZATION_PROBE_CLUSTER_IMAGE_URL").
-		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/alpine/alpine-3-23-bios-base.qcow2").
-		StringVar(&config.DynamicProbes.VirtualizationProbe.ClusterImageURL)
+	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
+		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter-vm/alpine-3-23-uefi-minimal.qcow").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
 
 	cmd.Flag("virtualization-probe-vm-class", "VirtualMachineClass name for virtualization VM lifecycle probe").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VM_CLASS").
@@ -152,15 +152,15 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 	cmd.Flag("dynamic-probe-known-zoneprefix", "A known zone prefix for current cloud provider").
 		StringVar(&config.DynamicProbes.ZonePrefix)
 
-	cmd.Flag("virtualization-probe-cluster-image", "ClusterVirtualImage name for virtualization VM lifecycle probe").
-		Envar("UPMETER_VIRTUALIZATION_PROBE_CLUSTER_IMAGE").
-		Default("alpine-3-23-bios-base").
-		StringVar(&config.DynamicProbes.VirtualizationProbe.ClusterImageName)
+	cmd.Flag("virtualization-probe-virtualimage", "VirtualImage name for virtualization VM lifecycle probe").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE").
+		Default("alpine-3-23-uefi-minimal").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageName)
 
-	cmd.Flag("virtualization-probe-cluster-image-url", "HTTP URL used to create ClusterVirtualImage when missing").
-		Envar("UPMETER_VIRTUALIZATION_PROBE_CLUSTER_IMAGE_URL").
-		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/alpine/alpine-3-23-bios-base.qcow2").
-		StringVar(&config.DynamicProbes.VirtualizationProbe.ClusterImageURL)
+	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
+		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter-vm/alpine-3-23-uefi-minimal.qcow").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
 
 	cmd.Flag("virtualization-probe-vm-class", "VirtualMachineClass name for virtualization VM lifecycle probe").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VM_CLASS").
