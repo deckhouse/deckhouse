@@ -416,6 +416,28 @@ func (c *Client) getClusterStatus() (map[string]*clientv3.StatusResponse, error)
 	return clusterStatus, nil
 }
 
+// CheckClusterHealthy verifies that every known etcd member is reachable,
+// has an elected leader, and reports no internal errors.
+// Each member status call is bounded by the given timeout.
+func CheckClusterHealthy(ctx context.Context, etcdCli Interface, timeout time.Duration, logger *log.Logger) error {
+	for _, ep := range etcdCli.Endpoints() {
+		statusCtx, cancel := context.WithTimeout(ctx, timeout)
+		resp, err := etcdCli.Status(statusCtx, ep)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("member %s unreachable: %w", ep, err)
+		}
+		if resp.Leader == 0 {
+			return fmt.Errorf("member %s has no leader (cluster has no quorum)", ep)
+		}
+		if len(resp.Errors) > 0 {
+			return fmt.Errorf("member %s reported errors: %v", ep, resp.Errors)
+		}
+		logger.Info("etcd member healthy", slog.String("endpoint", ep))
+	}
+	return nil
+}
+
 func (c *Client) WaitForClusterAvailable(retries int, retryInterval time.Duration) (bool, error) {
 	for i := 0; i < retries; i++ {
 		if i > 0 {
