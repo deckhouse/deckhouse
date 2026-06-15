@@ -244,13 +244,6 @@ properties:
     type: object
     default: {}
     properties:
-      virtualImageName:
-        type: string
-        default: alpine-3-23-uefi-minimal
-        description: |
-          VirtualImage name used by the virtualization VM lifecycle probe.
-          Created automatically in the probe namespace when missing if virtualImageURL is set.
-          When empty, only the virtualization-controller pod probe runs.
       virtualImageURL:
         type: string
         default: https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-uefi-minimal.qcow

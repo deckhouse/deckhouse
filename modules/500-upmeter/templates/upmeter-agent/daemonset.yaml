@@ -107,11 +107,8 @@ spec:
             - --dynamic-probe-known-zoneprefix={{ .Values.upmeter.internal.dynamicProbes.zonePrefix}}
             {{- end }}
             {{- with .Values.upmeter.virtualizationProbe }}
-            {{- if .virtualImageName }}
-            - --virtualization-probe-virtualimage={{ .virtualImageName }}
             {{- if .virtualImageURL }}
             - --virtualization-probe-virtualimage-url={{ .virtualImageURL }}
-            {{- end }}
             {{- end }}
             {{- end }}
           volumeMounts:

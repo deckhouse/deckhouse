@@ -173,10 +173,6 @@ properties:
     description: |
       Настройки e2e-пробы жизненного цикла виртуальной машины.
     properties:
-      virtualImageName:
-        description: |
-          Имя VirtualImage для пробы. Создаётся автоматически в namespace пробы, если отсутствует и задан virtualImageURL.
-          Если пусто, выполняется только проверка пода virtualization-controller.
       virtualImageURL:
         description: |
           HTTP URL образа для автоматического создания VirtualImage.

@@ -72,7 +72,7 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 
 	cmd.Flag("virtualization-probe-virtualimage", "VirtualImage name for virtualization VM lifecycle probe").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE").
-		Default("alpine-3-23-uefi-minimal").
+		Default("probe-image").
 		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageName)
 
 	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
@@ -149,7 +149,7 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 
 	cmd.Flag("virtualization-probe-virtualimage", "VirtualImage name for virtualization VM lifecycle probe").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE").
-		Default("alpine-3-23-uefi-minimal").
+		Default("probe-image").
 		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageName)
 
 	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
