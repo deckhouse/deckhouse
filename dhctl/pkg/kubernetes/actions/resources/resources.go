@@ -119,13 +119,13 @@ func (c *Creator) createAll(ctx context.Context) error {
 
 	for indx, resource := range c.resources {
 		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
-			log.DebugF("Resource %s with index % should be skipped from creation in the current iteration because the namespace does not exist\n", resource.String())
+			log.DebugF("Resource %s with index %d should be skipped from creation in the current iteration because the namespace does not exist\n", resource.String(), indx)
 			continue
 		}
 
 		resourcesList, err := apiResourceGetter.Get(ctx, &resource.GVK)
 		if err != nil {
-			log.DebugF("apiResourceGetter returns error: %w\n", err)
+			log.DebugF("apiResourceGetter returns error: %v\n", err)
 			continue
 		}
 

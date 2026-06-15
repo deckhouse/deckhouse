@@ -103,7 +103,7 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 		msg = fmt.Sprintf("Intermediate base infra was not saved in cluster: %v\n", err)
 	}
 
-	log.DebugF(msg)
+	log.DebugF("%s", msg)
 	return err
 }
 
@@ -177,7 +177,7 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 		msg = fmt.Sprintf("Intermediate state for node %s was not saved in cluster: %v\n", s.nodeName, err)
 	}
 
-	log.DebugF(msg)
+	log.DebugF("%s", msg)
 
 	return err
 }
