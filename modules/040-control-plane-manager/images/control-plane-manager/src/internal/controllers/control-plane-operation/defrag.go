@@ -20,17 +20,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
 	etcdclient "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
-	etcdconstants "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/constants"
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -38,16 +36,13 @@ import (
 )
 
 const (
-	// etcdDefragFragRatioThreshold is the minimum fragmentation ratio (fragmented/total)
-	// that triggers defragmentation. 0.20 means defrag when ≥20% of the DB is fragmented.
 	etcdDefragFragRatioThreshold = 0.20
 
 	etcdDefragTimeout       = 2 * time.Minute
 	etcdDefragStatusTimeout = 10 * time.Second
 )
 
-// defragEtcdIfNeeded connects to the local etcd endpoint, checks fragmentation,
-// and runs defragmentation if the fragmented ratio exceeds etcdDefragFragRatioThreshold.
+// defragEtcdIfNeeded runs defragmentation if the fragmented ratio exceeds etcdDefragFragRatioThreshold.
 // Returns true if defragmentation was performed, false if it was skipped.
 func defragEtcdIfNeeded(ctx context.Context, advertiseIP, pkiDir, kubeconfigDir string, logger *log.Logger) (bool, error) {
 	adminConfPath := filepath.Join(kubeconfigDir, "admin.conf")
@@ -62,7 +57,7 @@ func defragEtcdIfNeeded(ctx context.Context, advertiseIP, pkiDir, kubeconfigDir 
 	}
 	defer etcdCli.Close()
 
-	localEndpoint := "https://" + net.JoinHostPort(advertiseIP, strconv.Itoa(etcdconstants.EtcdListenClientPort))
+	localEndpoint := etcd.GetClientURL(advertiseIP)
 
 	statusCtx, cancel := context.WithTimeout(ctx, etcdDefragStatusTimeout)
 	defer cancel()
@@ -122,8 +117,7 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 		Namespace: constants.KubeSystemNamespace,
 	}, pod); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("etcd pod not found, will retry before defragmentation",
-				slog.String("pod", podName))
+			logger.Info("etcd pod not found, will retry before defragmentation", slog.String("pod", podName))
 			return StepResult{
 				Outcome:      OutcomePending,
 				Message:      "waiting for etcd pod to be ready before defragmentation",
@@ -134,8 +128,7 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 	}
 
 	if isPodCrashLooping(pod) {
-		logger.Warn("etcd pod is crash looping, will retry before defragmentation",
-			slog.String("pod", podName))
+		logger.Warn("etcd pod is crash looping, will retry before defragmentation", slog.String("pod", podName))
 		return StepResult{
 			Outcome:      OutcomePending,
 			Message:      fmt.Sprintf("pod %s is in CrashLoopBackOff, waiting before defragmentation", podName),
@@ -144,8 +137,7 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 	}
 
 	if !isPodReady(pod) {
-		logger.Info("etcd pod not ready, will retry before defragmentation",
-			slog.String("pod", podName))
+		logger.Info("etcd pod not ready, will retry before defragmentation", slog.String("pod", podName))
 		return StepResult{
 			Outcome:      OutcomePending,
 			Message:      "waiting for etcd pod to be ready before defragmentation",
