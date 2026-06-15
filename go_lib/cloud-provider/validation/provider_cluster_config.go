@@ -25,8 +25,12 @@ const providerClusterConfigurationPath = "ProviderClusterConfiguration"
 // When the path is absent, validation is skipped. When the path is present, the value must be a non-empty
 // base64-encoded kubeconfig.
 func ValidateProviderClusterConfigKubeconfig(state *State, pathToKubeconfig string) Result {
+	if state == nil {
+		return ResultForNilState()
+	}
+
 	result := Result{}
-	if state == nil || len(state.LegacyProviderClusterConfig) == 0 || pathToKubeconfig == "" {
+	if len(state.LegacyProviderClusterConfig) == 0 || pathToKubeconfig == "" {
 		return result
 	}
 

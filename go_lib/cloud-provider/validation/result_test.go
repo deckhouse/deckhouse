@@ -19,6 +19,23 @@ import (
 	"testing"
 )
 
+func TestResultForNilState(t *testing.T) {
+	t.Parallel()
+
+	result := ResultForNilState()
+	if !result.HasErrors() {
+		t.Fatal("ResultForNilState() HasErrors() = false, want true")
+	}
+
+	violations := result.Errors()
+	if len(violations) != 1 {
+		t.Fatalf("ResultForNilState() errors = %d, want 1", len(violations))
+	}
+	if violations[0].Code != CodeInternalStateNil {
+		t.Fatalf("ResultForNilState() code = %q, want %q", violations[0].Code, CodeInternalStateNil)
+	}
+}
+
 func TestResultHelpers(t *testing.T) {
 	t.Parallel()
 

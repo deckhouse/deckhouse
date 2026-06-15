@@ -18,10 +18,11 @@ import "fmt"
 
 // ValidateModuleConfig checks ModuleConfig presence and module-specific invariants.
 func ValidateModuleConfig(state *State) Result {
-	result := Result{}
 	if state == nil {
-		return result
+		return ResultForNilState()
 	}
+
+	result := Result{}
 
 	if state.ModuleConfig == nil {
 		if len(state.LegacyProviderClusterConfig) == 0 {

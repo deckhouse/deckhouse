@@ -21,8 +21,13 @@ import (
 
 // ValidatePreflight checks resources required before cluster bootstrap or converge.
 func ValidatePreflight(state *cpval.State) cpval.Result {
+	if state == nil {
+		return cpval.ResultForNilState()
+	}
+
 	result := cpval.Result{}
-	if state == nil || cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
+
+	if cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
 		return result
 	}
 

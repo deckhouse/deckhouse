@@ -39,6 +39,10 @@ func TestShouldSkipState(t *testing.T) {
 	if shouldSkipState(&cpval.State{}) {
 		t.Fatal("shouldSkipState(empty) = true, want false")
 	}
+
+	if shouldSkipState(nil) {
+		t.Fatal("shouldSkipState(nil) = true, want false")
+	}
 }
 
 func TestResultToAdmission(t *testing.T) {

@@ -27,7 +27,12 @@ const (
 	SeverityError = "error"
 	// SeverityWarning marks a non-blocking validation violation.
 	SeverityWarning = "warning"
+
+	// CodeInternalStateNil marks a caller contract violation: validation State was not initialized.
+	CodeInternalStateNil = "internal_state_nil"
 )
+
+const internalStateNilMessage = "internal validation error: state is not initialized"
 
 // Violation describes a single validation problem with a machine-readable code.
 type Violation struct {
@@ -45,6 +50,13 @@ type Violation struct {
 type Result struct {
 	errors   map[string]Violation
 	warnings map[string]Violation
+}
+
+// ResultForNilState reports that validation was invoked without an initialized State.
+func ResultForNilState() Result {
+	result := Result{}
+	result.AddError("", CodeInternalStateNil, internalStateNilMessage)
+	return result
 }
 
 // AddError records a blocking validation violation.

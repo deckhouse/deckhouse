@@ -26,10 +26,11 @@ import (
 
 // ValidateCredentialSecretPresence checks that primary credential Secret exists before bootstrap or converge.
 func ValidateCredentialSecretPresence(state *State) Result {
-	result := Result{}
 	if state == nil {
-		return result
+		return ResultForNilState()
 	}
+
+	result := Result{}
 
 	secret, ok := findCredentialSecret(state, cpapi.CredentialSecretName)
 	if !ok {
@@ -55,10 +56,11 @@ func ValidateCredentialSecretPresence(state *State) Result {
 
 // ValidateCredentialSecretContent checks semantic validity of managed credential Secrets.
 func ValidateCredentialSecretContent(state *State, allowedAuthSchemes []cpapi.AuthScheme) Result {
-	result := Result{}
 	if state == nil {
-		return result
+		return ResultForNilState()
 	}
+
+	result := Result{}
 
 	secrets := getManagedCredentialSecrets(state)
 	for _, secret := range secrets {

@@ -23,10 +23,11 @@ import (
 
 // ValidateMasterInstanceClass checks master InstanceClass existence and etcdDisk requirements.
 func ValidateMasterInstanceClass(state *State) Result {
-	result := Result{}
 	if state == nil {
-		return result
+		return ResultForNilState()
 	}
+
+	result := Result{}
 
 	masterNodeGroup, found := findNodeGroup(state, "master")
 	if !found {
@@ -66,10 +67,11 @@ func ValidateMasterInstanceClass(state *State) Result {
 
 // ValidateInstanceClassEtcdDiskAttachment checks etcdDisk usage against NodeGroup attachments.
 func ValidateInstanceClassEtcdDiskAttachment(state *State) Result {
-	result := Result{}
 	if state == nil {
-		return result
+		return ResultForNilState()
 	}
+
+	result := Result{}
 
 	consumers := collectInstanceClassConsumers(state.InstanceClassKind, state.NodeGroups)
 
@@ -102,10 +104,11 @@ func ValidateInstanceClassEtcdDiskAttachment(state *State) Result {
 
 // ValidateInstanceClassDelete checks whether an InstanceClass can be safely deleted.
 func ValidateInstanceClassDelete(state *State, className string, deletedClass *cpapi.InstanceClass) Result {
-	result := Result{}
 	if state == nil {
-		return result
+		return ResultForNilState()
 	}
+
+	result := Result{}
 
 	if strings.TrimSpace(className) == "" && deletedClass != nil {
 		className = deletedClass.Name

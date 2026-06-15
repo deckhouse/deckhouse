@@ -21,8 +21,13 @@ import (
 
 // ValidateInvariants runs DVP validation rules for the current cluster state.
 func ValidateInvariants(state *cpval.State) cpval.Result {
+	if state == nil {
+		return cpval.ResultForNilState()
+	}
+
 	result := cpval.Result{}
-	if state == nil || cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
+
+	if cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
 		return result
 	}
 

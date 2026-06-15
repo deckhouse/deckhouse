@@ -35,8 +35,9 @@ func hasViolationCode(result cpval.Result, code string) bool {
 func TestValidatePreflightNilState(t *testing.T) {
 	t.Parallel()
 
-	if result := ValidatePreflight(nil); result.HasErrors() {
-		t.Fatalf("ValidatePreflight(nil) = %q, want no errors", result.Error())
+	result := ValidatePreflight(nil)
+	if !hasViolationCode(result, cpval.CodeInternalStateNil) {
+		t.Fatalf("ValidatePreflight(nil) = %q, want %s", result.Error(), cpval.CodeInternalStateNil)
 	}
 }
 

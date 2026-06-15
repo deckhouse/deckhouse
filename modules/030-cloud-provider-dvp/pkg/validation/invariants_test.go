@@ -114,8 +114,9 @@ func TestValidateInvariantsIgnoresNodeParameterFields(t *testing.T) {
 func TestValidateInvariantsNilState(t *testing.T) {
 	t.Parallel()
 
-	if result := ValidateInvariants(nil); result.HasErrors() {
-		t.Fatalf("ValidateInvariants(nil) = %q, want no errors", result.Error())
+	result := ValidateInvariants(nil)
+	if !hasViolationCode(result, cpval.CodeInternalStateNil) {
+		t.Fatalf("ValidateInvariants(nil) = %q, want %s", result.Error(), cpval.CodeInternalStateNil)
 	}
 }
 

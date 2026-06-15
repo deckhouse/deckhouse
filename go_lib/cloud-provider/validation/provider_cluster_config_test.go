@@ -23,8 +23,9 @@ import (
 func TestValidateProviderClusterConfigKubeconfigNilState(t *testing.T) {
 	t.Parallel()
 
-	if result := ValidateProviderClusterConfigKubeconfig(nil, "provider.kubeconfigDataBase64"); result.HasErrors() {
-		t.Fatalf("ValidateProviderClusterConfigKubeconfig(nil) = %q, want no errors", result.Error())
+	result := ValidateProviderClusterConfigKubeconfig(nil, "provider.kubeconfigDataBase64")
+	if !hasViolationCode(result, CodeInternalStateNil) {
+		t.Fatalf("ValidateProviderClusterConfigKubeconfig(nil) = %q, want %s", result.Error(), CodeInternalStateNil)
 	}
 }
 

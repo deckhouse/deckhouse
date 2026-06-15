@@ -30,11 +30,7 @@ import (
 )
 
 func shouldSkipState(state *cpval.State) bool {
-	if state == nil {
-		return false
-	}
-
-	return cpapi.ShouldSkipNewModelValidation(state.MigrationStatus)
+	return state != nil && cpapi.ShouldSkipNewModelValidation(state.MigrationStatus)
 }
 
 func resultToAdmission(result cpval.Result) (admission.Warnings, error) {

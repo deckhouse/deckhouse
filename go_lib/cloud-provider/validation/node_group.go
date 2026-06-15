@@ -21,10 +21,11 @@ import (
 
 // ValidateMasterNodeGroup checks master NodeGroup topology requirements.
 func ValidateMasterNodeGroup(state *State) Result {
-	result := Result{}
 	if state == nil {
-		return result
+		return ResultForNilState()
 	}
+
+	result := Result{}
 
 	masterNodeGroup, found := findNodeGroup(state, "master")
 	if !found {

@@ -17,10 +17,6 @@ package validation
 import cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 
 func getManagedCredentialSecrets(state *State) []cpapi.CredentialSecret {
-	if state == nil {
-		return nil
-	}
-
 	secrets := make([]cpapi.CredentialSecret, 0, len(state.CredentialSecrets))
 	for _, secret := range state.CredentialSecrets {
 		if secret.Namespace != "" && secret.Namespace != state.NamespaceName {
@@ -38,10 +34,6 @@ func getManagedCredentialSecrets(state *State) []cpapi.CredentialSecret {
 }
 
 func findCredentialSecret(state *State, name string) (cpapi.CredentialSecret, bool) {
-	if state == nil {
-		return cpapi.CredentialSecret{}, false
-	}
-
 	for _, secret := range state.CredentialSecrets {
 		if secret.Name != name {
 			continue
@@ -58,10 +50,6 @@ func findCredentialSecret(state *State, name string) (cpapi.CredentialSecret, bo
 }
 
 func findNodeGroup(state *State, name string) (cpapi.NodeGroup, bool) {
-	if state == nil {
-		return cpapi.NodeGroup{}, false
-	}
-
 	for _, nodeGroup := range state.NodeGroups {
 		if nodeGroup.Name == name {
 			return nodeGroup, true
@@ -72,10 +60,6 @@ func findNodeGroup(state *State, name string) (cpapi.NodeGroup, bool) {
 }
 
 func findInstanceClass(state *State, name string) (cpapi.InstanceClass, bool) {
-	if state == nil {
-		return cpapi.InstanceClass{}, false
-	}
-
 	for _, class := range state.InstanceClasses {
 		if class.Name == name {
 			return class, true
