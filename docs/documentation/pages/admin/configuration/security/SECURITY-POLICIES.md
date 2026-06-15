@@ -202,25 +202,25 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 
 ## Blocking vulnerable images
 
-### How it Works
+### Working Principle
 
 The module has a built-in vulnerability check for images and prevents them from launching if they contain vulnerabilities with a severity higher than the permitted level.
 Vulnerability checking is performed using the [`operator-trivy`] module (/modules/operator-trivy). When a pod is created, a special hook is called to the `operator-trivy` module with information about the image being used. A list of image vulnerabilities is returned in response. If these vulnerabilities include vulnerabilities with a severity higher than the permitted level, the object is prevented from being created.
 
-Important clarifications:
-- For this mechanism to work, the `operator-trivy` module must be enabled and operational.
-- The check only applies to the namespace where the `security.deckhouse.io/trivy-provider: ""` label is set (see the [`operator-trivy`](/modules/operator-trivy) module documentation ).
+{% alert level="info" %}
+For this mechanism to work, the `operator-trivy` module must be enabled and operational.
 
-### How to configure the check
+The check only applies to the namespace where the `security.deckhouse.io/trivy-provider: ""` label is set (see the [`operator-trivy`](/modules/operator-trivy) module documentation ).
+{% endalert %}
+
+### Configuring Vulnerability Checks
 
 Required:
 1. Enable the vulnerability checking mechanism using the [`settings.denyVulnerableImages.enabled`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-enabled) parameter
 
-2. Configure the allowed severity levels for vulnerabilities found in containers using the [`settings.denyVulnerableImages.allowedSeverityLevels`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-allowedseveritylevels) parameter. This parameter is a whitelist, meaning it only specifies allowed severity levels. Available values ​​are `"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"`. If the parameter is empty or not specified, the object will be rejected if it contains vulnerabilities of any level.
+1. Configure the allowed severity levels for vulnerabilities found in containers using the [`settings.denyVulnerableImages.allowedSeverityLevels`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-allowedseveritylevels) parameter. This parameter is a whitelist, meaning it only specifies allowed severity levels. Available values ​​are `"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"`. If the parameter is empty or not specified, the object will be rejected if it contains vulnerabilities of any level.
 
-### Example
-
-For scenarios that blocking critical and high vulnerabilities, specify:
+The following is an example configuration. For scenarios that blocking critical and high vulnerabilities, specify:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -245,7 +245,7 @@ Check that the `operator-trivy` module is enabled and has a `Ready` status:
 d8 k get modules operator-trivy
 ```
 
-And add a label to the namespace where the check should be applied:
+Add a label to the namespace where the check should be applied:
 
 ```shell
 d8 k label ns <NAMESPACE> security.deckhouse.io/trivy-provider=
@@ -558,7 +558,7 @@ This allows custom policies to allow or deny `kubectl exec` and `kubectl attach`
 
 #### Built-in policy for `heritage: deckhouse` label on Pods
 
-To protect system components managed by Deckhouse,
+To protect system components managed by Deckhouse Kubernetes Platform,
 the `admission-policy-engine` module includes a built-in policy `D8DenyExecHeritage`
 that forbids running `kubectl exec` and `kubectl attach` operations to all Pods with the `heritage: deckhouse` label.
 

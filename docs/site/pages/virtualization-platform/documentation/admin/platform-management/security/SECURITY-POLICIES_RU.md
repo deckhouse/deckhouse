@@ -207,20 +207,20 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 В модуле есть встроенная функция проверки уязвимостей образов и запрета запуска, при наличии уязвимостей с критичностью выше разрешенного уровня.
 Проверка уязвимостей производится выполняется с помощью модуля [`operator-trivy`](/modules/operator-trivy). В момент создания пода производится специальный хук модулю `operator-trivy` с информацией о используемом образе. В ответ возвращается перечень уязвимостей образа. Если среди данных уязвимостей есть уязвимости с критичностью выше разрешенного уровня, то создание объекта запрещается.
 
-Важные уточнения:
-- Для работы механизма должен быть включен и работоспособен модуль `operator-trivy`.
-- Проверка применяется только к неймспейсу, где установлен лейбл `security.deckhouse.io/trivy-provider: ""` (подробнее — в документации модуля [`operator-trivy`](/modules/operator-trivy)).
+{% alert level="info" %}
+Для работы механизма должен быть включен и работоспособен модуль `operator-trivy`.
 
-### Как настроить проверку
+Проверка применяется только к неймспейсу, где установлен лейбл `security.deckhouse.io/trivy-provider: ""` (подробнее — в документации модуля [`operator-trivy`](/modules/operator-trivy)).
+{% endalert %}
+
+### Настройка проверки
 
 Требуется:
 1. Включить механизм проверки уязвимостей через параметр [`settings.denyVulnerableImages.enabled`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-enabled)
 
-2. Настроить допустимые уровни критичности уязвимостей найденных в контейнерах через параметр  [`settings.denyVulnerableImages.allowedSeverityLevels`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-allowedseveritylevels). Данных параметр - это белый список т.е. в нем указываются только разрешенные уровни критичности. Доступные значения - `"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"`. Если параметр пустой или не задан, объект будет отклонен при наличии уязвимостей любого уровня.
+1. Настроить допустимые уровни критичности уязвимостей найденных в контейнерах через параметр  [`settings.denyVulnerableImages.allowedSeverityLevels`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-allowedseveritylevels). Данных параметр - это белый список т.е. в нем указываются только разрешенные уровни критичности. Доступные значения - `"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"`. Если параметр пустой или не задан, объект будет отклонен при наличии уязвимостей любого уровня.
 
-### Пример
-
-Для сценариев, соответствующих требованиям ФСТЭК по блокировке критических и высоких уязвимостей, укажите:
+Ниже показан пример конфигурации. Для сценариев, соответствующих требованиям ФСТЭК по блокировке критических и высоких уязвимостей, укажите:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -245,7 +245,7 @@ spec:
 d8 k get modules operator-trivy
 ```
 
-И добавьте лейбл в неймспейс, где должна применяться проверка:
+Добавьте лейбл в неймспейс, где должна применяться проверка:
 
 ```shell
 d8 k label ns <NAMESPACE> security.deckhouse.io/trivy-provider=
