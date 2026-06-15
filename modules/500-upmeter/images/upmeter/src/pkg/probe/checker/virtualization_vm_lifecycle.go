@@ -703,7 +703,7 @@ spec:
     cores: 1
     coreFraction: 5%%
   memory:
-    size: 256Gi
+    size: 256Mi
   blockDeviceRefs:
     - kind: VirtualDisk
       name: %q

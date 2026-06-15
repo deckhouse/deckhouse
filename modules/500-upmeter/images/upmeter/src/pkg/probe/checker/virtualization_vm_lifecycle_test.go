@@ -80,6 +80,9 @@ func Test_virtualMachineManifest(t *testing.T) {
 	cpu := spec["cpu"].(map[string]interface{})
 	assert.EqualValues(t, 1, cpu["cores"])
 
+	memory := spec["memory"].(map[string]interface{})
+	assert.Equal(t, "256Mi", memory["size"])
+
 	blockDeviceRefs := spec["blockDeviceRefs"].([]interface{})
 	assert.Len(t, blockDeviceRefs, 1)
 	ref := blockDeviceRefs[0].(map[string]interface{})
