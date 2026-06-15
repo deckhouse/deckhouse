@@ -77,7 +77,7 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 
 	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
-		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-uefi-minimal.qcow2").
+		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-bios-minimal.qcow2").
 		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
 
 	// User-Agent
@@ -154,7 +154,7 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 
 	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
-		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-uefi-minimal.qcow2").
+		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-bios-minimal.qcow2").
 		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
 
 	// User-Agent

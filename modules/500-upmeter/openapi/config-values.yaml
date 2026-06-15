@@ -246,7 +246,7 @@ properties:
     properties:
       virtualImageURL:
         type: string
-        default: https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-uefi-minimal.qcow2
+        default: https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-bios-minimal.qcow2
         description: |
           HTTP URL of the VM image used to create VirtualImage when it does not exist.
   disabledProbes:

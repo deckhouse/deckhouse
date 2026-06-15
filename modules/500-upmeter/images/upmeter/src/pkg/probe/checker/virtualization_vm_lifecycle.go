@@ -766,7 +766,6 @@ metadata:
   namespace: %q
 spec:
   runPolicy: AlwaysOn
-  bootLoader: UEFI
   cpu:
     cores: 1
     coreFraction: 5%%
