@@ -37,12 +37,18 @@ const (
 	virtualizationProbeName = "virtualization"
 	virtualizationVMName    = "probe-vm"
 	virtualizationDiskName  = "probe-disk"
+	virtualizationEvictName = "probe-vm-evict"
 
 	virtualizationPhaseReady   = "Ready"
 	virtualizationPhaseRunning = "Running"
+	vmopPhaseCompleted         = "Completed"
+	vmopPhaseFailed            = "Failed"
+	vmopTypeEvict              = "Evict"
 
 	virtualizationConditionAgentReady = "AgentReady"
 	conditionStatusTrue               = "True"
+
+	defaultVMClassAnnotation = "virtualmachineclass.virtualization.deckhouse.io/is-default-class"
 )
 
 var (
@@ -61,6 +67,16 @@ var (
 		Version:  "v1alpha2",
 		Resource: "virtualmachines",
 	}
+	virtualMachineOperationGVR = schema.GroupVersionResource{
+		Group:    "virtualization.deckhouse.io",
+		Version:  "v1alpha2",
+		Resource: "virtualmachineoperations",
+	}
+	virtualMachineClassGVR = schema.GroupVersionResource{
+		Group:    "virtualization.deckhouse.io",
+		Version:  "v1alpha3",
+		Resource: "virtualmachineclasses",
+	}
 )
 
 // VirtualMachineLifecycle is a checker constructor and configurator.
@@ -74,13 +90,14 @@ type VirtualMachineLifecycle struct {
 	VirtualImageName string
 	VirtualImageURL  string
 
-	RequestTimeout              time.Duration
-	WaitVirtualImageTimeout     time.Duration
-	WaitVirtualDiskTimeout      time.Duration
-	WaitVirtualMachineTimeout   time.Duration
-	WaitDeletionTimeout         time.Duration
-	WaitNamespaceDeletedTimeout time.Duration
-	Timeout                     time.Duration
+	RequestTimeout                     time.Duration
+	WaitVirtualImageTimeout            time.Duration
+	WaitVirtualDiskTimeout             time.Duration
+	WaitVirtualMachineTimeout          time.Duration
+	WaitVirtualMachineMigrationTimeout time.Duration
+	WaitDeletionTimeout                time.Duration
+	WaitNamespaceDeletedTimeout        time.Duration
+	Timeout                            time.Duration
 }
 
 func (c VirtualMachineLifecycle) Checker() check.Checker {
@@ -93,12 +110,13 @@ func (c VirtualMachineLifecycle) Checker() check.Checker {
 		virtualImageName: c.VirtualImageName,
 		virtualImageURL:  c.VirtualImageURL,
 
-		requestTimeout:              fallbackDuration(c.RequestTimeout, 5*time.Second),
-		waitVirtualImageTimeout:     fallbackDuration(c.WaitVirtualImageTimeout, 15*time.Minute),
-		waitVirtualDiskTimeout:      fallbackDuration(c.WaitVirtualDiskTimeout, 3*time.Minute),
-		waitVirtualMachineTimeout:   fallbackDuration(c.WaitVirtualMachineTimeout, 5*time.Minute),
-		waitDeletionTimeout:         fallbackDuration(c.WaitDeletionTimeout, 2*time.Minute),
-		waitNamespaceDeletedTimeout: fallbackDuration(c.WaitNamespaceDeletedTimeout, 2*time.Minute),
+		requestTimeout:                     fallbackDuration(c.RequestTimeout, 5*time.Second),
+		waitVirtualImageTimeout:            fallbackDuration(c.WaitVirtualImageTimeout, 15*time.Minute),
+		waitVirtualDiskTimeout:             fallbackDuration(c.WaitVirtualDiskTimeout, 3*time.Minute),
+		waitVirtualMachineTimeout:          fallbackDuration(c.WaitVirtualMachineTimeout, 5*time.Minute),
+		waitVirtualMachineMigrationTimeout: fallbackDuration(c.WaitVirtualMachineMigrationTimeout, time.Minute),
+		waitDeletionTimeout:                fallbackDuration(c.WaitDeletionTimeout, 2*time.Minute),
+		waitNamespaceDeletedTimeout:        fallbackDuration(c.WaitNamespaceDeletedTimeout, 2*time.Minute),
 	}
 
 	return withTimeout(checker, fallbackDuration(c.Timeout, 25*time.Minute))
@@ -114,12 +132,13 @@ type virtualMachineLifecycleChecker struct {
 	virtualImageName string
 	virtualImageURL  string
 
-	requestTimeout              time.Duration
-	waitVirtualImageTimeout     time.Duration
-	waitVirtualDiskTimeout      time.Duration
-	waitVirtualMachineTimeout   time.Duration
-	waitDeletionTimeout         time.Duration
-	waitNamespaceDeletedTimeout time.Duration
+	requestTimeout                     time.Duration
+	waitVirtualImageTimeout            time.Duration
+	waitVirtualDiskTimeout             time.Duration
+	waitVirtualMachineTimeout          time.Duration
+	waitVirtualMachineMigrationTimeout time.Duration
+	waitDeletionTimeout                time.Duration
+	waitNamespaceDeletedTimeout        time.Duration
 }
 
 func (c *virtualMachineLifecycleChecker) Check() check.Error {
@@ -205,6 +224,15 @@ func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.
 			return check.ErrFail("verification: VirtualMachine AgentReady condition did not become True")
 		}
 		return lifecycleStepError("waiting for VirtualMachine AgentReady", err)
+	}
+
+	if err := c.runStep("checking VirtualMachine migration", func() error {
+		return c.verifyVirtualMachineMigration(ctx)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: VirtualMachine migration did not complete")
+		}
+		return lifecycleStepError("checking VirtualMachine migration", err)
 	}
 
 	if err := c.runStep("deleting VirtualMachine", func() error {
@@ -436,6 +464,22 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 	return err
 }
 
+func (c *virtualMachineLifecycleChecker) createVirtualMachineEvictOperation(ctx context.Context) error {
+	manifest := virtualMachineOperationManifest(c.agentID, c.namespace, virtualizationEvictName, virtualizationVMName)
+	obj, err := decodeManifestToUnstructured(manifest)
+	if err != nil {
+		return err
+	}
+	_, err = c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineOperationGVR).
+		Namespace(c.namespace).
+		Create(ctx, obj, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
 func (c *virtualMachineLifecycleChecker) deleteVirtualMachine(ctx context.Context) error {
 	return c.access.Kubernetes().Dynamic().
 		Resource(virtualMachineGVR).
@@ -464,8 +508,130 @@ func (c *virtualMachineLifecycleChecker) waitVirtualMachineAgentReady(ctx contex
 	)
 }
 
+func (c *virtualMachineLifecycleChecker) waitVirtualMachineMigrationCompleted(ctx context.Context, initialNode string) error {
+	return waitForCondition(
+		c.waitVirtualMachineMigrationTimeout,
+		pollingInterval(c.waitVirtualMachineMigrationTimeout),
+		func() (bool, error) {
+			vmop, err := c.access.Kubernetes().Dynamic().
+				Resource(virtualMachineOperationGVR).
+				Namespace(c.namespace).
+				Get(ctx, virtualizationEvictName, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			if err != nil {
+				return false, err
+			}
+
+			phase := unstructuredNestedString(vmop.Object, "status", "phase")
+			if phase == vmopPhaseFailed {
+				return false, fmt.Errorf("VirtualMachineOperation %q failed", virtualizationEvictName)
+			}
+			if phase != vmopPhaseCompleted {
+				return false, nil
+			}
+
+			currentNode, err := c.virtualMachineNodeName(ctx)
+			if err != nil {
+				return false, err
+			}
+			return currentNode != "" && currentNode != initialNode, nil
+		},
+	)
+}
+
+func (c *virtualMachineLifecycleChecker) verifyVirtualMachineMigration(ctx context.Context) error {
+	availableNodes, err := c.virtualMachineClassAvailableNodes(ctx)
+	if err != nil {
+		return err
+	}
+	if len(availableNodes) < 2 {
+		return nil
+	}
+
+	initialNode, err := c.virtualMachineNodeName(ctx)
+	if err != nil {
+		return err
+	}
+	if initialNode == "" {
+		return fmt.Errorf("VirtualMachine %q has empty status.nodeName", virtualizationVMName)
+	}
+
+	if err := c.createVirtualMachineEvictOperation(ctx); err != nil {
+		return err
+	}
+
+	return c.waitVirtualMachineMigrationCompleted(ctx, initialNode)
+}
+
 func (c *virtualMachineLifecycleChecker) waitVirtualMachineAbsent(ctx context.Context) error {
 	return c.waitResourceAbsent(ctx, virtualMachineGVR, virtualizationVMName, c.waitDeletionTimeout)
+}
+
+func (c *virtualMachineLifecycleChecker) virtualMachineNodeName(ctx context.Context) (string, error) {
+	obj, err := c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineGVR).
+		Namespace(c.namespace).
+		Get(ctx, virtualizationVMName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	return unstructuredNestedString(obj.Object, "status", "nodeName"), nil
+}
+
+func (c *virtualMachineLifecycleChecker) virtualMachineClassAvailableNodes(ctx context.Context) ([]string, error) {
+	vmClassName, err := c.virtualMachineClassName(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	vmClass, err := c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineClassGVR).
+		Get(ctx, vmClassName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return unstructuredNestedStringSlice(vmClass.Object, "status", "availableNodes"), nil
+}
+
+func (c *virtualMachineLifecycleChecker) virtualMachineClassName(ctx context.Context) (string, error) {
+	vm, err := c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineGVR).
+		Namespace(c.namespace).
+		Get(ctx, virtualizationVMName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	if vmClassName := unstructuredNestedString(vm.Object, "spec", "virtualMachineClassName"); vmClassName != "" {
+		return vmClassName, nil
+	}
+
+	defaultVMClass, err := c.defaultVirtualMachineClass(ctx)
+	if err != nil {
+		return "", err
+	}
+	if defaultVMClass == "" {
+		return "", fmt.Errorf("default VirtualMachineClass not found")
+	}
+	return defaultVMClass, nil
+}
+
+func (c *virtualMachineLifecycleChecker) defaultVirtualMachineClass(ctx context.Context) (string, error) {
+	list, err := c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineClassGVR).
+		List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	for i := range list.Items {
+		item := &list.Items[i]
+		if item.GetAnnotations()[defaultVMClassAnnotation] == "true" {
+			return item.GetName(), nil
+		}
+	}
+	return "", nil
 }
 
 func (c *virtualMachineLifecycleChecker) waitResourcePhase(
@@ -690,6 +856,14 @@ func unstructuredNestedString(obj map[string]interface{}, fields ...string) stri
 	return value
 }
 
+func unstructuredNestedStringSlice(obj map[string]interface{}, fields ...string) []string {
+	values, found, err := unstructured.NestedStringSlice(obj, fields...)
+	if err != nil || !found {
+		return nil
+	}
+	return values
+}
+
 func unstructuredConditionStatus(obj map[string]interface{}, conditionType string) string {
 	conditions, found, err := unstructured.NestedSlice(obj, "status", "conditions")
 	if err != nil || !found {
@@ -775,4 +949,22 @@ spec:
     - kind: VirtualDisk
       name: %q
 `, agentID, name, namespace, diskName)
+}
+
+func virtualMachineOperationManifest(agentID, namespace, name, vmName string) string {
+	return fmt.Sprintf(`
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  labels:
+    heritage: upmeter
+    upmeter-agent: %q
+    upmeter-group: extensions
+    upmeter-probe: virtualization
+  name: %q
+  namespace: %q
+spec:
+  virtualMachineName: %q
+  type: Evict
+`, agentID, name, namespace, vmName)
 }

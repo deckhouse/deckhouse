@@ -90,6 +90,22 @@ func Test_virtualMachineManifest(t *testing.T) {
 	assert.Equal(t, "probe-disk", ref["name"])
 }
 
+func Test_virtualMachineOperationManifest(t *testing.T) {
+	manifest := virtualMachineOperationManifest("agent-01", "test-ns", "probe-vm-evict", "probe-vm")
+
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(manifest), &obj)
+	assert.NoError(t, err)
+
+	metadata := obj["metadata"].(map[string]interface{})
+	assert.Equal(t, "probe-vm-evict", metadata["name"])
+	assert.Equal(t, "test-ns", metadata["namespace"])
+
+	spec := obj["spec"].(map[string]interface{})
+	assert.Equal(t, "probe-vm", spec["virtualMachineName"])
+	assert.Equal(t, "Evict", spec["type"])
+}
+
 func Test_unstructuredNestedString(t *testing.T) {
 	obj := map[string]interface{}{
 		"status": map[string]interface{}{
@@ -99,6 +115,17 @@ func Test_unstructuredNestedString(t *testing.T) {
 
 	assert.Equal(t, "Running", unstructuredNestedString(obj, "status", "phase"))
 	assert.Equal(t, "", unstructuredNestedString(obj, "status", "missing"))
+}
+
+func Test_unstructuredNestedStringSlice(t *testing.T) {
+	obj := map[string]interface{}{
+		"status": map[string]interface{}{
+			"availableNodes": []interface{}{"node-a", "node-b"},
+		},
+	}
+
+	assert.Equal(t, []string{"node-a", "node-b"}, unstructuredNestedStringSlice(obj, "status", "availableNodes"))
+	assert.Nil(t, unstructuredNestedStringSlice(obj, "status", "missing"))
 }
 
 func Test_unstructuredConditionStatus(t *testing.T) {

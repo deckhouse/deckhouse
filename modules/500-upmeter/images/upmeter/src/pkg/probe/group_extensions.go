@@ -257,13 +257,14 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe 
 				VirtualImageName: virtProbe.VirtualImageName,
 				VirtualImageURL:  virtProbe.VirtualImageURL,
 
-				RequestTimeout:              5 * time.Second,
-				WaitVirtualImageTimeout:     30 * time.Second,
-				WaitVirtualDiskTimeout:      30 * time.Second,
-				WaitVirtualMachineTimeout:   30 * time.Second,
-				WaitDeletionTimeout:         30 * time.Second,
-				WaitNamespaceDeletedTimeout: 30 * time.Second,
-				Timeout:                     4 * time.Minute,
+				RequestTimeout:                     5 * time.Second,
+				WaitVirtualImageTimeout:            30 * time.Second,
+				WaitVirtualDiskTimeout:             30 * time.Second,
+				WaitVirtualMachineTimeout:          30 * time.Second,
+				WaitVirtualMachineMigrationTimeout: time.Minute,
+				WaitDeletionTimeout:                30 * time.Second,
+				WaitNamespaceDeletedTimeout:        30 * time.Second,
+				Timeout:                            6 * time.Minute,
 			},
 		})
 	}
