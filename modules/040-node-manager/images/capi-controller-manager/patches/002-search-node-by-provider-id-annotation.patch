@@ -1,8 +1,8 @@
-diff --git a/api/v1beta1/index/node.go b/api/v1beta1/index/node.go
-index 64fa4af29..f8e6d2439 100644
---- a/api/v1beta1/index/node.go
-+++ b/api/v1beta1/index/node.go
-@@ -40,5 +40,13 @@ func NodeByProviderID(o client.Object) []string {
+diff --git a/api/core/v1beta2/index/node.go b/api/core/v1beta2/index/node.go
+index 4af2f80be..434321807 100644
+--- a/api/core/v1beta2/index/node.go
++++ b/api/core/v1beta2/index/node.go
+@@ -40,5 +40,12 @@ func NodeByProviderID(o client.Object) []string {
  		return nil
  	}
  
@@ -13,25 +13,23 @@ index 64fa4af29..f8e6d2439 100644
 +			node.Spec.ProviderID = providerID
 +		}
 +	}
-+
  	return []string{node.Spec.ProviderID}
  }
 diff --git a/internal/controllers/machine/machine_controller_noderef.go b/internal/controllers/machine/machine_controller_noderef.go
-index 5a74b717c..40fe10fb0 100644
+index 7d1a62aca..cfed08f7e 100644
 --- a/internal/controllers/machine/machine_controller_noderef.go
 +++ b/internal/controllers/machine/machine_controller_noderef.go
-@@ -233,6 +233,14 @@ func (r *Reconciler) getNode(ctx context.Context, c client.Reader, providerID st
+@@ -230,6 +230,13 @@ func (r *Reconciler) getNode(ctx context.Context, c client.Reader, providerID st
  		}
  
  		for _, node := range nl.Items {
-+				if node.Spec.ProviderID == "static://" {
-+					providerID := node.Annotations["node.deckhouse.io/provider-id"]
++                               if node.Spec.ProviderID == "static://" {
++                                        providerID := node.Annotations["node.deckhouse.io/provider-id"]
 +
-+					if providerID != "" {
-+						node.Spec.ProviderID = providerID
-+					}
-+				}
-+
++                                        if providerID != "" {
++                                                node.Spec.ProviderID = providerID
++                                        }
++                                }
  			if providerID == node.Spec.ProviderID {
  				return &node, nil
  			}
