@@ -320,7 +320,7 @@ func qualifiedGarbageObjects(items []unstructured.Unstructured) []metav1.Object 
 	return objects
 }
 
-func splitQualifiedName(qualifiedName string) (namespace, name string, err error) {
+func splitQualifiedName(qualifiedName string) (string, string, error) {
 	parts := strings.SplitN(qualifiedName, "/", 2)
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return "", "", fmt.Errorf("invalid qualified name %q", qualifiedName)
