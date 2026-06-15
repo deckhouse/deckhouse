@@ -77,13 +77,8 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 
 	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
-		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter-vm/alpine-3-23-uefi-minimal.qcow").
+		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-uefi-minimal.qcow").
 		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
-
-	cmd.Flag("virtualization-probe-vm-class", "VirtualMachineClass name for virtualization VM lifecycle probe").
-		Envar("UPMETER_VIRTUALIZATION_PROBE_VM_CLASS").
-		Default("generic").
-		StringVar(&config.DynamicProbes.VirtualizationProbe.VMClassName)
 
 	// User-Agent
 	// TODO generate from CI?
@@ -159,13 +154,8 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 
 	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
-		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter-vm/alpine-3-23-uefi-minimal.qcow").
+		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-uefi-minimal.qcow").
 		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
-
-	cmd.Flag("virtualization-probe-vm-class", "VirtualMachineClass name for virtualization VM lifecycle probe").
-		Envar("UPMETER_VIRTUALIZATION_PROBE_VM_CLASS").
-		Default("generic").
-		StringVar(&config.DynamicProbes.VirtualizationProbe.VMClassName)
 
 	// User-Agent
 	// TODO generate from CI?

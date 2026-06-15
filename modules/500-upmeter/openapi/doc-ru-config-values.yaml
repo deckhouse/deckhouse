@@ -180,9 +180,6 @@ properties:
       virtualImageURL:
         description: |
           HTTP URL образа для автоматического создания VirtualImage.
-      vmClassName:
-        description: |
-          Имя VirtualMachineClass для пробы жизненного цикла ВМ.
   https:
     description: |
       Тип сертификата, используемого для веб-приложений webui и status.

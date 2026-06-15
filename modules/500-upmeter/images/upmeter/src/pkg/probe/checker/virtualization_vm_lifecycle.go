@@ -70,7 +70,6 @@ type VirtualMachineLifecycle struct {
 	Namespace        string
 	VirtualImageName string
 	VirtualImageURL  string
-	VMClassName      string
 
 	RequestTimeout              time.Duration
 	WaitVirtualImageTimeout     time.Duration
@@ -90,7 +89,6 @@ func (c VirtualMachineLifecycle) Checker() check.Checker {
 		namespace:        c.Namespace,
 		virtualImageName: c.VirtualImageName,
 		virtualImageURL:  c.VirtualImageURL,
-		vmClassName:      fallbackString(c.VMClassName, "generic"),
 
 		requestTimeout:              fallbackDuration(c.RequestTimeout, 5*time.Second),
 		waitVirtualImageTimeout:     fallbackDuration(c.WaitVirtualImageTimeout, 15*time.Minute),
@@ -112,7 +110,6 @@ type virtualMachineLifecycleChecker struct {
 	namespace        string
 	virtualImageName string
 	virtualImageURL  string
-	vmClassName      string
 
 	requestTimeout              time.Duration
 	waitVirtualImageTimeout     time.Duration
@@ -415,7 +412,6 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 		c.namespace,
 		virtualizationVMName,
 		virtualizationDiskName,
-		c.vmClassName,
 	)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
@@ -688,7 +684,7 @@ spec:
 `, agentID, name, namespace, virtualImageName)
 }
 
-func virtualMachineManifest(agentID, namespace, name, diskName, vmClassName string) string {
+func virtualMachineManifest(agentID, namespace, name, diskName string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
@@ -701,7 +697,6 @@ metadata:
   name: %q
   namespace: %q
 spec:
-  virtualMachineClassName: %q
   runPolicy: AlwaysOn
   bootLoader: UEFI
   cpu:
@@ -712,5 +707,5 @@ spec:
   blockDeviceRefs:
     - kind: VirtualDisk
       name: %q
-`, agentID, name, namespace, vmClassName, diskName)
+`, agentID, name, namespace, diskName)
 }

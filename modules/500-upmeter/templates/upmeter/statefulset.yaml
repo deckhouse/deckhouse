@@ -121,9 +121,6 @@ spec:
           {{- if .virtualImageURL }}
           - --virtualization-probe-virtualimage-url={{ .virtualImageURL }}
           {{- end }}
-          {{- if .vmClassName }}
-          - --virtualization-probe-vm-class={{ .vmClassName }}
-          {{- end }}
           {{- end }}
           {{- end }}
         env:

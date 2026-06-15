@@ -68,7 +68,6 @@ type DynamicProbesConfig struct {
 type VirtualizationProbeConfig struct {
 	VirtualImageName string
 	VirtualImageURL  string
-	VMClassName      string
 }
 
 type ConvergeProbeConfig struct {
@@ -116,7 +115,6 @@ func (a *Agent) Start(ctx context.Context) error {
 		VirtualizationProbe: probe.VirtualizationProbeConfig{
 			VirtualImageName: a.config.DynamicProbes.VirtualizationProbe.VirtualImageName,
 			VirtualImageURL:  a.config.DynamicProbes.VirtualizationProbe.VirtualImageURL,
-			VMClassName:      a.config.DynamicProbes.VirtualizationProbe.VMClassName,
 		},
 	}
 

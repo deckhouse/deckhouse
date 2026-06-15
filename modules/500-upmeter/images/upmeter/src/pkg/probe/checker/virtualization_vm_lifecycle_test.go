@@ -64,7 +64,7 @@ func Test_virtualDiskManifest(t *testing.T) {
 }
 
 func Test_virtualMachineManifest(t *testing.T) {
-	manifest := virtualMachineManifest("agent-01", "test-ns", "probe-vm", "probe-disk", "generic")
+	manifest := virtualMachineManifest("agent-01", "test-ns", "probe-vm", "probe-disk")
 
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(manifest), &obj)
@@ -74,7 +74,7 @@ func Test_virtualMachineManifest(t *testing.T) {
 	assert.Equal(t, "probe-vm", metadata["name"])
 
 	spec := obj["spec"].(map[string]interface{})
-	assert.Equal(t, "generic", spec["virtualMachineClassName"])
+	assert.NotContains(t, spec, "virtualMachineClassName")
 	assert.Equal(t, "AlwaysOn", spec["runPolicy"])
 
 	cpu := spec["cpu"].(map[string]interface{})

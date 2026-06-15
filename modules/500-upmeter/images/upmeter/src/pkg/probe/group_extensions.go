@@ -256,7 +256,6 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe 
 				Namespace:        run.StaticIdentifier("upmeter-vm"),
 				VirtualImageName: virtProbe.VirtualImageName,
 				VirtualImageURL:  virtProbe.VirtualImageURL,
-				VMClassName:      virtProbe.VMClassName,
 
 				RequestTimeout:              5 * time.Second,
 				WaitVirtualImageTimeout:     15 * time.Minute,

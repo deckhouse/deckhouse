@@ -82,7 +82,6 @@ type DynamicProbesConfig struct {
 type VirtualizationProbeConfig struct {
 	VirtualImageName string
 	VirtualImageURL  string
-	VMClassName      string
 }
 
 func NewConfig() *Config {
@@ -271,7 +270,6 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 		VirtualizationProbe: probe.VirtualizationProbeConfig{
 			VirtualImageName: dynamic.VirtualizationProbe.VirtualImageName,
 			VirtualImageURL:  dynamic.VirtualizationProbe.VirtualImageURL,
-			VMClassName:      dynamic.VirtualizationProbe.VMClassName,
 		},
 	}
 	dummyDoer := checker.NoopDoer{}
