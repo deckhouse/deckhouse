@@ -323,9 +323,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nodeExporter":                      "imageHash-monitoringKubernetes-nodeExporter",
 		"oomKillsExporter":                  "imageHash-monitoringKubernetes-oomKillsExporter",
 	},
-	"monitoringPing": map[string]interface{}{
-		"monitoringPing": "imageHash-monitoringPing-monitoringPing",
-	},
 	"multitenancyManager": map[string]interface{}{
 		"multitenancyManager": "imageHash-multitenancyManager-multitenancyManager",
 	},
