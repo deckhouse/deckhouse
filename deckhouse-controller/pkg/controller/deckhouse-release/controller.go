@@ -622,7 +622,7 @@ func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, sev
 		rawVal, found, err := unstructured.NestedFieldNoCopy(alert.Object, "alert", "severityLevel")
 		r.logger.Debug("alert severity", slog.Any("raw_val", rawVal), slog.String("type", fmt.Sprintf("%T", rawVal)), slog.Bool("found", found))
 		if err != nil || !found {
-			r.logger.Debug("alert severity not found", slog.String("name", alert.GetName()), slog.String("error", err.Error()))
+			r.logger.Debug("alert severity not found", slog.String("name", alert.GetName()), log.Err(err))
 			continue
 		}
 
@@ -633,13 +633,14 @@ func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, sev
 		case string:
 			alertSeverity, err = strconv.Atoi(v)
 			if err != nil {
+				r.logger.Warn("cannot convert alert severity to int", slog.String("name", alert.GetName()), slog.String("error", err.Error()))
 				continue
 			}
 		default:
 			continue
 		}
 
-		if alertSeverity >= severityThreshold {
+		if alertSeverity <= severityThreshold {
 			r.logger.Error("release update is blocked by alert", slog.String("name", alert.GetName()), slog.Int("severity", alertSeverity), slog.Int("threshold", severityThreshold))
 			return fmt.Errorf("release update is blocked by alert %q: severity %d exceeds threshold %d",
 				alert.GetName(), alertSeverity, severityThreshold)

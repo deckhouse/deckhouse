@@ -43,7 +43,7 @@ func (suite *ControllerTestSuite) seedClusterAlert(name string, severityLevel in
 func (suite *ControllerTestSuite) TestBlockOnAlerts() {
 	ctx := context.Background()
 
-	suite.Run("High severity alert blocks release", func() {
+	suite.Run("High severity alert does not block release", func() {
 		ds := blockOnAlertsDeckhouseSettings(embeddedMUP, true, 4)
 		suite.setupControllerSettings("block-on-alerts-high-severity-blocks-release.yaml", initValues, ds)
 		suite.seedClusterAlert("blocking-alert", 7)
@@ -53,10 +53,10 @@ func (suite *ControllerTestSuite) TestBlockOnAlerts() {
 		require.NoError(suite.T(), err)
 
 		dr = suite.getDeckhouseRelease("v1.25.1")
-		require.Equal(suite.T(), v1alpha1.DeckhouseReleasePhasePending, dr.Status.Phase)
+		require.Equal(suite.T(), v1alpha1.DeckhouseReleasePhaseDeployed, dr.Status.Phase)
 	})
 
-	suite.Run("Low severity alert does not block release", func() {
+	suite.Run("Low severity alert blocks release", func() {
 		ds := blockOnAlertsDeckhouseSettings(embeddedMUP, true, 4)
 		suite.setupControllerSettings("block-on-alerts-low-severity-does-not-block.yaml", initValues, ds)
 		suite.seedClusterAlert("safe-alert", 2)
@@ -66,7 +66,7 @@ func (suite *ControllerTestSuite) TestBlockOnAlerts() {
 		require.NoError(suite.T(), err)
 
 		dr = suite.getDeckhouseRelease("v1.25.1")
-		require.Equal(suite.T(), v1alpha1.DeckhouseReleasePhaseDeployed, dr.Status.Phase)
+		require.Equal(suite.T(), v1alpha1.DeckhouseReleasePhasePending, dr.Status.Phase)
 	})
 
 	suite.Run("Severity equals threshold blocks release", func() {

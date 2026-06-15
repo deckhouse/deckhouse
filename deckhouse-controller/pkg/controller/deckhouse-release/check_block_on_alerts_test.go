@@ -48,6 +48,16 @@ func makeClusterAlert(name string, severityLevel int) *unstructured.Unstructured
 	return obj
 }
 
+func makeClusterAlertWithoutSeverity(name string) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetGroupVersionKind(clusterAlertGVK)
+	obj.SetName(name)
+
+	_ = unstructured.SetNestedField(obj.Object, name+"-alert", "alert", "name")
+
+	return obj
+}
+
 func newReconcilerWithAlerts(t *testing.T, alerts ...*unstructured.Unstructured) *deckhouseReleaseReconciler {
 	t.Helper()
 
@@ -78,57 +88,55 @@ func TestCheckBlockOnAlerts(t *testing.T) {
 		assert.Contains(t, err.Error(), "alert-eq")
 	})
 
-	t.Run("alert severity below threshold – not blocked", func(t *testing.T) {
+	t.Run("alert severity below threshold – blocked", func(t *testing.T) {
 		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-low", 2))
-		require.NoError(t, rec.checkBlockOnAlerts(ctx, 4))
-	})
-
-	t.Run("alert severity above threshold – blocked", func(t *testing.T) {
-		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-high", 7))
 		err := rec.checkBlockOnAlerts(ctx, 4)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "alert-high")
-		assert.Contains(t, err.Error(), "7")
+		assert.Contains(t, err.Error(), "alert-low")
+		assert.Contains(t, err.Error(), "2")
+	})
+
+	t.Run("alert severity above threshold – not blocked", func(t *testing.T) {
+		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-high", 7))
+		require.NoError(t, rec.checkBlockOnAlerts(ctx, 4))
 	})
 
 	t.Run("severityLevel absent – alert is skipped, not blocked", func(t *testing.T) {
-		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-no-sev", 0))
+		rec := newReconcilerWithAlerts(t, makeClusterAlertWithoutSeverity("alert-no-sev"))
 		require.NoError(t, rec.checkBlockOnAlerts(ctx, 4))
 	})
 
-	t.Run("zero threshold – severity 5 is blocked", func(t *testing.T) {
+	t.Run("zero threshold – severity 5 is not blocked", func(t *testing.T) {
 		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-default", 5))
-		err := rec.checkBlockOnAlerts(ctx, 0)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "5")
+		require.NoError(t, rec.checkBlockOnAlerts(ctx, 0))
 	})
 
-	t.Run("zero threshold – severity 4 is blocked", func(t *testing.T) {
-		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-default-eq", 4))
+	t.Run("zero threshold – severity 0 is blocked", func(t *testing.T) {
+		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-default-eq", 0))
 		err := rec.checkBlockOnAlerts(ctx, 0)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "4")
+		assert.Contains(t, err.Error(), "0")
 	})
 
-	t.Run("multiple alerts: one above threshold – blocked on first violator", func(t *testing.T) {
+	t.Run("multiple alerts: one below threshold – blocked on first violator", func(t *testing.T) {
 		rec := newReconcilerWithAlerts(t,
-			makeClusterAlert("safe-alert", 3),
-			makeClusterAlert("blocking-alert", 8),
+			makeClusterAlert("blocking-alert", 3),
+			makeClusterAlert("safe-alert", 8),
 		)
 		err := rec.checkBlockOnAlerts(ctx, 4)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "blocking-alert")
 	})
 
-	t.Run("custom threshold 6 – severity 5 is not blocked", func(t *testing.T) {
+	t.Run("custom threshold 6 – severity 5 is blocked", func(t *testing.T) {
 		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-under-custom", 5))
-		require.NoError(t, rec.checkBlockOnAlerts(ctx, 6))
-	})
-
-	t.Run("custom threshold 6 – severity 7 is blocked", func(t *testing.T) {
-		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-over-custom", 7))
 		err := rec.checkBlockOnAlerts(ctx, 6)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "7")
+		assert.Contains(t, err.Error(), "5")
+	})
+
+	t.Run("custom threshold 6 – severity 7 is not blocked", func(t *testing.T) {
+		rec := newReconcilerWithAlerts(t, makeClusterAlert("alert-over-custom", 7))
+		require.NoError(t, rec.checkBlockOnAlerts(ctx, 6))
 	})
 }
