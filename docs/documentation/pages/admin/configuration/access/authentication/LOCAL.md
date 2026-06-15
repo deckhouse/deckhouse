@@ -130,7 +130,7 @@ Once the group is created and includes all necessary users, proceed by configuri
 
 Password policy allows controlling password complexity, rotation, and user lockout.
 
-To set up a password policy, use the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) field in the configuration of the `user-authn` module:
+To set up a password policy, use the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) field in the configuration of the `user-authn` module.
 
 Examples of policies:
 
