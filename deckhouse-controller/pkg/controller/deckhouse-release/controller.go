@@ -58,7 +58,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -615,7 +614,7 @@ func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, sev
 		var alertSeverity int
 		switch v := rawVal.(type) {
 		case int:
-			alertSeverity = int(v)
+			alertSeverity = v
 		case string:
 			alertSeverity, err = strconv.Atoi(v)
 			if err != nil {
