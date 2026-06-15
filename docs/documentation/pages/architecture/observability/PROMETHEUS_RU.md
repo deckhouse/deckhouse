@@ -32,7 +32,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
    В prometheus-main может использоваться оригинальный («vanilla») Prometheus или [Deckhouse Prom++](https://github.com/deckhouse/prompp) — высокопроизводительный форк Prometheus с открытым исходным кодом, разработанный для значительного сокращения потребления памяти при сохранении полной совместимости с оригинальным проектом. В модуле по умолчанию используется Deckhouse Prom++. Есть возможность переключиться с Deckhouse Prom++ на оригинальный Prometheus. В этом случае потребуется миграция данных журнала упреждающей записи (WAL или write-ahead log), поскольку в Deckhouse Prom++ используется свой формат журнала WAL. Миграция осуществляется автоматически при помощи init-контейнера prompptool.
 
-   Prometheus-main является основным источником данных. Он сообирает метрики, обрабатывает настроенные правила и отправляет алерты в соответствии с его конфигурацией. Инсталляцию Prometheus, а также его конфигурацию создает [Prometheus Operator](/modules/operator-prometheus/) на основании кастомных ресурсов:
+   Prometheus-main является основным источником данных. Он собирает метрики, обрабатывает настроенные правила и отправляет алерты в соответствии с его конфигурацией. Инсталляцию Prometheus, а также его конфигурацию создает [Prometheus Operator](/modules/operator-prometheus/) на основании кастомных ресурсов:
 
    * [Prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheus) — описывает инсталляцию (кластер) Prometheus;
    * [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitor) — задаёт, как собирать метрики с набора сервисов;
@@ -53,7 +53,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
    * **init-config-reloader** — init-контейнер, выполняющий однократный запуск config-reloader для загрузки конфигурации Prometheus.
    * **prompptool** — init-контейнер, выполняющий автоматическую миграцию данных журнала WAL в случае переключения с Deckhouse Prom++ на оригинальный Prometheus и наоборот;
-   * **config-reloader** — сайдкар-контейнер, который следит за изменениями в файле конфигурации `prometheus.yaml` и, при необходимости, вызывает перезагрузку конфигурации Prometheus (HTTP-запросом на специальный эндпойнт `/-/reload`). Config-reloader является [утилитой](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) из Open Source-проекта [Prometheus Operator](https://github.com/coreos/prometheus-operator/).
+   * **config-reloader** — сайдкар-контейнер, который следит за изменениями в файле конфигурации `prometheus.yaml` и, при необходимости, вызывает перезагрузку конфигурации Prometheus (HTTP-запросом на специальный эндпоинт `/-/reload`). Config-reloader является [утилитой](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) из Open Source-проекта [Prometheus Operator](https://github.com/coreos/prometheus-operator/).
    * **prometheus** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к серверу Prometheus. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
@@ -82,7 +82,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
    * **promxy** — сайдкар-контейнер, проксирующий запросы на компонент prometheus-main. Promxy - это прокси-сервер для Prometheus, который позволяет нескольким узлам Prometheus выглядеть как одна конечная точка API для пользователя. Является [Open Source-проектом](https://github.com/jacksontj/promxy);
    * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к контейнерам mimir (запросы на сервер Prometheus и запросы на метрики контейнера) и promxy (запросы на метрики контейнера). Подробно описан выше.
 
-1. **Memcached** (StatefulSet) — компонент, используемый aggregating-proxy для кеширования метрик Prometheus. Memcached - программное обеспечение, реализующее сервис кэширования данных в оперативной памяти. Цель — ускорить выполнение запросов к метрикам Prometheus.
+1. **Memcached** (StatefulSet) — компонент, используемый aggregating-proxy для кеширования метрик Prometheus. Memcached - программное обеспечение, реализующее сервис кеширования данных в оперативной памяти. Цель — ускорить выполнение запросов к метрикам Prometheus.
 
    Состоит из следующих контейнеров:
 

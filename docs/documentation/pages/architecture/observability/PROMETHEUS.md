@@ -99,7 +99,7 @@ The module consists of the following components:
    Alerts-receiver will be removed from the [`prometheus`](/modules/prometheus/) module in the near future, Alertmanager from [`observability`](/modules/observability/) module will be used to receive all alerts.
    {% endalert %}
 
-7. **Alerts-receiver**: A server compatible with [Alertmanager](https://github.com/prometheus/alertmanager) API. Alerts-receiver receves basic alerts from prometheus-main, creates [ClusterAlerts](/modules/prometheus/cr.html#clusteralert) custom resources based on them, updates their statuses and deletes them if the alert is no longer active. ClusterAlerts custom resources are used to inform DKP users on active alerts and are displayed in the web interface of DKP. Alerts-receiver is developed by Flant. It consists of one container.
+7. **Alerts-receiver**: A server compatible with [Alertmanager](https://github.com/prometheus/alertmanager) API. Alerts-receiver receives basic alerts from prometheus-main, creates [ClusterAlerts](/modules/prometheus/cr.html#clusteralert) custom resources based on them, updates their statuses and deletes them if the alert is no longer active. ClusterAlerts custom resources are used to inform DKP users on active alerts and are displayed in the web interface of DKP. Alerts-receiver is developed by Flant. It consists of one container.
 
 ## Fault Tolerance and High Availability Monitoring (HA) mode
 
