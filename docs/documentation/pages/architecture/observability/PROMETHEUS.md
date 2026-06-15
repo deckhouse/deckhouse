@@ -9,7 +9,7 @@ The `prometheus` module expands the monitoring stack with preset parameters for 
 
 For more details about the module, refer to [the module documentation](/modules/prometheus/) section.
 
-## Архитектура модуля
+## Module architecture
 
 {% alert level="info" %}
 The following simplifications are made in the diagram:
@@ -23,7 +23,7 @@ The Level 2 C4 architecture of the [`prometheus`](/modules/prometheus/) module a
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Prometheus module architecture](../../../images/architecture/observability/c4-l2-prometheus.svg)
 
-## Компоненты модуля
+## Module components
 
 The module consists of the following components:
 
@@ -101,12 +101,6 @@ The module consists of the following components:
 
 7. **Alerts-receiver**: A server compatible with [Alertmanager](https://github.com/prometheus/alertmanager) API. Alerts-receiver receives basic alerts from prometheus-main, creates [ClusterAlerts](/modules/prometheus/cr.html#clusteralert) custom resources based on them, updates their statuses and deletes them if the alert is no longer active. ClusterAlerts custom resources are used to inform DKP users on active alerts and are displayed in the web interface of DKP. Alerts-receiver is developed by Flant. It consists of one container.
 
-## Fault Tolerance and High Availability Monitoring (HA) mode
-
-The [`prometheus`](/modules/prometheus/) module provides built-in fault tolerance for all its key components. All monitoring services (Prometheus servers, storage systems, proxies, and other important components) are deployed in multiple copies by default. This ensures that in the event of a failure of a separate instance, the service will continue to work without loss of data and availability.
-
-Prometheus, the main component of metric collection, runs in at least two copies (if there are enough nodes in the cluster). Both Prometheus instances use the same configuration and receive the same data. To ensure seamless operation in case of failure of one of the copies, a special component, the aggregation proxy, is used to access Prometheus. It allows you to combine metrics from both Prometheus instances and always return the most complete and up-to-date data, even if one of the copies is temporarily unavailable.
-
 ## Module interactions
 
 The module interacts with the following components:
@@ -132,3 +126,9 @@ Prometheus interactions related to the collection of metrics from DKP components
 The following external components interact with the module:
 
 1. **Ingress-controller** (controller nginx as stated on diagram): Forwards users requests to Grafana.
+
+## Fault Tolerance and High Availability Monitoring (HA) mode
+
+The [`prometheus`](/modules/prometheus/) module provides built-in fault tolerance for all its key components. All monitoring services (Prometheus servers, storage systems, proxies, and other important components) are deployed in multiple copies by default. This ensures that in the event of a failure of a separate instance, the service will continue to work without loss of data and availability.
+
+Prometheus, the main component of metric collection, runs in at least two copies (if there are enough nodes in the cluster). Both Prometheus instances use the same configuration and receive the same data. To ensure seamless operation in case of failure of one of the copies, a special component, the aggregation proxy, is used to access Prometheus. It allows you to combine metrics from both Prometheus instances and always return the most complete and up-to-date data, even if one of the copies is temporarily unavailable.
