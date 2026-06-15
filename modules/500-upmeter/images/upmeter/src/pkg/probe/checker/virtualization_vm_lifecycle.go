@@ -42,7 +42,7 @@ const (
 	virtualizationPhaseRunning = "Running"
 
 	virtualizationConditionAgentReady = "AgentReady"
-	conditionStatusTrue              = "True"
+	conditionStatusTrue               = "True"
 )
 
 var (
