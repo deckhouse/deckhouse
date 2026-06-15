@@ -73,6 +73,7 @@ data:
   dhcpd-enabled: "true"
   dhcpd-cluster-dns: {{ .Values.global.discovery.clusterDNSAddress | quote }}
   dhcpd-cluster-domain: {{ .Values.global.discovery.clusterDomain | quote }}
+  enable-dvp-public-service-snat: "true"
   {{- end }}
 
   {{- if .Values.cniCilium.sctpEnabled }}
