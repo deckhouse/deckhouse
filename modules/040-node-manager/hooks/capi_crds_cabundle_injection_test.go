@@ -156,7 +156,7 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
-        caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tQ2FQSUNlcnQK
+        caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tQ2FQSUNlcnQ=
         service:
           namespace: d8-cloud-instance-manager
           name: capi-webhook-service
@@ -249,7 +249,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("CustomResourceDefinition", "", "clusters.cluster.x-k8s.io").
 				Field(`spec.conversion.webhook.clientConfig.caBundle`).String()).
-				To(Equal("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tQ2FQSUNlcnQK"))
+				To(Equal("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tQ2FQSUNlcnQ="))
 		})
 	})
 
