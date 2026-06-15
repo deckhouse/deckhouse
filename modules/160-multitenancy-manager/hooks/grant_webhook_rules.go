@@ -29,60 +29,68 @@ func filterRegistrations(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	return obj, nil
 }
 
-// grantableWebhookRules derives the admission webhook rules from the registered, Managed-enforcement
-// GrantableClusterResourceDefinitions: one CREATE/UPDATE rule per (group, resource) of their usageReferences'
-// rules. Versions are matched with "*" (the controller selects the right path per version). Snapshots
-// must be collected under the name "registrations".
+// filterReferences is the snapshot filter for GrantableClusterResourceReference objects.
+func filterReferences(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return obj, nil
+}
+
+// grantableWebhookRules derives the admission webhook rules from the registered
+// GrantableClusterResourceReference paths: one CREATE/UPDATE rule per (group, resource) of their rule,
+// but only for references whose target GrantableClusterResourceDefinition exists and is Managed.
+// Versions are matched with "*" (the controller selects the right path per version). Snapshots must be
+// collected under the names "registrations" (definitions) and "references".
 func grantableWebhookRules(input *go_hook.HookInput) []admissionregistrationv1.RuleWithOperations {
+	// Enforcement mode by definition name; absent ⇒ the reference is dangling and intercepts nothing.
+	enforcement := make(map[string]string)
+	for _, snap := range input.Snapshots.Get("registrations") {
+		def := &unstructured.Unstructured{}
+		if err := snap.UnmarshalTo(def); err != nil {
+			continue
+		}
+		e, _, _ := unstructured.NestedString(def.Object, "spec", "enforcement")
+		enforcement[def.GetName()] = e
+	}
+
 	rules := make([]admissionregistrationv1.RuleWithOperations, 0)
 	seen := make(map[string]struct{})
 
-	for _, snap := range input.Snapshots.Get("registrations") {
-		reg := &unstructured.Unstructured{}
-		if err := snap.UnmarshalTo(reg); err != nil {
+	for _, snap := range input.Snapshots.Get("references") {
+		ref := &unstructured.Unstructured{}
+		if err := snap.UnmarshalTo(ref); err != nil {
 			continue
 		}
-		// External-enforcement resources are not intercepted by our webhooks.
-		if enforcement, _, _ := unstructured.NestedString(reg.Object, "spec", "enforcement"); enforcement == "External" {
+		defName, _, _ := unstructured.NestedString(ref.Object, "spec", "grantableClusterResourceName")
+		// Skip dangling references and those pointing at External-enforcement definitions.
+		if e, ok := enforcement[defName]; !ok || e == "External" {
 			continue
 		}
-		refs, found, _ := unstructured.NestedSlice(reg.Object, "spec", "usageReferences")
+		rule, found, _ := unstructured.NestedMap(ref.Object, "spec", "rule")
 		if !found {
 			continue
 		}
-		for _, ref := range refs {
-			refMap, ok := ref.(map[string]any)
-			if !ok {
+		for _, g := range toStringSlice(rule["apiGroups"]) {
+			if g == "*" {
+				// A wildcard-group rule would intercept everything; rely on the in-handler
+				// check instead and skip it from the static webhook rules.
 				continue
 			}
-			rule, ok := refMap["rule"].(map[string]any)
-			if !ok {
-				continue
-			}
-			for _, g := range toStringSlice(rule["apiGroups"]) {
-				if g == "*" {
-					// A wildcard-group rule would intercept everything; rely on the in-handler
-					// check instead and skip it from the static webhook rules.
+			for _, res := range toStringSlice(rule["resources"]) {
+				key := g + "/" + res
+				if _, dup := seen[key]; dup {
 					continue
 				}
-				for _, res := range toStringSlice(rule["resources"]) {
-					key := g + "/" + res
-					if _, dup := seen[key]; dup {
-						continue
-					}
-					seen[key] = struct{}{}
-					rules = append(rules, admissionregistrationv1.RuleWithOperations{
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{g},
-							APIVersions: []string{"*"},
-							Resources:   []string{res},
-							Scope:       ptr.To(admissionregistrationv1.NamespacedScope),
-						},
-						Operations: []admissionregistrationv1.OperationType{
-							admissionregistrationv1.Create, admissionregistrationv1.Update,
-						},
-					})
-				}
+				seen[key] = struct{}{}
+				rules = append(rules, admissionregistrationv1.RuleWithOperations{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{g},
+						APIVersions: []string{"*"},
+						Resources:   []string{res},
+						Scope:       ptr.To(admissionregistrationv1.NamespacedScope),
+					},
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create, admissionregistrationv1.Update,
+					},
+				})
 			}
 		}
 	}

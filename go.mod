@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse
 
-go 1.25.8
+go 1.26.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0

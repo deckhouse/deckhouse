@@ -31,9 +31,6 @@ const (
 	// ModuleLabel/ModuleValue identify the owning module (used by the protective admission policy).
 	ModuleLabel = "module"
 	ModuleValue = "multitenancy-manager"
-
-	// ClusterResourceGrantName is the fixed name of the per-namespace ClusterResourceGrant object.
-	ClusterResourceGrantName = "objects"
 )
 
 // ManagedLabels returns the ownership labels every controller-managed object carries.

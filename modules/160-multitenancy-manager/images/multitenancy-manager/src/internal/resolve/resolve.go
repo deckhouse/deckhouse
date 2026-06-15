@@ -28,6 +28,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -99,25 +100,41 @@ func EntriesFor(grants []*v1alpha1.ClusterResourceGrantPolicy, resourceName stri
 	return out
 }
 
-// RegistrationsForRequest returns the Managed-enforcement registrations that govern a usage object of
-// the given (group, version, resource), i.e. one of their usageReferences' rules matches.
-func RegistrationsForRequest(ctx context.Context, cl client.Client, group, version, resource string) ([]*v1alpha1.GrantableClusterResourceDefinition, error) {
-	regList := &v1alpha1.GrantableClusterResourceDefinitionList{}
-	if err := cl.List(ctx, regList); err != nil {
+// MatchedReference pairs a GrantableClusterResourceReference whose rule matched the request with the
+// GrantableClusterResourceDefinition it points at.
+type MatchedReference struct {
+	Reference  *v1alpha1.GrantableClusterResourceReference
+	Definition *v1alpha1.GrantableClusterResourceDefinition
+}
+
+// ReferencesForRequest returns the validation paths governing a usage object of the given
+// (group, version, resource): every GrantableClusterResourceReference whose rule matches and whose
+// target definition exists and is Managed. Unbound references (dangling grantableClusterResourceName)
+// and references to External definitions are skipped — they enforce nothing here.
+func ReferencesForRequest(ctx context.Context, cl client.Client, group, version, resource string) ([]MatchedReference, error) {
+	refList := &v1alpha1.GrantableClusterResourceReferenceList{}
+	if err := cl.List(ctx, refList); err != nil {
+		return nil, fmt.Errorf("list GrantableClusterResourceReferences: %w", err)
+	}
+	defList := &v1alpha1.GrantableClusterResourceDefinitionList{}
+	if err := cl.List(ctx, defList); err != nil {
 		return nil, fmt.Errorf("list GrantableClusterResourceDefinitions: %w", err)
 	}
-	out := make([]*v1alpha1.GrantableClusterResourceDefinition, 0)
-	for i := range regList.Items {
-		reg := &regList.Items[i]
-		if reg.Spec.Enforcement == v1alpha1.EnforcementExternal {
+	defByName := make(map[string]*v1alpha1.GrantableClusterResourceDefinition, len(defList.Items))
+	for i := range defList.Items {
+		defByName[defList.Items[i].Name] = &defList.Items[i]
+	}
+	out := make([]MatchedReference, 0)
+	for i := range refList.Items {
+		ref := &refList.Items[i]
+		if !engine.RuleMatches(ref.Spec.Rule, group, version, resource) {
 			continue
 		}
-		for j := range reg.Spec.UsageReferences {
-			if engine.RuleMatches(reg.Spec.UsageReferences[j].Rule, group, version, resource) {
-				out = append(out, reg)
-				break
-			}
+		def := defByName[ref.Spec.GrantableClusterResourceName]
+		if def == nil || def.Spec.Enforcement == v1alpha1.EnforcementExternal {
+			continue
 		}
+		out = append(out, MatchedReference{Reference: ref, Definition: def})
 	}
 	return out, nil
 }
@@ -195,6 +212,7 @@ func (r *Resolved) Available() []v1alpha1.AvailableObject {
 func Resolve(
 	ctx context.Context,
 	cl client.Client,
+	mapper meta.RESTMapper,
 	reg *v1alpha1.GrantableClusterResourceDefinition,
 	entries []v1alpha1.GrantResource,
 ) (*Resolved, error) {
@@ -241,12 +259,12 @@ func Resolve(
 
 	// Object-backed: list live objects and expand selectors.
 	if !reg.IsValueBacked() {
-		gv, err := schema.ParseGroupVersion(reg.Spec.GrantedResource.APIVersion)
+		gvk, err := grantedGVK(mapper, reg)
 		if err != nil {
-			return nil, fmt.Errorf("parse grantedResource apiVersion %q: %w", reg.Spec.GrantedResource.APIVersion, err)
+			return nil, err
 		}
 		list := &unstructured.UnstructuredList{}
-		list.SetGroupVersionKind(schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: reg.Spec.GrantedResource.Kind + "List"})
+		list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
 		if err := cl.List(ctx, list); err != nil {
 			return nil, fmt.Errorf("list granted resource %s: %w", reg.Spec.GrantedResource.Kind, err)
 		}
@@ -285,7 +303,7 @@ func Resolve(
 
 	// Effective default falls back to the registration's defaultFrom annotation.
 	if r.def == "" && !reg.IsValueBacked() && reg.Spec.DefaultFrom != nil && reg.Spec.DefaultFrom.AnnotationKey != "" {
-		def, err := defaultFromAnnotation(ctx, cl, reg)
+		def, err := defaultFromAnnotation(ctx, cl, mapper, reg)
 		if err == nil {
 			r.def = def
 		}
@@ -333,14 +351,23 @@ func matchSel(ls *metav1.LabelSelector, objLabels labels.Set) bool {
 	return sel.Matches(objLabels)
 }
 
+// grantedGVK resolves the granted resource's group+kind to a served GVK via the REST mapper.
+func grantedGVK(mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDefinition) (schema.GroupVersionKind, error) {
+	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: reg.Spec.GrantedResource.APIGroup, Kind: reg.Spec.GrantedResource.Kind})
+	if err != nil {
+		return schema.GroupVersionKind{}, fmt.Errorf("map grantedResource %s/%s: %w", reg.Spec.GrantedResource.APIGroup, reg.Spec.GrantedResource.Kind, err)
+	}
+	return mapping.GroupVersionKind, nil
+}
+
 // defaultFromAnnotation finds the single granted object annotated as the cluster-wide default.
-func defaultFromAnnotation(ctx context.Context, cl client.Client, reg *v1alpha1.GrantableClusterResourceDefinition) (string, error) {
-	gv, err := schema.ParseGroupVersion(reg.Spec.GrantedResource.APIVersion)
+func defaultFromAnnotation(ctx context.Context, cl client.Client, mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDefinition) (string, error) {
+	gvk, err := grantedGVK(mapper, reg)
 	if err != nil {
 		return "", err
 	}
 	list := &unstructured.UnstructuredList{}
-	list.SetGroupVersionKind(schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: reg.Spec.GrantedResource.Kind + "List"})
+	list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
 	if err := cl.List(ctx, list); err != nil {
 		return "", err
 	}

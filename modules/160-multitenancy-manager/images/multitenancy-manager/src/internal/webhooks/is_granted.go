@@ -26,31 +26,30 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"controller/api/v1alpha1"
 	"controller/internal/engine"
 	"controller/internal/jsonpath"
 	"controller/internal/namespaces"
-	"controller/internal/quota"
 	"controller/internal/resolve"
 )
 
 var _ http.Handler = &IsGrantedValidator{}
 
 // IsGrantedValidator is the /is-granted validating webhook: it allows or denies the use of a granted
-// object (by availability) and enforces object quota.
+// object by availability (which cluster-scoped resources the project may reference).
 type IsGrantedValidator struct {
 	log     logr.Logger
 	cl      client.Client
+	mapper  meta.RESTMapper
 	factory jsonpath.Factory
 }
 
 // NewIsGrantedValidator builds the /is-granted validating webhook.
-func NewIsGrantedValidator(log logr.Logger, cl client.Client, factory jsonpath.Factory) *IsGrantedValidator {
-	return &IsGrantedValidator{log: log.WithValues("component", "is-granted"), cl: cl, factory: factory}
+func NewIsGrantedValidator(log logr.Logger, cl client.Client, mapper meta.RESTMapper, factory jsonpath.Factory) *IsGrantedValidator {
+	return &IsGrantedValidator{log: log.WithValues("component", "is-granted"), cl: cl, mapper: mapper, factory: factory}
 }
 
 // InstallInto registers the handler on the webhook server.
@@ -79,11 +78,9 @@ func (v *IsGrantedValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	writeReview(w, review)
 }
 
-// decide returns the admission response. It fails open only on its own internal errors (returned as
-// error), never silently — availability for opt-in (None) / excluded resources is enforced even when
-// no grant matches the project.
+// decide returns the admission response. Availability is enforced for every matched reference; on
+// UPDATE values already present in the old object are grandfathered so existing objects are not broken.
 func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.AdmissionRequest, log logr.Logger) (*admissionv1.AdmissionResponse, error) {
-	// System namespaces and subresources are out of scope.
 	if namespaces.IsSystem(req.Namespace) || req.SubResource != "" || req.Namespace == "" {
 		return allowedResponse(req.UID), nil
 	}
@@ -93,11 +90,11 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 
 	group, version, resourcePlural := req.Resource.Group, req.Resource.Version, req.Resource.Resource
 
-	regs, err := resolve.RegistrationsForRequest(ctx, v.cl, group, version, resourcePlural)
+	refs, err := resolve.ReferencesForRequest(ctx, v.cl, group, version, resourcePlural)
 	if err != nil {
-		return nil, fmt.Errorf("registrations for request: %w", err)
+		return nil, fmt.Errorf("references for request: %w", err)
 	}
-	if len(regs) == 0 {
+	if len(refs) == 0 {
 		return allowedResponse(req.UID), nil
 	}
 
@@ -127,79 +124,64 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		}
 	}
 
-	var pool *v1alpha1.ClusterResourceGrant
-	var projectNamespaces []string
+	// Resolve availability once per definition (several references may share one).
+	resolvedByDef := map[string]*resolve.Resolved{}
 
-	for _, reg := range regs {
-		entries := resolve.EntriesFor(grants, reg.Name)
-		resolved, err := resolve.Resolve(ctx, v.cl, reg, entries)
-		if err != nil {
-			return nil, fmt.Errorf("resolve %s: %w", reg.Name, err)
+	for _, mr := range refs {
+		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version)
+		if !ok {
+			continue
 		}
-
-		contribs, err := engine.Contributions(v.factory, reg, obj, group, version, resourcePlural)
+		guardOK, err := engine.EvalMatch(v.factory, fp.Match, obj)
 		if err != nil {
-			return nil, fmt.Errorf("contributions: %w", err)
+			return nil, fmt.Errorf("eval match: %w", err)
 		}
-		if len(contribs) == 0 {
+		if !guardOK {
+			continue
+		}
+		names, err := engine.StringValuesAt(v.factory, obj, fp.Path)
+		if err != nil {
+			return nil, fmt.Errorf("read field %q: %w", fp.Path, err)
+		}
+		if len(names) == 0 {
 			continue
 		}
 
-		// Diff-based UPDATE: values already present in the old object are grandfathered.
-		oldNames := map[string]struct{}{}
+		// Grandfather values already present in the old object on UPDATE.
+		old := map[string]struct{}{}
 		if oldObj != nil {
-			oldContribs, err := engine.Contributions(v.factory, reg, oldObj, group, version, resourcePlural)
-			if err != nil {
-				return nil, fmt.Errorf("old contributions: %w", err)
-			}
-			for _, c := range oldContribs {
-				oldNames[c.Name] = struct{}{}
+			if oldVals, err := engine.StringValuesAt(v.factory, oldObj, fp.Path); err == nil {
+				for _, n := range oldVals {
+					old[n] = struct{}{}
+				}
 			}
 		}
 
-		// Availability check.
-		for _, c := range contribs {
-			if _, grandfathered := oldNames[c.Name]; grandfathered {
+		def := mr.Definition
+		resolved := resolvedByDef[def.Name]
+		if resolved == nil {
+			resolved, err = resolve.Resolve(ctx, v.cl, v.mapper, def, resolve.EntriesFor(grants, def.Name))
+			if err != nil {
+				return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
+			}
+			resolvedByDef[def.Name] = resolved
+		}
+
+		for _, name := range names {
+			if name == "" {
 				continue
 			}
-			if !resolved.Decide(c.Name) {
+			if _, grandfathered := old[name]; grandfathered {
+				continue
+			}
+			if !resolved.Decide(name) {
 				msg := fmt.Sprintf(
 					"[multitenancy] %s %q references %q which is not available to project %q. "+
 						"Ask the cluster administrator to grant it.",
-					req.Kind.Kind, req.Name, c.Name, project)
-				log.Info("denied: not available", "value", c.Name)
+					req.Kind.Kind, req.Name, name, project)
+				log.Info("denied: not available", "value", name)
 				return deniedResponse(req.UID, msg), nil
 			}
-		}
-
-		// Quota check.
-		if pool == nil {
-			pool, err = quota.Pool(ctx, v.cl, project)
-			if err != nil {
-				return nil, fmt.Errorf("pool: %w", err)
-			}
-		}
-		if pool == nil {
-			continue
-		}
-		if projectNamespaces == nil {
-			projectNamespaces, err = resolve.ProjectNamespaces(ctx, v.cl, project)
-			if err != nil {
-				return nil, fmt.Errorf("project namespaces: %w", err)
-			}
-		}
-		gvk := schema.GroupVersionKind{Group: req.Kind.Group, Version: req.Kind.Version, Kind: req.Kind.Kind}
-		used, err := quota.ProjectUsage(ctx, v.cl, v.factory, reg, gvk, resourcePlural, projectNamespaces, req.Namespace, req.Name)
-		if err != nil {
-			return nil, fmt.Errorf("project usage: %w", err)
-		}
-		adding := quota.ContributionUsage(contribs)
-		if viol := quota.Check(pool, reg.Name, used, adding); viol != nil {
-			msg := fmt.Sprintf(
-				"[multitenancy] %s %q exceeds the object quota of project %q (%s).",
-				req.Kind.Kind, req.Name, project, viol.String())
-			log.Info("denied: quota", "violation", viol.String())
-			return deniedResponse(req.UID, msg), nil
 		}
 	}
 

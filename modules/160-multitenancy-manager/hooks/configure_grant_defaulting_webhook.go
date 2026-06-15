@@ -47,6 +47,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "GrantableClusterResourceDefinition",
 			FilterFunc: filterRegistrations,
 		},
+		{
+			Name:       "references",
+			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
+			Kind:       "GrantableClusterResourceReference",
+			FilterFunc: filterReferences,
+		},
 	},
 }, dependency.WithExternalDependencies(configureDefaultingWebhook))
 

@@ -30,15 +30,15 @@ rules:
   - get
   - list
   - watch
-# Cluster operators see the registrations and the per-project policies, plus (across all projects)
-# the rendered catalog and the object-quota pools. None of these are created here — managers only view.
+# Cluster operators see the registrations, the reference paths, the per-project policies and the
+# rendered catalog. None of these are created here — managers only view.
 - apiGroups:
   - multitenancy.deckhouse.io
   resources:
   - grantableclusterresourcedefinitions
+  - grantableclusterresourcereferences
   - clusterresourcegrantpolicies
   - availableclusterresources
-  - clusterresourcegrants
   verbs:
   - get
   - list

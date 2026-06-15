@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"slices"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
@@ -37,8 +38,9 @@ type DeckhouseSettings struct {
 		NotificationConfig     releaseUpdater.NotificationConfig `json:"notification"`
 		BlockOnAlerts          releaseUpdater.BlockOnAlerts      `json:"blockOnAlerts"`
 	} `json:"update"`
-	ReleaseChannel           string `json:"releaseChannel"`
-	AllowExperimentalModules bool   `json:"allowExperimentalModules"`
+	ReleaseChannel             string   `json:"releaseChannel"`
+	AllowExperimentalModules   bool     `json:"allowExperimentalModules"`
+	AllowedExperimentalModules []string `json:"allowedExperimentalModules"`
 }
 
 func DefaultDeckhouseSettings() *DeckhouseSettings {
@@ -80,6 +82,7 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 
 	c.settings.ReleaseChannel = settings.ReleaseChannel
 	c.settings.AllowExperimentalModules = settings.AllowExperimentalModules
+	c.settings.AllowedExperimentalModules = slices.Clone(settings.AllowedExperimentalModules)
 	c.settings.Update.Mode = settings.Update.Mode
 	c.settings.Update.Windows = settings.Update.Windows
 	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
@@ -105,6 +108,21 @@ func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {
 	}
 
 	return c.settings
+}
+
+// ExperimentalModuleAllowed reports whether the named module may be enabled
+// despite being experimental: either all experimental modules are allowed, or
+// the module is named in the allowlist. It reads the settings under the lock.
+func (c *DeckhouseSettingsContainer) ExperimentalModuleAllowed(name string) bool {
+	c.lock.Lock()
+	if c.settings == nil {
+		c.lock.Unlock()
+		<-c.inited
+		c.lock.Lock()
+	}
+	defer c.lock.Unlock()
+
+	return c.settings.AllowExperimentalModules || slices.Contains(c.settings.AllowedExperimentalModules, name)
 }
 
 func NewModuleUpdatePolicySpecContainer(spec *v1alpha2.ModuleUpdatePolicySpec) *ModuleUpdatePolicySpecContainer {

@@ -27,7 +27,7 @@ description: Архитектура модуля sds-node-configurator в Deckho
 Архитектура модуля [`sds-node-configurator`](/modules/sds-node-configurator/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля sds-node-configurator](../../../images/architecture/storage/c4-l2-sds-node-configurator.ru.png)
+![Архитектура модуля sds-node-configurator](../../images/architecture/storage/c4-l2-sds-node-configurator.ru.png)
 
 ## Компоненты модуля
 

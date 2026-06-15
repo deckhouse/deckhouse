@@ -27,10 +27,12 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"controller/api/v1alpha1"
 	"controller/internal/engine"
 	"controller/internal/jsonpath"
 	"controller/internal/namespaces"
@@ -40,16 +42,17 @@ import (
 var _ http.Handler = &DefaultsMutator{}
 
 // DefaultsMutator is the /defaults mutating webhook: on CREATE it injects the per-project default
-// granted name into the referenced field when that field is empty.
+// granted name into a referenced field, per the reference path's defaulting mode (FillEmpty/Coerce).
 type DefaultsMutator struct {
 	log     logr.Logger
 	cl      client.Client
+	mapper  meta.RESTMapper
 	factory jsonpath.Factory
 }
 
 // NewDefaultsMutator builds the /defaults mutating webhook.
-func NewDefaultsMutator(log logr.Logger, cl client.Client, factory jsonpath.Factory) *DefaultsMutator {
-	return &DefaultsMutator{log: log.WithValues("component", "defaults"), cl: cl, factory: factory}
+func NewDefaultsMutator(log logr.Logger, cl client.Client, mapper meta.RESTMapper, factory jsonpath.Factory) *DefaultsMutator {
+	return &DefaultsMutator{log: log.WithValues("component", "defaults"), cl: cl, mapper: mapper, factory: factory}
 }
 
 // InstallInto registers the handler on the webhook server.
@@ -86,11 +89,11 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	}
 
 	group, version, resourcePlural := req.Resource.Group, req.Resource.Version, req.Resource.Resource
-	regs, err := resolve.RegistrationsForRequest(ctx, m.cl, group, version, resourcePlural)
+	refs, err := resolve.ReferencesForRequest(ctx, m.cl, group, version, resourcePlural)
 	if err != nil {
-		return nil, fmt.Errorf("registrations: %w", err)
+		return nil, fmt.Errorf("references: %w", err)
 	}
-	if len(regs) == 0 {
+	if len(refs) == 0 {
 		return allowedResponse(req.UID), nil
 	}
 
@@ -111,58 +114,59 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		return nil, fmt.Errorf("decode object: %w", err)
 	}
 
+	resolvedByDef := map[string]*resolve.Resolved{}
+	availByDef := map[string]map[string]bool{}
+
 	var patches []jsonPatchOperation
-	for _, reg := range regs {
-		entries := resolve.EntriesFor(grants, reg.Name)
-		resolved, err := resolve.Resolve(ctx, m.cl, reg, entries)
-		if err != nil {
-			return nil, fmt.Errorf("resolve %s: %w", reg.Name, err)
-		}
-		def := resolved.Default()
-		if def == "" {
-			// No project default configured: leave the field as-is. An unavailable value is then
-			// rejected by the /is-granted validating webhook rather than silently rewritten here.
+	for _, mr := range refs {
+		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version)
+		if !ok {
 			continue
 		}
-		available := make(map[string]bool, len(resolved.Available()))
-		for _, a := range resolved.Available() {
-			available[a.Name] = true
+		// Defaulting is per path: None never fills in (opt-in toggle annotations stay absent).
+		if fp.Defaulting == "" || fp.Defaulting == v1alpha1.DefaultingNone {
+			continue
 		}
-		for i := range reg.Spec.UsageReferences {
-			ref := &reg.Spec.UsageReferences[i]
-			// Defaulting is opt-in per reference: only inject into fields the registration marks
-			// defaultable. An opt-in reference (e.g. a feature-toggling annotation) is left untouched
-			// so its absence keeps its meaning; it is still validated and counted by /is-granted.
-			if !ref.Default {
-				continue
+		guard, err := engine.EvalMatch(m.factory, fp.Match, obj)
+		if err != nil || !guard {
+			continue
+		}
+		segs, ok := parsePathSegments(fp.Path)
+		if !ok {
+			continue
+		}
+		parentOK, value := fieldState(obj, segs)
+		if !parentOK {
+			// A parent object is missing, so a JSON Patch "add" would be unsafe.
+			continue
+		}
+
+		def := mr.Definition
+		resolved := resolvedByDef[def.Name]
+		if resolved == nil {
+			resolved, err = resolve.Resolve(ctx, m.cl, m.mapper, def, resolve.EntriesFor(grants, def.Name))
+			if err != nil {
+				return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
 			}
-			if !engine.RuleMatches(ref.Rule, group, version, resourcePlural) {
-				continue
+			resolvedByDef[def.Name] = resolved
+			avail := make(map[string]bool, len(resolved.Available()))
+			for _, a := range resolved.Available() {
+				avail[a.Name] = true
 			}
-			ok, err := engine.EvalMatch(m.factory, ref.Match, obj)
-			if err != nil || !ok {
-				continue
-			}
-			path := engine.SelectFieldPath(*ref, group, version)
-			segs, ok := parsePathSegments(path)
-			if !ok {
-				continue
-			}
-			parentOK, value := fieldState(obj, segs)
-			if !parentOK {
-				// A parent object is missing, so a JSON Patch "add" would be unsafe.
-				continue
-			}
-			// Always inject the project default into an empty field. Additionally, when the
-			// registration opts in via coerceToDefault, rewrite a non-empty value that is not
-			// available to the project — this is for fields a built-in admission controller
-			// pre-populates with a cluster default (e.g. the DefaultStorageClass on PVCs), where the
-			// field is never empty by the time this webhook runs. Without the opt-in an explicit
-			// out-of-list value is left as-is and rejected by /is-granted, never silently rewritten.
-			coerce := value == "" || (reg.Spec.CoerceToDefault && !available[value])
-			if coerce {
-				patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: def})
-			}
+			availByDef[def.Name] = avail
+		}
+		defName := resolved.Default()
+		if defName == "" {
+			// No project default configured: leave the field as-is; /is-granted rejects a bad value.
+			continue
+		}
+
+		// FillEmpty injects only into an empty field. Coerce also rewrites a non-empty value that is not
+		// available to the project (for fields a built-in admission controller pre-fills).
+		shouldDefault := value == "" ||
+			(fp.Defaulting == v1alpha1.DefaultingCoerce && !availByDef[def.Name][value])
+		if shouldDefault {
+			patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: defName})
 		}
 	}
 

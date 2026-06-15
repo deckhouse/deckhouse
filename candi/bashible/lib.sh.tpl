@@ -421,12 +421,20 @@ bb-rpp-wait-fetched() {
   local digest="$2"
   local tempdir="${BB_RP_FETCHED_STORE:-/opt/deckhouse/tmp/registrypackages}"
   local archive="${tempdir}/${name}/${digest}.tar.gz"
+  local installed_digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/${name}/digest"
   local deadline=$((SECONDS + 600))
   local svc="rpp-prefetch.service"
   local svc_state
 
   while [ $SECONDS -lt $deadline ]; do
     if [ -f "$archive" ]; then
+      return 0
+    fi
+    # Package already installed at the requested digest (e.g. baked into the base
+    # image — curl, jq). The prefetch skips such packages, so their archive is never
+    # written; without this check the wait blocks until the whole prefetch service
+    # finishes (~3 min on the first master), defeating the per-package wait.
+    if [ -f "$installed_digest_file" ] && [ "$(cat "$installed_digest_file" 2>/dev/null)" = "$digest" ]; then
       return 0
     fi
     if command -v systemctl >/dev/null 2>&1; then
