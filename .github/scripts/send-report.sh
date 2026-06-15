@@ -51,7 +51,7 @@ fi
 if [[ -z "$message" ]]; then
   if [[ "$branch" =~ ^release-[0-9]+\.[0-9]+$ ]] || [[ "$branch" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     message="🛑 Branch: **${branch}** Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
-  elif
+  else
     message="🛑 Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
   fi
 fi
