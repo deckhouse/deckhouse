@@ -286,8 +286,7 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHC
 		c.WithStderrHandler(stdOutErrHandler)
 		err := c.Run(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				// script reboot node
 				if ee.ExitCode() == 255 {
 					return nil

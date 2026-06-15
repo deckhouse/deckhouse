@@ -139,8 +139,7 @@ func runAction(t *testing.T, p *testActionParams) *testRunResult {
 	err = cmd.Wait()
 
 	exitCode := 0
-	var exitError *exec.ExitError
-	if errors.As(err, &exitError) {
+	if exitError, ok := errors.AsType[*exec.ExitError](err); ok {
 		exitCode = exitError.ExitCode()
 	}
 

@@ -155,7 +155,6 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	for _, saver := range s.saversDestinations {
 		svr := saver
 		wg.Go(func() {
-
 			err = svr.SaveState(ctx, outputs)
 			if err != nil {
 				log.ErrorF("Save intermediate state error: %v\n", err)

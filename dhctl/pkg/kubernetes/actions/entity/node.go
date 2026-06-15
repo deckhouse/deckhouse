@@ -292,13 +292,13 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 			}
 
 			var message strings.Builder
-			message.WriteString(fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes))
+			fmt.Fprintf(&message, "Nodes Ready %d of %d\n", len(readyNodes), desiredReadyNodes)
 			for _, node := range nodes.Items {
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
 				}
-				message.WriteString(fmt.Sprintf("* %s | %s\n", node.Name, condition))
+				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
 
 			if len(readyNodes) >= desiredReadyNodes {
@@ -350,13 +350,13 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 			}
 
 			var message strings.Builder
-			message.WriteString(fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes))
+			fmt.Fprintf(&message, "Nodes Ready %d of %v\n", len(readyNodes), desiredReadyNodes)
 			for _, node := range nodesList.Items {
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
 				}
-				message.WriteString(fmt.Sprintf("* %s | %s\n", node.Name, condition))
+				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
 
 			if len(readyNodes) >= desiredReadyNodes {

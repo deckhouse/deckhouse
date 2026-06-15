@@ -81,8 +81,7 @@ func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Ou
 			OutFields: []string{k},
 		})
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 			}
 			if matchNoOutput(err.Error()) {

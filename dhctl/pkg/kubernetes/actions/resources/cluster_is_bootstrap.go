@@ -61,8 +61,7 @@ func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) 
 	nodegroups := make([]*v1.NodeGroup, 0)
 	var errs error
 	for _, n := range ngs {
-		nn := n
-		ng, err := entity.UnstructuredToNodeGroup(&nn)
+		ng, err := entity.UnstructuredToNodeGroup(new(n))
 		if err != nil {
 			errs = multierr.Append(errs, err)
 			continue
@@ -190,7 +189,7 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) string {
 
 	fs := "%-30s %-8s %-8s %-9s %-8s %-17s\n"
 	var out strings.Builder
-	out.WriteString(fmt.Sprintf(fs, "NAME", "READY", "NODES", "INSTANCES", "DESIRED", "STATUS"))
+	fmt.Fprintf(&out, fs, "NAME", "READY", "NODES", "INSTANCES", "DESIRED", "STATUS")
 	for _, ng := range ngs {
 		stat := ng.Status
 		o := fmt.Sprintf(fs,

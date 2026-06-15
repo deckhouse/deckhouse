@@ -324,7 +324,7 @@ func ParallelCreateNodeGroup(
 	var msg strings.Builder
 	msg.WriteString("Create NodeGroups ")
 	for _, group := range terraNodeGroups {
-		msg.WriteString(fmt.Sprintf("%s (replicas: %v)️; ", group.Name, group.Replicas))
+		fmt.Fprintf(&msg, "%s (replicas: %v)️; ", group.Name, group.Replicas)
 	}
 
 	return log.ProcessCtx(ctx, "converge", msg.String(), func(ctx context.Context) error {

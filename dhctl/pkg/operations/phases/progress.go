@@ -57,8 +57,7 @@ func (p Progress) Clone() Progress {
 		}
 
 		if phase.Action != nil {
-			clonedAction := *phase.Action
-			clonedPhase.Action = &clonedAction
+			clonedPhase.Action = new(*phase.Action)
 		}
 
 		clonedPhases[i] = clonedPhase

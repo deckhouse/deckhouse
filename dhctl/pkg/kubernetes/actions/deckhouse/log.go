@@ -188,8 +188,7 @@ func (d *LogPrinter) printErrorsForTask(ctx context.Context, taskID string, erro
 
 	logOptions := corev1.PodLogOptions{Container: "deckhouse", TailLines: int64Pointer(100)}
 	if !d.lastErrorTime.IsZero() {
-		t := metav1.NewTime(d.lastErrorTime)
-		logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: &t}
+		logOptions = corev1.PodLogOptions{Container: "deckhouse", SinceTime: new(metav1.NewTime(d.lastErrorTime))}
 	}
 	// kubelet certificate on master can be changed before finish Deckhouse installation
 	// and dhctl can not get logs from Deckhouse pod
@@ -354,10 +353,9 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 			d.printLogsByLine(ctx, result)
 
 			time.Sleep(time.Second)
-			currentTime := metav1.NewTime(time.Now())
 			logOptions = corev1.PodLogOptions{
 				Container: "deckhouse",
-				SinceTime: &currentTime,
+				SinceTime: new(metav1.NewTime(time.Now())),
 				// see above
 				InsecureSkipTLSVerifyBackend: true,
 			}
@@ -366,6 +364,5 @@ func (d *LogPrinter) Print(ctx context.Context) (bool, error) {
 }
 
 func int64Pointer(i int) *int64 {
-	r := int64(i)
-	return &r
+	return new(int64(i))
 }

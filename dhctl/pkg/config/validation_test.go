@@ -19,8 +19,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestValidateResources(t *testing.T) {
@@ -625,10 +626,9 @@ func TestError_JSONOmitemptyAllFields(t *testing.T) {
 }
 
 func TestError_JSONOmitemptyKeepsNonZeroFields(t *testing.T) {
-	idx := 2
 	e := Error{
 		Reason:   ErrKindValidationFailed,
-		Index:    &idx,
+		Index:    new(2),
 		Group:    "deckhouse.io",
 		Version:  "v1alpha1",
 		Kind:     "ModuleConfig",
