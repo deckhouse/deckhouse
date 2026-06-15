@@ -33,7 +33,7 @@ func blockOnAlertsDeckhouseSettings(mup *v1alpha2.ModuleUpdatePolicySpec, enable
 	return ds
 }
 
-func (suite *ControllerTestSuite) seedClusterAlert(name string, severityLevel string) {
+func (suite *ControllerTestSuite) seedClusterAlert(name string, severityLevel int) {
 	suite.T().Helper()
 
 	alert := makeClusterAlert(name, severityLevel)
@@ -46,7 +46,7 @@ func (suite *ControllerTestSuite) TestBlockOnAlerts() {
 	suite.Run("High severity alert blocks release", func() {
 		ds := blockOnAlertsDeckhouseSettings(embeddedMUP, true, 4)
 		suite.setupControllerSettings("block-on-alerts-high-severity-blocks-release.yaml", initValues, ds)
-		suite.seedClusterAlert("blocking-alert", "7")
+		suite.seedClusterAlert("blocking-alert", 7)
 
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -59,7 +59,7 @@ func (suite *ControllerTestSuite) TestBlockOnAlerts() {
 	suite.Run("Low severity alert does not block release", func() {
 		ds := blockOnAlertsDeckhouseSettings(embeddedMUP, true, 4)
 		suite.setupControllerSettings("block-on-alerts-low-severity-does-not-block.yaml", initValues, ds)
-		suite.seedClusterAlert("safe-alert", "2")
+		suite.seedClusterAlert("safe-alert", 2)
 
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -72,7 +72,7 @@ func (suite *ControllerTestSuite) TestBlockOnAlerts() {
 	suite.Run("Severity equals threshold blocks release", func() {
 		ds := blockOnAlertsDeckhouseSettings(embeddedMUP, true, 4)
 		suite.setupControllerSettings("block-on-alerts-severity-equals-threshold.yaml", initValues, ds)
-		suite.seedClusterAlert("alert-eq", "4")
+		suite.seedClusterAlert("alert-eq", 4)
 
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -85,7 +85,7 @@ func (suite *ControllerTestSuite) TestBlockOnAlerts() {
 	suite.Run("BlockOnAlerts disabled does not block release", func() {
 		ds := blockOnAlertsDeckhouseSettings(embeddedMUP, false, 4)
 		suite.setupControllerSettings("block-on-alerts-disabled.yaml", initValues, ds)
-		suite.seedClusterAlert("blocking-alert", "7")
+		suite.seedClusterAlert("blocking-alert", 7)
 
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -98,7 +98,7 @@ func (suite *ControllerTestSuite) TestBlockOnAlerts() {
 	suite.Run("Forced release bypasses block on alerts", func() {
 		ds := blockOnAlertsDeckhouseSettings(embeddedMUP, true, 4)
 		suite.setupControllerSettings("block-on-alerts-forced-release.yaml", initValues, ds)
-		suite.seedClusterAlert("blocking-alert", "7")
+		suite.seedClusterAlert("blocking-alert", 7)
 
 		dr := suite.getDeckhouseRelease("v1.31.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
