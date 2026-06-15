@@ -228,10 +228,6 @@
     "observability",
     "ssdlc"
   ],
-  "prometheus-metrics-adapter": [
-    "observability",
-    "ssdlc"
-  ],
   "prometheus-pushgateway": [
     "observability",
     "ssdlc"

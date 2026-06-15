@@ -1120,32 +1120,6 @@
         }
       ]
     },
-    "prometheus-metrics-adapter": {
-      "name": "prometheus-metrics-adapter",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-monitoring",
-      "requirements": {
-        "modules": {
-          "prometheus": ">= 0.0.0"
-        }
-      },
-      "descriptions": {
-        "en": "Enables HPA and VPA autoscalers to use monitoring metrics for scaling decisions. Implements Kubernetes resource metrics API, custom metrics API, and external metrics API.",
-        "ru": "Позволяет HPA и VPA автоскейлерам использовать метрики мониторинга для принятия решений о масштабировании. Реализует API метрик ресурсов Kubernetes, API пользовательских метрик и API внешних метрик."
-      },
-      "oss": [
-        {
-          "name": "Kubernetes Metrics Server",
-          "link": "https://github.com/kubernetes-sigs/metrics-server",
-          "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
-          "logo": "/images/logos/kubernetes.svg",
-          "license": "Apache License 2.0"
-        }
-      ]
-    },
     "prometheus-pushgateway": {
       "name": "prometheus-pushgateway",
       "stage": "General Availability",
@@ -1634,16 +1608,6 @@
       ],
       "modules": [
         "vertical-pod-autoscaler"
-      ]
-    },
-    "Kubernetes Metrics Server": {
-      "link": "https://github.com/kubernetes-sigs/metrics-server",
-      "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
-      "logo": "/images/logos/kubernetes.svg",
-      "license": "Apache License 2.0",
-      "versions": [],
-      "modules": [
-        "prometheus-metrics-adapter"
       ]
     },
     "Libcap-ng": {

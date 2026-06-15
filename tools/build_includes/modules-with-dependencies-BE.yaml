@@ -247,14 +247,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/301-prometheus-metrics-adapter/hooks
-  to: /deckhouse/modules/301-prometheus-metrics-adapter/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler/hooks
   to: /deckhouse/modules/302-vertical-pod-autoscaler/hooks
   excludePaths:
