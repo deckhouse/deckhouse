@@ -255,11 +255,11 @@ properties:
             type: boolean
             default: false
             description: |
-              If enabled, the update will be blocked if there are any alerts in the cluster.
+              If enabled, the update will be blocked if there are any alerts in the cluster with severity level greater than or equal to the specified severity level.
           severity:
             type: integer
             description: |
-              The severity of the alerts that will block the update.
+              The severity level of the alerts that will block the update.
             enum:
               - 0
               - 1
