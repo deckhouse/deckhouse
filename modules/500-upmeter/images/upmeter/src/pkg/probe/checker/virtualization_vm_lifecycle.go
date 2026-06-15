@@ -40,6 +40,9 @@ const (
 
 	virtualizationPhaseReady   = "Ready"
 	virtualizationPhaseRunning = "Running"
+
+	virtualizationConditionAgentReady = "AgentReady"
+	conditionStatusTrue              = "True"
 )
 
 var (
@@ -193,6 +196,15 @@ func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.
 			return check.ErrFail("verification: VirtualMachine did not reach Running phase")
 		}
 		return lifecycleStepError("waiting for VirtualMachine Running", err)
+	}
+
+	if err := c.runStep("waiting for VirtualMachine AgentReady", func() error {
+		return c.waitVirtualMachineAgentReady(ctx)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: VirtualMachine AgentReady condition did not become True")
+		}
+		return lifecycleStepError("waiting for VirtualMachine AgentReady", err)
 	}
 
 	if err := c.runStep("deleting VirtualMachine", func() error {
@@ -441,6 +453,17 @@ func (c *virtualMachineLifecycleChecker) waitVirtualMachineRunning(ctx context.C
 	)
 }
 
+func (c *virtualMachineLifecycleChecker) waitVirtualMachineAgentReady(ctx context.Context) error {
+	return c.waitResourceCondition(
+		ctx,
+		virtualMachineGVR,
+		virtualizationVMName,
+		virtualizationConditionAgentReady,
+		conditionStatusTrue,
+		c.waitVirtualMachineTimeout,
+	)
+}
+
 func (c *virtualMachineLifecycleChecker) waitVirtualMachineAbsent(ctx context.Context) error {
 	return c.waitResourceAbsent(ctx, virtualMachineGVR, virtualizationVMName, c.waitDeletionTimeout)
 }
@@ -466,6 +489,31 @@ func (c *virtualMachineLifecycleChecker) waitResourcePhase(
 				return false, err
 			}
 			return unstructuredNestedString(obj.Object, "status", "phase") == phase, nil
+		},
+	)
+}
+
+func (c *virtualMachineLifecycleChecker) waitResourceCondition(
+	ctx context.Context,
+	gvr schema.GroupVersionResource,
+	name, conditionType, conditionStatus string,
+	timeout time.Duration,
+) error {
+	return waitForCondition(
+		timeout,
+		pollingInterval(timeout),
+		func() (bool, error) {
+			obj, err := c.access.Kubernetes().Dynamic().
+				Resource(gvr).
+				Namespace(c.namespace).
+				Get(ctx, name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			return unstructuredConditionStatus(obj.Object, conditionType) == conditionStatus, nil
 		},
 	)
 }
@@ -640,6 +688,26 @@ func unstructuredNestedString(obj map[string]interface{}, fields ...string) stri
 		return ""
 	}
 	return value
+}
+
+func unstructuredConditionStatus(obj map[string]interface{}, conditionType string) string {
+	conditions, found, err := unstructured.NestedSlice(obj, "status", "conditions")
+	if err != nil || !found {
+		return ""
+	}
+
+	for _, condition := range conditions {
+		conditionMap, ok := condition.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if unstructuredNestedString(conditionMap, "type") != conditionType {
+			continue
+		}
+		return unstructuredNestedString(conditionMap, "status")
+	}
+
+	return ""
 }
 
 func virtualImageManifest(agentID, namespace, name, imageURL string) string {

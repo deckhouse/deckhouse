@@ -100,3 +100,24 @@ func Test_unstructuredNestedString(t *testing.T) {
 	assert.Equal(t, "Running", unstructuredNestedString(obj, "status", "phase"))
 	assert.Equal(t, "", unstructuredNestedString(obj, "status", "missing"))
 }
+
+func Test_unstructuredConditionStatus(t *testing.T) {
+	obj := map[string]interface{}{
+		"status": map[string]interface{}{
+			"conditions": []interface{}{
+				map[string]interface{}{
+					"type":   "VirtualMachineClassReady",
+					"status": "True",
+				},
+				map[string]interface{}{
+					"type":   "AgentReady",
+					"status": "False",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, "False", unstructuredConditionStatus(obj, "AgentReady"))
+	assert.Equal(t, "True", unstructuredConditionStatus(obj, "VirtualMachineClassReady"))
+	assert.Equal(t, "", unstructuredConditionStatus(obj, "Missing"))
+}
