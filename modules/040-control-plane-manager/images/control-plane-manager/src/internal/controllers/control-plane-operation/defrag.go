@@ -72,7 +72,7 @@ func defragEtcdIfNeeded(ctx context.Context, advertiseIP, pkiDir, kubeconfigDir 
 		return false, fmt.Errorf("get etcd status at %s: %w", localEndpoint, err)
 	}
 
-	if resp.DbSize == 0 {
+	if resp.DbSize <= 0 {
 		logger.Info("etcd defrag skipped: db size is zero")
 		return false, nil
 	}
@@ -122,7 +122,8 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 		Namespace: constants.KubeSystemNamespace,
 	}, pod); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("etcd pod not found, will retry before defragmentation")
+			logger.Info("etcd pod not found, will retry before defragmentation",
+				slog.String("pod", podName))
 			return StepResult{
 				Outcome:      OutcomePending,
 				Message:      "waiting for etcd pod to be ready before defragmentation",
@@ -132,8 +133,19 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 		return StepResult{}, fmt.Errorf("get pod %s: %w", podName, err)
 	}
 
+	if isPodCrashLooping(pod) {
+		logger.Warn("etcd pod is crash looping, will retry before defragmentation",
+			slog.String("pod", podName))
+		return StepResult{
+			Outcome:      OutcomePending,
+			Message:      fmt.Sprintf("pod %s is in CrashLoopBackOff, waiting before defragmentation", podName),
+			RequeueAfter: requeueWaitPod,
+		}, nil
+	}
+
 	if !isPodReady(pod) {
-		logger.Info("etcd pod not ready, will retry before defragmentation")
+		logger.Info("etcd pod not ready, will retry before defragmentation",
+			slog.String("pod", podName))
 		return StepResult{
 			Outcome:      OutcomePending,
 			Message:      "waiting for etcd pod to be ready before defragmentation",
@@ -151,4 +163,3 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 	}
 	return StepResult{Outcome: OutcomeCompleted, Message: "skipped: fragmentation below threshold"}, nil
 }
-
