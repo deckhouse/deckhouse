@@ -552,6 +552,15 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 	if us.Update.BlockOnAlerts.Enabled {
 		if err := r.checkBlockOnAlerts(ctx, us.Update.BlockOnAlerts.Severity); err != nil {
 			r.logger.Error("release update is blocked by alert", slog.String("name", dr.GetName()), log.Err(err))
+
+			updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+				Phase:   v1alpha1.DeckhouseReleasePhasePending,
+				Message: err.Error(),
+			})
+			if updateErr != nil {
+				r.logger.Error("block on alerts status update ", slog.String("name", dr.GetName()), log.Err(updateErr))
+			}
+
 			return err
 		}
 	}
