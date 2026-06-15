@@ -4,12 +4,13 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.25.1
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   version: v1.25.1
 status:
   approved: false
-  message: ""
+  message: 'release update is blocked by alert "blocking-alert": severity 7 exceeds
+    threshold 4'
   phase: Pending
   transitionTime: null
 ---
