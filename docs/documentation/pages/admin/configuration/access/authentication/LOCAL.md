@@ -132,6 +132,11 @@ Password policy allows controlling password complexity, rotation, and user locko
 
 To set up a password policy, use the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) field in the configuration of the `user-authn` module:
 
+Examples of policies:
+
+{% tabs Examples of password policies%}
+{% tab "Without custom complexity rules" %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -151,23 +156,8 @@ spec:
         interval: "30d"
 ```
 
-Field description:
-
-- `complexityLevel`: Password complexity level. One of `None`, `Low`, `Fair`, `Good`, `Excellent` or `Custom`.
-- `custom`: Custom complexity rules (used only with `complexityLevel: Custom`):
-  - `custom.minLength`: Minimum number of characters in a password.
-  - `custom.specialCharacters`: If `true`, require at least one special character.
-  - `custom.numbers`: If `true`, require at least one digit.
-  - `custom.capitalized`: If `true`, require at least one uppercase letter.
-  - `custom.repeatedChars`: If `true`, forbid more than 2 identical characters in a row.
-- `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
-- `lockout`: Lockout settings after exceeding the limit of failed login attempts:
-  - `lockout.maxAttempts`: Limit of allowed failed login attempts.
-  - `lockout.lockDuration`: User lockout duration.
-- `rotation`: Password rotation settings:
-  - `rotation.interval`: Period for mandatory password change.
-
-Example of configuring a password policy with custom complexity rules:
+{% endtab %}
+{% tab "With custom complexity rules" %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -188,6 +178,9 @@ spec:
         repeatedChars: false
       passwordHistoryLimit: 10
 ```
+
+{% endtab %}
+{% endtabs %}
 
 ## Configuring two-factor authentication (2FA)
 

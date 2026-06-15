@@ -130,7 +130,12 @@ spec:
 
 Парольная политика позволяет контролировать сложность пароля, ротацию и блокировку пользователей.
 
-Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`:
+Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`.
+
+Примеры политик:
+
+{% tabs Примеры парольных политик%}
+{% tab "Без пользовательских правил сложности" %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -151,23 +156,8 @@ spec:
         interval: "30d"
 ```
 
-Описание полей:
-
-- `complexityLevel` — уровень сложности пароля: `None`, `Low`, `Fair`, `Good`, `Excellent` или `Custom`;
-- `custom` — пользовательские правила сложности (используются только при `complexityLevel: Custom`):
-  - `custom.minLength` — минимальное количество символов в пароле;
-  - `custom.specialCharacters` — если `true`, требуется хотя бы один специальный символ;
-  - `custom.numbers` — если `true`, требуется хотя бы одна цифра;
-  - `custom.capitalized` — если `true`, требуется хотя бы одна заглавная буква;
-  - `custom.repeatedChars` — если `true`, запрещается более 2 одинаковых символов подряд;
-- `passwordHistoryLimit` — число предыдущих паролей, которые хранит система, чтобы предотвратить их повторное использование;
-- `lockout` — настройки блокировки при превышении лимита неудачных попыток входа:
-  - `lockout.maxAttempts` — лимит неудачных попыток;
-  - `lockout.lockDuration` — длительность блокировки пользователя;
-- `rotation` — настройки ротации паролей:
-  - `rotation.interval` — период обязательной смены пароля.
-
-Пример настройки парольной политики с пользовательскими правилами сложности:
+{% endtab %}
+{% tab "С пользовательскими правилами сложности" %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -188,6 +178,9 @@ spec:
         repeatedChars: false
       passwordHistoryLimit: 10
 ```
+
+{% endtab %}
+{% endtabs %}
 
 ## Настройка двухфакторной аутентификации (2FA)
 
