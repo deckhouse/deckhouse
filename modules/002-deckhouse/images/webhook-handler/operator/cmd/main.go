@@ -135,6 +135,37 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		shOp.ConversionWebhookManager.ClientConfigs = make(map[string]*conversion.CrdClientConfig)
 	}
 
+	// Re-enable kubernetes bindings on every newly loaded hook so that the
+	// monitors that maintain object caches (snapshots) are recreated and
+	// wired to the freshly rebuilt HookController.
+	//
+	// HookManager.Init() above replaces every Hook (and therefore every
+	// HookController) with a brand new instance whose KubernetesController
+	// has no registered monitors. Admission/conversion hooks that pull data
+	// via 'includeSnapshotsFrom' rely on these monitors; without this step
+	// their 'snapshots' field is delivered empty and validating webhooks
+	// make decisions on missing data (e.g. always denying because a
+	// ModuleConfig snapshot looks absent).
+	//
+	// EnableKubernetesBindings is idempotent: it adds and starts a monitor
+	// only when one is not already registered, and the initial list it
+	// performs repopulates the snapshot cache synchronously.
+	kubernetesHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.OnKubernetesEvent)
+	if err != nil {
+		return fmt.Errorf("get kubernetes hooks: %w", err)
+	}
+	for _, name := range kubernetesHookNames {
+		h := shOp.HookManager.GetHook(name)
+		if h == nil {
+			continue
+		}
+		if _, err := h.HookController.EnableKubernetesBindings(); err != nil {
+			return fmt.Errorf("enable kubernetes bindings for hook %q: %w", name, err)
+		}
+		// Allow the monitors to emit events now that their caches are filled.
+		h.HookController.UnlockKubernetesEvents()
+	}
+
 	// Enable admission bindings on every newly loaded hook so that
 	// AdmissionLinks are populated and CanHandleEvent works.
 	admissionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesValidating)

@@ -505,17 +505,29 @@ spec:
 
 Чтобы добавить узлы типа CloudPermanent в облачный кластер DKP:
 
-1. Убедитесь, что включён модуль облачного провайдера. Например, [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), [`cloud-provider-aws`](/modules/cloud-provider-aws/) и др.
+1. Убедитесь, что включён модуль соответствующего облачного провайдера, например [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/) или [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
-   Это можно проверить с помощью команды:
+   Проверить состояние конкретного модуля можно командой:
 
    ```shell
-   d8 k -n d8-system get modules
+   d8 k -n d8-system get module <ИМЯ_МОДУЛЯ>
    ```
 
-   Или посмотреть в веб-интерфейсе Deckhouse.
+   Например:
 
-1. Создайте объект [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudPermanent`. Узлы типа `CloudPermanent` управляются через Terraform, встроенный в DKP. Конфигурация таких узлов находится в объекте `(Provider)ClusterConfiguration`. Редактировать его нужно с помощью утилиты `dhctl` в установочном контейнере. Пример:
+   ```shell
+   d8 k -n d8-system get module cloud-provider-yandex
+   ```
+
+1. Добавьте группу узлов типа `CloudPermanent` в секцию `nodeGroups` объекта (Provider)ClusterConfiguration. Узлы типа `CloudPermanent` управляются через Terraform, встроенный в DKP.
+
+   Отредактировать конфигурацию работающего кластера можно с помощью команды:
+
+   ```shell
+   d8 system edit provider-cluster-configuration
+   ```
+
+   Пример:
 
    ```yaml
    nodeGroups:
@@ -531,30 +543,50 @@ spec:
    ```
 
 1. Укажите параметры шаблона инстанса. Поля внутри `instanceClass` зависят от конкретного облачного провайдера. Ниже приведён пример для OpenStack:
+
    - `flavorName` — тип инстанса (ресурсы: CPU, RAM);
    - `imageName` — образ ОС;
    - `rootDiskSize` — размер системного диска (в ГБ);
    - `mainNetwork` — имя сети;
    - при необходимости: диск etcd, зоны, volume types и т.д.
 
-     Для других облаков названия и структура параметров могут отличаться. Актуальные поля можно посмотреть в описании CRD или в документации по соответствующему облачному провайдеру.
+   Для других облачных провайдеров названия и структура параметров могут отличаться. Актуальные поля можно посмотреть в описании (Provider)ClusterConfiguration или в документации по соответствующему облачному провайдеру, например [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration).
 
-1. Примените конфигурацию с помощью `dhctl converge`. После редактирования `(Provider)ClusterConfiguration` выполните:
+1. На локальном компьютере или административном узле запустите установочный контейнер DKP. Используйте образ той же редакции и версии, что и в кластере:
+
+   ```shell
+   docker run --pull=always --rm -it \
+     -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/<РЕДАКЦИЯ>/install:<ВЕРСИЯ> \
+     bash
+   ```
+
+1. В установочном контейнере проверьте состояние Terraform:
+
+   ```shell
+   dhctl terraform check \
+     --ssh-host <IP МАСТЕР-УЗЛА> \
+     --ssh-user <ИМЯ ПОЛЬЗОВАТЕЛЯ> \
+     --ssh-agent-private-keys /tmp/.ssh/<КЛЮЧ>
+   ```  
+
+1. Примените конфигурацию. В параметре `--ssh-user` укажите пользователя, от имени которого доступен вход на мастер-узел по SSH и который может выполнять команды через `sudo`:
 
    ```shell
    dhctl converge \
-     --ssh-host <IP мастер-узла> \
-     --ssh-user <имя пользователя> \
-     --ssh-agent-private-keys /tmp/.ssh/<ключ>
+     --ssh-host <IP МАСТЕР-УЗЛА> \
+     --ssh-user <ИМЯ ПОЛЬЗОВАТЕЛЯ> \
+     --ssh-agent-private-keys /tmp/.ssh/<КЛЮЧ>
    ```
 
    Эта команда:
+
    - запустит Terraform;
    - создаст нужные виртуальные машины;
-   - выполнит на них установку DKP (через `bootstrap.sh`);
+   - выполнит bootstrap и настройку новых узлов;
    - зарегистрирует узлы в кластере.
 
-1. Готово — новые узлы появятся в кластере автоматически. Их можно увидеть выполнив команду:
+1. Новые узлы появятся в кластере автоматически. Проверить появление узлов можно с помощью команды:
 
    ```shell
    d8 k get nodes

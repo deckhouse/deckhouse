@@ -127,9 +127,6 @@ func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) err
 			"name":      info.ClusterName,
 			"namespace": capiNamespace,
 			"labels":    commonLabels,
-			"finalizers": []interface{}{
-				"deckhouse.io/capi-controller-manager",
-			},
 		},
 		"spec": map[string]interface{}{
 			"clusterNetwork": map[string]interface{}{
