@@ -40,6 +40,11 @@ kubernetes:
 kubernetesValidating:
 - name: role-validating.deckhouse.io
   group: main
+  # The decision needs the "roles" snapshot (namespace/project-scoped ClusterRoles). With the
+  # updated shell-operator, group membership alone no longer injects sibling snapshots into a
+  # validating webhook context, so request it explicitly — otherwise .snapshots.roles is empty and
+  # the hook fails open, letting namespace/project roles be bound cluster-wide.
+  includeSnapshotsFrom: ["roles"]
   matchConditions:
   - expression: ("system:apiserver" != request.userInfo.username)
     name: exclude-kube-apiserver
