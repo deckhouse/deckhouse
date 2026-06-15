@@ -220,20 +220,20 @@ An image stored in container registry has a certain format. Let's look at an exa
 First, download the image locally:
 
 ```bash
-curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
+curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
 ```
 
 Next, create a `Dockerfile` with the following contents:
 
 ```Dockerfile
 FROM scratch
-COPY ubuntu2204.img /disk/ubuntu2204.img
+COPY ubuntu2404.img /disk/ubuntu2404.img
 ```
 
 Build the image and load it into the container registry. The example below uses docker.io as the container registry. you need to have a service account and a customized environment to run it.
 
 ```bash
-docker build -t docker.io/<username>/ubuntu2204:latest
+docker build -t docker.io/<username>/ubuntu2404:latest
 ```
 
 where `username` is the username specified when registering with docker.io.
@@ -251,13 +251,13 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-2204
+  name: ubuntu-2404
 spec:
   storage: ContainerRegistry
   dataSource:
     type: ContainerImage
     containerImage:
-      image: docker.io/<username>/ubuntu2204:latest
+      image: docker.io/<username>/ubuntu2404:latest
 EOF
 ```
 
@@ -269,7 +269,7 @@ How to create an image from Container Registry in the web interface:
 - Select "Upload data from container image" from the list.
 - In the form that opens, enter the image name in the "Image Name" field.
 - In the "Storage" field, select `ContainerRegistry`.
-- In the "Image in Container Registry" field, specify `docker.io/<username>/ubuntu2204:latest`.
+- In the "Image in Container Registry" field, specify `docker.io/<username>/ubuntu2404:latest`.
 - Click the "Create" button.
 - The image status is displayed at the top left, under the image name.
 

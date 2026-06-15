@@ -427,20 +427,20 @@ An image stored in a container registry has a specific format. Let’s consider 
 1. Download the image locally:
 
    ```shell
-   curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
+   curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
    ```
 
 1. Create a `Dockerfile` with the following content:
 
    ```shell
    FROM scratch
-   COPY ubuntu2204.img /disk/ubuntu2204.img
+   COPY ubuntu2404.img /disk/ubuntu2404.img
    ```
 
 1. Build the image and push it to a container registry. In this example, [docker.io](https://www.docker.com/) is used. To perform these steps, you need an account on the service and a properly configured environment:
 
    ```shell
-   docker build -t docker.io/<username>/ubuntu2204:latest
+   docker build -t docker.io/<username>/ubuntu2404:latest
    ```
 
    where `username` is the username you specified during registration on docker.io.
@@ -458,12 +458,12 @@ An image stored in a container registry has a specific format. Let’s consider 
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: ClusterVirtualImage
    metadata:
-     name: ubuntu-2204
+     name: ubuntu-2404
    spec:
      dataSource:
        type: ContainerImage
        containerImage:
-         image: docker.io/<username>/ubuntu2204:latest
+         image: docker.io/<username>/ubuntu2404:latest
    EOF
    ```
 
@@ -592,5 +592,5 @@ Images eligible for cleanup:
 KIND                   NAMESPACE            NAME
 ClusterVirtualImage                         debian-12
 VirtualDisk            default              debian-10-root
-VirtualImage           default              ubuntu-2204
+VirtualImage           default              ubuntu-2404
 ```
