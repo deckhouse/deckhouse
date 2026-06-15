@@ -597,7 +597,7 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 // checkBlockOnAlerts returns an error if there is at least one ClusterAlert
 // with severityLevel greater than the given threshold (default: 4).
 func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, severityThreshold int) error {
-	r.logger.Debug("checking block on alerts", slog.Int("severityThreshold", severityThreshold))
+	r.logger.Debug("checking block on alerts", slog.Int("severity_threshold", severityThreshold))
 	alertList := &unstructured.UnstructuredList{}
 	alertList.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "deckhouse.io",
@@ -611,7 +611,7 @@ func (r *deckhouseReleaseReconciler) checkBlockOnAlerts(ctx context.Context, sev
 	r.logger.Debug("found alerts", slog.Int("count", len(alertList.Items)))
 	for _, alert := range alertList.Items {
 		rawVal, found, err := unstructured.NestedFieldNoCopy(alert.Object, "alert", "severityLevel")
-		r.logger.Debug("alert severity", slog.Any("rawVal", rawVal), slog.String("type", fmt.Sprintf("%T", rawVal)), slog.Bool("found", found))
+		r.logger.Debug("alert severity", slog.Any("raw_val", rawVal), slog.String("type", fmt.Sprintf("%T", rawVal)), slog.Bool("found", found))
 		if err != nil || !found {
 			r.logger.Debug("alert severity not found", slog.String("name", alert.GetName()), slog.String("error", err.Error()))
 			continue
