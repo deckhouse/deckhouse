@@ -45,6 +45,10 @@ The roles created by the module fall into two categories:
 - [Use roles](#use-roles) — for granting permissions to users (for example, application developers) *within a specific namespace*.
 - [Manage roles](#manage-roles) — for granting administrator permissions.
 
+{% alert level="warning" %}
+Please note the specifics of configuring combined access and sharing using RoleBinding and ClusterAuthorizationRule (CAR) for the same user. For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
+{% endalert %}
+
 ## Use roles
 
 {% alert level="warning" %}
