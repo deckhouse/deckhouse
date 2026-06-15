@@ -24,7 +24,11 @@ kubernetes:
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
     queue: authorization
-    group: main
+    # NB: this snapshot-only binding must NOT be in the same `group` as the validating webhook.
+    # A binding that is both in a group and never triggers the hook (executeHookOnEvent: [] +
+    # executeHookOnSynchronization: false) gets coalesced by the group and its informer is not
+    # started, so the snapshot stays empty and the webhook (includeSnapshotsFrom: ["roles"]) fails
+    # open. Keep it standalone — exactly like the working kube-dns cluster-domain-alias hook.
     executeHookOnEvent: []
     executeHookOnSynchronization: false
     keepFullObjectsInMemory: false
