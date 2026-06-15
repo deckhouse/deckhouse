@@ -228,11 +228,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
 	},
 	"controlPlaneManager": map[string]interface{}{
-		"controlPlaneManager132":   "imageHash-controlPlaneManager-controlPlaneManager132",
-		"controlPlaneManager133":   "imageHash-controlPlaneManager-controlPlaneManager133",
-		"controlPlaneManager134":   "imageHash-controlPlaneManager-controlPlaneManager134",
-		"controlPlaneManager135":   "imageHash-controlPlaneManager-controlPlaneManager135",
-		"controlPlaneManager136":   "imageHash-controlPlaneManager-controlPlaneManager136",
+		"controlPlaneManager":      "imageHash-controlPlaneManager-controlPlaneManager",
 		"etcd":                     "imageHash-controlPlaneManager-etcd",
 		"etcdBackup":               "imageHash-controlPlaneManager-etcdBackup",
 		"kubeApiserver132":         "imageHash-controlPlaneManager-kubeApiserver132",
