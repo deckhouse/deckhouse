@@ -238,36 +238,34 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe 
 		},
 	}
 
-	if virtProbe.VirtualImageName != "" {
-		runners = append(runners, runnerConfig{
-			group:  groupExtensions,
-			probe:  "virtualization",
-			check:  "virtual-machine-lifecycle",
-			period: 5 * time.Minute,
-			config: checker.VirtualMachineLifecycle{
-				Access:           access,
-				PreflightChecker: controlPlanePinger,
-				Logger: logrus.NewEntry(logger).WithFields(logrus.Fields{
-					"group": groupExtensions,
-					"probe": "virtualization",
-					"check": "virtual-machine-lifecycle",
-				}),
-				AgentID:          run.ID(),
-				Namespace:        run.StaticIdentifier("upmeter-vm"),
-				VirtualImageName: virtProbe.VirtualImageName,
-				VirtualImageURL:  virtProbe.VirtualImageURL,
+	runners = append(runners, runnerConfig{
+		group:  groupExtensions,
+		probe:  "virtualization",
+		check:  "virtual-machine-lifecycle",
+		period: 5 * time.Minute,
+		config: checker.VirtualMachineLifecycle{
+			Access:           access,
+			PreflightChecker: controlPlanePinger,
+			Logger: logrus.NewEntry(logger).WithFields(logrus.Fields{
+				"group": groupExtensions,
+				"probe": "virtualization",
+				"check": "virtual-machine-lifecycle",
+			}),
+			AgentID:          run.ID(),
+			Namespace:        run.StaticIdentifier("upmeter-vm"),
+			VirtualImageName: checker.VirtualizationImageName,
+			VirtualImageURL:  virtProbe.VirtualImageURL,
 
-				RequestTimeout:                     5 * time.Second,
-				WaitVirtualImageTimeout:            30 * time.Second,
-				WaitVirtualDiskTimeout:             60 * time.Second,
-				WaitVirtualMachineTimeout:          30 * time.Second,
-				WaitVirtualMachineMigrationTimeout: time.Minute,
-				WaitDeletionTimeout:                30 * time.Second,
-				WaitNamespaceDeletedTimeout:        30 * time.Second,
-				Timeout:                            6 * time.Minute,
-			},
-		})
-	}
+			RequestTimeout:                     5 * time.Second,
+			WaitVirtualImageTimeout:            30 * time.Second,
+			WaitVirtualDiskTimeout:             60 * time.Second,
+			WaitVirtualMachineTimeout:          30 * time.Second,
+			WaitVirtualMachineMigrationTimeout: time.Minute,
+			WaitDeletionTimeout:                30 * time.Second,
+			WaitNamespaceDeletedTimeout:        30 * time.Second,
+			Timeout:                            6 * time.Minute,
+		},
+	})
 
 	return runners
 }

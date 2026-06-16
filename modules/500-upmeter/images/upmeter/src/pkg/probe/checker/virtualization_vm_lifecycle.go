@@ -35,6 +35,7 @@ import (
 
 const (
 	virtualizationProbeName = "virtualization"
+	VirtualizationImageName = "probe-image"
 	virtualizationVMName    = "probe-vm"
 	virtualizationDiskName  = "probe-disk"
 	virtualizationEvictName = "probe-vm-evict"
@@ -46,7 +47,6 @@ const (
 	vmopTypeEvict              = "Evict"
 
 	virtualizationConditionAgentReady = "AgentReady"
-	conditionStatusTrue               = "True"
 
 	defaultVMClassAnnotation = "virtualmachineclass.virtualization.deckhouse.io/is-default-class"
 )
@@ -503,7 +503,7 @@ func (c *virtualMachineLifecycleChecker) waitVirtualMachineAgentReady(ctx contex
 		virtualMachineGVR,
 		virtualizationVMName,
 		virtualizationConditionAgentReady,
-		conditionStatusTrue,
+		string(metav1.ConditionTrue),
 		c.waitVirtualMachineTimeout,
 	)
 }
