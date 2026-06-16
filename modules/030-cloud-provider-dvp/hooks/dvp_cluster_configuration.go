@@ -45,6 +45,11 @@ type pccSecretFilterResult struct {
 	ProviderDiscoveryDataJSON json.RawMessage `json:"providerDiscoveryDataJSON,omitempty"`
 }
 
+// candiDiscoveryDataFilterResult holds discovery data from the standalone candi secret.
+type candiDiscoveryDataFilterResult struct {
+	DiscoveryDataJSON json.RawMessage `json:"discoveryDataJSON,omitempty"`
+}
+
 // moduleConfigFilterResult holds the relevant fields from a ModuleConfig object.
 type moduleConfigFilterResult struct {
 	Version  int64           `json:"version"`
@@ -65,6 +70,10 @@ type credentialSecretResult struct {
 // ---- filter functions ----
 
 func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// The fake k8s dynamic client ignores field selectors, so we guard by name here.
+	if obj.GetName() != pccSecretName {
+		return nil, nil
+	}
 	secret := &corev1.Secret{}
 	if err := sdk.FromUnstructured(obj, secret); err != nil {
 		return nil, fmt.Errorf("cannot convert PCC secret from unstructured: %v", err)
@@ -133,6 +142,30 @@ func filterCredentialSecret(obj *unstructured.Unstructured) (go_hook.FilterResul
 	return credentialSecretResult{Name: secret.Name}, nil
 }
 
+func filterCandiDiscoverySecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// The fake k8s dynamic client ignores field selectors, so we guard by name here.
+	if obj.GetName() != dvpCandiDiscoverySecretName {
+		return nil, nil
+	}
+	secret := &corev1.Secret{}
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return nil, fmt.Errorf("cannot convert candi discovery secret from unstructured: %v", err)
+	}
+
+	discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]
+	if !ok || len(discoveryDataJSON) == 0 {
+		return candiDiscoveryDataFilterResult{}, nil
+	}
+
+	if _, err := config.ValidateDiscoveryData(&discoveryDataJSON, nil, nil); err != nil {
+		return nil, fmt.Errorf("validate candi cloud-provider-discovery-data.json: %v", err)
+	}
+
+	return candiDiscoveryDataFilterResult{
+		DiscoveryDataJSON: json.RawMessage(discoveryDataJSON),
+	}, nil
+}
+
 // ---- hook registration ----
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -192,10 +225,29 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       dvpInstanceClassKind,
 			FilterFunc: filterNamedResource,
 		},
+		// Binding 5: standalone candi discovery secret written by dhctl for new-style clusters.
+		// Takes priority over discovery data in the PCC secret when both are present.
+		{
+			Name:       "candi_discovery_data",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{dvpCandiDiscoverySecretNamespace},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{dvpCandiDiscoverySecretName},
+			},
+			FilterFunc: filterCandiDiscoverySecret,
+		},
 	},
 }, handleDVPClusterConfiguration)
 
 func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
+	// ---- Resolve discovery data: candi secret takes priority over PCC secret ----
+	discoveryData, candiPresent := resolveDiscoveryData(input)
+
 	// ---- Determine PCC presence ----
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	pccPresent := len(pccSnaps) > 0
@@ -206,7 +258,7 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 		// Values come from ModuleConfig v2 via addon-operator (already in input.Values).
 		// Clean up migration artifacts if they exist.
 		deleteMigrationArtifacts(input)
-		return mergeAndSetDiscoveryData(input, cloudDataV1.DVPCloudProviderDiscoveryData{})
+		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
 	// PCC is present - parse it.
@@ -222,11 +274,10 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 		}
 	}
 
-	// Parse discovery data.
-	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
-	if len(pccResult.ProviderDiscoveryDataJSON) > 0 {
+	// If candi secret is absent, fall back to discovery data from PCC secret.
+	if !candiPresent && len(pccResult.ProviderDiscoveryDataJSON) > 0 {
 		if err := json.Unmarshal(pccResult.ProviderDiscoveryDataJSON, &discoveryData); err != nil {
-			return fmt.Errorf("unmarshal discovery data: %w", err)
+			return fmt.Errorf("unmarshal discovery data from PCC: %w", err)
 		}
 	}
 
@@ -257,6 +308,32 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 	}
 
 	return mergeAndSetDiscoveryData(input, discoveryData)
+}
+
+// resolveDiscoveryData returns discovery data from the candi standalone secret and whether
+// the secret was present (even if empty). Callers use the bool to decide whether to fall
+// back to the PCC secret.
+func resolveDiscoveryData(input *go_hook.HookInput) (cloudDataV1.DVPCloudProviderDiscoveryData, bool) {
+	candiSnaps := input.Snapshots.Get("candi_discovery_data")
+	if len(candiSnaps) == 0 {
+		return cloudDataV1.DVPCloudProviderDiscoveryData{}, false
+	}
+
+	var candiResult candiDiscoveryDataFilterResult
+	if err := candiSnaps[0].UnmarshalTo(&candiResult); err != nil {
+		return cloudDataV1.DVPCloudProviderDiscoveryData{}, true
+	}
+
+	if len(candiResult.DiscoveryDataJSON) == 0 {
+		return cloudDataV1.DVPCloudProviderDiscoveryData{}, true
+	}
+
+	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
+	if err := json.Unmarshal(candiResult.DiscoveryDataJSON, &discoveryData); err != nil {
+		return cloudDataV1.DVPCloudProviderDiscoveryData{}, true
+	}
+
+	return discoveryData, true
 }
 
 // isNewResourcesComplete checks whether the migration target resources are fully in place.
@@ -334,7 +411,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 // mapPCCtoRootValues writes PCC fields into the root module values path
 // (cloudProviderDvp.provider/nodes) in v2 format so templates can render during migration.
 // Only individual leaf values are written so that fields populated by addon-operator from
-// config-values defaults (e.g. nodes.enabled, storage.enabled) are never overwritten.
+// config-values defaults (e.g. nodes.disabled, storage.disabled) are never overwritten.
 // storage is left entirely untouched - PCC does not control subsystem enablement.
 //
 // It also injects a synthetic cloudProviderDvp.internal.credentialSecrets["d8-credentials"]
@@ -346,7 +423,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		return nil
 	}
 
-	// provider - set the whole object (provider has no enabled flag, so overwriting is safe).
+	// provider - set the whole object (provider has no disabled flag, so overwriting is safe).
 	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
 		input.Values.Set("cloudProviderDvp.provider", map[string]any{
 			"parameters": map[string]any{
@@ -355,7 +432,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		})
 	}
 
-	// nodes.parameters - only PCC-derived fields; nodes.enabled is intentionally not touched
+	// nodes.parameters - only PCC-derived fields; nodes.disabled is intentionally not touched
 	// so the default from config-values is preserved.
 	nodesParams := map[string]any{}
 	if pcc.Layout != nil {

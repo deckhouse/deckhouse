@@ -32,20 +32,22 @@ import (
 )
 
 const (
-	dvpModuleName                 = "cloud-provider-dvp"
-	dvpNamespace                  = "d8-cloud-provider-dvp"
-	dvpMigrationResourcesName     = "d8-migration-resources"
-	dvpMigrationResourcesFilename = "resources.yaml"
-	dvpMigrationConfigMapName     = "d8-module-is-migrating"
-	dvpCredentialSecretName       = "d8-credentials"
-	dvpInstanceClassKind          = "DVPInstanceClass"
-	dvpInstanceClassAPI           = "deckhouse.io/v1alpha1"
-	dvpAuthSchemeKubeconfig       = "kubeconfig"
-	dvpCredentialSecretType       = "cloud-provider.deckhouse.io/credentials"
-	moduleConfigAPIVersion        = "deckhouse.io/v1alpha1"
-	pccSecretName                 = "d8-provider-cluster-configuration"
-	pccSecretNamespace            = "kube-system"
-	pccClusterConfigKey           = "cloud-provider-cluster-configuration.yaml"
+	dvpModuleName                    = "cloud-provider-dvp"
+	dvpNamespace                     = "d8-cloud-provider-dvp"
+	dvpMigrationResourcesName        = "d8-migration-resources"
+	dvpMigrationResourcesFilename    = "resources.yaml"
+	dvpMigrationConfigMapName        = "d8-module-is-migrating"
+	dvpCredentialSecretName          = "d8-credentials"
+	dvpInstanceClassKind             = "DVPInstanceClass"
+	dvpInstanceClassAPI              = "deckhouse.io/v1alpha1"
+	dvpAuthSchemeKubeconfig          = "kubeconfig"
+	dvpCredentialSecretType          = "cloud-provider.deckhouse.io/credentials"
+	moduleConfigAPIVersion           = "deckhouse.io/v1alpha1"
+	pccSecretName                    = "d8-provider-cluster-configuration"
+	pccSecretNamespace               = "kube-system"
+	pccClusterConfigKey              = "cloud-provider-cluster-configuration.yaml"
+	dvpCandiDiscoverySecretName      = "d8-candi-cloud-provider-discovery-data"
+	dvpCandiDiscoverySecretNamespace = "kube-system"
 )
 
 func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
@@ -68,7 +70,7 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 		sshPublicKey = *cfg.SSHPublicKey
 	}
 	nodesSettings := map[string]any{
-		"enabled": true,
+		"disabled": false,
 		"parameters": map[string]any{
 			"layout":       layout,
 			"sshPublicKey": sshPublicKey,
@@ -121,7 +123,7 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 			"settings": map[string]any{
 				"provider": providerSettings,
 				"storage": map[string]any{
-					"enabled":    true,
+					"disabled":   false,
 					"parameters": map[string]any{},
 				},
 				"nodes": nodesSettings,

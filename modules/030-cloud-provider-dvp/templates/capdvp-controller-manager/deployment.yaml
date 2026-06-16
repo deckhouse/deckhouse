@@ -30,7 +30,7 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
       key: clusterUUID
 {{- end -}}
 
-{{- if .Values.cloudProviderDvp.nodes.enabled }}
+{{- if not .Values.cloudProviderDvp.nodes.disabled }}
 {{- $capiConfig := dict -}}
 {{- $_ := set $capiConfig "fullname" "capdvp-controller-manager" -}}
 {{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "capdvpControllerManager")) -}}

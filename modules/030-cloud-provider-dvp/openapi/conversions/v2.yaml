@@ -11,9 +11,11 @@ conversions:
   - if .nodes.parameters.sshPublicKey == null then .nodes.parameters.sshPublicKey = "ssh-rsa PLACEHOLDER_REPLACE_ME" end
   - if .zones != null then .nodes.parameters.zones = .zones end
   - del(.zones)
-  - if .nodes.enabled == null then .nodes.enabled = true end
+  - if .nodes.disabled == null then .nodes.disabled = false end
   - if .storage == null then .storage = {} end
-  - if .storage.enabled == null then .storage.enabled = true end
+  - if .storage.disabled == null then .storage.disabled = false end
+  - if .ccm == null then .ccm = {} end
+  - if .ccm.disabled == null then .ccm.disabled = false end
   - if .storage.parameters == null then .storage.parameters = {} end
 description:
   ru: |
