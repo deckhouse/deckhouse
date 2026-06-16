@@ -326,47 +326,188 @@ alerts:
         CPU steal on node {{ $labels.node }} is too high.
       severity: "4"
       markupFormat: default
-    - name: CustomPodMonitorFoundInCluster
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
+    - name: CronJobAuthenticationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
       edition: ce
-      description: |-
-        There are PodMonitors in the Deckhouse namespace that were not created by Deckhouse.
+      description: |
+        Deckhouse was unable to log in to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image.
 
-        To resolve the issue, move these PodMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
+        To resolve this issue, investigate the possible causes in the following sources:
 
-        To list all PodMonitors in the Deckhouse namespace, run the following command:
-
-        ```bash
-        d8 k get podmonitors --all-namespaces -l heritage!=deckhouse
-        ```
-
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
       summary: |
-        Deckhouse namespace contains PodMonitors not created by Deckhouse.
-      severity: "9"
+        Unable to log in to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+      severity: "7"
       markupFormat: markdown
-    - name: CustomServiceMonitorFoundInD8Namespace
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
+    - name: CronJobAuthorizationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
       edition: ce
-      description: |-
-        There are ServiceMonitors in the Deckhouse namespace that were not created by Deckhouse.
+      description: |
+        Deckhouse has insufficient privileges to pull the `{{ $labels.image }}` image using the specified `imagePullSecrets`.
 
-        To resolve the issue, move these ServiceMonitors to the `user-spec` namespace by removing the `heritage: deckhouse` label.
+        To resolve this issue, investigate the possible causes in the following sources:
 
-        To list all ServiceMonitors in the Deckhouse namespace, run the following command:
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+      summary: |
+        Insufficient privileges to pull the {{ $labels.image }} image using the specified imagePullSecrets.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobBadImageFormat
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that the `{{ $labels.image }}` image name is incorrect.
+
+        To resolve this issue, check that the `{{ $labels.image }}` image name is spelled correctly in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image name is incorrect.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobFailed
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that Job `{{$labels.namespace}}/{{$labels.job_name}}` failed in CronJob `{{$labels.namespace}}/{{$labels.owner_name}}`.
+
+        Steps to resolve:
+
+        1. Print the job details:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           ```
+
+        1. Check the job status:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} get job {{$labels.job_name}}
+           ```
+
+        1. Check the status of pods created by the job:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           ```
+      summary: |
+        Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
+      severity: "5"
+      markupFormat: default
+    - name: CronJobImageAbsent
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that the `{{ $labels.image }}` image is missing from the container registry.
+
+        To resolve this issue, check whether the `{{ $labels.image }}` image is available in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image is missing from the registry.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobImageAvailabilityUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        Review the image-availability-exporter logs to see the detailed error information:
 
         ```bash
-        d8 k get servicemonitors --all-namespaces -l heritage!=deckhouse
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
-
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
       summary: |
-        Deckhouse namespace contains ServiceMonitors not created by Deckhouse.
-      severity: "9"
+        An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobPodsNotCreated
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that the pods set in CronJob `{{$labels.namespace}}/{{$labels.owner_name}}` still haven't been created.
+
+        Steps to resolve:
+
+        1. Print the job details:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} describe job {{$labels.job_name}}
+           ```
+
+        1. Check the job status:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} get job {{$labels.job_name}}
+           ```
+
+        1. Check the status of pods created by the job:
+
+           ```bash
+           d8 k -n {{$labels.namespace}} get pods -l job-name={{$labels.job_name}}
+           ```
+      summary: |
+        Pods set in CronJob {{$labels.namespace}}/{{$labels.job_name}} haven't been created.
+      severity: "5"
+      markupFormat: markdown
+    - name: CronJobRegistryUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+      summary: |
+        The container registry is not available for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobSchedulingError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that CronJob `{{$labels.namespace}}/{{$labels.cronjob}}` failed to schedule on time.
+
+        - Current schedule: `{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"} or vector(0)" $labels.namespace $labels.cronjob | query | first | label "schedule" | reReplaceAll "^$" "unknown" }}`
+        - Last scheduled time: `{{ printf "clamp(kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}, 0, 2147483647) or vector(0)" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp | reReplaceAll "^1970.+" "unknown" }}`
+        - Next projected schedule time: `{{ printf "clamp(kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}, 0, 2147483647) or vector(0)" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp | reReplaceAll "^1970.+" "unknown" }}`
+      summary: |
+        CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
+      severity: "6"
       markupFormat: markdown
     - name: D8AdmissionPolicyEngineNotBootstrapped
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/bootstrap.yaml
@@ -664,27 +805,6 @@ alerts:
       summary: |
         Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs or retries longer than 10 minutes.
       severity: "4"
-      markupFormat: markdown
-    - name: D8CustomPrometheusRuleFoundInCluster
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
-      edition: ce
-      description: |-
-        There are PrometheusRules in the Deckhouse namespace that were not created by Deckhouse.
-
-        To resolve the issue, replace these PrometheusRules with the CustomPrometheusRules object.
-
-        To list all PrometheusRules in the Deckhouse namespace, run the following command:
-
-        ```bash
-        d8 k get prometheusrules --all-namespaces -l heritage!=deckhouse
-        ```
-
-        For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
-      summary: |
-        Deckhouse namespace contains PrometheusRules not created by Deckhouse.
-      severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseConfigInvalid
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
@@ -2667,27 +2787,6 @@ alerts:
         Okmeter agent is not Ready.
       severity: "6"
       markupFormat: markdown
-    - name: D8OldPrometheusCustomTargetFormat
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
-      edition: ce
-      description: |-
-        Deckhouse has detected that services with the `prometheus-custom-target` label are being used to collect metrics in the cluster.
-
-        The label format has been changed. To resolve the issue, replace the `prometheus-custom-target` label with `prometheus.deckhouse.io/custom-target`.
-
-        To list all services labeled with `prometheus-custom-target`, run the following command:
-
-        ```bash
-        d8 k get service --all-namespaces --show-labels | grep prometheus-custom-target
-        ```
-
-        For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/modules/prometheus/faq.html).
-      summary: |
-        Services with the prometheus-custom-target label are being used for metric collection.
-      severity: "9"
-      markupFormat: markdown
     - name: D8OldPrometheusTargetFormat
       sourceFile: ee/fe/modules/340-monitoring-applications/monitoring/prometheus-rules/warnings/warnings.yaml
       moduleUrl: 340-monitoring-applications
@@ -2930,23 +3029,6 @@ alerts:
       summary: |
         Prometheus is unable to scrape prometheus-operator metrics.
       severity: "8"
-      markupFormat: markdown
-    - name: D8ReservedNodeLabelOrTaintFound
-      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/reserved-domain.tpl
-      moduleUrl: 340-monitoring-custom
-      module: monitoring-custom
-      edition: ce
-      description: |-
-        Deckhouse has detected that node {{ $labels.name }} is using one of the following:
-        - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
-        - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
-
-        This alert may fire if the corresponding module is missing or disabled in the cluster. It can be safely ignored if you are preparing nodes to enable a module that is currently disabled.
-
-        For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
-      summary: |
-        Node {{ $labels.name }} is using a reserved label or taint.
-      severity: "6"
       markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml
@@ -6111,7 +6193,6 @@ modules-having-alerts:
     - loki
     - metallb
     - monitoring-applications
-    - monitoring-custom
     - monitoring-kubernetes
     - multitenancy-manager
     - node-local-dns
