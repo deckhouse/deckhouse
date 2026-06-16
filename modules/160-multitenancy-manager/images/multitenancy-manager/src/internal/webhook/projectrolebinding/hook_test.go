@@ -67,6 +67,19 @@ func createRequest(t *testing.T, namespace, user string, prb *v1alpha3.ProjectRo
 	}}
 }
 
+func updateRequest(t *testing.T, namespace, user string, prb *v1alpha3.ProjectRoleBinding) admission.Request {
+	t.Helper()
+	raw, err := json.Marshal(prb)
+	require.NoError(t, err)
+	return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+		Operation: admissionv1.Update,
+		Namespace: namespace,
+		UserInfo:  authnv1.UserInfo{Username: user},
+		Object:    runtime.RawExtension{Raw: raw},
+		OldObject: runtime.RawExtension{Raw: raw},
+	}}
+}
+
 func realProject(name string) *v1alpha3.Project {
 	return &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: name}}
 }
@@ -108,6 +121,26 @@ func TestHandle_AllowsBindingInRealProject(t *testing.T) {
 	v := newValidator(t, realProject("team"))
 	resp := v.Handle(context.Background(), createRequest(t, "team", rolebinding.ControllerServiceAccount, binding("d8:project:viewer")))
 	assert.True(t, resp.Allowed)
+}
+
+func TestHandle_AllowsFinalizerRemovalDuringProjectTeardown(t *testing.T) {
+	t.Parallel()
+	// During project teardown the controller removes the PRB finalizer with an Update, by which
+	// time the owning project is already gone. The placement check must not run on Update, or the
+	// finalizer removal (and the project's main-namespace cleanup) would deadlock.
+	v := newValidator(t)
+	resp := v.Handle(context.Background(), updateRequest(t, "ghost", rolebinding.ControllerServiceAccount, binding("d8:project:viewer")))
+	assert.True(t, resp.Allowed)
+}
+
+func TestHandle_RejectsCreateInNonMainNamespaceForUser(t *testing.T) {
+	t.Parallel()
+	// A normal user must not be able to create a PRB in a namespace that is not a project's main
+	// namespace; the placement check still runs on Create regardless of the caller.
+	v := newValidator(t)
+	resp := v.Handle(context.Background(), createRequest(t, "ghost", "alice@example.com", binding("d8:project:viewer")))
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "is not the main namespace of a project")
 }
 
 func TestHandle_DeleteSkipsProjectExistenceChecks(t *testing.T) {

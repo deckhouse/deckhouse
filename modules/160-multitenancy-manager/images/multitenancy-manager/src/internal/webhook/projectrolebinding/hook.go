@@ -53,8 +53,14 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	// the binding must live in the main namespace of an existing, non-virtual project
-	if req.Operation != admissionv1.Delete {
+	// The "binding must live in the main namespace of an existing, non-virtual project" check only
+	// guards the *placement* of a binding, so it is enforced on CREATE alone. Enforcing it on UPDATE
+	// would deadlock project teardown: the controller removes the PRB finalizer with an Update, and
+	// by then the owning project is terminating or already gone, so the lookup below would deny the
+	// finalizer removal and the project's main namespace could never be cleaned up. An UPDATE can
+	// never move a binding into a different namespace, and the shared validator still applies the
+	// managed-by, role-scope and privilege-escalation checks on every operation.
+	if req.Operation == admissionv1.Create {
 		if req.Namespace == "default" || req.Namespace == "deckhouse" {
 			return admission.Denied("ProjectRoleBinding cannot be created in a virtual project namespace")
 		}

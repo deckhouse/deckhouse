@@ -496,6 +496,75 @@ func TestIsResourceNamespaced_UnknownResource(t *testing.T) {
 		"unknown resource should be assumed cluster-scoped")
 }
 
+// TestResolveAccessibleNamespaces_BroadGroupGrantDoesNotFlood verifies that a namespaced grant to an
+// "all authenticated" pseudo-group does not surface every namespace to every user (flood protection).
+func TestResolveAccessibleNamespaces_BroadGroupGrantDoesNotFlood(t *testing.T) {
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-a"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-b"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "reader"},
+			Rules: []rbacv1.PolicyRule{
+				{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"get", "list"}},
+			},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "everyone-reader"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.GroupKind, Name: "system:authenticated"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "reader"},
+		},
+	}
+
+	resolver := setupResolver(t, objs, nil)
+
+	userInfo := &user.DefaultInfo{Name: "anyone", Groups: []string{"system:authenticated"}}
+	namespaces, err := resolver.ResolveAccessibleNamespaces(userInfo)
+	require.NoError(t, err)
+	assert.Empty(t, namespaces, "a grant to system:authenticated must not surface namespaces in discovery")
+}
+
+// TestResolveAccessibleNamespaces_RBACv2UserWithoutCAR verifies that a user granted access purely via
+// RBAC (RoleBinding), without any ClusterAuthorizationRule, still sees their namespaces when the
+// multi-tenancy engine is active. This is the RBAC v2 case: access comes from RoleBindings, not CARs.
+func TestResolveAccessibleNamespaces_RBACv2UserWithoutCAR(t *testing.T) {
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-ns"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "other-ns"}},
+		&rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{Name: "reader", Namespace: "team-ns"},
+			Rules: []rbacv1.PolicyRule{
+				{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"get", "list"}},
+			},
+		},
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "reader-binding", Namespace: "team-ns"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "rbacv2-user"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "Role", Name: "reader"},
+		},
+	}
+
+	// Multi-tenancy engine is active, but its CAR directory is empty (the user has no CAR) — the
+	// normal RBAC v2 situation. The nonexistent config path leaves the directory empty.
+	mtEngine, err := multitenancy.NewEngine("/nonexistent-user-authz-config.json", nil, nil, nil)
+	require.NoError(t, err)
+
+	resolver := setupResolver(t, objs, mtEngine)
+
+	userInfo := &user.DefaultInfo{Name: "rbacv2-user", Groups: []string{"system:authenticated"}}
+
+	namespaces, err := resolver.ResolveAccessibleNamespaces(userInfo)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"team-ns"}, namespaces, "RBAC v2 user without a CAR must still see their namespace")
+
+	accessible, err := resolver.IsNamespaceAccessible(userInfo, "team-ns")
+	require.NoError(t, err)
+	assert.True(t, accessible, "Get path must also return accessible for an RBAC v2 user without a CAR")
+
+	accessible, err = resolver.IsNamespaceAccessible(userInfo, "other-ns")
+	require.NoError(t, err)
+	assert.False(t, accessible, "namespace without a binding must not be accessible")
+}
+
 // Helper functions
 
 // newTestScopeCache creates a ResourceScopeCache pre-populated with well-known resources.

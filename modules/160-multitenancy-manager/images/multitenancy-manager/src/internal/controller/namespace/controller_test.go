@@ -17,15 +17,40 @@ limitations under the License.
 package template
 
 import (
+	"context"
+	"sync"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	namespacemanager "controller/internal/manager/namespace"
 )
+
+func newReconciler(t *testing.T, allowOrphanNamespaces bool, objs ...client.Object) *reconciler {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha3.AddToScheme} {
+		require.NoError(t, add(scheme))
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+	return &reconciler{
+		init:                  new(sync.WaitGroup), // counter 0: Wait() returns immediately
+		logger:                logr.Discard(),
+		client:                c,
+		manager:               namespacemanager.New(c, logr.Discard()),
+		allowOrphanNamespaces: allowOrphanNamespaces,
+	}
+}
 
 func TestIsAutoWrapCandidate(t *testing.T) {
 	cases := []struct {
@@ -60,6 +85,37 @@ func TestIsAutoWrapCandidate(t *testing.T) {
 			assert.Equal(t, tc.want, isAutoWrapCandidate(tc.ns))
 		})
 	}
+}
+
+func TestReconcile_SyncsLabelsForAlreadyWrappedNamespace(t *testing.T) {
+	// An already auto-wrapped namespace carries the project-ownership label (stamped by the project
+	// reconciler) and the managed-project finalizer. A later user-label change must still propagate
+	// into the managed project's spec.parameters.namespace.labels - this is the regression that made
+	// the sync create-only.
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "team-a",
+		Labels: map[string]string{
+			"env":                          "prod", // user label added after the wrap
+			v1alpha3.ResourceLabelProject:  "team-a",
+			v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
+		},
+		Finalizers: []string{v1alpha3.NamespaceFinalizerManagedProject},
+	}}
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{
+		Name:   "team-a",
+		Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+	}}
+	require.False(t, isAutoWrapCandidate(ns), "an owned namespace is no longer an auto-wrap candidate")
+
+	r := newReconciler(t, true, ns, project)
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	require.NoError(t, err)
+
+	updated := new(v1alpha3.Project)
+	require.NoError(t, r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, updated))
+	require.NotNil(t, updated.Spec.Parameters["namespace"], "namespace parameters must be synced on update")
+	nsParams := updated.Spec.Parameters["namespace"].(map[string]any)
+	assert.Equal(t, map[string]any{"env": "prod"}, nsParams["labels"])
 }
 
 func TestPredicateShouldHandle(t *testing.T) {

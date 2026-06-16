@@ -129,7 +129,17 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// auto-wrap is only active when orphan namespaces are allowed.
-	if !r.allowOrphanNamespaces || !isAutoWrapCandidate(namespace) {
+	if !r.allowOrphanNamespaces {
+		return reconcile.Result{}, nil
+	}
+
+	// Wrap a fresh candidate, and keep an already-wrapped namespace in sync. After the first wrap
+	// the project reconciler stamps the main namespace with the project-ownership label, so the
+	// namespace is no longer an auto-wrap *candidate*; the managed-project finalizer is what marks
+	// it as already wrapped and still needing its user labels/annotations mirrored into the managed
+	// project's spec.parameters.namespace on every update (not only at create time).
+	wrapped := slices.Contains(namespace.Finalizers, v1alpha3.NamespaceFinalizerManagedProject)
+	if !isAutoWrapCandidate(namespace) && !wrapped {
 		return reconcile.Result{}, nil
 	}
 

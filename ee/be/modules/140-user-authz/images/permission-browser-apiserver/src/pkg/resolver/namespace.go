@@ -328,6 +328,19 @@ func (r *NamespaceResolver) isResourceNamespaced(group, resource string) bool {
 	return r.scopeCache.IsNamespaced(group, resource)
 }
 
+// broadDiscoveryGroups are the pseudo-groups automatically attached to every (un)authenticated
+// request. They are excluded from AccessibleNamespace discovery so that a broad namespaced grant to
+// "everyone" (e.g. a RoleBinding/ClusterRoleBinding to system:authenticated) does not surface every
+// namespace in every user's AccessibleNamespace list. This filtering is intentionally limited to
+// namespace discovery and does NOT affect real RBAC authorization (BulkSubjectAccessReview / the API
+// authorizer still honor such grants). AccessibleNamespace is a human-facing convenience, so
+// ServiceAccount pseudo-groups are deliberately not included here.
+var broadDiscoveryGroups = map[string]struct{}{
+	"system:authenticated":       {},
+	"system:authenticated:oauth": {},
+	"system:unauthenticated":     {},
+}
+
 // subjectMatches checks if any subject matches the user (for ClusterRoleBindings).
 func (r *NamespaceResolver) subjectMatches(subjects []rbacv1.Subject, userName string, userGroups []string, namespace string) bool {
 	for _, subject := range subjects {
@@ -360,6 +373,12 @@ func (r *NamespaceResolver) singleSubjectMatches(subject rbacv1.Subject, userNam
 	case rbacv1.UserKind:
 		return subject.Name == userName
 	case rbacv1.GroupKind:
+		// For namespace discovery, ignore grants made to the "all (un)authenticated" pseudo-groups:
+		// a single namespaced grant to e.g. system:authenticated would otherwise make every namespace
+		// appear in every user's AccessibleNamespace list. Real authorization still honors them.
+		if _, broad := broadDiscoveryGroups[subject.Name]; broad {
+			return false
+		}
 		for _, group := range userGroups {
 			if subject.Name == group {
 				return true
@@ -392,20 +411,9 @@ func (r *NamespaceResolver) filterByMultitenancy(userInfo user.Info, candidates 
 	accessType, filter := r.mtEngine.GetNamespaceAccessType(userInfo)
 
 	switch accessType {
-	case multitenancy.AllNamespacesAllowed:
-		// No MT restrictions, return all candidates
-		result := make([]string, 0, len(candidates))
-		for ns := range candidates {
-			result = append(result, ns)
-		}
-		return result
-
-	case multitenancy.NoNamespacesAllowed:
-		// Deny-by-default: user has no CAR and is not privileged
-		return []string{}
-
 	case multitenancy.FilteredAccess:
-		// User has restrictions - filter each namespace using pre-computed filter
+		// The user has an explicit CAR with namespace limits: keep it as a deny-filter over the
+		// RBAC-derived candidates.
 		result := make([]string, 0, len(candidates))
 		for ns := range candidates {
 			if r.mtEngine.IsNamespaceAllowedWithFilter(ns, filter) {
@@ -415,8 +423,17 @@ func (r *NamespaceResolver) filterByMultitenancy(userInfo user.Info, candidates 
 		return result
 
 	default:
-		// Should never happen, but return empty for safety
-		return []string{}
+		// AllNamespacesAllowed and NoNamespacesAllowed: multi-tenancy imposes no restriction here.
+		// In particular a user without a CAR — the norm under RBAC v2, where access comes from
+		// RoleBindings/ProjectRoleBindings rather than ClusterAuthorizationRule — must NOT be zeroed
+		// out; accessibility is decided by the RBAC candidates. Flooding from broad pseudo-group
+		// grants is prevented earlier, at the candidate stage (see broadDiscoveryGroups). This
+		// matches the API authorizer, which returns NoOpinion (lets RBAC decide) for such users.
+		result := make([]string, 0, len(candidates))
+		for ns := range candidates {
+			result = append(result, ns)
+		}
+		return result
 	}
 }
 
@@ -426,6 +443,12 @@ func (r *NamespaceResolver) isNamespaceAllowedByMultitenancy(userInfo user.Info,
 		return true
 	}
 
-	// Use the engine's exported method if available, or use Authorize
-	return r.mtEngine.IsNamespaceAllowed(userInfo, namespace)
+	// Only an explicit CAR with namespace limits (FilteredAccess) restricts discovery here. A user
+	// without a CAR (AllNamespacesAllowed/NoNamespacesAllowed) is not denied at this layer — RBAC
+	// decides — consistent with filterByMultitenancy and the API authorizer's NoOpinion behaviour.
+	accessType, filter := r.mtEngine.GetNamespaceAccessType(userInfo)
+	if accessType == multitenancy.FilteredAccess {
+		return r.mtEngine.IsNamespaceAllowedWithFilter(namespace, filter)
+	}
+	return true
 }

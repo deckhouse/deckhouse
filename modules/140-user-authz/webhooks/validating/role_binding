@@ -19,29 +19,6 @@ source /shell_lib.sh
 function __config__(){
   cat <<EOF
 configVersion: v1
-kubernetes:
-  - name: roles
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: ClusterRole
-    queue: authorization
-    # Sharing `group: main` with the validating webhook below is what delivers this snapshot into
-    # the webhook's binding context (.snapshots.roles). This is the mechanism the hook shipped with
-    # and that works on the current shell-operator. Selector updated for RBACv2: namespace/project
-    # scoped roles are no longer labeled `rbac.deckhouse.io/kind: use`; they carry
-    # `rbac.deckhouse.io/scope: namespace|project` instead.
-    group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
-    keepFullObjectsInMemory: false
-    labelSelector:
-      matchExpressions:
-        - key: rbac.deckhouse.io/scope
-          operator: In
-          values: ["namespace", "project"]
-    jqFilter: |
-      {
-        "name": .metadata.name
-      }
 kubernetesValidating:
 - name: role-validating.deckhouse.io
   group: main
@@ -59,15 +36,33 @@ kubernetesValidating:
 EOF
 }
 
+# The decision is made purely from roleRef on the object under review: namespace- and
+# project-scoped RBACv2 roles (and their capabilities, including the d8:custom:* variants)
+# carry well-known name prefixes and must never be bound cluster-wide via a ClusterRoleBinding.
+# This is intentionally snapshot-free: relying on a `.snapshots.roles` binding made the hook
+# fail open whenever the shell-operator snapshot was empty.
 function __main__() {
+  roleRefKind=$(context::jq -r '.review.request.object.roleRef.kind')
   clusterRoleName=$(context::jq -r '.review.request.object.roleRef.name')
-  result=$(context::jq -r --arg role "$clusterRoleName" '.snapshots.roles[].filterResult | select(.name == $role)')
-  if [[ "$result" ]]; then
+
+  if [[ "$roleRefKind" == "ClusterRole" ]]; then
+    case "$clusterRoleName" in
+      d8:namespace:* | \
+      d8:project:* | \
+      d8:namespace-capability:* | \
+      d8:project-capability:* | \
+      d8:custom:namespace:* | \
+      d8:custom:namespace-capability:* | \
+      d8:custom:project:* | \
+      d8:custom:project-capability:*)
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"ClusterRole '$clusterRoleName' cannot be used in ClusterRoleBinding. Use RoleBinding instead."}
 EOF
-  return 0;
+        return 0
+        ;;
+    esac
   fi
+
   cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
