@@ -28,6 +28,7 @@ import (
 	"gopkg.in/robfig/cron.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
@@ -38,6 +39,11 @@ const (
 	defragLastSlotKey      = "lastHandledCronSlot"
 
 	clusterIsBootstrappedPath = "global.clusterIsBootstrapped"
+
+	// defragGracePeriod is the maximum allowed delay between a cron slot firing and
+	// the hook handling it. If the slot is older than this (e.g. Deckhouse was down),
+	// we record it as handled and skip to avoid stale defrag runs.
+	defragGracePeriod = 5 * time.Minute
 )
 
 // defragNow is a hook for tests to inject a fixed time.
@@ -71,7 +77,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"node-role.kubernetes.io/control-plane": "",
 				},
 			},
-			FilterFunc: filterDefragNode,
+			ExecuteHookOnEvents: ptr.To(false),
+			FilterFunc:          filterDefragNode,
 		},
 		{
 			Name:       "arbiter_nodes_defrag",
@@ -82,7 +89,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"node.deckhouse.io/etcd-arbiter": "",
 				},
 			},
-			FilterFunc: filterDefragNode,
+			ExecuteHookOnEvents: ptr.To(false),
+			FilterFunc:          filterDefragNode,
 		},
 		{
 			Name:       "defrag_state_cm",
@@ -152,6 +160,14 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		return nil
 	}
 
+	// Grace period: if the slot is older than defragGracePeriod (e.g. Deckhouse was down),
+	// record it as handled and skip — running a stale defrag is pointless.
+	if currentSlot.Sub(nextSlot) > defragGracePeriod {
+		stateData := map[string]string{defragLastSlotKey: nextSlot.Format(time.RFC3339)}
+		input.PatchCollector.CreateOrUpdate(buildDefragStateCM(stateData))
+		return nil
+	}
+
 	// Collect all etcd nodes (masters + arbiters), deduplicated by name.
 	seen := make(map[string]struct{})
 	var nodeNames []string
@@ -212,7 +228,7 @@ func buildDefragCPO(nodeName string) *unstructured.Unstructured {
 				"nodeName":  nodeName,
 				"component": "Etcd",
 				"steps":     []interface{}{"DefragEtcd"},
-				"approved":  false,
+				"approved":  true,
 			},
 		},
 	}
