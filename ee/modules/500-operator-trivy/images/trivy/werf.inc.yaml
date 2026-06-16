@@ -25,7 +25,7 @@ secrets:
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/3p/aquasecurity/trivy-db.git /src/trivy-db # Not original trivy-db repo anymore
+  - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/3p/aquasecurity/trivy-db-archive.git /src/trivy-db # Not original trivy-db repo anymore
   - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy-db.git /src/trivy-db-patch
   - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy.git /src/trivy
   - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy.git /src/trivy-patch
