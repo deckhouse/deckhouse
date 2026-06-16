@@ -834,6 +834,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
   verbs:
   - get
   - list
+  - watch
 - apiGroups:
   - deckhouse.io
   resources:
@@ -841,6 +842,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
   verbs:
   - get
   - list
+  - watch
 - apiGroups:
   - deckhouse.io
   resources:
@@ -848,6 +850,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
   verbs:
   - get
   - list
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -855,7 +858,8 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
   - configmaps
   verbs:
   - get
-  - list`))
+  - list
+  - watch`))
 
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-dvp:validation-webhook").Exists()).To(BeTrue())
 		})
