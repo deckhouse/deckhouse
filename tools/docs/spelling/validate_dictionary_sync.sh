@@ -38,13 +38,13 @@ fi
 errors=0
 
 if [[ "${changed_wordlist}" == "true" && "${changed_dic}" == "false" ]]; then
-  echo "ERROR:Spelling dictionary sync error: ${WORDLIST_PATH} changed, but ${DICT_PATH} was not updated."
+  echo "ERROR: Spelling dictionary sync error: ${WORDLIST_PATH} changed, but ${DICT_PATH} was not updated."
   echo "Description: dev_OPS dictionary must be regenerated after editing the wordlist."
   errors=1
 fi
 
 if [[ "${changed_dic}" == "true" && "${changed_wordlist}" == "false" ]]; then
-  echo "ERROR:Spelling dictionary sync error: ${DICT_PATH} changed, but ${WORDLIST_PATH} was not updated."
+  echo "ERROR: Spelling dictionary sync error: ${DICT_PATH} changed, but ${WORDLIST_PATH} was not updated."
   echo "Description: wordlist must be updated and dev_OPS dictionary regenerated."
   errors=1
 fi
@@ -53,7 +53,7 @@ expected_count="$(wc -l < "${WORDLIST_PATH}" | tr -d '[:space:]')"
 actual_count="$(sed -n '1p' "${DICT_PATH}" | tr -d '\r' | tr -d '[:space:]')"
 
 if [[ "${expected_count}" != "${actual_count}" ]]; then
-  echo "ERROR:Spelling dictionary count mismatch: ${DICT_PATH} first line != wordlist word count."
+  echo "ERROR: Spelling dictionary count mismatch: ${DICT_PATH} first line != wordlist word count."
   echo "Description: expected '${expected_count}' (line count of ${WORDLIST_PATH}), got '${actual_count}'."
   errors=1
 fi
@@ -67,7 +67,7 @@ trap cleanup EXIT
 tail -n +2 "${DICT_PATH}" > "${dict_words_file}"
 
 if ! diff -u "${WORDLIST_PATH}" "${dict_words_file}" > "${dict_words_file}.diff"; then
-  echo "ERROR:Spelling dictionary content mismatch: words in ${DICT_PATH} do not match ${WORDLIST_PATH}."
+  echo "ERROR: Spelling dictionary content mismatch: words in ${DICT_PATH} do not match ${WORDLIST_PATH}."
   echo "Description: dictionary words (without the header line) must exactly match wordlist."
   echo "Regenerate with 'make docs-spellcheck-generate-dictionary'."
   head -n 30 "${dict_words_file}.diff"
