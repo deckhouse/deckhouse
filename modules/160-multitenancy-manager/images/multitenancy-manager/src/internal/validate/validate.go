@@ -50,7 +50,7 @@ func Project(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) erro
 	return nil
 }
 
-func LoadSchema(properties map[string]interface{}) (*spec.Schema, error) {
+func LoadSchema(properties map[string]any) (*spec.Schema, error) {
 	marshaled, err := json.Marshal(properties)
 	if err != nil {
 		var jsonErr *json.SyntaxError

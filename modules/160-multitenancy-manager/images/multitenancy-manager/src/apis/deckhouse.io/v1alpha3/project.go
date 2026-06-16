@@ -36,6 +36,7 @@ const (
 	ProjectConditionProjectResourcesUpgraded  = "ResourcesUpgraded"
 	ProjectConditionStandardFieldsApplied     = "StandardFieldsApplied"
 	ProjectConditionTemplateResourcesFiltered = "TemplateResourcesFiltered"
+	ProjectConditionTemplateRolesAllowed      = "TemplateRolesAllowed"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 
@@ -60,6 +61,19 @@ const (
 	ManagedByController    = "controller"
 
 	NamespaceAnnotationAdopt = "projects.deckhouse.io/adopt"
+
+	// ProjectLabelManagedByNamespace marks a Project that the controller auto-created to wrap a
+	// user-created namespace while allowNamespacesWithoutProjects is enabled. The namespace is the
+	// source of truth: such a project's spec is controller-managed and the project webhook rejects
+	// manual spec edits, except for removing this label, which detaches the project.
+	ProjectLabelManagedByNamespace = "multitenancy.deckhouse.io/project-managed-by-namespace"
+	ManagedByNamespace             = "true"
+
+	// NamespaceFinalizerManagedProject is set on a user namespace wrapped into a
+	// managed-by-namespace Project, so the controller observes the namespace deletion (namespaces
+	// usually carry no finalizer and would vanish before a delete event is processed) and cascades
+	// it to the managed Project before the namespace disappears.
+	NamespaceFinalizerManagedProject = "multitenancy.deckhouse.io/managed-project"
 
 	ReleaseLabelHashsum = "hashsum"
 
@@ -135,7 +149,6 @@ func (p *Project) DeepCopy() *Project {
 }
 func (p *Project) DeepCopyInto(newObj *Project) {
 	*newObj = *p
-	newObj.TypeMeta = p.TypeMeta
 	p.ObjectMeta.DeepCopyInto(&newObj.ObjectMeta)
 	p.Spec.DeepCopyInto(&newObj.Spec)
 	p.Status.DeepCopyInto(&newObj.Status)
@@ -364,6 +377,16 @@ func (p *Project) ClearConditions() {
 	p.Status.Conditions = []Condition{}
 }
 
+// IsConditionFalse reports whether the named condition is present and set to False.
+func (p *Project) IsConditionFalse(condName string) bool {
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == corev1.ConditionFalse
+		}
+	}
+	return false
+}
+
 func (p *Project) SetConditionTrue(condName string) {
 	for idx, cond := range p.Status.Conditions {
 		if cond.Type == condName {
@@ -409,6 +432,40 @@ func (p *Project) SetConditionFalse(condName, message string) {
 	})
 }
 
+// SetCondition adds or updates the named condition in the list, mirroring the transition semantics
+// of the Project condition helpers above: LastTransitionTime changes only on a real Status
+// transition, while LastProbeTime tracks the latest meaningful change. It reports whether the slice
+// was modified, so a caller can skip a no-op status write (and the reconcile it would re-trigger).
+// It is the single condition helper shared by the ProjectRoleBinding, ClusterProjectRoleBinding and
+// ProjectNamespace reconcilers.
+func SetCondition(conditions *[]Condition, condType string, status corev1.ConditionStatus, message string) bool {
+	now := metav1.Now()
+	for i := range *conditions {
+		cond := &(*conditions)[i]
+		if cond.Type != condType {
+			continue
+		}
+		if cond.Status == status && cond.Message == message {
+			return false
+		}
+		if cond.Status != status {
+			cond.LastTransitionTime = now
+		}
+		cond.Status = status
+		cond.Message = message
+		cond.LastProbeTime = now
+		return true
+	}
+	*conditions = append(*conditions, Condition{
+		Type:               condType,
+		Status:             status,
+		Message:            message,
+		LastProbeTime:      now,
+		LastTransitionTime: now,
+	})
+	return true
+}
+
 func (c *Condition) DeepCopy() *Condition {
 	if c == nil {
 		return nil
@@ -421,7 +478,4 @@ func (c *Condition) DeepCopyInto(newObj *Condition) {
 	*newObj = *c
 	c.LastTransitionTime.DeepCopyInto(&newObj.LastTransitionTime)
 	c.LastProbeTime.DeepCopyInto(&newObj.LastProbeTime)
-	newObj.Type = c.Type
-	newObj.Status = c.Status
-	newObj.Message = c.Message
 }

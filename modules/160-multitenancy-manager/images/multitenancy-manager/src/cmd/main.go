@@ -45,12 +45,15 @@ import (
 	templatecontroller "controller/internal/controller/template"
 	grantcontrollers "controller/internal/controllers"
 	clusterprojectrolebindingcontroller "controller/internal/controllers/clusterprojectrolebinding"
+	projectnamespacecontroller "controller/internal/controllers/projectnamespace"
 	projectrolebindingcontroller "controller/internal/controllers/projectrolebinding"
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
+	"controller/internal/rolebinding"
 	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
 	namespacewebhook "controller/internal/webhook/namespace"
 	projectwebhook "controller/internal/webhook/project"
+	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
 	projectrolebindingwebhook "controller/internal/webhook/projectrolebinding"
 	templatewebhook "controller/internal/webhook/template"
 	grantwebhooks "controller/internal/webhooks"
@@ -63,10 +66,10 @@ var (
 	templatesPath = "templates"
 	// helm release namespace
 	helmNamespace = "d8-multitenancy-manager"
-	// controller service account
-	serviceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+	// controller service account (centralized in internal/rolebinding so the value cannot drift)
+	serviceAccount = rolebinding.ControllerServiceAccount
 	// list of service accounts allowed to create namespaces when allowNamespacesWithoutProjects is set to false
-	allowedServiceAccounts = []string{serviceAccount, "system:serviceaccount:d8-system:deckhouse", "system:serviceaccount:d8-upmeter:upmeter-agent"}
+	allowedServiceAccounts = []string{serviceAccount, rolebinding.DeckhouseServiceAccount, "system:serviceaccount:d8-upmeter:upmeter-agent"}
 )
 
 const (
@@ -108,7 +111,7 @@ func main() {
 	}
 
 	// register namespace controller
-	if err = namespacecontroller.Register(runtimeManager, logger); err != nil {
+	if err = namespacecontroller.Register(runtimeManager, logger, allowOrphanNamespaces); err != nil {
 		fatal(logger, err, "register namespace controller")
 	}
 
@@ -152,9 +155,15 @@ func main() {
 		fatal(logger, err, "set up cluster project role binding reconciler")
 	}
 
+	// register the project namespace reconciler
+	if err = (&projectnamespacecontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up project namespace reconciler")
+	}
+
 	// register the project role binding webhooks
 	projectrolebindingwebhook.Register(runtimeManager)
 	clusterprojectrolebindingwebhook.Register(runtimeManager)
+	projectnamespacewebhook.Register(runtimeManager)
 
 	// start runtime manager
 	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {

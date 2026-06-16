@@ -26,14 +26,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -85,10 +86,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err := r.cleanup(ctx, cprb.Name); err != nil {
 			return ctrl.Result{}, err
 		}
-		cprb.Status.BoundProjects = 0
-		setNotReady(&cprb.Status.Conditions, fmt.Sprintf("roleRef %q is not allowed for project bindings", cprb.Spec.RoleRef.Name))
-		if err := r.Status().Update(ctx, cprb); err != nil {
-			return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+		message := fmt.Sprintf("roleRef %q is not allowed for project bindings", cprb.Spec.RoleRef.Name)
+		changed := false
+		if cprb.Status.BoundProjects != 0 {
+			cprb.Status.BoundProjects = 0
+			changed = true
+		}
+		if v1alpha3.SetCondition(&cprb.Status.Conditions, v1alpha3.ClusterProjectRoleBindingConditionReady, corev1.ConditionFalse, message) {
+			changed = true
+		}
+		if changed {
+			if err := r.Status().Update(ctx, cprb); err != nil {
+				return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+			}
 		}
 		return ctrl.Result{}, nil
 	}
@@ -132,11 +142,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, errors.Join(errs...)
 	}
 
-	cprb.Status.ObservedGeneration = cprb.Generation
-	cprb.Status.BoundProjects = int32(min(boundProjects, 1<<31-1))
-	setReady(&cprb.Status.Conditions)
-	if err := r.Status().Update(ctx, cprb); err != nil {
-		return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+	// Write status only when it actually changed: an unconditional write would bump the condition
+	// timestamps and re-enqueue this object through the For() watch, causing a reconcile hot-loop.
+	boundProjects32 := int32(min(boundProjects, 1<<31-1))
+	changed := false
+	if cprb.Status.ObservedGeneration != cprb.Generation {
+		cprb.Status.ObservedGeneration = cprb.Generation
+		changed = true
+	}
+	if cprb.Status.BoundProjects != boundProjects32 {
+		cprb.Status.BoundProjects = boundProjects32
+		changed = true
+	}
+	if v1alpha3.SetCondition(&cprb.Status.Conditions, v1alpha3.ClusterProjectRoleBindingConditionReady, corev1.ConditionTrue, "") {
+		changed = true
+	}
+	if changed {
+		if err := r.Status().Update(ctx, cprb); err != nil {
+			return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+		}
 	}
 
 	log.Info("the cluster project role binding reconciled", "namespaces", len(target), "projects", boundProjects)
@@ -144,92 +168,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *Reconciler) upsertRoleBinding(ctx context.Context, cprb *v1alpha3.ClusterProjectRoleBinding, ns, project string) error {
-	name := rolebinding.CPRBServiceName(cprb.Name)
-
-	// roleRef is immutable in the Kubernetes API: if the binding's role changed, the existing
-	// service RoleBinding must be recreated rather than updated.
-	existing := &rbacv1.RoleBinding{}
-	switch err := r.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, existing); {
-	case err == nil:
-		if existing.RoleRef.Name != cprb.Spec.RoleRef.Name {
-			if err := r.Delete(ctx, existing); err != nil && !k8serrors.IsNotFound(err) {
-				return fmt.Errorf("recreate RoleBinding %s/%s on roleRef change: %w", ns, name, err)
-			}
-		}
-	case !k8serrors.IsNotFound(err):
-		return fmt.Errorf("get RoleBinding %s/%s: %w", ns, name, err)
-	}
-
-	rb := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns}}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, rb, func() error {
-		if rb.Labels == nil {
-			rb.Labels = map[string]string{}
-		}
-		rb.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
-		rb.Labels[v1alpha3.ResourceLabelProject] = project
-		rb.Labels[v1alpha3.ResourceLabelOwnedByCPRB] = cprb.Name
-		if rb.Annotations == nil {
-			rb.Annotations = map[string]string{}
-		}
-		rb.Annotations[v1alpha3.ResourceAnnotationRelatedWith] = cprb.Name
-		rb.Subjects = rolebinding.CopySubjects(cprb.Spec.Subjects)
-		rb.RoleRef = rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     cprb.Spec.RoleRef.Name,
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("upsert RoleBinding %s/%s: %w", ns, rb.Name, err)
-	}
-	return nil
+	return rolebinding.UpsertServiceRoleBinding(ctx, r.Client, rolebinding.UpsertParams{
+		Name:        rolebinding.CPRBServiceName(cprb.Name),
+		Namespace:   ns,
+		Project:     project,
+		OwnerLabel:  v1alpha3.ResourceLabelOwnedByCPRB,
+		OwnerName:   cprb.Name,
+		RelatedWith: cprb.Name,
+		Subjects:    cprb.Spec.Subjects,
+		RoleRef:     cprb.Spec.RoleRef.Name,
+	}, nil)
 }
 
 func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target map[string]string) error {
-	list := &rbacv1.RoleBindingList{}
-	if err := r.List(ctx, list, client.MatchingLabels{v1alpha3.ResourceLabelOwnedByCPRB: name}); err != nil {
-		return fmt.Errorf("list service RoleBindings: %w", err)
+	keep := make(map[string]struct{}, len(target))
+	for ns := range target {
+		keep[ns] = struct{}{}
 	}
-	for i := range list.Items {
-		if _, ok := target[list.Items[i].Namespace]; ok {
-			continue
-		}
-		if err := r.Delete(ctx, &list.Items[i]); err != nil && !k8serrors.IsNotFound(err) {
-			return fmt.Errorf("delete stale RoleBinding %s/%s: %w", list.Items[i].Namespace, list.Items[i].Name, err)
-		}
-	}
-	return nil
+	return rolebinding.PruneServiceRoleBindings(ctx, r.Client, map[string]string{
+		v1alpha3.ResourceLabelOwnedByCPRB: name,
+	}, keep)
 }
 
 func (r *Reconciler) cleanup(ctx context.Context, name string) error {
 	return r.pruneRoleBindings(ctx, name, nil)
-}
-
-func setReady(conditions *[]v1alpha3.Condition) {
-	setCondition(conditions, corev1.ConditionTrue, "")
-}
-
-func setNotReady(conditions *[]v1alpha3.Condition, message string) {
-	setCondition(conditions, corev1.ConditionFalse, message)
-}
-
-func setCondition(conditions *[]v1alpha3.Condition, status corev1.ConditionStatus, message string) {
-	for i := range *conditions {
-		if (*conditions)[i].Type == v1alpha3.ClusterProjectRoleBindingConditionReady {
-			(*conditions)[i].Status = status
-			(*conditions)[i].Message = message
-			(*conditions)[i].LastProbeTime = metav1.Now()
-			return
-		}
-	}
-	*conditions = append(*conditions, v1alpha3.Condition{
-		Type:               v1alpha3.ClusterProjectRoleBindingConditionReady,
-		Status:             status,
-		Message:            message,
-		LastProbeTime:      metav1.Now(),
-		LastTransitionTime: metav1.Now(),
-	})
 }
 
 // SetupWithManager wires the reconciler and its watches. The fan-out is sequential
@@ -248,7 +210,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return reqs
 	})
 
-	enqueueByOwnedRoleBinding := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+	enqueueByOwnedRoleBinding := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
 		name, ok := obj.GetLabels()[v1alpha3.ResourceLabelOwnedByCPRB]
 		if !ok {
 			return nil
@@ -257,9 +219,12 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha3.ClusterProjectRoleBinding{}).
+		// Only spec changes (generation bumps) re-enqueue the CPRB itself; status writes must not,
+		// or the reconcile loops on its own writes. The project watch is narrowed so that a project
+		// status write only re-enqueues every CPRB when the namespace set actually changed.
+		For(&v1alpha3.ClusterProjectRoleBinding{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		Watches(&v1alpha3.Project{}, enqueueAll).
+		Watches(&v1alpha3.Project{}, enqueueAll, builder.WithPredicates(rolebinding.ProjectFanoutPredicate())).
 		Watches(&rbacv1.RoleBinding{}, enqueueByOwnedRoleBinding).
 		Named("cluster-project-role-binding").
 		Complete(r)

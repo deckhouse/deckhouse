@@ -157,18 +157,21 @@ func createDictBinding(subjectString string, subject rbacv1.Subject) *rbacv1.Rol
 	}
 }
 
+// stringBySubject builds a stable, collision-free dedup key for a subject. The
+// key is also stored in the rbac.deckhouse.io/subject annotation of the dict
+// binding, so it must uniquely identify the subject: the full identity is used
+// (it is not used as an object name — dict bindings use GenerateName — so there
+// is no length limit to honor).
 func stringBySubject(subject rbacv1.Subject) string {
+	kind := subject.Kind
+	if kind == "ServiceAccount" {
+		kind = "sa"
+	}
 	var str string
-	if subject.Kind == "ServiceAccount" {
-		subject.Kind = "sa"
-	}
 	if subject.Namespace == "" {
-		str = fmt.Sprintf("%s:%s", subject.Kind, subject.Name)
+		str = fmt.Sprintf("%s:%s", kind, subject.Name)
 	} else {
-		str = fmt.Sprintf("%s:%s:%s", subject.Kind, subject.Namespace, subject.Name)
-	}
-	if len(str) > 55 {
-		str = str[:55]
+		str = fmt.Sprintf("%s:%s:%s", kind, subject.Namespace, subject.Name)
 	}
 	return strings.ToLower(str)
 }

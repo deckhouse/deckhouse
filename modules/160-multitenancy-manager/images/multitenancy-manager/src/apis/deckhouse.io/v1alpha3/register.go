@@ -62,6 +62,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ProjectRoleBindingList{},
 		&ClusterProjectRoleBinding{},
 		&ClusterProjectRoleBindingList{},
+		&ProjectNamespace{},
+		&ProjectNamespaceList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

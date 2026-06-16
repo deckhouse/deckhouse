@@ -21,12 +21,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -57,6 +57,12 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	// Only the controller/Deckhouse may perform privileged operations: auto-wrapping an existing
+	// namespace into a managed-by-namespace project (Create) and editing a managed-by-namespace
+	// project (Update).
+	privileged := req.UserInfo.Username == rolebindingwebhook.ControllerServiceAccount ||
+		req.UserInfo.Username == rolebindingwebhook.DeckhouseServiceAccount
+
 	if req.Operation == admissionv1.Create {
 		// pass virtual projects
 		if project.Name == projectmanager.DefaultProjectName || project.Name == projectmanager.DeckhouseProjectName {
@@ -67,19 +73,22 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			return admission.Denied("Projects cannot start with 'd8-' or 'kube-'")
 		}
 
-		namespaces := new(corev1.NamespaceList)
-		if err := v.client.List(ctx, namespaces); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-		for _, namespace := range namespaces.Items {
-			if namespace.Name == project.Name {
-				if _, ok := namespace.Annotations[v1alpha3.NamespaceAnnotationAdopt]; ok {
-					continue
-				}
+		// the controller auto-wraps an existing user namespace into a managed-by-namespace project,
+		// so a same-name namespace is expected in that case.
+		managedByNamespace := project.Labels[v1alpha3.ProjectLabelManagedByNamespace] == v1alpha3.ManagedByNamespace
 
-				msg := fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name)
-				return admission.Denied(msg)
+		// The project's main namespace is named after the project, so a single Get is enough; a full
+		// namespace List would scan the whole cluster on every project create.
+		namespace := new(corev1.Namespace)
+		switch err := v.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
+		case err == nil:
+			_, adopt := namespace.Annotations[v1alpha3.NamespaceAnnotationAdopt]
+			allowExisting := adopt || (managedByNamespace && privileged)
+			if !allowExisting {
+				return admission.Denied(fmt.Sprintf("The '%s' project cannot be created, a namespace with its name exists", project.Name))
 			}
+		case !apierrors.IsNotFound(err):
+			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
 		// prefix collisions: the "<project>-*" name space is reserved for the additional namespaces
@@ -112,10 +121,23 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	}
 
 	if req.Operation == admissionv1.Update {
-		// Only the controller/Deckhouse may request a sync that skips re-validation. Gating this on
-		// the user prevents a tenant from setting the annotation themselves to bypass validation.
-		privileged := req.UserInfo.Username == rolebindingwebhook.ControllerServiceAccount ||
-			req.UserInfo.Username == rolebindingwebhook.DeckhouseServiceAccount
+		// A managed-by-namespace project is owned by its namespace; reject manual spec edits unless
+		// the request comes from the controller/Deckhouse or it detaches the project by removing the
+		// managed-by-namespace label.
+		old := new(v1alpha3.Project)
+		if len(req.OldObject.Raw) > 0 {
+			if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+				return admission.Errored(http.StatusBadRequest, err)
+			}
+		}
+		if old.Labels[v1alpha3.ProjectLabelManagedByNamespace] == v1alpha3.ManagedByNamespace && !privileged {
+			labelRemoved := project.Labels[v1alpha3.ProjectLabelManagedByNamespace] != v1alpha3.ManagedByNamespace
+			if !labelRemoved && !reflect.DeepEqual(old.Spec, project.Spec) {
+				return admission.Denied(fmt.Sprintf(
+					"The '%s' project is managed by its namespace; remove the %s label to detach it before editing its spec",
+					project.Name, v1alpha3.ProjectLabelManagedByNamespace))
+			}
+		}
 
 		// pass triggered projects
 		if privileged {
@@ -126,8 +148,11 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			}
 		}
 
-		// pass error projects (the status subresource is controller-managed)
-		if project.Status.State == v1alpha3.ProjectStateError {
+		// pass error projects (the status subresource is controller-managed). Gated to privileged
+		// requests so the controller can keep re-reconciling an already-erroring project, while a
+		// non-privileged user editing such a project still goes through full template/render
+		// validation instead of slipping further invalid spec edits past admission.
+		if privileged && project.Status.State == v1alpha3.ProjectStateError {
 			return admission.Allowed("").WithWarnings("The project skip validation due to the status")
 		}
 	}
@@ -172,11 +197,6 @@ func validateStandardFields(project *v1alpha3.Project) string {
 		}
 		if admin.Name == "" {
 			return "administrator name must not be empty"
-		}
-	}
-	for name, quantity := range project.Spec.Quota {
-		if _, err := resource.ParseQuantity(quantity.String()); err != nil {
-			return fmt.Sprintf("quota %q has invalid value %q: %v", name, quantity.String(), err)
 		}
 	}
 	return ""

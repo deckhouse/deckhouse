@@ -171,7 +171,58 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 			Expect(roleBinding).To(BeEmpty())
 		})
 	})
+
+	Context("There`s a manage binding to a role aggregating via matchExpressions", func() {
+		BeforeEach(func() {
+			// The bound role selects its capability with a matchExpressions
+			// selector (not matchLabels), which the previous matchLabels-only
+			// traversal silently skipped.
+			resources := []string{
+				systemCapability("d8:system-capability:expr:edit", "exprtest", "expr-ns"),
+				systemRoleWithExpressions("d8:system:exprmanager", "admin",
+					"rbac.deckhouse.io/aggregate-to-exprtest-as", "manager"),
+				manageBinding("exprbind", "d8:system:exprmanager"),
+			}
+			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
+			f.RunHook()
+		})
+
+		It("traverses the expression-based aggregation and creates the RoleBinding", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			roleBinding := f.KubernetesResource("RoleBinding", "expr-ns", "d8:namespace:admin:binding:exprbind")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:namespace:admin:binding:exprbind"))
+			Expect(roleBinding.Field("roleRef.name").Str).To(Equal("d8:namespace:admin"))
+		})
+	})
 })
+
+// systemRoleWithExpressions builds a manage ClusterRole whose AggregationRule
+// uses a matchExpressions selector (key In values) instead of matchLabels.
+func systemRoleWithExpressions(name, useRole, key string, values ...string) string {
+	role := rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRole",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				"rbac.deckhouse.io/use-role": useRole,
+				"rbac.deckhouse.io/kind":     "role",
+				"rbac.deckhouse.io/scope":    "system",
+			},
+		},
+		AggregationRule: &rbacv1.AggregationRule{ClusterRoleSelectors: []metav1.LabelSelector{
+			{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: key, Operator: metav1.LabelSelectorOpIn, Values: values},
+				},
+			},
+		}},
+	}
+	marshaled, _ := yaml.Marshal(&role)
+	return string(marshaled)
+}
 
 func systemRole(name, scope, lineage string) string {
 	role := rbacv1.ClusterRole{

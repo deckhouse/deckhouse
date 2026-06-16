@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-openapi/spec"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
@@ -395,6 +396,88 @@ items:
 	assert.False(t, hasRQ, "ResourceQuota smuggled in a List must be filtered out")
 	_, hasCM := renderedMap["ConfigMap.keep-me"]
 	assert.True(t, hasCM, "ConfigMap inside the List must be kept")
+}
+
+// TestCollectRoleRefs checks that the post-renderer extracts the roleRef of every binding kind
+// (ProjectRoleBinding/ClusterProjectRoleBinding via spec.roleRef, native RoleBinding/ClusterRoleBinding
+// via roleRef) and ignores non-binding objects.
+func TestCollectRoleRefs(t *testing.T) {
+	manifest := `
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: deckhouse.io/v1alpha3
+    kind: ProjectRoleBinding
+    metadata:
+      name: prb-disabled
+    spec:
+      roleRef:
+        kind: ClusterRole
+        name: d8:project:secret-reader
+  - apiVersion: deckhouse.io/v1alpha3
+    kind: ClusterProjectRoleBinding
+    metadata:
+      name: cprb-admin
+    spec:
+      roleRef:
+        kind: ClusterRole
+        name: d8:project:admin
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: rb-clusterrole
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: view
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: rb-role
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: some-role
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: not-a-binding
+    data:
+      a: b
+`
+	project := &v1alpha3.Project{}
+	project.Name = "test"
+
+	post := newPostRenderer(project, nil, ctrl.Log.WithName("test"), true)
+	_, err := post.Run(bytes.NewBufferString(manifest))
+	assert.Nil(t, err)
+
+	refs := make(map[string]BindingRoleRef)
+	for _, ref := range post.referencedRoles {
+		refs[ref.BindingName] = ref
+	}
+
+	assert.Len(t, refs, 4, "the ConfigMap must not be collected as a binding")
+	assert.Equal(t, BindingRoleRef{BindingKind: "ProjectRoleBinding", BindingName: "prb-disabled", RoleKind: "ClusterRole", RoleName: "d8:project:secret-reader"}, refs["prb-disabled"])
+	assert.Equal(t, BindingRoleRef{BindingKind: "ClusterProjectRoleBinding", BindingName: "cprb-admin", RoleKind: "ClusterRole", RoleName: "d8:project:admin"}, refs["cprb-admin"])
+	assert.Equal(t, BindingRoleRef{BindingKind: "RoleBinding", BindingName: "rb-clusterrole", RoleKind: "ClusterRole", RoleName: "view"}, refs["rb-clusterrole"])
+	assert.Equal(t, BindingRoleRef{BindingKind: "RoleBinding", BindingName: "rb-role", RoleKind: "Role", RoleName: "some-role"}, refs["rb-role"])
+}
+
+// TestMergeWithDefaults_AdditionalProperties pins the surprising-but-intentional behaviour of the
+// additionalProperties branch: a schema with additionalProperties models a free-form map, so the
+// user's keys are passed through verbatim and any named-property defaults are discarded.
+func TestMergeWithDefaults_AdditionalProperties(t *testing.T) {
+	schema := &spec.Schema{}
+	schema.Properties = map[string]spec.Schema{
+		"declared": {SchemaProps: spec.SchemaProps{Default: "from-schema"}},
+	}
+	schema.AdditionalProperties = &spec.SchemaOrBool{Allows: true}
+
+	out := mergeWithDefaults(schema, map[string]any{"free": "value", "declared": "kept"})
+
+	// only the non-property key survives; the declared property and its schema default are dropped.
+	assert.Equal(t, map[string]any{"free": "value"}, out)
 }
 
 func read[T any](path string) (*T, error) {

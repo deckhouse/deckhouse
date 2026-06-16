@@ -69,6 +69,29 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 9443
         path: /validate/v1alpha3/projectrolebindings
+  - name: projectnamespaces.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha3
+        resources:
+          - projectnamespaces
+        operations:
+          - CREATE
+          - UPDATE
+        scope: Namespaced
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/projectnamespaces
   - name: clusterprojectrolebindings.multitenancy-webhook.deckhouse.io
     rules:
       - apiGroups:

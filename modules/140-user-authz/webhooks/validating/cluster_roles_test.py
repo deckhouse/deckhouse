@@ -21,7 +21,7 @@ from deckhouse import hook, tests
 from dotmap import DotMap
 
 
-def binding_context(name, labels=None, rules=None, selector_labels=None):
+def binding_context(name, labels=None, rules=None, selector_labels=None, annotations=None):
     object_ = {
         "apiVersion": "rbac.authorization.k8s.io/v1",
         "kind": "ClusterRole",
@@ -29,6 +29,8 @@ def binding_context(name, labels=None, rules=None, selector_labels=None):
     }
     if labels is not None:
         object_["metadata"]["labels"] = labels
+    if annotations is not None:
+        object_["metadata"]["annotations"] = annotations
     if rules is not None:
         object_["rules"] = rules
     if selector_labels is not None:
@@ -191,6 +193,69 @@ class TestClusterRolesValidation(unittest.TestCase):
                     "rbac.deckhouse.io/aggregate-to-namespace-as": "viewer",
                 },
                 rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_custom_meta_annotations_are_allowed_on_custom_role(self):
+        # Administrators may override how a role is displayed via the
+        # custom.meta.deckhouse.io/{title,description} annotations (UI priority
+        # custom.meta > <lang>.meta > name). The webhook must not reject them.
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace:developer",
+                labels={"rbac.deckhouse.io/kind": "custom-role"},
+                annotations={
+                    "custom.meta.deckhouse.io/title": "Developer (custom)",
+                    "custom.meta.deckhouse.io/description": "Custom developer role",
+                    "en.meta.deckhouse.io/title": "Developer",
+                    "ru.meta.deckhouse.io/title": "Разработчик",
+                },
+                selector_labels=[{"rbac.deckhouse.io/aggregate-to-namespace-as": "viewer"}],
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_custom_meta_annotations_are_allowed_on_custom_capability(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace-capability:view-logs",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-capability",
+                    "rbac.deckhouse.io/aggregate-to-namespace-as": "viewer",
+                },
+                annotations={
+                    "custom.meta.deckhouse.io/title": "View logs (custom)",
+                    "custom.meta.deckhouse.io/description": "Read pod logs",
+                },
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_custom_meta_annotations_are_allowed_on_plain_role(self):
+        out = self.run_hook(
+            binding_context(
+                "my-own-role",
+                rules=SOME_RULES,
+                annotations={"custom.meta.deckhouse.io/title": "My role"},
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_admin_can_aggregate_disabled_role_into_custom_role(self):
+        # Card 5: a role annotated rbac.deckhouse.io/disabled-for-direct-use-in-projects must not be
+        # granted directly via a (Cluster)ProjectRoleBinding, but an administrator may still
+        # aggregate it into their own custom role. This webhook validates only the custom-role
+        # object (name/kind/rules/selectors/lineage) and never inspects the disabled annotation on
+        # the aggregated targets, so the aggregation is allowed.
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:project:auditor",
+                labels={"rbac.deckhouse.io/kind": "custom-role"},
+                selector_labels=[
+                    {"rbac.deckhouse.io/aggregate-to-project-as": "view"},
+                ],
             )
         )
         tests.assert_validation_allowed(self, out, None)

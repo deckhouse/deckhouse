@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	rolebinding "controller/internal/rolebinding"
 )
 
 func newClient(t *testing.T, objs ...client.Object) client.Client {
@@ -139,7 +140,7 @@ func TestValidate_Subjects(t *testing.T) {
 }
 
 func TestValidate_DisabledForProjects(t *testing.T) {
-	c := newClient(t, clusterRole("d8:project:viewer", nil, map[string]string{AnnotationDisabledForProjects: "true"}))
+	c := newClient(t, clusterRole("d8:project:viewer", nil, map[string]string{rolebinding.AnnotationDisabledForProjects: "true"}))
 	resp := Validate(context.Background(), c, request(admissionv1.Create, ControllerServiceAccount),
 		Input{RoleRefKind: "ClusterRole", RoleRefName: "d8:project:viewer"})
 	assert.False(t, resp.Allowed)

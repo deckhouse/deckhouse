@@ -36,11 +36,11 @@ import (
 )
 
 const (
-	ControllerServiceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
-	DeckhouseServiceAccount  = "system:serviceaccount:d8-system:deckhouse"
-
-	// AnnotationDisabledForProjects, when "true" on a ClusterRole, forbids granting it via PRB/CPRB.
-	AnnotationDisabledForProjects = "rbac.deckhouse.io/disabled-for-direct-use-in-projects"
+	// ControllerServiceAccount/DeckhouseServiceAccount re-export the privileged identities from the
+	// shared internal/rolebinding package, so the literal values live in exactly one place while the
+	// existing consumers of this webhook package keep referencing them here.
+	ControllerServiceAccount = rolebinding.ControllerServiceAccount
+	DeckhouseServiceAccount  = rolebinding.DeckhouseServiceAccount
 
 	LabelRBACKind  = "rbac.deckhouse.io/kind"
 	LabelRBACScope = "rbac.deckhouse.io/scope"
@@ -106,7 +106,7 @@ func Validate(ctx context.Context, c client.Client, req admission.Request, in In
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	if clusterRole.Annotations[AnnotationDisabledForProjects] == "true" {
+	if clusterRole.Annotations[rolebinding.AnnotationDisabledForProjects] == "true" {
 		return admission.Denied(fmt.Sprintf("ClusterRole %q is disabled for direct use in projects", in.RoleRefName))
 	}
 

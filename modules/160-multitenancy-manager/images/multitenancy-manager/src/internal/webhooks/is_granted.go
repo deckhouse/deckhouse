@@ -62,7 +62,7 @@ func (v *IsGrantedValidator) InstallInto(srv webhook.Server) { srv.Register("/is
 
 func (v *IsGrantedValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	review := &admissionv1.AdmissionReview{}
-	if err := decodeReview(r, review); err != nil {
+	if err := decodeReview(w, r, review); err != nil {
 		http.Error(w, "invalid AdmissionReview: "+err.Error(), http.StatusBadRequest)
 		return
 	}

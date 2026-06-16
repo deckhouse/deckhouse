@@ -45,6 +45,15 @@ var filteredKinds = map[string]struct{}{
 	"AuthorizationRule": {},
 }
 
+// BindingRoleRef records the role referenced by a binding object rendered from a project template,
+// together with the binding kind/name for diagnostics.
+type BindingRoleRef struct {
+	BindingKind string
+	BindingName string
+	RoleKind    string
+	RoleName    string
+}
+
 type postRenderer struct {
 	project        *v1alpha3.Project
 	versions       map[string]struct{}
@@ -53,6 +62,8 @@ type postRenderer struct {
 	isFirstInstall bool
 	// filtered is set when at least one ResourceQuota/AuthorizationRule object was dropped.
 	filtered bool
+	// referencedRoles collects the roleRefs of every binding object the template renders.
+	referencedRoles []BindingRoleRef
 }
 
 func newPostRenderer(project *v1alpha3.Project, versions map[string]struct{}, logger logr.Logger, isFirstInstall bool) *postRenderer {
@@ -128,6 +139,8 @@ func (r *postRenderer) processObject(object *unstructured.Unstructured, core **u
 		r.logger.Info("the resource is managed by the project spec and was filtered out", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
 		return nil
 	}
+
+	r.collectRoleRef(object)
 
 	// skip resource that not present in the cluster
 	if r.versions != nil {
@@ -206,6 +219,36 @@ func (r *postRenderer) processObject(object *unstructured.Unstructured, core **u
 	}
 	builder.WriteString("\n---\n" + string(data))
 	return nil
+}
+
+// collectRoleRef records the roleRef of a binding object (native RoleBinding/ClusterRoleBinding or
+// a ProjectRoleBinding/ClusterProjectRoleBinding) so the controller can flag templates that grant
+// disabled or otherwise forbidden roles.
+func (r *postRenderer) collectRoleRef(object *unstructured.Unstructured) {
+	var roleRef map[string]string
+	switch object.GetKind() {
+	case "RoleBinding", "ClusterRoleBinding":
+		if !strings.HasPrefix(object.GetAPIVersion(), "rbac.authorization.k8s.io/") {
+			return
+		}
+		roleRef, _, _ = unstructured.NestedStringMap(object.Object, "roleRef")
+	case v1alpha3.ProjectRoleBindingKind, v1alpha3.ClusterProjectRoleBindingKind:
+		if !strings.HasPrefix(object.GetAPIVersion(), "deckhouse.io/") {
+			return
+		}
+		roleRef, _, _ = unstructured.NestedStringMap(object.Object, "spec", "roleRef")
+	default:
+		return
+	}
+	if roleRef == nil {
+		return
+	}
+	r.referencedRoles = append(r.referencedRoles, BindingRoleRef{
+		BindingKind: object.GetKind(),
+		BindingName: object.GetName(),
+		RoleKind:    roleRef["kind"],
+		RoleName:    roleRef["name"],
+	})
 }
 
 func (r *postRenderer) newNamespace(name string) []byte {

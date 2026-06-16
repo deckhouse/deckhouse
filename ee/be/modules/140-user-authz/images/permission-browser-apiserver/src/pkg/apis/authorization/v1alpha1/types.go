@@ -164,3 +164,68 @@ type AccessibleNamespaceList struct {
 	// Items is the list of accessible namespaces
 	Items []AccessibleNamespace `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
+
+// +genclient
+// +genclient:nonNamespaced
+// +genclient:onlyVerbs=create
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// WhoCan answers the reverse-RBAC question: given an action (verb on a resource,
+// optionally scoped to a namespace/name/subresource), which subjects (Users,
+// Groups, ServiceAccounts) are allowed to perform it. This is similar to
+// OpenShift's `oc policy who-can`.
+//
+// This resource is ephemeral - it is not stored, only created.
+type WhoCan struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Spec describes the action to resolve subjects for.
+	Spec WhoCanSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+
+	// Status is filled in by the server with the subjects allowed to perform the action.
+	// +optional
+	Status WhoCanStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+}
+
+// WhoCanSpec is the specification for a who-can request.
+type WhoCanSpec struct {
+	// ResourceAttributes describes the resource action to resolve subjects for.
+	// +optional
+	ResourceAttributes *ResourceAttributes `json:"resourceAttributes,omitempty" protobuf:"bytes,1,opt,name=resourceAttributes"`
+
+	// NonResourceAttributes describes the non-resource action to resolve subjects for.
+	// +optional
+	NonResourceAttributes *NonResourceAttributes `json:"nonResourceAttributes,omitempty" protobuf:"bytes,2,opt,name=nonResourceAttributes"`
+}
+
+// WhoCanStatus contains the subjects allowed to perform the requested action.
+type WhoCanStatus struct {
+	// Users is the list of user names allowed to perform the action.
+	// +optional
+	// +listType=atomic
+	Users []string `json:"users,omitempty" protobuf:"bytes,1,rep,name=users"`
+
+	// Groups is the list of group names allowed to perform the action.
+	// +optional
+	// +listType=atomic
+	Groups []string `json:"groups,omitempty" protobuf:"bytes,2,rep,name=groups"`
+
+	// ServiceAccounts is the list of service accounts allowed to perform the action.
+	// +optional
+	// +listType=atomic
+	ServiceAccounts []ServiceAccountReference `json:"serviceAccounts,omitempty" protobuf:"bytes,3,rep,name=serviceAccounts"`
+
+	// EvaluationError contains any non-fatal error encountered while resolving subjects.
+	// +optional
+	EvaluationError string `json:"evaluationError,omitempty" protobuf:"bytes,4,opt,name=evaluationError"`
+}
+
+// ServiceAccountReference identifies a ServiceAccount subject by namespace and name.
+type ServiceAccountReference struct {
+	// Namespace is the namespace of the ServiceAccount.
+	Namespace string `json:"namespace" protobuf:"bytes,1,opt,name=namespace"`
+
+	// Name is the name of the ServiceAccount.
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+}

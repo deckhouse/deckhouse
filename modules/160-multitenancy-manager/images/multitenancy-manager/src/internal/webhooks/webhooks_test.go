@@ -436,6 +436,36 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 	}
 }
 
+func TestDecodeReview_RejectsOversizeBody(t *testing.T) {
+	p := NewProtectValidator(logr.Discard(), "system:serviceaccount:d8-multitenancy-manager:coc")
+	// a body larger than the limit must be rejected before it is fully buffered into memory.
+	huge := bytes.Repeat([]byte("a"), maxAdmissionRequestBytes+1024)
+	body := []byte(`{"kind":"AdmissionReview","request":{"uid":"1","name":"`)
+	body = append(body, huge...)
+	body = append(body, []byte(`"}}`)...)
+
+	req := httptest.NewRequest(http.MethodPost, "/protect", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	p.ServeHTTP(rec, req)
+	if rec.Code == http.StatusOK {
+		t.Fatalf("an oversize body must be rejected, got status %d", rec.Code)
+	}
+}
+
+func TestDecodeReview_RejectsWrongKind(t *testing.T) {
+	p := NewProtectValidator(logr.Discard(), "system:serviceaccount:d8-multitenancy-manager:coc")
+	body := []byte(`{"kind":"NotAReview","request":{"uid":"1"}}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/protect", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	p.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("a non-AdmissionReview payload must be rejected with 400, got status %d", rec.Code)
+	}
+}
+
 func TestProtect(t *testing.T) {
 	p := NewProtectValidator(logr.Discard(), "system:serviceaccount:d8-multitenancy-manager:coc")
 	arGVK := metav1.GroupVersionKind{Group: "multitenancy.deckhouse.io", Version: "v1alpha1", Kind: "AvailableClusterResource"}

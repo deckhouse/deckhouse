@@ -137,7 +137,7 @@ func (c *Client) initActionConfig(namespace string) error {
 	return c.conf.Init(kubeConfig, namespace, helmDriver, c.DebugLog)
 }
 
-func (c *Client) DebugLog(format string, args ...interface{}) {
+func (c *Client) DebugLog(format string, args ...any) {
 	c.logger.Info(fmt.Sprintf(format, args...))
 }
 
@@ -154,6 +154,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 	values := buildValues(project, template)
 	hash := hashMD5(c.templates, values)
 
+	// action.History exposes no context or timeout; the lookup is a single, bounded API read.
 	releases, err := action.NewHistory(c.conf).Run(project.Name)
 	isFirstInstall := false
 	if err != nil {
@@ -210,7 +211,9 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 	return post.filtered, nil
 }
 
-// discoverAPI returns api versions, they will be used in the post renderer
+// discoverAPI returns api versions, they will be used in the post renderer. The discovery client API
+// (ServerGroupsAndResources) accepts neither a context nor a deadline, so this call cannot be bound
+// by ctx; it is limited only by the REST client's own transport timeout.
 func (c *Client) discoverAPI() (map[string]struct{}, error) {
 	dc, err := c.conf.RESTClientGetter.ToDiscoveryClient()
 	if err != nil {
@@ -256,33 +259,35 @@ func buildChart(templates map[string][]byte, releaseName string) *chart.Chart {
 	return ch
 }
 
-func buildValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
-	// to handle empty template
-	if len(template.Spec.ResourcesTemplate) == 0 {
-		template.Spec.ResourcesTemplate = " "
+func buildValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) map[string]any {
+	// Work on a copy of the spec so the empty-template placeholder below does not mutate the
+	// caller's template (a cache-shared object reused across reconciles).
+	templateSpec := template.Spec
+	if len(templateSpec.ResourcesTemplate) == 0 {
+		templateSpec.ResourcesTemplate = " "
 	}
 
 	// skip error, invalid template cannot be here due to validation
-	schema, _ := validate.LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
+	schema, _ := validate.LoadSchema(templateSpec.ParametersSchema.OpenAPIV3Schema)
 
 	preparedProject := struct {
-		Name         string                 `json:"projectName" yaml:"projectName"`
-		TemplateName string                 `json:"projectTemplateName" yaml:"projectTemplateName"`
-		Parameters   map[string]interface{} `json:"parameters" yaml:"parameters"`
+		Name         string         `json:"projectName" yaml:"projectName"`
+		TemplateName string         `json:"projectTemplateName" yaml:"projectTemplateName"`
+		Parameters   map[string]any `json:"parameters" yaml:"parameters"`
 	}{
 		Name:         project.Name,
 		TemplateName: project.Spec.ProjectTemplateName,
 		Parameters:   mergeWithDefaults(schema, project.Spec.Parameters),
 	}
 
-	return map[string]interface{}{
-		"projectTemplate": structs.Map(template.Spec),
+	return map[string]any{
+		"projectTemplate": structs.Map(templateSpec),
 		"project":         structs.Map(preparedProject),
 	}
 }
 
-func mergeWithDefaults(schema *spec.Schema, projectValues map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
+func mergeWithDefaults(schema *spec.Schema, projectValues map[string]any) map[string]any {
+	result := make(map[string]any)
 
 	for property, propertySchema := range schema.Properties {
 		if projectValue, exists := projectValues[property]; exists {
@@ -291,7 +296,7 @@ func mergeWithDefaults(schema *spec.Schema, projectValues map[string]interface{}
 
 			// recursively handle nested objects
 			if propertySchema.Type.Contains("object") {
-				if valueMap, ok := projectValue.(map[string]interface{}); ok {
+				if valueMap, ok := projectValue.(map[string]any); ok {
 					result[property] = mergeWithDefaults(&propertySchema, valueMap)
 				}
 			}
@@ -308,9 +313,13 @@ func mergeWithDefaults(schema *spec.Schema, projectValues map[string]interface{}
 		}
 	}
 
-	// handle additionalProperties (map types)
+	// Handle additionalProperties (free-form map types). When a schema declares additionalProperties
+	// it models a map, not a fixed object, so the values are user-controlled keys. We deliberately
+	// REPLACE result here (discarding the property defaults computed above): an additionalProperties
+	// schema and named-property defaults are not combined, the map's own keys win. This branch is
+	// pinned by TestMergeWithDefaults_AdditionalProperties.
 	if schema.AdditionalProperties != nil {
-		mapResult := make(map[string]interface{})
+		mapResult := make(map[string]any)
 		for key, value := range projectValues {
 			// skip keys that are already handled as properties
 			if _, exists := schema.Properties[key]; exists {
@@ -351,11 +360,18 @@ func (c *Client) rollbackLatestRelease(releases []*release.Release) error {
 	return rollback.Run(latestRelease.Name)
 }
 
-// Delete deletes resources
-func (c *Client) Delete(_ context.Context, releaseName string) error {
+// Delete deletes resources. The Helm uninstall API does not accept a context, so ctx is honoured by
+// bailing out before starting a teardown that is already cancelled, and an explicit Timeout bounds
+// the uninstall wait (mirroring the install/upgrade timeout) so a slow API server cannot stall it.
+func (c *Client) Delete(ctx context.Context, releaseName string) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("uninstall the '%s' release: %w", releaseName, err)
+	}
+
 	uninstall := action.NewUninstall(c.conf)
 	uninstall.KeepHistory = false
 	uninstall.IgnoreNotFound = true
+	uninstall.Timeout = c.opts.Timeout
 
 	if _, err := uninstall.Run(releaseName); err != nil {
 		return fmt.Errorf("uninstall the '%s' release: %w", releaseName, err)
@@ -363,6 +379,38 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 
 	c.logger.Info("the release deleted", "release", releaseName)
 	return nil
+}
+
+// RenderedRoleRefs renders the project template and returns the roleRefs of every binding object it
+// declares (RoleBinding, ClusterRoleBinding, ProjectRoleBinding, ClusterProjectRoleBinding). It runs
+// on a copy of the project so collecting the refs does not mutate the caller's status.
+func (c *Client) RenderedRoleRefs(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) ([]BindingRoleRef, error) {
+	ch := buildChart(c.templates, project.Name)
+
+	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
+		Name:      project.Name,
+		Namespace: project.Name,
+	}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("render values: %w", err)
+	}
+
+	rendered, err := engine.Render(ch, values)
+	if err != nil {
+		return nil, fmt.Errorf("render chart: %w", err)
+	}
+
+	buf := bytes.NewBuffer(nil)
+	for _, file := range rendered {
+		buf.WriteString(file)
+	}
+
+	renderer := newPostRenderer(project.DeepCopy(), nil, c.logger, false)
+	if _, err = renderer.Run(buf); err != nil {
+		return nil, fmt.Errorf("post render: %w", err)
+	}
+
+	return renderer.referencedRoles, nil
 }
 
 // ValidateRender tests project render

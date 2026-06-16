@@ -19,20 +19,24 @@ package project
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
+	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
+	rolebinding "controller/internal/rolebinding"
 	"controller/internal/validate"
 )
 
@@ -110,7 +114,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
 		project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
 		project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
-	} else if err, done := m.handleTemplate(ctx, project); done {
+	} else if done, err := m.handleTemplate(ctx, project); done {
 		return ctrl.Result{}, err
 	}
 
@@ -139,7 +143,11 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		project.Status.Usage = usage
 	}
 
-	project.SetState(v1alpha3.ProjectStateDeployed)
+	if project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed) {
+		project.SetState(v1alpha3.ProjectStateError)
+	} else {
+		project.SetState(v1alpha3.ProjectStateDeployed)
+	}
 	if err := m.updateProjectStatus(ctx, project); err != nil {
 		m.logger.Error(err, "failed to update the project status", "project", project.Name)
 		return ctrl.Result{}, err
@@ -152,7 +160,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 // handleTemplate runs the template-based part of the reconciliation: resolving the template,
 // validating the project against it and upgrading the helm release. The bool return value reports
 // whether reconciliation must stop (an error already updated the status and the caller should return).
-func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project) (error, bool) {
+func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project) (bool, error) {
 	m.logger.Info("get the project template for project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 	projectTemplate, err := m.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
@@ -160,9 +168,9 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectTemplateFound, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			return updateErr, true
+			return true, updateErr
 		}
-		return err, true
+		return true, err
 	}
 
 	if projectTemplate == nil {
@@ -170,9 +178,9 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectTemplateFound, "The project template not found")
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			return updateErr, true
+			return true, updateErr
 		}
-		return nil, true
+		return true, nil
 	}
 
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
@@ -184,9 +192,9 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectValidated, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			return updateErr, true
+			return true, updateErr
 		}
-		return nil, true
+		return true, nil
 	}
 
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
@@ -198,9 +206,9 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectResourcesUpgraded, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			return updateErr, true
+			return true, updateErr
 		}
-		return err, true
+		return true, err
 	}
 
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
@@ -210,7 +218,77 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	} else {
 		project.SetConditionTrue(v1alpha3.ProjectConditionTemplateResourcesFiltered)
 	}
-	return nil, false
+
+	m.checkTemplateRoles(ctx, project, projectTemplate)
+	return false, nil
+}
+
+// checkTemplateRoles renders the project template and flags any binding that grants a ClusterRole
+// which is forbidden in projects: one carrying the rbac.deckhouse.io/disabled-for-direct-use-in-projects
+// annotation, or (for ProjectRoleBinding/ClusterProjectRoleBinding) one outside the PRB/CPRB
+// allow-list. The result is surfaced as the TemplateRolesAllowed condition, mirroring how
+// TemplateResourcesFiltered is surfaced; it never fails the reconcile.
+func (m *Manager) checkTemplateRoles(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) {
+	refs, err := m.helmClient.RenderedRoleRefs(project, template)
+	if err != nil {
+		// The upgrade above already rendered the template successfully; a render hiccup here must
+		// not flip the project into an error state, so treat the roles as allowed.
+		m.logger.Error(err, "failed to render the project template role refs", "project", project.Name, "template", template.Name)
+		project.SetConditionTrue(v1alpha3.ProjectConditionTemplateRolesAllowed)
+		return
+	}
+	m.applyTemplateRolesCondition(ctx, project, refs)
+}
+
+// applyTemplateRolesCondition evaluates the roleRefs rendered by a template and sets the
+// TemplateRolesAllowed condition: False (naming every offending binding/role) when a binding grants
+// a forbidden role, True otherwise.
+func (m *Manager) applyTemplateRolesCondition(ctx context.Context, project *v1alpha3.Project, refs []helm.BindingRoleRef) {
+	var offending []string
+	for _, ref := range refs {
+		// The disabled annotation and the allow-list only concern ClusterRole references.
+		if ref.RoleKind != "ClusterRole" {
+			continue
+		}
+		projectBinding := ref.BindingKind == v1alpha3.ProjectRoleBindingKind || ref.BindingKind == v1alpha3.ClusterProjectRoleBindingKind
+		if reason := m.roleViolation(ctx, ref.RoleName, projectBinding); reason != "" {
+			offending = append(offending, fmt.Sprintf("%s %q grants ClusterRole %q (%s)", ref.BindingKind, ref.BindingName, ref.RoleName, reason))
+		}
+	}
+
+	if len(offending) > 0 {
+		// The render order is non-deterministic; sort so the condition message is stable across reconciles.
+		slices.Sort(offending)
+		project.SetConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed,
+			fmt.Sprintf("The template renders bindings that grant roles forbidden in projects: %s.", strings.Join(offending, "; ")))
+		return
+	}
+	project.SetConditionTrue(v1alpha3.ProjectConditionTemplateRolesAllowed)
+}
+
+// roleViolation returns a non-empty reason when a ClusterRole must not be granted via a project
+// binding. enforceAllowList is set for ProjectRoleBinding/ClusterProjectRoleBinding references,
+// which are restricted to the PRB/CPRB allow-list; native RoleBinding/ClusterRoleBinding references
+// are only checked for the disabled annotation.
+func (m *Manager) roleViolation(ctx context.Context, name string, enforceAllowList bool) string {
+	if enforceAllowList && !rolebinding.IsRoleAllowed(name) {
+		return "not in the allowed project role list: d8:project:*, d8:namespace:*, their capabilities and d8:custom:*"
+	}
+
+	clusterRole := &rbacv1.ClusterRole{}
+	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, clusterRole); err != nil {
+		if apierrors.IsNotFound(err) {
+			// A missing role cannot be granted; existence is enforced by the binding webhook, not here.
+			return ""
+		}
+		m.logger.Error(err, "failed to get the cluster role for the template role check", "project-role", name)
+		return ""
+	}
+
+	if clusterRole.Annotations[rolebinding.AnnotationDisabledForProjects] == "true" {
+		return "disabled for direct use in projects"
+	}
+	return ""
 }
 
 // HandleVirtual handles virtual project

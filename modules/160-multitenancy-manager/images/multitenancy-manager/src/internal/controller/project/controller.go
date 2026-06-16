@@ -90,6 +90,12 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 			predicate.GenerationChangedPredicate{},
 			customPredicate[client.Object]{logger: logger})).
 		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+			// an additional namespace of a real project (owned, but not the main namespace) appeared
+			// or disappeared: re-reconcile that project so status.namespaces is refreshed, which in
+			// turn re-fans-out the PRB/CPRB RoleBindings into (or out of) the namespace.
+			if proj, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]; ok && object.GetName() != proj {
+				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: proj}}}
+			}
 			if _, ok := object.GetLabels()[v1alpha3.ResourceLabelTemplate]; ok {
 				return nil
 			}

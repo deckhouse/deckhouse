@@ -85,7 +85,6 @@ func (p *ProjectRoleBinding) DeepCopy() *ProjectRoleBinding {
 }
 func (p *ProjectRoleBinding) DeepCopyInto(newObj *ProjectRoleBinding) {
 	*newObj = *p
-	newObj.TypeMeta = p.TypeMeta
 	p.ObjectMeta.DeepCopyInto(&newObj.ObjectMeta)
 	p.Spec.DeepCopyInto(&newObj.Spec)
 	p.Status.DeepCopyInto(&newObj.Status)
@@ -173,7 +172,6 @@ func (p *ClusterProjectRoleBinding) DeepCopy() *ClusterProjectRoleBinding {
 }
 func (p *ClusterProjectRoleBinding) DeepCopyInto(newObj *ClusterProjectRoleBinding) {
 	*newObj = *p
-	newObj.TypeMeta = p.TypeMeta
 	p.ObjectMeta.DeepCopyInto(&newObj.ObjectMeta)
 	p.Spec.DeepCopyInto(&newObj.Spec)
 	p.Status.DeepCopyInto(&newObj.Status)

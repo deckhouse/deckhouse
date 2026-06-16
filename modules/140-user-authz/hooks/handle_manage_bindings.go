@@ -131,19 +131,24 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 func syncBindings(_ context.Context, input *go_hook.HookInput) error {
+	// Materialize and index the manage roles once. Re-decoding the snapshot and
+	// recompiling aggregation selectors for every manage binding would be
+	// needlessly quadratic.
+	roles, err := indexManageRoles(input.Snapshots.Get("manageRoles"))
+	if err != nil {
+		return err
+	}
+
 	expected := make(map[string]bool)
 	for binding, err := range sdkobjectpatch.SnapshotIter[filteredManageBinding](input.Snapshots.Get("manageBindings")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'manageBindings' snapshot: %w", err)
 		}
-		role, namespaces, err := roleAndNamespacesByBinding(input.Snapshots.Get("manageRoles"), binding.RoleName)
-		if err != nil {
-			return fmt.Errorf("failed to get role and namespaces for binding '%s': %w", binding.Name, err)
-		}
+		useRole, namespaces := roleAndNamespacesByBinding(roles, binding.RoleName)
 
-		useBindingName := fmt.Sprintf("d8:namespace:%s:binding:%s", role, binding.Name)
+		useBindingName := fmt.Sprintf("d8:namespace:%s:binding:%s", useRole, binding.Name)
 		for namespace := range namespaces {
-			input.PatchCollector.CreateOrUpdate(createBinding(&binding, role, namespace))
+			input.PatchCollector.CreateOrUpdate(createBinding(&binding, useRole, namespace))
 			// Track by (namespace, name): one manage binding fans out to the
 			// same RoleBinding name across many namespaces, so keying by name
 			// alone would keep an orphan alive whenever a namespace drops out
@@ -172,31 +177,63 @@ func useBindingKey(namespace, name string) string {
 	return namespace + "/" + name
 }
 
-func roleAndNamespacesByBinding(manageRoles []pkg.Snapshot, roleName string) (string, map[string]bool, error) {
-	// Materialize the manage roles/capabilities once so we can walk the
-	// aggregation graph to arbitrary depth without re-iterating the snapshot.
-	roles := make([]filteredManageRole, 0, len(manageRoles))
+// indexedManageRole is the decoded form of a manage ClusterRole with its
+// aggregation selectors compiled once, so the aggregation walk can match
+// children without rebuilding selectors on every comparison.
+type indexedManageRole struct {
+	name      string
+	labels    map[string]string
+	selectors []labels.Selector
+}
+
+// indexManageRoles materializes the manage roles snapshot and precompiles each
+// role's aggregation selectors. Using metav1.LabelSelectorAsSelector honors both
+// matchLabels and matchExpressions; the previous matchLabels-only matching
+// silently skipped expression-based aggregation rules.
+func indexManageRoles(manageRoles []pkg.Snapshot) ([]indexedManageRole, error) {
+	roles := make([]indexedManageRole, 0, len(manageRoles))
 	for role, err := range sdkobjectpatch.SnapshotIter[filteredManageRole](manageRoles) {
 		if err != nil {
-			return "", nil, fmt.Errorf("failed to iterate over 'manageRoles' snapshot: %w", err)
+			return nil, fmt.Errorf("failed to iterate over 'manageRoles' snapshot: %w", err)
 		}
-		roles = append(roles, role)
-	}
 
-	var found *filteredManageRole
+		indexed := indexedManageRole{
+			name:   role.Name,
+			labels: role.Labels,
+		}
+		if role.Rule != nil {
+			for i := range role.Rule.ClusterRoleSelectors {
+				selector, err := metav1.LabelSelectorAsSelector(&role.Rule.ClusterRoleSelectors[i])
+				if err != nil {
+					return nil, fmt.Errorf("invalid aggregation selector on manage role '%s': %w", role.Name, err)
+				}
+				indexed.selectors = append(indexed.selectors, selector)
+			}
+		}
+		roles = append(roles, indexed)
+	}
+	return roles, nil
+}
+
+// roleAndNamespacesByBinding resolves the use-role and the set of namespaces the
+// given manage role grants by walking the aggregation graph. It returns an empty
+// use-role and no namespaces when the bound role is unknown or carries no
+// rbac.deckhouse.io/use-role label.
+func roleAndNamespacesByBinding(roles []indexedManageRole, roleName string) (string, map[string]bool) {
+	var found *indexedManageRole
 	for i := range roles {
-		if roles[i].Name == roleName {
+		if roles[i].name == roleName {
 			found = &roles[i]
 			break
 		}
 	}
 	if found == nil {
-		return "", nil, nil
+		return "", nil
 	}
 
-	useRole, ok := found.Labels["rbac.deckhouse.io/use-role"]
+	useRole, ok := found.labels["rbac.deckhouse.io/use-role"]
 	if !ok {
-		return "", nil, nil
+		return "", nil
 	}
 
 	// Walk the whole aggregation chain (bound role -> roles/capabilities it
@@ -206,44 +243,43 @@ func roleAndNamespacesByBinding(manageRoles []pkg.Snapshot, roleName string) (st
 	// namespaced capabilities, e.g. d8:system:superadmin ->
 	// d8:subsystem:<s>:superadmin -> d8:subsystem:<s>:manager -> capability.
 	namespaces := make(map[string]bool)
-	visited := map[string]bool{found.Name: true}
+	visited := map[string]bool{found.name: true}
 	collectManageNamespaces(found, roles, namespaces, visited)
 
-	return useRole, namespaces, nil
+	return useRole, namespaces
 }
 
 // collectManageNamespaces descends into every manage role/capability whose labels
-// match node's aggregationRule, recording the rbac.deckhouse.io/namespace label of
-// each reached object. The visited set guards against cycles and repeated work.
-func collectManageNamespaces(node *filteredManageRole, roles []filteredManageRole, namespaces, visited map[string]bool) {
-	if node.Rule == nil {
+// match node's aggregation selectors, recording the rbac.deckhouse.io/namespace
+// label of each reached object. The visited set guards against cycles and
+// repeated work.
+func collectManageNamespaces(node *indexedManageRole, roles []indexedManageRole, namespaces, visited map[string]bool) {
+	if len(node.selectors) == 0 {
 		return
 	}
 	for i := range roles {
 		child := &roles[i]
-		if !matchAggregationRule(node.Rule, child.Labels) {
+		if !matchAggregationSelectors(node.selectors, child.labels) {
 			continue
 		}
-		if namespace, ok := child.Labels["rbac.deckhouse.io/namespace"]; ok {
+		if namespace, ok := child.labels["rbac.deckhouse.io/namespace"]; ok {
 			namespaces[namespace] = true
 		}
-		if visited[child.Name] {
+		if visited[child.name] {
 			continue
 		}
-		visited[child.Name] = true
+		visited[child.name] = true
 		collectManageNamespaces(child, roles, namespaces, visited)
 	}
 }
 
-func matchAggregationRule(rule *rbacv1.AggregationRule, roleLabels map[string]string) bool {
-	if rule == nil {
-		return false
-	}
-	for _, selector := range rule.ClusterRoleSelectors {
-		if selector.MatchLabels != nil {
-			if labels.SelectorFromSet(selector.MatchLabels).Matches(labels.Set(roleLabels)) {
-				return true
-			}
+// matchAggregationSelectors reports whether any of the precompiled aggregation
+// selectors matches the candidate role's labels.
+func matchAggregationSelectors(selectors []labels.Selector, roleLabels map[string]string) bool {
+	set := labels.Set(roleLabels)
+	for _, selector := range selectors {
+		if selector.Matches(set) {
+			return true
 		}
 	}
 	return false

@@ -21,7 +21,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,6 +35,23 @@ import (
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/rolebinding"
 )
+
+func reconcileCPRB(t *testing.T, r *Reconciler, name string) {
+	t.Helper()
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: name}})
+	require.NoError(t, err)
+}
+
+func serviceRoleBinding(name, namespace, role string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rolebinding.CPRBServiceName(name),
+			Namespace: namespace,
+			Labels:    map[string]string{v1alpha3.ResourceLabelOwnedByCPRB: name},
+		},
+		RoleRef: rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: role},
+	}
+}
 
 func newReconciler(t *testing.T, objs ...client.Object) (*Reconciler, client.Client) {
 	t.Helper()
@@ -102,4 +122,116 @@ func TestReconcile_FansOutToAllNonVirtualProjects(t *testing.T) {
 	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, got))
 	assert.Equal(t, int32(2), got.Status.BoundProjects)
 	assert.Contains(t, got.Finalizers, v1alpha3.ClusterProjectRoleBindingFinalizer)
+}
+
+// TestReconcile_DeletionRemovesFinalizerAndBindings mirrors the PRB deletion path: the finalizer is
+// removed only after the fanned-out service RoleBindings are cleaned up.
+func TestReconcile_DeletionRemovesFinalizerAndBindings(t *testing.T) {
+	t.Parallel()
+	r, c := newReconciler(t, cprb("global-viewer", "d8:project:viewer"), project("alpha", false, "alpha"))
+
+	// first pass adds the finalizer and fans out the binding
+	reconcileCPRB(t, r, "global-viewer")
+	name := rolebinding.CPRBServiceName("global-viewer")
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: name}, &rbacv1.RoleBinding{}))
+
+	// delete the CPRB: the finalizer keeps it around (with DeletionTimestamp) for cleanup
+	got := &v1alpha3.ClusterProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, got))
+	require.NoError(t, c.Delete(context.Background(), got))
+
+	reconcileCPRB(t, r, "global-viewer")
+
+	err := c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: name}, &rbacv1.RoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "the fanned-out RoleBinding must be cleaned up on deletion")
+	err = c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, &v1alpha3.ClusterProjectRoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "the CPRB must be gone once the finalizer is removed")
+}
+
+// TestReconcile_PrunesStaleRoleBindings removes a binding left in a namespace that is no longer part
+// of any project.
+func TestReconcile_PrunesStaleRoleBindings(t *testing.T) {
+	t.Parallel()
+	stale := serviceRoleBinding("global-viewer", "gone", "d8:project:viewer")
+	r, c := newReconciler(t, cprb("global-viewer", "d8:project:viewer"), project("alpha", false, "alpha"), stale)
+
+	reconcileCPRB(t, r, "global-viewer")
+
+	name := rolebinding.CPRBServiceName("global-viewer")
+	err := c.Get(context.Background(), client.ObjectKey{Namespace: "gone", Name: name}, &rbacv1.RoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "the stale binding must be pruned")
+	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: name}, &rbacv1.RoleBinding{}))
+}
+
+// TestReconcile_RecreatesOnRoleRefChange verifies the immutable roleRef is handled by delete+recreate.
+func TestReconcile_RecreatesOnRoleRefChange(t *testing.T) {
+	t.Parallel()
+	old := serviceRoleBinding("global-viewer", "alpha", "d8:project:viewer")
+	r, c := newReconciler(t, cprb("global-viewer", "d8:project:admin"), project("alpha", false, "alpha"), old)
+
+	reconcileCPRB(t, r, "global-viewer")
+
+	rb := &rbacv1.RoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: rolebinding.CPRBServiceName("global-viewer")}, rb))
+	assert.Equal(t, "d8:project:admin", rb.RoleRef.Name, "roleRef must be updated to the new role")
+}
+
+// TestReconcile_ForbiddenRoleIsNotFannedOut verifies defense-in-depth: a disallowed role is cleaned
+// up and never propagated, even if it slipped past the webhook.
+func TestReconcile_ForbiddenRoleIsNotFannedOut(t *testing.T) {
+	t.Parallel()
+	r, c := newReconciler(t, cprb("escalation", "cluster-admin"), project("alpha", false, "alpha"))
+
+	reconcileCPRB(t, r, "escalation")
+
+	err := c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: rolebinding.CPRBServiceName("escalation")}, &rbacv1.RoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "a forbidden role must not be fanned out")
+
+	got := &v1alpha3.ClusterProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "escalation"}, got))
+	assert.Equal(t, int32(0), got.Status.BoundProjects)
+	require.Len(t, got.Status.Conditions, 1)
+	assert.Equal(t, corev1.ConditionFalse, got.Status.Conditions[0].Status)
+}
+
+// TestReconcile_SkipsDeletionTimestampedProject verifies a terminating project receives no binding
+// and is not counted in BoundProjects.
+func TestReconcile_SkipsDeletionTimestampedProject(t *testing.T) {
+	t.Parallel()
+	deleting := project("alpha", false, "alpha")
+	deleting.Finalizers = []string{v1alpha3.ProjectFinalizer}
+	r, c := newReconciler(t, cprb("global-viewer", "d8:project:viewer"), deleting, project("beta", false, "beta"))
+
+	// deleting the project sets its DeletionTimestamp (the finalizer keeps it listed)
+	require.NoError(t, c.Delete(context.Background(), deleting))
+
+	reconcileCPRB(t, r, "global-viewer")
+
+	name := rolebinding.CPRBServiceName("global-viewer")
+	err := c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: name}, &rbacv1.RoleBinding{})
+	assert.True(t, k8serrors.IsNotFound(err), "a terminating project must not receive the binding")
+	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "beta", Name: name}, &rbacv1.RoleBinding{}))
+
+	got := &v1alpha3.ClusterProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, got))
+	assert.Equal(t, int32(1), got.Status.BoundProjects, "only the live project is bound")
+}
+
+// TestReconcile_StatusUnchangedNoWrite is the unit-level guard for the self-triggered reconcile
+// hot-loop fix: a second reconcile that changes nothing must not rewrite status (which the fake
+// client would surface as a bumped resourceVersion). The full loop elimination still needs envtest.
+func TestReconcile_StatusUnchangedNoWrite(t *testing.T) {
+	t.Parallel()
+	r, c := newReconciler(t, cprb("global-viewer", "d8:project:viewer"), project("alpha", false, "alpha"))
+
+	reconcileCPRB(t, r, "global-viewer")
+	first := &v1alpha3.ClusterProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, first))
+
+	reconcileCPRB(t, r, "global-viewer")
+	second := &v1alpha3.ClusterProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, second))
+
+	assert.Equal(t, first.ResourceVersion, second.ResourceVersion,
+		"an unchanged reconcile must not rewrite the status and re-enqueue the object")
 }

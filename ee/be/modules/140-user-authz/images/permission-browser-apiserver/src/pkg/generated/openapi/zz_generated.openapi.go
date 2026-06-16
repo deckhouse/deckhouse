@@ -89,8 +89,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.BulkSubjectAccessReviewStatus": schema_pkg_apis_authorization_v1alpha1_BulkSubjectAccessReviewStatus(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAttributes":         schema_pkg_apis_authorization_v1alpha1_NonResourceAttributes(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResourceAttributes":            schema_pkg_apis_authorization_v1alpha1_ResourceAttributes(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ServiceAccountReference":       schema_pkg_apis_authorization_v1alpha1_ServiceAccountReference(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.SubjectAccessReviewRequest":    schema_pkg_apis_authorization_v1alpha1_SubjectAccessReviewRequest(ref),
 		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.SubjectAccessReviewResult":     schema_pkg_apis_authorization_v1alpha1_SubjectAccessReviewResult(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.WhoCan":                        schema_pkg_apis_authorization_v1alpha1_WhoCan(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.WhoCanSpec":                    schema_pkg_apis_authorization_v1alpha1_WhoCanSpec(ref),
+		"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.WhoCanStatus":                  schema_pkg_apis_authorization_v1alpha1_WhoCanStatus(ref),
 	}
 }
 
@@ -3071,6 +3075,36 @@ func schema_pkg_apis_authorization_v1alpha1_ResourceAttributes(ref common.Refere
 	}
 }
 
+func schema_pkg_apis_authorization_v1alpha1_ServiceAccountReference(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ServiceAccountReference identifies a ServiceAccount subject by namespace and name.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespace is the namespace of the ServiceAccount.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the ServiceAccount.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"namespace", "name"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_authorization_v1alpha1_SubjectAccessReviewRequest(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3138,5 +3172,163 @@ func schema_pkg_apis_authorization_v1alpha1_SubjectAccessReviewResult(ref common
 				Required: []string{"allowed"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_authorization_v1alpha1_WhoCan(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WhoCan answers the reverse-RBAC question: given an action (verb on a resource, optionally scoped to a namespace/name/subresource), which subjects (Users, Groups, ServiceAccounts) are allowed to perform it. This is similar to OpenShift's `oc policy who-can`.\n\nThis resource is ephemeral - it is not stored, only created.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec describes the action to resolve subjects for.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.WhoCanSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status is filled in by the server with the subjects allowed to perform the action.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.WhoCanStatus"),
+						},
+					},
+				},
+				Required: []string{"spec"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.WhoCanSpec", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.WhoCanStatus"},
+	}
+}
+
+func schema_pkg_apis_authorization_v1alpha1_WhoCanSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WhoCanSpec is the specification for a who-can request.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"resourceAttributes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ResourceAttributes describes the resource action to resolve subjects for.",
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResourceAttributes"),
+						},
+					},
+					"nonResourceAttributes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NonResourceAttributes describes the non-resource action to resolve subjects for.",
+							Ref:         ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAttributes"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.NonResourceAttributes", "permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ResourceAttributes"},
+	}
+}
+
+func schema_pkg_apis_authorization_v1alpha1_WhoCanStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WhoCanStatus contains the subjects allowed to perform the requested action.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"users": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Users is the list of user names allowed to perform the action.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"groups": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Groups is the list of group names allowed to perform the action.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"serviceAccounts": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "ServiceAccounts is the list of service accounts allowed to perform the action.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ServiceAccountReference"),
+									},
+								},
+							},
+						},
+					},
+					"evaluationError": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvaluationError contains any non-fatal error encountered while resolving subjects.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"permission-browser-apiserver/pkg/apis/authorization/v1alpha1.ServiceAccountReference"},
 	}
 }

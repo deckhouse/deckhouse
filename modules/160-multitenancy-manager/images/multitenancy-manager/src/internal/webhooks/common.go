@@ -19,6 +19,7 @@ package webhooks
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -34,12 +35,26 @@ import (
 // can never become the thing that locks a queue.
 const webhookDecisionTimeout = 3 * time.Second
 
-// decodeReview reads and decodes an AdmissionReview from a JSON request body.
-func decodeReview(r *http.Request, review *admissionv1.AdmissionReview) error {
+// maxAdmissionRequestBytes bounds the admission request body so an oversized payload cannot exhaust
+// memory. It is generously above any realistic AdmissionReview (the kube-apiserver caps the embedded
+// object well below this) while still rejecting abusive bodies.
+const maxAdmissionRequestBytes = 10 << 20 // 10 MiB
+
+// decodeReview reads and decodes an AdmissionReview from a JSON request body, bounding the body size
+// to guard against unbounded-memory (DoS) requests.
+func decodeReview(w http.ResponseWriter, r *http.Request, review *admissionv1.AdmissionReview) error {
 	if ct := r.Header.Get("Content-Type"); ct != "application/json" {
 		return errors.New("unexpected Content-Type: " + ct)
 	}
-	return json.NewDecoder(r.Body).Decode(review)
+	r.Body = http.MaxBytesReader(w, r.Body, maxAdmissionRequestBytes)
+	if err := json.NewDecoder(r.Body).Decode(review); err != nil {
+		return err
+	}
+	// Defense in depth: reject a payload that claims to be something other than an AdmissionReview.
+	if review.Kind != "" && review.Kind != "AdmissionReview" {
+		return fmt.Errorf("unexpected object kind %q, want AdmissionReview", review.Kind)
+	}
+	return nil
 }
 
 // writeReview writes an AdmissionReview as the JSON response.

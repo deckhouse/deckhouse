@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -94,6 +95,38 @@ func TestReconcile_FansOutToAllNamespaces(t *testing.T) {
 	got := &v1alpha3.ProjectRoleBinding{}
 	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: "viewers"}, got))
 	assert.Contains(t, got.Finalizers, v1alpha3.ProjectRoleBindingFinalizer)
+}
+
+// TestReconcile_FansOutToProjectNamespaceAdditional verifies the ProjectNamespace integration: when
+// an additional namespace (created by a ProjectNamespace and reflected in Project.status.namespaces)
+// appears, the existing PRB extends its service RoleBinding into it; when it is removed, the stale
+// RoleBinding is pruned.
+func TestReconcile_FansOutToProjectNamespaceAdditional(t *testing.T) {
+	binding := prb("viewers", "proj", "d8:project:viewer")
+	// the ProjectNamespace controller added "proj-backend" to the project status.
+	r, c := newReconciler(t, binding, project("proj", "proj", "proj-backend"))
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}})
+	assert.NoError(t, err)
+
+	for _, ns := range []string{"proj", "proj-backend"} {
+		assert.NoErrorf(t, c.Get(context.Background(), client.ObjectKey{Namespace: ns, Name: rolebinding.PRBServiceName("viewers")}, &rbacv1.RoleBinding{}),
+			"RoleBinding must be fanned out into %s", ns)
+	}
+
+	// the ProjectNamespace was deleted: the additional namespace leaves the project status.
+	updated := &v1alpha3.ProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: "viewers"}, updated))
+	r2, c2 := newReconciler(t, updated, project("proj", "proj"),
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{
+			Name:      rolebinding.PRBServiceName("viewers"),
+			Namespace: "proj-backend",
+			Labels:    map[string]string{v1alpha3.ResourceLabelOwnedByPRB: "viewers", v1alpha3.ResourceLabelProject: "proj"},
+		}})
+	_, err = r2.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}})
+	assert.NoError(t, err)
+	err = c2.Get(context.Background(), client.ObjectKey{Namespace: "proj-backend", Name: rolebinding.PRBServiceName("viewers")}, &rbacv1.RoleBinding{})
+	assert.Error(t, err, "the RoleBinding must be pruned from the removed additional namespace")
 }
 
 func TestReconcile_PrunesStaleRoleBindings(t *testing.T) {
@@ -184,4 +217,25 @@ func TestReconcile_ForbiddenRoleIsNotFannedOut(t *testing.T) {
 
 	err = c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: rolebinding.PRBServiceName("escalation")}, &rbacv1.RoleBinding{})
 	assert.Error(t, err, "a forbidden role must not be fanned out")
+}
+
+// TestReconcile_StatusUnchangedNoWrite is the unit-level guard for the self-triggered reconcile
+// hot-loop fix: a second reconcile that changes nothing must not rewrite status (which the fake
+// client would surface as a bumped resourceVersion). The full loop elimination still needs envtest.
+func TestReconcile_StatusUnchangedNoWrite(t *testing.T) {
+	binding := prb("viewers", "proj", "d8:project:viewer")
+	r, c := newReconciler(t, binding, project("proj", "proj", "proj-extra"))
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}})
+	require.NoError(t, err)
+	first := &v1alpha3.ProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: "viewers"}, first))
+
+	_, err = r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}})
+	require.NoError(t, err)
+	second := &v1alpha3.ProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: "viewers"}, second))
+
+	assert.Equal(t, first.ResourceVersion, second.ResourceVersion,
+		"an unchanged reconcile must not rewrite the status and re-enqueue the object")
 }

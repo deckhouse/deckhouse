@@ -22,15 +22,15 @@ import (
 	"fmt"
 	"hash"
 	"maps"
-	"sort"
+	"slices"
 )
 
-func hashMD5(templates map[string][]byte, values map[string]interface{}) string {
-	tmp := make(map[string]interface{}, len(templates))
+func hashMD5(templates map[string][]byte, values map[string]any) string {
+	tmp := make(map[string]any, len(templates))
 	for k, v := range templates {
 		tmp[k] = v
 	}
-	sum := make(map[string]interface{})
+	sum := make(map[string]any)
 	maps.Copy(sum, tmp)
 	for k, v := range values {
 		sum[k] = v
@@ -40,15 +40,15 @@ func hashMD5(templates map[string][]byte, values map[string]interface{}) string 
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func hashObject(sum map[string]interface{}, hash *hash.Hash) {
-	var keys = sortedKeys(sum)
+func hashObject(sum map[string]any, hash *hash.Hash) {
+	keys := sortedKeys(sum)
 	for _, key := range keys {
 		v := sum[key]
 		escapeKey(key, hash)
 		switch o := v.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			hashObject(o, hash)
-		case []interface{}:
+		case []any:
 			hashArray(o, hash)
 		default:
 			escapeValue(o, hash)
@@ -56,12 +56,12 @@ func hashObject(sum map[string]interface{}, hash *hash.Hash) {
 	}
 }
 
-func hashArray(array []interface{}, hash *hash.Hash) {
+func hashArray(array []any, hash *hash.Hash) {
 	for _, v := range array {
 		switch o := v.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			hashObject(o, hash)
-		case []interface{}:
+		case []any:
 			hashArray(o, hash)
 		default:
 			escapeValue(o, hash)
@@ -73,16 +73,16 @@ func escapeKey(key string, writer *hash.Hash) {
 	(*writer).Write([]byte(key))
 }
 
-func escapeValue(value interface{}, writer *hash.Hash) {
+func escapeValue(value any, writer *hash.Hash) {
 	fmt.Fprintf(*writer, `%T`, value)
 	fmt.Fprintf(*writer, "%v", value)
 }
 
-func sortedKeys(sum map[string]interface{}) []string {
+func sortedKeys(sum map[string]any) []string {
 	keys := make([]string, 0, len(sum))
 	for k := range sum {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	return keys
 }

@@ -87,7 +87,7 @@ spec:
           type: object
           x-kubernetes-validations:
             - rule: 'size(self.metadata.name) <= 53'
-              message: "Project name must be no longer than 53 characters."
+              message: "Project name must be no longer than 53 characters: it is used as the Helm release name when a projectTemplateName is set, and Helm limits release names to 53 characters."
           properties:
             spec:
               type: object
@@ -182,7 +182,7 @@ spec:
           type: object
           x-kubernetes-validations:
             - rule: 'size(self.metadata.name) <= 53'
-              message: "Project name must be no longer than 53 characters."
+              message: "Project name must be no longer than 53 characters: it is used as the Helm release name when a projectTemplateName is set, and Helm limits release names to 53 characters."
           properties:
             spec:
               type: object

@@ -17,9 +17,10 @@ limitations under the License.
 package project
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -163,8 +164,8 @@ func (m *Manager) collectNamespaceStatus(ctx context.Context, project *v1alpha3.
 		statuses = append(statuses, v1alpha3.NamespaceStatus{Name: ns.Name, Kind: kind})
 	}
 
-	sort.Slice(statuses, func(i, j int) bool {
-		return statuses[i].Name < statuses[j].Name
+	slices.SortFunc(statuses, func(a, b v1alpha3.NamespaceStatus) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 	return statuses, nil
 }
