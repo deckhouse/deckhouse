@@ -15,7 +15,7 @@ injectedAnnotations:
 template: '{{`{{ Template_Version_And_Istio_Version_Mismatched_Check_Installation }}`}}'
 templates:
   sidecar: |
-{{ $.Files.Get (printf "files/%s/static/injection-template.yaml" $revision) | trim | indent 4 }}
+{{ $.Files.Get (printf "files/%s/static/sidecar-injection-template.yaml" $revision) | trim | indent 4 }}
   gateway: |
 {{ $.Files.Get (printf "files/%s/static/gateway-injection-template.yaml" $revision) | trim | indent 4 }}
   d8-seccomp: |
