@@ -15,7 +15,6 @@
 package validation
 
 import (
-	"encoding/json"
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -145,7 +144,7 @@ func migrationBaseState(t *testing.T) *State {
 				TypeMeta:   metav1.TypeMeta{Kind: instanceClassKind},
 				ObjectMeta: metav1.ObjectMeta{Name: "master-test"},
 				Spec: cpapi.InstanceClassSpec{
-					EtcdDisk: migrationRawJSONForTest("{}"),
+					EtcdDisk: map[string]any{},
 				},
 			},
 		},
@@ -175,11 +174,6 @@ func migrationCompleteState(t *testing.T) *State {
 	})
 
 	return state
-}
-
-func migrationRawJSONForTest(value string) *json.RawMessage {
-	message := json.RawMessage(value)
-	return &message
 }
 
 func TestMigrationStatusIncompleteWhenModuleConfigMissing(t *testing.T) {

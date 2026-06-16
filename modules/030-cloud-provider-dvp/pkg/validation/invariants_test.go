@@ -15,7 +15,6 @@
 package validation
 
 import (
-	"encoding/json"
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -32,7 +31,7 @@ func TestValidateInvariantsAllowsUnattachedEtcdDisk(t *testing.T) {
 		TypeMeta:   metav1.TypeMeta{Kind: InstanceClassKind},
 		ObjectMeta: metav1.ObjectMeta{Name: "orphan-dvp"},
 		Spec: cpapi.InstanceClassSpec{
-			EtcdDisk: rawJSONForTest("{}"),
+			EtcdDisk: map[string]any{},
 		},
 	})
 
@@ -46,8 +45,8 @@ func TestValidateInvariantsSkipsPendingMigration(t *testing.T) {
 	t.Parallel()
 
 	state := &cpval.State{
-		ModuleName:      ModuleName,
-		NamespaceName:   Namespace,
+		ModuleName:        ModuleName,
+		NamespaceName:     Namespace,
 		InstanceClassKind: InstanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
@@ -69,6 +68,18 @@ func TestValidateInvariantsSkipsPendingMigration(t *testing.T) {
 	result := ValidateInvariants(state)
 	if result.HasErrors() {
 		t.Fatalf("ValidateInvariants() during migration = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateInvariantsRequiresMasterEtcdDisk(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.InstanceClasses[0].Spec.EtcdDisk = nil
+
+	result := ValidateInvariants(state)
+	if !hasViolationCode(result, "master_etcd_disk_required") {
+		t.Fatalf("ValidateInvariants() = %q, want master etcdDisk requirement", result.Error())
 	}
 }
 
@@ -136,9 +147,9 @@ func validState(t *testing.T) *cpval.State {
 	t.Helper()
 
 	state := &cpval.State{
-		ModuleName:                   ModuleName,
-		NamespaceName:                Namespace,
-		InstanceClassKind:            InstanceClassKind,
+		ModuleName:        ModuleName,
+		NamespaceName:     Namespace,
+		InstanceClassKind: InstanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
@@ -192,17 +203,12 @@ func validState(t *testing.T) *cpval.State {
 				TypeMeta:   metav1.TypeMeta{Kind: InstanceClassKind},
 				ObjectMeta: metav1.ObjectMeta{Name: "master-dvp"},
 				Spec: cpapi.InstanceClassSpec{
-					EtcdDisk: rawJSONForTest("{}"),
+					EtcdDisk: map[string]any{},
 				},
 			},
 		},
 	}
 	return state
-}
-
-func rawJSONForTest(value string) *json.RawMessage {
-	message := json.RawMessage(value)
-	return &message
 }
 
 func validKubeconfigB64ForTest() string {

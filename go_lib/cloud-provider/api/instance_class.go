@@ -14,11 +14,7 @@
 
 package api
 
-import (
-	"encoding/json"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // InstanceClass is a provider-specific instance class resource.
 type InstanceClass struct {
@@ -31,7 +27,7 @@ type InstanceClass struct {
 
 // InstanceClassSpec holds provider-specific instance class parameters.
 type InstanceClassSpec struct {
-	EtcdDisk *json.RawMessage `json:"etcdDisk,omitempty"`
+	EtcdDisk map[string]any `json:"etcdDisk,omitempty"`
 }
 
 // InstanceClassStatus holds runtime status fields populated by the provider module.

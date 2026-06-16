@@ -15,7 +15,6 @@
 package validation
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 
@@ -47,14 +46,14 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsUnattachedEtcdDisk(t *test
 				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
 				ObjectMeta: v1.ObjectMeta{Name: "master-dvp"},
 				Spec: cpapi.InstanceClassSpec{
-					EtcdDisk: rawJSONForInstanceClassTest("{}"),
+					EtcdDisk: map[string]any{},
 				},
 			},
 			{
 				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
 				ObjectMeta: v1.ObjectMeta{Name: "orphan-dvp"},
 				Spec: cpapi.InstanceClassSpec{
-					EtcdDisk: rawJSONForInstanceClassTest("{}"),
+					EtcdDisk: map[string]any{},
 				},
 			},
 		},
@@ -113,7 +112,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *
 				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
 				ObjectMeta: v1.ObjectMeta{Name: "shared-dvp"},
 				Spec: cpapi.InstanceClassSpec{
-					EtcdDisk: rawJSONForInstanceClassTest("{}"),
+					EtcdDisk: map[string]any{},
 				},
 			},
 		},
@@ -143,7 +142,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsMasterOnly(t *testing.T) {
 			{
 				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
 				ObjectMeta: v1.ObjectMeta{Name: "master-dvp"},
-				Spec:       cpapi.InstanceClassSpec{EtcdDisk: rawJSONForInstanceClassTest("{}")},
+				Spec:       cpapi.InstanceClassSpec{EtcdDisk: map[string]any{}},
 			},
 		},
 	))
@@ -163,7 +162,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentSkipsOtherKinds(t *testing.T) {
 			{
 				TypeMeta:   v1.TypeMeta{Kind: "OtherInstanceClass"},
 				ObjectMeta: v1.ObjectMeta{Name: "orphan"},
-				Spec:       cpapi.InstanceClassSpec{EtcdDisk: rawJSONForInstanceClassTest("{}")},
+				Spec:       cpapi.InstanceClassSpec{EtcdDisk: map[string]any{}},
 			},
 		},
 	))
@@ -192,7 +191,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentRequiresMasterWhenAttached(t *te
 			{
 				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
 				ObjectMeta: v1.ObjectMeta{Name: "worker-dvp"},
-				Spec:       cpapi.InstanceClassSpec{EtcdDisk: rawJSONForInstanceClassTest("{}")},
+				Spec:       cpapi.InstanceClassSpec{EtcdDisk: map[string]any{}},
 			},
 		},
 	))
@@ -283,9 +282,4 @@ func TestValidateInstanceClassDeleteUsesDeletedClassName(t *testing.T) {
 	if !hasViolationCode(result, "instance_class_in_use") {
 		t.Fatalf("ValidateInstanceClassDelete() = %q", result.Error())
 	}
-}
-
-func rawJSONForInstanceClassTest(value string) *json.RawMessage {
-	message := json.RawMessage(value)
-	return &message
 }
