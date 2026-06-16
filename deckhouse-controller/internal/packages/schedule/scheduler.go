@@ -333,21 +333,28 @@ func (s *Scheduler) compute() []*node {
 			continue
 		}
 
-		if !n.status.Enabled {
-			// Disabled nodes have nothing to wait for — mark them active so they do
-			// not block higher-order nodes via canSchedule's order-tier gate. Nodes
-			// that later flip back to enabled are reset to idle by the loop above and
-			// go through normal scheduling from there.
-			n.state = nodeStateActive
-			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
-			continue
-		}
-
 		// Status flipped — reset this node so the next schedule pass can
 		// either re-schedule it (now enabled) or mark it active via the
 		// disabled-mark-active loop below (now disabled).
 		n.state = nodeStateIdle
-		enabled = append(enabled, n.name)
+
+		if !n.status.Enabled {
+			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
+		} else {
+			enabled = append(enabled, n.name)
+		}
+	}
+
+	// Disabled nodes have nothing to wait for — mark them active so they do
+	// not block higher-order nodes via canSchedule's order-tier gate. This
+	// sweep is unconditional (not gated on a status flip), so nodes that are
+	// born disabled — never enabled to begin with — are parked active too.
+	// Nodes that later flip back to enabled are reset to idle by the loop
+	// above and go through normal scheduling from there.
+	for _, n := range sorted {
+		if n.state == nodeStateIdle && !n.status.Enabled {
+			n.state = nodeStateActive
+		}
 	}
 
 	if s.onScheduleHook != nil {
