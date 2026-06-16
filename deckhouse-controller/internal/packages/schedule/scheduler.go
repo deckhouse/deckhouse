@@ -325,7 +325,6 @@ func (s *Scheduler) compute() []*node {
 	// leave its members frozen at nodeStateIdle, surfaced quickly by stalled
 	// higher-tier nodes via canSchedule's order-tier gate.
 	sorted, _ := topoSort(s.nodes)
-	var enabled []string
 	for _, n := range sorted {
 		current := n.status.Enabled
 		n.status = checker.Check(n.checkers...)
@@ -340,8 +339,6 @@ func (s *Scheduler) compute() []*node {
 
 		if !n.status.Enabled {
 			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
-		} else {
-			enabled = append(enabled, n.name)
 		}
 	}
 
@@ -358,6 +355,12 @@ func (s *Scheduler) compute() []*node {
 	}
 
 	if s.onScheduleHook != nil {
+		var enabled []string
+		for _, n := range sorted {
+			if n.status.Enabled {
+				enabled = append(enabled, n.name)
+			}
+		}
 		s.onScheduleHook(enabled)
 	}
 
