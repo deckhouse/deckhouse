@@ -21,13 +21,13 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`csi-vsphere`](/modules/csi-vsphere/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![csi-vsphere architecture](../../../../images/architecture/storage/c4-l2-csi-vsphere.png)
+![csi-vsphere architecture](../../../images/architecture/storage/c4-l2-csi-vsphere.png)
 
 ## Module components
 
 The module consists of the following components:
 
-1. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used CSI driver for volume management.
+1. **Cloud-data-discoverer**: It is responsible for collecting data from the VMware vSphere API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used CSI driver for volume management.
 
    It consists of the following containers:
 
