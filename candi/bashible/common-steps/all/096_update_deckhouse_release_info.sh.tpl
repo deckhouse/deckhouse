@@ -25,7 +25,12 @@ deckhouse_version="$(
 
 modules="$(
   bb-curl-kube "/apis/deckhouse.io/v1alpha1/modulereleases" |
-  jq '[.items[] | select(.status.phase=="Deployed") | .metadata.name]'
+  jq '
+    .items
+    | map(select(.status.phase=="Deployed"))
+    | map({key: .spec.moduleName, value: ("v" + .spec.version)})
+    | from_entries
+  '
 )"
 
 if [[ -z "$deckhouse_version" || -z "$modules" ]]; then
