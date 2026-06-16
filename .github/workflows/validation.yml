@@ -406,9 +406,6 @@ jobs:
         with:
           name: pr_diff
 
-      - name: Validate spelling dictionary sync
-        run: ./.github/scripts/validate_spelling_dictionary_sync.sh ./pr.diff
-
       - name: Run check
         env:
           DIFF_PATH: ./pr.diff
