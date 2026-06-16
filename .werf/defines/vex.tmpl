@@ -127,20 +127,14 @@ shell:
     export VAULT_KEY="cosign.key"
 {{- end }}
   - |
-    cosign version
-    cosign_args="--tlog-upload=false"
-    if ! [[ $(cosign version) =~ v2.[0-9]+[.0-9]* ]]; then
-      cosign signing-config create --out signing-config.json
-      cosign_args="--signing-config signing-config.json"
-    fi
-    echo "Cosign arguments: $cosign_args"
     cosign attest \
       --replace \
       --registry-username="${REGISTRY_USER}" \
       --registry-password="${REGISTRY_PASSWORD}" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
-      --key ${VAULT_KEY} ${cosign_args} \
+      --key ${VAULT_KEY} \
+      --tlog-upload=false \
       -y -d \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
