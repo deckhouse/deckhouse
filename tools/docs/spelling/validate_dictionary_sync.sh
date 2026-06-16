@@ -35,6 +35,9 @@ if [[ "${changed_wordlist}" == "false" && "${changed_dic}" == "false" ]]; then
   exit 0
 fi
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORDLIST_PATH="${WORDLIST_PATH}" "${script_dir}/validate_wordlist.sh"
+
 errors=0
 
 if [[ "${changed_wordlist}" == "true" && "${changed_dic}" == "false" ]]; then
