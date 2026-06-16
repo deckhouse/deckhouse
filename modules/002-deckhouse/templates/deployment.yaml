@@ -187,6 +187,8 @@ spec:
               value: "false"
             - name: USE_NELM
               value: "true"
+            - name: NELM_DEPENDENCY_GRAPH_ENABLED
+              value: "true"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA
