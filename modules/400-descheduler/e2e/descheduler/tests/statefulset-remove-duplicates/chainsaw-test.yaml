@@ -6,7 +6,7 @@ spec:
   description: >-
     StatefulSet without PDB: the RemoveDuplicates strategy must evict duplicate
     StatefulSet pods concentrated on a single node and let them spread across
-    the cluster (testing doc, scenario 1).
+    the cluster.
   concurrent: false
   timeouts:
     apply: 30s

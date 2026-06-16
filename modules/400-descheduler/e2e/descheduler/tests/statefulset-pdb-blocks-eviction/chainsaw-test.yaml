@@ -6,7 +6,7 @@ spec:
   description: >-
     StatefulSet protected by a PDB with maxUnavailable=0: the RemoveDuplicates
     strategy detects duplicates but every eviction request must be rejected by
-    the API server, so all pods stay in place (testing doc, scenario 2a).
+    the API server, so all pods stay in place.
   concurrent: false
   timeouts:
     apply: 30s

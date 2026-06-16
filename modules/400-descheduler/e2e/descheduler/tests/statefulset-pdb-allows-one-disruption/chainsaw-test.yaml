@@ -6,8 +6,7 @@ spec:
   description: >-
     StatefulSet protected by a PDB with maxUnavailable=1: the RemoveDuplicates
     strategy evicts duplicate pods one at a time, the StatefulSet never loses
-    more than one replica at once and ends up spread across nodes
-    (testing doc, scenario 2b).
+    more than one replica at once and ends up spread across nodes.
 
   concurrent: false
   timeouts:

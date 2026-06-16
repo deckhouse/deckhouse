@@ -5,9 +5,8 @@ metadata:
 spec:
   description: >-
     The upstream descheduler minReplicas protection is not exposed by Deckhouse:
-    the Descheduler v1alpha2 CRD has no spec.minReplicas field (testing doc,
-    scenario 3a) and a manual edit of the rendered descheduler-policy ConfigMap
-    is overwritten by Deckhouse (testing doc, scenario 3b).
+    the Descheduler v1alpha2 CRD has no spec.minReplicas field and a manual edit of the rendered descheduler-policy ConfigMap
+    is overwritten by Deckhouse.
   concurrent: false
   timeouts:
     apply: 30s

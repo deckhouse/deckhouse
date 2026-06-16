@@ -6,9 +6,9 @@ spec:
   description: >-
     Single-replica StatefulSet without PDB: the descheduler evicts even the only
     pod of a StatefulSet because Deckhouse does not expose the upstream
-    minReplicas protection (testing doc, scenario 3c). A deterministic inter-pod
+    minReplicas protection. A deterministic inter-pod
     anti-affinity violation is used as the eviction trigger instead of the
-    utilization-dependent lowNodeUtilization strategy from the testing doc.
+    utilization-dependent lowNodeUtilization strategy.
   concurrent: false
   timeouts:
     apply: 30s
