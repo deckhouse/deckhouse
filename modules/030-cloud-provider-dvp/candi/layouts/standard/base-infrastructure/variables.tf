@@ -80,7 +80,7 @@ locals {
       }]
     },
     {
-      from  = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
+      from  = [{ ipBlock = { cidr = "0.0.0.0/0" } }, { namespaceSelector = {} }]
       ports = [{ port = 22, protocol = "TCP" }]
     },
     {
