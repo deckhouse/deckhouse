@@ -152,7 +152,7 @@ spec:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
 
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                    > **Caution.** Can only be used together with `nodeType: CloudEphemeral`.
                   type: object
                   required:
                     - classReference
@@ -378,7 +378,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution.** The `master` node group update mode must be `Manual` to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
 
@@ -399,7 +399,7 @@ spec:
                           description: |
                             Drain Pods from the nodes before approving disruption.
 
-                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            **Caution.** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
@@ -884,7 +884,7 @@ spec:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
 
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                    > **Caution.** Can only be used together with `nodeType: CloudEphemeral`.
                   type: object
                   required:
                     - classReference
@@ -1096,7 +1096,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution.** The `master` node group update mode must be `Manual` to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
 
@@ -1117,7 +1117,7 @@ spec:
                           description: |
                             Drain Pods from the nodes before approving disruption.
 
-                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            **Caution.** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
@@ -1783,7 +1783,7 @@ spec:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
 
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                    > **Caution.** Can only be used together with `nodeType: CloudEphemeral`.
                   type: object
                   required:
                     - classReference
@@ -2021,7 +2021,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. Nodes are not drained automatically in `Manual` mode. If necessary, manually drain nodes before setting the `update.node.deckhouse.io/disruption-approved=` annotation. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. Nodes are not drained automatically in `Manual` mode. If necessary, manually drain nodes before setting the `update.node.deckhouse.io/disruption-approved=` annotation. **Caution.** The `master` node group update mode must be `Manual` to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates. Nodes could be drained automatically before reboot, as configured by the [drainBeforeApproval](#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) option.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
 
@@ -2042,7 +2042,7 @@ spec:
                           description: |
                             Drain Pods from the nodes before approving disruption.
 
-                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            **Caution.** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
