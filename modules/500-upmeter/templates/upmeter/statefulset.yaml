@@ -115,8 +115,9 @@ spec:
           - --dynamic-probe-nodegroup={{ $name }}
             {{- end }}
           {{- end }}
-          {{- with .Values.global.modulesImages.digests.virtualization.upmeterVm }}
-          - --virtualization-probe-vm-image={{ $.Values.global.modulesImages.registry.base }}@{{ . }}
+          {{- if (.Values.global.enabledModules | has "virtualization") }}
+          {{- $upmeterVmImageDigest := required "global.modulesImages.digests.virtualization.upmeterVm is required when virtualization module is enabled" $.Values.global.modulesImages.digests.virtualization.upmeterVm }}
+          - --virtualization-probe-vm-image={{ $.Values.global.modulesImages.registry.base }}@{{ $upmeterVmImageDigest }}
           {{- end }}
         env:
           - name: UPMETER_DB_PATH
