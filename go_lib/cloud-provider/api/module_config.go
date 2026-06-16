@@ -45,8 +45,8 @@ type ModuleConfigSpecProviderSettings struct {
 	Parameters map[string]any `json:"parameters,omitempty"`
 }
 
-// ModuleConfigSpecSubsystemSettings holds subsystem enablement and parameters.
+// ModuleConfigSpecSubsystemSettings holds subsystem disablement and parameters.
 type ModuleConfigSpecSubsystemSettings struct {
-	Enabled    *bool          `json:"enabled,omitempty"`
+	Disabled   *bool          `json:"disabled,omitempty"`
 	Parameters map[string]any `json:"parameters,omitempty"`
 }

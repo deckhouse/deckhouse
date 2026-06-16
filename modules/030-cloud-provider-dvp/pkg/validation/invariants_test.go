@@ -54,8 +54,8 @@ func TestValidateInvariantsSkipsPendingMigration(t *testing.T) {
 				Enabled: ptr.To(true),
 				Version: 2,
 				Settings: cpapi.ModuleConfigSpecSettings{
-					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)},
-					Nodes:   &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)},
+					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Disabled: ptr.To(true)},
+					Nodes:   &cpapi.ModuleConfigSpecSubsystemSettings{Disabled: ptr.To(true)},
 				},
 			},
 		},
@@ -104,9 +104,9 @@ func TestValidateInvariantsIgnoresNodeParameterFields(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
-	state.ModuleConfig.Spec.Settings.Storage = &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(false)}
+	state.ModuleConfig.Spec.Settings.Storage = &cpapi.ModuleConfigSpecSubsystemSettings{Disabled: ptr.To(true)}
 	state.ModuleConfig.Spec.Settings.Nodes = &cpapi.ModuleConfigSpecSubsystemSettings{
-		Enabled: ptr.To(true),
+		Disabled: ptr.To(false),
 		Parameters: map[string]any{
 			"layout":       "UnsupportedLayout",
 			"sshPublicKey": "",
@@ -162,11 +162,11 @@ func validState(t *testing.T) *cpval.State {
 						},
 					},
 					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Enabled:    ptr.To(true),
+						Disabled:   ptr.To(false),
 						Parameters: map[string]any{},
 					},
 					Nodes: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Enabled: ptr.To(false),
+						Disabled: ptr.To(true),
 					},
 				},
 			},

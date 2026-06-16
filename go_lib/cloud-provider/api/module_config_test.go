@@ -44,3 +44,32 @@ func TestModuleConfigSpecProviderParameters(t *testing.T) {
 		t.Fatalf("Provider.Parameters = %#v, want namespace parameter", moduleConfig.Spec.Settings.Provider)
 	}
 }
+
+func TestModuleConfigSpecSubsystemDisabled(t *testing.T) {
+	t.Parallel()
+
+	raw := `{
+		"spec": {
+			"settings": {
+				"nodes": {
+					"disabled": true
+				},
+				"storage": {
+					"disabled": false
+				}
+			}
+		}
+	}`
+
+	var moduleConfig ModuleConfig
+	if err := json.Unmarshal([]byte(raw), &moduleConfig); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+
+	if moduleConfig.Spec.Settings.Nodes == nil || moduleConfig.Spec.Settings.Nodes.Disabled == nil || !*moduleConfig.Spec.Settings.Nodes.Disabled {
+		t.Fatalf("Nodes.Disabled = %#v, want true", moduleConfig.Spec.Settings.Nodes)
+	}
+	if moduleConfig.Spec.Settings.Storage == nil || moduleConfig.Spec.Settings.Storage.Disabled == nil || *moduleConfig.Spec.Settings.Storage.Disabled {
+		t.Fatalf("Storage.Disabled = %#v, want false", moduleConfig.Spec.Settings.Storage)
+	}
+}

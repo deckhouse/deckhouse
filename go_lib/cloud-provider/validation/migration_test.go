@@ -107,11 +107,11 @@ func migrationBaseState(t *testing.T) *State {
 						},
 					},
 					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Enabled:    ptr.To(true),
+						Disabled:   ptr.To(false),
 						Parameters: map[string]any{},
 					},
 					Nodes: &cpapi.ModuleConfigSpecSubsystemSettings{
-						Enabled: ptr.To(false),
+						Disabled: ptr.To(true),
 					},
 				},
 			},
@@ -224,7 +224,7 @@ func TestMigrationStatusIncompleteWhenProviderSettingsMissing(t *testing.T) {
 	state := migrationBaseState(t)
 	state.LegacyProviderClusterConfig = map[string]any{"masterNodeGroup": map[string]any{}}
 	state.ModuleConfig.Spec.Settings = cpapi.ModuleConfigSpecSettings{
-		Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Enabled: ptr.To(true)},
+		Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Disabled: ptr.To(false)},
 	}
 
 	got := MigrationStatusFromState(state, &rules)
