@@ -35,6 +35,7 @@ import (
 // the production 1-minute default.
 func TestMain(m *testing.M) {
 	constants.KubernetesAPICallTimeout = 200 * time.Millisecond
+	constants.EtcdAPICallTimeout = 200 * time.Millisecond
 	os.Exit(m.Run())
 }
 
