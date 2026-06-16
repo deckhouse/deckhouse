@@ -213,7 +213,12 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 		}
 	}
 
-	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
+	cmd := `test -f /var/lib/bashible/cleanup_static_node.sh || {
+	echo "ERROR: cleanup_static_node.sh not found"
+	exit 1
+}
+
+bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing`
 
 	userPassedSSHSetting := sshClient.Session().Copy()
 
