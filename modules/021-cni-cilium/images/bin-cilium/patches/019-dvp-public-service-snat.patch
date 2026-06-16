@@ -1,5 +1,5 @@
 diff --git a/bpf/Makefile b/bpf/Makefile
-index 5e3864464a..21e4b5c9c1 100644
+index 5e386446..21e4b5c9 100644
 --- a/bpf/Makefile
 +++ b/bpf/Makefile
 @@ -166,6 +166,7 @@ LXC_OPTIONS = \
@@ -11,10 +11,32 @@ index 5e3864464a..21e4b5c9c1 100644
  	 -DENABLE_IPV4:-DENABLE_IPV6:-DENCAP_IFINDEX:-DTUNNEL_MODE:-DPOLICY_VERDICT_NOTIFY:-DUSE_BPF_PROG_FOR_INGRESS_POLICY: \
  	 -DENABLE_IPV4:-DENABLE_IPV6:-DENCAP_IFINDEX:-DTUNNEL_MODE:-DENABLE_TPROXY:-DENABLE_HOST_ROUTING: \
 diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
-index 54e18e1732..c0e1879626 100644
+index 54e18e17..dade5b38 100644
 --- a/bpf/bpf_lxc.c
 +++ b/bpf/bpf_lxc.c
-@@ -85,6 +85,9 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
+@@ -37,10 +37,8 @@
+  * algorithm for in-cluster traffic. Otherwise, it will fail with the Maglev hash algorithm because Cilium doesn't provision
+  * the Maglev table for ClusterIP unless bpf.lbExternalClusterIP is set to true.
+  */
+-#if LB_SELECTION == LB_SELECTION_MAGLE
+ #undef LB_SELECTION
+ #define LB_SELECTION LB_SELECTION_RANDOM
+-#endif
+ 
+ #include "lib/lb.h"
+ #include "lib/drop.h"
+@@ -54,10 +52,6 @@
+ #include "lib/nodeport.h"
+ #include "lib/policy_log.h"
+ 
+-#ifdef ENABLE_DHCPD
+-#include "lib/dhcp.h"
+-#endif
+-
+ /* Per-packet LB is needed if all LB cases can not be handled in bpf_sock.
+  * Most services with L7 LB flag can not be redirected to their proxy port
+  * in bpf_sock, so we must check for those via per packet LB as well.
+@@ -85,6 +79,9 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
  	struct lb4_key key = {};
  	__u16 proxy_port = 0;
  	__u32 cluster_id = 0;
@@ -24,7 +46,7 @@ index 54e18e1732..c0e1879626 100644
  	int l4_off;
  	int ret = 0;
  
-@@ -119,7 +122,11 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
+@@ -119,7 +116,11 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
  #endif /* ENABLE_LOCAL_REDIRECT_POLICY && ENABLE_SOCKET_LB_FULL */
  		ret = lb4_local(get_ct_map4(&tuple), ctx, ipv4_is_fragment(ip4),
  				ETH_HLEN, l4_off, &key, &tuple, svc, &ct_state_new,
@@ -37,7 +59,7 @@ index 54e18e1732..c0e1879626 100644
  
  #ifdef SERVICE_NO_BACKEND_RESPONSE
  		if (ret == DROP_NO_SERVICE)
-@@ -132,7 +139,11 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
+@@ -132,7 +133,11 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
  	}
  skip_service_lookup:
  	/* Store state to be picked up on the continuation tail call. */
@@ -50,7 +72,7 @@ index 54e18e1732..c0e1879626 100644
  	return tail_call_internal(ctx, CILIUM_CALL_IPV4_CT_EGRESS, ext_err);
  }
  #endif /* ENABLE_IPV4 */
-@@ -267,6 +278,14 @@ static __always_inline int drop_for_direction(struct __ctx_buff *ctx,
+@@ -267,6 +272,15 @@ static __always_inline int drop_for_direction(struct __ctx_buff *ctx,
  }
  #endif /* ENABLE_IPV4 || ENABLE_IPV6 */
  
@@ -58,6 +80,7 @@ index 54e18e1732..c0e1879626 100644
 +#define DVP_PUBLIC_SERVICE_SNAT_RESTORE_ARG , NULL
 +#define DVP_LXC_DELIVERY_HAIRPIN	(1 << 0)
 +#define DVP_LXC_DELIVERY_PUBLIC_SNAT	(1 << 1)
++#define DVP_LXC_DELIVERY_REV_SNAT	(1 << 2)
 +#else
 +#define DVP_PUBLIC_SERVICE_SNAT_RESTORE_ARG
 +#endif
@@ -65,7 +88,7 @@ index 54e18e1732..c0e1879626 100644
  #define TAIL_CT_LOOKUP4(ID, NAME, DIR, CONDITION, TARGET_ID, TARGET_NAME)	\
  __section_tail(CILIUM_MAP_CALLS, ID)						\
  static __always_inline								\
-@@ -308,7 +327,8 @@ int NAME(struct __ctx_buff *ctx)						\
+@@ -308,7 +322,8 @@ int NAME(struct __ctx_buff *ctx)						\
  		__u16 proxy_port;						\
  										\
  		lb4_ctx_restore_state(ctx, &ct_state_new, &proxy_port,		\
@@ -75,7 +98,7 @@ index 54e18e1732..c0e1879626 100644
  		if (ct_state_new.rev_nat_index)					\
  			scope = SCOPE_FORWARD;					\
  		if (is_defined(ENABLE_L7_LB) && proxy_port)			\
-@@ -876,22 +896,20 @@ struct {
+@@ -876,22 +891,88 @@ struct {
  	__uint(max_entries, 1);
  } CT_TAIL_CALL_BUFFER4 __section_maps_btf;
  
@@ -86,17 +109,85 @@ index 54e18e1732..c0e1879626 100644
 - */
 -static __always_inline int handle_ipv4_from_lxc(struct __ctx_buff *ctx, __u32 *dst_sec_identity,
 -						__s8 *ext_err)
-+static __always_inline int
-+handle_ipv4_from_lxc_delivery(struct __ctx_buff *ctx, __u32 *dst_sec_identity,
-+			      bool hairpin_flow, bool from_l7lb,
 +#ifdef ENABLE_DVP_PUBLIC_SERVICE_SNAT
-+			      bool public_service_snat,
-+#endif
-+			      __u32 cluster_id,
++static __always_inline int
++handle_ipv4_from_lxc_dvp_snat(struct __ctx_buff *ctx, __u32 delivery_flags,
 +			      __s8 *ext_err)
  {
 -	struct ct_state *ct_state, ct_state_new = {};
 -	struct ipv4_ct_tuple *tuple;
++	struct trace_ctx trace = {
++		.reason = TRACE_REASON_UNKNOWN,
++		.monitor = 0,
++	};
++	struct ct_buffer4 *ct_buffer;
++	void *data, *data_end;
++	struct iphdr *ip4;
++	enum ct_status ct_status;
++	__u32 zero = 0;
++	int ret;
++
++	if (!revalidate_data(ctx, &data, &data_end, &ip4))
++		return DROP_INVALID;
++
++	ct_buffer = map_lookup_elem(&CT_TAIL_CALL_BUFFER4, &zero);
++	if (!ct_buffer)
++		return DROP_INVALID_TC_BUFFER;
++
++	ct_status = (enum ct_status)ct_buffer->ret;
++
++	if ((delivery_flags & DVP_LXC_DELIVERY_REV_SNAT) &&
++	    ct_status == CT_REPLY && ip4->daddr == IPV4_GATEWAY) {
++		struct ipv4_nat_target target = {
++			.min_port = NODEPORT_PORT_MIN_NAT,
++			.max_port = NODEPORT_PORT_MAX_NAT,
++		};
++
++		ret = snat_v4_rev_nat(ctx, &target, &trace, ext_err);
++		if (ret == NAT_PUNT_TO_STACK || ret == DROP_NAT_NO_MAPPING) {
++			ret = CTX_ACT_OK;
++		} else if (IS_ERR(ret)) {
++			return ret;
++		} else {
++			ctx_snat_done_set(ctx);
++			if (!revalidate_data(ctx, &data, &data_end, &ip4))
++				return DROP_INVALID;
++		}
++	}
++
++	if (delivery_flags & DVP_LXC_DELIVERY_PUBLIC_SNAT) {
++		struct ipv4_nat_target target = {
++			.addr = IPV4_GATEWAY,
++			.min_port = NODEPORT_PORT_MIN_NAT,
++			.max_port = NODEPORT_PORT_MAX_NAT,
++			.from_local_endpoint = true,
++		};
++		struct ipv4_ct_tuple snat_tuple = {};
++
++		snat_v4_init_tuple(ip4, NAT_DIR_EGRESS, &snat_tuple);
++		ret = snat_v4_nat(ctx, &snat_tuple, ip4, ct_buffer->l4_off,
++				  ipv4_has_l4_header(ip4), &target, &trace,
++				  ext_err);
++		if (ret == NAT_PUNT_TO_STACK)
++			ret = CTX_ACT_OK;
++		if (IS_ERR(ret))
++			return ret;
++
++		ctx_snat_done_set(ctx);
++		if (!revalidate_data(ctx, &data, &data_end, &ip4))
++			return DROP_INVALID;
++	}
++
++	return CTX_ACT_OK;
++}
++#endif /* ENABLE_DVP_PUBLIC_SERVICE_SNAT */
++
++static __always_inline int
++handle_ipv4_from_lxc_delivery(struct __ctx_buff *ctx, __u32 *dst_sec_identity,
++			      bool hairpin_flow, bool from_l7lb,
++			      __u32 cluster_id,
++			      __s8 *ext_err)
++{
 +	struct ct_buffer4 *ct_buffer;
 +	struct ct_state *ct_state;
  #ifdef ENABLE_ROUTING
@@ -108,7 +199,7 @@ index 54e18e1732..c0e1879626 100644
  	struct trace_ctx trace = {
  		.reason = TRACE_REASON_UNKNOWN,
  		.monitor = 0,
-@@ -899,239 +917,87 @@ static __always_inline int handle_ipv4_from_lxc(struct __ctx_buff *ctx, __u32 *d
+@@ -899,28 +980,26 @@ static __always_inline int handle_ipv4_from_lxc(struct __ctx_buff *ctx, __u32 *d
  	__u32 __maybe_unused tunnel_endpoint = 0, zero = 0;
  	__u8 __maybe_unused encrypt_key = 0;
  	bool __maybe_unused skip_tunnel = false;
@@ -134,49 +225,63 @@ index 54e18e1732..c0e1879626 100644
 -	lb4_ctx_restore_state(ctx, &ct_state_new, &proxy_port, &cluster_id, true);
 -	hairpin_flow = ct_state_new.loopback;
 -#endif /* ENABLE_PER_PACKET_LB */
--
++	ct_buffer = map_lookup_elem(&CT_TAIL_CALL_BUFFER4, &zero);
++	if (!ct_buffer)
++		return DROP_INVALID_TC_BUFFER;
++	if (ct_buffer->tuple.saddr == 0)
++		return DROP_INVALID_TC_BUFFER;
+ 
 -	/* Determine the destination category for policy fallback. */
 -	if (1) {
--		struct remote_endpoint_info *info;
--
--		info = lookup_ip4_remote_endpoint(ip4->daddr, cluster_id);
--		if (info && info->sec_identity) {
--			*dst_sec_identity = info->sec_identity;
--			tunnel_endpoint = info->tunnel_endpoint;
--			encrypt_key = get_min_encrypt_key(info->key);
--			skip_tunnel = info->flag_skip_tunnel;
--		} else {
--			*dst_sec_identity = WORLD_IPV4_ID;
--		}
--
--		cilium_dbg(ctx, info ? DBG_IP_ID_MAP_SUCCEED4 : DBG_IP_ID_MAP_FAILED4,
--			   ip4->daddr, *dst_sec_identity);
--	}
--
- 	ct_buffer = map_lookup_elem(&CT_TAIL_CALL_BUFFER4, &zero);
- 	if (!ct_buffer)
- 		return DROP_INVALID_TC_BUFFER;
- 	if (ct_buffer->tuple.saddr == 0)
--		/* The map value is zeroed so the map update didn't happen somehow. */
- 		return DROP_INVALID_TC_BUFFER;
- 
--	tuple = (struct ipv4_ct_tuple *)&ct_buffer->tuple;
- 	ct_state = (struct ct_state *)&ct_buffer->ct_state;
++	ct_state = (struct ct_state *)&ct_buffer->ct_state;
 +	ct_status = (enum ct_status)ct_buffer->ret;
 +	trace.reason = (enum trace_reason)ct_buffer->ret;
- 	trace.monitor = ct_buffer->monitor;
++	trace.monitor = ct_buffer->monitor;
++
++	{
+ 		struct remote_endpoint_info *info;
+ 
+ 		info = lookup_ip4_remote_endpoint(ip4->daddr, cluster_id);
+@@ -937,301 +1016,108 @@ static __always_inline int handle_ipv4_from_lxc(struct __ctx_buff *ctx, __u32 *d
+ 			   ip4->daddr, *dst_sec_identity);
+ 	}
+ 
+-	ct_buffer = map_lookup_elem(&CT_TAIL_CALL_BUFFER4, &zero);
+-	if (!ct_buffer)
+-		return DROP_INVALID_TC_BUFFER;
+-	if (ct_buffer->tuple.saddr == 0)
+-		/* The map value is zeroed so the map update didn't happen somehow. */
+-		return DROP_INVALID_TC_BUFFER;
++	hairpin_flow |= ct_state->loopback;
+ 
+-	tuple = (struct ipv4_ct_tuple *)&ct_buffer->tuple;
+-	ct_state = (struct ct_state *)&ct_buffer->ct_state;
+-	trace.monitor = ct_buffer->monitor;
 -	ret = ct_buffer->ret;
 -	ct_status = (enum ct_status)ret;
 -	trace.reason = (enum trace_reason)ret;
 -	l4_off = ct_buffer->l4_off;
--
++#if defined(ENABLE_HOST_FIREWALL) && !defined(ENABLE_ROUTING)
++	/* If the destination is the local host and per-endpoint routes are
++	 * enabled, jump to the bpf_host program to enforce ingress host policies.
++	 * Note that bpf_lxc can be loaded before bpf_host, so bpf_host's policy
++	 * program may not yet be present at this time.
++	 */
++	if (*dst_sec_identity == HOST_ID) {
++		ctx_store_meta(ctx, CB_FROM_HOST, 0);
++		ret = tail_call_policy(ctx, HOST_EP_ID);
+ 
 -	/* Apply network policy: */
 -	switch (ct_status) {
 -	case CT_NEW:
 -	case CT_ESTABLISHED:
 -#if defined(ENABLE_L7_LB)
 -		from_l7lb = ctx_load_meta(ctx, CB_FROM_HOST) == FROM_HOST_L7_LB;
--
++		/* report fine-grained error: */
++		return DROP_HOST_NOT_READY;
++	}
++#endif /* ENABLE_HOST_FIREWALL && !ENABLE_ROUTING */
+ 
 -		/* Forward to L7 LB first before applying network policy: */
 -		if (proxy_port > 0) {
 -			/* tuple addresses have been swapped by CT lookup */
@@ -185,30 +290,73 @@ index 54e18e1732..c0e1879626 100644
 -			break;
 -		}
 -#endif /* ENABLE_L7_LB */
--
++	/* Allow a hairpin packet to be redirected even if ENABLE_ROUTING is
++	 * disabled (for example, with per-endpoint routes). Otherwise, the
++	 * packet will be dropped by the kernel if the packet will be routed to
++	 * the interface it came from after the packet has been passed to the
++	 * stack.
++	 *
++	 * If ENABLE_ROUTING is disabled, but the fast redirect is enabled, we
++	 * do lookup the local endpoint here to check whether we must pass the
++	 * packet up the stack for the host itself. We also want to run through
++	 * the ipv4_local_delivery() function to enforce ingress policies for
++	 * that endpoint.
++	 */
++	if (is_defined(ENABLE_ROUTING) || hairpin_flow ||
++	    is_defined(ENABLE_HOST_ROUTING)) {
++		__be32 daddr = ip4->daddr;
++		struct endpoint_info *ep;
+ 
 -		/* When an endpoint connects to itself via service clusterIP, we need
 -		 * to skip the policy enforcement. If we didn't, the user would have to
 -		 * define policy rules to allow pods to talk to themselves. We still
 -		 * want to execute the conntrack logic so that replies can be correctly
 -		 * matched.
--		 */
++		/* Loopback replies are addressed to IPV4_LOOPBACK, so
++		 * an endpoint lookup with ip4->daddr won't work.
++		 *
++		 * But as it is loopback traffic, the clientIP and backendIP
++		 * are identical and we can just use the packet's saddr
++		 * for the destination endpoint lookup.
+ 		 */
 -		if (hairpin_flow)
 -			break;
--
++		if (ct_status == CT_REPLY && hairpin_flow)
++			daddr = ip4->saddr;
+ 
 -		/* If the packet is in the establishing direction and it's destined
 -		 * within the cluster, it must match policy or be dropped. If it's
 -		 * bound for the host/outside, perform the CIDR policy check.
--		 */
++		/* Lookup IPv4 address, this will return a match if:
++		 *  - The destination IP address belongs to a local endpoint
++		 *    managed by cilium
++		 *  - The destination IP address is an IP address associated with the
++		 *    host itself
++		 *  - The destination IP address belongs to endpoint itself.
+ 		 */
 -		verdict = policy_can_egress4(ctx, &POLICY_MAP, tuple, l4_off, SECLABEL_IPV4,
 -					     *dst_sec_identity, &policy_match_type, &audited,
 -					     ext_err, &proxy_port);
- 
+-
 -		if (verdict == DROP_POLICY_AUTH_REQUIRED) {
 -			auth_type = (__u8)*ext_err;
 -			verdict = auth_lookup(ctx, SECLABEL_IPV4, *dst_sec_identity,
 -					      tunnel_endpoint, auth_type);
 -		}
--
++		ep = __lookup_ip4_endpoint(daddr);
++		if (ep) {
++#if defined(ENABLE_HOST_ROUTING) || defined(ENABLE_ROUTING)
++			if (ep->flags & ENDPOINT_MASK_HOST_DELIVERY) {
++				if (is_defined(ENABLE_ROUTING)) {
++# ifdef HOST_IFINDEX
++					goto to_host;
++# endif
++					return DROP_HOST_UNREACHABLE;
++				}
++				goto pass_to_stack;
++			}
++#endif /* ENABLE_HOST_ROUTING || ENABLE_ROUTING */
+ 
 -		/* Emit verdict if drop or if allow for CT_NEW. */
 -		if (verdict != CTX_ACT_OK || ct_status != CT_ESTABLISHED) {
 -			send_policy_verdict_notify(ctx, *dst_sec_identity, tuple->dport,
@@ -216,16 +364,35 @@ index 54e18e1732..c0e1879626 100644
 -						   verdict, proxy_port,
 -						   policy_match_type, audited,
 -						   auth_type);
--		}
--
++			/* If the packet is from L7 LB it is coming from the host */
++			return ipv4_local_delivery(ctx, ETH_HLEN, SECLABEL_IPV4,
++						   MARK_MAGIC_IDENTITY, ip4,
++						   ep, METRIC_EGRESS, from_l7lb,
++						   false, 0);
+ 		}
++	}
+ 
 -		if (verdict != CTX_ACT_OK)
 -			return verdict;
--
++	/* L7 proxy result in VTEP redirection in bpf_host, but when L7 proxy disabled
++	 * We want VTEP redirection handled earlier here to avoid packets passing to
++	 * stack to bpf_host for VTEP redirection. When L7 proxy enabled, but no
++	 * L7 policy applied to pod, VTEP redirection also happen here.
++	 */
++#if defined(ENABLE_VTEP)
++	{
++		struct vtep_key vkey = {};
++		struct vtep_value *vtep;
+ 
 -		break;
 -	case CT_RELATED:
 -	case CT_REPLY:
 -		/* Skip policy enforcement for return traffic. */
--
++		vkey.vtep_ip = ip4->daddr & VTEP_MASK;
++		vtep = map_lookup_elem(&VTEP_MAP, &vkey);
++		if (!vtep)
++			goto skip_vtep;
+ 
 -		/* Check if this is return traffic to an ingress proxy. */
 -		if (ct_state->proxy_redirect) {
 -			send_trace_notify(ctx, TRACE_TO_PROXY, SECLABEL_IPV4,
@@ -234,22 +401,12 @@ index 54e18e1732..c0e1879626 100644
 -					  trace.monitor);
 -			/* Stack will do a socket match and deliver locally. */
 -			return ctx_redirect_to_proxy4(ctx, tuple, 0, false);
-+#ifdef ENABLE_DVP_PUBLIC_SERVICE_SNAT
-+	if (ct_status == CT_REPLY && ip4->daddr == IPV4_GATEWAY) {
-+		struct ipv4_nat_target target = {
-+			.min_port = NODEPORT_PORT_MIN_NAT,
-+			.max_port = NODEPORT_PORT_MAX_NAT,
-+		};
-+
-+		ret = snat_v4_rev_nat(ctx, &target, &trace, ext_err);
-+		if (ret == NAT_PUNT_TO_STACK || ret == DROP_NAT_NO_MAPPING) {
-+			ret = CTX_ACT_OK;
-+		} else if (IS_ERR(ret)) {
-+			return ret;
-+		} else {
-+			ctx_snat_done_set(ctx);
-+			if (!revalidate_data(ctx, &data, &data_end, &ip4))
-+				return DROP_INVALID;
++		if (vtep->vtep_mac && vtep->tunnel_endpoint) {
++			if (eth_store_daddr(ctx, (__u8 *)&vtep->vtep_mac, 0) < 0)
++				return DROP_WRITE_ERROR;
++			return __encap_and_redirect_with_nodeid(ctx, 0, vtep->tunnel_endpoint,
++								SECLABEL_IPV4, WORLD_IPV4_ID,
++								WORLD_IPV4_ID, &trace);
  		}
 -		/* proxy_port remains 0 in this case */
 -
@@ -257,6 +414,8 @@ index 54e18e1732..c0e1879626 100644
 -	default:
 -		return DROP_UNKNOWN_CT;
  	}
++skip_vtep:
++#endif
  
 -	switch (ct_status) {
 -	case CT_NEW:
@@ -284,23 +443,8 @@ index 54e18e1732..c0e1879626 100644
 -
 -		ret = ct_create4(ct_map, ct_related_map, tuple, ctx,
 -				 CT_EGRESS, &ct_state_new, ext_err);
-+	if (public_service_snat) {
-+		struct ipv4_nat_target target = {
-+			.addr = IPV4_GATEWAY,
-+			.min_port = NODEPORT_PORT_MIN_NAT,
-+			.max_port = NODEPORT_PORT_MAX_NAT,
-+			.from_local_endpoint = true,
-+		};
-+		struct ipv4_ct_tuple snat_tuple = {};
-+
-+		snat_v4_init_tuple(ip4, NAT_DIR_EGRESS, &snat_tuple);
-+		ret = snat_v4_nat(ctx, &snat_tuple, ip4, ct_buffer->l4_off,
-+				  ipv4_has_l4_header(ip4), &target, &trace,
-+				  ext_err);
-+		if (ret == NAT_PUNT_TO_STACK)
-+			ret = CTX_ACT_OK;
- 		if (IS_ERR(ret))
- 			return ret;
+-		if (IS_ERR(ret))
+-			return ret;
 -		break;
 -
 -	case CT_ESTABLISHED:
@@ -342,22 +486,17 @@ index 54e18e1732..c0e1879626 100644
 -						  ext_err);
 -		}
 -#endif /* ENABLE_NODEPORT */
- 
+-
 -		break;
 -	default:
 -		return DROP_UNKNOWN_CT;
-+		ctx_snat_done_set(ctx);
-+		if (!revalidate_data(ctx, &data, &data_end, &ip4))
-+			return DROP_INVALID;
- 	}
-+#endif /* ENABLE_DVP_PUBLIC_SERVICE_SNAT */
- 
+-	}
+-
 -#ifdef ENABLE_SRV6
- 	{
+-	{
 -		__u32 *vrf_id;
 -		union v6addr *sid;
-+		struct remote_endpoint_info *info;
- 
+-
 -		/* Determine if packet belongs to a VRF */
 -		vrf_id = srv6_lookup_vrf4(ip4->saddr, ip4->daddr);
 -		if (vrf_id) {
@@ -369,23 +508,12 @@ index 54e18e1732..c0e1879626 100644
 -				return tail_call_internal(ctx, CILIUM_CALL_SRV6_ENCAP,
 -							  ext_err);
 -			}
-+		info = lookup_ip4_remote_endpoint(ip4->daddr, cluster_id);
-+		if (info && info->sec_identity) {
-+			*dst_sec_identity = info->sec_identity;
-+			tunnel_endpoint = info->tunnel_endpoint;
-+			encrypt_key = get_min_encrypt_key(info->key);
-+			skip_tunnel = info->flag_skip_tunnel;
-+		} else {
-+			*dst_sec_identity = WORLD_IPV4_ID;
- 		}
-+
-+		cilium_dbg(ctx, info ? DBG_IP_ID_MAP_SUCCEED4 : DBG_IP_ID_MAP_FAILED4,
-+			   ip4->daddr, *dst_sec_identity);
- 	}
+-		}
+-	}
 -#endif /* ENABLE_SRV6 */
- 
- 	hairpin_flow |= ct_state->loopback;
- 
+-
+-	hairpin_flow |= ct_state->loopback;
+-
 -	/* L7 LB does L7 policy enforcement, so we only redirect packets
 -	 * NOT from L7 LB.
 -	 */
@@ -397,10 +525,113 @@ index 54e18e1732..c0e1879626 100644
 -		return ctx_redirect_to_proxy4(ctx, tuple, proxy_port, false);
 -	}
 -
- #if defined(ENABLE_HOST_FIREWALL) && !defined(ENABLE_ROUTING)
- 	/* If the destination is the local host and per-endpoint routes are
- 	 * enabled, jump to the bpf_host program to enforce ingress host policies.
-@@ -1351,15 +1217,291 @@ encrypt_to_stack:
+-#if defined(ENABLE_HOST_FIREWALL) && !defined(ENABLE_ROUTING)
+-	/* If the destination is the local host and per-endpoint routes are
+-	 * enabled, jump to the bpf_host program to enforce ingress host policies.
+-	 * Note that bpf_lxc can be loaded before bpf_host, so bpf_host's policy
+-	 * program may not yet be present at this time.
+-	 */
+-	if (*dst_sec_identity == HOST_ID) {
+-		ctx_store_meta(ctx, CB_FROM_HOST, 0);
+-		ret = tail_call_policy(ctx, HOST_EP_ID);
+-
+-		/* report fine-grained error: */
+-		return DROP_HOST_NOT_READY;
+-	}
+-#endif /* ENABLE_HOST_FIREWALL && !ENABLE_ROUTING */
+-
+-	/* Allow a hairpin packet to be redirected even if ENABLE_ROUTING is
+-	 * disabled (for example, with per-endpoint routes). Otherwise, the
+-	 * packet will be dropped by the kernel if the packet will be routed to
+-	 * the interface it came from after the packet has been passed to the
+-	 * stack.
+-	 *
+-	 * If ENABLE_ROUTING is disabled, but the fast redirect is enabled, we
+-	 * do lookup the local endpoint here to check whether we must pass the
+-	 * packet up the stack for the host itself. We also want to run through
+-	 * the ipv4_local_delivery() function to enforce ingress policies for
+-	 * that endpoint.
+-	 */
+-	if (is_defined(ENABLE_ROUTING) || hairpin_flow ||
+-	    is_defined(ENABLE_HOST_ROUTING)) {
+-		__be32 daddr = ip4->daddr;
+-		struct endpoint_info *ep;
+-
+-		/* Loopback replies are addressed to IPV4_LOOPBACK, so
+-		 * an endpoint lookup with ip4->daddr won't work.
+-		 *
+-		 * But as it is loopback traffic, the clientIP and backendIP
+-		 * are identical and we can just use the packet's saddr
+-		 * for the destination endpoint lookup.
+-		 */
+-		if (ct_status == CT_REPLY && hairpin_flow)
+-			daddr = ip4->saddr;
+-
+-		/* Lookup IPv4 address, this will return a match if:
+-		 *  - The destination IP address belongs to a local endpoint
+-		 *    managed by cilium
+-		 *  - The destination IP address is an IP address associated with the
+-		 *    host itself
+-		 *  - The destination IP address belongs to endpoint itself.
+-		 */
+-		ep = __lookup_ip4_endpoint(daddr);
+-		if (ep) {
+-#if defined(ENABLE_HOST_ROUTING) || defined(ENABLE_ROUTING)
+-			if (ep->flags & ENDPOINT_MASK_HOST_DELIVERY) {
+-				if (is_defined(ENABLE_ROUTING)) {
+-# ifdef HOST_IFINDEX
+-					goto to_host;
+-# endif
+-					return DROP_HOST_UNREACHABLE;
+-				}
+-				goto pass_to_stack;
+-			}
+-#endif /* ENABLE_HOST_ROUTING || ENABLE_ROUTING */
+-
+-			/* If the packet is from L7 LB it is coming from the host */
+-			return ipv4_local_delivery(ctx, ETH_HLEN, SECLABEL_IPV4,
+-						   MARK_MAGIC_IDENTITY, ip4,
+-						   ep, METRIC_EGRESS, from_l7lb,
+-						   false, 0);
+-		}
+-	}
+-
+-	/* L7 proxy result in VTEP redirection in bpf_host, but when L7 proxy disabled
+-	 * We want VTEP redirection handled earlier here to avoid packets passing to
+-	 * stack to bpf_host for VTEP redirection. When L7 proxy enabled, but no
+-	 * L7 policy applied to pod, VTEP redirection also happen here.
+-	 */
+-#if defined(ENABLE_VTEP)
+-	{
+-		struct vtep_key vkey = {};
+-		struct vtep_value *vtep;
+-
+-		vkey.vtep_ip = ip4->daddr & VTEP_MASK;
+-		vtep = map_lookup_elem(&VTEP_MAP, &vkey);
+-		if (!vtep)
+-			goto skip_vtep;
+-
+-		if (vtep->vtep_mac && vtep->tunnel_endpoint) {
+-			if (eth_store_daddr(ctx, (__u8 *)&vtep->vtep_mac, 0) < 0)
+-				return DROP_WRITE_ERROR;
+-			return __encap_and_redirect_with_nodeid(ctx, 0, vtep->tunnel_endpoint,
+-								SECLABEL_IPV4, WORLD_IPV4_ID,
+-								WORLD_IPV4_ID, &trace);
+-		}
+-	}
+-skip_vtep:
+-#endif
+-
+-#if defined(TUNNEL_MODE) || defined(ENABLE_HIGH_SCALE_IPCACHE)
+-	if (!skip_tunnel) {
+-		struct tunnel_key key = {};
++#if defined(TUNNEL_MODE) || defined(ENABLE_HIGH_SCALE_IPCACHE)
++	if (!skip_tunnel) {
++		struct tunnel_key key = {};
+ 
+ 		if (cluster_id > UINT16_MAX)
+ 			return DROP_INVALID_CLUSTER_ID;
+@@ -1351,15 +1237,298 @@ encrypt_to_stack:
  	return CTX_ACT_OK;
  }
  
@@ -417,8 +648,6 @@ index 54e18e1732..c0e1879626 100644
  {
 -	__u32 dst_sec_identity = 0;
 -	__s8 ext_err = 0;
--
--	int ret = handle_ipv4_from_lxc(ctx, &dst_sec_identity, &ext_err);
 +	struct ct_state *ct_state, ct_state_new = {};
 +	struct ipv4_ct_tuple *tuple;
 +	void *data, *data_end;
@@ -444,7 +673,8 @@ index 54e18e1732..c0e1879626 100644
 +#endif
 +	__u32 cluster_id = 0;
 +	void *ct_map, *ct_related_map = NULL;
-+
+ 
+-	int ret = handle_ipv4_from_lxc(ctx, &dst_sec_identity, &ext_err);
 +	if (!revalidate_data(ctx, &data, &data_end, &ip4))
 +		return DROP_INVALID;
 +
@@ -461,7 +691,7 @@ index 54e18e1732..c0e1879626 100644
 +	/* Determine the destination category for policy fallback. */
 +	if (1) {
 +		struct remote_endpoint_info *info;
- 
++
 +		info = lookup_ip4_remote_endpoint(ip4->daddr, cluster_id);
 +		if (info && info->sec_identity) {
 +			*dst_sec_identity = info->sec_identity;
@@ -657,7 +887,7 @@ index 54e18e1732..c0e1879626 100644
 +		}
 +	}
 +#endif /* ENABLE_SRV6 */
-+
+ 
 +	hairpin_flow |= ct_state->loopback;
 +
 +	/* L7 LB does L7 policy enforcement, so we only redirect packets
@@ -677,11 +907,18 @@ index 54e18e1732..c0e1879626 100644
 +
 +		if (public_service_snat)
 +			delivery_flags |= DVP_LXC_DELIVERY_PUBLIC_SNAT;
++		if (ct_status == CT_REPLY && ip4->daddr == IPV4_GATEWAY)
++			delivery_flags |= DVP_LXC_DELIVERY_REV_SNAT;
 +
 +		ctx_store_meta(ctx, CB_CT_STATE, delivery_flags);
 +#ifdef ENABLE_CLUSTER_AWARE_ADDRESSING
 +		ctx_store_meta(ctx, CB_CLUSTER_ID_EGRESS, cluster_id);
 +#endif
++
++		if (delivery_flags & (DVP_LXC_DELIVERY_PUBLIC_SNAT |
++				      DVP_LXC_DELIVERY_REV_SNAT))
++			return tail_call_internal(ctx, CILIUM_CALL_IPV4_DVP_SNAT,
++						  ext_err);
 +
 +		return tail_call_internal(ctx, CILIUM_CALL_IPV4_FROM_LXC_DELIVERY,
 +					  ext_err);
@@ -699,11 +936,28 @@ index 54e18e1732..c0e1879626 100644
  	if (IS_ERR(ret))
  		return send_drop_notify_ext(ctx, SECLABEL_IPV4, dst_sec_identity,
  					    TRACE_EP_ID_UNKNOWN, ret, ext_err,
-@@ -1377,6 +1519,42 @@ int tail_handle_ipv4_cont(struct __ctx_buff *ctx)
+@@ -1377,6 +1546,58 @@ int tail_handle_ipv4_cont(struct __ctx_buff *ctx)
  	return ret;
  }
  
 +#ifdef ENABLE_DVP_PUBLIC_SERVICE_SNAT
++__section_tail(CILIUM_MAP_CALLS, CILIUM_CALL_IPV4_DVP_SNAT)
++static __always_inline
++int tail_handle_ipv4_dvp_snat(struct __ctx_buff *ctx)
++{
++	__u32 delivery_flags = ctx_load_meta(ctx, CB_CT_STATE);
++	__u32 dst_sec_identity = 0;
++	__s8 ext_err = 0;
++	int ret;
++
++	ret = handle_ipv4_from_lxc_dvp_snat(ctx, delivery_flags, &ext_err);
++	if (IS_ERR(ret))
++		return finish_ipv4_from_lxc(ctx, ret, dst_sec_identity, ext_err);
++
++	return tail_call_internal(ctx, CILIUM_CALL_IPV4_FROM_LXC_DELIVERY,
++				  &ext_err);
++}
++
 +__section_tail(CILIUM_MAP_CALLS, CILIUM_CALL_IPV4_FROM_LXC_DELIVERY)
 +static __always_inline
 +int tail_handle_ipv4_delivery(struct __ctx_buff *ctx)
@@ -721,7 +975,6 @@ index 54e18e1732..c0e1879626 100644
 +	ret = handle_ipv4_from_lxc_delivery(ctx, &dst_sec_identity,
 +					    delivery_flags & DVP_LXC_DELIVERY_HAIRPIN,
 +					    ctx_load_meta(ctx, CB_FROM_HOST) == FROM_HOST_L7_LB,
-+					    delivery_flags & DVP_LXC_DELIVERY_PUBLIC_SNAT,
 +					    cluster_id, &ext_err);
 +	return finish_ipv4_from_lxc(ctx, ret, dst_sec_identity, ext_err);
 +}
@@ -742,25 +995,552 @@ index 54e18e1732..c0e1879626 100644
  TAIL_CT_LOOKUP4(CILIUM_CALL_IPV4_CT_EGRESS, tail_ipv4_ct_egress, CT_EGRESS,
  		is_defined(ENABLE_PER_PACKET_LB),
  		CILIUM_CALL_IPV4_FROM_LXC_CONT, tail_handle_ipv4_cont)
+@@ -1517,10 +1738,6 @@ int cil_from_container(struct __ctx_buff *ctx)
+ #endif /* ENABLE_IPV6 */
+ #ifdef ENABLE_IPV4
+ 	case bpf_htons(ETH_P_IP):
+-#ifdef ENABLE_DHCPD
+-		if (unlikely(handle_dhcp_request(ctx, &ret)))
+-			break;
+-#endif
+ 		edt_set_aggregate(ctx, LXC_ID);
+ 		ret = tail_call_internal(ctx, CILIUM_CALL_IPV4_FROM_LXC, &ext_err);
+ 		sec_label = SECLABEL_IPV4;
 diff --git a/bpf/lib/common.h b/bpf/lib/common.h
-index dec82f37f3..406eb62f09 100644
+index dec82f37..6a7dbf18 100644
 --- a/bpf/lib/common.h
 +++ b/bpf/lib/common.h
-@@ -143,7 +143,8 @@ enum {
+@@ -48,12 +48,6 @@
+ #define CONDITIONAL_PREALLOC BPF_F_NO_PREALLOC
+ #endif
+ 
+-#ifdef NO_COMMON_MEM_MAPS
+-#define LRU_MEM_FLAVOR BPF_F_NO_COMMON_LRU
+-#else
+-#define LRU_MEM_FLAVOR 0
+-#endif
+-
+ #if defined(ENABLE_EGRESS_GATEWAY)
+ #define ENABLE_EGRESS_GATEWAY_COMMON
+ #endif
+@@ -143,7 +137,9 @@ enum {
  #define CILIUM_CALL_IPV4_NO_SERVICE		47
  #define CILIUM_CALL_IPV6_NO_SERVICE		48
  #define CILIUM_CALL_MULTICAST_EP_DELIVERY       49
 -#define CILIUM_CALL_SIZE			50
-+#define CILIUM_CALL_IPV4_FROM_LXC_DELIVERY	50
-+#define CILIUM_CALL_SIZE			51
++#define CILIUM_CALL_IPV4_DVP_SNAT		50
++#define CILIUM_CALL_IPV4_FROM_LXC_DELIVERY	51
++#define CILIUM_CALL_SIZE			52
  
  typedef __u64 mac_t;
  
+@@ -621,8 +617,8 @@ enum {
+ #define DROP_MISSED_TAIL_CALL	-140
+ #define DROP_WRITE_ERROR	-141
+ #define DROP_UNKNOWN_L4		-142
+-#define DROP_UNKNOWN_ICMP4_CODE	-143
+-#define DROP_UNKNOWN_ICMP4_TYPE	-144
++#define DROP_UNKNOWN_ICMP_CODE	-143
++#define DROP_UNKNOWN_ICMP_TYPE	-144
+ #define DROP_UNKNOWN_ICMP6_CODE	-145
+ #define DROP_UNKNOWN_ICMP6_TYPE	-146
+ #define DROP_NO_TUNNEL_KEY	-147
+@@ -705,8 +701,6 @@ enum {
+ #define REASON_FRAG_PACKET		9
+ #define REASON_FRAG_PACKET_UPDATE	10
+ #define REASON_MISSED_CUSTOM_CALL	11
+-#define REASON_DECRYPTING			12
+-#define REASON_ENCRYPTING			13
+ 
+ /* Lookup scope for externalTrafficPolicy=Local */
+ #define LB_LOOKUP_SCOPE_EXT	0
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 42f074f3c1..1f22e9d17f 100644
+index 42f074f3..a53ec7b8 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
-@@ -2021,6 +2021,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -3,8 +3,6 @@
+ 
+ #pragma once
+ 
+-#include "common.h"
+-
+ #include "bpf/compiler.h"
+ #include "csum.h"
+ #include "conntrack.h"
+@@ -13,7 +11,6 @@
+ #include "ids.h"
+ #include "nat_46x64.h"
+ #include "ratelimit.h"
+-#include "dbg.h"
+ 
+ #ifndef SKIP_CALLS_MAP
+ #include "drop.h"
+@@ -63,7 +60,6 @@ struct {
+ 	__type(value, struct lb_affinity_val);
+ 	__uint(pinning, LIBBPF_PIN_BY_NAME);
+ 	__uint(max_entries, CILIUM_LB_AFFINITY_MAP_MAX_ENTRIES);
+-	__uint(map_flags, LRU_MEM_FLAVOR);
+ } LB6_AFFINITY_MAP __section_maps_btf;
+ #endif
+ 
+@@ -85,7 +81,6 @@ struct {
+ 	__type(value, struct lb6_health);
+ 	__uint(pinning, LIBBPF_PIN_BY_NAME);
+ 	__uint(max_entries, CILIUM_LB_BACKENDS_MAP_MAX_ENTRIES);
+-	__uint(map_flags, LRU_MEM_FLAVOR);
+ } LB6_HEALTH_MAP __section_maps_btf;
+ #endif
+ 
+@@ -152,7 +147,6 @@ struct {
+ 	__type(value, struct lb_affinity_val);
+ 	__uint(pinning, LIBBPF_PIN_BY_NAME);
+ 	__uint(max_entries, CILIUM_LB_AFFINITY_MAP_MAX_ENTRIES);
+-	__uint(map_flags, LRU_MEM_FLAVOR);
+ } LB4_AFFINITY_MAP __section_maps_btf;
+ #endif
+ 
+@@ -174,7 +168,6 @@ struct {
+ 	__type(value, struct lb4_health);
+ 	__uint(pinning, LIBBPF_PIN_BY_NAME);
+ 	__uint(max_entries, CILIUM_LB_BACKENDS_MAP_MAX_ENTRIES);
+-	__uint(map_flags, LRU_MEM_FLAVOR);
+ } LB4_HEALTH_MAP __section_maps_btf;
+ #endif
+ 
+@@ -195,59 +188,6 @@ struct {
+ 	});
+ } LB4_MAGLEV_MAP_OUTER __section_maps_btf;
+ #endif /* LB_SELECTION == LB_SELECTION_MAGLEV */
+-
+-#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_LEAST_CONN
+-
+-#ifndef LEAST_CONN_TIMEOUT
+-#define LEAST_CONN_TIMEOUT 10000000ULL
+-#endif
+-
+-#define LEAST_CONN_NEXT_ITER_TIMEOUT 1000000ULL
+-
+-#define UINT32_MAX 0xffffffff
+-#define CLOCK_MONOTONIC 1
+-
+-struct lb4_lct_key {
+-	__u32 backend_id;
+-};
+-
+-struct lb4_lct_backend {
+-	__u32 count;
+-};
+-
+-struct lb4_lct_service {
+-	__u32 is_tmr_active;
+-	__u32 backend_id;
+-	__u16 last_slot;
+-	__u16 rest_count;
+-	__u8 pad[4];
+-	struct bpf_timer tmr;
+-};
+-
+-#define LEAST_CONN_MAX_ENTRIES 65536
+-/* the limit was selected due to verifier restriction on executing instructions */
+-#define LEAST_CONN_FOREACH_MAX_ENTRIES 100
+-#define LEAST_CONN_THRESHOLD 5
+-
+-struct {
+-	__uint(type, BPF_MAP_TYPE_HASH);
+-	__type(key, struct lb4_lct_key);
+-	__type(value, struct lb4_lct_backend);
+-	__uint(pinning, LIBBPF_PIN_BY_NAME);
+-	__uint(max_entries, LEAST_CONN_MAX_ENTRIES);
+-	__uint(map_flags, BPF_F_NO_PREALLOC);
+-} LB4_LCT_BACKEND __section_maps_btf;
+-
+-struct {
+-	__uint(type, BPF_MAP_TYPE_HASH);
+-	__type(key, struct lb4_key);
+-	__type(value, struct lb4_lct_service);
+-	__uint(pinning, LIBBPF_PIN_BY_NAME);
+-	__uint(max_entries, LEAST_CONN_MAX_ENTRIES);
+-	__uint(map_flags, BPF_F_NO_PREALLOC);
+-} LB4_LCT_SERVICE __section_maps_btf;
+-#endif /* LB_SELECTION == LB_SELECTION_LEAST_CONN */
+-
+ #endif /* ENABLE_IPV4 */
+ 
+ #ifdef ENABLE_SESSION_AFFINITY
+@@ -687,7 +627,6 @@ struct lb6_service *lb6_lookup_service(struct lb6_key *key,
+ 				       const bool scope_switch)
+ {
+ 	struct lb6_service *svc;
+-	__u8 orig_proto = key->proto;
+ 
+ 	key->scope = LB_LOOKUP_SCOPE_EXT;
+ 	key->backend_slot = 0;
+@@ -705,16 +644,7 @@ struct lb6_service *lb6_lookup_service(struct lb6_key *key,
+ 		if (!scope_switch || !lb6_svc_is_two_scopes(svc))
+ 			return svc;
+ 		key->scope = LB_LOOKUP_SCOPE_INT;
+-		key->proto = orig_proto;
+ 		svc = map_lookup_elem(&LB6_SERVICES_MAP_V2, key);
+-
+-#if defined(ENABLE_SERVICE_PROTOCOL_DIFFERENTIATION)
+-		/* Also check for ANY protocol for internal scope lookups */
+-		if (!svc && key->proto != 0) {
+-			key->proto = 0;
+-			svc = map_lookup_elem(&LB6_SERVICES_MAP_V2, key);
+-		}
+-#endif
+ 	}
+ 
+ 	return svc;
+@@ -762,6 +692,7 @@ struct lb6_service *lb6_lookup_backend_slot(struct __ctx_buff *ctx __maybe_unuse
+ 	return NULL;
+ }
+ 
++#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_RANDOM
+ static __always_inline __u32
+ lb6_select_backend_id_random(struct __ctx_buff *ctx,
+ 			     struct lb6_key *key,
+@@ -774,6 +705,7 @@ lb6_select_backend_id_random(struct __ctx_buff *ctx,
+ 
+ 	return be ? be->backend_id : 0;
+ }
++#endif  /* defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_RANDOM */
+ 
+ #if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_MAGLEV
+ static __always_inline __u32
+@@ -819,16 +751,10 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
+ 	case LB_SELECTION_RANDOM:
+ 		return lb6_select_backend_id_random(ctx, key, tuple, svc);
+ 	default:
+-#if LB_SELECTION == LB_SELECTION_RANDOM
+-		return lb6_select_backend_id_random(ctx, key, tuple, svc);
+-#elif LB_SELECTION == LB_SELECTION_MAGLEV
+-		return lb6_select_backend_id_maglev(ctx, key, tuple, svc);
+-#else
+-# error "Invalid load balancer backend selection algorithm!"
+-#endif /* LB_SELECTION */
++		return 0;
+ 	}
+ }
+-#elif LB_SELECTION == LB_SELECTION_RANDOM || LB_SELECTION == LB_SELECTION_LEAST_CONN
++#elif LB_SELECTION == LB_SELECTION_RANDOM
+ # define lb6_select_backend_id	lb6_select_backend_id_random
+ #elif LB_SELECTION == LB_SELECTION_MAGLEV
+ # define lb6_select_backend_id	lb6_select_backend_id_maglev
+@@ -1058,11 +984,7 @@ static __always_inline int lb6_local(const void *map, struct __ctx_buff *ctx,
+ 		}
+ #endif
+ 		if (backend_id == 0) {
+-			if (lb6_svc_is_hostport(svc)) {
+-				backend_id = lb6_select_backend_id_random(ctx, key, tuple, svc);
+-			} else {
+-				backend_id = lb6_select_backend_id(ctx, key, tuple, svc);
+-			}
++			backend_id = lb6_select_backend_id(ctx, key, tuple, svc);
+ 			backend = lb6_lookup_backend(ctx, backend_id);
+ 			if (backend == NULL)
+ 				goto no_service;
+@@ -1378,14 +1300,7 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
+ 			return ret;
+ 		return 0;
+ 	case IPPROTO_ICMP:
+-
+-#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
+-		/* if loadbalancer-icmp-reply is enabled, we need to return 0
+-		 * to allow the packet to be processed by the next part of the code */
+-		return 0;
+-#else
+ 		return DROP_UNSUPP_SERVICE_PROTO;
+-#endif
+ 	default:
+ 		return DROP_UNKNOWN_L4;
+ 	}
+@@ -1432,7 +1347,6 @@ struct lb4_service *lb4_lookup_service(struct lb4_key *key,
+ 				       const bool scope_switch)
+ {
+ 	struct lb4_service *svc;
+-	__u8 orig_proto = key->proto;
+ 
+ 	key->scope = LB_LOOKUP_SCOPE_EXT;
+ 	key->backend_slot = 0;
+@@ -1450,16 +1364,7 @@ struct lb4_service *lb4_lookup_service(struct lb4_key *key,
+ 		if (!scope_switch || !lb4_svc_is_two_scopes(svc))
+ 			return svc;
+ 		key->scope = LB_LOOKUP_SCOPE_INT;
+-		key->proto = orig_proto;
+ 		svc = map_lookup_elem(&LB4_SERVICES_MAP_V2, key);
+-
+-#if defined(ENABLE_SERVICE_PROTOCOL_DIFFERENTIATION)
+-		/* Also check for ANY protocol for internal scope lookups */
+-		if (!svc && key->proto != 0) {
+-			key->proto = 0;
+-			svc = map_lookup_elem(&LB4_SERVICES_MAP_V2, key);
+-		}
+-#endif
+ 	}
+ 
+ 	return svc;
+@@ -1507,6 +1412,7 @@ struct lb4_service *lb4_lookup_backend_slot(struct __ctx_buff *ctx __maybe_unuse
+ 	return NULL;
+ }
+ 
++#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_RANDOM
+ static __always_inline __u32
+ lb4_select_backend_id_random(struct __ctx_buff *ctx,
+ 			     struct lb4_key *key,
+@@ -1519,6 +1425,7 @@ lb4_select_backend_id_random(struct __ctx_buff *ctx,
+ 
+ 	return be ? be->backend_id : 0;
+ }
++#endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_RANDOM */
+ 
+ #if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_MAGLEV
+ static __always_inline __u32
+@@ -1550,215 +1457,6 @@ lb4_select_backend_id_maglev(struct __ctx_buff *ctx __maybe_unused,
+ }
+ #endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_MAGLEV */
+ 
+-#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_LEAST_CONN
+-
+-static __always_inline int
+-is_backend_active(__u32 backend_id)
+-{
+-	struct lb4_backend *bck = __lb4_lookup_backend(backend_id);
+-	return bck != NULL && bck->flags == BE_STATE_ACTIVE;
+-}
+-
+-static __always_inline __u16
+-lb4_least_conn_get_slot(struct lb4_lct_service *svc, __u16 count)
+-{
+-	return (svc->last_slot >= 1 && svc->last_slot <= count) ? svc->last_slot : 1;
+-}
+-
+-static int
+-lb4_select_least_conn_backend_cb(void *map __maybe_unused, struct lb4_key *k, struct lb4_lct_service *svc)
+-{
+-	__u16 slot, max, i;
+-	struct lb4_service *lb4_svc;
+-	struct lb4_lct_backend *bck;
+-
+-	struct lb4_key key = *k;
+-	__u32 max_count = UINT32_MAX;
+-	struct lb4_lct_key bck_key = {
+-		.backend_id = svc->backend_id,
+-	};
+-
+-	lb4_svc = map_lookup_elem(&LB4_SERVICES_MAP_V2, k);
+-	if (lb4_svc == NULL) {
+-		printk("FAILED lookup svc from callback\n");
+-		svc->is_tmr_active = 0;
+-		return 0;
+-	}
+-
+-	bck = map_lookup_elem(&LB4_LCT_BACKEND, &bck_key);
+-	if (bck != NULL && is_backend_active(svc->backend_id)) {
+-		max_count = bck->count;
+-	}
+-
+-	/* always start searching from next slot */
+-	svc->last_slot++;
+-	slot = lb4_least_conn_get_slot(svc, lb4_svc->count);
+-	max = svc->rest_count <= LEAST_CONN_FOREACH_MAX_ENTRIES ?
+-		svc->rest_count : LEAST_CONN_FOREACH_MAX_ENTRIES;
+-	for (i = 0; i < max; i++) {
+-		struct lb4_service *lb4_bck;
+-		__u32 conn_count = 0;
+-		
+-		svc->rest_count--;
+-		slot = ((slot + i - 1) % lb4_svc->count) + 1;
+-		key.backend_slot = slot;
+-		lb4_bck = __lb4_lookup_backend_slot(&key);
+-		if (lb4_bck == NULL || !is_backend_active(lb4_bck->backend_id))
+-			continue;
+-
+-		bck_key.backend_id = lb4_bck->backend_id;
+-		bck = map_lookup_elem(&LB4_LCT_BACKEND, &bck_key);
+-		if (bck != NULL) {
+-			conn_count = bck->count;
+-		}
+-
+-		if (conn_count <= max_count) {
+-			max_count = conn_count;
+-			svc->backend_id = lb4_bck->backend_id;
+-			if (max_count <= LEAST_CONN_THRESHOLD) {
+-				svc->rest_count = 0;
+-				break;
+-			}
+-		}
+-	}
+-	if (svc->rest_count == 0) {
+-		svc->is_tmr_active = 0;
+-	} else {
+-		/* too big backend list - continue searching backend in next iteration */
+-		if (timer_start(&svc->tmr, LEAST_CONN_NEXT_ITER_TIMEOUT, 0)) {
+-			printk("FAILED start timer\n");
+-			svc->rest_count = 0;
+-			svc->is_tmr_active = 0;
+-		}
+-	}
+-	svc->last_slot = slot;
+-	return 0;
+-}
+-
+-static __always_inline void
+-start_timer(struct lb4_lct_service *svc, __u64 timeout, __u16 svc_count)
+-{
+-	if (svc->is_tmr_active)
+-		return;
+-
+-	/* after cilium bpf prog update we must always replace callback on new version */
+-	/* otherwise old bpf prog will not deleted from system memory and its callback will be executed */
+-	if (timer_set_callback(&svc->tmr, lb4_select_least_conn_backend_cb)) {
+-		printk("FAILED set timer cb\n");
+-		return;
+-	}
+-
+-	if (timer_start(&svc->tmr, timeout, 0)) {
+-		printk("FAILED start timer\n");
+-		return;
+-	}
+-
+-	svc->rest_count = svc_count;
+-	svc->is_tmr_active = 1;
+-}
+-
+-static __always_inline __u32
+-lb4_least_conn_select_backend_id_random(struct __ctx_buff *ctx,
+-			     struct lb4_key *key,
+-			     const struct lb4_service *svc,
+-				 __u16 *last_slot)
+-{
+-	/* Backend slot 0 is always reserved for the service frontend. */
+-	__u16 slot = (get_prandom_u32() % svc->count) + 1;
+-	struct lb4_service *be = lb4_lookup_backend_slot(ctx, key, slot);
+-	if (be == NULL)
+-		return 0;
+-
+-	*last_slot = slot;
+-	return be->backend_id;
+-}
+-
+-static __always_inline __u32
+-lb4_select_backend_id_least_conn(struct __ctx_buff *ctx __maybe_unused,
+-			     struct lb4_key *key __maybe_unused,
+-			     const struct ipv4_ct_tuple *tuple __maybe_unused,
+-			     const struct lb4_service *svc __maybe_unused)
+-{
+-	struct lb4_lct_service *val = map_lookup_elem(&LB4_LCT_SERVICE, key);
+-	if (val == NULL) {
+-		struct lb4_lct_service new_val = {
+-			.is_tmr_active = 0,
+-			.last_slot = 1,
+-			.rest_count = 0,
+-		};
+-
+-		new_val.backend_id = lb4_least_conn_select_backend_id_random(ctx, key, svc, &new_val.last_slot);
+-		key->backend_slot = 0;
+-
+-		if (map_update_elem(&LB4_LCT_SERVICE, key, &new_val, BPF_ANY)) {
+-			printk("FAILED insert new val\n");
+-			return new_val.backend_id;
+-		}
+-
+-		val = map_lookup_elem(&LB4_LCT_SERVICE, key);
+-		if (val == NULL) {
+-			printk("FAILED LOOKUP SERVICE MAP\n");
+-			return new_val.backend_id;
+-		}
+-
+-		if (timer_init(&val->tmr, &LB4_LCT_SERVICE, CLOCK_MONOTONIC)) {
+-			printk("FAILED init timer\n");
+-			return new_val.backend_id;
+-		}
+-
+-		if (timer_set_callback(&val->tmr, lb4_select_least_conn_backend_cb)) {
+-			printk("FAILED set timer cb\n");
+-			return new_val.backend_id;
+-		}
+-
+-		start_timer(val, is_backend_active(new_val.backend_id) ? LEAST_CONN_TIMEOUT : 1000, svc->count);
+-		return new_val.backend_id;
+-	}
+-
+-	if (!is_backend_active(val->backend_id)) {
+-		val->backend_id = lb4_select_backend_id_random(ctx, key, tuple, svc);
+-	}
+-
+-	start_timer(val, LEAST_CONN_TIMEOUT, svc->count);
+-	return val->backend_id;
+-}
+-
+-static __always_inline void
+-_lb_lct_conn_closed(__u32 backend_id)
+-{
+-	struct lb4_lct_backend *val;
+-	struct lb4_lct_key key = {
+-		.backend_id = backend_id,
+-	};
+-
+-	val = map_lookup_elem(&LB4_LCT_BACKEND, &key);
+-	if (val == NULL || val->count == 0)
+-		return;
+-
+-	__sync_fetch_and_sub(&val->count, 1);
+-}
+-
+-static __always_inline void
+-_lb_lct_conn_open(__u32 backend_id)
+-{
+-	struct lb4_lct_backend *val;
+-	struct lb4_lct_key key = {
+-		.backend_id = backend_id,
+-	};
+-
+-	val = map_lookup_elem(&LB4_LCT_BACKEND, &key);
+-	if (val == NULL) {
+-		struct lb4_lct_backend new_val = {
+-			.count = 1,
+-		};
+-		map_update_elem(&LB4_LCT_BACKEND, &key, &new_val, BPF_ANY);
+-		return;
+-	}
+-
+-	__sync_fetch_and_add(&val->count, 1);
+-}
+-#endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_LEAST_CONN */
+-
+ #ifdef LB_SELECTION_PER_SERVICE
+ static __always_inline __u32 lb4_algorithm(const struct lb4_service *svc)
+ {
+@@ -1775,26 +1473,14 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+ 		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
+ 	case LB_SELECTION_RANDOM:
+ 		return lb4_select_backend_id_random(ctx, key, tuple, svc);
+-	case LB_SELECTION_LEAST_CONN:
+-		return lb4_select_backend_id_least_conn(ctx, key, tuple, svc);
+ 	default:
+-#if LB_SELECTION == LB_SELECTION_RANDOM
+-		return lb4_select_backend_id_random(ctx, key, tuple, svc);
+-#elif LB_SELECTION == LB_SELECTION_MAGLEV
+-		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
+-#elif LB_SELECTION == LB_SELECTION_LEAST_CONN
+-		return lb4_select_backend_id_least_conn(ctx, key, tuple, svc);
+-#else
+-# error "Invalid load balancer backend selection algorithm!"
+-#endif /* LB_SELECTION */
++		return 0;
+ 	}
+ }
+ #elif LB_SELECTION == LB_SELECTION_RANDOM
+ # define lb4_select_backend_id	lb4_select_backend_id_random
+ #elif LB_SELECTION == LB_SELECTION_MAGLEV
+ # define lb4_select_backend_id	lb4_select_backend_id_maglev
+-#elif LB_SELECTION == LB_SELECTION_LEAST_CONN
+-# define lb4_select_backend_id	lb4_select_backend_id_least_conn
+ #elif LB_SELECTION == LB_SELECTION_FIRST
+ /* Backend selection for tests that always chooses first slot. */
+ static __always_inline __u32
+@@ -2021,6 +1707,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  				     bool has_l4_header,
  				     const bool skip_xlate,
  				     __u32 *cluster_id __maybe_unused,
@@ -771,7 +1551,7 @@ index 42f074f3c1..1f22e9d17f 100644
  				     __s8 *ext_err,
  				     __net_cookie netns_cookie __maybe_unused)
  {
-@@ -2031,6 +2035,9 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -2031,6 +1721,9 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  	__u32 backend_id = 0;
  	__be32 new_saddr = 0;
  	int ret;
@@ -781,7 +1561,49 @@ index 42f074f3c1..1f22e9d17f 100644
  #ifdef ENABLE_SESSION_AFFINITY
  	union lb4_affinity_client_id client_id = {
  		.client_ip = saddr,
-@@ -2189,9 +2196,23 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -2061,12 +1754,7 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+ #endif
+ 		if (backend_id == 0) {
+ 			/* No CT entry has been found, so select a svc endpoint */
+-			if (lb4_svc_is_hostport(svc)) {
+-				backend_id = lb4_select_backend_id_random(ctx, key, tuple, svc);
+-			} else {
+-				backend_id = lb4_select_backend_id(ctx, key, tuple, svc);
+-			}
+-
++			backend_id = lb4_select_backend_id(ctx, key, tuple, svc);
+ 			backend = lb4_lookup_backend(ctx, backend_id);
+ 			if (backend == NULL)
+ 				goto no_service;
+@@ -2081,10 +1769,6 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+ 		if (IS_ERR(ret))
+ 			goto drop_err;
+ 
+-#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_LEAST_CONN
+-		_lb_lct_conn_open(backend_id);
+-#endif
+-
+ #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
+ 		_lb_act_conn_open(state->rev_nat_index, backend->zone);
+ #endif
+@@ -2098,16 +1782,6 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+ 		 * session we are likely to get a TCP RST.
+ 		 */
+ 		backend = lb4_lookup_backend(ctx, backend_id);
+-#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_LEAST_CONN
+-		if (backend) {
+-			if (state->syn) { /* Reopened connections */
+-				_lb_lct_conn_open(backend_id);
+-			} else if (state->closing) {
+-				_lb_lct_conn_closed(backend_id);
+-			}
+-		}
+-#endif
+-
+ #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
+ 		if (backend) {
+ 			if (state->syn) /* Reopened connections */
+@@ -2189,9 +1863,23 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  	if (likely(backend->port))
  		tuple->sport = backend->port;
  
@@ -808,7 +1630,7 @@ index 42f074f3c1..1f22e9d17f 100644
  no_service:
  	ret = DROP_NO_SERVICE;
  drop_err:
-@@ -2208,15 +2229,25 @@ drop_err:
+@@ -2208,15 +1896,25 @@ drop_err:
   */
  static __always_inline void lb4_ctx_store_state(struct __ctx_buff *ctx,
  						const struct ct_state *state,
@@ -829,18 +1651,18 @@ index 42f074f3c1..1f22e9d17f 100644
 -		       0);
 +	if (state->loopback)
 +		flags |= 1;
-+#endif
+ #endif
 +#ifdef ENABLE_DVP_PUBLIC_SERVICE_SNAT
 +	if (public_service_snat)
 +		flags |= 2;
- #endif
++#endif
 +
 +	ctx_store_meta(ctx, CB_PROXY_MAGIC, (__u32)proxy_port << 16);
 +	ctx_store_meta(ctx, CB_CT_STATE, (__u32)state->rev_nat_index << 16 | flags);
  	ctx_store_meta(ctx, CB_CLUSTER_ID_EGRESS, cluster_id);
  }
  
-@@ -2228,7 +2259,11 @@ static __always_inline void lb4_ctx_store_state(struct __ctx_buff *ctx,
+@@ -2228,7 +1926,11 @@ static __always_inline void lb4_ctx_store_state(struct __ctx_buff *ctx,
  static __always_inline void
  lb4_ctx_restore_state(struct __ctx_buff *ctx, struct ct_state *state,
  		       __u16 *proxy_port, __u32 *cluster_id __maybe_unused,
@@ -853,7 +1675,7 @@ index 42f074f3c1..1f22e9d17f 100644
  {
  	__u32 meta = clear ? ctx_load_and_clear_meta(ctx, CB_CT_STATE) :
  			     ctx_load_meta(ctx, CB_CT_STATE);
-@@ -2237,6 +2272,10 @@ lb4_ctx_restore_state(struct __ctx_buff *ctx, struct ct_state *state,
+@@ -2237,6 +1939,10 @@ lb4_ctx_restore_state(struct __ctx_buff *ctx, struct ct_state *state,
  		state->loopback = 1;
  #endif
  	state->rev_nat_index = meta >> 16;
@@ -865,10 +1687,32 @@ index 42f074f3c1..1f22e9d17f 100644
  	*proxy_port = clear ? (ctx_load_and_clear_meta(ctx, CB_PROXY_MAGIC) >> 16) :
  			      (ctx_load_meta(ctx, CB_PROXY_MAGIC) >> 16);
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 5b6a33b1c8..dc5da60821 100644
+index 5b6a33b1..6a36d136 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
-@@ -2570,7 +2570,12 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -849,6 +849,9 @@ static __always_inline int
+ nodeport_rev_dnat_ingress_ipv6(struct __ctx_buff *ctx, struct trace_ctx *trace,
+ 			       __s8 *ext_err)
+ {
++#ifdef ENABLE_NAT_46X64_GATEWAY
++	const bool nat_46x64_fib = nat46x64_cb_route(ctx);
++#endif
+ 	struct bpf_fib_lookup_padded fib_params = {
+ 		.l = {
+ 			.family		= AF_INET6,
+@@ -869,9 +872,8 @@ nodeport_rev_dnat_ingress_ipv6(struct __ctx_buff *ctx, struct trace_ctx *trace,
+ 
+ 	if (!revalidate_data(ctx, &data, &data_end, &ip6))
+ 		return DROP_INVALID;
+-
+-#if !defined(IS_BPF_LXC) && defined(ENABLE_NAT_46X64_GATEWAY)
+-	if (nat46x64_cb_route(ctx))
++#ifdef ENABLE_NAT_46X64_GATEWAY
++	if (nat_46x64_fib)
+ 		goto fib_lookup;
+ #endif
+ 	ret = lb6_extract_tuple(ctx, ip6, ETH_HLEN, &l4_off, &tuple);
+@@ -2570,7 +2572,12 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  	} else {
  		ret = lb4_local(get_ct_map4(tuple), ctx, is_fragment, l3_off, l4_off,
  				key, tuple, svc, &ct_state_svc, has_l4_header,
@@ -882,11 +1726,133 @@ index 5b6a33b1c8..dc5da60821 100644
  #ifdef SERVICE_NO_BACKEND_RESPONSE
  		if (ret == DROP_NO_SERVICE) {
  			/* Packet is TX'ed back out, avoid EDT false-positives: */
+@@ -2677,73 +2684,6 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+ 				  ext_err);
+ }
+ 
+-#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
+-/* ICMP reply packets construction code for LoadBalancer services
+- */
+-static __always_inline
+-int make_icmp_response_lb4(struct __ctx_buff *ctx,
+-					struct iphdr *ip4)
+-{
+-	void *data, *data_end;
+-	struct ethhdr *ethhdr;
+-	struct icmphdr *icmphdr;
+-	union macaddr smac = {};
+-	union macaddr dmac = {};
+-	__be32 tmp_addr;
+-	__u32 ccsum = 0;
+-	struct ratelimit_key rkey = {
+-		.usage = RATELIMIT_USAGE_ICMP_LB4,
+-	};
+-	struct ratelimit_settings settings = {
+-		.bucket_size = 1000,
+-		.tokens_per_topup = 100,
+-		.topup_interval_ns = NSEC_PER_SEC,
+-	};
+-
+-	rkey.key.icmp_lb4.netdev_idx = ctx_get_ifindex(ctx);
+-	if (!ratelimit_check_and_take(&rkey, &settings))
+-		return DROP_RATE_LIMITED;
+-
+-	data = ctx_data(ctx);
+-	data_end = ctx_data_end(ctx);
+-
+-	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) +
+-		sizeof(struct icmphdr) > data_end)
+-		return DROP_INVALID;
+-
+-	if (eth_load_saddr(ctx, smac.addr, 0) < 0)
+-		return DROP_INVALID;
+-
+-	if (eth_load_daddr(ctx, dmac.addr, 0) < 0)
+-		return DROP_INVALID;
+-
+-	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
+-
+-	if (icmphdr->type != ICMP_ECHO)
+-		return CTX_ACT_OK;
+-
+-	/* Write reversed eth header, ready for egress */
+-	ethhdr = data;
+-	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
+-	memcpy(ethhdr->h_source, dmac.addr, sizeof(dmac.addr));
+-
+-	/* Write reversed ip header, ready for egress */
+-	tmp_addr = ip4->daddr;
+-	ip4->daddr = ip4->saddr;
+-	ip4->saddr = tmp_addr;
+-
+-	/* Write reversed icmp header */
+-	icmphdr->type = ICMP_ECHOREPLY;
+-
+-	ccsum = bpf_ntohs(icmphdr->checksum);
+-	ccsum += 0x0800;
+-	ccsum = (ccsum & 0xFFFF) + (ccsum >> 16);
+-	icmphdr->checksum = bpf_htons((__u16)ccsum);
+-
+-	return redirect_self(ctx);
+-}
+-#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
+-
+ /* Main node-port entry point for host-external ingressing node-port traffic
+  * which handles the case of: i) backend is local EP, ii) backend is remote EP,
+  * iii) reply from remote backend EP.
+@@ -2781,19 +2721,7 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+ 	lb4_fill_key(&key, &tuple);
+ 
+ 	svc = lb4_lookup_service(&key, false);
+-
+ 	if (svc) {
+-#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
+-		/* If the packet is an ICMP echo request, we need to check if special
+-		port=0 service exists and if so, create a reply packet and send it back
+-		to the original source.	This is only supported for LoadBalancer services. */
+-		if (unlikely(ip4->protocol == IPPROTO_ICMP)) {
+-			ret = make_icmp_response_lb4(ctx, ip4);
+-			if (ret != CTX_ACT_REDIRECT)
+-				goto skip_service_lookup;
+-			return ret;
+-		}
+-#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
+ 		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
+ 					has_l4_header, l4_off,
+ 					src_sec_identity, punt_to_stack, ext_err);
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
-index 48044295bd..cb206d10ef 100644
+index 48044295..d2d86271 100644
 --- a/daemon/cmd/daemon_main.go
 +++ b/daemon/cmd/daemon_main.go
-@@ -684,6 +684,9 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+@@ -555,9 +555,6 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+ 	flags.Bool(option.EnableSVCSourceRangeCheck, true, "Enable check of service source ranges (currently, only for LoadBalancer)")
+ 	option.BindEnv(vp, option.EnableSVCSourceRangeCheck)
+ 
+-	flags.Bool(option.EnableLoadBalancerICMPReply, false, "Enable ICMP reply generation for LoadBalancer services")
+-	option.BindEnv(vp, option.EnableLoadBalancerICMPReply)
+-
+ 	flags.String(option.AddressScopeMax, fmt.Sprintf("%d", defaults.AddressScopeMax), "Maximum local address scope for ipcache to consider host addresses")
+ 	flags.MarkHidden(option.AddressScopeMax)
+ 	option.BindEnv(vp, option.AddressScopeMax)
+@@ -580,7 +577,7 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+ 	flags.MarkHidden(option.NodePortMode)
+ 	option.BindEnv(vp, option.NodePortMode)
+ 
+-	flags.String(option.NodePortAlg, option.NodePortAlgRandom, "BPF load balancing algorithm (\"random\", \"maglev\", \"least-conn\")")
++	flags.String(option.NodePortAlg, option.NodePortAlgRandom, "BPF load balancing algorithm (\"random\", \"maglev\")")
+ 	flags.MarkHidden(option.NodePortAlg)
+ 	option.BindEnv(vp, option.NodePortAlg)
+ 
+@@ -599,7 +596,7 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+ 	flags.Bool(option.LoadBalancerAlgorithmAnnotation, false, "Enable service-level annotation for configuring BPF load balancing algorithm")
+ 	option.BindEnv(vp, option.LoadBalancerAlgorithmAnnotation)
+ 
+-	flags.String(option.LoadBalancerAlgorithm, option.NodePortAlgRandom, "BPF load balancing algorithm (\"random\", \"maglev\", \"least-conn\")")
++	flags.String(option.LoadBalancerAlgorithm, option.NodePortAlgRandom, "BPF load balancing algorithm (\"random\", \"maglev\")")
+ 	option.BindEnv(vp, option.LoadBalancerAlgorithm)
+ 
+ 	flags.String(option.LoadBalancerDSRDispatch, option.DSRDispatchOption, "BPF load balancing DSR dispatch method (\"opt\", \"ipip\", \"geneve\")")
+@@ -684,6 +681,9 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
  	flags.Bool(option.EnableMasqueradeRouteSource, false, "Masquerade packets to the source IP provided from the routing layer rather than interface address")
  	option.BindEnv(vp, option.EnableMasqueradeRouteSource)
  
@@ -896,11 +1862,164 @@ index 48044295bd..cb206d10ef 100644
  	flags.Bool(option.EnableIPMasqAgent, false, "Enable BPF ip-masq-agent")
  	option.BindEnv(vp, option.EnableIPMasqAgent)
  
+@@ -1156,9 +1156,6 @@ func initEnv(vp *viper.Viper) {
+ 	if option.Config.PreAllocateMaps {
+ 		bpf.EnableMapPreAllocation()
+ 	}
+-	if option.Config.BPFDistributedLRU {
+-		bpf.EnableMapDistributedLRU()
+-	}
+ 
+ 	scopedLog := log.WithFields(logrus.Fields{
+ 		logfields.Path + ".RunDir": option.Config.RunDir,
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
-index bf75a52f71..6ee072469a 100644
+index bf75a52f..a29a613c 100644
 --- a/pkg/datapath/linux/config/config.go
 +++ b/pkg/datapath/linux/config/config.go
-@@ -771,6 +771,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+@@ -33,7 +33,6 @@ import (
+ 	datapath "github.com/cilium/cilium/pkg/datapath/types"
+ 	"github.com/cilium/cilium/pkg/defaults"
+ 	"github.com/cilium/cilium/pkg/identity"
+-	lxcmap "github.com/cilium/cilium/pkg/ipcache"
+ 	"github.com/cilium/cilium/pkg/labels"
+ 	"github.com/cilium/cilium/pkg/mac"
+ 	"github.com/cilium/cilium/pkg/maglev"
+@@ -48,6 +47,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/maps/ipmasq"
+ 	"github.com/cilium/cilium/pkg/maps/l2respondermap"
+ 	"github.com/cilium/cilium/pkg/maps/lbmap"
++	"github.com/cilium/cilium/pkg/maps/lxcmap"
+ 	"github.com/cilium/cilium/pkg/maps/metricsmap"
+ 	"github.com/cilium/cilium/pkg/maps/nat"
+ 	"github.com/cilium/cilium/pkg/maps/neighborsmap"
+@@ -100,41 +100,6 @@ func writeIncludes(w io.Writer) (int, error) {
+ 	return fmt.Fprintf(w, "#include \"lib/utils.h\"\n\n")
+ }
+ 
+-func ipv4ToHex(ipString string) (string, error) {
+-	ip := net.ParseIP(ipString)
+-	if ip == nil {
+-		return "", fmt.Errorf("invalid IPv4 address: %s", ipString)
+-	}
+-
+-	ipBytes := ip.To4()
+-	if ipBytes == nil {
+-		return "", fmt.Errorf("not an IPv4 address: %s", ipString)
+-	}
+-
+-	hexString := fmt.Sprintf("0x%02X%02X%02X%02X", ipBytes[0], ipBytes[1], ipBytes[2], ipBytes[3])
+-	return hexString, nil
+-}
+-
+-// implemented only single domain
+-func generateDomainSearchList(domain string) string {
+-	labels := strings.Split(domain, ".")
+-	var result []string
+-	result = append(result, "119") // option code
+-	result = append(result, "0") // total length
+-	totalLength := 1
+-	for _, label := range labels {
+-		labelLength := len(label)
+-		result = append(result, fmt.Sprintf("%d", labelLength))
+-		for _, c := range label {
+-			result = append(result, fmt.Sprintf("'%c'", c))
+-		}
+-		totalLength += 1 + labelLength
+-	}
+-	result = append(result, "0")
+-	result[1] = fmt.Sprintf("%d", totalLength)
+-	return fmt.Sprintf("{ %s }", strings.Join(result, ", "))
+-}
+-
+ // WriteNodeConfig writes the local node configuration to the specified writer.
+ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeConfiguration) error {
+ 	extraMacrosMap := make(dpdef.Map)
+@@ -180,6 +145,12 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 
+ 	cDefinesMap["KERNEL_HZ"] = fmt.Sprintf("%d", option.Config.KernelHz)
+ 
++	if option.Config.BPFDistributedLRU {
++		cDefinesMap["LRU_MEM_FLAVOR"] = "BPF_F_NO_COMMON_LRU"
++	} else {
++		cDefinesMap["LRU_MEM_FLAVOR"] = "0"
++	}
++
+ 	if option.Config.EnableIPv6 {
+ 		extraMacrosMap["ROUTER_IP"] = routerIP.String()
+ 		fw.WriteString(defineIPv6("ROUTER_IP", routerIP))
+@@ -198,16 +169,6 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 			cDefinesMap["IPV4_FRAG_DATAGRAMS_MAP"] = fragmap.MapName
+ 			cDefinesMap["CILIUM_IPV4_FRAG_MAP_MAX_ENTRIES"] = fmt.Sprintf("%d", option.Config.FragmentsMapEntries)
+ 		}
+-
+-		if option.Config.DhcpdEnabled {
+-			cDefinesMap["ENABLE_DHCPD"] = "1"
+-			ipv4DNS, err := ipv4ToHex(option.Config.DhcpdClusterDNS)
+-			if err != nil {
+-				return err
+-			}
+-			cDefinesMap["IPV4_DNS_SERVER"] = ipv4DNS
+-			cDefinesMap["DOMAIN_SEARCH_LIST_VALUE"] = generateDomainSearchList(option.Config.DhcpdClusterDomain)
+-		}
+ 	}
+ 
+ 	if option.Config.EnableIPv6 {
+@@ -290,9 +251,6 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 	if option.Config.PreAllocateMaps {
+ 		cDefinesMap["PREALLOCATE_MAPS"] = "1"
+ 	}
+-	if option.Config.BPFDistributedLRU {
+-		cDefinesMap["NO_COMMON_MEM_MAPS"] = "1"
+-	}
+ 
+ 	cDefinesMap["EVENTS_MAP"] = eventsmap.MapName
+ 	cDefinesMap["EVENTS_MAP_RATE_LIMIT"] = fmt.Sprintf("%d", option.Config.BPFEventsDefaultRateLimit)
+@@ -472,9 +430,6 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 			}
+ 		}
+ 		cDefinesMap["ENABLE_NODEPORT"] = "1"
+-		if option.Config.EnableLoadBalancerICMPReply {
+-			cDefinesMap["ENABLE_LOADBALANCER_ICMP_REPLY"] = "1"
+-		}
+ 		if option.Config.EnableIPv4 {
+ 			cDefinesMap["NODEPORT_NEIGH4"] = neighborsmap.Map4Name
+ 			cDefinesMap["NODEPORT_NEIGH4_SIZE"] = fmt.Sprintf("%d", option.Config.NeighMapEntriesGlobal)
+@@ -590,11 +545,9 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 	const (
+ 		selectionRandom = iota + 1
+ 		selectionMaglev
+-		selectionLeastConn
+ 	)
+ 	cDefinesMap["LB_SELECTION_RANDOM"] = fmt.Sprintf("%d", selectionRandom)
+ 	cDefinesMap["LB_SELECTION_MAGLEV"] = fmt.Sprintf("%d", selectionMaglev)
+-	cDefinesMap["LB_SELECTION_LEAST_CONN"] = fmt.Sprintf("%d", selectionLeastConn)
+ 	if option.Config.LoadBalancerAlgorithmAnnotation {
+ 		cDefinesMap["LB_SELECTION_PER_SERVICE"] = "1"
+ 	}
+@@ -602,8 +555,6 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 		cDefinesMap["LB_SELECTION"] = fmt.Sprintf("%d", selectionRandom)
+ 	} else if option.Config.NodePortAlg == option.NodePortAlgMaglev {
+ 		cDefinesMap["LB_SELECTION"] = fmt.Sprintf("%d", selectionMaglev)
+-	} else if option.Config.NodePortAlg == option.NodePortAlgLeastConn {
+-		cDefinesMap["LB_SELECTION"] = fmt.Sprintf("%d", selectionLeastConn)
+ 	}
+ 
+ 	// define maglev tables when loadbalancer algorith is maglev or config can
+@@ -618,13 +569,6 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 			cDefinesMap["LB4_MAGLEV_MAP_OUTER"] = lbmap.MaglevOuter4MapName
+ 		}
+ 	}
+-
+-	if option.Config.LoadBalancerAlgorithmAnnotation ||
+-		option.Config.NodePortAlg == option.NodePortAlgLeastConn {
+-		cDefinesMap["LB4_LCT_BACKEND"] = lbmap.LeastConnBackend4MapName
+-		cDefinesMap["LB4_LCT_SERVICE"] = lbmap.LeastConnService4MapName
+-	}
+-
+ 	cDefinesMap["HASH_INIT4_SEED"] = fmt.Sprintf("%d", h.maglev.SeedJhash0)
+ 	cDefinesMap["HASH_INIT6_SEED"] = fmt.Sprintf("%d", h.maglev.SeedJhash1)
+ 
+@@ -771,6 +715,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
  		cDefinesMap["ENABLE_CUSTOM_CALLS"] = "1"
  	}
  
@@ -913,10 +2032,36 @@ index bf75a52f71..6ee072469a 100644
  		cDefinesMap["ENABLE_VTEP"] = "1"
  		cDefinesMap["VTEP_MAP"] = vtep.Name
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index 76056cca9a..4de859beba 100644
+index 76056cca..bf88ec5e 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
-@@ -363,6 +363,9 @@ const (
+@@ -22,7 +22,6 @@ import (
+ 	"unicode"
+ 	"unicode/utf8"
+ 
+-	"github.com/cilium/ebpf"
+ 	"github.com/google/go-cmp/cmp"
+ 	"github.com/google/go-cmp/cmp/cmpopts"
+ 	"github.com/mackerelio/go-osstat/memory"
+@@ -44,7 +43,6 @@ import (
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/mac"
+ 	"github.com/cilium/cilium/pkg/time"
+-	"github.com/cilium/cilium/pkg/util"
+ 	"github.com/cilium/cilium/pkg/version"
+ )
+ 
+@@ -247,9 +245,6 @@ const (
+ 	// EnableSVCSourceRangeCheck enables check of service source range checks
+ 	EnableSVCSourceRangeCheck = "enable-svc-source-range-check"
+ 
+-	// EnableLoadBalancerICMPReply enables ICMP reply generation for LoadBalancer services
+-	EnableLoadBalancerICMPReply = "enable-loadbalancer-icmp-reply"
+-
+ 	// NodePortMode indicates in which mode NodePort implementation should run
+ 	// ("snat", "dsr" or "hybrid")
+ 	NodePortMode = "node-port-mode"
+@@ -363,14 +358,12 @@ const (
  	// EnableMasqueradeRouteSource masquerades to the source route IP address instead of the interface one
  	EnableMasqueradeRouteSource = "enable-masquerade-to-route-source"
  
@@ -926,15 +2071,90 @@ index 76056cca9a..4de859beba 100644
  	// EnableIPMasqAgent enables BPF ip-masq-agent
  	EnableIPMasqAgent = "enable-ip-masq-agent"
  
-@@ -1670,6 +1673,7 @@ type DaemonConfig struct {
+-	// DdhcpdEnabled enables BPF dhcp server
+-	DhcpdEnabled = "dhcpd-enabled"
+-	DhcpdClusterDNS = "dhcpd-cluster-dns"
+-	DhcpdClusterDomain = "dhcpd-cluster-domain"
+-
+ 	// EnableIPv4EgressGateway enables the IPv4 egress gateway
+ 	EnableIPv4EgressGateway = "enable-ipv4-egress-gateway"
+ 
+@@ -998,12 +991,6 @@ const (
+ 	// K8sHeartbeatTimeout configures the timeout for apiserver heartbeat
+ 	K8sHeartbeatTimeout = "k8s-heartbeat-timeout"
+ 
+-	// EndpointInterfaceHostMAC defines MAC address for host side veth interface
+-	EndpointInterfaceHostMAC = "endpoint-interface-host-mac"
+-
+-	// EndpointInterfaceMAC defines MAC address for container side veth interface
+-	EndpointInterfaceMAC = "endpoint-interface-mac"
+-
+ 	// EnableIPv4FragmentsTrackingName is the name of the option to enable
+ 	// IPv4 fragments tracking for L4-based lookups. Needs LRU map support.
+ 	EnableIPv4FragmentsTrackingName = "enable-ipv4-fragment-tracking"
+@@ -1243,9 +1230,6 @@ const (
+ 	// NodePortAlgMaglev is for using maglev consistent hashing for backend selection
+ 	NodePortAlgMaglev = "maglev"
+ 
+-	// NodePortAlgLeastConn is for using least connection algorithm backend selection
+-	NodePortAlgLeastConn = "least-conn"
+-
+ 	// DSR dispatch mode to encode service into IP option or extension header
+ 	DSRDispatchOption = "opt"
+ 
+@@ -1670,10 +1654,8 @@ type DaemonConfig struct {
  	EnableIPv6Masquerade        bool
  	EnableBPFMasquerade         bool
  	EnableMasqueradeRouteSource bool
 +	EnableDVPPublicServiceSNAT  bool
  	EnableIPMasqAgent           bool
- 	DhcpdEnabled                bool
- 	DhcpdClusterDNS             string
-@@ -2703,6 +2707,12 @@ func (c *DaemonConfig) Validate(vp *viper.Viper) error {
+-	DhcpdEnabled                bool
+-	DhcpdClusterDNS             string
+-	DhcpdClusterDomain          string
+ 	IPMasqAgentConfigPath       string
+ 
+ 	EnableBPFClockProbe     bool
+@@ -1863,12 +1845,6 @@ type DaemonConfig struct {
+ 	// LocalRouterIPv6 is the link-local IPv6 address used for Cilium's router device
+ 	LocalRouterIPv6 string
+ 
+-	// EndpointInterfaceHostMAC defines MAC address for host side veth interface
+-	EndpointInterfaceHostMAC string
+-
+-	// EndpointInterfaceMAC defines MAC address for container side veth interface
+-	EndpointInterfaceMAC string
+-
+ 	// EnableEndpointRoutes enables use of per endpoint routes
+ 	EnableEndpointRoutes bool
+ 
+@@ -1881,9 +1857,6 @@ type DaemonConfig struct {
+ 	// EnableSVCSourceRangeCheck enables check of loadBalancerSourceRanges
+ 	EnableSVCSourceRangeCheck bool
+ 
+-	// EnableLoadBalancerICMPReply enables ICMP reply generation for LoadBalancer services
+-	EnableLoadBalancerICMPReply bool
+-
+ 	// EnableHealthDatapath enables IPIP health probes data path
+ 	EnableHealthDatapath bool
+ 
+@@ -2319,8 +2292,6 @@ var (
+ 		KVStoreOpt:                      make(map[string]string),
+ 		LogOpt:                          make(map[string]string),
+ 		LoopbackIPv4:                    defaults.LoopbackIPv4,
+-		EndpointInterfaceHostMAC:        defaults.EndpointInterfaceHostMAC,
+-		EndpointInterfaceMAC:            defaults.EndpointInterfaceMAC,
+ 		EnableEndpointRoutes:            defaults.EnableEndpointRoutes,
+ 		AnnotateK8sNode:                 defaults.AnnotateK8sNode,
+ 		K8sServiceCacheSize:             defaults.K8sServiceCacheSize,
+@@ -2349,7 +2320,6 @@ var (
+ 		BPFEventsTraceEnabled:         defaults.BPFEventsTraceEnabled,
+ 		BPFConntrackAccounting:        defaults.BPFConntrackAccounting,
+ 		EnableEnvoyConfig:             defaults.EnableEnvoyConfig,
+-		DhcpdEnabled:                  defaults.DhcpdEnabled,
+ 		EnableInternalTrafficPolicy:   defaults.EnableInternalTrafficPolicy,
+ 
+ 		EnableNonDefaultDenyPolicies: defaults.EnableNonDefaultDenyPolicies,
+@@ -2703,6 +2673,12 @@ func (c *DaemonConfig) Validate(vp *viper.Viper) error {
  		}
  	}
  
@@ -947,7 +2167,34 @@ index 76056cca9a..4de859beba 100644
  	switch c.RoutingMode {
  	case RoutingModeNative, RoutingModeTunnel:
  	default:
-@@ -3037,6 +3047,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+@@ -2910,8 +2886,6 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+ 	c.L2AnnouncerRetryPeriod = vp.GetDuration(L2AnnouncerRetryPeriod)
+ 	c.WireguardPersistentKeepalive = vp.GetDuration(WireguardPersistentKeepalive)
+ 	c.EnableWellKnownIdentities = vp.GetBool(EnableWellKnownIdentities)
+-	c.EndpointInterfaceHostMAC = vp.GetString(EndpointInterfaceHostMAC)
+-	c.EndpointInterfaceMAC = vp.GetString(EndpointInterfaceMAC)
+ 	c.EnableXDPPrefilter = vp.GetBool(EnableXDPPrefilter)
+ 	c.EnableTCX = vp.GetBool(EnableTCX)
+ 	c.DisableCiliumEndpointCRD = vp.GetBool(DisableCiliumEndpointCRDName)
+@@ -2938,7 +2912,6 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+ 	c.EnableUnreachableRoutes = vp.GetBool(EnableUnreachableRoutes)
+ 	c.EnableNodePort = vp.GetBool(EnableNodePort)
+ 	c.EnableSVCSourceRangeCheck = vp.GetBool(EnableSVCSourceRangeCheck)
+-	c.EnableLoadBalancerICMPReply = vp.GetBool(EnableLoadBalancerICMPReply)
+ 	c.EnableHostPort = vp.GetBool(EnableHostPort)
+ 	c.EnableHostLegacyRouting = vp.GetBool(EnableHostLegacyRouting)
+ 	c.NodePortBindProtection = vp.GetBool(NodePortBindProtection)
+@@ -2987,9 +2960,6 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+ 	c.LocalRouterIPv6 = vp.GetString(LocalRouterIPv6)
+ 	c.EnableBPFClockProbe = vp.GetBool(EnableBPFClockProbe)
+ 	c.EnableIPMasqAgent = vp.GetBool(EnableIPMasqAgent)
+-	c.DhcpdEnabled = vp.GetBool(DhcpdEnabled)
+-	c.DhcpdClusterDNS = vp.GetString(DhcpdClusterDNS)
+-	c.DhcpdClusterDomain = vp.GetString(DhcpdClusterDomain)
+ 	c.EnableIPv4EgressGateway = vp.GetBool(EnableIPv4EgressGateway)
+ 	c.EnableEnvoyConfig = vp.GetBool(EnableEnvoyConfig)
+ 	c.IPMasqAgentConfigPath = vp.GetString(IPMasqAgentConfigPath)
+@@ -3037,6 +3007,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
  	c.EnableIPv6Masquerade = vp.GetBool(EnableIPv6Masquerade) && c.EnableIPv6
  	c.EnableBPFMasquerade = vp.GetBool(EnableBPFMasquerade)
  	c.EnableMasqueradeRouteSource = vp.GetBool(EnableMasqueradeRouteSource)
@@ -955,3 +2202,52 @@ index 76056cca9a..4de859beba 100644
  	c.EnablePMTUDiscovery = vp.GetBool(EnablePMTUDiscovery)
  	c.IPv6NAT46x64CIDR = defaults.IPv6NAT46x64CIDR
  	c.IPAMCiliumNodeUpdateRate = vp.GetDuration(IPAMCiliumNodeUpdateRate)
+@@ -3662,8 +3633,6 @@ func (c *DaemonConfig) calculateBPFMapSizes(vp *viper.Viper) error {
+ 		}
+ 		c.calculateDynamicBPFMapSizes(vp, vms.Total, dynamicSizeRatio)
+ 		c.BPFMapsDynamicSizeRatio = dynamicSizeRatio
+-	} else if c.BPFDistributedLRU {
+-		return fmt.Errorf("distributed LRU is only valid with a specified dynamic map size ratio")
+ 	} else if dynamicSizeRatio < 0.0 {
+ 		return fmt.Errorf("specified dynamic map size ratio %f must be > 0.0", dynamicSizeRatio)
+ 	} else if dynamicSizeRatio > 1.0 {
+@@ -3687,7 +3656,6 @@ func (c *DaemonConfig) SetMapElementSizes(
+ }
+ 
+ func (c *DaemonConfig) calculateDynamicBPFMapSizes(vp *viper.Viper, totalMemory uint64, dynamicSizeRatio float64) {
+-	possibleCPUs := 1
+ 	// Heuristic:
+ 	// Distribute relative to map default entries among the different maps.
+ 	// Cap each map size by the maximum. Map size provided by the user will
+@@ -3712,28 +3680,13 @@ func (c *DaemonConfig) calculateDynamicBPFMapSizes(vp *viper.Viper, totalMemory
+ 		SockRevNATMapEntriesDefault*c.SizeofSockRevElement
+ 	log.Debugf("Total memory for default map entries: %d", totalMapMemoryDefault)
+ 
+-	// In case of distributed LRU, we need to round up to the number of possible CPUs
+-	// since this is also what the kernel does internally, see htab_map_alloc()'s:
+-	//
+-	//   htab->map.max_entries = roundup(attr->max_entries,
+-	//				     num_possible_cpus());
+-	//
+-	// Thus, if we would not round up from agent side, then Cilium would constantly
+-	// try to replace maps due to property mismatch!
+-	if c.BPFDistributedLRU {
+-		cpus, err := ebpf.PossibleCPU()
+-		if err != nil {
+-			log.Fatal("Failed to get number of possible CPUs needed for the distributed LRU")
+-		}
+-		possibleCPUs = cpus
+-	}
+ 	getEntries := func(entriesDefault, min, max int) int {
+ 		entries := (entriesDefault * memoryAvailableForMaps) / totalMapMemoryDefault
+-		entries = util.RoundUp(entries, possibleCPUs)
+ 		if entries < min {
+-			entries = util.RoundUp(min, possibleCPUs)
++			entries = min
+ 		} else if entries > max {
+-			entries = util.RoundDown(max, possibleCPUs)
++			log.Debugf("clamped from %d to %d", entries, max)
++			entries = max
+ 		}
+ 		return entries
+ 	}
