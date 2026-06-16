@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package controlplane
 
 import "maps"
 
@@ -24,16 +24,17 @@ import "maps"
 // ClusterConfiguration holds legacy ClusterConfiguration data (fallback during migration).
 // Templates choose the source explicitly: `coalesce .settings.field .clusterConfiguration.field`.
 // ToMap is the only boundary with the Go template engine.
-type ControlPlaneTemplateConfig struct {
-	RunType    string         `json:"runType"`
-	NodeIP     string         `json:"nodeIP"`
-	NodeName   string         `json:"nodeName"`
-	Registry   map[string]any `json:"registry"`
-	Images     map[string]any `json:"images"`
-	VersionMap map[string]any `json:"-"`
+type TemplateConfig struct {
+	RunType    string                 `json:"runType"`
+	NodeIP     string                 `json:"nodeIP"`
+	NodeName   string                 `json:"nodeName"`
+	Registry   map[string]interface{} `json:"registry"`
+	Images     map[string]interface{} `json:"images"`
+	VersionMap map[string]interface{} `json:"-"`
 
-	Settings             map[string]any `json:"settings"`
-	ClusterConfiguration map[string]any `json:"clusterConfiguration"`
+	Settings             map[string]interface{} `json:"settings"`
+	APIServer            map[string]interface{} `json:"apiserver"`
+	ClusterConfiguration map[string]interface{} `json:"clusterConfiguration"`
 }
 
 // ToMap is the only entry point into the Go template engine. It converts the typed struct
@@ -49,6 +50,7 @@ func (c *ControlPlaneTemplateConfig) ToMap() map[string]any {
 	m["registry"] = c.Registry
 	m["images"] = c.Images
 	m["settings"] = c.Settings
+	m["apiserver"] = c.APIServer
 	m["clusterConfiguration"] = c.ClusterConfiguration
 	return m
 }

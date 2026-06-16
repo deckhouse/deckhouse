@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 )
 
 // expectedPKIFiles is the full set of files that CreatePKIBundle must produce.
@@ -49,9 +49,9 @@ var caFiles = []string{
 	"sa.key", "sa.pub",
 }
 
-func newPKITemplateConfig(clusterDomain, serviceSubnetCIDR string) *config.ControlPlaneTemplateConfig {
-	return &config.ControlPlaneTemplateConfig{
-		ClusterConfiguration: map[string]any{
+func newPKITemplateConfig(clusterDomain, serviceSubnetCIDR string) *controlplane.TemplateConfig {
+	return &controlplane.TemplateConfig{
+		ClusterConfiguration: map[string]interface{}{
 			"clusterDomain":     clusterDomain,
 			"serviceSubnetCIDR": serviceSubnetCIDR,
 		},
@@ -136,8 +136,11 @@ func TestGeneratePKIArtifacts_ApiserverSANContainsServiceIP(t *testing.T) {
 				}
 			}
 			if !found {
-				t.Errorf("apiserver cert SAN does not contain service IP %s; got: %v",
-					tt.expectedFirstSvc, cert.IPAddresses)
+				t.Errorf(
+					"apiserver cert SAN does not contain service IP %s; got: %v",
+					tt.expectedFirstSvc, 
+					cert.IPAddresses,
+				)
 			}
 		})
 	}
@@ -151,7 +154,7 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 		nodeName    string
 		nodeIP      string
 		endpoint    string
-		cfg         *config.ControlPlaneTemplateConfig
+		cfg         *controlplane.TemplateConfig
 		artifactDir string
 		wantSubstr  string
 	}{
@@ -187,8 +190,8 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			nodeName: "master-0",
 			nodeIP:   "10.0.0.1",
 			endpoint: "10.0.0.1",
-			cfg: &config.ControlPlaneTemplateConfig{
-				ClusterConfiguration: map[string]any{
+			cfg: &controlplane.TemplateConfig{
+				ClusterConfiguration: map[string]interface{}{
 					"serviceSubnetCIDR": "10.96.0.0/12",
 				},
 			},
@@ -200,8 +203,8 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			nodeName: "master-0",
 			nodeIP:   "10.0.0.1",
 			endpoint: "10.0.0.1",
-			cfg: &config.ControlPlaneTemplateConfig{
-				ClusterConfiguration: map[string]any{
+			cfg: &controlplane.TemplateConfig{
+				ClusterConfiguration: map[string]interface{}{
 					"clusterDomain": "cluster.local",
 				},
 			},
