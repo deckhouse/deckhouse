@@ -82,9 +82,12 @@ spec:
                     mode:
                       type: string
                       description: |
-                        Replicas management mode:
-                        - `Static` — the mode where the number of replicas is specified explicitly.
-                        - `HPA` — the mode where the number of replicas is calculated automatically using HPA based on CPU usage.
+                        Replicas management mode.
+
+                        Possible values:
+
+                        - `Static`: the mode where the number of replicas is specified explicitly.
+                        - `HPA`: the mode where the number of replicas is calculated automatically using HPA based on CPU usage.
                       enum: ['Static', 'HPA']
                       default: 'Static'
                     static:
@@ -296,20 +299,27 @@ spec:
                           type: string
                           description: |
                             Specifies which namespaces are allowed to attach Routes to this Gateway.
-                            - `All` — Routes in all namespaces may be attached.
-                            - `Selector` — Only Routes in namespaces matching the `selector` may be attached.
-                            - `Same` — Only Routes in the same namespace as the Gateway may be attached.
+
+                            Possible values:
+
+                            - `All`: Routes in all namespaces may be attached.
+                            - `Selector`: Only Routes in namespaces matching the `selector` may be attached.
+                            - `Same`: Only Routes in the same namespace as the Gateway may be attached.
                           enum: ['All', 'Selector', 'Same']
                           default: 'Same'
                         selector:
                           type: object
                           description: |
-                            Label selector for selecting namespaces. Required when `from` is `Selector`.
+                            Label selector for selecting namespaces.
+
+                            Required when `from` is `Selector`.
                           properties:
                             matchLabels:
                               type: object
                               description: |
-                                A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions with operator `In` and the values array containing only the value.
+                                A map of {key,value} pairs.
+
+                                A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions with operator `In` and the values array containing only the value.
                               additionalProperties:
                                 type: string
                             matchExpressions:

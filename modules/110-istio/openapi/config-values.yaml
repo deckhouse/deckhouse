@@ -1003,9 +1003,12 @@ properties:
               mode:
                 type: string
                 description: |
-                  Resource management mode:
-                  - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static) parameter section;
-                  - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa) parameter section.
+                  Resource management mode.
+
+                  Possible values:
+
+                  - `Static`: allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static) parameter section;
+                  - `VPA`: uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa) parameter section.
                 enum: ['VPA', 'Static']
                 default: 'VPA'
               vpa:
@@ -1019,10 +1022,12 @@ properties:
                     description: |
                       VPA operating mode.
 
-                      - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                      Possible values:
+
+                      - `Initial`: VPA sets initial values for pod resource requests and limits at pod creation time.
                         Resource values are not changed automatically afterwards.
 
-                      - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                      - `InPlaceOrRecreate`: VPA attempts to update pod resources in place when supported by the cluster.
                         If in-place updates are not possible, the pod will be recreated.
                     enum: ['Initial', 'InPlaceOrRecreate']
                     default: 'InPlaceOrRecreate'
