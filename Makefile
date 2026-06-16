@@ -370,6 +370,28 @@ lint-doc-spellcheck-pr:
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
 	@echo "Sorting wordlist..."
 	@sort ./tools/docs/spelling/wordlist -o ./tools/docs/spelling/wordlist
+	@echo "Validating wordlist..."
+	@bash -c '\
+	  wordlist=./tools/docs/spelling/wordlist; \
+	  duplicates=$$({ \
+	    uniq -d "$$wordlist"; \
+	    awk "{print \$$1}" "$$wordlist" | sort | uniq -d; \
+	  } | sed "/^$$/d" | sort -u); \
+	  spaced=$$(grep -E "[[:space:]]" "$$wordlist" || true); \
+	  has_error=0; \
+	  if [ -n "$$duplicates" ]; then \
+	    echo "Error: duplicate words in wordlist:"; \
+	    echo "$$duplicates" | sed "s/^/  - /"; \
+	    has_error=1; \
+	  fi; \
+	  if [ -n "$$spaced" ]; then \
+	    echo "Error: words with whitespace in wordlist:"; \
+	    echo "$$spaced" | sed "s/^/  - /"; \
+	    has_error=1; \
+	  fi; \
+	  if [ "$$has_error" -ne 0 ]; then \
+	    exit 1; \
+	  fi'
 	@echo "Generating dictionary..."
 	@test -f ./tools/docs/spelling/dictionaries/dev_OPS.dic && rm ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@touch ./tools/docs/spelling/dictionaries/dev_OPS.dic
