@@ -1,4 +1,4 @@
-{{- if .Values.cloudProviderDvp.storage.enabled }}
+{{- if not .Values.cloudProviderDvp.storage.disabled }}
 {{- range $index, $storageClass := .Values.cloudProviderDvp.internal.storageClasses }}
 ---
 apiVersion: storage.k8s.io/v1
