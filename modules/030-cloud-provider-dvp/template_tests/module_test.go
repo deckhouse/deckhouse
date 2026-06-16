@@ -36,7 +36,6 @@ const providerID = "dvp"
 const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
 const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
 const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
-const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 const globalValues = `
   clusterIsBootstrapped: true
@@ -67,7 +66,7 @@ const globalValues = `
 
 const moduleValuesA = `
 nodes:
-  enabled: true
+  disabled: false
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
@@ -75,8 +74,10 @@ provider:
   parameters:
     namespace: cloud-provider01
 storage:
-  enabled: true
+  disabled: false
   parameters: {}
+ccm:
+  disabled: false
 internal:
   credentialSecrets:
     d8-credentials:
@@ -110,7 +111,7 @@ internal:
 
 const moduleValuesStorageDisabled = `
 nodes:
-  enabled: true
+  disabled: false
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
@@ -118,8 +119,10 @@ provider:
   parameters:
     namespace: cloud-provider01
 storage:
-  enabled: false
+  disabled: true
   parameters: {}
+ccm:
+  disabled: false
 internal:
   credentialSecrets:
     d8-credentials:
@@ -153,7 +156,7 @@ internal:
 
 const moduleValuesNodesDisabled = `
 nodes:
-  enabled: false
+  disabled: true
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
@@ -161,8 +164,10 @@ provider:
   parameters:
     namespace: cloud-provider01
 storage:
-  enabled: true
+  disabled: false
   parameters: {}
+ccm:
+  disabled: false
 internal:
   credentialSecrets:
     d8-credentials:
@@ -182,7 +187,7 @@ internal:
 
 const moduleValuesBothDisabled = `
 nodes:
-  enabled: false
+  disabled: true
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
@@ -190,8 +195,10 @@ provider:
   parameters:
     namespace: cloud-provider01
 storage:
-  enabled: false
+  disabled: true
   parameters: {}
+ccm:
+  disabled: false
 internal:
   credentialSecrets:
     d8-credentials:
@@ -203,6 +210,37 @@ internal:
     zones:
       - default
   storageClasses: []
+`
+
+const moduleValuesCCMDisabled = `
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  disabled: false
+  parameters: {}
+ccm:
+  disabled: true
+internal:
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses:
+    - dvpStorageClass: 1test
+      name: 1test
+    - dvpStorageClass: ceph-pool-r2-csi-rbd
+      name: ceph-pool-r2-csi-rbd
 `
 
 const tolerationsAnyNodeWithUninitialized = `
@@ -686,6 +724,46 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			// User-authz ClusterRole must be present.
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-dvp:user")
 			Expect(userAuthzUser.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("DVP with CCM disabled", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesCCMDisabled)
+			f.HelmRender()
+		})
+
+		It("CCM Deployment must not render; capdvp, CSI, and cloud-data-discoverer must render", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// CCM Deployment must be absent.
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeFalse())
+
+			// capdvp must still be present (guarded only by nodes.disabled).
+			capdvpDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capdvp-controller-manager")
+			Expect(capdvpDeployment.Exists()).To(BeTrue())
+
+			capdvpSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "capdvp-controller-manager")
+			Expect(capdvpSA.Exists()).To(BeTrue())
+
+			// CSI must still be present.
+			csiController := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			Expect(csiController.Exists()).To(BeTrue())
+
+			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.dvp.deckhouse.io")
+			Expect(csiDriver.Exists()).To(BeTrue())
+
+			csiSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
+			Expect(csiSA.Exists()).To(BeTrue())
+
+			// cloud-data-discoverer must still be present.
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddDeployment.Exists()).To(BeTrue())
 		})
 	})
 })

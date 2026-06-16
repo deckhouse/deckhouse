@@ -411,7 +411,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 // mapPCCtoRootValues writes PCC fields into the root module values path
 // (cloudProviderDvp.provider/nodes) in v2 format so templates can render during migration.
 // Only individual leaf values are written so that fields populated by addon-operator from
-// config-values defaults (e.g. nodes.enabled, storage.enabled) are never overwritten.
+// config-values defaults (e.g. nodes.disabled, storage.disabled) are never overwritten.
 // storage is left entirely untouched - PCC does not control subsystem enablement.
 //
 // It also injects a synthetic cloudProviderDvp.internal.credentialSecrets["d8-credentials"]
@@ -423,7 +423,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		return nil
 	}
 
-	// provider - set the whole object (provider has no enabled flag, so overwriting is safe).
+	// provider - set the whole object (provider has no disabled flag, so overwriting is safe).
 	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
 		input.Values.Set("cloudProviderDvp.provider", map[string]any{
 			"parameters": map[string]any{
@@ -432,7 +432,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		})
 	}
 
-	// nodes.parameters - only PCC-derived fields; nodes.enabled is intentionally not touched
+	// nodes.parameters - only PCC-derived fields; nodes.disabled is intentionally not touched
 	// so the default from config-values is preserved.
 	nodesParams := map[string]any{}
 	if pcc.Layout != nil {
