@@ -135,6 +135,61 @@ rules:
   - get
   - list
   - watch
+# CAPI CRD ownership and storage-version migration (node-controller owns these CRDs)
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions/status
+  verbs:
+  - get
+  - update
+  - patch
+# CAPI resources rewritten during storage migration; Cluster/MachineHealthCheck also created by capicluster controller
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - clusters
+  - machinesets
+  - machinepools
+  - machinehealthchecks
+  - machinedrainrules
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+- apiGroups:
+  - runtime.cluster.x-k8s.io
+  resources:
+  - extensionconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+# capi-controller-manager Deployment - read for the storage-flip gate
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
 # Instance lifecycle and status reconciliation
 - apiGroups:
   - deckhouse.io

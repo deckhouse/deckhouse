@@ -42,6 +42,7 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/capicrd"
 	"github.com/deckhouse/node-controller/internal/register"
 	_ "github.com/deckhouse/node-controller/internal/register/controllers"
 	"github.com/deckhouse/node-controller/internal/webhook"
@@ -112,6 +113,11 @@ func main() {
 
 	if err = webhook.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to setup webhooks")
+		os.Exit(1)
+	}
+
+	if err = capicrd.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to setup CAPI CRD manager")
 		os.Exit(1)
 	}
 
