@@ -195,8 +195,9 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		return nil
 	}
 
+	slotSuffix := nextSlot.Format("060102-1504")
 	for _, nodeName := range nodeNames {
-		cpo := buildDefragCPO(nodeName)
+		cpo := buildDefragCPO(nodeName, slotSuffix)
 		input.PatchCollector.CreateIfNotExists(cpo)
 	}
 
@@ -209,13 +210,13 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	return nil
 }
 
-func buildDefragCPO(nodeName string) *unstructured.Unstructured {
+func buildDefragCPO(nodeName, slotSuffix string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "control-plane.deckhouse.io/v1alpha1",
 			"kind":       "ControlPlaneOperation",
 			"metadata": map[string]interface{}{
-				"name":      "etcd-defrag-" + nodeName,
+				"name":      "etcd-defrag-" + nodeName + "-" + slotSuffix,
 				"namespace": defragStateCMNamespace,
 				"labels": map[string]interface{}{
 					"control-plane.deckhouse.io/node":      nodeName,
