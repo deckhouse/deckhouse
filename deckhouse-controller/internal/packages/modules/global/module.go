@@ -319,7 +319,7 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
 		{
 			Op:    "add",
-			Path:  "/global/enabledModules",
+			Path:  "/enabledModules",
 			Value: data,
 		},
 	}}
