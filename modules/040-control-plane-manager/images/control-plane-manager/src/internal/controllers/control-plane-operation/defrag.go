@@ -60,7 +60,7 @@ func defragEtcdIfNeeded(ctx context.Context, pkiDir, kubeconfigDir string, logge
 	// Always connect to the local member directly — the controller runs on the same node.
 	localEndpoint := etcd.GetClientURL("127.0.0.1")
 
-	if err := etcdclient.CheckClusterHealthy(ctx, etcdCli, etcdDefragStatusTimeout, logger); err != nil {
+	if err := etcdCli.CheckClusterHealthy(ctx, etcdDefragStatusTimeout); err != nil {
 		return false, fmt.Errorf("etcd cluster not healthy, skipping defrag: %w", err)
 	}
 
@@ -97,7 +97,7 @@ func defragEtcdIfNeeded(ctx context.Context, pkiDir, kubeconfigDir string, logge
 	defragCtx, defragCancel := context.WithTimeout(ctx, etcdDefragTimeout)
 	defer defragCancel()
 
-	if _, err = etcdCli.Raw().Defragment(defragCtx, localEndpoint); err != nil {
+	if err = etcdCli.Defragment(defragCtx, localEndpoint); err != nil {
 		return false, fmt.Errorf("defragment etcd: %w", err)
 	}
 
