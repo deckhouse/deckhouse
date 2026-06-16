@@ -1,0 +1,134 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: descheduler-minreplicas-not-supported
+spec:
+  description: >-
+    The upstream descheduler minReplicas protection is not exposed by Deckhouse:
+    the Descheduler v1alpha2 CRD has no spec.minReplicas field (testing doc,
+    scenario 3a) and a manual edit of the rendered descheduler-policy ConfigMap
+    is overwritten by Deckhouse (testing doc, scenario 3b).
+  concurrent: false
+  timeouts:
+    apply: 30s
+    assert: 120s
+    delete: 60s
+
+  catch:
+    - description: Show Descheduler CRs on failure
+      get:
+        apiVersion: deckhouse.io/v1alpha2
+        kind: Descheduler
+    - description: Show the policy ConfigMap on failure
+      get:
+        apiVersion: v1
+        kind: ConfigMap
+        name: descheduler-policy
+        namespace: d8-descheduler
+    - description: Show events in the descheduler namespace on failure
+      events:
+        namespace: d8-descheduler
+
+  steps:
+    - name: assert-module-installed
+      description: Verify that the descheduler module is installed in the cluster
+      try:
+        - description: Assert the Descheduler CRD exists
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: deschedulers.deckhouse.io
+
+    - name: attempt-minreplicas-cr
+      description: Try to create a Descheduler CR with the unsupported minReplicas field and verify it cannot be persisted
+      try:
+        - description: >-
+            Apply the CR with spec.minReplicas; with strict field validation the API server
+            rejects it, otherwise the unknown field is pruned by the CRD schema — both
+            outcomes are acceptable and the expect below tolerates either
+          apply:
+            file: manifests/descheduler-cr-minreplicas.yaml
+            expect:
+              - check:
+                  ($error == null || $error != null): true
+        - description: Assert no Descheduler resource in the cluster carries spec.minReplicas
+          assert:
+            resource:
+              (x_k8s_list($client, 'deckhouse.io/v1alpha2', 'Descheduler')):
+                (length(items[?spec.minReplicas]) == `0`): true
+
+    - name: apply-probe-cr
+      description: Create a valid probe Descheduler CR so Deckhouse renders the policy ConfigMap
+      try:
+        - description: Apply the probe Descheduler CR
+          apply:
+            file: manifests/descheduler-cr.yaml
+        - description: Assert the policy ConfigMap contains the e2e-minreplicas-probe profile
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'e2e-minreplicas-probe')): true
+      cleanup:
+        - description: Delete the probe Descheduler CR (Deckhouse re-renders the ConfigMap without it)
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: Descheduler
+              name: e2e-minreplicas-probe
+
+    - name: inject-minreplicas-into-configmap
+      description: Manually append a minReplicas marker to the rendered policy, simulating a manual ConfigMap edit
+      try:
+        - description: Patch the policy ConfigMap appending a minReplicas marker line to policy.yaml
+          patch:
+            template: true
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                policy.yaml: >-
+                  (join(`"\n"`, [x_k8s_get($client, 'v1', 'ConfigMap', 'd8-descheduler', 'descheduler-policy').data."policy.yaml", '# manual edit: minReplicas: 2']))
+        - description: Assert the manual minReplicas edit is present in the ConfigMap
+          assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'minReplicas')): true
+
+    - name: trigger-module-rerender
+      description: Update the probe Descheduler CR so Deckhouse re-renders the policy ConfigMap
+      try:
+        - description: Apply the updated probe CR with a changed pod label selector
+          apply:
+            file: manifests/descheduler-cr-updated.yaml
+
+    - name: verify-manual-edit-overwritten
+      description: Verify Deckhouse overwrote the manual edit and minReplicas never reaches the rendered policy
+      try:
+        - description: Assert the ConfigMap was re-rendered with the updated profile and without minReplicas
+          assert:
+            timeout: 300s
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'minreplicas-probe-updated')): true
+                (contains("policy.yaml", 'minReplicas')): false

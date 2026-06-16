@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: e2e-sts-pdb-blocks
+spec:
+  podLabelSelector:
+    matchLabels:
+      e2e-test: sts-pdb-blocks
+  strategies:
+    removeDuplicates:
+      enabled: true
