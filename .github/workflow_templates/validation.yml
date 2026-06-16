@@ -291,6 +291,56 @@ steps:
     with:
       name: pr_diff
 
+  - name: Validate spelling wordlist <-> dev_OPS.dic sync
+    env:
+      WORDLIST_PATH: tools/docs/spelling/wordlist
+      DICT_PATH: tools/docs/spelling/dictionaries/dev_OPS.dic
+      DIFF_PATH: ./pr.diff
+    run: |
+      set -euo pipefail
+
+      changed_wordlist=false
+      changed_dic=false
+
+      if grep '^diff --git ' "${DIFF_PATH}" | grep -Fq "${WORDLIST_PATH}"; then
+        changed_wordlist=true
+      fi
+      if grep '^diff --git ' "${DIFF_PATH}" | grep -Fq "${DICT_PATH}"; then
+        changed_dic=true
+      fi
+
+      if [[ "${changed_wordlist}" == "false" && "${changed_dic}" == "false" ]]; then
+        echo "No changes detected in ${WORDLIST_PATH} or ${DICT_PATH}; skipping sync checks."
+        exit 0
+      fi
+
+      errors=0
+
+      if [[ "${changed_wordlist}" == "true" && "${changed_dic}" == "false" ]]; then
+        echo "::error::Spelling dictionary sync error: ${WORDLIST_PATH} changed, but ${DICT_PATH} was not updated."
+        echo "Description: dev_OPS dictionary must be regenerated after editing the wordlist."
+        errors=1
+      fi
+
+      if [[ "${changed_dic}" == "true" && "${changed_wordlist}" == "false" ]]; then
+        echo "::error::Spelling dictionary sync error: ${DICT_PATH} changed, but ${WORDLIST_PATH} was not updated."
+        echo "Description: wordlist must be updated and dev_OPS dictionary regenerated."
+        errors=1
+      fi
+
+      expected_count="$(wc -l < "${WORDLIST_PATH}" | tr -d '[:space:]')"
+      actual_count="$(sed -n '1p' "${DICT_PATH}" | tr -d '\r' | tr -d '[:space:]')"
+
+      if [[ "${expected_count}" != "${actual_count}" ]]; then
+        echo "::error::Spelling dictionary count mismatch: ${DICT_PATH} first line != wordlist word count."
+        echo "Description: expected '${expected_count}' (line count of ${WORDLIST_PATH}), got '${actual_count}'."
+        errors=1
+      fi
+
+      if [[ "${errors}" -ne 0 ]]; then
+        exit 1
+      fi
+
    # <template: spellcheck_template>
   - name: Spell check
     run: |
