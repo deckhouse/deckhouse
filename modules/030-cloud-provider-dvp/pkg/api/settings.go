@@ -37,11 +37,15 @@ package api
 // +deckhouse:ru:description:value=
 // +deckhouse:ru:description:value="> Чтобы изменения вступили в силу, после изменения параметров узлов выполните команду `dhctl converge`."
 // +deckhouse:XDocSearch=ModuleConfig
+// +deckhouse:XConfigVersion=2
 // +deckhouse:DisableAdditionalProperties=true
 type ModuleConfigSettings struct {
 	Provider Provider `json:"provider"`
-	Storage  Storage  `json:"storage"`
-	Nodes    Nodes    `json:"nodes"`
+	// +optional
+	Storage Storage `json:"storage,omitempty"`
+	Nodes   Nodes   `json:"nodes"`
+	// +optional
+	CCM CCM `json:"ccm"`
 }
 
 // +deckhouse:DisableAdditionalProperties=true
@@ -51,18 +55,25 @@ type Provider struct {
 
 // +deckhouse:DisableAdditionalProperties=true
 type Storage struct {
-	// +kubebuilder:default=true
+	// +kubebuilder:default=false
 	// +optional
-	Enabled    bool              `json:"enabled,omitempty"`
+	Disabled   bool              `json:"disabled,omitempty"`
 	Parameters StorageParameters `json:"parameters"`
 }
 
 // +deckhouse:DisableAdditionalProperties=true
 type Nodes struct {
-	// +kubebuilder:default=true
+	// +kubebuilder:default=false
 	// +optional
-	Enabled    bool            `json:"enabled,omitempty"`
+	Disabled   bool            `json:"disabled,omitempty"`
 	Parameters NodesParameters `json:"parameters"`
+}
+
+// +deckhouse:DisableAdditionalProperties=true
+type CCM struct {
+	// +kubebuilder:default=false
+	// +optional
+	Disabled bool `json:"disabled,omitempty"`
 }
 
 // Contains settings to connect to the Deckhouse Kubernetes Platform API.
@@ -147,3 +158,5 @@ type NodesParameters struct {
 	// +optional
 	IPAddresses map[string][]string `json:"ipAddresses,omitempty"`
 }
+
+type CCMParameters struct{}

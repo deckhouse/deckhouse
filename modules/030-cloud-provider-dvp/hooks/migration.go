@@ -70,7 +70,7 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 		sshPublicKey = *cfg.SSHPublicKey
 	}
 	nodesSettings := map[string]any{
-		"enabled": true,
+		"disabled": false,
 		"parameters": map[string]any{
 			"layout":       layout,
 			"sshPublicKey": sshPublicKey,
@@ -123,7 +123,7 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 			"settings": map[string]any{
 				"provider": providerSettings,
 				"storage": map[string]any{
-					"enabled":    true,
+					"disabled":   false,
 					"parameters": map[string]any{},
 				},
 				"nodes": nodesSettings,
