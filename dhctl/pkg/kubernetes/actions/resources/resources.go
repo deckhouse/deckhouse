@@ -391,10 +391,19 @@ func CreateResourcesLoop(
 			return ctx.Err()
 		case <-endChannel:
 			if len(resources) > 0 {
-				_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Failed to create", func(ctx context.Context) error {
-					dhlog.FromContext(ctx).WarnContext(ctx, strings.Join(remained, "\n"))
+				_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Resources failed to become ready", func(ctx context.Context) error {
+					// Print the reason next to the list so the bare resource names are not shown
+					// without context: installation did not finish cleanly, the wait timed out.
+					dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+						"Installation finished with an error: creating resources timed out after %s. "+
+							"The resources below did not become ready and were not fully created:\n%s\n\n"+
+							"This is usually caused by the absence of worker nodes in the cluster. "+
+							"Add at least one worker node or remove the taints from the master node "+
+							"(in the case of a single-node installation).",
+						timeout, strings.Join(remained, "\n")))
 					return nil
 				})
+
 				return fmt.Errorf(
 					"Creating resources timed out after %s: resources cannot become ready. "+
 						"This could be due to lack of worker nodes in the cluster. "+

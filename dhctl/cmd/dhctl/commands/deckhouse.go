@@ -134,7 +134,10 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		}
 
 		if dryRun {
-			manifest := deckhouse.CreateDeckhouseDeploymentManifest(installConfig)
+			manifest, err := deckhouse.CreateDeckhouseDeploymentManifest(installConfig)
+			if err != nil {
+				return err
+			}
 			out, err := yaml.Marshal(manifest)
 			if err != nil {
 				return err

@@ -58,16 +58,6 @@ import (
 )
 
 const (
-	banner = "" +
-		`========================================================================================
- _____             _     _                                ______                _ _____
-(____ \           | |   | |                              / _____)              | (_____)
- _   \ \ ____ ____| |  _| | _   ___  _   _  ___  ____   | /      ____ ____   _ | |  _
-| |   | / _  ) ___) | / ) || \ / _ \| | | |/___)/ _  )  | |     / _  |  _ \ / || | | |
-| |__/ ( (/ ( (___| |< (| | | | |_| | |_| |___ ( (/ /   | \____( ( | | | | ( (_| |_| |_
-|_____/ \____)____)_| \_)_| |_|\___/ \____(___/ \____)   \______)_||_|_| |_|\____(_____)
-========================================================================================`
-
 	bootstrapAbortInvalidCacheMessage = `Create cache %s:
 	Error: %v
 	The Kubernetes cluster was probably bootstrapped successfully.
@@ -912,9 +902,7 @@ func (b *ClusterBootstrapper) GetLastState() phases.DhctlState {
 }
 
 func printBanner(ctx context.Context) {
-	l := dhlog.FromContext(ctx)
-	// Tagged as banner: the terminal UI pins it at the top of the live canvas.
-	l.InfoContext(ctx, banner, dhlog.Banner())
+	dhlog.PrintBanner(ctx)
 }
 
 func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, error) {
@@ -1030,7 +1018,11 @@ func createResources(
 
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, "\nThe installation has completed successfully.\nTo finalize bootstrapping, please add at least one non-master node or remove the taints from your master node (in the case of a single-node installation).\n")
+		dhlog.FromContext(ctx).WarnContext(
+			ctx,
+			"Core module deckhouse has been installed.\n"+
+				"The resources provided by your configuration will now be applied.",
+		)
 
 		tasks = result.ManifestResult.WithResourcesMCTasks
 

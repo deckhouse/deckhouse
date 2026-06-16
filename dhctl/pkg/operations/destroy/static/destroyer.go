@@ -165,7 +165,11 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	logger.DebugContext(ctx, "Starting static cluster destroy process")
 	masterHosts := sshClient.Session().AvailableHosts()
 	stdOutErrHandler := func(l string) {
-		logger.WarnContext(ctx, l)
+		// Cleanup script streams its own `[INFO] ...`/`[ERROR] ...` lines; keep the WARN severity
+		// but tag FileOnly so they stay in the debug log and never flood the compact terminal.
+		// lib-connection already echoes every streamed line to the debug file (`ssh: <line>`), so
+		// this handler is debug-only by design — keep it non-nil or that echo disappears too.
+		logger.LogAttrs(ctx, slog.LevelWarn, l, dhlog.FileOnly())
 	}
 
 	logger.DebugContext(ctx, "Discovering additional master nodes")

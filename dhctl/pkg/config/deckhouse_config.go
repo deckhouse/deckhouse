@@ -1,18 +1,16 @@
-/*
-Copyright 2023 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package config
 
@@ -68,10 +66,11 @@ type DeckhouseInstaller struct {
 	CommanderUUID uuid.UUID
 }
 
-func (c *DeckhouseInstaller) GetImageTag(ctx context.Context, forceVersionTag bool) string {
+func (c *DeckhouseInstaller) GetImageTag(ctx context.Context, forceVersionTag bool) (string, error) {
 	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
-		return tag
+		return tag, nil
 	}
+
 	tag := c.DevBranch
 	if forceVersionTag {
 		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer(ctx, c.VersionFilePath, c.DownloadDir)
@@ -81,19 +80,27 @@ func (c *DeckhouseInstaller) GetImageTag(ctx context.Context, forceVersionTag bo
 	}
 
 	if tag == "" {
-		panic("You are probably using a development image. Please use devBranch")
+		return "", fmt.Errorf("cannot determine Deckhouse image tag: you are probably using a development image, please set devBranch")
 	}
-	return tag
+	return tag, nil
 }
 
-func (c *DeckhouseInstaller) GetInclusterImage(ctx context.Context, forceVersionTag bool) string {
-	tag := c.GetImageTag(ctx, forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag)
+func (c *DeckhouseInstaller) GetInclusterImage(ctx context.Context, forceVersionTag bool) (string, error) {
+	tag, err := c.GetImageTag(ctx, forceVersionTag)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag), nil
 }
 
-func (c *DeckhouseInstaller) GetRemoteImage(ctx context.Context, forceVersionTag bool) string {
-	tag := c.GetImageTag(ctx, forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag)
+func (c *DeckhouseInstaller) GetRemoteImage(ctx context.Context, forceVersionTag bool) (string, error) {
+	tag, err := c.GetImageTag(ctx, forceVersionTag)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag), nil
 }
 
 // ReadVersionTagFromInstallerContainer reads the installer image version tag.

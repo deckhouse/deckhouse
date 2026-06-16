@@ -64,7 +64,10 @@ func prepareDeckhouseDeploymentForUpdate(
 		// It helps to reduce wait time on bootstrap process restarting,
 		// and prevents a race condition when deckhouse's Pod is scheduled
 		// on the non-approved node, so the bootstrap process never finishes.
-		params := deckhouseDeploymentParamsFromCfg(cfg)
+		params, err := deckhouseDeploymentParamsFromCfg(cfg)
+		if err != nil {
+			return err
+		}
 		params.DeployTime = manifests.GetDeckhouseDeployTime(currentManifestInCluster)
 
 		resDeployment = manifests.ParameterizeDeckhouseDeployment(currentManifestInCluster.DeepCopy(), params)
@@ -78,11 +81,18 @@ func prepareDeckhouseDeploymentForUpdate(
 func controllerDeploymentTask(
 	kubeCl *client.KubernetesClient,
 	cfg *config.DeckhouseInstaller,
-) actions.ManifestTask {
+) (actions.ManifestTask, error) {
+	// Build the manifest up front so the image-tag error surfaces here instead of inside the
+	// Manifest callback (which has no way to return an error).
+	deployment, err := CreateDeckhouseDeploymentManifest(cfg)
+	if err != nil {
+		return actions.ManifestTask{}, err
+	}
+
 	return actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
 		Manifest: func() interface{} {
-			return CreateDeckhouseDeploymentManifest(cfg)
+			return deployment
 		},
 		CreateFunc: func(ctx context.Context, manifest interface{}) error {
 			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(ctx, manifest.(*appsv1.Deployment), metav1.CreateOptions{})
@@ -98,7 +108,7 @@ func controllerDeploymentTask(
 
 			return err
 		},
-	}
+	}, nil
 }
 
 func LockDeckhouseQueueBeforeCreatingModuleConfigs(
@@ -650,7 +660,11 @@ func CreateDeckhouseManifests(
 		tasks = append(tasks, *lockCmTask)
 	}
 
-	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
+	deploymentTask, err := controllerDeploymentTask(kubeCl, cfg)
+	if err != nil {
+		return nil, err
+	}
+	tasks = append(tasks, deploymentTask)
 
 	result := &ManifestsResult{}
 
@@ -769,25 +783,36 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 }
 
 func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
-	task := controllerDeploymentTask(kubeCl, cfg)
+	task, err := controllerDeploymentTask(kubeCl, cfg)
+	if err != nil {
+		return err
+	}
 
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create Deployment", task.CreateOrUpdate)
 }
 
-func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
+func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) (manifests.DeckhouseDeploymentParams, error) {
+	image, err := cfg.GetInclusterImage(context.Background(), true)
+	if err != nil {
+		return manifests.DeckhouseDeploymentParams{}, err
+	}
+
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetInclusterImage(context.Background(), true),
+		Registry:           image,
 		LogLevel:           cfg.LogLevel,
 		Bundle:             cfg.Bundle,
 		KubeadmBootstrap:   cfg.KubeadmBootstrap,
 		MasterNodeSelector: cfg.MasterNodeSelector,
-	}
+	}, nil
 }
 
-func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.Deployment {
-	params := deckhouseDeploymentParamsFromCfg(cfg)
+func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) (*appsv1.Deployment, error) {
+	params, err := deckhouseDeploymentParamsFromCfg(cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	return manifests.DeckhouseDeployment(params)
+	return manifests.DeckhouseDeployment(params), nil
 }
 
 func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
