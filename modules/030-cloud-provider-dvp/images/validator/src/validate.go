@@ -19,13 +19,16 @@ import (
 	"fmt"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
 	dhctlproto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 )
 
 func validate(_ context.Context, input dhctlproto.PrepareInput) error {
+	if input.Operation == dhctlproto.OperationDestroy {
+		return nil
+	}
+
 	stateBuilder := cpvalprotocol.NewStateBuilder(
 		cpvalprotocol.StateBuilderConfig{
 			ModuleName:        dvpval.ModuleName,
@@ -37,19 +40,14 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 
 	state, err := stateBuilder.Build(input)
 	if err != nil {
-		return fmt.Errorf("build validation state: %w", err)
+		return fmt.Errorf("internal error: build validation state: %w", err)
 	}
 
 	if cpapi.ShouldSkipNewModelValidation(state.MigrationStatus) {
 		return nil
 	}
 
-	result := cpval.Result{}
-
-	if input.Operation == dhctlproto.OperationBootstrap || input.Operation == dhctlproto.OperationConverge {
-		result.Merge(dvpval.ValidatePreflight(state))
-	}
-
+	result := dvpval.ValidatePreflight(state)
 	result.Merge(dvpval.ValidateInvariants(state))
 
 	return result.ErrorOrNil()

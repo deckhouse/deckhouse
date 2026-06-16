@@ -28,8 +28,8 @@ import (
 func testModuleSettings() map[string]any {
 	return map[string]any{
 		"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
-		"storage":  map[string]any{"enabled": true, "parameters": map[string]any{}},
-		"nodes":    map[string]any{"enabled": false},
+		"storage":  map[string]any{"disabled": false, "parameters": map[string]any{}},
+		"nodes":    map[string]any{"disabled": true},
 	}
 }
 
@@ -97,8 +97,8 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 		Vars: &proto.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
-				"storage":  map[string]any{"enabled": false},
-				"nodes":    map[string]any{"enabled": false},
+				"storage":  map[string]any{"disabled": true},
+				"nodes":    map[string]any{"disabled": true},
 			},
 			Secrets: map[string]map[string]any{
 				cpapi.CredentialSecretName: testCredentialSecretObject(),
@@ -107,6 +107,22 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), `NodeGroup "master" is required`) {
 		t.Fatalf("validate() error = %v, want master NodeGroup preflight error", err)
+	}
+}
+
+func TestValidateDestroySkipsValidation(t *testing.T) {
+	t.Parallel()
+
+	err := validate(context.Background(), proto.PrepareInput{
+		Operation: proto.OperationDestroy,
+		Vars: &proto.CloudProviderVars{
+			Settings: map[string]any{
+				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("validate() error = %v, want nil for destroy", err)
 	}
 }
 

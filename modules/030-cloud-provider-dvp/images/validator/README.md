@@ -35,13 +35,14 @@ The validator checks:
 Migration from ProviderClusterConfiguration is skipped while legacy resources are
 incomplete (`MigrationStatus` / `d8-module-is-migrating` ConfigMap).
 
-**Preflight policy:** Preflight runs only in the dhctl validator for `bootstrap` and
-`converge`. The admission webhook validates resource invariants only.
+**Validation policy:** The dhctl validator runs preflight and invariant checks only
+for `bootstrap` and `converge`. Other operations, such as `destroy`, only decode
+the incoming state and then return successfully.
 
 | Path                     | ModuleConfig | Credential content | Credential presence | etcdDisk | Preflight | Migration skip |
 | ------------------------ | ------------ | ------------------ | ------------------- | -------- | --------- | -------------- |
 | dhctl bootstrap/converge | yes          | yes (if present)   | yes                 | yes      | yes       | PCC / migration status |
-| dhctl other operations   | yes          | yes (if present)   | no                  | yes      | no        | PCC / migration status |
+| dhctl other operations   | no           | no                 | no                  | no       | no        | no             |
 | admission webhook        | yes          | yes (if present)   | no                  | yes      | no        | ConfigMap      |
 
 On success writes `{}` to stdout and exits 0.
@@ -86,8 +87,8 @@ cat > /tmp/req.json << 'EOF'
     "vars": {
       "settings": {
         "provider": {"parameters": {"namespace": "default"}},
-        "storage": {"enabled": true, "parameters": {}},
-        "nodes": {"enabled": false}
+        "storage": {"disabled": false, "parameters": {}},
+        "nodes": {"disabled": true}
       },
       "secrets": {
         "d8-credentials": {
