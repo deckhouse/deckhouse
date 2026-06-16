@@ -1491,7 +1491,7 @@ MY_VAR: "myvalue"
 			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "sidecar-injector-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x27").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x27").Exists()).To(BeFalse())
