@@ -44,7 +44,7 @@ const (
 
 // defragEtcdIfNeeded runs defragmentation if the fragmented ratio exceeds etcdDefragFragRatioThreshold.
 // Returns true if defragmentation was performed, false if it was skipped.
-func defragEtcdIfNeeded(ctx context.Context, advertiseIP, pkiDir, kubeconfigDir string, logger *log.Logger) (bool, error) {
+func defragEtcdIfNeeded(ctx context.Context, pkiDir, kubeconfigDir string, logger *log.Logger) (bool, error) {
 	adminConfPath := filepath.Join(kubeconfigDir, "admin.conf")
 	kubeClient, err := etcdclient.ClientSetFromFile(adminConfPath)
 	if err != nil {
@@ -57,7 +57,8 @@ func defragEtcdIfNeeded(ctx context.Context, advertiseIP, pkiDir, kubeconfigDir 
 	}
 	defer etcdCli.Close()
 
-	localEndpoint := etcd.GetClientURL(advertiseIP)
+	// Always connect to the local member directly — the controller runs on the same node.
+	localEndpoint := etcd.GetClientURL("127.0.0.1")
 
 	if err := etcdclient.CheckClusterHealthy(ctx, etcdCli, etcdDefragStatusTimeout, logger); err != nil {
 		return false, fmt.Errorf("etcd cluster not healthy, skipping defrag: %w", err)
@@ -140,7 +141,7 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 		}, nil
 	}
 
-	defragged, err := defragEtcdIfNeeded(ctx, r.node.AdvertiseIP, constants.KubernetesPkiPath, r.node.KubeconfigDir, logger)
+	defragged, err := defragEtcdIfNeeded(ctx, constants.KubernetesPkiPath, r.node.KubeconfigDir, logger)
 	if err != nil {
 		return StepResult{}, err
 	}
