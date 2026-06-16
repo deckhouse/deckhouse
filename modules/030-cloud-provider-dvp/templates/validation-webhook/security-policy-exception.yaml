@@ -1,4 +1,6 @@
-{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+{{- $bootstrapHostNetwork := not .Values.global.clusterIsBootstrapped }}
+
+{{- if and (.Values.global.enabledModules | has "admission-policy-engine-crd") $bootstrapHostNetwork }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException

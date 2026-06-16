@@ -1,11 +1,7 @@
+{{- $bootstrapHostNetwork := not .Values.global.clusterIsBootstrapped }}
+
 {{- define "dvp_validation_webhook_pod_annotations" -}}
 checksum/tls: {{ include (print $.Template.BasePath "/validation-webhook/secret-tls.yaml") . | sha256sum }}
-{{- end -}}
-
-{{- define "dvp_validation_webhook_pod_labels" -}}
-  {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
-security.deckhouse.io/security-policy-exception: validation-webhook
-  {{- end }}
 {{- end -}}
 
 {{- define "dvp_validation_webhook_args" -}}
@@ -77,7 +73,9 @@ spec:
     metadata:
       labels:
         app: validation-webhook
-        {{- include "dvp_validation_webhook_pod_labels" . | nindent 8 }}
+        {{- if and (.Values.global.enabledModules | has "admission-policy-engine-crd") $bootstrapHostNetwork }}
+        security.deckhouse.io/security-policy-exception: validation-webhook
+        {{- end }}
       annotations:
         kubectl.kubernetes.io/default-exec-container: validation-webhook
         kubectl.kubernetes.io/default-logs-container: validation-webhook
@@ -91,7 +89,7 @@ spec:
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "validation-webhook")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       automountServiceAccountToken: true
-    {{- if not .Values.global.clusterIsBootstrapped }}
+    {{- if $bootstrapHostNetwork }}
       hostNetwork: true
     {{- end }}
       dnsPolicy: {{ include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet") }}
