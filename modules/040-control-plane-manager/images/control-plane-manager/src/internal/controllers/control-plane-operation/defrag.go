@@ -81,10 +81,10 @@ func defragEtcdIfNeeded(ctx context.Context, pkiDir, kubeconfigDir string, logge
 	fragRatio := float64(fragmented) / float64(resp.DbSize)
 
 	logger.Info("etcd defrag: fragmentation check",
-		slog.Int64("dbSizeBytes", resp.DbSize),
-		slog.Int64("dbSizeInUseBytes", resp.DbSizeInUse),
-		slog.Int64("fragmentedBytes", fragmented),
-		slog.Float64("fragRatio", fragRatio),
+		slog.Int64("db_size_bytes", resp.DbSize),
+		slog.Int64("db_size_in_use_bytes", resp.DbSizeInUse),
+		slog.Int64("fragmented_bytes", fragmented),
+		slog.Float64("frag_ratio", fragRatio),
 		slog.Float64("threshold", etcdDefragFragRatioThreshold))
 
 	if fragRatio < etcdDefragFragRatioThreshold {
@@ -104,7 +104,6 @@ func defragEtcdIfNeeded(ctx context.Context, pkiDir, kubeconfigDir string, logge
 	logger.Info("etcd defrag: completed successfully")
 	return true, nil
 }
-
 
 // defragEtcd is the Reconciler-level implementation of the DefragEtcd step.
 // It ensures the etcd pod is Ready, then defragments if fragmentation exceeds the threshold.
