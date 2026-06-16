@@ -18,8 +18,8 @@ properties:
   nodes:
     additionalProperties: false
     properties:
-      enabled:
-        default: true
+      disabled:
+        default: false
         type: boolean
       parameters:
         additionalProperties: false
@@ -108,8 +108,8 @@ properties:
   storage:
     additionalProperties: false
     properties:
-      enabled:
-        default: true
+      disabled:
+        default: false
         type: boolean
       parameters:
         additionalProperties: false
@@ -122,6 +122,13 @@ properties:
     type: object
     required:
       - parameters
+  ccm:
+    type: object
+    additionalProperties: false
+    properties:
+      disabled:
+        default: false
+        type: boolean
 required:
   - nodes
   - provider

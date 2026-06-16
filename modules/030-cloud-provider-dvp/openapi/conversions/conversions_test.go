@@ -46,7 +46,7 @@ provider:
   parameters:
     namespace: my-ns
 nodes:
-  enabled: true
+  disabled: false
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
@@ -54,8 +54,10 @@ nodes:
       - zone-a
       - zone-b
 storage:
-  enabled: true
+  disabled: false
   parameters: {}
+ccm:
+  disabled: false
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
@@ -69,13 +71,15 @@ provider:
   parameters:
     namespace: default
 nodes:
-  enabled: true
+  disabled: false
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
 storage:
-  enabled: true
+  disabled: false
   parameters: {}
+ccm:
+  disabled: false
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
@@ -92,13 +96,15 @@ provider:
   parameters:
     namespace: ns1
 nodes:
-  enabled: true
+  disabled: false
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
 storage:
-  enabled: true
+  disabled: false
   parameters: {}
+ccm:
+  disabled: false
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
@@ -114,15 +120,17 @@ provider:
   parameters:
     namespace: default
 nodes:
-  enabled: true
+  disabled: false
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
     zones:
       - z1
 storage:
-  enabled: true
+  disabled: false
   parameters: {}
+ccm:
+  disabled: false
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
