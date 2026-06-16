@@ -46,8 +46,10 @@ func Test_virtualImageManifest(t *testing.T) {
 	spec := obj["spec"].(map[string]interface{})
 	dataSource := spec["dataSource"].(map[string]interface{})
 	containerImage := dataSource["containerImage"].(map[string]interface{})
+	imagePullSecret := containerImage["imagePullSecret"].(map[string]interface{})
 	assert.Equal(t, "ContainerImage", dataSource["type"])
 	assert.Equal(t, "registry.example.com/upmeter-vm@sha256:abc", containerImage["image"])
+	assert.Equal(t, registrySecretName, imagePullSecret["name"])
 }
 
 func Test_virtualDiskManifest(t *testing.T) {

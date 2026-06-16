@@ -46,6 +46,8 @@ const (
 	virtualizationDiskName  = "probe-disk"
 	virtualizationEvictName = "probe-vm-evict"
 
+	upmeterNamespace           = "d8-upmeter"
+	registrySecretName         = "deckhouse-registry"
 	virtualizationPhaseReady   = "Ready"
 	virtualizationPhaseRunning = "Running"
 	vmopPhaseCompleted         = "Completed"
@@ -214,6 +216,10 @@ func (c *virtualMachineLifecycleChecker) doVirtualMachineSetup(ctx context.Conte
 		return lifecycleStepError("creating namespace", err)
 	}
 
+	if err := c.runStep("ensuring registry secret", func() error { return c.ensureRegistrySecret(ctx) }); err != nil {
+		return lifecycleStepError("ensuring registry secret", err)
+	}
+
 	if err := c.runStep("ensuring VirtualImage", func() error {
 		return c.ensureVirtualImageReady(ctx)
 	}); err != nil {
@@ -309,6 +315,43 @@ func (c *virtualMachineLifecycleChecker) createNamespace(ctx context.Context) er
 
 func (c *virtualMachineLifecycleChecker) deleteNamespace(ctx context.Context) error {
 	return c.access.Kubernetes().CoreV1().Namespaces().Delete(ctx, c.namespace, metav1.DeleteOptions{})
+}
+
+func (c *virtualMachineLifecycleChecker) ensureRegistrySecret(ctx context.Context) error {
+	source, err := c.access.Kubernetes().CoreV1().Secrets(upmeterNamespace).Get(ctx, registrySecretName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("get registry secret %s/%s: %w", upmeterNamespace, registrySecretName, err)
+	}
+
+	data := make(map[string][]byte, len(source.Data))
+	for key, value := range source.Data {
+		data[key] = append([]byte(nil), value...)
+	}
+
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      registrySecretName,
+			Namespace: c.namespace,
+			Labels: map[string]string{
+				"heritage":      "upmeter",
+				agentLabelKey:   c.agentID,
+				"upmeter-group": VirtualizationGroupName,
+				"upmeter-probe": c.probeName,
+			},
+		},
+		Type: source.Type,
+		Data: data,
+	}
+
+	_, err = c.access.Kubernetes().CoreV1().Secrets(c.namespace).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
 }
 
 func (c *virtualMachineLifecycleChecker) ensureVirtualImageReady(ctx context.Context) error {
@@ -870,7 +913,9 @@ spec:
     type: ContainerImage
     containerImage:
       image: %q
-`, agentID, VirtualizationGroupName, probeName, name, namespace, containerImage)
+      imagePullSecret:
+        name: %q
+`, agentID, VirtualizationGroupName, probeName, name, namespace, containerImage, registrySecretName)
 }
 
 func virtualDiskManifest(agentID, namespace, probeName, name, virtualImageName string) string {

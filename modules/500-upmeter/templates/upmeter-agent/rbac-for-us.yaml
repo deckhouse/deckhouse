@@ -22,6 +22,12 @@ rules:
       - list
       - create
       - delete
+  # Virtualization check: copy registry secret to ephemeral VM probe namespaces.
+  - apiGroups: [""]
+    resources:
+      - secrets
+    verbs:
+      - create
   # - In monitoring, we check daemonset availability based on available nodes
   - apiGroups: [""]
     resources: ["nodes"]
