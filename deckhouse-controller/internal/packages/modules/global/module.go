@@ -316,11 +316,15 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 	sort.Strings(enabledModules)
 	data, _ := json.Marshal(enabledModules)
 
-	_ = m.values.ApplyValuesPatch(addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
+	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
 		{
 			Op:    "add",
 			Path:  "/global/enabledModules",
 			Value: data,
 		},
-	}})
+	}}
+
+	if err := m.values.ApplyValuesPatch(patch); err != nil {
+		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
+	}
 }
