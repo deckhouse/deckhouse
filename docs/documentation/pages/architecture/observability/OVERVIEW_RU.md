@@ -28,5 +28,5 @@ extractedLinksMax: 0
 В подразделе на данный момент описаны:
 
 * [архитектура мониторинга в DKP](monitoring.html);
-* [модуль prometheus](prometheus.html);
+* [модуль `prometheus`](prometheus.html);
 * [модули логирования](logging.html).

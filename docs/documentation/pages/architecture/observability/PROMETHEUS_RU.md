@@ -6,7 +6,7 @@ search: prometheus module, monitoring architecture, monitoring components, monit
 description: Архитектура модуля prometheus в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `prometheus` разворачивает стек мониторинга с предустановленными параметрами для Deckhouse Kubernetes Platform (DKP) и приложений, что упрощает начальную настройку.
+Модуль `prometheus` разворачивает стек мониторинга с предустановленными параметрами для Deckhouse Kubernetes Platform (DKP) и обеспечивает сбор, хранение и обработку метрик кластера и приложений.
 
 Подробнее с описанием модуля можно ознакомиться в [соответствующем разделе документации](/modules/prometheus/).
 
@@ -28,14 +28,14 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
 Модуль состоит из следующих компонентов:
 
-1. **Prometheus-main** (StatefulSet) — основной Prometheus. [Prometheus](https://github.com/prometheus/prometheus) — система мониторинга и оповещения, использующая базу данных временных рядов (TSDB или time series database). Она в реальном времени собирает и анализирует метрики работы приложений и серверов. Prometheus-main собирает метрики с настроенных объектов мониторинга каждые 30 секунд. С помощью параметра [scrapeInterval](/modules/prometheus/configuration.html#parameters-scrapeinterval) можно изменить это значение.
+1. **Prometheus-main** (StatefulSet) — основной экземпляр Prometheus. [Prometheus](https://github.com/prometheus/prometheus) — это система мониторинга и оповещения, использующая базу данных временных рядов (TSDB или time series database). Она в реальном времени собирает и анализирует метрики работы приложений и серверов. Prometheus-main собирает метрики с настроенных объектов мониторинга каждые 30 секунд. С помощью параметра [`scrapeInterval`](/modules/prometheus/configuration.html#parameters-scrapeinterval) можно изменить это значение.
 
-   В prometheus-main может использоваться оригинальный («vanilla») Prometheus или [Deckhouse Prom++](https://github.com/deckhouse/prompp) — высокопроизводительный форк Prometheus с открытым исходным кодом, разработанный для значительного сокращения потребления памяти при сохранении полной совместимости с оригинальным проектом. В модуле по умолчанию используется Deckhouse Prom++. Есть возможность переключиться с Deckhouse Prom++ на оригинальный Prometheus. В этом случае потребуется миграция данных журнала упреждающей записи (WAL или write-ahead log), поскольку в Deckhouse Prom++ используется свой формат журнала WAL. Миграция осуществляется автоматически при помощи init-контейнера prompptool.
+   В prometheus-main может использоваться оригинальный («vanilla») Prometheus или [Deckhouse Prom++](https://github.com/deckhouse/prompp) — высокопроизводительный форк Prometheus с открытым исходным кодом, разработанный для сокращения потребления памяти при сохранении полной совместимости с оригинальным проектом. В модуле по умолчанию используется Deckhouse Prom++. Есть возможность переключиться с Deckhouse Prom++ на оригинальный Prometheus. В этом случае потребуется миграция данных журнала упреждающей записи (WAL или write-ahead log), поскольку в Deckhouse Prom++ используется свой формат журнала WAL. Миграция осуществляется автоматически при помощи init-контейнера prompptool.
 
-   Prometheus-main является основным источником данных. Он собирает метрики, обрабатывает настроенные правила и отправляет алерты в соответствии с его конфигурацией. Инсталляцию Prometheus, а также его конфигурацию создает [Prometheus Operator](/modules/operator-prometheus/) на основании кастомных ресурсов:
+   Prometheus-main является основным источником данных. Он собирает метрики, обрабатывает настроенные правила и отправляет алерты в соответствии с заданной конфигурацией. Инсталляцию Prometheus, а также его конфигурацию создаёт [Prometheus Operator](/modules/operator-prometheus/) на основании следующих кастомных ресурсов:
 
    * [Prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheus) — описывает инсталляцию (кластер) Prometheus;
-   * [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitor) — задаёт, как собирать метрики с набора сервисов;
+   * [ServiceMonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#servicemonitor) — задаёт настройки сбора метрик с набора сервисов;
    * [PrometheusRule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusrule) — содержит набор правил Prometheus.
 
    Prometheus Operator отслеживает ресурсы Prometheus и для каждого генерирует:
@@ -43,64 +43,64 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
    * StatefulSet с самим Prometheus;
    * секрет `prometheus-main` с `prometheus.yaml` (основной конфигурационный файл) и `configmaps.json` (конфигурационный файл для контейнера config-reloader, описанного ниже). Секрет `prometheus-main` монтируется в под prometheus-main и используется контейнером config-reloader.
   
-   Prometheus Operator отслеживает ресурсы ServiceMonitor и PrometheusRule и на их основании обновляет конфигурацию (prometheus.yaml и configmaps.json) в указанном выше секрете.
+   Prometheus Operator отслеживает ресурсы ServiceMonitor и PrometheusRule и на их основании обновляет конфигурацию (`prometheus.yaml` и `configmaps.json`) в указанном выше секрете.
 
-   Подробнее с описанием работы Prometheus Operator можно ознакомиться [в разделе документации модуля](/modules/operator-prometheus/).
+   Подробнее с описанием работы Prometheus Operator можно ознакомиться [в разделе документации модуля `operator-prometheus`](/modules/operator-prometheus/).
 
-   Подробнее с описанием работы компонента prometheus-main можно ознакомиться в разделе [Архитектура мониторинга](monitoring.html#prometheus).
+   Подробнее с описанием работы компонента prometheus-main можно ознакомиться [в разделе «Архитектура мониторинга»](monitoring.html#prometheus).
 
    Prometheus-main состоит из следующих контейнеров:
 
-   * **init-config-reloader** — init-контейнер, выполняющий однократный запуск config-reloader для загрузки конфигурации Prometheus.
+   * **init-config-reloader** — init-контейнер, выполняющий однократный запуск config-reloader для загрузки конфигурации Prometheus;
    * **prompptool** — init-контейнер, выполняющий автоматическую миграцию данных журнала WAL в случае переключения с Deckhouse Prom++ на оригинальный Prometheus и наоборот;
-   * **config-reloader** — сайдкар-контейнер, который следит за изменениями в файле конфигурации `prometheus.yaml` и, при необходимости, вызывает перезагрузку конфигурации Prometheus (HTTP-запросом на специальный эндпоинт `/-/reload`). Config-reloader является [утилитой](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) из Open Source-проекта [Prometheus Operator](https://github.com/coreos/prometheus-operator/).
+   * **config-reloader** — сайдкар-контейнер, который следит за изменениями в файле конфигурации `prometheus.yaml` и, при необходимости, вызывает перезагрузку конфигурации Prometheus (HTTP-запросом на специальный эндпоинт `/-/reload`). Config-reloader является [утилитой](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) из Open Source-проекта [Prometheus Operator](https://github.com/coreos/prometheus-operator/);
    * **prometheus** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к серверу Prometheus. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Prometheus-longterm** (StatefulSet) — дополнительный Prometheus, хранящий выборку разреженных метрик из основного Prometheus (prometheus-main). Это позволяет пользователям просматривать и анализировать исторические тренды за длительный период времени. Prometheus-longterm получает данные благодаря настроенной федерации с основным Prometheus.
+1. **Prometheus-longterm** (StatefulSet) — дополнительный экземпляр Prometheus, хранящий выборку разреженных метрик из основного Prometheus (prometheus-main). Это позволяет пользователям просматривать и анализировать исторические тренды за длительный период времени. Prometheus-longterm получает данные благодаря настроенному механизму федерации с основным экземпляром Prometheus.
 
-   В prometheus-longterm также может использоваться оригинальный Prometheus или Deckhouse Prom++. Состав контейнеров и принцип их работы у prometheus-longterm такие же, как и у prometheus-main.
+   В prometheus-longterm также может использоваться оригинальный Prometheus или Deckhouse Prom++. Состав контейнеров и принцип их работы у prometheus-longterm совпадает с prometheus-main.
+
+1. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana отображает дашборды, поставляемые вместе с модулями DKP. Grafana умеет работать в режиме высокой доступности, не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Компонент включён по умолчанию, но при желании его можно отключить с помощью [параметра `settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled).
 
    {% alert level="info" %}
-   Grafana-v10 в ближайшее время будет отключена, для просмотра дашбордов мониторинга нужно будет использовать веб-интерфейс DKP.
+   Grafana-v10 будет отключена в будущих релизах DKP. Для просмотра дашбордов мониторинга используйте [веб-интерфейс Deckhouse](/modules/console/).
    {% endalert %}
-
-1. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana отображает дашборды, поставляемые вместе с модулями DKP. Grafana умеет работать в режиме высокой доступности, не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Grafana по умолчанию включена, но её можно отключить при помощи [следующего параметра модуля](/modules/prometheus/configuration.html#parameters-grafana-enabled).
 
    Состоит из следующих контейнеров:
 
-   * **dashboard-provisioner** — сайдкар-контейнер, который следит за кастомными ресурсами [GrafanaDashboardDefinition](/modules/prometheus/cr.html#grafanadashboarddefinition) и при появлении новых GrafanaDashboardDefinition добавляет описанные в них дашборды в фолдер Grafana;
+   * **dashboard-provisioner** — сайдкар-контейнер, который следит за кастомными ресурсами [GrafanaDashboardDefinition](/modules/prometheus/cr.html#grafanadashboarddefinition) и, при появлении нового ресурса, добавляет описанные в них дашборды в папку Grafana;
    * **grafana** — основной контейнер. Является [Open Source-проектом](https://github.com/grafana/grafana);
-   * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к серверу Grafana и его метрикам. Подробно описан выше.
+   * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступ к серверу Grafana и его метрикам. Подробно описан выше.
 
-1. **Aggregating-proxy** — выполняет кеширование метрик, сбор данных с нескольких Prometheus (если они работают в режиме высокой доступности), дедупликацию данных и вычисление запроса.
+1. **Aggregating-proxy** — выполняет кеширование метрик, сбор данных с нескольких экземпляров Prometheus (если они работают в режиме высокой доступности), дедупликацию данных и вычисление запросов.
 
    Состоит из следующих контейнеров:
 
    * **wait-memcached** — init-контейнер, ожидающий доступности компонента memcached по сети. Aggregating-proxy использует memcached для кеширования метрик в оперативной памяти;
    * **mimir** — сайдкар-контейнер, работающий с компонентом memcached для оптимизации запросов и кеширования данных. При отсутствии данных в кеше, mimir пересылает запрос на компонент prometheus-main через еще один сайдкар-контейнер promxy. Является [Open Source-проектом](https://github.com/grafana/mimir);
-   * **promxy** — сайдкар-контейнер, проксирующий запросы на компонент prometheus-main. Promxy - это прокси-сервер для Prometheus, который позволяет нескольким узлам Prometheus выглядеть как одна конечная точка API для пользователя. Является [Open Source-проектом](https://github.com/jacksontj/promxy);
-   * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к контейнерам mimir (запросы на сервер Prometheus и запросы на метрики контейнера) и promxy (запросы на метрики контейнера). Подробно описан выше.
+   * **promxy** — сайдкар-контейнер, проксирующий запросы к компоненту prometheus-main и предоставляющий единый эндпоинт для доступа к данным нескольких экземпляров Prometheus. Является [Open Source-проектом](https://github.com/jacksontj/promxy);
+   * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступ к контейнерам mimir (запросы к серверу Prometheus и метрикам контейнера) и promxy (запросы к метрикам контейнера). Подробно описан выше.
 
-1. **Memcached** (StatefulSet) — компонент, используемый aggregating-proxy для кеширования метрик Prometheus. Memcached - программное обеспечение, реализующее сервис кеширования данных в оперативной памяти. Цель — ускорить выполнение запросов к метрикам Prometheus.
+1. **Memcached** (StatefulSet) — компонент, используемый aggregating-proxy для кеширования метрик Prometheus. Memcached — это программное обеспечение, реализующее сервис кеширования данных в оперативной памяти для ускорения выполнения запросов к метрикам Prometheus.
 
    Состоит из следующих контейнеров:
 
    * **memcached** — основной контейнер. Является [Open Source-проектом](https://github.com/memcached/memcached);
    * **exporter** — сайдкар-контейнер, экспортирующий метрики контейнера memcached. Exporter собирает метрики контейнера memcached через сетевое подключение, а также из PID-файла процесса memcached. Является [Open Source-проектом](https://github.com/prometheus/memcached_exporter).
 
-1. **Trickster** — кеширующий прокси-сервер, снижающий нагрузку на Prometheus. Используется для кеширования и проксирования запросов на prometheus-longterm. В ближайшее время будет deprecated.
+1. **Trickster** — кеширующий прокси-сервер, снижающий нагрузку на Prometheus. Используется для кеширования и проксирования запросов к prometheus-longterm. В будущих релизах DKP ожидается, что компонент будет признан устаревшим и перестанет поддерживаться.
 
    Состоит из следующих контейнеров:
 
    * **trickster** — основной контейнер. Является [Open Source-проектом](https://github.com/trickstercache/trickster);
-   * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к прокси-серверу и его метрикам. Подробно описан выше.
+   * **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступ к прокси-серверу и его метрикам. Подробно описан выше.
 
    {% alert level="info" %}
-   Alerts-receiver в ближайшее время будет удален из модуля [`prometheus`](/modules/prometheus/), для приема всех алертов будет использоваться Alertmanager из модуля [`observability`](/modules/observability/).
+   В будущих релизах DKP alerts-receiver будет удалён из модуля [`prometheus`](/modules/prometheus/). Для приема всех алертов будет использоваться компонент Alertmanager модуля [`observability`](/modules/observability/).
    {% endalert %}
 
-1. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создает на их основе кастомные ресурсы [ClusterAlerts](https://deckhouse.ru/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlerts используется для информирования пользователей DKP об активных алертах и отображаются в веб-интерфейсе DKP. Является разработкой компании «Флант». Состоит из одного контейнера.
+1. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создаёт на их основе кастомные ресурсы [ClusterAlert](/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlert используется для информирования пользователей DKP об активных алертах и отображаются в веб-интерфейсе Deckhouse. Является разработкой компании «Флант». Состоит из одного контейнера.
 
 ## Взаимодействия модуля
 
@@ -114,7 +114,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
 
 2. **Alertmanager** — отправка кастомных алертов.
 
-Prometheus, входящий в состав модуля, собирает метрики со всех компонентов DKP:
+Экземпляр Prometheus, входящий в состав модуля, собирает метрики со всех компонентов DKP:
 
 * компоненты модулей;
 * компоненты control plane кластера;
@@ -130,6 +130,6 @@ Prometheus, входящий в состав модуля, собирает ме
 
 ## Режим отказоустойчивости и высокой доступности мониторинга (HA)
 
-Модуль [`prometheus`](/modules/prometheus/) обеспечивает встроенную отказоустойчивость всех его ключевых компонентов. Все сервисы мониторинга (Prometheus-серверы, системы хранения, прокси и прочие важные компоненты) по умолчанию развертываются в нескольких копиях. Это гарантирует, что в случае сбоя отдельного экземпляра сервис продолжит работу без потери данных и доступности.
+Модуль [`prometheus`](/modules/prometheus/) обеспечивает встроенную отказоустойчивость всех своих ключевых компонентов. Все сервисы мониторинга (Prometheus-серверы, системы хранения, прокси и прочие важные компоненты) по умолчанию развёртываются в нескольких копиях. Это гарантирует, что в случае сбоя отдельного экземпляра сервис продолжит работу без потери данных и доступности.
 
-Prometheus — основной компонент сбора метрик — запускается минимум в двух копиях (при наличии достаточного количества узлов в кластере). Все инстансы Prometheus используют одинаковую конфигурацию и получают одни и те же данные. Чтобы обеспечить бесшовную работу при отказе одной из копий для обращения к Prometheus используется специальный компонент — aggregation-proxy. Он позволяет объединять метрики обоих Prometheus-инстансов и всегда возвращать наиболее полные и актуальные данные, даже если одна из копий временно недоступна.
+Prometheus — основной компонент сбора метрик — запускается минимум в двух копиях (при наличии достаточного количества узлов в кластере). Все экземпляры Prometheus используют одинаковую конфигурацию и получают одни и те же данные. Чтобы обеспечить бесперебойную работу при отказе одной из копий для обращения к Prometheus используется специальный компонент — aggregating-proxy. Он позволяет объединять метрики нескольких экземпляров Prometheus и всегда возвращать наиболее полные и актуальные данные, даже если одна из копий временно недоступна.
