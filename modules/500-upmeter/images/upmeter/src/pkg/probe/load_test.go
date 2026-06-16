@@ -120,7 +120,6 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
-		{Group: "virtualization", Probe: "controller"},
 		{Group: "virtualization", Probe: "vm-creation"},
 		{Group: "virtualization", Probe: "vm-migration"},
 	}
@@ -167,7 +166,6 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
-		{Group: "virtualization", Probe: "controller"},
 		{Group: "virtualization", Probe: "vm-creation"},
 		{Group: "virtualization", Probe: "vm-migration"},
 	}

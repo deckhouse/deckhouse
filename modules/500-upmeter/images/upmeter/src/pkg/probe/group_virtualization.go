@@ -33,19 +33,6 @@ func initVirtualization(access kubernetes.Access, preflight checker.Doer, virtPr
 	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
 	return []runnerConfig{
-		{
-			group:  checker.VirtualizationGroupName,
-			probe:  checker.VirtualizationControllerProbeName,
-			check:  "pod",
-			period: 10 * time.Second,
-			config: checker.AtLeastOnePodReady{
-				Access:           access,
-				Timeout:          5 * time.Second,
-				Namespace:        "d8-virtualization",
-				LabelSelector:    "app=virtualization-controller",
-				PreflightChecker: controlPlanePinger,
-			},
-		},
 		virtualMachineLifecycleRunner(
 			access,
 			controlPlanePinger,

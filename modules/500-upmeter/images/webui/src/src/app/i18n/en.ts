@@ -103,6 +103,14 @@ const langPack: LangPack = {
             <p>Group result is a combination of probe results with the priority of the worst results.</p>
             `,
     },
+    virtualization: {
+      ...GROUP_DEFAULT_TOOLTIP,
+      title: "Virtualization",
+      description: `
+            <p>Checks the availability of virtualization components and VM lifecycle operations.</p>
+            <p>Group result is a combination of probe results with the priority of the worst results.</p>
+            `,
+    },
     "load-balancing": {
       ...GROUP_DEFAULT_TOOLTIP,
       title: "Load balancing",
@@ -402,16 +410,24 @@ const langPack: LangPack = {
           "error occurred during pods fetching, or kube-apiserver is not available, or probe execution is skipped because previous probe was not yet finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
-      virtualization: {
-        title: "Virtualization",
-        description:
-          "Virtualization module health: controller pods and optional VM create-start-delete lifecycle check",
-        reasonUp:
-          "virtualization-controller is ready and VM lifecycle check succeeded when configured",
-        reasonDown:
-          "virtualization-controller is not ready or VM lifecycle check failed",
+    },
+    virtualization: {
+      "vm-creation": {
+        title: "VM creation",
+        description: "Creates VirtualImage, VirtualDisk and VirtualMachine, waits for the VM and guest agent, then cleans up.",
+        reasonUp: "VirtualImage, VirtualDisk and VirtualMachine were created successfully and the VM guest agent became ready",
+        reasonDown: "VirtualImage, VirtualDisk or VirtualMachine creation failed, or the VM guest agent did not become ready",
         reasonUnknown:
-          "error occurred during check, kube-apiserver is not available, or previous probe run has not finished",
+          "error occurred during VM lifecycle check, kube-apiserver is not available, or previous probe run has not finished",
+        reasonNodata: REASON_AGENTS_STOPPED,
+      },
+      "vm-migration": {
+        title: "VM migration",
+        description: "Creates a temporary VM, evicts it to another node, verifies migration completion, then cleans up.",
+        reasonUp: "temporary VM was created and successfully migrated to another node",
+        reasonDown: "temporary VM creation or migration failed",
+        reasonUnknown:
+          "error occurred during VM migration check, kube-apiserver is not available, or previous probe run has not finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
     },

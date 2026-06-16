@@ -36,8 +36,6 @@ import (
 const (
 	// VirtualizationGroupName is the upmeter group name for virtualization probes.
 	VirtualizationGroupName          = "virtualization"
-	// VirtualizationControllerProbeName is the probe name for virtualization-controller readiness.
-	VirtualizationControllerProbeName = "controller"
 	// VirtualizationCreationProbeName is the probe name for VM creation lifecycle.
 	VirtualizationCreationProbeName  = "vm-creation"
 	// VirtualizationMigrationProbeName is the probe name for VM migration lifecycle.
