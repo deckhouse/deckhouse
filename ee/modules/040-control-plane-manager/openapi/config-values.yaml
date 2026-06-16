@@ -344,17 +344,15 @@ properties:
       #   type: string
       #   default: Rollback
       #   description: |
-      #     Enables signature verification by the api-server for all records.
-      #     Transforms all records in etcd to new format with signature.
+      #     Enables signature verification of records by the API server.
+
+      #     Depending on the selected mode, records in etcd may be converted to the signed format or reverted to the standard etcd format.
 
       #     Possible values:
-      #     - Migrate
-      #       Allow read records without signature or with invalid signature.
-      #     - Enforce
-      #       Reject records without signature, with invalid signature or in wrong format.
-      #     - Rollback
-      #       Transform records to standard format (default format for etcd) when modify records.
-      #       Allows use records without signature or with invalid signature.
+
+      #     - `Migrate`: Allows reading records without a signature or with an invalid signature. Modified records are converted to the signed format.
+      #     - `Enforce`: Allows working only with records that have a valid signature. Records without a signature, with an invalid signature, or in an unsupported format are rejected.
+      #     - `Rollback`: Converts records to the standard etcd format when they are modified. Allows reading records without a signature or with an invalid signature.
       #   x-examples: ["Migrate"]
       #   enum:
       #     - Migrate

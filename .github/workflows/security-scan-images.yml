@@ -691,7 +691,7 @@ jobs:
   # <template: set_security_scan_requirement_status>
   set_security_scan_requirement_status:
     name: Set commit status after security scan run
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     needs: test_cve_report_main
     if: ${{ always() }}
     permissions:
@@ -699,7 +699,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Install GitHub CLI
-        run: sudo apt-get install gh -y
+        uses: deckhouse/modules-actions/gh@v15
       - name: Auth with GitHub CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
       - name: Set PR Label
@@ -853,7 +853,7 @@ jobs:
   # <template: set_security_rootless_requirement_status>
   set_security_rootless_requirement_status:
     name: Set commit status after security rootless scan run
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     needs:
       - pull_request_info
       - security_scan_images
@@ -863,7 +863,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Install GitHub CLI
-        run: sudo apt-get install gh -y
+        uses: deckhouse/modules-actions/gh@v15
       - name: Auth with GitHub CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
       - name: Set PR Label
@@ -1203,7 +1203,7 @@ jobs:
   # <template: set_security_antivirus_requirement_status>
   set_security_antivirus_requirement_status:
     name: Set commit status after antivirus scan run
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     needs: [drweb-scan, kaspersky-scan]
     if: ${{ always() }}
     permissions:
@@ -1211,7 +1211,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Install GitHub CLI
-        run: sudo apt-get install gh -y
+        uses: deckhouse/modules-actions/gh@v15
       - name: Auth with GitHub CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
       - name: Set PR Label

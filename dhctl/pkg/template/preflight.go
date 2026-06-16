@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,13 @@ import (
 )
 
 var (
-	checkPortsScriptPath              = filepath.Join("preflight", "check_ports.sh.tpl")
-	checkLocalhostScriptPath          = filepath.Join("preflight", "check_localhost.sh.tpl")
-	checkProxyRevTunnelOpenScriptPath = filepath.Join("preflight", "check_reverse_tunnel_open.sh.tpl")
-	killReverseTunnelPath             = filepath.Join("preflight", "kill_reverse_tunnel.sh.tpl")
-	checkDeckhouseUserScriptPath      = filepath.Join("preflight", "check_deckhouse_user.sh.tpl")
-	preflightScriptDirPath            = "preflight"
+	checkPortsScriptPath                  = filepath.Join("preflight", "check_ports.sh.tpl")
+	checkLocalhostScriptPath              = filepath.Join("preflight", "check_localhost.sh.tpl")
+	checkProxyRevTunnelOpenScriptPath     = filepath.Join("preflight", "check_reverse_tunnel_open.sh.tpl")
+	killReverseTunnelPath                 = filepath.Join("preflight", "kill_reverse_tunnel.sh.tpl")
+	checkReverseTunnelReachableScriptPath = filepath.Join("preflight", "check_reverse_tunnel_reachable.sh.tpl")
+	checkDeckhouseUserScriptPath          = filepath.Join("preflight", "check_deckhouse_user.sh.tpl")
+	preflightScriptDirPath                = "preflight"
 )
 
 func RenderAndSavePreflightCheckPortsScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
@@ -82,6 +83,20 @@ func RenderAndSaveKillReverseTunnelScript(ctx context.Context, host, port string
 		map[string]interface{}{
 			"host": host,
 			"port": port,
+		},
+	)
+}
+
+func RenderAndSavePreflightReverseTunnelReachableScript(ctx context.Context, url string, globalOptions *options.GlobalOptions) (string, error) {
+	dhlog.FromContext(ctx).DebugContext(ctx, "Start render proxy reverse tunnel reachable script")
+	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkReverseTunnelReachableScriptPath)
+
+	return RenderAndSaveTemplate(
+		ctx,
+		"check_reverse_tunnel_reachable.sh",
+		scriptPath,
+		map[string]interface{}{
+			"url": url,
 		},
 	)
 }
