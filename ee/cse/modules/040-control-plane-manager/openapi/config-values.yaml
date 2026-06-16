@@ -425,6 +425,28 @@ properties:
             default: /var/lib/etcd
             description: |
               Host path on masters nodes for etcd backup.
+      defrag:
+        type: object
+        default: {}
+        description: |
+          etcd defragmentation parameters.
+        properties:
+          enabled:
+            type: boolean
+            description: |
+              Enable periodic etcd defragmentation.
+
+              Defaults to `true` when the cluster has three or more etcd members (masters ≥ 3, or
+              masters = 2 with an etcd-arbiter node); otherwise defaults to `false`.
+              An explicit value always takes priority over the computed default.
+          cronSchedule:
+            type: string
+            default: "*/3 * * * *"
+            x-examples:
+            - "0 1 * * *"
+            description: |
+              Defragmentation schedule in cron format (UTC). Temporary default `*/3 * * * *` is used
+              for testing; change to `0 1 * * *` (or similar) before going to production.
       maxDbSize:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) parameter.
