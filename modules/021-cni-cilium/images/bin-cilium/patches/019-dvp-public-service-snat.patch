@@ -979,23 +979,10 @@ index 54e18e17..6b3a002c 100644
  		is_defined(ENABLE_PER_PACKET_LB),
  		CILIUM_CALL_IPV4_FROM_LXC_CONT, tail_handle_ipv4_cont)
 diff --git a/bpf/lib/common.h b/bpf/lib/common.h
-index dec82f37..6a7dbf18 100644
+index dec82f37..2866e20d 100644
 --- a/bpf/lib/common.h
 +++ b/bpf/lib/common.h
-@@ -48,12 +48,6 @@
- #define CONDITIONAL_PREALLOC BPF_F_NO_PREALLOC
- #endif
- 
--#ifdef NO_COMMON_MEM_MAPS
--#define LRU_MEM_FLAVOR BPF_F_NO_COMMON_LRU
--#else
--#define LRU_MEM_FLAVOR 0
--#endif
--
- #if defined(ENABLE_EGRESS_GATEWAY)
- #define ENABLE_EGRESS_GATEWAY_COMMON
- #endif
-@@ -143,7 +137,9 @@ enum {
+@@ -143,7 +143,9 @@ enum {
  #define CILIUM_CALL_IPV4_NO_SERVICE		47
  #define CILIUM_CALL_IPV6_NO_SERVICE		48
  #define CILIUM_CALL_MULTICAST_EP_DELIVERY       49
@@ -1006,113 +993,11 @@ index dec82f37..6a7dbf18 100644
  
  typedef __u64 mac_t;
  
-@@ -621,8 +617,8 @@ enum {
- #define DROP_MISSED_TAIL_CALL	-140
- #define DROP_WRITE_ERROR	-141
- #define DROP_UNKNOWN_L4		-142
--#define DROP_UNKNOWN_ICMP4_CODE	-143
--#define DROP_UNKNOWN_ICMP4_TYPE	-144
-+#define DROP_UNKNOWN_ICMP_CODE	-143
-+#define DROP_UNKNOWN_ICMP_TYPE	-144
- #define DROP_UNKNOWN_ICMP6_CODE	-145
- #define DROP_UNKNOWN_ICMP6_TYPE	-146
- #define DROP_NO_TUNNEL_KEY	-147
-@@ -705,8 +701,6 @@ enum {
- #define REASON_FRAG_PACKET		9
- #define REASON_FRAG_PACKET_UPDATE	10
- #define REASON_MISSED_CUSTOM_CALL	11
--#define REASON_DECRYPTING			12
--#define REASON_ENCRYPTING			13
- 
- /* Lookup scope for externalTrafficPolicy=Local */
- #define LB_LOOKUP_SCOPE_EXT	0
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 42f074f3..75e0b828 100644
+index 42f074f3..1f22e9d1 100644
 --- a/bpf/lib/lb.h
 +++ b/bpf/lib/lb.h
-@@ -63,7 +63,6 @@ struct {
- 	__type(value, struct lb_affinity_val);
- 	__uint(pinning, LIBBPF_PIN_BY_NAME);
- 	__uint(max_entries, CILIUM_LB_AFFINITY_MAP_MAX_ENTRIES);
--	__uint(map_flags, LRU_MEM_FLAVOR);
- } LB6_AFFINITY_MAP __section_maps_btf;
- #endif
- 
-@@ -85,7 +84,6 @@ struct {
- 	__type(value, struct lb6_health);
- 	__uint(pinning, LIBBPF_PIN_BY_NAME);
- 	__uint(max_entries, CILIUM_LB_BACKENDS_MAP_MAX_ENTRIES);
--	__uint(map_flags, LRU_MEM_FLAVOR);
- } LB6_HEALTH_MAP __section_maps_btf;
- #endif
- 
-@@ -152,7 +150,6 @@ struct {
- 	__type(value, struct lb_affinity_val);
- 	__uint(pinning, LIBBPF_PIN_BY_NAME);
- 	__uint(max_entries, CILIUM_LB_AFFINITY_MAP_MAX_ENTRIES);
--	__uint(map_flags, LRU_MEM_FLAVOR);
- } LB4_AFFINITY_MAP __section_maps_btf;
- #endif
- 
-@@ -174,7 +171,6 @@ struct {
- 	__type(value, struct lb4_health);
- 	__uint(pinning, LIBBPF_PIN_BY_NAME);
- 	__uint(max_entries, CILIUM_LB_BACKENDS_MAP_MAX_ENTRIES);
--	__uint(map_flags, LRU_MEM_FLAVOR);
- } LB4_HEALTH_MAP __section_maps_btf;
- #endif
- 
-@@ -687,7 +683,6 @@ struct lb6_service *lb6_lookup_service(struct lb6_key *key,
- 				       const bool scope_switch)
- {
- 	struct lb6_service *svc;
--	__u8 orig_proto = key->proto;
- 
- 	key->scope = LB_LOOKUP_SCOPE_EXT;
- 	key->backend_slot = 0;
-@@ -705,16 +700,7 @@ struct lb6_service *lb6_lookup_service(struct lb6_key *key,
- 		if (!scope_switch || !lb6_svc_is_two_scopes(svc))
- 			return svc;
- 		key->scope = LB_LOOKUP_SCOPE_INT;
--		key->proto = orig_proto;
- 		svc = map_lookup_elem(&LB6_SERVICES_MAP_V2, key);
--
--#if defined(ENABLE_SERVICE_PROTOCOL_DIFFERENTIATION)
--		/* Also check for ANY protocol for internal scope lookups */
--		if (!svc && key->proto != 0) {
--			key->proto = 0;
--			svc = map_lookup_elem(&LB6_SERVICES_MAP_V2, key);
--		}
--#endif
- 	}
- 
- 	return svc;
-@@ -1432,7 +1418,6 @@ struct lb4_service *lb4_lookup_service(struct lb4_key *key,
- 				       const bool scope_switch)
- {
- 	struct lb4_service *svc;
--	__u8 orig_proto = key->proto;
- 
- 	key->scope = LB_LOOKUP_SCOPE_EXT;
- 	key->backend_slot = 0;
-@@ -1450,16 +1435,7 @@ struct lb4_service *lb4_lookup_service(struct lb4_key *key,
- 		if (!scope_switch || !lb4_svc_is_two_scopes(svc))
- 			return svc;
- 		key->scope = LB_LOOKUP_SCOPE_INT;
--		key->proto = orig_proto;
- 		svc = map_lookup_elem(&LB4_SERVICES_MAP_V2, key);
--
--#if defined(ENABLE_SERVICE_PROTOCOL_DIFFERENTIATION)
--		/* Also check for ANY protocol for internal scope lookups */
--		if (!svc && key->proto != 0) {
--			key->proto = 0;
--			svc = map_lookup_elem(&LB4_SERVICES_MAP_V2, key);
--		}
--#endif
- 	}
- 
- 	return svc;
-@@ -2021,6 +1997,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -2021,6 +2021,10 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  				     bool has_l4_header,
  				     const bool skip_xlate,
  				     __u32 *cluster_id __maybe_unused,
@@ -1123,7 +1008,7 @@ index 42f074f3..75e0b828 100644
  				     __s8 *ext_err,
  				     __net_cookie netns_cookie __maybe_unused)
  {
-@@ -2031,6 +2011,9 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -2031,6 +2035,9 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  	__u32 backend_id = 0;
  	__be32 new_saddr = 0;
  	int ret;
@@ -1133,7 +1018,7 @@ index 42f074f3..75e0b828 100644
  #ifdef ENABLE_SESSION_AFFINITY
  	union lb4_affinity_client_id client_id = {
  		.client_ip = saddr,
-@@ -2189,9 +2172,23 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+@@ -2189,9 +2196,23 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
  	if (likely(backend->port))
  		tuple->sport = backend->port;
  
@@ -1160,7 +1045,7 @@ index 42f074f3..75e0b828 100644
  no_service:
  	ret = DROP_NO_SERVICE;
  drop_err:
-@@ -2208,15 +2205,25 @@ drop_err:
+@@ -2208,15 +2229,25 @@ drop_err:
   */
  static __always_inline void lb4_ctx_store_state(struct __ctx_buff *ctx,
  						const struct ct_state *state,
@@ -1192,7 +1077,7 @@ index 42f074f3..75e0b828 100644
  	ctx_store_meta(ctx, CB_CLUSTER_ID_EGRESS, cluster_id);
  }
  
-@@ -2228,7 +2235,11 @@ static __always_inline void lb4_ctx_store_state(struct __ctx_buff *ctx,
+@@ -2228,7 +2259,11 @@ static __always_inline void lb4_ctx_store_state(struct __ctx_buff *ctx,
  static __always_inline void
  lb4_ctx_restore_state(struct __ctx_buff *ctx, struct ct_state *state,
  		       __u16 *proxy_port, __u32 *cluster_id __maybe_unused,
@@ -1205,7 +1090,7 @@ index 42f074f3..75e0b828 100644
  {
  	__u32 meta = clear ? ctx_load_and_clear_meta(ctx, CB_CT_STATE) :
  			     ctx_load_meta(ctx, CB_CT_STATE);
-@@ -2237,6 +2248,10 @@ lb4_ctx_restore_state(struct __ctx_buff *ctx, struct ct_state *state,
+@@ -2237,6 +2272,10 @@ lb4_ctx_restore_state(struct __ctx_buff *ctx, struct ct_state *state,
  		state->loopback = 1;
  #endif
  	state->rev_nat_index = meta >> 16;
@@ -1217,32 +1102,10 @@ index 42f074f3..75e0b828 100644
  	*proxy_port = clear ? (ctx_load_and_clear_meta(ctx, CB_PROXY_MAGIC) >> 16) :
  			      (ctx_load_meta(ctx, CB_PROXY_MAGIC) >> 16);
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 5b6a33b1..8da064ec 100644
+index 5b6a33b1..dc5da608 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
-@@ -849,6 +849,9 @@ static __always_inline int
- nodeport_rev_dnat_ingress_ipv6(struct __ctx_buff *ctx, struct trace_ctx *trace,
- 			       __s8 *ext_err)
- {
-+#ifdef ENABLE_NAT_46X64_GATEWAY
-+	const bool nat_46x64_fib = nat46x64_cb_route(ctx);
-+#endif
- 	struct bpf_fib_lookup_padded fib_params = {
- 		.l = {
- 			.family		= AF_INET6,
-@@ -869,9 +872,8 @@ nodeport_rev_dnat_ingress_ipv6(struct __ctx_buff *ctx, struct trace_ctx *trace,
- 
- 	if (!revalidate_data(ctx, &data, &data_end, &ip6))
- 		return DROP_INVALID;
--
--#if !defined(IS_BPF_LXC) && defined(ENABLE_NAT_46X64_GATEWAY)
--	if (nat46x64_cb_route(ctx))
-+#ifdef ENABLE_NAT_46X64_GATEWAY
-+	if (nat_46x64_fib)
- 		goto fib_lookup;
- #endif
- 	ret = lb6_extract_tuple(ctx, ip6, ETH_HLEN, &l4_off, &tuple);
-@@ -2570,7 +2572,12 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -2570,7 +2570,12 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  	} else {
  		ret = lb4_local(get_ct_map4(tuple), ctx, is_fragment, l3_off, l4_off,
  				key, tuple, svc, &ct_state_svc, has_l4_header,
@@ -1257,7 +1120,7 @@ index 5b6a33b1..8da064ec 100644
  		if (ret == DROP_NO_SERVICE) {
  			/* Packet is TX'ed back out, avoid EDT false-positives: */
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
-index 48044295..e003bdcf 100644
+index 48044295..cb206d10 100644
 --- a/daemon/cmd/daemon_main.go
 +++ b/daemon/cmd/daemon_main.go
 @@ -684,6 +684,9 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
@@ -1270,44 +1133,11 @@ index 48044295..e003bdcf 100644
  	flags.Bool(option.EnableIPMasqAgent, false, "Enable BPF ip-masq-agent")
  	option.BindEnv(vp, option.EnableIPMasqAgent)
  
-@@ -1156,9 +1159,6 @@ func initEnv(vp *viper.Viper) {
- 	if option.Config.PreAllocateMaps {
- 		bpf.EnableMapPreAllocation()
- 	}
--	if option.Config.BPFDistributedLRU {
--		bpf.EnableMapDistributedLRU()
--	}
- 
- 	scopedLog := log.WithFields(logrus.Fields{
- 		logfields.Path + ".RunDir": option.Config.RunDir,
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
-index bf75a52f..62ad22bd 100644
+index bf75a52f..6ee07246 100644
 --- a/pkg/datapath/linux/config/config.go
 +++ b/pkg/datapath/linux/config/config.go
-@@ -180,6 +180,12 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
- 
- 	cDefinesMap["KERNEL_HZ"] = fmt.Sprintf("%d", option.Config.KernelHz)
- 
-+	if option.Config.BPFDistributedLRU {
-+		cDefinesMap["LRU_MEM_FLAVOR"] = "BPF_F_NO_COMMON_LRU"
-+	} else {
-+		cDefinesMap["LRU_MEM_FLAVOR"] = "0"
-+	}
-+
- 	if option.Config.EnableIPv6 {
- 		extraMacrosMap["ROUTER_IP"] = routerIP.String()
- 		fw.WriteString(defineIPv6("ROUTER_IP", routerIP))
-@@ -290,9 +296,6 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
- 	if option.Config.PreAllocateMaps {
- 		cDefinesMap["PREALLOCATE_MAPS"] = "1"
- 	}
--	if option.Config.BPFDistributedLRU {
--		cDefinesMap["NO_COMMON_MEM_MAPS"] = "1"
--	}
- 
- 	cDefinesMap["EVENTS_MAP"] = eventsmap.MapName
- 	cDefinesMap["EVENTS_MAP_RATE_LIMIT"] = fmt.Sprintf("%d", option.Config.BPFEventsDefaultRateLimit)
-@@ -771,6 +774,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+@@ -771,6 +771,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
  		cDefinesMap["ENABLE_CUSTOM_CALLS"] = "1"
  	}
  
@@ -1320,26 +1150,10 @@ index bf75a52f..62ad22bd 100644
  		cDefinesMap["ENABLE_VTEP"] = "1"
  		cDefinesMap["VTEP_MAP"] = vtep.Name
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index 76056cca..016ef962 100644
+index 76056cca..4de859be 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
-@@ -22,7 +22,6 @@ import (
- 	"unicode"
- 	"unicode/utf8"
- 
--	"github.com/cilium/ebpf"
- 	"github.com/google/go-cmp/cmp"
- 	"github.com/google/go-cmp/cmp/cmpopts"
- 	"github.com/mackerelio/go-osstat/memory"
-@@ -44,7 +43,6 @@ import (
- 	"github.com/cilium/cilium/pkg/logging/logfields"
- 	"github.com/cilium/cilium/pkg/mac"
- 	"github.com/cilium/cilium/pkg/time"
--	"github.com/cilium/cilium/pkg/util"
- 	"github.com/cilium/cilium/pkg/version"
- )
- 
-@@ -363,6 +361,9 @@ const (
+@@ -363,6 +363,9 @@ const (
  	// EnableMasqueradeRouteSource masquerades to the source route IP address instead of the interface one
  	EnableMasqueradeRouteSource = "enable-masquerade-to-route-source"
  
@@ -1349,7 +1163,7 @@ index 76056cca..016ef962 100644
  	// EnableIPMasqAgent enables BPF ip-masq-agent
  	EnableIPMasqAgent = "enable-ip-masq-agent"
  
-@@ -1670,6 +1671,7 @@ type DaemonConfig struct {
+@@ -1670,6 +1673,7 @@ type DaemonConfig struct {
  	EnableIPv6Masquerade        bool
  	EnableBPFMasquerade         bool
  	EnableMasqueradeRouteSource bool
@@ -1357,7 +1171,7 @@ index 76056cca..016ef962 100644
  	EnableIPMasqAgent           bool
  	DhcpdEnabled                bool
  	DhcpdClusterDNS             string
-@@ -2703,6 +2705,12 @@ func (c *DaemonConfig) Validate(vp *viper.Viper) error {
+@@ -2703,6 +2707,12 @@ func (c *DaemonConfig) Validate(vp *viper.Viper) error {
  		}
  	}
  
@@ -1370,7 +1184,7 @@ index 76056cca..016ef962 100644
  	switch c.RoutingMode {
  	case RoutingModeNative, RoutingModeTunnel:
  	default:
-@@ -3037,6 +3045,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+@@ -3037,6 +3047,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
  	c.EnableIPv6Masquerade = vp.GetBool(EnableIPv6Masquerade) && c.EnableIPv6
  	c.EnableBPFMasquerade = vp.GetBool(EnableBPFMasquerade)
  	c.EnableMasqueradeRouteSource = vp.GetBool(EnableMasqueradeRouteSource)
@@ -1378,52 +1192,3 @@ index 76056cca..016ef962 100644
  	c.EnablePMTUDiscovery = vp.GetBool(EnablePMTUDiscovery)
  	c.IPv6NAT46x64CIDR = defaults.IPv6NAT46x64CIDR
  	c.IPAMCiliumNodeUpdateRate = vp.GetDuration(IPAMCiliumNodeUpdateRate)
-@@ -3662,8 +3671,6 @@ func (c *DaemonConfig) calculateBPFMapSizes(vp *viper.Viper) error {
- 		}
- 		c.calculateDynamicBPFMapSizes(vp, vms.Total, dynamicSizeRatio)
- 		c.BPFMapsDynamicSizeRatio = dynamicSizeRatio
--	} else if c.BPFDistributedLRU {
--		return fmt.Errorf("distributed LRU is only valid with a specified dynamic map size ratio")
- 	} else if dynamicSizeRatio < 0.0 {
- 		return fmt.Errorf("specified dynamic map size ratio %f must be > 0.0", dynamicSizeRatio)
- 	} else if dynamicSizeRatio > 1.0 {
-@@ -3687,7 +3694,6 @@ func (c *DaemonConfig) SetMapElementSizes(
- }
- 
- func (c *DaemonConfig) calculateDynamicBPFMapSizes(vp *viper.Viper, totalMemory uint64, dynamicSizeRatio float64) {
--	possibleCPUs := 1
- 	// Heuristic:
- 	// Distribute relative to map default entries among the different maps.
- 	// Cap each map size by the maximum. Map size provided by the user will
-@@ -3712,28 +3718,13 @@ func (c *DaemonConfig) calculateDynamicBPFMapSizes(vp *viper.Viper, totalMemory
- 		SockRevNATMapEntriesDefault*c.SizeofSockRevElement
- 	log.Debugf("Total memory for default map entries: %d", totalMapMemoryDefault)
- 
--	// In case of distributed LRU, we need to round up to the number of possible CPUs
--	// since this is also what the kernel does internally, see htab_map_alloc()'s:
--	//
--	//   htab->map.max_entries = roundup(attr->max_entries,
--	//				     num_possible_cpus());
--	//
--	// Thus, if we would not round up from agent side, then Cilium would constantly
--	// try to replace maps due to property mismatch!
--	if c.BPFDistributedLRU {
--		cpus, err := ebpf.PossibleCPU()
--		if err != nil {
--			log.Fatal("Failed to get number of possible CPUs needed for the distributed LRU")
--		}
--		possibleCPUs = cpus
--	}
- 	getEntries := func(entriesDefault, min, max int) int {
- 		entries := (entriesDefault * memoryAvailableForMaps) / totalMapMemoryDefault
--		entries = util.RoundUp(entries, possibleCPUs)
- 		if entries < min {
--			entries = util.RoundUp(min, possibleCPUs)
-+			entries = min
- 		} else if entries > max {
--			entries = util.RoundDown(max, possibleCPUs)
-+			log.Debugf("clamped from %d to %d", entries, max)
-+			entries = max
- 		}
- 		return entries
- 	}
