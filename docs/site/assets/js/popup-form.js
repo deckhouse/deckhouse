@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
   class PopupForm {
     constructor(wrapper) {
       this.wrapper = wrapper;
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function() {
       this.updateContactValue();
       this.initializeCheckbox();
       this.toggleTelegramInput();
-      if(this.telegramCheckbox) {
+      if (this.telegramCheckbox) {
         this.telegramCheckbox.addEventListener('change', this.toggleTelegramInput.bind(this));
       }
     }
@@ -34,10 +34,10 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     updateContactValue() {
-      if(this.preferredContact) {
+      if (this.preferredContact) {
         let selectedContacts = [];
         this.checkboxes.forEach(checkbox => {
-          if(checkbox.checked) {
+          if (checkbox.checked) {
             selectedContacts.push(checkbox.value);
           }
         });
@@ -46,8 +46,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     toggleTelegramInput() {
-      if(this.telegramCheckbox) {
-        if(this.telegramCheckbox.checked) {
+      if (this.telegramCheckbox) {
+        if (this.telegramCheckbox.checked) {
           this.telegramInput.style.display = 'block';
         } else {
           this.telegramInput.style.display = 'none';
@@ -84,18 +84,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
       const modalAttr = this.wrapper.dataset.modalWindow;
 
-      if(modalAttr == 'request_access') {
-        if(FormData.company) {
+      if (modalAttr == 'request_access') {
+        if (FormData.company) {
           bitrixFields.fields['TITLE'] += FormData.company + ' - запрос бесплатного триала';
         }
       } else {
-        if(FormData.company) {
+        if (FormData.company) {
           bitrixFields.fields['TITLE'] += FormData.company + ' - запрос ';
         }
-    
+
         bitrixFields.fields['TITLE'] += 'с сайта Deckhouse ';
       }
-  
+
       if (FormData.name) {
         bitrixFields.fields['NAME'] = FormData.name;
       }
@@ -117,11 +117,11 @@ document.addEventListener("DOMContentLoaded", function() {
           }
         ]
       }
-  
+
       if (FormData.position) {
         bitrixFields.fields['POST'] = FormData.position;
       }
-  
+
       if (FormData.preferred_contact) {
         bitrixFields.fields['COMMENTS'] = `Предпочтительный вид связи: ${FormData.preferred_contact}`;
         if (this.telegramCheckbox.checked && this.telegramInput.value) {
@@ -144,7 +144,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const parts = new URL(FormData.referer_url).searchParams;
 
       parts.forEach((value, key) => {
-        if(key.startsWith('utm_')) {
+        if (key.startsWith('utm_')) {
           query[key] = value;
         }
       })
@@ -173,8 +173,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
       const utmAccepted = ['utm_campaign', 'utm_medium', 'utm_source', 'utm_term'];
       utmAccepted.forEach(param => {
-        if(query[param]) {
-          if(!document.cookie.includes(param + '=')) {
+        if (query[param]) {
+          if (!document.cookie.includes(param + '=')) {
             createCookie(param, query[param], 28);
           }
         } else {
@@ -186,21 +186,21 @@ document.addEventListener("DOMContentLoaded", function() {
         const spamPattern = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CASE|WHEN|SLEEP|--|\|\||OR|AND|CHR\()\b)/i;
 
         function checkingValue(value) {
-          if(!value) return false;
+          if (!value) return false;
 
-          if(typeof value === 'string') {
+          if (typeof value === 'string') {
             return spamPattern.test(value);
           }
 
-          if(typeof value === 'number') {
+          if (typeof value === 'number') {
             return spamPattern.test(value.toString());
           }
 
-          if(Array.isArray(value)) {
+          if (Array.isArray(value)) {
             return value.some(checkingValue);
           }
 
-          if(typeof value === 'object' && value !== null) {
+          if (typeof value === 'object' && value !== null) {
             return Object.values(value).some(checkingValue);
           }
 
@@ -212,15 +212,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
       let isSpam = false;
 
-      for(const fieldsValue in bitrixFields.fields) {
-        if(themeFormValidation(bitrixFields.fields[fieldsValue])) {
+      for (const fieldsValue in bitrixFields.fields) {
+        if (themeFormValidation(bitrixFields.fields[fieldsValue])) {
           isSpam = true;
           break;
         }
       }
 
-      if(!isSpam) {
-        const url = 'https://crm.flant.ru/rest/132/bm7uy367wn001kef/crm.lead.add.json';
+      if (!isSpam) {
+        const url = 'https://crm.flant.ru/rest/933/2ml8c186r7d7jgud/crm.lead.add.json';
 
         fetch(url, {
           method: 'POST',
@@ -230,14 +230,14 @@ document.addEventListener("DOMContentLoaded", function() {
           },
           body: JSON.stringify(bitrixFields)
         })
-        .then(res => {
-          if(res.ok) {
-            this.downloadFile();
-            this.successSubmit();
-          } else {
-            this.errorSubmit();
-          }
-        })
+          .then(res => {
+            if (res.ok) {
+              this.downloadFile();
+              this.successSubmit();
+            } else {
+              this.errorSubmit();
+            }
+          })
       } else {
         this.errorSubmit();
       }
@@ -307,7 +307,7 @@ document.addEventListener("DOMContentLoaded", function() {
   })
 })
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
   const forms = document.querySelectorAll('form.form.form__request');
 
   forms.forEach(form => {
@@ -319,25 +319,25 @@ document.addEventListener("DOMContentLoaded", function() {
       let isFilled = true;
 
       inputsRequired.forEach(input => {
-        if(!input.value.trim()) {
+        if (!input.value.trim()) {
           isFilled = false;
         }
       });
 
       checkboxRequired.forEach(checkbox => {
-        if(!checkbox.checked) {
+        if (!checkbox.checked) {
           isFilled = false;
         };
       })
 
       submit.disabled = !isFilled;
     }
-    
+
     form.addEventListener('input', hasFilledInput);
     form.addEventListener('change', hasFilledInput);
 
     form.addEventListener('submit', e => {
-      if(submit.disabled) {
+      if (submit.disabled) {
         e.preventDefault;
       }
     })
