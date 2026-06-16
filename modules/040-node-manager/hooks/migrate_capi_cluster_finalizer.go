@@ -27,7 +27,10 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-const capiControllerManagerFinalizer = "deckhouse.io/capi-controller-manager"
+const (
+	capiControllerManagerFinalizer = "deckhouse.io/capi-controller-manager"
+	capiNamespace                  = "d8-cloud-instance-manager"
+)
 
 type capiClusterFinalizerMeta struct {
 	APIVersion string

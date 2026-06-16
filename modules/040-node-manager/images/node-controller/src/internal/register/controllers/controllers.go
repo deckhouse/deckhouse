@@ -20,6 +20,12 @@ package controllers
 
 import (
 	_ "github.com/deckhouse/node-controller/internal/controller/bashiblecleanup"
+	_ "github.com/deckhouse/node-controller/internal/controller/capicluster"
+	_ "github.com/deckhouse/node-controller/internal/controller/capicontrolplane"
+	_ "github.com/deckhouse/node-controller/internal/controller/capihelmownership"
+	_ "github.com/deckhouse/node-controller/internal/controller/capimdmetrics"
+	_ "github.com/deckhouse/node-controller/internal/controller/capisetreplicas"
+	_ "github.com/deckhouse/node-controller/internal/controller/crdmigration"
 	_ "github.com/deckhouse/node-controller/internal/controller/draining"
 	_ "github.com/deckhouse/node-controller/internal/controller/instance"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
