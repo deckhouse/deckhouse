@@ -106,10 +106,8 @@ spec:
               {{- end }}
             - --dynamic-probe-known-zoneprefix={{ .Values.upmeter.internal.dynamicProbes.zonePrefix}}
             {{- end }}
-            {{- with .Values.upmeter.virtualizationProbe }}
-            {{- if .virtualImageURL }}
-            - --virtualization-probe-virtualimage-url={{ .virtualImageURL }}
-            {{- end }}
+            {{- with $.Values.global.modulesImages.digests.virtualization.upmeterVm }}
+            - --virtualization-probe-vm-image={{ $.Values.global.modulesImages.registry.base }}@{{ . }}
             {{- end }}
           volumeMounts:
           - mountPath: /db

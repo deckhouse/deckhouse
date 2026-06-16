@@ -39,7 +39,7 @@ func initVirtualization(access kubernetes.Access, preflight checker.Doer, virtPr
 			logger,
 			checker.VirtualizationCreationProbeName,
 			"upmeter-vm-creation",
-			virtProbe.VirtualImageURL,
+			virtProbe.VMImage,
 			false,
 		),
 		virtualMachineLifecycleRunner(
@@ -48,7 +48,7 @@ func initVirtualization(access kubernetes.Access, preflight checker.Doer, virtPr
 			logger,
 			checker.VirtualizationMigrationProbeName,
 			"upmeter-vm-migration",
-			virtProbe.VirtualImageURL,
+			virtProbe.VMImage,
 			true,
 		),
 	}
@@ -60,7 +60,7 @@ func virtualMachineLifecycleRunner(
 	logger *logrus.Logger,
 	probeName,
 	namespaceSuffix,
-	virtualImageURL string,
+	vmImage string,
 	verifyMigration bool,
 ) runnerConfig {
 	return runnerConfig{
@@ -76,12 +76,12 @@ func virtualMachineLifecycleRunner(
 				"probe": probeName,
 				"check": "virtual-machine-lifecycle",
 			}),
-			AgentID:          run.ID(),
-			Namespace:        run.StaticIdentifier(namespaceSuffix),
-			ProbeName:        probeName,
-			VirtualImageName: checker.VirtualizationImageName,
-			VirtualImageURL:  virtualImageURL,
-			VerifyMigration:  verifyMigration,
+			AgentID:                    run.ID(),
+			Namespace:                  run.StaticIdentifier(namespaceSuffix),
+			ProbeName:                  probeName,
+			VirtualImageName:           checker.VirtualizationImageName,
+			VirtualImageContainerImage: vmImage,
+			VerifyMigration:            verifyMigration,
 
 			RequestTimeout:                     5 * time.Second,
 			WaitVirtualImageTimeout:            30 * time.Second,

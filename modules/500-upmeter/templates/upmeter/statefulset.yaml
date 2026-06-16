@@ -115,10 +115,8 @@ spec:
           - --dynamic-probe-nodegroup={{ $name }}
             {{- end }}
           {{- end }}
-          {{- with .Values.upmeter.virtualizationProbe }}
-          {{- if .virtualImageURL }}
-          - --virtualization-probe-virtualimage-url={{ .virtualImageURL }}
-          {{- end }}
+          {{- with .Values.global.modulesImages.digests.virtualization.upmeterVm }}
+          - --virtualization-probe-vm-image={{ $.Values.global.modulesImages.registry.base }}@{{ . }}
           {{- end }}
         env:
           - name: UPMETER_DB_PATH

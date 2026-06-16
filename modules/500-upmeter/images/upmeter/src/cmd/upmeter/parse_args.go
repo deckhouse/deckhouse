@@ -70,10 +70,9 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 	cmd.Flag("dynamic-probe-nodegroup", "Node Group name tracked by probes").
 		StringsVar(&config.DynamicProbes.NodeGroups)
 
-	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
-		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
-		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-bios-minimal.qcow2").
-		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
+	cmd.Flag("virtualization-probe-vm-image", "Container image used to create VirtualImage for virtualization VM lifecycle probes").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VM_IMAGE").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VMImage)
 
 	// User-Agent
 	// TODO generate from CI?
@@ -142,10 +141,9 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 	cmd.Flag("dynamic-probe-known-zoneprefix", "A known zone prefix for current cloud provider").
 		StringVar(&config.DynamicProbes.ZonePrefix)
 
-	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
-		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
-		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/upmeter/alpine-3-23-bios-minimal.qcow2").
-		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
+	cmd.Flag("virtualization-probe-vm-image", "Container image used to create VirtualImage for virtualization VM lifecycle probes").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VM_IMAGE").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VMImage)
 
 	// User-Agent
 	// TODO generate from CI?

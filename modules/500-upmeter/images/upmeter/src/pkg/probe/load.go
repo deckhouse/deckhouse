@@ -74,7 +74,7 @@ type DynamicConfig struct {
 }
 
 type VirtualizationProbeConfig struct {
-	VirtualImageURL string
+	VMImage string
 }
 
 type ConvergeConfig struct {

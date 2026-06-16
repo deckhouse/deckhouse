@@ -35,16 +35,16 @@ import (
 
 const (
 	// VirtualizationGroupName is the upmeter group name for virtualization probes.
-	VirtualizationGroupName          = "virtualization"
+	VirtualizationGroupName = "virtualization"
 	// VirtualizationCreationProbeName is the probe name for VM creation lifecycle.
-	VirtualizationCreationProbeName  = "vm-creation"
+	VirtualizationCreationProbeName = "vm-creation"
 	// VirtualizationMigrationProbeName is the probe name for VM migration lifecycle.
 	VirtualizationMigrationProbeName = "vm-migration"
 	// VirtualizationImageName is the VirtualImage name used by VM lifecycle probes.
-	VirtualizationImageName          = "probe-image"
-	virtualizationVMName             = "probe-vm"
-	virtualizationDiskName           = "probe-disk"
-	virtualizationEvictName          = "probe-vm-evict"
+	VirtualizationImageName = "probe-image"
+	virtualizationVMName    = "probe-vm"
+	virtualizationDiskName  = "probe-disk"
+	virtualizationEvictName = "probe-vm-evict"
 
 	virtualizationPhaseReady   = "Ready"
 	virtualizationPhaseRunning = "Running"
@@ -91,12 +91,12 @@ type VirtualMachineLifecycle struct {
 	PreflightChecker check.Checker
 	Logger           *logrus.Entry
 
-	AgentID          string
-	Namespace        string
-	ProbeName        string
-	VirtualImageName string
-	VirtualImageURL  string
-	VerifyMigration  bool
+	AgentID                    string
+	Namespace                  string
+	ProbeName                  string
+	VirtualImageName           string
+	VirtualImageContainerImage string
+	VerifyMigration            bool
 
 	RequestTimeout                     time.Duration
 	WaitVirtualImageTimeout            time.Duration
@@ -110,15 +110,15 @@ type VirtualMachineLifecycle struct {
 
 func (c VirtualMachineLifecycle) Checker() check.Checker {
 	checker := &virtualMachineLifecycleChecker{
-		access:           c.Access,
-		preflightChecker: c.PreflightChecker,
-		logger:           c.Logger,
-		agentID:          fallbackString(c.AgentID, "unknown"),
-		namespace:        c.Namespace,
-		probeName:        fallbackString(c.ProbeName, VirtualizationCreationProbeName),
-		virtualImageName: c.VirtualImageName,
-		virtualImageURL:  c.VirtualImageURL,
-		verifyMigration:  c.VerifyMigration,
+		access:                     c.Access,
+		preflightChecker:           c.PreflightChecker,
+		logger:                     c.Logger,
+		agentID:                    fallbackString(c.AgentID, "unknown"),
+		namespace:                  c.Namespace,
+		probeName:                  fallbackString(c.ProbeName, VirtualizationCreationProbeName),
+		virtualImageName:           c.VirtualImageName,
+		virtualImageContainerImage: c.VirtualImageContainerImage,
+		verifyMigration:            c.VerifyMigration,
 
 		requestTimeout:                     fallbackDuration(c.RequestTimeout, 5*time.Second),
 		waitVirtualImageTimeout:            fallbackDuration(c.WaitVirtualImageTimeout, 15*time.Minute),
@@ -137,12 +137,12 @@ type virtualMachineLifecycleChecker struct {
 	preflightChecker check.Checker
 	logger           *logrus.Entry
 
-	agentID          string
-	namespace        string
-	probeName        string
-	virtualImageName string
-	virtualImageURL  string
-	verifyMigration  bool
+	agentID                    string
+	namespace                  string
+	probeName                  string
+	virtualImageName           string
+	virtualImageContainerImage string
+	verifyMigration            bool
 
 	requestTimeout                     time.Duration
 	waitVirtualImageTimeout            time.Duration
@@ -329,11 +329,11 @@ func (c *virtualMachineLifecycleChecker) createVirtualImageIfMissing(ctx context
 	if !apierrors.IsNotFound(err) {
 		return err
 	}
-	if c.virtualImageURL == "" {
-		return fmt.Errorf("VirtualImage %q not found and virtualImageURL is not configured", c.virtualImageName)
+	if c.virtualImageContainerImage == "" {
+		return fmt.Errorf("VirtualImage %q not found and VM image is not configured", c.virtualImageName)
 	}
 
-	manifest := virtualImageManifest(c.agentID, c.namespace, c.probeName, c.virtualImageName, c.virtualImageURL)
+	manifest := virtualImageManifest(c.agentID, c.namespace, c.probeName, c.virtualImageName, c.virtualImageContainerImage)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
 		return err
@@ -852,7 +852,7 @@ func unstructuredConditionStatus(obj map[string]interface{}, conditionType strin
 	return ""
 }
 
-func virtualImageManifest(agentID, namespace, probeName, name, imageURL string) string {
+func virtualImageManifest(agentID, namespace, probeName, name, containerImage string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
@@ -867,10 +867,10 @@ metadata:
 spec:
   storage: ContainerRegistry
   dataSource:
-    type: HTTP
-    http:
-      url: %q
-`, agentID, VirtualizationGroupName, probeName, name, namespace, imageURL)
+    type: ContainerImage
+    containerImage:
+      image: %q
+`, agentID, VirtualizationGroupName, probeName, name, namespace, containerImage)
 }
 
 func virtualDiskManifest(agentID, namespace, probeName, name, virtualImageName string) string {
