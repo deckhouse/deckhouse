@@ -28,6 +28,13 @@ rules:
       - secrets
     verbs:
       - create
+  - apiGroups: [""]
+    resources:
+      - secrets
+    resourceNames:
+      - virtualization-module-registry
+    verbs:
+      - get
   # - In monitoring, we check daemonset availability based on available nodes
   - apiGroups: [""]
     resources: ["nodes"]

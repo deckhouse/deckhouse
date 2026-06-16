@@ -46,8 +46,8 @@ const (
 	virtualizationDiskName  = "probe-disk"
 	virtualizationEvictName = "probe-vm-evict"
 
-	upmeterNamespace           = "d8-upmeter"
-	registrySecretName         = "deckhouse-registry"
+	virtualizationNamespace    = "d8-virtualization"
+	registrySecretName         = "virtualization-module-registry"
 	virtualizationPhaseReady   = "Ready"
 	virtualizationPhaseRunning = "Running"
 	vmopPhaseCompleted         = "Completed"
@@ -318,9 +318,9 @@ func (c *virtualMachineLifecycleChecker) deleteNamespace(ctx context.Context) er
 }
 
 func (c *virtualMachineLifecycleChecker) ensureRegistrySecret(ctx context.Context) error {
-	source, err := c.access.Kubernetes().CoreV1().Secrets(upmeterNamespace).Get(ctx, registrySecretName, metav1.GetOptions{})
+	source, err := c.access.Kubernetes().CoreV1().Secrets(virtualizationNamespace).Get(ctx, registrySecretName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("get registry secret %s/%s: %w", upmeterNamespace, registrySecretName, err)
+		return fmt.Errorf("get registry secret %s/%s: %w", virtualizationNamespace, registrySecretName, err)
 	}
 
 	data := make(map[string][]byte, len(source.Data))

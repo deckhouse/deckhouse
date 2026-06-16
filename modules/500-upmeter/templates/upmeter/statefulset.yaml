@@ -116,8 +116,7 @@ spec:
             {{- end }}
           {{- end }}
           {{- if (.Values.global.enabledModules | has "virtualization") }}
-          {{- $upmeterVmImageDigest := required "global.modulesImages.digests.virtualization.upmeterVm is required when virtualization module is enabled" $.Values.global.modulesImages.digests.virtualization.upmeterVm }}
-          - --virtualization-probe-vm-image={{ $.Values.global.modulesImages.registry.base }}@{{ $upmeterVmImageDigest }}
+          - --virtualization-probe-vm-image={{ include "helm_lib_module_image" (list . "upmeterVm" "virtualization") }}
           {{- end }}
         env:
           - name: UPMETER_DB_PATH
