@@ -19,6 +19,7 @@ package common
 import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -46,12 +47,19 @@ func CacheOptions() (cache.Options, client.Options) {
 		"d8-provider-cluster-configuration",
 	})
 
+	capiCRDSelector := labels.SelectorFromSet(labels.Set{
+		"cluster.x-k8s.io/provider": "cluster-api",
+	})
+
 	cacheOpts := cache.Options{
 		DefaultTransform: func(obj interface{}) (interface{}, error) {
 			stripNodeHeavyFields(obj)
 			return stripManagedFields(obj)
 		},
 		ByObject: map[client.Object]cache.ByObject{
+			&apiextensionsv1.CustomResourceDefinition{}: {
+				Label: capiCRDSelector,
+			},
 			&corev1.Secret{}: {
 				Namespaces: map[string]cache.Config{
 					MachineNamespace: {
@@ -68,6 +76,10 @@ func CacheOptions() (cache.Options, client.Options) {
 			&capiv1beta2.Machine{}: machineNS,
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):     machineNS,
+			&capiv1beta2.MachineDeployment{}:                                        machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "Cluster"):               machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineHealthCheck"):    machineNS,
+			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,
 		},
 	}
 
