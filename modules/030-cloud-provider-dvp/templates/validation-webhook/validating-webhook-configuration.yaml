@@ -12,7 +12,9 @@ webhooks:
     timeoutSeconds: 30
     matchConditions:
       - name: cloud-provider-dvp-module-config
-        expression: object.metadata.name == 'cloud-provider-dvp'
+        expression: >-
+          (object != null && object.metadata.name == 'cloud-provider-dvp') ||
+          (oldObject != null && oldObject.metadata.name == 'cloud-provider-dvp')
     clientConfig:
       service:
         name: validation-webhook
@@ -23,7 +25,7 @@ webhooks:
     rules:
       - apiGroups: ["deckhouse.io"]
         apiVersions: ["v1alpha1"]
-        operations: ["CREATE", "UPDATE"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
         resources: ["moduleconfigs"]
         scope: "Cluster"
   - name: secrets.cloud-provider-dvp.deckhouse.io
@@ -37,9 +39,13 @@ webhooks:
         kubernetes.io/metadata.name: d8-cloud-provider-dvp
     matchConditions:
       - name: credential-secret-name
-        expression: object.metadata.name == 'd8-credentials' || object.metadata.name.startsWith('d8-credentials-') || (oldObject != null && (oldObject.metadata.name == 'd8-credentials' || oldObject.metadata.name.startsWith('d8-credentials-')))
+        expression: >-
+          (object != null && (object.metadata.name == 'd8-credentials' || object.metadata.name.startsWith('d8-credentials-'))) ||
+          (oldObject != null && (oldObject.metadata.name == 'd8-credentials' || oldObject.metadata.name.startsWith('d8-credentials-')))
       - name: credential-secret-type
-        expression: object.type == 'cloud-provider.deckhouse.io/credentials' || (oldObject != null && oldObject.type == 'cloud-provider.deckhouse.io/credentials')
+        expression: >-
+          (object != null && object.type == 'cloud-provider.deckhouse.io/credentials') ||
+          (oldObject != null && oldObject.type == 'cloud-provider.deckhouse.io/credentials')
     clientConfig:
       service:
         name: validation-webhook
@@ -61,7 +67,11 @@ webhooks:
     timeoutSeconds: 30
     matchConditions:
       - name: dvp-node-group-involved
-        expression: object.spec.nodeType == 'CloudPermanent' || (oldObject != null && oldObject.spec.nodeType == 'CloudPermanent') || (has(object.spec.cloudInstances) && has(object.spec.cloudInstances.classReference) && object.spec.cloudInstances.classReference.kind == 'DVPInstanceClass') || (oldObject != null && has(oldObject.spec.cloudInstances) && has(oldObject.spec.cloudInstances.classReference) && oldObject.spec.cloudInstances.classReference.kind == 'DVPInstanceClass')
+        expression: >-
+          (object != null && object.spec.nodeType == 'CloudPermanent') ||
+          (oldObject != null && oldObject.spec.nodeType == 'CloudPermanent') ||
+          (object != null && has(object.spec.cloudInstances) && has(object.spec.cloudInstances.classReference) && object.spec.cloudInstances.classReference.kind == 'DVPInstanceClass') ||
+          (oldObject != null && has(oldObject.spec.cloudInstances) && has(oldObject.spec.cloudInstances.classReference) && oldObject.spec.cloudInstances.classReference.kind == 'DVPInstanceClass')
     clientConfig:
       service:
         name: validation-webhook
