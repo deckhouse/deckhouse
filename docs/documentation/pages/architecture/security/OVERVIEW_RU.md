@@ -10,6 +10,10 @@ extractedLinksMax: 0
 
 В данном подразделе описывается архитектура подсистемы Security (подсистемы безопасности) Deckhouse Kubernetes Platform (DKP).
 
+{% alert level="info" %}
+Практические материалы по этим модулям подробно разобраны в курсе [«Инструменты безопасности в Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/security-tools-in-dkp/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+{% endalert %}
+
 В подсистему Security входят следующие модули:
 
 * [`admission-policy-engine`](/modules/admission-policy-engine/) — позволяет использовать в кластере политики безопасности согласно Kubernetes [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/). Для реализации политик модуль использует [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/);
