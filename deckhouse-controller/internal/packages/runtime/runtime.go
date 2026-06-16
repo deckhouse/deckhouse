@@ -537,7 +537,13 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		return version
 	}
 
+	onScheduleHook := func(enabled []string) {
+		r.logger.Info("enabled packages", "packages", enabled)
+		r.global.SetEnabledModules(enabled)
+	}
+
 	r.scheduler = schedule.NewScheduler(
+		schedule.WithOnScheduleHook(onScheduleHook),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),

@@ -16,10 +16,13 @@ package global
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"sync/atomic"
 
+	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -300,4 +303,24 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	}
 
 	return nil
+}
+
+// SetEnabledModules inject enabledModules to the global values
+// enabledModules are injected as a patch, to recalculate on every global values change
+func (m *Module) SetEnabledModules(enabledModules []string) {
+	if len(enabledModules) == 0 {
+		return
+	}
+
+	// keep them sorted to prevent helm rollout on each restart
+	sort.Strings(enabledModules)
+	data, _ := json.Marshal(enabledModules)
+
+	_ = m.values.ApplyValuesPatch(addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
+		{
+			Op:    "add",
+			Path:  "/global/enabledModules",
+			Value: data,
+		},
+	}})
 }

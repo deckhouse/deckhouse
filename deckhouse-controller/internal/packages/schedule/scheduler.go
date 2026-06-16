@@ -26,10 +26,6 @@ import (
 )
 
 const (
-	// packageGlobal is the sentinel node that all other nodes implicitly depend on.
-	// It acts as the root of the dependency graph and must complete before any scheduling begins.
-	packageGlobal = "global"
-
 	// FunctionalOrder is the Order value assigned to functional (non-critical) packages.
 	// It is higher than any critical package order, ensuring functional packages are
 	// scheduled only after all critical packages have been processed.
@@ -58,6 +54,8 @@ type Scheduler struct {
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
+
+	onScheduleHook func(enabled []string)
 
 	pause atomic.Bool // When true, no state changes are processed
 }
@@ -90,6 +88,13 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 func WithDependencyGetter(getter dependency.Getter) Option {
 	return func(s *Scheduler) {
 		s.dependencyGetter = getter
+	}
+}
+
+// WithOnScheduleHook sets the hook to be called after scheduling is computed.
+func WithOnScheduleHook(hook func(enabled []string)) Option {
+	return func(s *Scheduler) {
+		s.onScheduleHook = hook
 	}
 }
 
@@ -294,15 +299,14 @@ func (s *Scheduler) schedule() {
 		return
 	}
 
-	enabled, computed := s.compute()
-	for _, n := range computed {
+	for _, n := range s.compute() {
 		if n.state != nodeStateIdle {
 			continue
 		}
 
 		if s.canSchedule(n) {
 			n.state = nodeStateScheduled
-			s.send(Event{Name: n.name, Kind: EventSchedule, Enabled: enabled})
+			s.send(Event{Name: n.name, Kind: EventSchedule})
 		}
 	}
 }
@@ -314,7 +318,7 @@ func (s *Scheduler) schedule() {
 // [EventDisable]. No global reconverge happens — canSchedule no longer gates
 // on per-dep state, so one node's status change cannot invalidate another
 // node's schedulability beyond the live order-tier check.
-func (s *Scheduler) compute() ([]string, []*node) {
+func (s *Scheduler) compute() []*node {
 	// AddNode is the authoritative cycle gate, so topoSort should never
 	// return an error here. The disabled-mark-active loop below walks `sorted`
 	// and relies on that invariant; a cycle slipping through (gate bug) would
@@ -329,30 +333,28 @@ func (s *Scheduler) compute() ([]string, []*node) {
 			continue
 		}
 
-		// Status flipped — reset this node so the next schedule pass can
-		// either re-schedule it (now enabled) or mark it active via the
-		// disabled-mark-active loop below (now disabled).
-		n.state = nodeStateIdle
-
 		if !n.status.Enabled {
+			// Disabled nodes have nothing to wait for — mark them active so they do
+			// not block higher-order nodes via canSchedule's order-tier gate. Nodes
+			// that later flip back to enabled are reset to idle by the loop above and
+			// go through normal scheduling from there.
+			n.state = nodeStateActive
 			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
 			continue
 		}
 
+		// Status flipped — reset this node so the next schedule pass can
+		// either re-schedule it (now enabled) or mark it active via the
+		// disabled-mark-active loop below (now disabled).
+		n.state = nodeStateIdle
 		enabled = append(enabled, n.name)
 	}
 
-	// Disabled nodes have nothing to wait for — mark them active so they do
-	// not block higher-order nodes via canSchedule's order-tier gate. Nodes
-	// that later flip back to enabled are reset to idle by the loop above and
-	// go through normal scheduling from there.
-	for _, n := range sorted {
-		if n.state == nodeStateIdle && !n.status.Enabled {
-			n.state = nodeStateActive
-		}
+	if s.onScheduleHook != nil {
+		s.onScheduleHook(enabled)
 	}
 
-	return enabled, sorted
+	return sorted
 }
 
 // canSchedule returns true if a node is eligible to transition from idle to

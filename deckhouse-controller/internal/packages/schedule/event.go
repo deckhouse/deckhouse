@@ -31,7 +31,6 @@ type Event struct {
 	Name    string
 	Reason  string
 	Message string
-	Enabled []string
 }
 
 // Ch returns a read-only channel that emits [Event] values as the graph
