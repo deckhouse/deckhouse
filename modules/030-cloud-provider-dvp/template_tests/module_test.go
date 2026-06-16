@@ -730,6 +730,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
 			Expect(deploy.Exists()).To(BeTrue())
 			Expect(deploy.Field("spec.template.spec.hostNetwork").Exists()).To(BeFalse())
+			Expect(deploy.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
 			Expect(deploy.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(deploy.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 			Expect(deploy.Field("spec.template.spec.serviceAccountName").String()).To(Equal(validationWebhookName))
@@ -748,11 +749,19 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 
 		It("renders deployment with hostNetwork during bootstrap", func() {
 			f.ValuesSet("global.clusterIsBootstrapped", false)
+			f.ValuesSet("global.enabledModules", []string{
+				"vertical-pod-autoscaler",
+				"vertical-pod-autoscaler-crd",
+				"admission-policy-engine-crd",
+				"cloud-provider-dvp",
+			})
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
 			Expect(deploy.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(deploy.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).
+				To(Equal(validationWebhookName))
 			Expect(deploy.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
 		})
 
@@ -879,6 +888,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.clusterIsBootstrapped", false)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
 			f.ValuesSet("global.enabledModules", []string{
@@ -894,6 +904,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
+			Expect(deploy.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 			Expect(deploy.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).
 				To(Equal(validationWebhookName))
 
@@ -903,6 +914,17 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(spe.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
 			Expect(spe.Field("spec.network.hostPorts.0.port").Int()).To(Equal(int64(4330)))
 			Expect(spe.Field("spec.network.hostPorts.0.protocol").String()).To(Equal("TCP"))
+		})
+
+		It("does not render SecurityPolicyException after cluster bootstrap", func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploy := f.KubernetesResource("Deployment", moduleNamespace, validationWebhookName)
+			Expect(deploy.Field("spec.template.spec.hostNetwork").Exists()).To(BeFalse())
+			Expect(deploy.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, validationWebhookName).Exists()).To(BeFalse())
 		})
 	})
 })

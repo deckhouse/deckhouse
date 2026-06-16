@@ -17,7 +17,6 @@ package webhooks
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -62,19 +61,11 @@ func (v *CredentialSecretValidator) Register(manager ctrl.Manager) error {
 }
 
 func (v *CredentialSecretValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	if err := rejectManagedCredentialSecretWrongType(obj); err != nil {
-		return nil, err
-	}
-
 	return v.validate(ctx, admissionv1.Create, obj)
 }
 
 func (v *CredentialSecretValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	if err := validateCredentialSecretTypeChange(oldObj, newObj); err != nil {
-		return nil, err
-	}
-
-	if err := rejectManagedCredentialSecretWrongType(newObj); err != nil {
 		return nil, err
 	}
 
@@ -139,23 +130,14 @@ func (v *CredentialSecretValidator) validate(
 	return warnings, nil
 }
 
-func isManagedCredentialSecretName(name string) bool {
-	return name == cpapi.CredentialSecretName || strings.HasPrefix(name, cpapi.CredentialSecretName+"-")
-}
-
 func isManagedCredentialSecretObject(obj runtime.Object) bool {
 	if secret, ok := obj.(*corev1.Secret); ok {
 		return cpapi.IsManagedCredentialSecret(secret)
 	}
 
 	if unstructuredObj, ok := obj.(*unstructured.Unstructured); ok {
-		name := unstructuredObj.GetName()
 		secretType, _, _ := unstructured.NestedString(unstructuredObj.Object, "type")
-		if secretType != cpapi.CredentialsSecretType {
-			return false
-		}
-
-		return isManagedCredentialSecretName(name)
+		return secretType == cpapi.CredentialsSecretType
 	}
 
 	return false
@@ -180,7 +162,7 @@ func validateCredentialSecretTypeChange(oldObj, newObj runtime.Object) error {
 		return nil
 	}
 
-	if !isManagedCredentialSecretName(oldSecret.Name) || oldSecret.Type != cpapi.CredentialsSecretType {
+	if oldSecret.Type != cpapi.CredentialsSecretType {
 		return nil
 	}
 
@@ -189,27 +171,6 @@ func validateCredentialSecretTypeChange(oldObj, newObj runtime.Object) error {
 	}
 
 	return invalidCredentialSecretTypeError(newSecret.Name)
-}
-
-func rejectManagedCredentialSecretWrongType(obj runtime.Object) error {
-	secret, err := asSecret(obj)
-	if err != nil {
-		return internalBuildError(fmt.Errorf("decode Secret: %w", err))
-	}
-
-	if objectNamespace(secret) != dvpval.Namespace {
-		return nil
-	}
-
-	if !isManagedCredentialSecretName(secret.Name) {
-		return nil
-	}
-
-	if secret.Type == cpapi.CredentialsSecretType {
-		return nil
-	}
-
-	return invalidCredentialSecretTypeError(secret.Name)
 }
 
 func invalidCredentialSecretTypeError(name string) error {

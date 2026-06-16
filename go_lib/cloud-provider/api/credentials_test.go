@@ -76,8 +76,8 @@ func TestIsManagedCredentialSecret(t *testing.T) {
 	}{
 		{name: "nil secret", secret: nil, want: false},
 		{name: "wrong type", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName}, Type: corev1.SecretTypeTLS}, want: false},
-		{name: "wrong name", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "other"}, Type: CredentialsSecretType}, want: false},
 		{name: "primary", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName}, Type: CredentialsSecretType}, want: true},
+		{name: "arbitrary name", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "other"}, Type: CredentialsSecretType}, want: true},
 		{name: "component", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "d8-credentials-storage"}, Type: CredentialsSecretType}, want: true},
 	}
 
@@ -102,11 +102,11 @@ func TestCredentialSecretIsManaged(t *testing.T) {
 	}).IsManaged() {
 		t.Fatal("IsManaged() = false for primary credential secret")
 	}
-	if (CredentialSecret{
+	if !(CredentialSecret{
 		ObjectMeta: metav1.ObjectMeta{Name: "other"},
 		Type:       CredentialsSecretType,
 	}).IsManaged() {
-		t.Fatal("IsManaged() = true for unmanaged name")
+		t.Fatal("IsManaged() = false for credential secret with arbitrary name")
 	}
 	if !(CredentialSecret{
 		ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName + "-storage"},

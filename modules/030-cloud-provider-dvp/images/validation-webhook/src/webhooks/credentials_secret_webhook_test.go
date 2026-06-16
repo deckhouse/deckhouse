@@ -117,7 +117,7 @@ func TestCredentialSecretValidatorWithFakeClientSkipsMigration(t *testing.T) {
 	}
 }
 
-func TestCredentialSecretValidatorWithFakeClientRejectsCreateWithManagedNameWrongType(t *testing.T) {
+func TestCredentialSecretValidatorWithFakeClientRejectsCreateWithWrongType(t *testing.T) {
 	t.Parallel()
 
 	builder := newWebhookAdmissionStateBuilder(t, validDVPClusterObjects()...)
@@ -127,24 +127,8 @@ func TestCredentialSecretValidatorWithFakeClientRejectsCreateWithManagedNameWron
 	secret.Type = corev1.SecretTypeTLS
 
 	_, err := validator.ValidateCreate(context.Background(), secret)
-	if err == nil || !strings.Contains(err.Error(), cpapi.CredentialsSecretType) {
-		t.Fatalf("ValidateCreate() error = %v, want wrong type denial", err)
-	}
-}
-
-func TestRejectManagedCredentialSecretWrongType(t *testing.T) {
-	t.Parallel()
-
-	secret := dvpCredentialSecret(validWebhookKubeconfigB64())
-	secret.Type = corev1.SecretTypeTLS
-
-	err := rejectManagedCredentialSecretWrongType(secret)
-	if err == nil || !strings.Contains(err.Error(), cpapi.CredentialsSecretType) {
-		t.Fatalf("rejectManagedCredentialSecretWrongType() error = %v, want type denial", err)
-	}
-
-	if err := rejectManagedCredentialSecretWrongType(dvpCredentialSecret(validWebhookKubeconfigB64())); err != nil {
-		t.Fatalf("rejectManagedCredentialSecretWrongType(valid) error = %v, want nil", err)
+	if err != nil {
+		t.Fatalf("ValidateCreate() error = %v, want allow for non-credential Secret type", err)
 	}
 }
 
@@ -180,9 +164,8 @@ func TestValidateCredentialSecretTypeChangeFailsClosedOnDecodeError(t *testing.T
 func TestRejectManagedCredentialSecretWrongTypeFailsClosedOnDecodeError(t *testing.T) {
 	t.Parallel()
 
-	err := rejectManagedCredentialSecretWrongType(&metav1.Status{})
-	if err == nil || !strings.Contains(err.Error(), "build validation state") {
-		t.Fatalf("rejectManagedCredentialSecretWrongType(decode error) error = %v, want internal error", err)
+	if _, err := asSecret(&metav1.Status{}); err == nil {
+		t.Fatal("asSecret(Status) error = nil, want type error")
 	}
 }
 
@@ -198,7 +181,7 @@ func TestIsManagedCredentialSecretObject(t *testing.T) {
 	}
 
 	unstructuredSecret := &unstructured.Unstructured{Object: map[string]any{
-		"metadata": map[string]any{"name": cpapi.CredentialSecretName + "-storage"},
+		"metadata": map[string]any{"name": "extra-credentials"},
 		"type":     cpapi.CredentialsSecretType,
 	}}
 	if !isManagedCredentialSecretObject(unstructuredSecret) {

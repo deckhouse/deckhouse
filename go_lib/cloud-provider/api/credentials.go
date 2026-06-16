@@ -16,8 +16,6 @@
 package api
 
 import (
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -111,20 +109,12 @@ func IsManagedCredentialSecret(secret *corev1.Secret) bool {
 		return false
 	}
 
-	if secret.Type != CredentialsSecretType {
-		return false
-	}
-
-	return secret.Name == CredentialSecretName || strings.HasPrefix(secret.Name, CredentialSecretName+"-")
+	return secret.Type == CredentialsSecretType
 }
 
-// IsManaged reports whether the credential Secret uses the managed provider naming and type.
+// IsManaged reports whether the credential Secret uses the managed provider type.
 func (s CredentialSecret) IsManaged() bool {
-	if s.Type != CredentialsSecretType {
-		return false
-	}
-
-	return s.Name == CredentialSecretName || strings.HasPrefix(s.Name, CredentialSecretName+"-")
+	return s.Type == CredentialsSecretType
 }
 
 // NormalizedData returns credential fields as strings; StringData overrides Data.
