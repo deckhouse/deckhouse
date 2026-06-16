@@ -116,7 +116,15 @@ spec:
             {{- end }}
           {{- end }}
           {{- if (.Values.global.enabledModules | has "virtualization") }}
-          - --virtualization-probe-vm-image={{ include "helm_lib_module_image" (list . "upmeterVm" "virtualization") }}
+          {{- $virtualizationDigests := index .Values.global.modulesImages.digests "virtualization" | default dict }}
+          {{- $upmeterVmImageDigest := required "global.modulesImages.digests.virtualization.upmeterVm is required when virtualization module is enabled" (index $virtualizationDigests "upmeterVm") }}
+          {{- $virtualizationRegistryBase := join "/" (list (trimAll "/" .Values.global.modulesImages.registry.base) "modules" "virtualization") }}
+          {{- $virtualizationValues := index .Values "virtualization" | default dict }}
+          {{- $virtualizationRegistryBaseOverride := dig "registry" "base" "" $virtualizationValues }}
+          {{- if $virtualizationRegistryBaseOverride }}
+          {{- $virtualizationRegistryBase = join "/" (list (trimAll "/" $virtualizationRegistryBaseOverride) "virtualization") }}
+          {{- end }}
+          - --virtualization-probe-vm-image={{ $virtualizationRegistryBase }}@{{ $upmeterVmImageDigest }}
           {{- end }}
         env:
           - name: UPMETER_DB_PATH
