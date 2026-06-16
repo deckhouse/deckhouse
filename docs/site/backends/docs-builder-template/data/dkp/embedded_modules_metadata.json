@@ -1409,21 +1409,21 @@
       },
       "oss": []
     },
-    "monitoring-custom": {
-      "name": "monitoring-custom",
+    "monitoring-deckhouse": {
+      "name": "monitoring-deckhouse",
       "stage": "General Availability",
       "subsystems": [
         "observability"
       ],
       "namespace": "d8-monitoring",
+      "descriptions": {
+        "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+        "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+      },
       "requirements": {
         "modules": {
           "prometheus": ">= 0.0.0"
         }
-      },
-      "descriptions": {
-        "en": "Simplifies monitoring setup for custom applications by requiring only a specific label on Service or Pod. Enables collection of application metrics without manual Prometheus configuration.",
-        "ru": "Упрощает настройку мониторинга пользовательских приложений, требуя только указания определённого лейбла на Service или Pod. Позволяет собирать метрики приложений без ручной настройки Prometheus."
       },
       "oss": []
     },

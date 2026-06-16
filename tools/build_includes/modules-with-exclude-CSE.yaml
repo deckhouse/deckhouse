@@ -395,11 +395,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-custom
-  to: /deckhouse/modules/340-monitoring-custom
+- add: /modules/340-extended-monitoring
+  to: /deckhouse/modules/340-extended-monitoring
   excludePaths:
     - docs
     - README.md
@@ -414,9 +411,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
   excludePaths:

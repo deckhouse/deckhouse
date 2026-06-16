@@ -83,7 +83,6 @@ editions:
   - log-shipper
   - loki
   - metallb
-  - monitoring-custom
   - monitoring-kubernetes
   - monitoring-ping
   - multitenancy-manager
