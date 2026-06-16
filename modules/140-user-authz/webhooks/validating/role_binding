@@ -24,11 +24,12 @@ kubernetes:
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
     queue: authorization
-    # NB: this snapshot-only binding must NOT be in the same `group` as the validating webhook.
-    # A binding that is both in a group and never triggers the hook (executeHookOnEvent: [] +
-    # executeHookOnSynchronization: false) gets coalesced by the group and its informer is not
-    # started, so the snapshot stays empty and the webhook (includeSnapshotsFrom: ["roles"]) fails
-    # open. Keep it standalone — exactly like the working kube-dns cluster-domain-alias hook.
+    # Sharing `group: main` with the validating webhook below is what delivers this snapshot into
+    # the webhook's binding context (.snapshots.roles). This is the mechanism the hook shipped with
+    # and that works on the current shell-operator. Selector updated for RBACv2: namespace/project
+    # scoped roles are no longer labeled `rbac.deckhouse.io/kind: use`; they carry
+    # `rbac.deckhouse.io/scope: namespace|project` instead.
+    group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
     keepFullObjectsInMemory: false
@@ -44,11 +45,6 @@ kubernetes:
 kubernetesValidating:
 - name: role-validating.deckhouse.io
   group: main
-  # The decision needs the "roles" snapshot (namespace/project-scoped ClusterRoles). With the
-  # updated shell-operator, group membership alone no longer injects sibling snapshots into a
-  # validating webhook context, so request it explicitly — otherwise .snapshots.roles is empty and
-  # the hook fails open, letting namespace/project roles be bound cluster-wide.
-  includeSnapshotsFrom: ["roles"]
   matchConditions:
   - expression: ("system:apiserver" != request.userInfo.username)
     name: exclude-kube-apiserver
