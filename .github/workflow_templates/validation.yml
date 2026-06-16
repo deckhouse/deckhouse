@@ -129,7 +129,7 @@ jobs:
 
   doc_validation:
     name: Docs Validation (base)
-{!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
+{!{ tmpl.Exec "doc_changes_validation_template" (slice $ctx) | strings.Indent 4 }!}
 
   workflow_render:
     name: Render workflow
@@ -239,6 +239,33 @@ steps:
       SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_{!{ $type }!} }}
     run: |
       ./.github/scripts/validation_run.sh ./testing/validate_{!{ $type }!}.sh
+{!{- end -}!}
+
+{!{/* Template for doc changes validation job. */}!}
+{!{ define "doc_changes_validation_template" }!}
+{!{- $ctx := index . 0 -}!}
+needs:
+  - discover
+  - pull_request_info
+if: needs.discover.outputs.run_doc_changes == 'true'
+runs-on: ubuntu-24.04
+steps:
+  {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
+
+  - name: Restore diff artifact
+    uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+    with:
+      name: pr_diff
+
+  - name: Validate spelling dictionary sync
+    run: ./.github/scripts/validate_spelling_dictionary_sync.sh ./pr.diff
+
+  - name: Run check
+    env:
+      DIFF_PATH: ./pr.diff
+      SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_doc_changes }}
+    run: |
+      ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
 {!{- end -}!}
 
 {!{/* Template for linter jobs. */}!}
