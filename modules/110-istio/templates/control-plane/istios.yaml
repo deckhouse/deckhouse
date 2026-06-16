@@ -9,12 +9,12 @@
 
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- if get $versionInfo "supportsOperator" }}
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
-  {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
+  {{- $supportsOperator := get $versionInfo "supportsOperator" }}
+  {{- if or (hasPrefix "1.25" $fullVersion) (not $supportsOperator) }}
     {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -123,6 +123,7 @@ spec:
             {{- end }}
           {{- end }}
         name: main-access-log-format
+{{- include "istioUserExtensionProviders" $ | nindent 6 }}
 
       # The rules below exclude upmeter-related namespaces from istiod's point of view.
       # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
@@ -260,6 +261,5 @@ spec:
       - matchExpressions:
         - key: job-name
           operator: Exists
-  {{- end }}
   {{- end }}
 {{- end }}
