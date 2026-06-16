@@ -210,7 +210,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-				Expect(disabledProbes).To(ContainElement("extensions/virtualization"))
+				Expect(disabledProbes).To(ContainElement("virtualization/"))
 			})
 
 			It("virtualization probe is disabled without default vmclass", func() {
@@ -221,7 +221,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-				Expect(disabledProbes).To(ContainElement("extensions/virtualization"))
+				Expect(disabledProbes).To(ContainElement("virtualization/"))
 			})
 
 			It("virtualization probe is disabled without disk storageclass", func() {
@@ -232,7 +232,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-				Expect(disabledProbes).To(ContainElement("extensions/virtualization"))
+				Expect(disabledProbes).To(ContainElement("virtualization/"))
 			})
 
 			It("virtualization probe is enabled with default vmclass and default storageclass", func() {
@@ -243,7 +243,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-				Expect(disabledProbes).NotTo(ContainElement("extensions/virtualization"))
+				Expect(disabledProbes).NotTo(ContainElement("virtualization/"))
 			})
 
 			It("virtualization probe is enabled with default vmclass and configured disk storageclass", func() {
@@ -254,7 +254,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
 				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-				Expect(disabledProbes).NotTo(ContainElement("extensions/virtualization"))
+				Expect(disabledProbes).NotTo(ContainElement("virtualization/"))
 			})
 		})
 	})
@@ -720,34 +720,34 @@ func Test_calcDisabledProbes(t *testing.T) {
 			),
 		},
 
-		// virtualization -> extensions/virtualization
+		// virtualization -> virtualization/
 		{
-			name:           "extensions/virtualization off",
-			expectDisabled: set.New("extensions/virtualization"),
+			name:           "virtualization off",
+			expectDisabled: set.New("virtualization/"),
 		},
 		{
-			name: "extensions/virtualization on",
+			name: "virtualization on",
 			args: args{
 				presence:       appPresence{defaultVMClass: true, diskStorageClass: true},
 				enabledModules: set.New("virtualization"),
 			},
-			expectNotDisabled: set.New("extensions/virtualization"),
+			expectNotDisabled: set.New("virtualization/"),
 		},
 		{
-			name: "extensions/virtualization off without default vmclass",
+			name: "virtualization off without default vmclass",
 			args: args{
 				presence:       appPresence{diskStorageClass: true},
 				enabledModules: set.New("virtualization"),
 			},
-			expectDisabled: set.New("extensions/virtualization"),
+			expectDisabled: set.New("virtualization/"),
 		},
 		{
-			name: "extensions/virtualization off without disk storageclass",
+			name: "virtualization off without disk storageclass",
 			args: args{
 				presence:       appPresence{defaultVMClass: true},
 				enabledModules: set.New("virtualization"),
 			},
-			expectDisabled: set.New("extensions/virtualization"),
+			expectDisabled: set.New("virtualization/"),
 		},
 
 		// prometheus-longterm -> extensions/prometheus-longterm

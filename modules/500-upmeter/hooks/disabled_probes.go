@@ -226,7 +226,7 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 	}
 
 	if !enabledModules.Has("virtualization") || !presence.defaultVMClass || !presence.diskStorageClass {
-		disabledProbes.Add("extensions/virtualization")
+		disabledProbes.Add("virtualization/")
 	}
 }
 

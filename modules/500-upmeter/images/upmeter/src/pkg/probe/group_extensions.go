@@ -19,14 +19,11 @@ package probe
 import (
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
-	"d8.io/upmeter/pkg/probe/run"
 )
 
-func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe VirtualizationProbeConfig, logger *logrus.Logger) []runnerConfig {
+func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerConfig {
 	const (
 		groupExtensions     = "extensions"
 		controlPlaneTimeout = 5 * time.Second
@@ -223,49 +220,8 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe 
 				Timeout:  5 * time.Second,
 				Endpoint: "https://dex.d8-user-authn/keys",
 			},
-		}, {
-			group:  groupExtensions,
-			probe:  "virtualization",
-			check:  "pod",
-			period: 10 * time.Second,
-			config: checker.AtLeastOnePodReady{
-				Access:           access,
-				Timeout:          5 * time.Second,
-				Namespace:        "d8-virtualization",
-				LabelSelector:    "app=virtualization-controller",
-				PreflightChecker: controlPlanePinger,
-			},
 		},
 	}
-
-	runners = append(runners, runnerConfig{
-		group:  groupExtensions,
-		probe:  "virtualization",
-		check:  "virtual-machine-lifecycle",
-		period: 5 * time.Minute,
-		config: checker.VirtualMachineLifecycle{
-			Access:           access,
-			PreflightChecker: controlPlanePinger,
-			Logger: logrus.NewEntry(logger).WithFields(logrus.Fields{
-				"group": groupExtensions,
-				"probe": "virtualization",
-				"check": "virtual-machine-lifecycle",
-			}),
-			AgentID:          run.ID(),
-			Namespace:        run.StaticIdentifier("upmeter-vm"),
-			VirtualImageName: checker.VirtualizationImageName,
-			VirtualImageURL:  virtProbe.VirtualImageURL,
-
-			RequestTimeout:                     5 * time.Second,
-			WaitVirtualImageTimeout:            30 * time.Second,
-			WaitVirtualDiskTimeout:             60 * time.Second,
-			WaitVirtualMachineTimeout:          30 * time.Second,
-			WaitVirtualMachineMigrationTimeout: time.Minute,
-			WaitDeletionTimeout:                30 * time.Second,
-			WaitNamespaceDeletedTimeout:        30 * time.Second,
-			Timeout:                            6 * time.Minute,
-		},
-	})
 
 	return runners
 }

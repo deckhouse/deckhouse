@@ -59,6 +59,7 @@ func TestLoader_Groups(t *testing.T) {
 		"load-balancing",
 		"monitoring-and-autoscaling",
 		"synthetic",
+		"virtualization",
 	}
 	assert.Equal(t, allGroups, unfiltered.Groups())
 
@@ -73,6 +74,7 @@ func TestLoader_Groups(t *testing.T) {
 		"load-balancing",
 		"monitoring-and-autoscaling",
 		"synthetic",
+		"virtualization",
 	}
 	assert.Equal(t, notAllGroups, filtered.Groups())
 }
@@ -104,7 +106,6 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "extensions", Probe: "observability-webhook"},
 		{Group: "extensions", Probe: "openvpn"},
 		{Group: "extensions", Probe: "prometheus-longterm"},
-		{Group: "extensions", Probe: "virtualization"},
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},
 		{Group: "load-balancing", Probe: "metallb"},
 		{Group: "monitoring-and-autoscaling", Probe: "alertmanager"},
@@ -119,6 +120,9 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
+		{Group: "virtualization", Probe: "controller"},
+		{Group: "virtualization", Probe: "vm-creation"},
+		{Group: "virtualization", Probe: "vm-migration"},
 	}
 
 	assert.Equal(t, allProbesSorted, unfiltered.Probes())
@@ -163,6 +167,9 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
+		{Group: "virtualization", Probe: "controller"},
+		{Group: "virtualization", Probe: "vm-creation"},
+		{Group: "virtualization", Probe: "vm-migration"},
 	}
 
 	assert.Equal(t, filteredProbesSorted, filtered.Probes())

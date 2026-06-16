@@ -48,7 +48,6 @@ func Test_newProbeLister(t *testing.T) {
 		{Group: "extensions", Probe: "observability-webhook"},
 		{Group: "extensions", Probe: "openvpn"},
 		{Group: "extensions", Probe: "prometheus-longterm"},
-		{Group: "extensions", Probe: "virtualization"},
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},
 		{Group: "load-balancing", Probe: "metallb"},
 		{Group: "monitoring-and-autoscaling", Probe: "alertmanager"},
@@ -64,6 +63,9 @@ func Test_newProbeLister(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
+		{Group: "virtualization", Probe: "controller"},
+		{Group: "virtualization", Probe: "vm-creation"},
+		{Group: "virtualization", Probe: "vm-migration"},
 	}
 
 	allGroupsSorted := []string{
@@ -73,6 +75,7 @@ func Test_newProbeLister(t *testing.T) {
 		"load-balancing",
 		"monitoring-and-autoscaling",
 		"synthetic",
+		"virtualization",
 	}
 
 	assert.Equal(t, allProbesSorted, pl.Probes())
@@ -106,7 +109,6 @@ func Test_newProbeLister_with_dynamic(t *testing.T) {
 		{Group: "extensions", Probe: "observability-webhook"},
 		{Group: "extensions", Probe: "openvpn"},
 		{Group: "extensions", Probe: "prometheus-longterm"},
-		{Group: "extensions", Probe: "virtualization"},
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},
 		{Group: "load-balancing", Probe: "metallb"},
 		{Group: "monitoring-and-autoscaling", Probe: "alertmanager"},
@@ -127,6 +129,9 @@ func Test_newProbeLister_with_dynamic(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
+		{Group: "virtualization", Probe: "controller"},
+		{Group: "virtualization", Probe: "vm-creation"},
+		{Group: "virtualization", Probe: "vm-migration"},
 	}
 
 	allGroupsSorted := []string{
@@ -138,6 +143,7 @@ func Test_newProbeLister_with_dynamic(t *testing.T) {
 		"nginx",
 		"nodegroups",
 		"synthetic",
+		"virtualization",
 	}
 
 	assert.Equal(t, allProbesSorted, pl.Probes())

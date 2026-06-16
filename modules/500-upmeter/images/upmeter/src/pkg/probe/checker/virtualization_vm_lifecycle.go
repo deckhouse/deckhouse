@@ -34,11 +34,19 @@ import (
 )
 
 const (
-	virtualizationProbeName = "virtualization"
-	VirtualizationImageName = "probe-image"
-	virtualizationVMName    = "probe-vm"
-	virtualizationDiskName  = "probe-disk"
-	virtualizationEvictName = "probe-vm-evict"
+	// VirtualizationGroupName is the upmeter group name for virtualization probes.
+	VirtualizationGroupName          = "virtualization"
+	// VirtualizationControllerProbeName is the probe name for virtualization-controller readiness.
+	VirtualizationControllerProbeName = "controller"
+	// VirtualizationCreationProbeName is the probe name for VM creation lifecycle.
+	VirtualizationCreationProbeName  = "vm-creation"
+	// VirtualizationMigrationProbeName is the probe name for VM migration lifecycle.
+	VirtualizationMigrationProbeName = "vm-migration"
+	// VirtualizationImageName is the VirtualImage name used by VM lifecycle probes.
+	VirtualizationImageName          = "probe-image"
+	virtualizationVMName             = "probe-vm"
+	virtualizationDiskName           = "probe-disk"
+	virtualizationEvictName          = "probe-vm-evict"
 
 	virtualizationPhaseReady   = "Ready"
 	virtualizationPhaseRunning = "Running"
@@ -87,8 +95,10 @@ type VirtualMachineLifecycle struct {
 
 	AgentID          string
 	Namespace        string
+	ProbeName        string
 	VirtualImageName string
 	VirtualImageURL  string
+	VerifyMigration  bool
 
 	RequestTimeout                     time.Duration
 	WaitVirtualImageTimeout            time.Duration
@@ -107,8 +117,10 @@ func (c VirtualMachineLifecycle) Checker() check.Checker {
 		logger:           c.Logger,
 		agentID:          fallbackString(c.AgentID, "unknown"),
 		namespace:        c.Namespace,
+		probeName:        fallbackString(c.ProbeName, VirtualizationCreationProbeName),
 		virtualImageName: c.VirtualImageName,
 		virtualImageURL:  c.VirtualImageURL,
+		verifyMigration:  c.VerifyMigration,
 
 		requestTimeout:                     fallbackDuration(c.RequestTimeout, 5*time.Second),
 		waitVirtualImageTimeout:            fallbackDuration(c.WaitVirtualImageTimeout, 15*time.Minute),
@@ -129,8 +141,10 @@ type virtualMachineLifecycleChecker struct {
 
 	agentID          string
 	namespace        string
+	probeName        string
 	virtualImageName string
 	virtualImageURL  string
+	verifyMigration  bool
 
 	requestTimeout                     time.Duration
 	waitVirtualImageTimeout            time.Duration
@@ -177,6 +191,27 @@ func (c *virtualMachineLifecycleChecker) preflight() check.Error {
 }
 
 func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.Error {
+	if result := c.doVirtualMachineSetup(ctx); result != nil {
+		return result
+	}
+
+	if !c.verifyMigration {
+		return nil
+	}
+
+	if err := c.runStep("checking VirtualMachine migration", func() error {
+		return c.verifyVirtualMachineMigration(ctx)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: VirtualMachine migration did not complete")
+		}
+		return lifecycleStepError("checking VirtualMachine migration", err)
+	}
+
+	return nil
+}
+
+func (c *virtualMachineLifecycleChecker) doVirtualMachineSetup(ctx context.Context) check.Error {
 	if err := c.runStep("creating namespace", func() error { return c.createNamespace(ctx) }); err != nil {
 		return lifecycleStepError("creating namespace", err)
 	}
@@ -226,72 +261,6 @@ func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.
 		return lifecycleStepError("waiting for VirtualMachine AgentReady", err)
 	}
 
-	if err := c.runStep("checking VirtualMachine migration", func() error {
-		return c.verifyVirtualMachineMigration(ctx)
-	}); err != nil {
-		if errors.Is(err, errConditionTimeout) {
-			return check.ErrFail("verification: VirtualMachine migration did not complete")
-		}
-		return lifecycleStepError("checking VirtualMachine migration", err)
-	}
-
-	if err := c.runStep("deleting VirtualMachine", func() error {
-		err := c.deleteVirtualMachine(ctx)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return lifecycleStepError("deleting VirtualMachine", err)
-	}
-
-	if err := c.runStep("waiting for VirtualMachine deletion", func() error {
-		return c.waitVirtualMachineAbsent(ctx)
-	}); err != nil {
-		if errors.Is(err, errConditionTimeout) {
-			return check.ErrFail("verification: VirtualMachine was not deleted")
-		}
-		return lifecycleStepError("waiting for VirtualMachine deletion", err)
-	}
-
-	if err := c.runStep("deleting VirtualDisk", func() error {
-		err := c.deleteVirtualDisk(ctx)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return lifecycleStepError("deleting VirtualDisk", err)
-	}
-
-	if err := c.runStep("waiting for VirtualDisk deletion", func() error {
-		return c.waitVirtualDiskAbsent(ctx)
-	}); err != nil {
-		if errors.Is(err, errConditionTimeout) {
-			return check.ErrFail("verification: VirtualDisk was not deleted")
-		}
-		return lifecycleStepError("waiting for VirtualDisk deletion", err)
-	}
-
-	if err := c.runStep("deleting VirtualImage", func() error {
-		err := c.deleteVirtualImage(ctx)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return lifecycleStepError("deleting VirtualImage", err)
-	}
-
-	if err := c.runStep("waiting for VirtualImage deletion", func() error {
-		return c.waitVirtualImageAbsent(ctx)
-	}); err != nil {
-		if errors.Is(err, errConditionTimeout) {
-			return check.ErrFail("verification: VirtualImage was not deleted")
-		}
-		return lifecycleStepError("waiting for VirtualImage deletion", err)
-	}
-
 	return nil
 }
 
@@ -331,8 +300,8 @@ func (c *virtualMachineLifecycleChecker) createNamespace(ctx context.Context) er
 			Labels: map[string]string{
 				"heritage":      "upmeter",
 				agentLabelKey:   c.agentID,
-				"upmeter-group": "extensions",
-				"upmeter-probe": virtualizationProbeName,
+				"upmeter-group": VirtualizationGroupName,
+				"upmeter-probe": c.probeName,
 			},
 		},
 	}
@@ -366,7 +335,7 @@ func (c *virtualMachineLifecycleChecker) createVirtualImageIfMissing(ctx context
 		return fmt.Errorf("VirtualImage %q not found and virtualImageURL is not configured", c.virtualImageName)
 	}
 
-	manifest := virtualImageManifest(c.agentID, c.namespace, c.virtualImageName, c.virtualImageURL)
+	manifest := virtualImageManifest(c.agentID, c.namespace, c.probeName, c.virtualImageName, c.virtualImageURL)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
 		return err
@@ -402,7 +371,7 @@ func (c *virtualMachineLifecycleChecker) waitVirtualImageReady(ctx context.Conte
 }
 
 func (c *virtualMachineLifecycleChecker) createVirtualDisk(ctx context.Context) error {
-	manifest := virtualDiskManifest(c.agentID, c.namespace, virtualizationDiskName, c.virtualImageName)
+	manifest := virtualDiskManifest(c.agentID, c.namespace, c.probeName, virtualizationDiskName, c.virtualImageName)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
 		return err
@@ -450,6 +419,7 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 	manifest := virtualMachineManifest(
 		c.agentID,
 		c.namespace,
+		c.probeName,
 		virtualizationVMName,
 		virtualizationDiskName,
 	)
@@ -465,7 +435,7 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 }
 
 func (c *virtualMachineLifecycleChecker) createVirtualMachineEvictOperation(ctx context.Context) error {
-	manifest := virtualMachineOperationManifest(c.agentID, c.namespace, virtualizationEvictName, virtualizationVMName)
+	manifest := virtualMachineOperationManifest(c.agentID, c.namespace, c.probeName, virtualizationEvictName, virtualizationVMName)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
 		return err
@@ -884,7 +854,7 @@ func unstructuredConditionStatus(obj map[string]interface{}, conditionType strin
 	return ""
 }
 
-func virtualImageManifest(agentID, namespace, name, imageURL string) string {
+func virtualImageManifest(agentID, namespace, probeName, name, imageURL string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
@@ -892,8 +862,8 @@ metadata:
   labels:
     heritage: upmeter
     upmeter-agent: %q
-    upmeter-group: extensions
-    upmeter-probe: virtualization
+    upmeter-group: %q
+    upmeter-probe: %q
   name: %q
   namespace: %q
 spec:
@@ -902,10 +872,10 @@ spec:
     type: HTTP
     http:
       url: %q
-`, agentID, name, namespace, imageURL)
+`, agentID, VirtualizationGroupName, probeName, name, namespace, imageURL)
 }
 
-func virtualDiskManifest(agentID, namespace, name, virtualImageName string) string {
+func virtualDiskManifest(agentID, namespace, probeName, name, virtualImageName string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualDisk
@@ -913,8 +883,8 @@ metadata:
   labels:
     heritage: upmeter
     upmeter-agent: %q
-    upmeter-group: extensions
-    upmeter-probe: virtualization
+    upmeter-group: %q
+    upmeter-probe: %q
   name: %q
   namespace: %q
 spec:
@@ -923,10 +893,10 @@ spec:
     objectRef:
       kind: VirtualImage
       name: %q
-`, agentID, name, namespace, virtualImageName)
+`, agentID, VirtualizationGroupName, probeName, name, namespace, virtualImageName)
 }
 
-func virtualMachineManifest(agentID, namespace, name, diskName string) string {
+func virtualMachineManifest(agentID, namespace, probeName, name, diskName string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
@@ -934,8 +904,8 @@ metadata:
   labels:
     heritage: upmeter
     upmeter-agent: %q
-    upmeter-group: extensions
-    upmeter-probe: virtualization
+    upmeter-group: %q
+    upmeter-probe: %q
   name: %q
   namespace: %q
 spec:
@@ -948,10 +918,10 @@ spec:
   blockDeviceRefs:
     - kind: VirtualDisk
       name: %q
-`, agentID, name, namespace, diskName)
+`, agentID, VirtualizationGroupName, probeName, name, namespace, diskName)
 }
 
-func virtualMachineOperationManifest(agentID, namespace, name, vmName string) string {
+func virtualMachineOperationManifest(agentID, namespace, probeName, name, vmName string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineOperation
@@ -959,12 +929,12 @@ metadata:
   labels:
     heritage: upmeter
     upmeter-agent: %q
-    upmeter-group: extensions
-    upmeter-probe: virtualization
+    upmeter-group: %q
+    upmeter-probe: %q
   name: %q
   namespace: %q
 spec:
   virtualMachineName: %q
   type: Evict
-`, agentID, name, namespace, vmName)
+`, agentID, VirtualizationGroupName, probeName, name, namespace, vmName)
 }
