@@ -26,7 +26,30 @@ Use them to access the web interface of the Deckhouse Kubernetes Platform compon
 
 Open the cluster web interface by clicking the "Connect and open" button in the row with the created cluster on the main screen.
 
-<img src="/images/gs/installer/open-console.png" alt='What the "Connect and open" button looks like...' style="width: 100%;">
+{%- if page.platform_code == 'yandex' or page.platform_code == "bm" %}
+<img src="/images/gs/installer/ya-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'dvp-provider' %}
+<img src="/images/gs/installer/dvp-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'openstack' %}
+<img src="/images/gs/installer/openstack-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'openstack_selectel' %}
+<img src="/images/gs/installer/selectel-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'openstack_vk' %}
+<img src="/images/gs/installer/vk-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'vsphere' %}
+<img src="/images/gs/installer/vsphere-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'vcd' %}
+<img src="/images/gs/installer/vcd-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+{%- endif %}
+{%- if page.platform_code == 'zvirt' %}
+<img src="/images/gs/installer/zvirt-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+{%- endif %}
 
 The web interface for managing the installed DKP cluster will open in the same window.
 
