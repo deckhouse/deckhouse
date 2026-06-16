@@ -581,6 +581,19 @@ apiVersions:
                 - Isolated
                 - None
               default: Isolated
+            ingressPorts:
+              type: array
+              description: |
+                List of TCP ports allowed for ingress traffic from all sources (both external IPs and all pods within the cluster).
+
+                Useful for exposing ports that must be reachable from a bastion host, whether it is an external VM or a pod running inside the parent cluster.
+
+                Set to an empty array to deny all such unrestricted ingress access.
+              default: [22]
+              items:
+                type: integer
+                minimum: 1
+                maximum: 65535
           required:
             - kubeconfigDataBase64
             - namespace

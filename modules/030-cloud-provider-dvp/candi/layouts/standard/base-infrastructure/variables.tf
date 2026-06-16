@@ -42,40 +42,55 @@ locals {
 }
 
 locals {
-  template_ingress = [
-    {
-      from = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = local.project_namespace }
-        }
-      }]
-    },
-    {
-      from  = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
-      ports = [{ port = 22, protocol = "TCP" }]
-    },
-    {
-      from  = [{ namespaceSelector = {} }]
-      ports = [{ port = 22, protocol = "TCP" }]
-    },
-    {
-      from = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-ingress-nginx" }
-        }
-        podSelector = {
-          matchLabels = { app = "controller" }
-        }
-      }]
-    },
-    {
-      from = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-metallb" }
-        }
-      }]
-    }
-  ]
+  ingress_ports_raw = try(var.providerClusterConfiguration.provider.ingressPorts, null)
+  ingress_ports     = local.ingress_ports_raw != null ? local.ingress_ports_raw : [22]
+
+  bastion_ingress_rules = flatten([
+    for port in local.ingress_ports : [
+      {
+        from  = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
+        ports = [{ port = port, protocol = "TCP" }]
+      },
+      {
+        from  = [{ namespaceSelector = {} }]
+        ports = [{ port = port, protocol = "TCP" }]
+      }
+    ]
+  ])
+}
+
+locals {
+  template_ingress = concat(
+    [
+      {
+        from = [{
+          namespaceSelector = {
+            matchLabels = { "kubernetes.io/metadata.name" = local.project_namespace }
+          }
+        }]
+      },
+    ],
+    local.bastion_ingress_rules,
+    [
+      {
+        from = [{
+          namespaceSelector = {
+            matchLabels = { "kubernetes.io/metadata.name" = "d8-ingress-nginx" }
+          }
+          podSelector = {
+            matchLabels = { app = "controller" }
+          }
+        }]
+      },
+      {
+        from = [{
+          namespaceSelector = {
+            matchLabels = { "kubernetes.io/metadata.name" = "d8-metallb" }
+          }
+        }]
+      }
+    ]
+  )
 
   template_egress = [
     {
