@@ -37,6 +37,7 @@ func ValidateCredentialSecretPresence(state *State) Result {
 		result.AddError(
 			"Secret/"+cpapi.CredentialSecretName,
 			"credential_secret_required",
+			nil,
 			fmt.Sprintf(`credential Secret %q is required`, cpapi.CredentialSecretName),
 		)
 
@@ -47,6 +48,7 @@ func ValidateCredentialSecretPresence(state *State) Result {
 		result.AddError(
 			fmt.Sprintf("Secret/%s.type", secret.Name),
 			"invalid_credential_secret_type",
+			secret.Type,
 			fmt.Sprintf("credential Secret type must be %q", cpapi.CredentialsSecretType),
 		)
 	}
@@ -68,6 +70,7 @@ func ValidateCredentialSecretContent(state *State, allowedAuthSchemes []cpapi.Au
 			result.AddError(
 				fmt.Sprintf("Secret/%s.type", secret.Name),
 				"invalid_credential_secret_type",
+				secret.Type,
 				fmt.Sprintf("credential Secret type must be %q", cpapi.CredentialsSecretType),
 			)
 		}
@@ -94,7 +97,7 @@ func validateCredentialSecrets(secrets []cpapi.CredentialSecret, allowedAuthSche
 		authScheme := cpapi.AuthScheme(strings.TrimSpace(data["authScheme"]))
 
 		if authScheme == "" {
-			result.AddError(path+".data.authScheme", "auth_scheme_required", "authScheme is required")
+			result.AddError(path+".data.authScheme", "auth_scheme_required", authScheme, "authScheme is required")
 			continue
 		}
 
@@ -102,6 +105,7 @@ func validateCredentialSecrets(secrets []cpapi.CredentialSecret, allowedAuthSche
 			result.AddError(
 				path+".data.authScheme",
 				"unsupported_auth_scheme",
+				string(authScheme),
 				fmt.Sprintf("authScheme %q is not allowed", authScheme),
 			)
 			continue
@@ -132,6 +136,7 @@ func validateAuthSchemeKeys(path string, data map[string]string, authScheme cpap
 			result.AddError(
 				path+".data.secret",
 				"invalid_kubeconfig_secret",
+				secret,
 				"secret must contain base64-encoded kubeconfig",
 			)
 		}
@@ -139,6 +144,7 @@ func validateAuthSchemeKeys(path string, data map[string]string, authScheme cpap
 		result.AddError(
 			path+".data.authScheme",
 			"unsupported_auth_scheme",
+			string(authScheme),
 			fmt.Sprintf("authScheme %q is not allowed", authScheme),
 		)
 	}
@@ -162,7 +168,7 @@ func validateRequiredCredentialKey(path string, data map[string]string, key stri
 		message = fmt.Sprintf("%s is required for authScheme %q", key, authScheme)
 	}
 
-	result.AddError(path+".data."+key, code, message)
+	result.AddError(path+".data."+key, code, data[key], message)
 }
 
 func validateKubeconfigBase64(kubeconfigB64 string) error {

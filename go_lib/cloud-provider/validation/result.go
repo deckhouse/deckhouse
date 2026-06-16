@@ -42,6 +42,8 @@ type Violation struct {
 	Code string `json:"code,omitempty"`
 	// Message is a human-readable explanation of the violation.
 	Message string `json:"message"`
+	// Value is the rejected field value for admission errors.
+	Value any `json:"value,omitempty"`
 	// Severity is either SeverityError or SeverityWarning.
 	Severity string `json:"severity"`
 }
@@ -55,12 +57,13 @@ type Result struct {
 // ResultForNilState reports that validation was invoked without an initialized State.
 func ResultForNilState() Result {
 	result := Result{}
-	result.AddError("", CodeInternalStateNil, internalStateNilMessage)
+	result.AddError("", CodeInternalStateNil, nil, internalStateNilMessage)
 	return result
 }
 
 // AddError records a blocking validation violation.
-func (r *Result) AddError(path, code, message string) {
+// value is the rejected field value shown in admission errors.
+func (r *Result) AddError(path, code string, value any, message string) {
 	if r.errors == nil {
 		r.errors = make(map[string]Violation)
 	}
@@ -69,12 +72,14 @@ func (r *Result) AddError(path, code, message string) {
 		Path:     path,
 		Code:     code,
 		Message:  message,
+		Value:    value,
 		Severity: SeverityError,
 	}
 }
 
 // AddWarning records a non-blocking validation violation.
-func (r *Result) AddWarning(path, code, message string) {
+// value is the field value related to the warning.
+func (r *Result) AddWarning(path, code string, value any, message string) {
 	if r.warnings == nil {
 		r.warnings = make(map[string]Violation)
 	}
@@ -83,6 +88,7 @@ func (r *Result) AddWarning(path, code, message string) {
 		Path:     path,
 		Code:     code,
 		Message:  message,
+		Value:    value,
 		Severity: SeverityWarning,
 	}
 }

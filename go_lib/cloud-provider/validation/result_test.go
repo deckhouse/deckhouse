@@ -36,15 +36,30 @@ func TestResultForNilState(t *testing.T) {
 	}
 }
 
+func TestResultAddErrorStoresValue(t *testing.T) {
+	t.Parallel()
+
+	result := Result{}
+	result.AddError("Secret/d8-credentials.data.authScheme", "unsupported_auth_scheme", "apiToken", `authScheme "apiToken" is not allowed`)
+
+	violations := result.Errors()
+	if len(violations) != 1 {
+		t.Fatalf("Errors() = %d, want 1", len(violations))
+	}
+	if violations[0].Value != "apiToken" {
+		t.Fatalf("Errors()[0].Value = %#v, want %q", violations[0].Value, "apiToken")
+	}
+}
+
 func TestResultHelpers(t *testing.T) {
 	t.Parallel()
 
 	result := Result{}
-	result.AddError("path.one", "code_one", "message one")
-	result.AddWarning("path.two", "code_two", "message two")
+	result.AddError("path.one", "code_one", nil, "message one")
+	result.AddWarning("path.two", "code_two", nil, "message two")
 	other := Result{}
-	other.AddError("path.three", "code_three", "message three")
-	other.AddWarning("path.four", "code_four", "message four")
+	other.AddError("path.three", "code_three", nil, "message three")
+	other.AddWarning("path.four", "code_four", nil, "message four")
 	result.Merge(other)
 
 	if !result.HasErrors() {
@@ -69,7 +84,7 @@ func TestResultHelpers(t *testing.T) {
 	}
 
 	pathless := Result{}
-	pathless.AddError("", "code", "plain message")
+	pathless.AddError("", "code", nil, "plain message")
 	if !strings.Contains(pathless.Error(), "plain message") || strings.Contains(pathless.Error(), ": plain message") {
 		t.Fatalf("Error() without path = %q", pathless.Error())
 	}
@@ -79,10 +94,10 @@ func TestResultMergeKeepsSameCodeAtDifferentPaths(t *testing.T) {
 	t.Parallel()
 
 	result := Result{}
-	result.AddError("Secret/d8-credentials", "credential_secret_required", `credential Secret "d8-credentials" is required`)
+	result.AddError("Secret/d8-credentials", "credential_secret_required", nil, `credential Secret "d8-credentials" is required`)
 
 	duplicate := Result{}
-	duplicate.AddError("Secret/other", "credential_secret_required", "other message")
+	duplicate.AddError("Secret/other", "credential_secret_required", nil, "other message")
 	result.Merge(duplicate)
 
 	if len(result.Errors()) != 2 {
@@ -94,10 +109,10 @@ func TestResultMergeDeduplicatesViolationsByCodeAndPath(t *testing.T) {
 	t.Parallel()
 
 	result := Result{}
-	result.AddError("Secret/d8-credentials", "credential_secret_required", `credential Secret "d8-credentials" is required`)
+	result.AddError("Secret/d8-credentials", "credential_secret_required", nil, `credential Secret "d8-credentials" is required`)
 
 	duplicate := Result{}
-	duplicate.AddError("Secret/d8-credentials", "credential_secret_required", "duplicate message")
+	duplicate.AddError("Secret/d8-credentials", "credential_secret_required", nil, "duplicate message")
 	result.Merge(duplicate)
 
 	if len(result.Errors()) != 1 {
@@ -114,10 +129,10 @@ func TestResultMergeKeepsDifferentCodes(t *testing.T) {
 	t.Parallel()
 
 	result := Result{}
-	result.AddError("Secret/d8-credentials", "credential_secret_required", `credential Secret "d8-credentials" is required`)
+	result.AddError("Secret/d8-credentials", "credential_secret_required", nil, `credential Secret "d8-credentials" is required`)
 
 	duplicate := Result{}
-	duplicate.AddError("Secret/d8-credentials", "duplicate_credential_secret_required", `credential Secret "d8-credentials" is required`)
+	duplicate.AddError("Secret/d8-credentials", "duplicate_credential_secret_required", nil, `credential Secret "d8-credentials" is required`)
 	result.Merge(duplicate)
 
 	if len(result.Errors()) != 2 {
@@ -129,7 +144,7 @@ func TestResultErrorOrNilReturnsWrappedMessage(t *testing.T) {
 	t.Parallel()
 
 	result := Result{}
-	result.AddError("Secret/x", "bad", "failed")
+	result.AddError("Secret/x", "bad", nil, "failed")
 
 	err := result.ErrorOrNil()
 	if err == nil || err.Error() != "Secret/x: failed" {

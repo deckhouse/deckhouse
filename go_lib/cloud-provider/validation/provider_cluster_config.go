@@ -42,12 +42,12 @@ func ValidateProviderClusterConfigKubeconfig(state *State, pathToKubeconfig stri
 	errorPath := providerClusterConfigurationPath + "." + pathToKubeconfig
 	kubeconfigB64 := strings.TrimSpace(value)
 	if kubeconfigB64 == "" {
-		result.AddError(errorPath, "pcc_kubeconfig_required", pathToKubeconfig+" must be set")
+		result.AddError(errorPath, "pcc_kubeconfig_required", "", pathToKubeconfig+" must be set")
 		return result
 	}
 
 	if err := validateKubeconfigBase64(kubeconfigB64); err != nil {
-		result.AddError(errorPath, "invalid_pcc_kubeconfig", "must contain base64-encoded kubeconfig")
+		result.AddError(errorPath, "invalid_pcc_kubeconfig", kubeconfigB64, "must contain base64-encoded kubeconfig")
 	}
 
 	return result

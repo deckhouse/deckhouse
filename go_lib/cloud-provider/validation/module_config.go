@@ -26,7 +26,7 @@ func ValidateModuleConfig(state *State) Result {
 
 	if state.ModuleConfig == nil {
 		if len(state.LegacyProviderClusterConfig) == 0 {
-			result.AddError("ModuleConfig", "module_config_required", "ModuleConfig is required")
+			result.AddError("ModuleConfig", "module_config_required", nil, "ModuleConfig is required")
 		}
 
 		return result
@@ -37,6 +37,7 @@ func ValidateModuleConfig(state *State) Result {
 		result.AddError(
 			"ModuleConfig.metadata.name",
 			"invalid_module_config_name",
+			moduleConfig.Name,
 			fmt.Sprintf("must be %q", state.ModuleName),
 		)
 	}

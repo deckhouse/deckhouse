@@ -123,9 +123,22 @@ func (v *CredentialSecretValidator) validate(
 
 	warnings, admissionErr := resultToAdmission(result)
 	if admissionErr != nil {
-		credentialSecretLog.Info("validation denied", "violations", len(result.Errors()))
+		errorViolations := result.Errors()
+		warningViolations := result.Warnings()
+
+		credentialSecretLog.Info("validation denied", "errors", len(errorViolations), "warnings", len(warningViolations))
+		credentialSecretLog.V(1).Info("validation errors", "errors", violationMessages(errorViolations), "warnings", violationMessages(warningViolations))
+
 		return warnings, admissionErr
 	}
+
+	credentialSecretLog.Info(
+		"validation allowed",
+		"operation", operation,
+		"resource", "Secret",
+		"name", name,
+		"namespace", namespace,
+	)
 
 	return warnings, nil
 }

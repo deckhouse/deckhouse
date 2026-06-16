@@ -100,9 +100,22 @@ func (v *ModuleConfigValidator) validate(
 
 	warnings, admissionErr := resultToAdmission(result)
 	if admissionErr != nil {
-		moduleConfigLog.Info("validation denied", "violations", len(result.Errors()))
+		errorViolations := result.Errors()
+		warningViolations := result.Warnings()
+
+		moduleConfigLog.Info("validation denied", "errors", len(errorViolations), "warnings", len(warningViolations))
+		moduleConfigLog.V(1).Info("validation errors", "errors", violationMessages(errorViolations), "warnings", violationMessages(warningViolations))
+
 		return warnings, admissionErr
 	}
+
+	moduleConfigLog.Info(
+		"validation allowed",
+		"operation", operation,
+		"resource", "ModuleConfig",
+		"name", name,
+		"namespace", objectNamespace(obj),
+	)
 
 	return warnings, nil
 }

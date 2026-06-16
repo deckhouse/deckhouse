@@ -43,7 +43,10 @@ func resultToAdmission(result cpval.Result) (admission.Warnings, error) {
 	errors := result.Errors()
 	fieldErrors := make(field.ErrorList, 0, len(errors))
 	for _, violation := range errors {
-		fieldErrors = append(fieldErrors, field.Invalid(violationFieldPath(violation.Path), nil, violation.Message))
+		fieldErrors = append(
+			fieldErrors,
+			field.Invalid(violationFieldPath(violation.Path), violation.Value, violation.Message),
+		)
 	}
 
 	return warnings, apierrors.NewInvalid(schema.GroupKind{}, "", fieldErrors)
@@ -68,6 +71,19 @@ func violationMessage(violation cpval.Violation) string {
 	}
 
 	return violation.Path + ": " + violation.Message
+}
+
+func violationMessages(violations []cpval.Violation) []string {
+	if len(violations) == 0 {
+		return nil
+	}
+
+	messages := make([]string, 0, len(violations))
+	for _, violation := range violations {
+		messages = append(messages, violationMessage(violation))
+	}
+
+	return messages
 }
 
 func violationFieldPath(path string) *field.Path {

@@ -29,7 +29,7 @@ func ValidateMasterNodeGroup(state *State) Result {
 
 	masterNodeGroup, found := findNodeGroup(state, "master")
 	if !found {
-		result.AddError("NodeGroup/master", "master_node_group_required", `NodeGroup "master" is required`)
+		result.AddError("NodeGroup/master", "master_node_group_required", nil, `NodeGroup "master" is required`)
 		return result
 	}
 
@@ -37,6 +37,7 @@ func ValidateMasterNodeGroup(state *State) Result {
 		result.AddError(
 			"NodeGroup/master.spec.cloudInstances.classReference",
 			"master_class_reference_required",
+			nil,
 			fmt.Sprintf(`NodeGroup "master" must reference %s`, state.InstanceClassKind),
 		)
 
@@ -48,6 +49,7 @@ func ValidateMasterNodeGroup(state *State) Result {
 		result.AddError(
 			"NodeGroup/master.spec.cloudInstances.classReference.kind",
 			"master_invalid_instance_class_kind",
+			classRef.Kind,
 			fmt.Sprintf("must be %q", state.InstanceClassKind),
 		)
 	}
@@ -56,6 +58,7 @@ func ValidateMasterNodeGroup(state *State) Result {
 		result.AddError(
 			"NodeGroup/master.spec.cloudInstances.classReference.name",
 			"master_instance_class_name_required",
+			classRef.Name,
 			fmt.Sprintf(`NodeGroup "master" must reference %s by name`, state.InstanceClassKind),
 		)
 	}

@@ -101,9 +101,22 @@ func (v *DVPInstanceClassValidator) validate(
 
 	warnings, admissionErr := resultToAdmission(result)
 	if admissionErr != nil {
-		instanceClassLog.Info("validation denied", "violations", len(result.Errors()))
+		errorViolations := result.Errors()
+		warningViolations := result.Warnings()
+
+		instanceClassLog.Info("validation denied", "errors", len(errorViolations), "warnings", len(warningViolations))
+		instanceClassLog.V(1).Info("validation errors", "errors", violationMessages(errorViolations), "warnings", violationMessages(warningViolations))
+
 		return warnings, admissionErr
 	}
+
+	instanceClassLog.Info(
+		"validation allowed",
+		"operation", operation,
+		"resource", dvpval.InstanceClassKind,
+		"name", name,
+		"namespace", objectNamespace(obj),
+	)
 
 	return warnings, nil
 }

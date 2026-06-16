@@ -79,6 +79,12 @@ func TestValidateCredentialSecretContentRejectsUnsupportedAuthScheme(t *testing.
 	if !result.HasErrors() || !strings.Contains(result.Error(), "is not allowed") {
 		t.Fatalf("ValidateCredentialSecretContent() expected unsupported auth scheme error, got: %s", result.Error())
 	}
+
+	for _, violation := range result.Errors() {
+		if violation.Code == "unsupported_auth_scheme" && violation.Value != string(cpapi.AuthSchemeAPIToken) {
+			t.Fatalf("unsupported_auth_scheme Value = %#v, want %q", violation.Value, cpapi.AuthSchemeAPIToken)
+		}
+	}
 }
 
 func TestValidateCredentialSecretsAcceptsValidKubeconfig(t *testing.T) {

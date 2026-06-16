@@ -54,7 +54,7 @@ func TestResultToAdmission(t *testing.T) {
 	}
 
 	withWarnings := cpval.Result{}
-	withWarnings.AddWarning("spec.zone", "deprecated_zone", "zone is deprecated")
+	withWarnings.AddWarning("spec.zone", "deprecated_zone", nil, "zone is deprecated")
 	warnings, err = resultToAdmission(withWarnings)
 	if err != nil {
 		t.Fatalf("resultToAdmission() error = %v, want nil for warnings-only result", err)
@@ -64,7 +64,7 @@ func TestResultToAdmission(t *testing.T) {
 	}
 
 	denied := cpval.Result{}
-	denied.AddError("", "denied", "denied")
+	denied.AddError("", "denied", nil, "denied")
 	warnings, err = resultToAdmission(denied)
 	if err == nil {
 		t.Fatal("resultToAdmission() error = nil, want denial")
@@ -77,14 +77,43 @@ func TestResultToAdmission(t *testing.T) {
 	}
 
 	deniedWithWarnings := cpval.Result{}
-	deniedWithWarnings.AddError("spec.enabled", "disabled", "module must be enabled")
-	deniedWithWarnings.AddWarning("spec.settings", "legacy_setting", "setting is deprecated")
+	deniedWithWarnings.AddError("spec.enabled", "disabled", nil, "module must be enabled")
+	deniedWithWarnings.AddWarning("spec.settings", "legacy_setting", nil, "setting is deprecated")
 	warnings, err = resultToAdmission(deniedWithWarnings)
 	if err == nil || !apierrors.IsInvalid(err) {
 		t.Fatalf("resultToAdmission() error = %v, want Invalid", err)
 	}
 	if len(warnings) != 1 || warnings[0] != "spec.settings: setting is deprecated" {
 		t.Fatalf("resultToAdmission() warnings = %v, want warnings preserved on denial", warnings)
+	}
+
+	deniedWithValue := cpval.Result{}
+	deniedWithValue.AddError(
+		"Secret/d8-credentials.data.authScheme",
+		"unsupported_auth_scheme",
+		"apiToken",
+		`authScheme "apiToken" is not allowed`,
+	)
+	_, err = resultToAdmission(deniedWithValue)
+	if err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("resultToAdmission() error = %v, want Invalid", err)
+	}
+	statusErr, ok := err.(*apierrors.StatusError)
+	if !ok {
+		t.Fatalf("resultToAdmission() error = %T, want *apierrors.StatusError", err)
+	}
+	details := statusErr.Status().Details
+	if details == nil || len(details.Causes) != 1 {
+		t.Fatalf("Status().Details.Causes = %#v, want one field error", details)
+	}
+	if details.Causes[0].Field != "d8-credentials.data.authScheme" {
+		t.Fatalf("field error path = %q, want d8-credentials.data.authScheme", details.Causes[0].Field)
+	}
+	if !strings.Contains(details.Causes[0].Message, `Invalid value: "apiToken"`) {
+		t.Fatalf("field error message = %q, want Invalid value apiToken", details.Causes[0].Message)
+	}
+	if !strings.Contains(details.Causes[0].Message, `authScheme "apiToken" is not allowed`) {
+		t.Fatalf("field error message = %q, want authScheme denial text", details.Causes[0].Message)
 	}
 }
 

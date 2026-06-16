@@ -48,6 +48,7 @@ func ValidateMasterInstanceClass(state *State) Result {
 		result.AddError(
 			"NodeGroup/master.spec.cloudInstances.classReference.name",
 			"master_instance_class_not_found",
+			classRef.Name,
 			fmt.Sprintf("%s %q was not found", state.InstanceClassKind, classRef.Name),
 		)
 
@@ -58,6 +59,7 @@ func ValidateMasterInstanceClass(state *State) Result {
 		result.AddError(
 			state.InstanceClassKind+"/"+classRef.Name+".spec.etcdDisk",
 			"master_etcd_disk_required",
+			nil,
 			fmt.Sprintf("master %s must define spec.etcdDisk", state.InstanceClassKind),
 		)
 	}
@@ -94,6 +96,7 @@ func ValidateInstanceClassEtcdDiskAttachment(state *State) Result {
 			result.AddError(
 				path+".spec.etcdDisk",
 				"etcd_disk_forbidden_for_non_master",
+				class.Spec.EtcdDisk,
 				"InstanceClass.spec.etcdDisk can be used only when class is attached to NodeGroup master",
 			)
 		}
@@ -128,6 +131,7 @@ func ValidateInstanceClassDelete(state *State, className string, deletedClass *c
 			result.AddError(
 				state.InstanceClassKind+"/"+className,
 				"instance_class_in_use",
+				nodeGroup.Name,
 				fmt.Sprintf("InstanceClass is used by NodeGroup %q", nodeGroup.Name),
 			)
 		}
@@ -135,8 +139,9 @@ func ValidateInstanceClassDelete(state *State, className string, deletedClass *c
 
 	if deletedClass != nil && len(deletedClass.Status.NodeGroupConsumers) > 0 {
 		result.AddError(
-			state.InstanceClassKind+"/"+className,
+			state.InstanceClassKind+"/"+className+".status.nodeGroupConsumers",
 			"instance_class_has_consumers",
+			len(deletedClass.Status.NodeGroupConsumers),
 			fmt.Sprintf("%s is used by %d NodeGroup consumers", state.InstanceClassKind, len(deletedClass.Status.NodeGroupConsumers)),
 		)
 	}

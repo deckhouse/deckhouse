@@ -115,9 +115,22 @@ func (v *NodeGroupValidator) validate(
 
 	warnings, admissionErr := resultToAdmission(result)
 	if admissionErr != nil {
-		nodeGroupLog.Info("validation denied", "violations", len(result.Errors()))
+		errorViolations := result.Errors()
+		warningViolations := result.Warnings()
+
+		nodeGroupLog.Info("validation denied", "errors", len(errorViolations), "warnings", len(warningViolations))
+		nodeGroupLog.V(1).Info("validation errors", "errors", violationMessages(errorViolations), "warnings", violationMessages(warningViolations))
+
 		return warnings, admissionErr
 	}
+
+	nodeGroupLog.Info(
+		"validation allowed",
+		"operation", operation,
+		"resource", "NodeGroup",
+		"name", name,
+		"namespace", objectNamespace(obj),
+	)
 
 	return warnings, nil
 }
