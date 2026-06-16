@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync/atomic"
 
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
@@ -45,6 +46,10 @@ type Module struct {
 
 	hooks  *hooks.GlobalStorage // Hook storage with indices
 	values *values.Storage      // Values storage with layering
+
+	// running tracks whether OnStartup hooks have completed successfully.
+	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
+	running atomic.Bool
 
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -76,6 +81,7 @@ func NewModuleByConfig(cfg *Config, logger *log.Logger) (*Module, error) {
 	m := new(Module)
 
 	m.name = "global"
+	m.running = atomic.Bool{}
 
 	m.path = cfg.Path
 	m.patcher = cfg.Patcher
@@ -241,6 +247,8 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
 	}
+
+	m.running.Store(true)
 
 	return nil
 }

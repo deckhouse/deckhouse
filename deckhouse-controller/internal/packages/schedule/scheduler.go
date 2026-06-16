@@ -260,19 +260,6 @@ func (s *Scheduler) Complete(completed string) {
 		n.state = nodeStateActive
 	}
 
-	if completed == packageGlobal {
-		var enabled []string
-		for _, n := range s.compute() {
-			if n.name == packageGlobal || !n.status.Enabled {
-				continue
-			}
-
-			enabled = append(enabled, n.name)
-		}
-
-		s.send(Event{Kind: EventGlobalDone, Enabled: enabled})
-	}
-
 	s.schedule()
 }
 
@@ -307,14 +294,15 @@ func (s *Scheduler) schedule() {
 		return
 	}
 
-	for _, n := range s.compute() {
+	enabled, computed := s.compute()
+	for _, n := range computed {
 		if n.state != nodeStateIdle {
 			continue
 		}
 
 		if s.canSchedule(n) {
 			n.state = nodeStateScheduled
-			s.send(Event{Name: n.name, Kind: EventSchedule})
+			s.send(Event{Name: n.name, Kind: EventSchedule, Enabled: enabled})
 		}
 	}
 }
@@ -326,13 +314,14 @@ func (s *Scheduler) schedule() {
 // [EventDisable]. No global reconverge happens — canSchedule no longer gates
 // on per-dep state, so one node's status change cannot invalidate another
 // node's schedulability beyond the live order-tier check.
-func (s *Scheduler) compute() []*node {
+func (s *Scheduler) compute() ([]string, []*node) {
 	// AddNode is the authoritative cycle gate, so topoSort should never
 	// return an error here. The disabled-mark-active loop below walks `sorted`
 	// and relies on that invariant; a cycle slipping through (gate bug) would
 	// leave its members frozen at nodeStateIdle, surfaced quickly by stalled
 	// higher-tier nodes via canSchedule's order-tier gate.
 	sorted, _ := topoSort(s.nodes)
+	var enabled []string
 	for _, n := range sorted {
 		current := n.status.Enabled
 		n.status = checker.Check(n.checkers...)
@@ -347,7 +336,10 @@ func (s *Scheduler) compute() []*node {
 
 		if !n.status.Enabled {
 			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
+			continue
 		}
+
+		enabled = append(enabled, n.name)
 	}
 
 	// Disabled nodes have nothing to wait for — mark them active so they do
@@ -360,7 +352,7 @@ func (s *Scheduler) compute() []*node {
 		}
 	}
 
-	return sorted
+	return enabled, sorted
 }
 
 // canSchedule returns true if a node is eligible to transition from idle to
