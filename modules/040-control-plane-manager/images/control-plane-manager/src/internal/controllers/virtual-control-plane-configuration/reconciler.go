@@ -168,7 +168,7 @@ func (r *reconciler) reconcileControlPlaneNode(
 	pkiSecret *corev1.Secret,
 	configSecret *corev1.Secret,
 ) (reconcile.Result, error) {
-	target, err := buildTargetControlPlaneNode(vcp, configSecret, pkiSecret)
+	target, err := buildTargetControlPlaneNode(configSecret, pkiSecret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -196,7 +196,6 @@ func (r *reconciler) reconcileControlPlaneNode(
 }
 
 func buildTargetControlPlaneNode(
-	vcp *controlplanev1alpha1.VirtualControlPlane,
 	configSecret *corev1.Secret,
 	pkiSecret *corev1.Secret,
 ) (*controlplanev1alpha1.ControlPlaneNode, error) {
