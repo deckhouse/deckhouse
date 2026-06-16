@@ -100,7 +100,7 @@ description: Архитектура модуля prometheus в Deckhouse Kuberne
    В будущих релизах DKP alerts-receiver будет удалён из модуля [`prometheus`](/modules/prometheus/). Для приема всех алертов будет использоваться компонент Alertmanager модуля [`observability`](/modules/observability/).
    {% endalert %}
 
-1. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создаёт на их основе кастомные ресурсы [ClusterAlert](/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlert используется для информирования пользователей DKP об активных алертах и отображаются в веб-интерфейсе Deckhouse. Является разработкой компании «Флант». Состоит из одного контейнера.
+1. **Alerts-receiver** — сервер, совместимый с API [Alertmanager](https://github.com/prometheus/alertmanager). Alerts-receiver принимает базовые алерты от prometheus-main, создаёт на их основе кастомные ресурсы [ClusterAlert](/modules/prometheus/cr.html#clusteralert), обновляет их статусы и удаляет, если алерт больше не активен. Кастомные ресурсы ClusterAlert используются для информирования пользователей DKP об активных алертах и отображаются в веб-интерфейсе Deckhouse. Является разработкой компании «Флант». Состоит из одного контейнера.
 
 ## Взаимодействия модуля
 
