@@ -8,6 +8,8 @@ properties:
     properties:
       cniSecretData:
         type: string
+        x-examples:
+        - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV3b2dJQ0p0YjJSbElqb2dJbFpZVEVGT0lpd0tJQ0FpYldGemNYVmxjbUZrWlUxdlpHVWlPaUFpUWxCR0lncDkK"
       storageClasses:
         type: array
         additionalProperties:
