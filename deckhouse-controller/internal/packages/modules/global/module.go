@@ -22,7 +22,6 @@ import (
 	"sort"
 	"sync/atomic"
 
-	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -37,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
+	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
