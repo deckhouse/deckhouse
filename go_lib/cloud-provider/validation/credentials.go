@@ -97,7 +97,7 @@ func validateCredentialSecrets(secrets []cpapi.CredentialSecret, allowedAuthSche
 		authScheme := cpapi.AuthScheme(strings.TrimSpace(data["authScheme"]))
 
 		if authScheme == "" {
-			result.AddError(path+".data.authScheme", "auth_scheme_required", authScheme, "authScheme is required")
+			result.AddError(path+".data.authScheme", "auth_scheme_required", nil, "authScheme is required")
 			continue
 		}
 
@@ -168,7 +168,7 @@ func validateRequiredCredentialKey(path string, data map[string]string, key stri
 		message = fmt.Sprintf("%s is required for authScheme %q", key, authScheme)
 	}
 
-	result.AddError(path+".data."+key, code, data[key], message)
+	result.AddError(path+".data."+key, code, nil, message)
 }
 
 func validateKubeconfigBase64(kubeconfigB64 string) error {
