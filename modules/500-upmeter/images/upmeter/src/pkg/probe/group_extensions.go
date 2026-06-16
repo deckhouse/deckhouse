@@ -259,7 +259,7 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe 
 
 				RequestTimeout:                     5 * time.Second,
 				WaitVirtualImageTimeout:            30 * time.Second,
-				WaitVirtualDiskTimeout:             30 * time.Second,
+				WaitVirtualDiskTimeout:             60 * time.Second,
 				WaitVirtualMachineTimeout:          30 * time.Second,
 				WaitVirtualMachineMigrationTimeout: time.Minute,
 				WaitDeletionTimeout:                30 * time.Second,
