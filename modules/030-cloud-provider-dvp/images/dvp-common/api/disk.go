@@ -250,8 +250,8 @@ func (d *DiskService) ListDisksByLabels(ctx context.Context, matchLabels map[str
 }
 
 func (d *DiskService) MigrateDiskStorageClass(ctx context.Context, diskName string, newStorageClass string) error {
-	vmd, err := d.GetDiskByName(ctx, diskName)
-	if err != nil {
+	var vmd v1alpha2.VirtualDisk
+	if err := d.client.Get(ctx, types.NamespacedName{Namespace: d.namespace, Name: diskName}, &vmd); err != nil {
 		return err
 	}
 
@@ -263,7 +263,7 @@ func (d *DiskService) MigrateDiskStorageClass(ctx context.Context, diskName stri
 	patch := client.MergeFrom(vmd.DeepCopy())
 	vmd.Spec.PersistentVolumeClaim.StorageClass = &newStorageClass
 
-	return d.client.Patch(ctx, vmd, patch)
+	return d.client.Patch(ctx, &vmd, patch)
 }
 
 func (d *DiskService) GetStorageClassList(ctx context.Context) (*storagev1.StorageClassList, error) {
