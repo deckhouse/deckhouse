@@ -215,8 +215,8 @@ fmt:
 	gofumpt -l -w -extra .
 	golangci-lint run ./... -c .golangci.yaml --fix
 
-ci:
-	./hack/coverage.sh
+ci: bin/gotestsum
+	GOTESTSUM=$(abspath $(GOTESTSUM)) ./hack/coverage.sh
 
 devenv:
 	./hack/devenv/start.sh
