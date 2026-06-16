@@ -95,13 +95,13 @@ spec:
                     - MCM
                     - CAPI
                   description: |
-                    Machinery used to manage nodes in this group.
+                    Node management mechanism used for this node group.
 
                     The field value indicates which component manages the nodes:
                     
-                    - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
-                    - `MCM` — nodes in the group are managed by Machine Controller Manager.
-                    - `CAPI` — nodes in the group are managed by Cluster API.
+                    - `None`: Nodes in the group are not managed by Machine Controller Manager or CAPI.
+                    - `MCM`: Nodes in the group are managed by Machine Controller Manager.
+                    - `CAPI`: Nodes in the group are managed by Cluster API.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
@@ -728,13 +728,13 @@ spec:
                     - MCM
                     - CAPI
                   description: |
-                    Machinery used to manage nodes in this group.
+                    Node management mechanism used for this node group.
 
                     The field value indicates which component manages the nodes:
                     
-                    - `None` — nodes in the group are not managed by MCM or CAPI.
-                    - `MCM` — nodes in the group are managed by machine-controller-manager.
-                    - `CAPI` — nodes in the group are managed by Cluster API.
+                    - `None`: Nodes in the group are not managed by Machine Controller Manager or CAPI.
+                    - `MCM`: Nodes in the group are managed by Machine Controller Manager.
+                    - `CAPI`: Nodes in the group are managed by Cluster API.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
@@ -1401,13 +1401,13 @@ spec:
                     - MCM
                     - CAPI
                   description: |
-                    Machinery used to manage nodes in this group.
+                    Node management mechanism used for this node group.
 
                     The field value indicates which component manages the nodes:
                     
-                    - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
-                    - `MCM` — nodes in the group are managed by Machine Controller Manager.
-                    - `CAPI` — nodes in the group are managed by Cluster API.
+                    - `None`: Nodes in the group are not managed by Machine Controller Manager or CAPI.
+                    - `MCM`: Nodes in the group are managed by Machine Controller Manager.
+                    - `CAPI`: Nodes in the group are managed by Cluster API.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
@@ -1505,7 +1505,7 @@ spec:
                   properties:
                     synced:
                       type: string
-                      description: True if last observed version of the resource was successfully applied in the cluster.
+                      description: Indicates whether the last observed version of the resource was successfully applied in the cluster.
                     observed:
                       type: object
                       description: Contains last timestamp when the resource change was noted by the operator and its checksum.
