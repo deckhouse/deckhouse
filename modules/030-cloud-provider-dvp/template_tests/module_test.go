@@ -243,6 +243,10 @@ storage:
 ccm:
   disabled: true
 internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
   credentialSecrets:
     d8-credentials:
       authScheme: Kubeconfig
