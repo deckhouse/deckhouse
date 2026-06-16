@@ -295,13 +295,21 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          VAULT_KEY: "dh-2025-aug-dev"
-          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
+          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
           SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+          WERF_SIGN_ELF_FILES: "1"
+          WERF_SIGN_MANIFEST: "1"
+          WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+          VAULT_ADDR: "https://seguro.flant.com"
+          WERF_VAULT_AUTH_PATH: "github"
+          WERF_ACTIONS_AUDIENCE: "github-access-aud"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
