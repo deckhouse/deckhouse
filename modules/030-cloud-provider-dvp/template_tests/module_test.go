@@ -784,6 +784,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(secret.Field("type").String()).To(Equal("kubernetes.io/tls"))
 			Expect(secret.Field("data.tls\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dGVzdC1jcnQ="))))
 			Expect(secret.Field("data.tls\\.key").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dGVzdC1rZXk="))))
+			Expect(secret.Field("data.ca\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("dGVzdC1jYQ=="))))
 		})
 
 		It("renders ValidatingWebhookConfiguration with four webhooks", func() {
