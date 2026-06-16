@@ -31,18 +31,21 @@ const (
 // Normal control plane manager constants
 const (
 	ControlPlaneManagerName = "control-plane-manager"
+	CpcControllerName       = "control-plane-configuration-controller"
+	CpnControllerName       = "control-plane-node-controller"
+	CpoControllerName       = "control-plane-operation-controller"
 )
 
 // Virtual control plane manager constants
 const (
-	VirtualControlPlaneManagerName = "virtual-control-plane-manager"
+	VirtualControlPlaneManagerName      = "virtual-control-plane-manager"
+	VirtualConfigurationController      = "virtual-control-plane-configuration-controller"
+	VirtualControlPlaneNamespacePrefix  = "d8-vcp-"
+	VirtualControlPlaneConfigSecretName = "d8-vcp-config"
 )
 
 const (
 	KubeSystemNamespace                 = "kube-system"
-	CpcControllerName                   = "control-plane-configuration-controller"
-	CpnControllerName                   = "control-plane-node-controller"
-	CpoControllerName                   = "control-plane-operation-controller"
 	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
 	PkiSecretName                       = "d8-pki"
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
