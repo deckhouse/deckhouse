@@ -36,7 +36,6 @@ const providerID = "dvp"
 const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
 const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
 const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
-const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 const globalValues = `
   clusterIsBootstrapped: true
@@ -67,7 +66,7 @@ const globalValues = `
 
 const moduleValuesA = `
 nodes:
-  enabled: true
+  disabled: false
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
@@ -75,8 +74,10 @@ provider:
   parameters:
     namespace: cloud-provider01
 storage:
-  enabled: true
+  disabled: false
   parameters: {}
+ccm:
+  disabled: false
 internal:
   credentialSecrets:
     d8-credentials:
@@ -110,7 +111,7 @@ internal:
 
 const moduleValuesStorageDisabled = `
 nodes:
-  enabled: true
+  disabled: false
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
@@ -118,8 +119,10 @@ provider:
   parameters:
     namespace: cloud-provider01
 storage:
-  enabled: false
+  disabled: true
   parameters: {}
+ccm:
+  disabled: false
 internal:
   credentialSecrets:
     d8-credentials:
@@ -153,7 +156,7 @@ internal:
 
 const moduleValuesNodesDisabled = `
 nodes:
-  enabled: false
+  disabled: true
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
@@ -161,8 +164,10 @@ provider:
   parameters:
     namespace: cloud-provider01
 storage:
-  enabled: true
+  disabled: false
   parameters: {}
+ccm:
+  disabled: false
 internal:
   credentialSecrets:
     d8-credentials:
@@ -182,7 +187,7 @@ internal:
 
 const moduleValuesBothDisabled = `
 nodes:
-  enabled: false
+  disabled: true
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
@@ -190,8 +195,10 @@ provider:
   parameters:
     namespace: cloud-provider01
 storage:
-  enabled: false
+  disabled: true
   parameters: {}
+ccm:
+  disabled: false
 internal:
   credentialSecrets:
     d8-credentials:

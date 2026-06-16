@@ -68,7 +68,7 @@
 {{- define "csi_node_volume_mounts" }}
 {{- end }}
 
-{{- if .Values.cloudProviderDvp.storage.enabled }}
+{{- if not .Values.cloudProviderDvp.storage.disabled }}
 {{- $csiImageName := "dvpCsiDriver" }}
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
 {{- if $csiControllerImage }}

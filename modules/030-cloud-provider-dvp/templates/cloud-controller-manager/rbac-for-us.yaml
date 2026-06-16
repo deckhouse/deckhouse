@@ -1,4 +1,4 @@
-{{- if .Values.cloudProviderDvp.nodes.enabled }}
+{{- if not .Values.cloudProviderDvp.nodes.disabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
