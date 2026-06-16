@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
@@ -46,6 +47,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
+
+type ModulePreparator interface {
+	PrepareModule(ctx context.Context) error
+	Module() string
+}
 
 type BashiblePipelineParams struct {
 	Node                   libcon.Interface
@@ -98,6 +104,8 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	devicePath := params.DevicePath
 	globalOpts := params.GlobalOpts
 
+	logger := loggerProvider()
+
 	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
 	if err := depsChecker.Check(ctx); err != nil {
 		return err
@@ -127,7 +135,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	if ready {
-		log.Success("Bashible has already run! Skipping Bashible installation\n")
+		logger.Success("Bashible has already run! Skipping Bashible installation\n")
 		return nil
 	}
 
@@ -166,7 +174,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
 		if !params.IsDebug {
 			if err := os.RemoveAll(templateController.TmpDir); err != nil {
-				params.LoggerProvider().WarnF("failed to cleanup temporary directory: %v", err)
+				logger.WarnF("failed to cleanup temporary directory: %v", err)
 			}
 		}
 	})
@@ -175,18 +183,21 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	nodeName, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-name")
+	nodeInfo, err := bashible.ReadNodeInfo(ctx)
 	if err != nil {
-		return fmt.Errorf("read discovered node name: %w", err)
+		return fmt.Errorf("Cannot read node info: %w", err)
 	}
 
-	discoveredNodeIP, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-ip")
-	if err != nil {
-		return fmt.Errorf("read discovered node IP: %w", err)
-	}
-
-	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, globalOpts); err != nil {
+	if err := PrepareControlPlaneArtifacts(nodeInfo, cfg, templateController, globalOpts); err != nil {
 		return err
+	}
+
+	modulesPreparators := getModulesPreparators(params)
+	for _, preparator := range modulesPreparators {
+		logger.DebugF("Starting prepare module %s", preparator.Module())
+		if err := preparator.PrepareModule(ctx); err != nil {
+			return err
+		}
 	}
 
 	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseNodePreparation)
@@ -200,7 +211,25 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseExecuteBashibleBundle)
+
 	return nil
+}
+
+func getModulesPreparators(params *BashiblePipelineParams) []ModulePreparator {
+	controlPlaneSettings := controlplane.NewSettingsExtractor(
+		params.MetaConfig,
+		config.NewSchemaStore(params.GlobalOpts),
+		config.GetEdition(),
+		params.LoggerProvider,
+	)
+
+	return []ModulePreparator{
+		controlplane.NewBootstrapPreparator(
+			controlPlaneSettings,
+			params.Node,
+			params.LoggerProvider,
+		),
+	}
 }
 
 func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
@@ -282,12 +311,15 @@ func PrepareBashibleBundle(
 }
 
 func PrepareControlPlaneArtifacts(
-	nodeName, nodeIP string,
+	nodeInfo *dhbashible.NodeInfo,
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
 	globalOpts *options.GlobalOptions,
 ) error {
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
+		nodeName := nodeInfo.NodeName
+		nodeIP := nodeInfo.NodeIP
+
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
 
 		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
