@@ -24,10 +24,4 @@
 
 {{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager" $prometheusRules) }}
 
-{{- include "helm_lib_single_dashboard" (list . "node-controller" "Kubernetes Cluster" (.Files.Get "monitoring/grafana-dashboards/kubernetes-cluster/node-controller.json")) }}
-
-{{- if not (.Values.global.enabledModules | has "gpu") }}
-  {{- if include "nvidia_gpu_enabled" . }}
-    {{- include "helm_lib_grafana_dashboard_definitions" . }}
-  {{- end }}
-{{- end }}
+{{ include "helm_lib_grafana_dashboard_definitions" . }}
