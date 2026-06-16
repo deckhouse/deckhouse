@@ -21,7 +21,7 @@ webhooks:
         namespace: d8-cloud-provider-dvp
         path: /validate-deckhouse-io-v1alpha1-moduleconfig
         port: 443
-      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc | quote }}
     rules:
       - apiGroups: ["deckhouse.io"]
         apiVersions: ["v1alpha1"]
@@ -48,7 +48,7 @@ webhooks:
         namespace: d8-cloud-provider-dvp
         path: /validate--v1-secret
         port: 443
-      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc | quote }}
     rules:
       - apiGroups: [""]
         apiVersions: ["v1"]
@@ -74,7 +74,7 @@ webhooks:
         namespace: d8-cloud-provider-dvp
         path: /validate-deckhouse-io-v1-nodegroup
         port: 443
-      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc | quote }}
     rules:
       - apiGroups: ["deckhouse.io"]
         apiVersions: ["v1"]
@@ -93,7 +93,7 @@ webhooks:
         namespace: d8-cloud-provider-dvp
         path: /validate-deckhouse-io-v1alpha1-dvpinstanceclass
         port: 443
-      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc | quote }}
     rules:
       - apiGroups: ["deckhouse.io"]
         apiVersions: ["v1alpha1"]
