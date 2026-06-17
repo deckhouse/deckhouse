@@ -31,6 +31,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
@@ -379,7 +380,7 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		)
 }
 
-func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, outputs *infrastructure.PipelineOutputs) error {
+func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, outputs *infrastructure.PipelineOutputs) error {
 	if outputs == nil || len(outputs.InfrastructureState) == 0 {
 		return ErrNoInfrastructureState
 	}
@@ -414,6 +415,10 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		return err
 	}
 
+	if err := saveCandiCloudProviderDiscoveryData(ctx, kubeCl, providerName, outputs.CloudDiscovery); err != nil {
+		return err
+	}
+
 	patch, err := json.Marshal(map[string]interface{}{
 		"data": map[string]interface{}{
 			"cloud-provider-discovery-data.json": outputs.CloudDiscovery,
@@ -433,12 +438,61 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		)
 		if k8errors.IsNotFound(err) {
 			// mc-flow cluster: the legacy Secret is intentionally absent and
-			// discovery data is recomputed on each run — nothing to patch.
+			// discovery data lives in d8-candi-cloud-provider-discovery-data
+			// (written above) — nothing to patch here.
 			log.WarnLn("Skipping cloud discovery data update: legacy Secret d8-provider-cluster-configuration not present (mc-flow cluster)")
 			return nil
 		}
 		return err
 	})
+}
+
+// saveCandiCloudProviderDiscoveryData writes discovery data into
+// d8-candi-cloud-provider-discovery-data in the provider's
+// d8-cloud-provider-<name> namespace. The namespace is created if missing — the
+// cloud-provider module's helm chart will adopt and label it later.
+func saveCandiCloudProviderDiscoveryData(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, discoveryData []byte) error {
+	if providerName == "" {
+		return nil
+	}
+	namespace := providerdata.CloudProviderNamespace(providerName)
+
+	if err := ensureNamespace(ctx, kubeCl, namespace); err != nil {
+		return err
+	}
+
+	task := actions.ManifestTask{
+		Name:     fmt.Sprintf(`Secret %q`, namespace+"/d8-candi-cloud-provider-discovery-data"),
+		Manifest: func() interface{} { return manifests.SecretWithCandiCloudProviderDiscoveryData(namespace, discoveryData) },
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets(namespace).
+				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
+			return err
+		},
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets(namespace).
+				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+
+			return err
+		},
+	}
+	return retry.NewLoop("Save candi cloud-provider discovery data", 45, 10*time.Second).
+		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
+}
+
+func ensureNamespace(ctx context.Context, kubeCl *client.KubernetesClient, name string) error {
+	return retry.NewLoop(fmt.Sprintf("Ensure Namespace %q", name), 45, 10*time.Second).
+		RunContext(ctx, func() error {
+			ns := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
+			_, err := kubeCl.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+			if err == nil || k8errors.IsAlreadyExists(err) {
+				return nil
+			}
+			return err
+		})
 }
 
 func DeleteInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, secretName string) error {

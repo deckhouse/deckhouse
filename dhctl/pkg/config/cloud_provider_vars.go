@@ -41,7 +41,7 @@ var nodeGroupGVR = schema.GroupVersionResource{Group: "deckhouse.io", Version: "
 // cloudProviderNamespace returns the canonical d8-cloud-provider-<name>
 // namespace of the provider module.
 func cloudProviderNamespace(providerName string) string {
-	return "d8-" + providerdata.CloudProviderModuleName(providerName)
+	return providerdata.CloudProviderNamespace(providerName)
 }
 
 // CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and

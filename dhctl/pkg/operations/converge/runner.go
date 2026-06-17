@@ -524,7 +524,7 @@ func (r *runner) updateClusterState(ctx *convergecontext.Context, metaConfig *co
 			return global.ErrConvergeInterrupted
 		}
 
-		return infrastructurestate.SaveClusterInfrastructureState(ctx.Ctx(), kubeCl, outputs)
+		return infrastructurestate.SaveClusterInfrastructureState(ctx.Ctx(), kubeCl, metaConfig.ProviderName, outputs)
 	})
 
 	if err != nil {
