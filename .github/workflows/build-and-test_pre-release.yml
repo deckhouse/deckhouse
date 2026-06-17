@@ -2709,15 +2709,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-<<<<<<< HEAD
-<<<<<<< HEAD
           TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:0827a3308a3cd84f78f6c35448bccdb35ae3061ec6be9c7f1b87936f76e1f551"
-=======
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:e810c8a276d9187355199f4c2bce0cf447caa1e22654fd2c6d42a784521b3155"
->>>>>>> dc43f21183 (1048 imgs)
-=======
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:488bed937dba29938a36e89fc62847112cddfb8e8d33fcd09527ecfcbe927f59"
->>>>>>> 415c8c9450 (update 1049; fix iptables behaviour)
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
