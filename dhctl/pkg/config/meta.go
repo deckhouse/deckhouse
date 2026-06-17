@@ -615,6 +615,28 @@ func (m *MetaConfig) IsStatic() bool {
 	return m.ClusterType == "Static"
 }
 
+// FindProviderModuleConfig returns the cloud-provider-<name> ModuleConfig
+// when present, or nil. Used to detect whether the cluster is on the new
+// mc-flow provider format.
+func (m *MetaConfig) FindProviderModuleConfig() *ModuleConfig {
+	if m == nil || m.ProviderName == "" {
+		return nil
+	}
+	return m.FindModuleConfig(providerdata.CloudProviderModuleName(m.ProviderName))
+}
+
+// HasProviderModuleConfig reports whether the cluster carries a
+// cloud-provider-<name> ModuleConfig (the new mc-flow provider format).
+func (m *MetaConfig) HasProviderModuleConfig() bool {
+	return m.FindProviderModuleConfig() != nil
+}
+
+// HasLegacyProviderConfig reports whether the cluster carries a non-empty
+// d8-provider-cluster-configuration payload (the legacy provider format).
+func (m *MetaConfig) HasLegacyProviderConfig() bool {
+	return m != nil && len(m.ProviderClusterConfig) > 0
+}
+
 func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface{} {
 	static := make(map[string]interface{})
 
