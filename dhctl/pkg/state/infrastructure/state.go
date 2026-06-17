@@ -480,8 +480,10 @@ func saveCandiCloudProviderDiscoveryData(ctx context.Context, kubeCl *client.Kub
 	}
 
 	task := actions.ManifestTask{
-		Name:     fmt.Sprintf(`Secret %q`, namespace+"/d8-candi-cloud-provider-discovery-data"),
-		Manifest: func() interface{} { return manifests.SecretWithCandiCloudProviderDiscoveryData(namespace, discoveryData) },
+		Name: fmt.Sprintf(`Secret %q`, namespace+"/d8-candi-cloud-provider-discovery-data"),
+		Manifest: func() interface{} {
+			return manifests.SecretWithCandiCloudProviderDiscoveryData(namespace, discoveryData)
+		},
 		CreateFunc: func(ctx context.Context, manifest interface{}) error {
 			_, err := kubeCl.
 				CoreV1().Secrets(namespace).
