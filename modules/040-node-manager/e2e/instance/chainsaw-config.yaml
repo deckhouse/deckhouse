@@ -1,0 +1,17 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: instance-controller-e2e
+spec:
+  timeouts:
+    apply: 60s
+    assert: 15m      # lifecycle-scale waits for a real VM to be provisioned and bootstrapped
+    error: 15m       # GC of an Instance after its source is removed can take a few minutes
+    delete: 5m
+    cleanup: 20m
+    exec: 5m
+  execution:
+    failFast: true
+    parallel: 1      # Instance and Node are cluster-scoped; tests mutate shared state
+  discovery:
+    testFile: chainsaw-test.yaml

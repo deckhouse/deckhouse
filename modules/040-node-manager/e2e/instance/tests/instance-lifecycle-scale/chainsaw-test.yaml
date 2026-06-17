@@ -1,0 +1,241 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: instance-lifecycle-scale
+spec:
+  description: |
+    Full Instance lifecycle on a LIVE DVP/CAPI cluster with a REAL machine and REAL bashible.
+    Creates a CloudEphemeral NodeGroup that provisions one real VM and verifies the whole
+    contract the controller produces, then tears it down.
+
+    The verification is declarative: chainsaw asserts poll until the state matches, so they
+    are flap-proof and read top to bottom. The only script is a one-line resolver that binds
+    the dynamic Instance name (the Instance is cluster-scoped and unlabeled, so it cannot be
+    selected declaratively). Everything else — spec, status, conditions, the bashible message
+    and the Server-Side-Apply field ownership — is asserted via the resource tree and JMESPath.
+
+    Recorded transitions (documented here; the asserts below verify the stable milestones the
+    Instance passes through, not the fleeting intermediate states, to stay flap-proof):
+      scale-UP:   NG Scaling=True, instances=1 -> Machine + Node created -> Instance appears
+                  machine-backed (phase Pending/Provisioning -> Provisioned -> Running,
+                  machineStatus Progressing -> Ready, bashibleStatus Unknown) -> Node Ready ->
+                  bashible first converge applies BashibleReady=True so bashibleStatus -> Ready
+                  and NG.status.ready -> 1.
+      scale-DOWN: NG deleted -> Machine deletion -> Instance phase Terminating, bashibleStatus
+                  Unknown -> Node removed -> controller removes the finalizer -> Instance deleted.
+
+    Drives the controller only through a NodeGroup (Instances/InstanceClasses are not
+    user-writable on a deckhouse cluster). Provisions a real cloud VM — can take 10-15 minutes.
+  concurrent: false
+  steps:
+    - name: assert-dvpinstanceclass-worker-exists
+      try:
+        - description: The DVPInstanceClass backing the NodeGroup exists and is well-formed
+          assert:
+            file: asserts/assert-dvpinstanceclass-worker.yaml
+      cleanup:
+        - description: Wait until all e2e-instance nodes are removed (runs last in the cleanup chain)
+          script:
+            timeout: 20m
+            content: |
+              set -eu
+              for i in $(seq 1 120); do
+                NODES=$(kubectl get nodes -l app=e2e-instance-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$NODES" -eq 0 ]; then exit 0; fi
+                sleep 10
+              done
+              echo "Timed out waiting for e2e-instance nodes removal"
+              exit 1
+            check:
+              ($error == null): true
+
+    - name: cleanup-leftover-nodegroup
+      try:
+        - description: Delete a leftover NodeGroup e2e-instance from a previous run
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-instance
+
+    - name: apply-nodegroup
+      try:
+        - description: Create a CloudEphemeral NodeGroup that provisions one real VM
+          apply:
+            file: manifests/nodegroup.yaml
+      cleanup:
+        - description: Delete the NodeGroup
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-instance
+
+    - name: show-scale-up-phases
+      try:
+        - description: |
+            Print the Instance phase/machineStatus/bashibleStatus as the VM is ordered, so the
+            lifecycle is visible (e.g. Pending -> Provisioning -> Running, Progressing -> Ready,
+            bashibleStatus Unknown -> Ready). Waits until it converges to Running/Ready/Ready.
+          script:
+            timeout: 20m
+            content: |
+              set -eu
+              last=""; saw_non_running=0; saw_bashible_unknown=0; saw_machine_ready=0
+              for i in $(seq 1 220); do
+                st=$(kubectl get instances.deckhouse.io -o json 2>/dev/null \
+                  | jq -r 'first(.items[] | select(.metadata.name | test("e2e-instance-")))
+                           | "\(.status.phase // "-")/\(.status.machineStatus // "-")/\(.status.bashibleStatus // "-")"' 2>/dev/null || true)
+                if [ -n "$st" ] && [ "$st" != "$last" ]; then
+                  echo "instance: $st"; last="$st"
+                  ph=${st%%/*}; rest=${st#*/}; ms=${rest%%/*}; bs=${rest##*/}
+                  case "$ph" in Pending|Provisioning|Provisioned) saw_non_running=1 ;; esac
+                  [ "$bs" = "Unknown" ] && saw_bashible_unknown=1
+                  [ "$ms" = "Ready" ] && saw_machine_ready=1
+                fi
+                [ "$st" = "Running/Ready/Ready" ] && break
+                sleep 5
+              done
+              # Verify the lifecycle progression (flap-proof: only stable, reliably-observed milestones).
+              [ "$last" = "Running/Ready/Ready" ] || { echo "did not converge to Running/Ready/Ready (last='$last')" >&2; exit 1; }
+              [ "$saw_non_running" = 1 ]    || { echo "expected a non-Running phase (Pending/Provisioning/Provisioned) before Running" >&2; exit 1; }
+              [ "$saw_machine_ready" = 1 ]  || { echo "expected machineStatus to reach Ready" >&2; exit 1; }
+              [ "$saw_bashible_unknown" = 1 ] || { echo "expected bashibleStatus Unknown (bashible converging) before Ready" >&2; exit 1; }
+              echo "scale-up OK: phase progressed through provisioning to Running, machineStatus -> Ready, bashibleStatus Unknown -> Ready"
+            check:
+              ($error == null): true
+      catch:
+        - description: Collect cloud-instance-manager events on failure
+          events:
+            namespace: d8-cloud-instance-manager
+
+    - name: assert-nodegroup-scales-up
+      try:
+        - description: The NodeGroup provisions and reports a ready node
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              metadata:
+                name: e2e-instance
+              status:
+                (nodes >= `1`): true
+                (ready >= `1`): true
+
+    - name: assert-node-ready
+      try:
+        - description: The provisioned node has joined and is Ready
+          assert:
+            file: asserts/assert-node-ready.yaml
+      catch:
+        - description: Collect cloud-instance-manager events on failure
+          events:
+            namespace: d8-cloud-instance-manager
+
+    - name: verify-instance-contract
+      try:
+        # The Instance is cluster-scoped and unlabeled, so its dynamic name is resolved once
+        # and reused by the declarative asserts in this same step (outputs bindings are
+        # step-scoped). printf avoids a trailing newline so no trim is needed.
+        - description: Resolve the Running e2e Instance (ignores any leftover Terminating one)
+          script:
+            content: |
+              set -eu
+              printf '%s' "$(kubectl get instances.deckhouse.io -o json \
+                | jq -r 'first(.items[] | select((.metadata.name | test("e2e-instance-")) and .status.phase == "Running")).metadata.name')"
+            outputs:
+              - name: instanceName
+                value: ($stdout)
+        - description: |
+            The controller created a machine-backed Instance with the CAPI machineRef and added
+            its finalizer.
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: Instance
+              metadata:
+                name: ($instanceName)
+                finalizers:
+                  - node-manager.hooks.deckhouse.io/instance-controller
+              spec:
+                machineRef:
+                  kind: Machine
+                  apiVersion: cluster.x-k8s.io/v1beta2
+                  name: ($instanceName)
+                  namespace: d8-cloud-instance-manager
+        - description: |
+            The Instance converges to Running/Ready/Ready with MachineReady (reason Ready) and
+            BashibleReady conditions, a "bashible: " message, and the real Server-Side-Apply
+            field ownership split between the controller and bashible.
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: Instance
+              metadata:
+                name: ($instanceName)
+                (length(managedFields[?manager == 'node-controller-instancestatus']) > `0`): true
+                (length(managedFields[?manager == 'node-controller-instance-bashible-status']) > `0`): true
+                (length(managedFields[?manager == 'bashible-bashibleready']) > `0`): true
+              status:
+                phase: Running
+                machineStatus: Ready
+                bashibleStatus: Ready
+                "(starts_with(message, 'bashible: '))": true
+                (conditions[?type == 'MachineReady'] | [0].status): "True"
+                (conditions[?type == 'MachineReady'] | [0].reason): Ready
+                (conditions[?type == 'BashibleReady'] | [0].status): "True"
+      catch:
+        - description: Collect cloud-instance-manager events on failure
+          events:
+            namespace: d8-cloud-instance-manager
+
+    - name: delete-nodegroup
+      try:
+        - description: Remove the NodeGroup — CAPI deletes the Machine and Node
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-instance
+
+    - name: assert-node-gone
+      try:
+        - description: The node is removed after the NodeGroup is deleted
+          error:
+            file: asserts/assert-no-node.yaml
+
+    - name: show-scale-down-phases-and-gc
+      try:
+        - description: |
+            Print the Instance phases during teardown (e.g. -> Terminating) and confirm the
+            controller removes the finalizer and deletes the Instance.
+          script:
+            timeout: 10m
+            content: |
+              set -eu
+              last=""; saw_terminating=0
+              for i in $(seq 1 200); do
+                n=$(kubectl get instances.deckhouse.io -o json 2>/dev/null \
+                  | jq '[.items[] | select(.metadata.name | test("e2e-instance-"))] | length')
+                if [ "$n" = "0" ]; then
+                  echo "instance: deleted"
+                  [ "$saw_terminating" = 1 ] || { echo "expected the Instance to be observed Terminating before deletion" >&2; exit 1; }
+                  echo "scale-down OK: Instance went Terminating then was garbage-collected"
+                  exit 0
+                fi
+                st=$(kubectl get instances.deckhouse.io -o json 2>/dev/null \
+                  | jq -r 'first(.items[] | select(.metadata.name | test("e2e-instance-")))
+                           | "\(.status.phase // "-")/\(.status.machineStatus // "-")/\(.status.bashibleStatus // "-")"' 2>/dev/null || true)
+                if [ -n "$st" ] && [ "$st" != "$last" ]; then
+                  echo "instance: $st"; last="$st"
+                  case "$st" in Terminating/*) saw_terminating=1 ;; esac
+                fi
+                sleep 3
+              done
+              echo "instance was not garbage-collected (last='$last')" >&2
+              exit 1
+            check:
+              ($error == null): true

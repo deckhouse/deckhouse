@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: e2e-instance
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: DVPInstanceClass
+      name: worker
+    minPerZone: 1
+    maxPerZone: 1
+  nodeTemplate:
+    labels:
+      app: e2e-instance-test

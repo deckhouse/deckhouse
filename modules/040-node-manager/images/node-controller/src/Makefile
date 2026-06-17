@@ -3,6 +3,12 @@ IMG ?= registry.deckhouse.io/deckhouse/node-controller:latest
 BINARY_NAME ?= node-controller
 GOBIN ?= $(shell go env GOPATH)/bin
 
+# Location for locally-installed tooling (envtest assets, setup-envtest).
+LOCALBIN ?= $(shell pwd)/bin
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+# Kubebuilder assets version for the envtest integration suite.
+ENVTEST_K8S_VERSION ?= 1.34.1
+
 # Go tools
 CONTROLLER_GEN = $(GOBIN)/controller-gen
 CONVERSION_GEN = $(GOBIN)/conversion-gen
@@ -35,8 +41,20 @@ lint: ## Run golangci-lint against code.
 	golangci-lint run ./...
 
 .PHONY: test
-test: ## Run tests.
-	go test ./... -coverprofile cover.out
+test: envtest ## Run the whole unit + envtest suite (verbose) with coverage.
+	@echo "==> [test] running go test -v (unit + envtest)..."
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -v -coverprofile cover.out
+	@echo "==> [test] total coverage:"
+	@go tool cover -func=cover.out | tail -1
+
+.PHONY: test-envtest
+test-envtest: envtest ## Run the Instance controller envtest suite (ENVTEST_DEBUG=1 dumps state before/after each spec; ENVTEST_LOGS=1 adds controller logs).
+	@echo "==> [test-envtest] running the Instance controller envtest specs (ENVTEST_DEBUG=1 = state dumps, ENVTEST_LOGS=1 = controller logs)..."
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+		go test ./internal/controller/instance/ -run TestInstanceControllerEnvtest -v -ginkgo.v -count=1 \
+		-coverpkg=./internal/controller/instance/... -coverprofile cover-instance.out
+	@echo "==> [test-envtest] Instance controller coverage (envtest specs only):"
+	@go tool cover -func=cover-instance.out | tail -1
 
 ##@ Build
 
@@ -87,6 +105,19 @@ conversion-gen: ## Download conversion-gen locally if necessary.
 .PHONY: gofumpt
 gofumpt: ## Download gofumpt locally if necessary.
 	@test -f $(GOFUMPT) || GOBIN=$(GOBIN) go install mvdan.cc/gofumpt@latest
+
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Install setup-envtest and download the kubebuilder assets (etcd, kube-apiserver, kubectl).
+	@echo "==> [envtest] kubebuilder assets (k8s $(ENVTEST_K8S_VERSION)): $$($(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"
+
+$(ENVTEST): $(LOCALBIN)
+	@test -s $(ENVTEST) || { \
+		echo "==> [envtest] installing setup-envtest..."; \
+		GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest; \
+	}
 
 ##@ Deployment
 

@@ -1,0 +1,6 @@
+version: "3"
+
+includes:
+  instance-lifecycle-scale:
+    taskfile: ./tests/instance-lifecycle-scale/Taskfile.yml
+    dir: ./tests/instance-lifecycle-scale

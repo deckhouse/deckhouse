@@ -1,0 +1,15 @@
+# The NodeGroup created by this test references this DVPInstanceClass. Assert it exists and
+# has a well-formed VM shape (without pinning exact values, so the test is not cluster-specific).
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: worker
+spec:
+  virtualMachine:
+    (cpu.cores > `0`): true
+    (memory.size != ''): true
+    (virtualMachineClassName != ''): true
+  rootDisk:
+    (size != ''): true
+    image:
+      (name != ''): true
