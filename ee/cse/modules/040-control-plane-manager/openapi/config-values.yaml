@@ -427,7 +427,8 @@ properties:
               Host path on masters nodes for etcd backup.
       defrag:
         type: object
-        default: {}
+        default:
+          cronSchedule: "*/3 * * * *"
         description: |
           etcd defragmentation parameters.
         properties:
@@ -441,7 +442,7 @@ properties:
               An explicit value always takes priority over the computed default.
           cronSchedule:
             type: string
-            default: "*/3 * * * *"
+            default: "0 1 * * *"
             x-examples:
             - "0 1 * * *"
             description: |
