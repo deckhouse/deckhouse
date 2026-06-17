@@ -187,9 +187,8 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		return nil, err
 	}
 	// Honest readiness: report Ready only once the webhook server is actually serving, instead of an
-	// unconditional Ping. Otherwise the pod is Ready while its webhooks cannot answer, and the apiserver
-	// keeps routing admission calls to it — turning a not-yet-serving replica into webhook timeouts (and,
-	// with failurePolicy: Fail, a queue lock).
+	// unconditional Ping. Otherwise the pod is Ready while its webhooks cannot answer yet, and the
+	// apiserver routes admission to a not-yet-serving replica (webhook timeouts on startup/rollout).
 	if err = runtimeManager.AddReadyzCheck("readyz", runtimeManager.GetWebhookServer().StartedChecker()); err != nil {
 		logger.Error(err, "unable to set up ready check")
 		return nil, err
