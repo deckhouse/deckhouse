@@ -10,38 +10,61 @@ This guide describes how to migrate an existing virtual machine from VMware to D
 
 The migration source can be:
 
-- a virtual machine distribution (an `OVA` file — an archive containing disk files in `vmdk` format, VM metadata in `ovf` format, and checksums in `mf` format);
+- a virtual machine distribution (an `OVA` file, a tar archive with disk files in `vmdk` format, VM metadata in `ovf` format, and checksums in `mf` format);
 - standalone `VMDK` disk files.
+
+## Migration approaches
+
+### Direct VMDK import
+
+DVP supports importing disks in `vmdk` format.
+You can upload a `VMDK` file from an OVA or vSphere export to a [`VirtualImage`](/modules/virtualization/cr.html#virtualimage) or [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage), create a disk from the image, and then a virtual machine.
+See [Images](/products/virtualization-platform/documentation/user/resource-management/images.html#load-an-image-from-the-command-line) for the upload procedure.
+
+{% alert level="warning" %}
+The platform imports the disk file as-is and does not adapt the guest OS for KVM.
+For disks from VMware this often causes problems: the VM fails to boot, cannot see the disk, or has no network (especially on Windows).
+Direct import is suitable only when the `VMDK` is already prepared for QEMU/KVM.
+{% endalert %}
+
+### Recommended path
+
+For typical VMs from VMware, use the `virt-v2v` utility: it converts `VMDK` to `qcow2` and adapts the guest OS for KVM (virtio drivers, bootloader, replacement of VMware devices).
+Upload the prepared disk directly to a [`VirtualDisk`](/modules/virtualization/cr.html#virtualdisk) with `type: Upload`.
+The volume is provisioned in the chosen StorageClass, bypassing DVCR.
+
+The step-by-step instructions below cover this scenario.
 
 ## Migration stages
 
 Migrating a VM from VMware to DVP includes the following stages:
 
 1. [Install the required tools](#install-tools).
-1. [Prepare a disk image in `qcow2` format](#convert-the-disk) (convert from `VMDK` to `qcow2`).
-1. [Upload the disk image to the cluster](#upload-the-disk-image) as a [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource.
+1. [Convert the disk](#convert-the-disk).
+1. [Upload the disk to the cluster](#upload-the-disk-to-the-cluster) as a [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource.
 1. [Create a virtual machine](#create-the-virtual-machine) ([VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource) that boots from this disk.
 
-## What you need for conversion
+## What you need for migration
 
 Before you start the migration, make sure you have:
 
 - access to the DVP cluster with the Deckhouse CLI utility (`d8`) installed and permissions to create virtualization resources in the target namespace;
-- a Linux machine (or equivalent) where `virt-v2v` and `libguestfs` can be installed, with enough disk space to unpack the virtual machine `OVA` distribution (or the standalone disk files) and to store the conversion output directory;
+- a Linux host with `virt-v2v` and `libguestfs` installed and enough disk space to unpack the `OVA` (or standalone `VMDK` files) and store the conversion output;
 - the VMware export files (`OVA` or `VMDK`).
 
-For more information about disks and ways to upload images, see [Disks](/products/virtualization-platform/documentation/user/resource-management/disks.html).
+For more details on uploading disks to the cluster, see [Disks](/products/virtualization-platform/documentation/user/resource-management/disks.html).
 
 ## Install tools
 
-The list of required tools and resources depends on the type of system installed in the VM (the guest OS) being migrated from VMware to DVP:
+On this step you prepare a conversion workstation.
+It does not have to be a DVP cluster node: any Linux host with internet access or a local package repository is sufficient.
 
-- for Linux, packages from the distribution repository are sufficient;
-- for Windows, you will additionally need a `virtio-win` ISO so that the guest OS works correctly with KVM virtual devices after migration.
+The packages you need depend on the guest OS in the VM you are migrating:
 
-This step prepares a conversion workstation. It does not need to be a DVP cluster node; any Linux host with internet access or a local package repository is sufficient.
+- for Linux, `virt-v2v` and `libguestfs` are sufficient;
+- for Windows, you will additionally need a `virtio-win` ISO so the guest OS works correctly with virtual devices in KVM after migration.
 
-Install the tools on the conversion workstation:
+Install the tools:
 
 {% tabs os %}
 {% tab "Ubuntu/Debian workstation" %}
@@ -75,6 +98,12 @@ Run the following command:
 sudo dnf install -y virt-v2v libguestfs-tools-c virtio-win
 ```
 
+If the VM being migrated runs Windows, set the path to the ISO via an environment variable:
+
+```bash
+export VIRTIO_WIN=/path/to/virtio-win.iso
+```
+
 {% endtab %}
 {% endtabs %}
 
@@ -82,11 +111,15 @@ Then proceed to converting the disk.
 
 ## Convert the disk
 
-At this stage you turn VMware disk data into one or more `qcow2` files that DVP can use as virtual machine disk volumes. If you already have a `VMDK` path, skip ahead to the [Convert VMDK to qcow2 via virt-v2v](#convert-vmdk-to-qcow2-via-virt-v2v) subsection. If you are using a virtual machine `OVA` distribution, unpack it first.
+On this step you convert VMware data into one or more `qcow2` files that DVP can use as virtual machine volumes.
+If you already have a ready `VMDK`, go straight to [Convert VMDK to qcow2 via virt-v2v](#convert-vmdk-to-qcow2-via-virt-v2v).
+If you are using a virtual machine `OVA` distribution, [unpack it first](#extract-an-ova).
 
 ### Extract an OVA
 
-An `OVA` file is a tar archive that bundles an OVF descriptor, a manifest, and one or more `VMDK` images. Unpacking exposes the disk files the `virt-v2v` utility expects.
+An `OVA` file is a tar archive with a manifest, an `OVF` descriptor, and one or more `VMDK` images.
+Unpacking gives you the disk file path for `virt-v2v`.
+Keep the `OVF` file: you will use it later for CPU, memory, and bootloader settings in the VirtualMachine resource.
 
 Extract everything if you want to verify checksums or inspect the OVF:
 
@@ -115,7 +148,8 @@ Virtual machines with multiple disks contain several `*.vmdk` files. Convert eac
 
 ### Convert VMDK to qcow2 via virt-v2v
 
-With `-i disk`, the `virt-v2v` utility processes a local `VMDK` and saves the result into the directory you specify. To perform the conversion, run:
+With `-i disk`, `virt-v2v` processes a local `VMDK` and saves the result into the directory you specify.
+To perform the conversion, run:
 
 {% tabs os_convert %}
 {% tab "For a Linux guest OS" %}
@@ -140,11 +174,11 @@ VIRTIO_WIN=/path/to/virtio-win.iso virt-v2v -i disk ./machine-disk1.vmdk \
 
 After the conversion, a file such as `./out/machine.qcow2` will appear under `./out` (the basename often matches the original VM name from the metadata). That file is what you upload to the cluster next.
 
-## Upload the disk image
+## Upload the disk to the cluster
 
-This subsection explains how to transfer the `qcow2` image into DVP through the Kubernetes API.
-
-At this stage the `qcow2` image becomes a persistent volume in the cluster. In DVP this is done with a `VirtualDisk` whose data source is `Upload`.
+This section describes how to transfer the prepared `qcow2` image to DVP through the Kubernetes API.
+At this stage the file becomes a persistent volume in the cluster: create a VirtualDisk with `type: Upload` and transfer the `qcow2` over HTTP.
+The disk is provisioned in the chosen StorageClass, bypassing DVCR.
 
 Uploading the disk image to the cluster includes the following steps:
 
@@ -176,7 +210,9 @@ Select the class name that fits your storage requirements for VM disks.
 
 ### Create a VirtualDisk for upload
 
-Create the disk resource, specifying StorageClass and volume size. `spec.persistentVolumeClaim.size` must be at least the actual size of the `qcow2` you upload (if unsure, leave margin—you can recreate the resource with a larger PVC).
+Create the disk resource, specifying StorageClass and volume size.
+`spec.persistentVolumeClaim.size` must be at least the actual size of the `qcow2` you upload.
+If unsure, leave margin: if the size is insufficient, recreate the resource with a larger PVC.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -193,7 +229,7 @@ spec:
 EOF
 ```
 
-The object should move to `WaitForUserUpload`, meaning the volume is allocated and you can start transferring the file.
+After creation the resource moves to `WaitForUserUpload`: the volume is allocated and you can start transferring the file.
 
 ### Get upload URLs
 
@@ -247,13 +283,15 @@ NAMESPACE   NAME             PHASE   CAPACITY   AGE
 default     uploaded-disk    Ready   10Gi       1m
 ```
 
-If the phase stays on `WaitForUserUpload` for a long time or the resource enters `Failed`, check messages with `kubectl describe vd uploaded-disk` and events in the corresponding namespace.
+If the phase stays on `WaitForUserUpload` for a long time or the resource enters `Failed`, check messages with `d8 k describe vd uploaded-disk` and events in the corresponding namespace.
 
 Continue when the disk reaches `Ready`.
 
 ## Create the virtual machine
 
-The final step is to describe the VM you want to run: CPU and memory, networks, and which disk is bootable. VMware configuration (`OVF`/`VMX`) is not imported automatically. Carry over the parameters manually using the mapping table below and the example VirtualMachine YAML manifest (VirtualMachine resource).
+The final step is to describe the VM that will boot from the migrated disk.
+Specify how much CPU and memory to allocate, which network to attach, and which disk is bootable.
+VMware configuration (`OVF`/`VMX`) is not imported directly: carry over parameters manually using the `OVF` file and the mapping table below.
 
 ### VMware vs DVP terminology
 
@@ -262,7 +300,6 @@ If you know vSphere, the following table maps familiar VMware objects to Kuberne
 | VMware                  | DVP                                                                                                                                                           | Description                      |
 |-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------|
 | Datastore               | StorageClass                                                                                                                                                  | Disk backing storage             |
-| VM hardware version     | [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass)                                                                                    | VM class (CPU, memory, policies) |
 | VMX                     | [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).spec                                                                                         | VM specification                 |
 | Virtual disk (VMDK)     | [VirtualDisk](/modules/virtualization/cr.html#virtualdisk)                                                                                                    | VM disk                          |
 | ISO image               | [VirtualImage](/modules/virtualization/cr.html#virtualimage) (`cdrom: true`)                                                                                  | Installation or driver ISO       |
@@ -306,6 +343,8 @@ EOF
 
 Set `osType: Windows` for Windows guests.
 
+If the source VM in VMware used UEFI boot, add `bootloader: EFI` (see the parameter table below).
+
 If additional networks and the SDN module are configured in the cluster, you can add interfaces alongside the primary network:
 
 ```yaml
@@ -319,16 +358,18 @@ Additional capabilities (cloud-init, multiple disks, VM classes for production e
 
 #### Common spec fields
 
-The following table lists fields you most often need to verify after migrating from VMware.
+The following table lists fields you most often need to verify after migration from VMware.
+CPU, memory, and bootloader values can usually be taken from the unpacked `OVF` file.
 
-| Field                         | Description                                               |
-|-------------------------------|-----------------------------------------------------------|
-| `virtualMachineClassName`     | VM class, e.g. `generic`, `serverful`, `high-performance` |
-| `osType`                      | `Generic` (Linux and others) or `Windows`                 |
-| `cpu.cores`                   | Number of vCPUs                                           |
-| `memory.size`                 | RAM                                                       |
-| `blockDeviceRefs`             | Disks and images; list order is boot order                |
-| `provisioning.type: UserData` | cloud-init user data for first boot of the guest OS       |
+| Field                         | Description                                                                                  |
+|-------------------------------|----------------------------------------------------------------------------------------------|
+| `virtualMachineClassName`     | VM class, e.g. `generic`, `serverful`, `high-performance`                                    |
+| `osType`                      | `Generic` (Linux and others) or `Windows`                                                    |
+| `bootloader`                  | Boot firmware: `BIOS`, `EFI`, or `EFIWithSecureBoot`; for UEFI VMs in VMware, set `EFI`        |
+| `cpu.cores`                   | Number of vCPUs                                                                              |
+| `memory.size`                 | RAM                                                                                          |
+| `blockDeviceRefs`             | Disks and images; list order is boot order                                                     |
+| `provisioning.type: UserData` | cloud-init user data for first boot of the guest OS                                          |
 
 ### Check VM status
 
@@ -345,7 +386,7 @@ NAME    PHASE     NODE           IPADDRESS     AGE
 my-vm   Running   virtlab-pt-2   10.66.10.12   2m
 ```
 
-If the phase is `Pending` or startup fails, use `d8 k describe vm my-vm` and review virtualization component logs in the cluster.
+If the phase is `Pending` or startup fails, use `d8 k describe vm my-vm`, the serial console `d8 v console my-vm` (see [Connect to the VM](#connect-to-the-vm) below), and review virtualization component logs in the cluster.
 
 ### Connect to the VM
 
