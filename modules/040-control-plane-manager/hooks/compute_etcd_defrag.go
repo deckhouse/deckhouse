@@ -24,13 +24,17 @@ import (
 )
 
 const (
-	etcdDefragEnabledConfigPath   = "controlPlaneManager.etcd.defrag.enabled"
-	etcdDefragScheduleConfigPath  = "controlPlaneManager.etcd.defrag.cronSchedule"
-	etcdDefragEnabledInternalPath = "controlPlaneManager.internal.etcdDefrag.enabled"
+	etcdDefragEnabledConfigPath    = "controlPlaneManager.etcd.defrag.enabled"
+	etcdDefragScheduleConfigPath   = "controlPlaneManager.etcd.defrag.cronSchedule"
+	etcdDefragEnabledInternalPath  = "controlPlaneManager.internal.etcdDefrag.enabled"
 	etcdDefragScheduleInternalPath = "controlPlaneManager.internal.etcdDefrag.cronSchedule"
 
-	mastersNodeInternalPath      = "controlPlaneManager.internal.mastersNode"
+	mastersNodeInternalPath        = "controlPlaneManager.internal.mastersNode"
 	hasEtcdArbiterNodeInternalPath = "controlPlaneManager.internal.hasEtcdArbiterNode"
+
+	// etcdDefragDefaultCronSchedule is used when cronSchedule is not set in ModuleConfig.
+	// The OpenAPI schema default is not applied when the parent object defaults to {}.
+	etcdDefragDefaultCronSchedule = "*/3 * * * *"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -54,6 +58,9 @@ func handleComputeEtcdDefrag(_ context.Context, input *go_hook.HookInput) error 
 	}
 
 	cronSchedule := input.Values.Get(etcdDefragScheduleConfigPath).String()
+	if cronSchedule == "" {
+		cronSchedule = etcdDefragDefaultCronSchedule
+	}
 
 	input.Values.Set(etcdDefragEnabledInternalPath, enabled)
 	input.Values.Set(etcdDefragScheduleInternalPath, cronSchedule)
