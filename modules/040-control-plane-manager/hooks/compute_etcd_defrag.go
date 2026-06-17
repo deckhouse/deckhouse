@@ -31,6 +31,8 @@ const (
 
 	mastersNodeInternalPath        = "controlPlaneManager.internal.mastersNode"
 	hasEtcdArbiterNodeInternalPath = "controlPlaneManager.internal.hasEtcdArbiterNode"
+
+	etcdDefragDefaultCronSchedule = "*/3 * * * *"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -54,6 +56,9 @@ func handleComputeEtcdDefrag(_ context.Context, input *go_hook.HookInput) error 
 	}
 
 	cronSchedule := input.Values.Get(etcdDefragScheduleConfigPath).String()
+	if cronSchedule == "" {
+		cronSchedule = etcdDefragDefaultCronSchedule
+	}
 
 	input.Values.Set(etcdDefragEnabledInternalPath, enabled)
 	input.Values.Set(etcdDefragScheduleInternalPath, cronSchedule)
