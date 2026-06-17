@@ -445,8 +445,7 @@ properties:
             x-examples:
             - "0 1 * * *"
             description: |
-              Defragmentation schedule in cron format (UTC). Temporary default `*/3 * * * *` is used
-              for testing; change to `0 1 * * *` (or similar) before going to production.
+              Defragmentation schedule in cron format (UTC).
       maxDbSize:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) parameter.
