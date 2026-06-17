@@ -64,7 +64,7 @@ The module consists of the following components:
 
    * **nginx**: Sidecar container that is NGINX proxy server, which is used to publish static files. It is an [open-source project](https://github.com/nginx/nginx).
 
-1. **Label-enforcer**: A component that authorizes and proxyes user requests to metrics (prometheus-main via the label-proxy service) and logs (loki via the logs-gateway service) sources, specified in the Datasource resources of grafana component API. Label-enforcer verifies RBAC access to monitoring data based on user rights, retrieves a list of available namespaces, and enriches requests with labels to filter requested data within user namespaces. For more information about access control, refer to [the module documentation](/modules/observability/metrics.html) section. Label-enforcer handles not only read requests, but also write requests.
+1. **Label-enforcer**: A component that authorizes and proxies user requests to metrics (prometheus-main via the label-proxy service) and logs (loki via the logs-gateway service) sources, specified in the Datasource resources of grafana component API. Label-enforcer verifies RBAC access to monitoring data based on user rights, retrieves a list of available namespaces, and enriches requests with labels to filter requested data within user namespaces. For more information about access control, refer to [the module documentation](/modules/observability/metrics.html) section. Label-enforcer handles not only read requests, but also write requests.
 
    It consists of a single container:
 
@@ -91,7 +91,7 @@ The module interacts with the following components:
 
 1. **Prometheus**: Uses it as a data source and destination.
 1. **Loki**: Uses it as a data source.
-1. **Alerts recievers**: Sends alers.
+1. **Alerts receivers**: Sends alerts.
 1. [DOP](/products/observability-platform/): Uses it as a data destination (metrics from cluster nodes).
 
 The following external components interact with the module:
