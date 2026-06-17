@@ -29,8 +29,11 @@ type DvpProviderClusterConfiguration struct {
 }
 
 type DvpProvider struct {
-	KubeconfigDataBase64 *string `json:"kubeconfigDataBase64,omitempty" yaml:"kubeconfigDataBase64,omitempty"`
-	Namespace            *string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	KubeconfigDataBase64 *string           `json:"kubeconfigDataBase64,omitempty" yaml:"kubeconfigDataBase64,omitempty"`
+	Namespace            *string           `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	NetworkPolicy        *string           `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
+	IngressPorts         []int             `json:"ingressPorts,omitempty" yaml:"ingressPorts,omitempty"`
+	AdditionalVMLabels   map[string]string `json:"additionalVMLabels,omitempty" yaml:"additionalVMLabels,omitempty"`
 }
 
 type DvpModuleConfiguration struct {
