@@ -57,7 +57,7 @@ func NewServer(cfg *rest.Config, scheme *runtime.Scheme, options ServerConfig) (
 		return nil, err
 	}
 
-	if err := manager.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := manager.AddReadyzCheck("readyz", manager.GetWebhookServer().StartedChecker()); err != nil {
 		return nil, err
 	}
 
