@@ -238,6 +238,12 @@ func TestIsGranted_SystemRequestBypass(t *testing.T) {
 	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); resp.Allowed {
 		t.Fatal("a normal user must still be denied an ungranted value")
 	}
+	// system:masters is NOT an automated writer: a human cluster-admin stays subject to the guardrail.
+	rm := review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)
+	rm.Request.UserInfo.Groups = []string{"system:masters"}
+	if resp := serve(t, v, "/is-granted", rm); resp.Allowed {
+		t.Fatal("system:masters must remain subject to the grant guardrail (not an automated system writer)")
+	}
 }
 
 func TestIsGranted_ManagedByNamespaceBypass(t *testing.T) {

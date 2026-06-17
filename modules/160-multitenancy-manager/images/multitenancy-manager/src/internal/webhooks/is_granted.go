@@ -36,6 +36,26 @@ import (
 	"controller/internal/resolve"
 )
 
+// automatedSystemWriterGroups are the AUTOMATED system writers whose requests must never be denied by
+// the grant guardrail, otherwise a module's Helm release (applied by the deckhouse-controller from
+// system:serviceaccounts:d8-system) deadlocks the module's queue. Unlike protect.go's broader
+// systemBypassGroups, system:masters is intentionally absent so a human cluster-admin remains subject
+// to the guardrail.
+var automatedSystemWriterGroups = map[string]struct{}{
+	"system:nodes":                       {},
+	"system:serviceaccounts:kube-system": {},
+	"system:serviceaccounts:d8-system":   {},
+}
+
+func isAutomatedSystemWriter(req *admissionv1.AdmissionRequest) bool {
+	for _, g := range req.UserInfo.Groups {
+		if _, ok := automatedSystemWriterGroups[g]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 var _ http.Handler = &IsGrantedValidator{}
 
 // IsGrantedValidator is the /is-granted validating webhook: it allows or denies the use of a granted
@@ -90,13 +110,16 @@ func (v *IsGrantedValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // decide returns the admission response. Availability is enforced for every matched reference; on
 // UPDATE values already present in the old object are grandfathered so existing objects are not broken.
 func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.AdmissionRequest, log logr.Logger) (*admissionv1.AdmissionResponse, error) {
-	// NEVER deny a system / cluster-component request. The deckhouse-controller SA (group
+	// NEVER deny an AUTOMATED system writer. The deckhouse-controller SA (group
 	// system:serviceaccounts:d8-system) applies EVERY module's Helm release server-side; a denial here
 	// fails that install, which addon-operator then retries forever — deadlocking the module's queue
 	// (this is exactly how an AuthorizationRule/CAR-derived RoleBinding locked the user-authz module).
-	// The grant allow-list exists to police PROJECT USERS, who instead get a fast, terminal admission
-	// denial. System writers must always pass. Mirrors protect.go's isSystemRequest exemption.
-	if isSystemRequest(req) {
+	// kube-system controllers / the kubelet must not be blocked during teardown either. The grant
+	// allow-list exists to police USERS, who instead get a fast, terminal admission denial.
+	// NOTE: system:masters is deliberately NOT exempt — a human cluster-admin stays subject to the
+	// guardrail (grant the resource via a ClusterResourceGrantPolicy, or detach the namespace), so the
+	// protection cannot be silently bypassed from a kubeconfig.
+	if isAutomatedSystemWriter(req) {
 		return allowedResponse(req.UID), nil
 	}
 	if namespaces.IsSystem(req.Namespace) || req.SubResource != "" || req.Namespace == "" {
