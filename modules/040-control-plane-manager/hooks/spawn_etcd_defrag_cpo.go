@@ -121,14 +121,17 @@ func filterDefragStateCM(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Get(etcdDefragEnabledInternalPath).Bool() {
+		input.Logger.Debug("etcd defrag disabled, skipping")
 		return nil
 	}
 	if !input.Values.Get(clusterIsBootstrappedPath).Bool() {
+		input.Logger.Debug("cluster not bootstrapped yet, skipping")
 		return nil
 	}
 
 	cronSpec := input.Values.Get(etcdDefragScheduleInternalPath).String()
 	if cronSpec == "" {
+		input.Logger.Warn("etcd defrag cronSchedule is empty, skipping")
 		return nil
 	}
 
@@ -156,13 +159,26 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	}
 
 	nextSlot := sched.Next(lastHandled)
+	input.Logger.Info("etcd defrag cron check",
+		"currentSlot", currentSlot.Format(time.RFC3339),
+		"lastHandled", lastHandled.Format(time.RFC3339),
+		"nextSlot", nextSlot.Format(time.RFC3339),
+	)
+
 	if currentSlot.Before(nextSlot) {
+		input.Logger.Debug("etcd defrag: next slot not reached yet, skipping")
 		return nil
 	}
 
 	// Grace period: if the slot is older than defragGracePeriod (e.g. Deckhouse was down),
 	// record it as handled and skip — running a stale defrag is pointless.
-	if currentSlot.Sub(nextSlot) > defragGracePeriod {
+	// Skip this check on the very first run (no CM yet) — always fire immediately.
+	if !lastHandled.IsZero() && currentSlot.Sub(nextSlot) > defragGracePeriod {
+		input.Logger.Warn("etcd defrag: slot missed by more than grace period, skipping",
+			"nextSlot", nextSlot.Format(time.RFC3339),
+			"delay", currentSlot.Sub(nextSlot).String(),
+			"gracePeriod", defragGracePeriod.String(),
+		)
 		stateData := map[string]string{defragLastSlotKey: nextSlot.Format(time.RFC3339)}
 		input.PatchCollector.CreateOrUpdate(buildDefragStateCM(stateData))
 		return nil
@@ -192,13 +208,17 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	}
 
 	if len(nodeNames) == 0 {
+		input.Logger.Warn("etcd defrag: no etcd nodes found, skipping")
 		return nil
 	}
+
+	input.Logger.Info("etcd defrag: spawning CPOs", "nodes", nodeNames, "slot", nextSlot.Format(time.RFC3339))
 
 	slotSuffix := nextSlot.Format("060102-1504")
 	for _, nodeName := range nodeNames {
 		cpo := buildDefragCPO(nodeName, slotSuffix)
 		input.PatchCollector.CreateIfNotExists(cpo)
+		input.Logger.Info("etcd defrag: CPO created", "name", "etcd-defrag-"+nodeName+"-"+slotSuffix)
 	}
 
 	stateData := map[string]string{
