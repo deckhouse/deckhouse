@@ -59,7 +59,7 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
+	err = retry.NewLoop("Get converge state from Kubernetes cluster", 25, 1*time.Second).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 
@@ -91,7 +91,7 @@ func (s *inSecretStateStore) Delete(ctx *Context) error {
 	if err != nil {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
-	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
+	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 25, 1*time.Second).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 
@@ -148,7 +148,7 @@ func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error 
 		},
 	}
 
-	return retry.NewLoop("Save dhctl converge state", 45, 10*time.Second).
+	return retry.NewLoop("Save dhctl converge state", 450, 1*time.Second).
 		RunContext(
 			convergeCtx.Ctx(),
 			func() error {

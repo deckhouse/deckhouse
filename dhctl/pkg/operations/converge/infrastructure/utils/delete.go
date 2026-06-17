@@ -30,8 +30,8 @@ import (
 func DeleteNodeObjectFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
 	return retry.NewLoop(
 		fmt.Sprintf("Delete node %s", nodeName),
-		10,
-		5*time.Second,
+		50,
+		1*time.Second,
 	).RunContext(ctx, func() error {
 		err := kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
 		if err != nil {

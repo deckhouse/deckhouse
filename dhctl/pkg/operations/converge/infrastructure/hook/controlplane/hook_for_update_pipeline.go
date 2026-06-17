@@ -224,7 +224,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %w", h.nodeToConverge, err)
 	}
 
-	err = retry.NewLoop("Check Stronghold readiness after node converge", 45, 10*time.Second).RunContext(ctx, func() error {
+	err = retry.NewLoop("Check Stronghold readiness after node converge", 450, 1*time.Second).RunContext(ctx, func() error {
 		ready, err := NewStrongholdReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
 		if err != nil {
 			return fmt.Errorf("failed to check Stronghold readiness: %w", err)
@@ -240,7 +240,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return err
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Check control-plane is ready on node '%s'", h.nodeToConverge), 45, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Check control-plane is ready on node '%s'", h.nodeToConverge), 450, 1*time.Second).RunContext(ctx, func() error {
 		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
 		if err != nil {
 			return fmt.Errorf("failed to check the master node '%s' readiness: %w", h.nodeToConverge, err)
@@ -300,7 +300,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 450, 1*time.Second).
 		RunContext(ctx, func() error {
 			return task.CreateOrUpdate(ctx)
 		})
