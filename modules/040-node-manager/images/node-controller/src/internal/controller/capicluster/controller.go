@@ -28,9 +28,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	sigsyaml "sigs.k8s.io/yaml"
 
+	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -50,23 +53,49 @@ type Reconciler struct {
 	register.Base
 }
 
-func (r *Reconciler) SetupWatches(_ register.Watcher) {}
+func (r *Reconciler) SetupWatches(w register.Watcher) {
+	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
+		func(_ context.Context, _ client.Object) []reconcile.Request {
+			return []reconcile.Request{{NamespacedName: types.NamespacedName{
+				Name:      cloudProviderSecretName,
+				Namespace: cloudProviderSecretNamespace,
+			}}}
+		},
+	))
+}
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-
-	// Only react to the cloud-provider secret.
 	if req.Name != cloudProviderSecretName || req.Namespace != cloudProviderSecretNamespace {
 		return ctrl.Result{}, nil
 	}
 
-	// Read cloud-provider secret.
+	clusterConfig, err := r.readClusterConfiguration(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.ensureCloudCluster(ctx, clusterConfig); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.ensureStaticCluster(ctx, clusterConfig); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *Reconciler) ensureCloudCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
+	logger := log.FromContext(ctx)
+
 	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, req.NamespacedName, secret); err != nil {
+	if err := r.Client.Get(ctx, types.NamespacedName{
+		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
+	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			return ctrl.Result{}, nil
+			return nil
 		}
-		return ctrl.Result{}, fmt.Errorf("get cloud-provider secret: %w", err)
+		return fmt.Errorf("get cloud-provider secret: %w", err)
 	}
 
 	clusterName := string(secret.Data["capiClusterName"])
@@ -74,23 +103,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	infraAPIVersion := string(secret.Data["capiClusterAPIVersion"])
 
 	if clusterName == "" || clusterKind == "" {
-		logger.V(1).Info("cloud-provider secret missing capi fields, skipping")
-		return ctrl.Result{}, nil
+		return nil
 	}
 	if infraAPIVersion == "" {
 		infraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
 	}
 
-	// Extract apiGroup from apiVersion (e.g. "infrastructure.cluster.x-k8s.io/v1alpha1" -> "infrastructure.cluster.x-k8s.io").
 	infraAPIGroup := infraAPIVersion
 	if idx := strings.LastIndex(infraAPIGroup, "/"); idx >= 0 {
 		infraAPIGroup = infraAPIGroup[:idx]
-	}
-
-	// Read cluster configuration for network settings.
-	clusterConfig, err := r.readClusterConfiguration(ctx)
-	if err != nil {
-		return ctrl.Result{}, err
 	}
 
 	commonLabels := map[string]interface{}{
@@ -99,7 +120,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		"app":      "capi-controller-manager",
 	}
 
-	// Create Cluster (if not exists).
 	cluster := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "Cluster",
@@ -128,10 +148,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}}
 
 	if err := r.createIfNotExists(ctx, cluster); err != nil {
-		return ctrl.Result{}, fmt.Errorf("create Cluster: %w", err)
+		return fmt.Errorf("create Cluster: %w", err)
 	}
 
-	// Create MachineHealthCheck (if not exists).
 	mhc := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "MachineHealthCheck",
@@ -158,11 +177,99 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}}
 
 	if err := r.createIfNotExists(ctx, mhc); err != nil {
-		return ctrl.Result{}, fmt.Errorf("create MachineHealthCheck: %w", err)
+		return fmt.Errorf("create MachineHealthCheck: %w", err)
 	}
 
-	logger.Info("ensured CAPI cluster resources", "cluster", clusterName)
-	return ctrl.Result{}, nil
+	logger.Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
+	return nil
+}
+
+func (r *Reconciler) ensureStaticCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
+	logger := log.FromContext(ctx)
+
+	ngList := &deckhousev1.NodeGroupList{}
+	if err := r.Client.List(ctx, ngList); err != nil {
+		return fmt.Errorf("list NodeGroups: %w", err)
+	}
+
+	hasStatic := false
+	for i := range ngList.Items {
+		if ngList.Items[i].Spec.StaticInstances != nil {
+			hasStatic = true
+			break
+		}
+	}
+	if !hasStatic {
+		return nil
+	}
+
+	staticLabels := map[string]interface{}{
+		"heritage": "deckhouse",
+		"module":   "node-manager",
+		"app":      "caps-controller-manager",
+	}
+
+	cluster := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "cluster.x-k8s.io/v1beta2",
+		"kind":       "Cluster",
+		"metadata": map[string]interface{}{
+			"name":      "static",
+			"namespace": capiNamespace,
+			"labels":    staticLabels,
+		},
+		"spec": map[string]interface{}{
+			"clusterNetwork": map[string]interface{}{
+				"pods":          map[string]interface{}{"cidrBlocks": []interface{}{clusterConfig.PodSubnetCIDR}},
+				"services":      map[string]interface{}{"cidrBlocks": []interface{}{clusterConfig.ServiceSubnetCIDR}},
+				"serviceDomain": clusterConfig.ClusterDomain,
+			},
+			"infrastructureRef": map[string]interface{}{
+				"apiGroup": "infrastructure.cluster.x-k8s.io",
+				"kind":     "StaticCluster",
+				"name":     "static",
+			},
+			"controlPlaneRef": map[string]interface{}{
+				"apiGroup": "infrastructure.cluster.x-k8s.io",
+				"kind":     "DeckhouseControlPlane",
+				"name":     "static-control-plane",
+			},
+		},
+	}}
+
+	if err := r.createIfNotExists(ctx, cluster); err != nil {
+		return fmt.Errorf("create static Cluster: %w", err)
+	}
+
+	mhc := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "cluster.x-k8s.io/v1beta2",
+		"kind":       "MachineHealthCheck",
+		"metadata": map[string]interface{}{
+			"name":      "static-machine-health-check",
+			"namespace": capiNamespace,
+			"labels":    staticLabels,
+		},
+		"spec": map[string]interface{}{
+			"clusterName": "static",
+			"selector": map[string]interface{}{
+				"matchLabels": map[string]interface{}{
+					"cluster.x-k8s.io/cluster-name": "static",
+				},
+			},
+			"checks": map[string]interface{}{
+				"nodeStartupTimeoutSeconds": int64(1200),
+				"unhealthyNodeConditions": []interface{}{
+					map[string]interface{}{"type": "Ready", "status": "Unknown", "timeoutSeconds": int64(2147483647)},
+				},
+			},
+		},
+	}}
+
+	if err := r.createIfNotExists(ctx, mhc); err != nil {
+		return fmt.Errorf("create static MachineHealthCheck: %w", err)
+	}
+
+	logger.Info("ensured static CAPI cluster resources")
+	return nil
 }
 
 func (r *Reconciler) createIfNotExists(ctx context.Context, obj *unstructured.Unstructured) error {
