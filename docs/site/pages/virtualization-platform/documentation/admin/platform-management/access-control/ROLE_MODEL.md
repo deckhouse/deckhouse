@@ -190,7 +190,7 @@ The module creates special aggregated cluster roles (`ClusterRole`). By using th
   For example, the `d8:use:role:manager` role in `RoleBinding` enables deleting/creating/editing the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
 
 {% alert level="warning" %}
-Please note the specifics of configuring combined access and sharing using RoleBinding and ClusterAuthorizationRule (CAR) for the same user when multi-tenancy mode is enabled in the cluster (parameter [`enableMultitenancy = true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
+Pay attention to the specifics of configuring combined access and shared use of RoleBinding and ClusterAuthorizationRule (CAR) for the same user when multitenancy mode is enabled in the cluster (parameter [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
 {% endalert %}
 
 ### Default access list for each role

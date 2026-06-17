@@ -33,12 +33,16 @@ The roles created by the module are divided into two classes:
 - [Use roles](#use-roles) — for assigning rights to users (such as application developers) **in a specific namespace**.
 - [Manage roles](#manage-roles) — for assigning rights to administrators.
 
+{: #rolebinding-car .anchored}
+
 {% alert level="warning" %}
-Please note the specifics of configuring combined access and the use of RoleBinding and ClusterAuthorizationRule (CAR) for the same user.
+Pay attention to the specifics of configuring combined access and the use of RoleBinding and ClusterAuthorizationRule (CAR) for the same user.
 
-If multitenancy mode is enabled in the cluster (the parameter [`enableMultitenancy = true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)) and a ClusterAuthorizationRule (CAR) exists for the user or group specified in the RoleBinding with rules for a namespace other than the target namespace (specified in the RoleBinding), the rules from the ClusterRole specified in the RoleBinding will not apply. This is due to the behavior of the `user-authz` module’s webhook. It checks whether a request belongs to authorized namespaces at the group level. If a user’s group is bound to a CAR with a selector limited to a specific namespace, all requests to namespaces not specified in the CAR will be rejected, regardless of whether the user has a RoleBinding for those namespaces.
+If multitenancy mode is enabled in the cluster (the parameter [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)) and a ClusterAuthorizationRule (CAR) exists for the user or group specified in the RoleBinding with rules for a namespace other than the target namespace (specified in the RoleBinding), the rules from the ClusterRole specified in the RoleBinding will not apply.
 
-It is recommended not to use RoleBinding for a user in conjunction with CAR. If combined access is required, use AuthorizationRule instead of ClusterAuthorizationRule.
+This is due to the behavior of the `user-authz` module’s webhook. It checks whether a request belongs to authorized namespaces at the group level. If a user’s group is bound to a CAR with a selector limited to a specific namespace, all requests to namespaces not specified in the CAR will be rejected, regardless of whether the user has a RoleBinding for those namespaces.
+
+It is recommended not to use RoleBinding for a user together with CAR. If combined access is required, use AuthorizationRule instead of ClusterAuthorizationRule.
 {% endalert %}
 
 ### Use roles

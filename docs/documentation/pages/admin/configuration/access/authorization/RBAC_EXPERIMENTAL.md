@@ -46,7 +46,7 @@ The roles created by the module fall into two categories:
 - [Manage roles](#manage-roles) — for granting administrator permissions.
 
 {% alert level="warning" %}
-Please note the specifics of configuring combined access and sharing using RoleBinding and ClusterAuthorizationRule (CAR) for the same user when multi-tenancy mode is enabled in the cluster (parameter [`enableMultitenancy = true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
+Pay attention to the specifics of configuring combined access and shared use of RoleBinding and ClusterAuthorizationRule (CAR) for the same user when multitenancy mode is enabled in the cluster (parameter [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). For more details, see the [`user-authz`](/modules/user-authz/#rolebinding-car) module documentation.
 {% endalert %}
 
 ## Use roles

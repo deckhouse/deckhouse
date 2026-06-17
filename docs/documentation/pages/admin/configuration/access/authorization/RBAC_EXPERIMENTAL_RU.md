@@ -33,7 +33,7 @@ lang: ru
 - [Manage-роли](#manage-роли) — для назначения прав администраторам.
 
 {% alert level="warning" %}
-Обратите внимание на особенности настройки комбинированного доступа и совместного использования RoleBinding и ClusterAuthorizationRule (CAR) для одного и того же пользователя при включенном в кластере режиме мультитенантности (параметр [`enableMultitenancy = true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). Подробнее — в документации модуля [`user-authz`](/modules/user-authz/#rolebinding-car).
+Обратите внимание на особенности настройки комбинированного доступа и совместного использования RoleBinding и ClusterAuthorizationRule (CAR) для одного и того же пользователя при включенном в кластере режиме мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). Подробнее — в документации модуля [`user-authz`](/modules/user-authz/#rolebinding-car).
 {% endalert %}
 
 ## Use-роли
