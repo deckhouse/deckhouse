@@ -370,6 +370,8 @@ lint-doc-spellcheck-pr:
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
 	@echo "Sorting wordlist..."
 	@sort ./tools/docs/spelling/wordlist -o ./tools/docs/spelling/wordlist
+	@echo "Validating wordlist..."
+	@./tools/docs/spelling/validate_wordlist.sh
 	@echo "Generating dictionary..."
 	@test -f ./tools/docs/spelling/dictionaries/dev_OPS.dic && rm ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@touch ./tools/docs/spelling/dictionaries/dev_OPS.dic
