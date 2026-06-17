@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,13 +55,14 @@ func (c *virtualConfigurator) configureOptions(opts *controllerruntime.Options) 
 				},
 			},
 			&controlplanev1alpha1.ControlPlaneNode{}: {
-				Namespaces: map[string]cache.Config{
-					constants.KubeSystemNamespace: {},
-				},
+				Label: labels.SelectorFromSet(labels.Set{
+					constants.ControlPlaneTypeLabelKey: string(constants.ControlPlaneTypeVirtual),
+				}),
 			},
 		},
 	}
 }
+
 func (c *virtualConfigurator) configureRuntimeManager(runtimeManager runtimemanager.Manager) error {
 	if err := virtualcontrolplaneconfiguration.BuildController(runtimeManager); err != nil {
 		return fmt.Errorf("build virtual-control-plane-configuration controller: %w", err)
