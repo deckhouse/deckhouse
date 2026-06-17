@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const testInstanceClassKind = "DVPInstanceClass"
@@ -32,7 +31,7 @@ func masterNodeGroupState(nodeGroups []cpapi.NodeGroup) *State {
 
 func validMasterNodeGroup() cpapi.NodeGroup {
 	return cpapi.NodeGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: "master"},
+		ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 		Spec: cpapi.NodeGroupSpec{
 			NodeType: cpapi.NodeTypeCloudPermanent,
 			CloudInstances: &cpapi.CloudInstances{

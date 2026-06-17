@@ -15,11 +15,6 @@
 // Package api defines typed Kubernetes resource models shared by cloud-provider modules.
 package api
 
-import (
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
 const (
 	// CredentialsSecretType is the Kubernetes Secret type that marks provider credentials.
 	CredentialsSecretType = "cloud-provider.deckhouse.io/credentials"
@@ -55,15 +50,15 @@ const (
 
 // CredentialSecret is a typed view of a provider credential Secret.
 type CredentialSecret struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	TypeMeta   `json:",inline"`
+	ObjectMeta `json:"metadata,omitempty"`
 
 	// Type is the Kubernetes Secret type.
-	Type string
+	Type string `json:"type,omitempty"`
 	// Data holds typed binary Secret data fields.
-	Data CredentialSecretData
+	Data CredentialSecretData `json:"data,omitempty"`
 	// StringData holds typed string Secret data fields.
-	StringData CredentialSecretStringData
+	StringData CredentialSecretStringData `json:"stringData,omitempty"`
 }
 
 // CredentialSecretData holds typed binary Secret data fields.
@@ -78,38 +73,6 @@ type CredentialSecretStringData struct {
 	AuthScheme AuthScheme `json:"authScheme,omitempty"`
 	Identity   string     `json:"identity,omitempty"`
 	Secret     string     `json:"secret,omitempty"`
-}
-
-// SecretToCredentialSecret converts a Kubernetes Secret into a typed CredentialSecret.
-func SecretToCredentialSecret(secret *corev1.Secret) CredentialSecret {
-	if secret == nil {
-		return CredentialSecret{}
-	}
-
-	return CredentialSecret{
-		TypeMeta:   secret.TypeMeta,
-		ObjectMeta: secret.ObjectMeta,
-		Type:       string(secret.Type),
-		Data: CredentialSecretData{
-			AuthScheme: secret.Data[CredentialSecretAuthSchemeKey],
-			Identity:   secret.Data[CredentialSecretIdentityKey],
-			Secret:     secret.Data[CredentialSecretSecretKey],
-		},
-		StringData: CredentialSecretStringData{
-			AuthScheme: AuthScheme(secret.StringData[CredentialSecretAuthSchemeKey]),
-			Identity:   secret.StringData[CredentialSecretIdentityKey],
-			Secret:     secret.StringData[CredentialSecretSecretKey],
-		},
-	}
-}
-
-// IsManagedCredentialSecret reports whether secret is a managed provider credential Secret.
-func IsManagedCredentialSecret(secret *corev1.Secret) bool {
-	if secret == nil {
-		return false
-	}
-
-	return secret.Type == CredentialsSecretType
 }
 
 // IsManaged reports whether the credential Secret uses the managed provider type.

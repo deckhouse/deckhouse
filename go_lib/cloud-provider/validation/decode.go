@@ -18,11 +18,18 @@ import (
 	"encoding/json"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
+
+// DecodeCredentialSecret decodes a credential Secret from a Kubernetes object map.
+func DecodeCredentialSecret(rawSecret map[string]any) (cpapi.CredentialSecret, error) {
+	secret, err := DecodeJSONValue[cpapi.CredentialSecret](rawSecret)
+	if err != nil {
+		return cpapi.CredentialSecret{}, fmt.Errorf("decode credential secret: %w", err)
+	}
+
+	return secret, nil
+}
 
 // DecodeCredentialSecrets decodes credential Secrets from CloudProviderVars.
 func DecodeCredentialSecrets(rawSecrets map[string]map[string]any) ([]cpapi.CredentialSecret, error) {
@@ -33,12 +40,12 @@ func DecodeCredentialSecrets(rawSecrets map[string]map[string]any) ([]cpapi.Cred
 	credSecrets := make([]cpapi.CredentialSecret, 0, len(rawSecrets))
 
 	for name, rawSecret := range rawSecrets {
-		secret, err := DecodeJSONValue[corev1.Secret](rawSecret)
+		secret, err := DecodeCredentialSecret(rawSecret)
 		if err != nil {
 			return credSecrets, fmt.Errorf("decode secret %q: %w", name, err)
 		}
 
-		credSecrets = append(credSecrets, cpapi.SecretToCredentialSecret(&secret))
+		credSecrets = append(credSecrets, secret)
 	}
 
 	return credSecrets, nil
@@ -135,7 +142,7 @@ func DecodeModuleConfigForModule(moduleName string, rawModuleConfig map[string]a
 
 	enabled := true
 	return &cpapi.ModuleConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: moduleName},
+		ObjectMeta: cpapi.ObjectMeta{Name: moduleName},
 		Spec: cpapi.ModuleConfigSpec{
 			Enabled:  &enabled,
 			Version:  2,

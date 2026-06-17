@@ -16,107 +16,32 @@ package api
 
 import (
 	"testing"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-func TestSecretToCredentialSecretNil(t *testing.T) {
-	t.Parallel()
-
-	if got := SecretToCredentialSecret(nil); got.Name != "" || got.Type != "" {
-		t.Fatalf("SecretToCredentialSecret(nil) = %#v, want empty CredentialSecret", got)
-	}
-}
-
-func TestSecretToCredentialSecretMapsTypedFields(t *testing.T) {
-	t.Parallel()
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "d8-credentials",
-			Namespace: "d8-cloud-provider-dvp",
-		},
-		Type: CredentialsSecretType,
-		Data: map[string][]byte{
-			CredentialSecretAuthSchemeKey: []byte("kubeconfig"),
-			CredentialSecretSecretKey:     []byte("encoded-kubeconfig"),
-		},
-		StringData: map[string]string{
-			CredentialSecretIdentityKey: "ignored-when-data-present",
-		},
-	}
-
-	got := SecretToCredentialSecret(secret)
-
-	if got.Name != secret.Name || got.Namespace != secret.Namespace {
-		t.Fatalf("SecretToCredentialSecret() metadata = %#v, want name %q namespace %q", got.ObjectMeta, secret.Name, secret.Namespace)
-	}
-	if got.Type != string(secret.Type) {
-		t.Fatalf("SecretToCredentialSecret() type = %q, want %q", got.Type, secret.Type)
-	}
-	if string(got.Data.AuthScheme) != "kubeconfig" {
-		t.Fatalf("SecretToCredentialSecret() data.authScheme = %q, want %q", got.Data.AuthScheme, "kubeconfig")
-	}
-	if string(got.Data.Secret) != "encoded-kubeconfig" {
-		t.Fatalf("SecretToCredentialSecret() data.secret = %q, want %q", got.Data.Secret, "encoded-kubeconfig")
-	}
-	if got.StringData.Identity != "ignored-when-data-present" {
-		t.Fatalf("SecretToCredentialSecret() stringData.identity = %q, want %q", got.StringData.Identity, "ignored-when-data-present")
-	}
-}
-
-func TestIsManagedCredentialSecret(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name   string
-		secret *corev1.Secret
-		want   bool
-	}{
-		{name: "nil secret", secret: nil, want: false},
-		{name: "wrong type", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName}, Type: corev1.SecretTypeTLS}, want: false},
-		{name: "primary", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName}, Type: CredentialsSecretType}, want: true},
-		{name: "arbitrary name", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "other"}, Type: CredentialsSecretType}, want: true},
-		{name: "component", secret: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "d8-credentials-storage"}, Type: CredentialsSecretType}, want: true},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := IsManagedCredentialSecret(tt.secret); got != tt.want {
-				t.Fatalf("IsManagedCredentialSecret() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestCredentialSecretIsManaged(t *testing.T) {
 	t.Parallel()
 
 	if !(CredentialSecret{
-		ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName},
+		ObjectMeta: ObjectMeta{Name: CredentialSecretName},
 		Type:       CredentialsSecretType,
 	}).IsManaged() {
 		t.Fatal("IsManaged() = false for primary credential secret")
 	}
 	if !(CredentialSecret{
-		ObjectMeta: metav1.ObjectMeta{Name: "other"},
+		ObjectMeta: ObjectMeta{Name: "other"},
 		Type:       CredentialsSecretType,
 	}).IsManaged() {
 		t.Fatal("IsManaged() = false for credential secret with arbitrary name")
 	}
 	if !(CredentialSecret{
-		ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName + "-storage"},
+		ObjectMeta: ObjectMeta{Name: CredentialSecretName + "-storage"},
 		Type:       CredentialsSecretType,
 	}).IsManaged() {
 		t.Fatal("IsManaged() = false for component credential secret")
 	}
 	if (CredentialSecret{
-		ObjectMeta: metav1.ObjectMeta{Name: CredentialSecretName + "-storage"},
-		Type:       string(corev1.SecretTypeTLS),
+		ObjectMeta: ObjectMeta{Name: CredentialSecretName + "-storage"},
+		Type:       "kubernetes.io/tls",
 	}).IsManaged() {
 		t.Fatal("IsManaged() = true for component secret with wrong type")
 	}

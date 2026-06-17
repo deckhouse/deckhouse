@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -96,7 +95,7 @@ func migrationBaseState(t *testing.T) *State {
 		NamespaceName:     namespaceName,
 		InstanceClassKind: instanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: moduleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: moduleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: ptr.To(true),
 				Version: 2,
@@ -118,7 +117,7 @@ func migrationBaseState(t *testing.T) *State {
 		},
 		CredentialSecrets: []cpapi.CredentialSecret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
+				ObjectMeta: cpapi.ObjectMeta{
 					Name:      cpapi.CredentialSecretName,
 					Namespace: namespaceName,
 				},
@@ -127,7 +126,7 @@ func migrationBaseState(t *testing.T) *State {
 		},
 		NodeGroups: []cpapi.NodeGroup{
 			{
-				ObjectMeta: metav1.ObjectMeta{Name: "master"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 				Spec: cpapi.NodeGroupSpec{
 					NodeType: cpapi.NodeTypeCloudPermanent,
 					CloudInstances: &cpapi.CloudInstances{
@@ -141,8 +140,8 @@ func migrationBaseState(t *testing.T) *State {
 		},
 		InstanceClasses: []cpapi.InstanceClass{
 			{
-				TypeMeta:   metav1.TypeMeta{Kind: instanceClassKind},
-				ObjectMeta: metav1.ObjectMeta{Name: "master-test"},
+				TypeMeta:   cpapi.TypeMeta{Kind: instanceClassKind},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master-test"},
 				Spec: cpapi.InstanceClassSpec{
 					EtcdDisk: map[string]any{},
 				},
@@ -163,14 +162,14 @@ func migrationCompleteState(t *testing.T) *State {
 		},
 	}
 	state.NodeGroups = append(state.NodeGroups, cpapi.NodeGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		ObjectMeta: cpapi.ObjectMeta{Name: "worker"},
 		Spec: cpapi.NodeGroupSpec{
 			NodeType: cpapi.NodeTypeCloudPermanent,
 		},
 	})
 	state.InstanceClasses = append(state.InstanceClasses, cpapi.InstanceClass{
-		TypeMeta:   metav1.TypeMeta{Kind: state.InstanceClassKind},
-		ObjectMeta: metav1.ObjectMeta{Name: "worker-test"},
+		TypeMeta:   cpapi.TypeMeta{Kind: state.InstanceClassKind},
+		ObjectMeta: cpapi.ObjectMeta{Name: "worker-test"},
 	})
 
 	return state

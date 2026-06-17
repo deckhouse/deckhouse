@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -34,7 +33,7 @@ func TestValidateModuleConfigAllowsDisabledSubsystems(t *testing.T) {
 	t.Parallel()
 
 	state := moduleConfigState(&cpapi.ModuleConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "cloud-provider-dvp"},
+		ObjectMeta: cpapi.ObjectMeta{Name: "cloud-provider-dvp"},
 		Spec: cpapi.ModuleConfigSpec{
 			Enabled: ptr.To(true),
 			Version: 2,
@@ -54,7 +53,7 @@ func TestValidateModuleConfigIgnoresSensitiveSettings(t *testing.T) {
 	t.Parallel()
 
 	moduleConfig := &cpapi.ModuleConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: "cloud-provider-dvp"},
+		ObjectMeta: cpapi.ObjectMeta{Name: "cloud-provider-dvp"},
 		Spec: cpapi.ModuleConfigSpec{
 			Settings: cpapi.ModuleConfigSpecSettings{
 				Provider: &cpapi.ModuleConfigSpecProviderSettings{
@@ -93,7 +92,7 @@ func TestValidateModuleConfigRejectsWrongName(t *testing.T) {
 	t.Parallel()
 
 	result := ValidateModuleConfig(moduleConfigState(
-		&cpapi.ModuleConfig{ObjectMeta: metav1.ObjectMeta{Name: "wrong-name"}},
+		&cpapi.ModuleConfig{ObjectMeta: cpapi.ObjectMeta{Name: "wrong-name"}},
 		nil,
 	))
 	if !hasViolationCode(result, "invalid_module_config_name") {

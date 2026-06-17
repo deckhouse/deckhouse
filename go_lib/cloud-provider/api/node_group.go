@@ -14,10 +14,6 @@
 
 package api
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
 // NodeType identifies the NodeGroup provisioning model.
 type NodeType string
 
@@ -28,8 +24,8 @@ const (
 
 // NodeGroup is a typed view of the deckhouse.io NodeGroup resource.
 type NodeGroup struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	TypeMeta   `json:",inline"`
+	ObjectMeta `json:"metadata,omitempty"`
 
 	Spec NodeGroupSpec `json:"spec,omitempty"`
 }

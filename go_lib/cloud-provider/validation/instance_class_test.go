@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestValidateInstanceClassEtcdDiskAttachmentAllowsUnattachedEtcdDisk(t *testing.T) {
@@ -29,7 +28,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsUnattachedEtcdDisk(t *test
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
-				ObjectMeta: v1.ObjectMeta{Name: "master"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 				Spec: cpapi.NodeGroupSpec{
 					NodeType: cpapi.NodeTypeCloudPermanent,
 					CloudInstances: &cpapi.CloudInstances{
@@ -43,15 +42,15 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsUnattachedEtcdDisk(t *test
 		},
 		[]cpapi.InstanceClass{
 			{
-				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
-				ObjectMeta: v1.ObjectMeta{Name: "master-dvp"},
+				TypeMeta:   cpapi.TypeMeta{Kind: "DVPInstanceClass"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
 				Spec: cpapi.InstanceClassSpec{
 					EtcdDisk: map[string]any{},
 				},
 			},
 			{
-				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
-				ObjectMeta: v1.ObjectMeta{Name: "orphan-dvp"},
+				TypeMeta:   cpapi.TypeMeta{Kind: "DVPInstanceClass"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "orphan-dvp"},
 				Spec: cpapi.InstanceClassSpec{
 					EtcdDisk: map[string]any{},
 				},
@@ -71,7 +70,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
-				ObjectMeta: v1.ObjectMeta{Name: "master"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 				Spec: cpapi.NodeGroupSpec{
 					NodeType: cpapi.NodeTypeCloudPermanent,
 					CloudInstances: &cpapi.CloudInstances{
@@ -83,7 +82,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *
 				},
 			},
 			{
-				ObjectMeta: v1.ObjectMeta{Name: "worker-a"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "worker-a"},
 				Spec: cpapi.NodeGroupSpec{
 					NodeType: cpapi.NodeTypeCloudPermanent,
 					CloudInstances: &cpapi.CloudInstances{
@@ -95,7 +94,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *
 				},
 			},
 			{
-				ObjectMeta: v1.ObjectMeta{Name: "worker-b"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "worker-b"},
 				Spec: cpapi.NodeGroupSpec{
 					NodeType: cpapi.NodeTypeCloudPermanent,
 					CloudInstances: &cpapi.CloudInstances{
@@ -109,8 +108,8 @@ func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *
 		},
 		[]cpapi.InstanceClass{
 			{
-				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
-				ObjectMeta: v1.ObjectMeta{Name: "shared-dvp"},
+				TypeMeta:   cpapi.TypeMeta{Kind: "DVPInstanceClass"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "shared-dvp"},
 				Spec: cpapi.InstanceClassSpec{
 					EtcdDisk: map[string]any{},
 				},
@@ -130,7 +129,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsMasterOnly(t *testing.T) {
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
-				ObjectMeta: v1.ObjectMeta{Name: "master"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 				Spec: cpapi.NodeGroupSpec{
 					CloudInstances: &cpapi.CloudInstances{
 						ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "master-dvp"},
@@ -140,8 +139,8 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsMasterOnly(t *testing.T) {
 		},
 		[]cpapi.InstanceClass{
 			{
-				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
-				ObjectMeta: v1.ObjectMeta{Name: "master-dvp"},
+				TypeMeta:   cpapi.TypeMeta{Kind: "DVPInstanceClass"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
 				Spec:       cpapi.InstanceClassSpec{EtcdDisk: map[string]any{}},
 			},
 		},
@@ -160,8 +159,8 @@ func TestValidateInstanceClassEtcdDiskAttachmentSkipsOtherKinds(t *testing.T) {
 		nil,
 		[]cpapi.InstanceClass{
 			{
-				TypeMeta:   v1.TypeMeta{Kind: "OtherInstanceClass"},
-				ObjectMeta: v1.ObjectMeta{Name: "orphan"},
+				TypeMeta:   cpapi.TypeMeta{Kind: "OtherInstanceClass"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "orphan"},
 				Spec:       cpapi.InstanceClassSpec{EtcdDisk: map[string]any{}},
 			},
 		},
@@ -179,7 +178,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentRequiresMasterWhenAttached(t *te
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
-				ObjectMeta: v1.ObjectMeta{Name: "worker"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "worker"},
 				Spec: cpapi.NodeGroupSpec{
 					CloudInstances: &cpapi.CloudInstances{
 						ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "worker-dvp"},
@@ -189,8 +188,8 @@ func TestValidateInstanceClassEtcdDiskAttachmentRequiresMasterWhenAttached(t *te
 		},
 		[]cpapi.InstanceClass{
 			{
-				TypeMeta:   v1.TypeMeta{Kind: "DVPInstanceClass"},
-				ObjectMeta: v1.ObjectMeta{Name: "worker-dvp"},
+				TypeMeta:   cpapi.TypeMeta{Kind: "DVPInstanceClass"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "worker-dvp"},
 				Spec:       cpapi.InstanceClassSpec{EtcdDisk: map[string]any{}},
 			},
 		},
@@ -207,7 +206,7 @@ func TestValidateInstanceClassEtcdDiskAttachmentSkipsNilEtcdDisk(t *testing.T) {
 	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
 		"DVPInstanceClass",
 		nil,
-		[]cpapi.InstanceClass{{ObjectMeta: v1.ObjectMeta{Name: "plain"}}},
+		[]cpapi.InstanceClass{{ObjectMeta: cpapi.ObjectMeta{Name: "plain"}}},
 	))
 
 	if result.HasErrors() {
@@ -230,7 +229,7 @@ func TestValidateInstanceClassDeleteInUseByNodeGroup(t *testing.T) {
 	state := instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{{
-			ObjectMeta: v1.ObjectMeta{Name: "master"},
+			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 			Spec: cpapi.NodeGroupSpec{
 				CloudInstances: &cpapi.CloudInstances{
 					ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "master-dvp"},
@@ -251,7 +250,7 @@ func TestValidateInstanceClassDeleteWithStatusConsumers(t *testing.T) {
 
 	state := instanceClassState("DVPInstanceClass", nil, nil)
 	deleted := &cpapi.InstanceClass{
-		ObjectMeta: v1.ObjectMeta{Name: "orphan-dvp"},
+		ObjectMeta: cpapi.ObjectMeta{Name: "orphan-dvp"},
 		Status:     cpapi.InstanceClassStatus{NodeGroupConsumers: []any{"worker"}},
 	}
 
@@ -267,7 +266,7 @@ func TestValidateInstanceClassDeleteUsesDeletedClassName(t *testing.T) {
 	state := instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{{
-			ObjectMeta: v1.ObjectMeta{Name: "master"},
+			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 			Spec: cpapi.NodeGroupSpec{
 				CloudInstances: &cpapi.CloudInstances{
 					ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "master-dvp"},
@@ -276,10 +275,75 @@ func TestValidateInstanceClassDeleteUsesDeletedClassName(t *testing.T) {
 		}},
 		nil,
 	)
-	deleted := &cpapi.InstanceClass{ObjectMeta: v1.ObjectMeta{Name: "master-dvp"}}
+	deleted := &cpapi.InstanceClass{ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"}}
 
 	result := ValidateInstanceClassDelete(state, "", deleted)
 	if !hasViolationCode(result, "instance_class_in_use") {
 		t.Fatalf("ValidateInstanceClassDelete() = %q", result.Error())
+	}
+}
+
+func TestValidateMasterInstanceClassRequiresEtcdDisk(t *testing.T) {
+	t.Parallel()
+
+	result := ValidateMasterInstanceClass(instanceClassState(
+		"DVPInstanceClass",
+		[]cpapi.NodeGroup{{
+			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
+			Spec: cpapi.NodeGroupSpec{
+				CloudInstances: &cpapi.CloudInstances{
+					ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "master-dvp"},
+				},
+			},
+		}},
+		[]cpapi.InstanceClass{{
+			ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
+		}},
+	))
+	if !hasViolationCode(result, "master_etcd_disk_required") {
+		t.Fatalf("ValidateMasterInstanceClass() = %q", result.Error())
+	}
+}
+
+func TestValidateMasterInstanceClassRequiresExistingClass(t *testing.T) {
+	t.Parallel()
+
+	result := ValidateMasterInstanceClass(instanceClassState(
+		"DVPInstanceClass",
+		[]cpapi.NodeGroup{{
+			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
+			Spec: cpapi.NodeGroupSpec{
+				CloudInstances: &cpapi.CloudInstances{
+					ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "missing-dvp"},
+				},
+			},
+		}},
+		nil,
+	))
+	if !hasViolationCode(result, "master_instance_class_not_found") {
+		t.Fatalf("ValidateMasterInstanceClass() = %q", result.Error())
+	}
+}
+
+func TestValidateMasterInstanceClassAllowsConfiguredMaster(t *testing.T) {
+	t.Parallel()
+
+	result := ValidateMasterInstanceClass(instanceClassState(
+		"DVPInstanceClass",
+		[]cpapi.NodeGroup{{
+			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
+			Spec: cpapi.NodeGroupSpec{
+				CloudInstances: &cpapi.CloudInstances{
+					ClassReference: &cpapi.ClassReference{Kind: "DVPInstanceClass", Name: "master-dvp"},
+				},
+			},
+		}},
+		[]cpapi.InstanceClass{{
+			ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
+			Spec:       cpapi.InstanceClassSpec{EtcdDisk: map[string]any{"size": "10Gi"}},
+		}},
+	))
+	if result.HasErrors() {
+		t.Fatalf("ValidateMasterInstanceClass() unexpected errors: %s", result.Error())
 	}
 }

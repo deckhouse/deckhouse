@@ -114,6 +114,109 @@ func TestDecodeCredentialSecretsInvalidPayload(t *testing.T) {
 	}
 }
 
+func TestDecodeCredentialSecretMapsFields(t *testing.T) {
+	t.Parallel()
+
+	secret, err := DecodeCredentialSecret(map[string]any{
+		"metadata": map[string]any{"name": "d8-credentials", "namespace": "d8-cloud-provider-dvp"},
+		"type":     cpapi.CredentialsSecretType,
+		"stringData": map[string]any{
+			"authScheme": "kubeconfig",
+			"secret":     "token",
+		},
+	})
+	if err != nil {
+		t.Fatalf("DecodeCredentialSecret() error = %v", err)
+	}
+	if secret.Name != "d8-credentials" || secret.Namespace != "d8-cloud-provider-dvp" {
+		t.Fatalf("DecodeCredentialSecret() metadata = %#v", secret.ObjectMeta)
+	}
+	if secret.StringData.AuthScheme != cpapi.AuthSchemeKubeconfig || secret.StringData.Secret != "token" {
+		t.Fatalf("DecodeCredentialSecret() stringData = %#v", secret.StringData)
+	}
+}
+
+func TestDecodeNodeGroup(t *testing.T) {
+	t.Parallel()
+
+	nodeGroup, err := DecodeNodeGroup(map[string]any{
+		"metadata": map[string]any{"name": "master"},
+		"spec":     map[string]any{"nodeType": "CloudPermanent"},
+	})
+	if err != nil {
+		t.Fatalf("DecodeNodeGroup() error = %v", err)
+	}
+	if nodeGroup.Name != "master" || nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
+		t.Fatalf("DecodeNodeGroup() = %#v", nodeGroup)
+	}
+}
+
+func TestDecodeNodeGroups(t *testing.T) {
+	t.Parallel()
+
+	nodeGroups, err := DecodeNodeGroups(map[string]map[string]any{
+		"master": {
+			"metadata": map[string]any{"name": "master"},
+			"spec":     map[string]any{"nodeType": "CloudPermanent"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("DecodeNodeGroups() error = %v", err)
+	}
+	if len(nodeGroups) != 1 || nodeGroups[0].Name != "master" {
+		t.Fatalf("DecodeNodeGroups() = %#v", nodeGroups)
+	}
+
+	_, err = DecodeNodeGroups(map[string]map[string]any{
+		"broken": {"spec": "invalid"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "decode node group") {
+		t.Fatalf("DecodeNodeGroups() error = %v, want decode failure", err)
+	}
+}
+
+func TestDecodeInstanceClass(t *testing.T) {
+	t.Parallel()
+
+	instanceClass, err := DecodeInstanceClass(map[string]any{
+		"metadata": map[string]any{"name": "master-dvp"},
+		"kind":     "DVPInstanceClass",
+		"spec": map[string]any{
+			"etcdDisk": map[string]any{"size": "10Gi"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("DecodeInstanceClass() error = %v", err)
+	}
+	if instanceClass.Name != "master-dvp" || instanceClass.Spec.EtcdDisk == nil {
+		t.Fatalf("DecodeInstanceClass() = %#v", instanceClass)
+	}
+}
+
+func TestDecodeInstanceClasses(t *testing.T) {
+	t.Parallel()
+
+	classes, err := DecodeInstanceClasses(map[string]map[string]any{
+		"master-dvp": {
+			"metadata": map[string]any{"name": "master-dvp"},
+			"kind":     "DVPInstanceClass",
+		},
+	})
+	if err != nil {
+		t.Fatalf("DecodeInstanceClasses() error = %v", err)
+	}
+	if len(classes) != 1 || classes[0].Name != "master-dvp" {
+		t.Fatalf("DecodeInstanceClasses() = %#v", classes)
+	}
+
+	_, err = DecodeInstanceClasses(map[string]map[string]any{
+		"broken": {"spec": "invalid"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "decode instance class") {
+		t.Fatalf("DecodeInstanceClasses() error = %v, want decode failure", err)
+	}
+}
+
 func TestDecodeJSONValueRoundTrip(t *testing.T) {
 	t.Parallel()
 

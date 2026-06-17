@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestFindHelpers(t *testing.T) {
@@ -29,16 +28,16 @@ func TestFindHelpers(t *testing.T) {
 	state := &State{
 		NamespaceName: namespace,
 		CredentialSecrets: []cpapi.CredentialSecret{{
-			ObjectMeta: metav1.ObjectMeta{
+			ObjectMeta: cpapi.ObjectMeta{
 				Name:      cpapi.CredentialSecretName,
 				Namespace: namespace,
 			},
 		}},
 		NodeGroups: []cpapi.NodeGroup{{
-			ObjectMeta: metav1.ObjectMeta{Name: "master"},
+			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 		}},
 		InstanceClasses: []cpapi.InstanceClass{{
-			ObjectMeta: metav1.ObjectMeta{Name: "master-dvp"},
+			ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
 		}},
 	}
 
@@ -66,7 +65,7 @@ func TestFindCredentialSecretMatchesEmptyNamespace(t *testing.T) {
 	state := &State{
 		NamespaceName: "d8-cloud-provider-test",
 		CredentialSecrets: []cpapi.CredentialSecret{{
-			ObjectMeta: metav1.ObjectMeta{Name: cpapi.CredentialSecretName},
+			ObjectMeta: cpapi.ObjectMeta{Name: cpapi.CredentialSecretName},
 		}},
 	}
 	if _, ok := findCredentialSecret(state, cpapi.CredentialSecretName); !ok {

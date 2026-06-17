@@ -14,12 +14,10 @@
 
 package api
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 // InstanceClass is a provider-specific instance class resource.
 type InstanceClass struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	TypeMeta   `json:",inline"`
+	ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   InstanceClassSpec   `json:"spec,omitempty"`
 	Status InstanceClassStatus `json:"status,omitempty"`

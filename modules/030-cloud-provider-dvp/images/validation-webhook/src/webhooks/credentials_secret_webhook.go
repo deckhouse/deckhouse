@@ -108,7 +108,7 @@ func (v *CredentialSecretValidator) validate(
 		return nil, internalBuildError(err)
 	}
 
-	state, err := v.builder.BuildForCredentialSecret(ctx, operation, secret)
+	state, err := v.builder.BuildForCredentialSecret(ctx, operation, cpvaladmission.SecretToCredentialSecret(secret))
 	if err != nil {
 		credentialSecretLog.Error(err, "failed to build validation state", "name", name, "namespace", namespace)
 		return nil, internalBuildError(err)
@@ -145,7 +145,7 @@ func (v *CredentialSecretValidator) validate(
 
 func isManagedCredentialSecretObject(obj runtime.Object) bool {
 	if secret, ok := obj.(*corev1.Secret); ok {
-		return cpapi.IsManagedCredentialSecret(secret)
+		return cpvaladmission.IsManagedCredentialSecret(secret)
 	}
 
 	if unstructuredObj, ok := obj.(*unstructured.Unstructured); ok {

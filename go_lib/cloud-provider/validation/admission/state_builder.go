@@ -137,14 +137,14 @@ func (b *StateBuilder) BuildForModuleConfig(
 func (b *StateBuilder) BuildForCredentialSecret(
 	ctx context.Context,
 	operation admissionv1.Operation,
-	secret *corev1.Secret,
+	secret cpapi.CredentialSecret,
 ) (*cpval.State, error) {
 	state, err := b.buildBaseState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("build base state: %w", err)
 	}
 
-	if !cpapi.IsManagedCredentialSecret(secret) {
+	if !secret.IsManaged() {
 		return state, nil
 	}
 
@@ -152,12 +152,11 @@ func (b *StateBuilder) BuildForCredentialSecret(
 	case admissionv1.Delete:
 		state.CredentialSecrets = removeCredentialSecret(
 			state.CredentialSecrets,
-			secret.GetName(),
-			secret.GetNamespace(),
+			secret.Name,
+			secret.Namespace,
 		)
 	default:
-		credSecret := cpapi.SecretToCredentialSecret(secret)
-		state.CredentialSecrets = upsertCredentialSecret(state.CredentialSecrets, credSecret)
+		state.CredentialSecrets = upsertCredentialSecret(state.CredentialSecrets, secret)
 	}
 
 	return state, nil
@@ -312,11 +311,11 @@ func (b *StateBuilder) listCredentialSecrets(ctx context.Context) ([]cpapi.Crede
 	result := make([]cpapi.CredentialSecret, 0, len(list.Items))
 	for i := range list.Items {
 		secret := &list.Items[i]
-		if !cpapi.IsManagedCredentialSecret(secret) {
+		if !IsManagedCredentialSecret(secret) {
 			continue
 		}
 
-		result = append(result, cpapi.SecretToCredentialSecret(secret))
+		result = append(result, SecretToCredentialSecret(secret))
 	}
 
 	return result, nil

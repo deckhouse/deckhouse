@@ -6,7 +6,6 @@ require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg v0.0.0-00010101000000-000000000000
-	github.com/go-logr/logr v1.4.3
 	k8s.io/api v0.33.12
 	k8s.io/apimachinery v0.33.12
 	k8s.io/client-go v0.33.12
@@ -24,6 +23,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/zapr v1.3.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect

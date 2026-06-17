@@ -19,7 +19,6 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -28,8 +27,8 @@ func TestValidateInvariantsAllowsUnattachedEtcdDisk(t *testing.T) {
 
 	state := validState(t)
 	state.InstanceClasses = append(state.InstanceClasses, cpapi.InstanceClass{
-		TypeMeta:   metav1.TypeMeta{Kind: InstanceClassKind},
-		ObjectMeta: metav1.ObjectMeta{Name: "orphan-dvp"},
+		TypeMeta:   cpapi.TypeMeta{Kind: InstanceClassKind},
+		ObjectMeta: cpapi.ObjectMeta{Name: "orphan-dvp"},
 		Spec: cpapi.InstanceClassSpec{
 			EtcdDisk: map[string]any{},
 		},
@@ -49,7 +48,7 @@ func TestValidateInvariantsSkipsPendingMigration(t *testing.T) {
 		NamespaceName:     Namespace,
 		InstanceClassKind: InstanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: ptr.To(true),
 				Version: 2,
@@ -88,7 +87,7 @@ func TestValidateInvariantsAllowsWorkerWithoutClassReference(t *testing.T) {
 
 	state := validState(t)
 	state.NodeGroups = append(state.NodeGroups, cpapi.NodeGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		ObjectMeta: cpapi.ObjectMeta{Name: "worker"},
 		Spec: cpapi.NodeGroupSpec{
 			NodeType: cpapi.NodeTypeCloudPermanent,
 		},
@@ -151,7 +150,7 @@ func validState(t *testing.T) *cpval.State {
 		NamespaceName:     Namespace,
 		InstanceClassKind: InstanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: ModuleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: ptr.To(true),
 				Version: 2,
@@ -173,7 +172,7 @@ func validState(t *testing.T) *cpval.State {
 		},
 		CredentialSecrets: []cpapi.CredentialSecret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
+				ObjectMeta: cpapi.ObjectMeta{
 					Name:      cpapi.CredentialSecretName,
 					Namespace: Namespace,
 				},
@@ -186,7 +185,7 @@ func validState(t *testing.T) *cpval.State {
 		},
 		NodeGroups: []cpapi.NodeGroup{
 			{
-				ObjectMeta: metav1.ObjectMeta{Name: "master"},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master"},
 				Spec: cpapi.NodeGroupSpec{
 					NodeType: cpapi.NodeTypeCloudPermanent,
 					CloudInstances: &cpapi.CloudInstances{
@@ -200,8 +199,8 @@ func validState(t *testing.T) *cpval.State {
 		},
 		InstanceClasses: []cpapi.InstanceClass{
 			{
-				TypeMeta:   metav1.TypeMeta{Kind: InstanceClassKind},
-				ObjectMeta: metav1.ObjectMeta{Name: "master-dvp"},
+				TypeMeta:   cpapi.TypeMeta{Kind: InstanceClassKind},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
 				Spec: cpapi.InstanceClassSpec{
 					EtcdDisk: map[string]any{},
 				},

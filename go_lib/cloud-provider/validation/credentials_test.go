@@ -20,8 +20,6 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func validTestKubeconfigB64() string {
@@ -30,7 +28,7 @@ func validTestKubeconfigB64() string {
 
 func managedCredentialSecret(name, namespace string, data cpapi.CredentialSecretStringData) cpapi.CredentialSecret {
 	return cpapi.CredentialSecret{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: cpapi.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
@@ -191,8 +189,8 @@ func TestValidateCredentialSecretContentIgnoresOrdinaryModuleSecrets(t *testing.
 			},
 		),
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "validation-webhook-tls", Namespace: "d8-cloud-provider-test"},
-			Type:       string(corev1.SecretTypeTLS),
+			ObjectMeta: cpapi.ObjectMeta{Name: "validation-webhook-tls", Namespace: "d8-cloud-provider-test"},
+			Type:       "kubernetes.io/tls",
 		},
 	})
 
@@ -459,5 +457,42 @@ func TestValidateCredentialSecretContentDispatchesAllAuthSchemeValidators(t *tes
 				t.Fatalf("ValidateCredentialSecretContent(%s) = %q, want validation errors", scheme, result.Error())
 			}
 		})
+	}
+}
+
+func TestValidateCredentialSecretPresenceRequiresPrimarySecret(t *testing.T) {
+	t.Parallel()
+
+	result := ValidateCredentialSecretPresence(credentialContentState(nil))
+	if !hasViolationCode(result, "credential_secret_required") {
+		t.Fatalf("ValidateCredentialSecretPresence() = %q, want required error", result.Error())
+	}
+}
+
+func TestValidateCredentialSecretPresenceRejectsWrongType(t *testing.T) {
+	t.Parallel()
+
+	result := ValidateCredentialSecretPresence(credentialContentState([]cpapi.CredentialSecret{
+		{
+			ObjectMeta: cpapi.ObjectMeta{Name: cpapi.CredentialSecretName, Namespace: "d8-cloud-provider-test"},
+			Type:       "kubernetes.io/tls",
+		},
+	}))
+	if !hasViolationCode(result, "invalid_credential_secret_type") {
+		t.Fatalf("ValidateCredentialSecretPresence() = %q, want type error", result.Error())
+	}
+}
+
+func TestValidateCredentialSecretPresenceAllowsManagedSecret(t *testing.T) {
+	t.Parallel()
+
+	result := ValidateCredentialSecretPresence(credentialContentState([]cpapi.CredentialSecret{
+		managedCredentialSecret(cpapi.CredentialSecretName, "d8-cloud-provider-test", cpapi.CredentialSecretStringData{
+			AuthScheme: cpapi.AuthSchemeKubeconfig,
+			Secret:     validTestKubeconfigB64(),
+		}),
+	}))
+	if result.HasErrors() {
+		t.Fatalf("ValidateCredentialSecretPresence() unexpected errors: %s", result.Error())
 	}
 }

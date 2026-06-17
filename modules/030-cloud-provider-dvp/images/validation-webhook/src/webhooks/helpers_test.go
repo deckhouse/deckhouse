@@ -123,7 +123,7 @@ func TestValidateAdmissionStateRunsOnlyInvariants(t *testing.T) {
 	state := &cpval.State{
 		ModuleName: dvpval.ModuleName,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: dvpval.ModuleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: dvpval.ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: boolPtr(true),
 				Version: 2,
@@ -142,7 +142,7 @@ func TestValidateAdmissionStateDoesNotEnforceMasterTopology(t *testing.T) {
 	state := &cpval.State{
 		ModuleName: dvpval.ModuleName,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: dvpval.ModuleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: dvpval.ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: boolPtr(true),
 				Version: 2,

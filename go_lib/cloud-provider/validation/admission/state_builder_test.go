@@ -101,12 +101,12 @@ func TestRuntimeStateBuilderBuildForCredentialSecretIgnoresOrdinaryModuleSecret(
 		},
 	), cfg)
 
-	state, err := builder.BuildForCredentialSecret(context.Background(), admissionv1.Update, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
+	state, err := builder.BuildForCredentialSecret(context.Background(), admissionv1.Update, cpapi.CredentialSecret{
+		ObjectMeta: cpapi.ObjectMeta{
 			Name:      "validation-webhook-tls",
 			Namespace: cfg.NamespaceName,
 		},
-		Type: corev1.SecretTypeTLS,
+		Type: "kubernetes.io/tls",
 	})
 	if err != nil {
 		t.Fatalf("BuildForCredentialSecret() error = %v", err)
@@ -258,12 +258,12 @@ func TestBuildForCredentialSecretUpsertAndDelete(t *testing.T) {
 		testCredentialSecretObject(cfg, cpapi.CredentialSecretName),
 	), cfg)
 
-	updated := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: cpapi.CredentialSecretName, Namespace: cfg.NamespaceName},
+	updated := cpapi.CredentialSecret{
+		ObjectMeta: cpapi.ObjectMeta{Name: cpapi.CredentialSecretName, Namespace: cfg.NamespaceName},
 		Type:       cpapi.CredentialsSecretType,
-		StringData: map[string]string{
-			cpapi.CredentialSecretAuthSchemeKey: string(cpapi.AuthSchemeKubeconfig),
-			cpapi.CredentialSecretSecretKey:     "updated",
+		StringData: cpapi.CredentialSecretStringData{
+			AuthScheme: cpapi.AuthSchemeKubeconfig,
+			Secret:     "updated",
 		},
 	}
 	state, err := builder.BuildForCredentialSecret(context.Background(), admissionv1.Update, updated)
@@ -448,8 +448,8 @@ func TestBuildForCredentialSecretUpsertsExisting(t *testing.T) {
 		testCredentialSecretObject(cfg, cpapi.CredentialSecretName),
 	), cfg)
 
-	updated := testCredentialSecretObject(cfg, cpapi.CredentialSecretName)
-	updated.StringData[cpapi.CredentialSecretSecretKey] = "rotated"
+	updated := testCredentialSecretValue(cfg, cpapi.CredentialSecretName)
+	updated.StringData.Secret = "rotated"
 	state, err := builder.BuildForCredentialSecret(context.Background(), admissionv1.Update, updated)
 	if err != nil {
 		t.Fatalf("BuildForCredentialSecret(update existing) error = %v", err)
@@ -566,6 +566,17 @@ func testInstanceClassObject(cfg StateBuilderConfig, name string) *unstructured.
 	obj.SetGroupVersionKind(cfg.instanceClassGVK())
 	obj.SetName(name)
 	return obj
+}
+
+func testCredentialSecretValue(cfg StateBuilderConfig, name string) cpapi.CredentialSecret {
+	return cpapi.CredentialSecret{
+		ObjectMeta: cpapi.ObjectMeta{Name: name, Namespace: cfg.NamespaceName},
+		Type:       cpapi.CredentialsSecretType,
+		StringData: cpapi.CredentialSecretStringData{
+			AuthScheme: cpapi.AuthSchemeKubeconfig,
+			Secret:     "token",
+		},
+	}
 }
 
 func testCredentialSecretObject(cfg StateBuilderConfig, name string) *corev1.Secret {
