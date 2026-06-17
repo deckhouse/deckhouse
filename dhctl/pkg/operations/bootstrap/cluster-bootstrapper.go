@@ -431,8 +431,9 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 		}
 
 		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
-			InstallConfig: bctx.deckhouseInstallConfig,
-			MetaConfig:    bctx.metaConfig,
+			InstallConfig:          bctx.deckhouseInstallConfig,
+			MetaConfig:             bctx.metaConfig,
+			SSHProviderInitializer: b.SSHProviderInitializer,
 		})
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
 			MetaConfig:  bctx.metaConfig,
