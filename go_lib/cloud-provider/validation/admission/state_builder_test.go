@@ -41,65 +41,11 @@ func testStateBuilderConfig() StateBuilderConfig {
 	}
 }
 
-func TestRuntimeStateBuilderListCredentialSecretsIgnoresOrdinaryModuleSecrets(t *testing.T) {
+func TestBuildForCredentialSecretIgnoresNonManagedSecret(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
-	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cpapi.CredentialSecretName,
-				Namespace: cfg.NamespaceName,
-			},
-			Type: cpapi.CredentialsSecretType,
-			StringData: map[string]string{
-				cpapi.CredentialSecretAuthSchemeKey: string(cpapi.AuthSchemeKubeconfig),
-				cpapi.CredentialSecretSecretKey:     "token",
-			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "validation-webhook-tls",
-				Namespace: cfg.NamespaceName,
-			},
-			Type: corev1.SecretTypeTLS,
-			Data: map[string][]byte{
-				"tls.crt": []byte("cert"),
-				"tls.key": []byte("key"),
-			},
-		},
-	), cfg)
-
-	state, err := builder.buildBaseState(context.Background())
-	if err != nil {
-		t.Fatalf("buildBaseState() error = %v", err)
-	}
-
-	if len(state.CredentialSecrets) != 1 {
-		t.Fatalf("buildBaseState() credential secrets = %d, want 1", len(state.CredentialSecrets))
-	}
-	if state.CredentialSecrets[0].Name != cpapi.CredentialSecretName {
-		t.Fatalf("buildBaseState() credential secret = %q, want %q", state.CredentialSecrets[0].Name, cpapi.CredentialSecretName)
-	}
-}
-
-func TestRuntimeStateBuilderBuildForCredentialSecretIgnoresOrdinaryModuleSecret(t *testing.T) {
-	t.Parallel()
-
-	cfg := testStateBuilderConfig()
-	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cpapi.CredentialSecretName,
-				Namespace: cfg.NamespaceName,
-			},
-			Type: cpapi.CredentialsSecretType,
-			StringData: map[string]string{
-				cpapi.CredentialSecretAuthSchemeKey: string(cpapi.AuthSchemeKubeconfig),
-				cpapi.CredentialSecretSecretKey:     "token",
-			},
-		},
-	), cfg)
+	builder := NewStateBuilder(newRuntimeBuilderTestClient(t), cfg)
 
 	state, err := builder.BuildForCredentialSecret(context.Background(), admissionv1.Update, cpapi.CredentialSecret{
 		ObjectMeta: cpapi.ObjectMeta{
@@ -112,8 +58,26 @@ func TestRuntimeStateBuilderBuildForCredentialSecretIgnoresOrdinaryModuleSecret(
 		t.Fatalf("BuildForCredentialSecret() error = %v", err)
 	}
 
+	if len(state.CredentialSecrets) != 0 {
+		t.Fatalf("BuildForCredentialSecret() credential secrets = %#v, want none", state.CredentialSecrets)
+	}
+}
+
+func TestBuildForCredentialSecretUsesAdmissionObjectOnly(t *testing.T) {
+	t.Parallel()
+
+	cfg := testStateBuilderConfig()
+	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
+		testCredentialSecretObject(cfg, "other-credentials"),
+	), cfg)
+
+	state, err := builder.BuildForCredentialSecret(context.Background(), admissionv1.Update, testCredentialSecretValue(cfg, cpapi.CredentialSecretName))
+	if err != nil {
+		t.Fatalf("BuildForCredentialSecret() error = %v", err)
+	}
+
 	if len(state.CredentialSecrets) != 1 || state.CredentialSecrets[0].Name != cpapi.CredentialSecretName {
-		t.Fatalf("BuildForCredentialSecret() credential secrets = %#v, want only %q", state.CredentialSecrets, cpapi.CredentialSecretName)
+		t.Fatalf("BuildForCredentialSecret() credential secrets = %#v, want admitted secret only", state.CredentialSecrets)
 	}
 }
 
@@ -139,15 +103,12 @@ func TestRuntimeStateBuilderIsMigrationPendingReadsConfigMap(t *testing.T) {
 	}
 }
 
-func TestConfigInstanceClassGVKs(t *testing.T) {
+func TestConfigInstanceClassGVK(t *testing.T) {
 	t.Parallel()
 
 	cfg := StateBuilderConfig{InstanceClassKind: "TestInstanceClass"}
 	if got := cfg.instanceClassGVK(); got.Kind != "TestInstanceClass" || got.Group != "deckhouse.io" {
 		t.Fatalf("instanceClassGVK() = %#v", got)
-	}
-	if got := cfg.instanceClassListGVK(); got.Kind != "TestInstanceClassList" {
-		t.Fatalf("instanceClassListGVK() = %#v", got)
 	}
 }
 
@@ -166,37 +127,31 @@ func TestIsMigrationPendingNotFound(t *testing.T) {
 	}
 }
 
-func TestBuildBaseStateLoadsClusterResources(t *testing.T) {
+func TestBuildForNodeGroupLoadsReferencedInstanceClass(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
 	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		testModuleConfigObject(cfg),
-		testNodeGroupObject("master", cpapi.NodeTypeCloudPermanent),
-		testNodeGroupObject("static", "CloudStatic"),
 		testInstanceClassObject(cfg, "master-dvp"),
-		testCredentialSecretObject(cfg, cpapi.CredentialSecretName),
 	), cfg)
 
-	state, err := builder.buildBaseState(context.Background())
+	state, err := builder.BuildForNodeGroup(
+		context.Background(),
+		admissionv1.Update,
+		testNodeGroupWithClassRef(cfg, "master", cpapi.NodeTypeCloudPermanent, "master-dvp"),
+	)
 	if err != nil {
-		t.Fatalf("buildBaseState() error = %v", err)
-	}
-	if state.ModuleConfig == nil || state.ModuleConfig.Name != cfg.ModuleName {
-		t.Fatalf("buildBaseState() module config = %#v", state.ModuleConfig)
+		t.Fatalf("BuildForNodeGroup() error = %v", err)
 	}
 	if len(state.NodeGroups) != 1 || state.NodeGroups[0].Name != "master" {
-		t.Fatalf("buildBaseState() node groups = %#v, want only CloudPermanent", state.NodeGroups)
+		t.Fatalf("BuildForNodeGroup() node groups = %#v, want admitted master", state.NodeGroups)
 	}
 	if len(state.InstanceClasses) != 1 || state.InstanceClasses[0].Name != "master-dvp" {
-		t.Fatalf("buildBaseState() instance classes = %#v", state.InstanceClasses)
-	}
-	if len(state.CredentialSecrets) != 1 {
-		t.Fatalf("buildBaseState() credential secrets = %d, want 1", len(state.CredentialSecrets))
+		t.Fatalf("BuildForNodeGroup() instance classes = %#v", state.InstanceClasses)
 	}
 }
 
-func TestBuildBaseStateSetsMigrationStatus(t *testing.T) {
+func TestBuildForModuleConfigSetsMigrationStatus(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
@@ -209,12 +164,15 @@ func TestBuildBaseStateSetsMigrationStatus(t *testing.T) {
 		},
 	), cfg)
 
-	state, err := builder.buildBaseState(context.Background())
+	state, err := builder.BuildForModuleConfig(context.Background(), admissionv1.Update, testModuleConfigObject(cfg))
 	if err != nil {
-		t.Fatalf("buildBaseState() error = %v", err)
+		t.Fatalf("BuildForModuleConfig() error = %v", err)
 	}
 	if !state.MigrationStatus.MigrationPending || !state.MigrationStatus.LegacyPCCPresent {
-		t.Fatalf("buildBaseState() migration status = %#v", state.MigrationStatus)
+		t.Fatalf("BuildForModuleConfig() migration status = %#v", state.MigrationStatus)
+	}
+	if len(state.NodeGroups) != 0 {
+		t.Fatalf("BuildForModuleConfig() node groups = %#v, want none", state.NodeGroups)
 	}
 }
 
@@ -283,58 +241,59 @@ func TestBuildForCredentialSecretUpsertAndDelete(t *testing.T) {
 	}
 }
 
-func TestBuildForNodeGroupCreateAddsCloudPermanent(t *testing.T) {
+func TestBuildForNodeGroupCreateKeepsAdmittedCloudPermanentOnly(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
-	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		testNodeGroupObject("master", cpapi.NodeTypeCloudPermanent),
-	), cfg)
+	builder := NewStateBuilder(newRuntimeBuilderTestClient(t), cfg)
 
 	worker := testNodeGroupObject("worker", cpapi.NodeTypeCloudPermanent)
 	state, err := builder.BuildForNodeGroup(context.Background(), admissionv1.Create, worker)
 	if err != nil {
 		t.Fatalf("BuildForNodeGroup(create) error = %v", err)
 	}
-	if len(state.NodeGroups) != 2 {
-		t.Fatalf("BuildForNodeGroup(create) node groups = %#v, want 2", state.NodeGroups)
+	if len(state.NodeGroups) != 1 || state.NodeGroups[0].Name != "worker" {
+		t.Fatalf("BuildForNodeGroup(create) node groups = %#v, want admitted worker only", state.NodeGroups)
+	}
+	if len(state.InstanceClasses) != 0 {
+		t.Fatalf("BuildForNodeGroup(create) instance classes = %#v, want none", state.InstanceClasses)
 	}
 }
 
-func TestBuildForNodeGroupUpdateRemovesNonCloudPermanent(t *testing.T) {
+func TestBuildForNodeGroupUpdateSkipsNonCloudPermanent(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
-	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		testNodeGroupObject("master", cpapi.NodeTypeCloudPermanent),
-		testNodeGroupObject("worker", cpapi.NodeTypeCloudPermanent),
-	), cfg)
+	builder := NewStateBuilder(newRuntimeBuilderTestClient(t), cfg)
 
 	static := testNodeGroupObject("master", "CloudStatic")
 	state, err := builder.BuildForNodeGroup(context.Background(), admissionv1.Update, static)
 	if err != nil {
 		t.Fatalf("BuildForNodeGroup(update static) error = %v", err)
 	}
-	if len(state.NodeGroups) != 1 || state.NodeGroups[0].Name != "worker" {
-		t.Fatalf("BuildForNodeGroup(update static) node groups = %#v, want only worker", state.NodeGroups)
+	if len(state.NodeGroups) != 0 {
+		t.Fatalf("BuildForNodeGroup(update static) node groups = %#v, want none", state.NodeGroups)
 	}
 }
 
-func TestBuildForNodeGroupDeleteRemovesGroup(t *testing.T) {
+func TestBuildForNodeGroupDeleteLeavesStateEmpty(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
 	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		testNodeGroupObject("master", cpapi.NodeTypeCloudPermanent),
-		testNodeGroupObject("worker", cpapi.NodeTypeCloudPermanent),
+		testNodeGroupWithClassRef(cfg, "worker", cpapi.NodeTypeCloudPermanent, "worker-dvp"),
+		testInstanceClassObject(cfg, "worker-dvp"),
 	), cfg)
 
 	state, err := builder.BuildForNodeGroup(context.Background(), admissionv1.Delete, testNodeGroupObject("worker", cpapi.NodeTypeCloudPermanent))
 	if err != nil {
 		t.Fatalf("BuildForNodeGroup(delete) error = %v", err)
 	}
-	if len(state.NodeGroups) != 1 || state.NodeGroups[0].Name != "master" {
-		t.Fatalf("BuildForNodeGroup(delete) node groups = %#v, want only master", state.NodeGroups)
+	if len(state.NodeGroups) != 0 {
+		t.Fatalf("BuildForNodeGroup(delete) node groups = %#v, want none", state.NodeGroups)
+	}
+	if len(state.InstanceClasses) != 0 {
+		t.Fatalf("BuildForNodeGroup(delete) instance classes = %#v, want none", state.InstanceClasses)
 	}
 }
 
@@ -342,17 +301,18 @@ func TestBuildForInstanceClassOperations(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
-	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		testInstanceClassObject(cfg, "master-dvp"),
-	), cfg)
+	builder := NewStateBuilder(newRuntimeBuilderTestClient(t), cfg)
 
 	created := testInstanceClassObject(cfg, "worker-dvp")
 	state, deleted, err := builder.BuildForInstanceClass(context.Background(), admissionv1.Create, created)
 	if err != nil {
 		t.Fatalf("BuildForInstanceClass(create) error = %v", err)
 	}
-	if deleted != nil || len(state.InstanceClasses) != 2 {
-		t.Fatalf("BuildForInstanceClass(create) classes = %#v, deleted = %#v, want 2 classes", state.InstanceClasses, deleted)
+	if deleted != nil || len(state.InstanceClasses) != 1 || state.InstanceClasses[0].Name != "worker-dvp" {
+		t.Fatalf("BuildForInstanceClass(create) classes = %#v, deleted = %#v", state.InstanceClasses, deleted)
+	}
+	if len(state.NodeGroups) != 0 {
+		t.Fatalf("BuildForInstanceClass(create) node groups = %#v, want none", state.NodeGroups)
 	}
 
 	toDelete := testInstanceClassObject(cfg, "worker-dvp")
@@ -360,8 +320,28 @@ func TestBuildForInstanceClassOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildForInstanceClass(delete) error = %v", err)
 	}
-	if deleted == nil || deleted.Name != "worker-dvp" || len(state.InstanceClasses) != 1 {
+	if deleted == nil || deleted.Name != "worker-dvp" || len(state.InstanceClasses) != 0 {
 		t.Fatalf("BuildForInstanceClass(delete) classes = %#v, deleted = %#v", state.InstanceClasses, deleted)
+	}
+}
+
+func TestBuildForInstanceClassDeleteLoadsReferencingNodeGroups(t *testing.T) {
+	t.Parallel()
+
+	cfg := testStateBuilderConfig()
+	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
+		testNodeGroupWithClassRef(cfg, "master", cpapi.NodeTypeCloudPermanent, "master-dvp"),
+	), cfg)
+
+	state, deleted, err := builder.BuildForInstanceClass(context.Background(), admissionv1.Delete, testInstanceClassObject(cfg, "master-dvp"))
+	if err != nil {
+		t.Fatalf("BuildForInstanceClass(delete) error = %v", err)
+	}
+	if deleted == nil || deleted.Name != "master-dvp" {
+		t.Fatalf("BuildForInstanceClass(delete) deleted = %#v", deleted)
+	}
+	if len(state.NodeGroups) != 1 || state.NodeGroups[0].Name != "master" {
+		t.Fatalf("BuildForInstanceClass(delete) node groups = %#v, want master consumer", state.NodeGroups)
 	}
 }
 
@@ -371,9 +351,11 @@ func TestBuildForNodeGroupInvalidObject(t *testing.T) {
 	cfg := testStateBuilderConfig()
 	builder := NewStateBuilder(newRuntimeBuilderTestClient(t), cfg)
 
-	_, err := builder.BuildForNodeGroup(context.Background(), admissionv1.Update, &metav1.Status{})
-	if err == nil || !strings.Contains(err.Error(), "get NodeGroup metadata") {
-		t.Fatalf("BuildForNodeGroup() error = %v, want metadata error", err)
+	broken := testNodeGroupObject("master", cpapi.NodeTypeCloudPermanent)
+	broken.Object["spec"] = "invalid"
+	_, err := builder.BuildForNodeGroup(context.Background(), admissionv1.Update, broken)
+	if err == nil || !strings.Contains(err.Error(), "decode NodeGroup") {
+		t.Fatalf("BuildForNodeGroup() error = %v, want decode error", err)
 	}
 }
 
@@ -397,12 +379,12 @@ func TestRuntimeObjectHelpers(t *testing.T) {
 	}
 }
 
-func TestBuildForInstanceClassUpdateUpsertsExisting(t *testing.T) {
+func TestBuildForInstanceClassUpdateUsesAdmissionObject(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
 	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		testInstanceClassObject(cfg, "master-dvp"),
+		testNodeGroupWithClassRef(cfg, "master", cpapi.NodeTypeCloudPermanent, "master-dvp"),
 	), cfg)
 
 	updated := testInstanceClassObject(cfg, "master-dvp")
@@ -414,39 +396,40 @@ func TestBuildForInstanceClassUpdateUpsertsExisting(t *testing.T) {
 	if deleted != nil || len(state.InstanceClasses) != 1 {
 		t.Fatalf("BuildForInstanceClass(update) classes = %#v, deleted = %#v", state.InstanceClasses, deleted)
 	}
+	if len(state.NodeGroups) != 1 || state.NodeGroups[0].Name != "master" {
+		t.Fatalf("BuildForInstanceClass(update) node groups = %#v, want master consumer", state.NodeGroups)
+	}
 }
 
-func TestBuildForNodeGroupUpdateUpsertsExisting(t *testing.T) {
+func TestBuildForNodeGroupUpdateLoadsReferencedInstanceClass(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
 	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		testNodeGroupObject("master", cpapi.NodeTypeCloudPermanent),
+		testInstanceClassObject(cfg, "master-dvp"),
 	), cfg)
 
-	updated := testNodeGroupObject("master", cpapi.NodeTypeCloudPermanent)
-	updated.Object["spec"] = map[string]any{
-		"nodeType": string(cpapi.NodeTypeCloudPermanent),
-		"cloudInstances": map[string]any{
-			"classReference": map[string]any{"kind": cfg.InstanceClassKind, "name": "master-dvp"},
-		},
-	}
-	state, err := builder.BuildForNodeGroup(context.Background(), admissionv1.Update, updated)
+	state, err := builder.BuildForNodeGroup(
+		context.Background(),
+		admissionv1.Update,
+		testNodeGroupWithClassRef(cfg, "master", cpapi.NodeTypeCloudPermanent, "master-dvp"),
+	)
 	if err != nil {
 		t.Fatalf("BuildForNodeGroup(update) error = %v", err)
 	}
 	if len(state.NodeGroups) != 1 {
 		t.Fatalf("BuildForNodeGroup(update) node groups = %#v, want 1", state.NodeGroups)
 	}
+	if len(state.InstanceClasses) != 1 || state.InstanceClasses[0].Name != "master-dvp" {
+		t.Fatalf("BuildForNodeGroup(update) instance classes = %#v", state.InstanceClasses)
+	}
 }
 
-func TestBuildForCredentialSecretUpsertsExisting(t *testing.T) {
+func TestBuildForCredentialSecretUsesAdmissionObjectOnUpdate(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
-	builder := NewStateBuilder(newRuntimeBuilderTestClient(t,
-		testCredentialSecretObject(cfg, cpapi.CredentialSecretName),
-	), cfg)
+	builder := NewStateBuilder(newRuntimeBuilderTestClient(t), cfg)
 
 	updated := testCredentialSecretValue(cfg, cpapi.CredentialSecretName)
 	updated.StringData.Secret = "rotated"
@@ -496,15 +479,17 @@ func TestBuildForModuleConfigDecodeError(t *testing.T) {
 	}
 }
 
-func TestBuildForInstanceClassInvalidMetadata(t *testing.T) {
+func TestBuildForInstanceClassInvalidObject(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
 	builder := NewStateBuilder(newRuntimeBuilderTestClient(t), cfg)
 
-	_, _, err := builder.BuildForInstanceClass(context.Background(), admissionv1.Create, &metav1.Status{})
-	if err == nil || !strings.Contains(err.Error(), "get TestInstanceClass metadata") {
-		t.Fatalf("BuildForInstanceClass() error = %v, want metadata error", err)
+	broken := testInstanceClassObject(cfg, "broken-dvp")
+	broken.Object["spec"] = "invalid"
+	_, _, err := builder.BuildForInstanceClass(context.Background(), admissionv1.Create, broken)
+	if err == nil || !strings.Contains(err.Error(), "decode TestInstanceClass") {
+		t.Fatalf("BuildForInstanceClass() error = %v, want decode error", err)
 	}
 }
 
@@ -550,6 +535,20 @@ func testModuleConfigObject(cfg StateBuilderConfig) *unstructured.Unstructured {
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"})
 	obj.SetName(cfg.ModuleName)
 	obj.Object["spec"] = map[string]any{"enabled": true, "version": int64(2)}
+	return obj
+}
+
+func testNodeGroupWithClassRef(cfg StateBuilderConfig, name string, nodeType cpapi.NodeType, className string) *unstructured.Unstructured {
+	obj := testNodeGroupObject(name, nodeType)
+	obj.Object["spec"] = map[string]any{
+		"nodeType": string(nodeType),
+		"cloudInstances": map[string]any{
+			"classReference": map[string]any{
+				"kind": cfg.InstanceClassKind,
+				"name": className,
+			},
+		},
+	}
 	return obj
 }
 

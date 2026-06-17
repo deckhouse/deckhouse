@@ -18,11 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,7 +33,6 @@ import (
 )
 
 var (
-	moduleConfigGVK  = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"}
 	nodeGroupListGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroupList"}
 )
 
@@ -53,15 +52,6 @@ func (c StateBuilderConfig) instanceClassGVK() schema.GroupVersionKind {
 		Group:   "deckhouse.io",
 		Version: "v1alpha1",
 		Kind:    c.InstanceClassKind,
-	}
-}
-
-// instanceClassListGVK returns the GroupVersionKind for the configured InstanceClass list kind.
-func (c StateBuilderConfig) instanceClassListGVK() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   "deckhouse.io",
-		Version: "v1alpha1",
-		Kind:    c.InstanceClassKind + "List",
 	}
 }
 
@@ -108,7 +98,7 @@ func (b *StateBuilder) BuildForModuleConfig(
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (*cpval.State, error) {
-	state, err := b.buildBaseState(ctx)
+	state, err := b.newBaseState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("build base state: %w", err)
 	}
@@ -139,7 +129,7 @@ func (b *StateBuilder) BuildForCredentialSecret(
 	operation admissionv1.Operation,
 	secret cpapi.CredentialSecret,
 ) (*cpval.State, error) {
-	state, err := b.buildBaseState(ctx)
+	state, err := b.newBaseState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("build base state: %w", err)
 	}
@@ -148,15 +138,10 @@ func (b *StateBuilder) BuildForCredentialSecret(
 		return state, nil
 	}
 
-	switch operation {
-	case admissionv1.Delete:
-		state.CredentialSecrets = removeCredentialSecret(
-			state.CredentialSecrets,
-			secret.Name,
-			secret.Namespace,
-		)
-	default:
-		state.CredentialSecrets = upsertCredentialSecret(state.CredentialSecrets, secret)
+	state.CredentialSecrets = make([]cpapi.CredentialSecret, 0)
+
+	if operation != admissionv1.Delete {
+		state.CredentialSecrets = append(state.CredentialSecrets, secret)
 	}
 
 	return state, nil
@@ -168,20 +153,14 @@ func (b *StateBuilder) BuildForNodeGroup(
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (*cpval.State, error) {
-	state, err := b.buildBaseState(ctx)
+	state, err := b.newBaseState(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("build base state: %w", err)
 	}
 
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return nil, fmt.Errorf("get NodeGroup metadata: %w", err)
-	}
+	state.NodeGroups = make([]cpapi.NodeGroup, 0)
 
-	switch operation {
-	case admissionv1.Delete:
-		state.NodeGroups = removeNodeGroup(state.NodeGroups, accessor.GetName())
-	default:
+	if operation != admissionv1.Delete {
 		objMap, err := runtimeObjectToMap(obj)
 		if err != nil {
 			return nil, fmt.Errorf("convert runtime object to map: %w", err)
@@ -193,9 +172,15 @@ func (b *StateBuilder) BuildForNodeGroup(
 		}
 
 		if nodeGroup.Spec.NodeType == cpapi.NodeTypeCloudPermanent {
-			state.NodeGroups = upsertNodeGroup(state.NodeGroups, *nodeGroup)
-		} else {
-			state.NodeGroups = removeNodeGroup(state.NodeGroups, nodeGroup.Name)
+			state.NodeGroups = append(state.NodeGroups, *nodeGroup)
+
+			instanceClass, err := b.getInstanceClassByNodeGroup(ctx, nodeGroup)
+			if err != nil {
+				return nil, err
+			}
+			if instanceClass != nil {
+				state.InstanceClasses = []cpapi.InstanceClass{*instanceClass}
+			}
 		}
 	}
 
@@ -208,14 +193,9 @@ func (b *StateBuilder) BuildForInstanceClass(
 	operation admissionv1.Operation,
 	obj runtime.Object,
 ) (*cpval.State, *cpapi.InstanceClass, error) {
-	state, err := b.buildBaseState(ctx)
+	state, err := b.newBaseState(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("build base state: %w", err)
-	}
-
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return nil, nil, fmt.Errorf("get %s metadata: %w", b.config.InstanceClassKind, err)
 	}
 
 	objMap, err := runtimeObjectToMap(obj)
@@ -228,46 +208,28 @@ func (b *StateBuilder) BuildForInstanceClass(
 		return nil, nil, fmt.Errorf("decode %s: %w", b.config.InstanceClassKind, err)
 	}
 
-	switch operation {
-	case admissionv1.Delete:
-		state.InstanceClasses = removeInstanceClass(state.InstanceClasses, accessor.GetName())
-		return state, instanceClass, nil
-	default:
-		state.InstanceClasses = upsertInstanceClass(state.InstanceClasses, *instanceClass)
-		return state, nil, nil
+	nodeGroups, err := b.listNodeGroupsByInstanceClass(ctx, instanceClass.Name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("list NodeGroups referencing %s: %w", b.config.InstanceClassKind, err)
 	}
+	state.NodeGroups = nodeGroups
+
+	state.InstanceClasses = make([]cpapi.InstanceClass, 0)
+	if operation == admissionv1.Delete {
+		return state, instanceClass, nil
+	}
+
+	state.InstanceClasses = append(state.InstanceClasses, *instanceClass)
+
+	return state, nil, nil
 }
 
-func (b *StateBuilder) buildBaseState(ctx context.Context) (*cpval.State, error) {
+func (b *StateBuilder) newBaseState(ctx context.Context) (*cpval.State, error) {
 	state := &cpval.State{
 		InstanceClassKind: b.config.InstanceClassKind,
 		NamespaceName:     b.config.NamespaceName,
 		ModuleName:        b.config.ModuleName,
 	}
-
-	moduleConfig, err := b.getModuleConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get ModuleConfig: %w", err)
-	}
-	state.ModuleConfig = moduleConfig
-
-	secrets, err := b.listCredentialSecrets(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list credential secrets: %w", err)
-	}
-	state.CredentialSecrets = secrets
-
-	nodeGroups, err := b.listCloudPermanentNodeGroups(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list CloudPermanent NodeGroups: %w", err)
-	}
-	state.NodeGroups = nodeGroups
-
-	instanceClasses, err := b.listInstanceClasses(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list InstanceClasses with kind %s: %w", b.config.InstanceClassKind, err)
-	}
-	state.InstanceClasses = instanceClasses
 
 	migrationPending, err := b.IsMigrationPending(ctx)
 	if err != nil {
@@ -284,44 +246,49 @@ func (b *StateBuilder) buildBaseState(ctx context.Context) (*cpval.State, error)
 	return state, nil
 }
 
-func (b *StateBuilder) getModuleConfig(ctx context.Context) (*cpapi.ModuleConfig, error) {
-	obj := newUnstructured(moduleConfigGVK)
-	err := b.client.Get(ctx, client.ObjectKey{Name: b.config.ModuleName}, obj)
+func (b *StateBuilder) getInstanceClassByNodeGroup(ctx context.Context, nodeGroup *cpapi.NodeGroup) (*cpapi.InstanceClass, error) {
+	if nodeGroup == nil || nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
+		return nil, nil
+	}
+
+	classRef := nodeGroup.Spec.CloudInstances.ClassReference
+	if classRef.Kind != b.config.InstanceClassKind {
+		return nil, nil
+	}
+
+	className := strings.TrimSpace(classRef.Name)
+	if className == "" {
+		return nil, nil
+	}
+
+	return b.getInstanceClassByName(ctx, className)
+}
+
+func (b *StateBuilder) getInstanceClassByName(ctx context.Context, name string) (*cpapi.InstanceClass, error) {
+	obj := newUnstructured(b.config.instanceClassGVK())
+	err := b.client.Get(ctx, client.ObjectKey{Name: name}, obj)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("get ModuleConfig: %w", err)
+
+		return nil, fmt.Errorf("get %s %q: %w", b.config.InstanceClassKind, name, err)
 	}
 
-	moduleConfig, err := cpval.DecodeModuleConfig(obj.Object)
+	instanceClass, err := cpval.DecodeInstanceClass(obj.Object)
 	if err != nil {
-		return nil, fmt.Errorf("decode ModuleConfig: %w", err)
+		return nil, fmt.Errorf("decode %s %q: %w", b.config.InstanceClassKind, name, err)
 	}
 
-	return moduleConfig, nil
+	return instanceClass, nil
 }
 
-func (b *StateBuilder) listCredentialSecrets(ctx context.Context) ([]cpapi.CredentialSecret, error) {
-	list := &corev1.SecretList{}
-	if err := b.client.List(ctx, list, client.InNamespace(b.config.NamespaceName)); err != nil {
-		return nil, fmt.Errorf("list credential Secrets: %w", err)
+func (b *StateBuilder) listNodeGroupsByInstanceClass(ctx context.Context, className string) ([]cpapi.NodeGroup, error) {
+	className = strings.TrimSpace(className)
+	if className == "" {
+		return nil, nil
 	}
 
-	result := make([]cpapi.CredentialSecret, 0, len(list.Items))
-	for i := range list.Items {
-		secret := &list.Items[i]
-		if !IsManagedCredentialSecret(secret) {
-			continue
-		}
-
-		result = append(result, SecretToCredentialSecret(secret))
-	}
-
-	return result, nil
-}
-
-func (b *StateBuilder) listCloudPermanentNodeGroups(ctx context.Context) ([]cpapi.NodeGroup, error) {
 	list := newUnstructuredList(nodeGroupListGVK)
 	if err := b.client.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list NodeGroups: %w", err)
@@ -334,28 +301,16 @@ func (b *StateBuilder) listCloudPermanentNodeGroups(ctx context.Context) ([]cpap
 			return nil, fmt.Errorf("decode NodeGroup: %w", err)
 		}
 
-		if nodeGroup.Spec.NodeType == cpapi.NodeTypeCloudPermanent {
-			result = append(result, *nodeGroup)
-		}
-	}
-
-	return result, nil
-}
-
-func (b *StateBuilder) listInstanceClasses(ctx context.Context) ([]cpapi.InstanceClass, error) {
-	list := newUnstructuredList(b.config.instanceClassListGVK())
-	if err := b.client.List(ctx, list); err != nil {
-		return nil, fmt.Errorf("list %s: %w", b.config.InstanceClassKind+"List", err)
-	}
-
-	result := make([]cpapi.InstanceClass, 0, len(list.Items))
-	for i := range list.Items {
-		instanceClass, err := cpval.DecodeInstanceClass(list.Items[i].Object)
-		if err != nil {
-			return nil, fmt.Errorf("decode %s: %w", b.config.InstanceClassKind, err)
+		if nodeGroup.Spec.CloudInstances == nil || nodeGroup.Spec.CloudInstances.ClassReference == nil {
+			continue
 		}
 
-		result = append(result, *instanceClass)
+		classRef := nodeGroup.Spec.CloudInstances.ClassReference
+		if classRef.Kind != b.config.InstanceClassKind || classRef.Name != className {
+			continue
+		}
+
+		result = append(result, *nodeGroup)
 	}
 
 	return result, nil
@@ -393,73 +348,4 @@ func runtimeObjectToMap(obj runtime.Object) (map[string]any, error) {
 	}
 
 	return object, nil
-}
-
-func upsertCredentialSecret(items []cpapi.CredentialSecret, item cpapi.CredentialSecret) []cpapi.CredentialSecret {
-	for i := range items {
-		if items[i].Name == item.Name && items[i].Namespace == item.Namespace {
-			items[i] = item
-			return items
-		}
-	}
-
-	return append(items, item)
-}
-
-func removeCredentialSecret(items []cpapi.CredentialSecret, name, namespace string) []cpapi.CredentialSecret {
-	result := make([]cpapi.CredentialSecret, 0, len(items))
-	for _, item := range items {
-		if item.Name == name && item.Namespace == namespace {
-			continue
-		}
-		result = append(result, item)
-	}
-
-	return result
-}
-
-func upsertNodeGroup(items []cpapi.NodeGroup, item cpapi.NodeGroup) []cpapi.NodeGroup {
-	for i := range items {
-		if items[i].Name == item.Name {
-			items[i] = item
-			return items
-		}
-	}
-
-	return append(items, item)
-}
-
-func removeNodeGroup(items []cpapi.NodeGroup, name string) []cpapi.NodeGroup {
-	result := make([]cpapi.NodeGroup, 0, len(items))
-	for _, item := range items {
-		if item.Name == name {
-			continue
-		}
-		result = append(result, item)
-	}
-
-	return result
-}
-
-func upsertInstanceClass(items []cpapi.InstanceClass, item cpapi.InstanceClass) []cpapi.InstanceClass {
-	for i := range items {
-		if items[i].Name == item.Name {
-			items[i] = item
-			return items
-		}
-	}
-
-	return append(items, item)
-}
-
-func removeInstanceClass(items []cpapi.InstanceClass, name string) []cpapi.InstanceClass {
-	result := make([]cpapi.InstanceClass, 0, len(items))
-	for _, item := range items {
-		if item.Name == name {
-			continue
-		}
-		result = append(result, item)
-	}
-
-	return result
 }
