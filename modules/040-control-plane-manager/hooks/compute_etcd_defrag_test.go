@@ -23,73 +23,78 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defrag ::", func() {
-	const initConfigValuesString = ``
-
-	newComputeHook := func(mastersCount int, hasArbiter bool, configEnabled *bool, configCronSchedule string) *HookExecutionConfig {
-		mastersJSON := `[]`
-		if mastersCount > 0 {
-			nodes := make([]string, mastersCount)
-			for i := range nodes {
-				nodes[i] = `"master"`
+const threeMastersValues = `{
+	"controlPlaneManager": {
+		"internal": {
+			"mastersNode": ["master-0","master-1","master-2"],
+			"hasEtcdArbiterNode": false,
+			"etcdDefrag": {}
+		},
+		"etcd": {
+			"defrag": {
+				"cronSchedule": ""
 			}
-			mastersJSON = `["master"]`
-			if mastersCount == 2 {
-				mastersJSON = `["master-0","master-1"]`
-			} else if mastersCount == 3 {
-				mastersJSON = `["master-0","master-1","master-2"]`
-			}
-		}
-
-		enabledJSON := "null"
-		if configEnabled != nil {
-			if *configEnabled {
-				enabledJSON = "true"
-			} else {
-				enabledJSON = "false"
-			}
-		}
-
-		cronJSON := ""
-		if configCronSchedule != "" {
-			cronJSON = `"` + configCronSchedule + `"`
-		} else {
-			cronJSON = `""`
-		}
-
-		values := `{
-			"controlPlaneManager": {
-				"internal": {
-					"mastersNode": ` + mastersJSON + `,
-					"hasEtcdArbiterNode": ` + boolStr(hasArbiter) + `,
-					"etcdDefrag": {}
-				},
-				"etcd": {
-					"defrag": {
-						"cronSchedule": ` + cronJSON + `
-					}
-				},
-				"apiserver": {"authn": {}, "authz": {}}
-			}
-		}`
-
-		configValues := ``
-		if configEnabled != nil {
-			configValues = `{"controlPlaneManager":{"etcd":{"defrag":{"enabled":` + enabledJSON + `}}}}`
-		}
-
-		return HookExecutionConfigInit(values, configValues)
+		},
+		"apiserver": {"authn": {}, "authz": {}}
 	}
+}`
 
-	ptrBool := func(b bool) *bool { return &b }
+const twoMastersArbiterValues = `{
+	"controlPlaneManager": {
+		"internal": {
+			"mastersNode": ["master-0","master-1"],
+			"hasEtcdArbiterNode": true,
+			"etcdDefrag": {}
+		},
+		"etcd": {
+			"defrag": {
+				"cronSchedule": ""
+			}
+		},
+		"apiserver": {"authn": {}, "authz": {}}
+	}
+}`
 
+const oneMasterValues = `{
+	"controlPlaneManager": {
+		"internal": {
+			"mastersNode": ["master-0"],
+			"hasEtcdArbiterNode": false,
+			"etcdDefrag": {}
+		},
+		"etcd": {
+			"defrag": {
+				"cronSchedule": ""
+			}
+		},
+		"apiserver": {"authn": {}, "authz": {}}
+	}
+}`
+
+const threeMastersCustomCronValues = `{
+	"controlPlaneManager": {
+		"internal": {
+			"mastersNode": ["master-0","master-1","master-2"],
+			"hasEtcdArbiterNode": false,
+			"etcdDefrag": {}
+		},
+		"etcd": {
+			"defrag": {
+				"cronSchedule": "0 3 * * *"
+			}
+		},
+		"apiserver": {"authn": {}, "authz": {}}
+	}
+}`
+
+var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defrag ::", func() {
 	Context("3 master nodes, no explicit config", func() {
-		f := newComputeHook(3, false, nil, "")
+		f := HookExecutionConfigInit(threeMastersValues, ``)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("sets enabled=true and cronSchedule from default", func() {
+		It("sets enabled=true and default cronSchedule", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(etcdDefragEnabledInternalPath).Bool()).To(BeTrue())
 			Expect(f.ValuesGet(etcdDefragScheduleInternalPath).String()).To(Equal(etcdDefragDefaultCronSchedule))
@@ -97,7 +102,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defr
 	})
 
 	Context("2 master nodes + etcd arbiter, no explicit config", func() {
-		f := newComputeHook(2, true, nil, "")
+		f := HookExecutionConfigInit(twoMastersArbiterValues, ``)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -109,7 +114,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defr
 	})
 
 	Context("1 master node, no explicit config", func() {
-		f := newComputeHook(1, false, nil, "")
+		f := HookExecutionConfigInit(oneMasterValues, ``)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -120,8 +125,8 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defr
 		})
 	})
 
-	Context("1 master node, explicit enabled=true", func() {
-		f := newComputeHook(1, false, ptrBool(true), "")
+	Context("1 master node, explicit enabled=true in config", func() {
+		f := HookExecutionConfigInit(oneMasterValues, `{"controlPlaneManager":{"etcd":{"defrag":{"enabled":true}}}}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -132,8 +137,8 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defr
 		})
 	})
 
-	Context("3 master nodes, explicit enabled=false", func() {
-		f := newComputeHook(3, false, ptrBool(false), "")
+	Context("3 master nodes, explicit enabled=false in config", func() {
+		f := HookExecutionConfigInit(threeMastersValues, `{"controlPlaneManager":{"etcd":{"defrag":{"enabled":false}}}}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -144,22 +149,15 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defr
 		})
 	})
 
-	Context("3 master nodes, explicit cronSchedule", func() {
-		f := newComputeHook(3, false, nil, "0 3 * * *")
+	Context("3 master nodes, custom cronSchedule in values", func() {
+		f := HookExecutionConfigInit(threeMastersCustomCronValues, ``)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("uses cronSchedule from config", func() {
+		It("uses cronSchedule from values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(etcdDefragScheduleInternalPath).String()).To(Equal("0 3 * * *"))
 		})
 	})
 })
-
-func boolStr(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
-}

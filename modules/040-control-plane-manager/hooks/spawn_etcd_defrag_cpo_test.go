@@ -148,7 +148,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 		defragNow = func() time.Time { return defragTestNow }
 	})
 	AfterEach(func() {
-		defragNow = func() time.Time { return time.Now().UTC() }
+		defragNow = time.Now
 	})
 
 	Context("defrag disabled in internal values", func() {

@@ -46,18 +46,8 @@ const (
 	defragGracePeriod = 5 * time.Minute
 )
 
-// defragNow is a hook for tests to inject a fixed time.
-var defragNow = func() time.Time {
-	return time.Now().UTC()
-}
-
-type defragStateCM struct {
-	LastHandledCronSlot string
-}
-
-type defragMasterNode struct {
-	Name string
-}
+// defragNow is overridden in tests to inject a fixed time.
+var defragNow = time.Now
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/etcd_defrag",
@@ -108,7 +98,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSpawnEtcdDefragCPO)
 
 func filterDefragNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return defragMasterNode{Name: obj.GetName()}, nil
+	return obj.GetName(), nil
 }
 
 func filterDefragStateCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -116,7 +106,7 @@ func filterDefragStateCM(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	if err := sdk.FromUnstructured(obj, &cm); err != nil {
 		return nil, fmt.Errorf("parse defrag state ConfigMap: %w", err)
 	}
-	return defragStateCM{LastHandledCronSlot: cm.Data[defragLastSlotKey]}, nil
+	return cm.Data[defragLastSlotKey], nil
 }
 
 func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error {
@@ -140,19 +130,17 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		return fmt.Errorf("parse etcd defrag cron schedule %q: %w", cronSpec, err)
 	}
 
-	currentSlot := defragNow().Truncate(time.Minute)
+	currentSlot := defragNow().UTC().Truncate(time.Minute)
 
 	var lastHandled time.Time
-	cmSnaps := input.Snapshots.Get("defrag_state_cm")
-	if len(cmSnaps) > 0 {
-		cm, err := sdkobjectpatch.UnmarshalToStruct[defragStateCM](input.Snapshots, "defrag_state_cm")
+	for slot, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("defrag_state_cm")) {
 		if err != nil {
 			return fmt.Errorf("unmarshal defrag state ConfigMap: %w", err)
 		}
-		if len(cm) > 0 && cm[0].LastHandledCronSlot != "" {
-			parsed, err := time.Parse(time.RFC3339, cm[0].LastHandledCronSlot)
+		if slot != "" {
+			parsed, err := time.Parse(time.RFC3339, slot)
 			if err != nil {
-				return fmt.Errorf("parse lastHandledCronSlot %q: %w", cm[0].LastHandledCronSlot, err)
+				return fmt.Errorf("parse lastHandledCronSlot %q: %w", slot, err)
 			}
 			lastHandled = parsed.UTC()
 		}
@@ -188,22 +176,22 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	seen := make(map[string]struct{})
 	var nodeNames []string
 
-	for node, err := range sdkobjectpatch.SnapshotIter[defragMasterNode](input.Snapshots.Get("master_nodes_defrag")) {
+	for name, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("master_nodes_defrag")) {
 		if err != nil {
 			return fmt.Errorf("iterate master_nodes_defrag: %w", err)
 		}
-		if _, exists := seen[node.Name]; !exists {
-			seen[node.Name] = struct{}{}
-			nodeNames = append(nodeNames, node.Name)
+		if _, exists := seen[name]; !exists {
+			seen[name] = struct{}{}
+			nodeNames = append(nodeNames, name)
 		}
 	}
-	for node, err := range sdkobjectpatch.SnapshotIter[defragMasterNode](input.Snapshots.Get("arbiter_nodes_defrag")) {
+	for name, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("arbiter_nodes_defrag")) {
 		if err != nil {
 			return fmt.Errorf("iterate arbiter_nodes_defrag: %w", err)
 		}
-		if _, exists := seen[node.Name]; !exists {
-			seen[node.Name] = struct{}{}
-			nodeNames = append(nodeNames, node.Name)
+		if _, exists := seen[name]; !exists {
+			seen[name] = struct{}{}
+			nodeNames = append(nodeNames, name)
 		}
 	}
 
@@ -216,16 +204,14 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 
 	slotSuffix := nextSlot.Format("060102-1504")
 	for _, nodeName := range nodeNames {
-		cpo := buildDefragCPO(nodeName, slotSuffix)
-		input.PatchCollector.CreateIfNotExists(cpo)
+		input.PatchCollector.CreateIfNotExists(buildDefragCPO(nodeName, slotSuffix))
 		input.Logger.Info("etcd defrag: CPO created", "name", "etcd-defrag-"+nodeName+"-"+slotSuffix)
 	}
 
 	stateData := map[string]string{
 		defragLastSlotKey: currentSlot.Format(time.RFC3339),
 	}
-	cm := buildDefragStateCM(stateData)
-	input.PatchCollector.CreateOrUpdate(cm)
+	input.PatchCollector.CreateOrUpdate(buildDefragStateCM(stateData))
 
 	return nil
 }
