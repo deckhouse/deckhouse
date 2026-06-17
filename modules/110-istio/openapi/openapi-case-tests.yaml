@@ -70,9 +70,3 @@ negative:
           envoyExtAuthzGrpc:
             service: authservice.istio-system.svc.cluster.local
             port: "10003"
-    - dataPlane:
-        extensionProviders:
-        - name: main-access-log-format
-          envoyExtAuthzGrpc:
-            service: authservice.istio-system.svc.cluster.local
-            port: 10003

@@ -741,8 +741,6 @@ properties:
               type: string
               description: Unique extension provider name.
               pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
-              not:
-                enum: ["main-access-log-format"]
             envoyExtAuthzGrpc:
               type: object
               additionalProperties: false
