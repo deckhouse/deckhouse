@@ -13,6 +13,7 @@ spec:
   - IPv4
   - IPv6
   ipFamilyPolicy: PreferDualStack
+  clusterIP: {{ index $dnsAddresses 0 | quote }}
   clusterIPs:
   {{- range $addr := $dnsAddresses }}
   - {{ $addr | quote }}
