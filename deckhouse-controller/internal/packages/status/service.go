@@ -407,10 +407,10 @@ func (s *Status) IsConditionTrue(condType ConditionType) bool {
 	return false
 }
 
-// ClearStatus creates a new status or resets conditions. If a health event
+// NewStatus creates a new status or resets conditions. If a health event
 // was buffered by UpdateHealth before this name was registered, it is
 // applied here and the buffer entry is dropped.
-func (s *Service) ClearStatus(name string) {
+func (s *Service) NewStatus(name string) {
 	s.mu.Lock()
 
 	s.statuses[name] = &Status{
