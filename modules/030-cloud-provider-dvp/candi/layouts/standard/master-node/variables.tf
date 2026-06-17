@@ -126,7 +126,10 @@ locals {
   kubernetes_data_disk_storage_class = lookup(local.instance_class.etcdDisk, "storageClass", null)
   kubernetes_data_disk_size          = local.instance_class.etcdDisk.size
 
-  additional_labels      = lookup(local.instance_class.virtualMachine, "additionalLabels", {})
+  additional_labels = merge(
+    lookup(local.instance_class.virtualMachine, "additionalLabels", {}),
+    lookup(var.providerClusterConfiguration, "additionalVMLabels", {}),
+  )
   additional_annotations = lookup(local.instance_class.virtualMachine, "additionalAnnotations", {})
   priority_class_name    = lookup(local.instance_class.virtualMachine, "priorityClassName", null)
   node_selector          = lookup(local.instance_class.virtualMachine, "nodeSelector", {})

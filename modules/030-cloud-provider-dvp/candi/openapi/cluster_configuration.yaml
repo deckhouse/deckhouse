@@ -594,6 +594,14 @@ apiVersions:
                 type: integer
                 minimum: 1
                 maximum: 65535
+            additionalVMLabels:
+              type: object
+              description: |
+                Additional labels to apply to all VM pods in the cluster (both master and worker nodes).
+
+                Useful for targeting VMs with pre-created NetworkPolicies in the parent cluster project.
+              additionalProperties:
+                type: string
           required:
             - kubeconfigDataBase64
             - namespace
