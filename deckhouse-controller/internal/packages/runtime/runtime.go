@@ -639,6 +639,9 @@ func (r *Runtime) Stop() {
 
 	// Close scheduler event channel
 	r.scheduler.Stop()
+
+	// Stop reflecting status to CRs (unblocks the status consumer loop)
+	r.status.Shutdown()
 }
 
 // PreservePackage identifies one installed Package instance to preserve during Cleanup.
