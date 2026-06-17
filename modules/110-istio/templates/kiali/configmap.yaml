@@ -33,6 +33,9 @@ data:
         istiod_deployment_name: istiod-{{ $revision }}
         config_map_name: istio-{{ $revision }}
         istio_sidecar_injector_config_map_name: istio-sidecar-injector-{{ $revision }}
+{{- if .Values.istio.kiali.validationReconcileInterval }}
+        validation_reconcile_interval: {{ .Values.istio.kiali.validationReconcileInterval }}
+{{- end }}
       prometheus:
         url: https://trickster.d8-monitoring/trickster/main
         auth:

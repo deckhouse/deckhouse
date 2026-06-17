@@ -465,6 +465,16 @@ properties:
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
       Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  kiali:
+    description: Настройки Kiali.
+    properties:
+      validationReconcileInterval:
+        description: |
+          Интервал валидации ресурсов Istio в Kiali.
+
+          Если не задан, Kiali использует значение по умолчанию "1m".
+
+          Нулевые значения ("0", "0s", "0m", "0h") запрещены.
   https:
     description: |
       Тип сертификата, используемого для публичных веб-интерфейсов модуля.
