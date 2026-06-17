@@ -147,6 +147,7 @@ const istioValues = `
               min: "64Mi"
     ambient:
       enabled: false
+    kiali: {}
 `
 
 func getSubdirs(dir string) ([]string, error) {
