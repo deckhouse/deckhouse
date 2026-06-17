@@ -261,21 +261,27 @@ cgroupsPerQOS: true
 cgroupDriver: ${cgroup_driver}
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
+  {{- $dnsAddresses := .normal.clusterDNSAddress | default "" }}
+  {{- if $dnsAddresses }}
 clusterDNS:
-  {{- range (.normal.clusterDNSAddress | splitList ",") }}
-    {{- $addr := trim . }}
-    {{- if $addr }}
+    {{- range (splitList "," $dnsAddresses) }}
+      {{- $addr := trim . }}
+      {{- if $addr }}
 - {{ $addr }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
 {{- if eq .runType "ClusterBootstrap" }}
 clusterDomain: {{ .clusterBootstrap.clusterDomain }}
+  {{- $dnsAddresses := .clusterBootstrap.clusterDNSAddress | default "" }}
+  {{- if $dnsAddresses }}
 clusterDNS:
-  {{- range (.clusterBootstrap.clusterDNSAddress | splitList ",") }}
-    {{- $addr := trim . }}
-    {{- if $addr }}
+    {{- range (splitList "," $dnsAddresses) }}
+      {{- $addr := trim . }}
+      {{- if $addr }}
 - {{ $addr }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
