@@ -205,6 +205,40 @@ metadata:
 		})
 	})
 
+	// ---- State B with the nodes path absent in values (legacy cluster, MC v2 not applied) ----
+	Context("State B: PCC present, cloudProviderDvp.nodes absent in values", func() {
+		// Legacy clusters have no cloud-provider-dvp ModuleConfig, and the nodes object
+		// has no own default (only nodes.disabled does), so cloudProviderDvp.nodes is
+		// absent. mapPCCtoRootValues must create the whole nodes object instead of
+		// patching nodes.parameters, otherwise a JSON-patch "missing path" error blocks
+		// the main queue.
+		legacyValues := `
+global:
+  discovery: {}
+cloudProviderDvp:
+  internal: {}
+  provider: {}
+`
+		bNoNodes := HookExecutionConfigInit(legacyValues, `{}`)
+		bNoNodes.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		bNoNodes.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		bNoNodes.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			bNoNodes.KubeStateSet(notEmptyPCCState)
+			bNoNodes.BindingContexts.Set(bNoNodes.GenerateBeforeHelmContext())
+			bNoNodes.RunHook()
+		})
+
+		It("should create the nodes object and fill parameters from PCC", func() {
+			Expect(bNoNodes).To(ExecuteSuccessfully())
+
+			Expect(bNoNodes.ValuesGet("cloudProviderDvp.nodes.parameters.layout").String()).To(Equal("Standard"))
+			Expect(bNoNodes.ValuesGet("cloudProviderDvp.nodes.parameters.sshPublicKey").String()).To(Equal("ssh-rsa AAAAB3N"))
+			Expect(bNoNodes.ValuesGet("cloudProviderDvp.nodes.parameters.region").String()).To(Equal("ru-msk-1"))
+		})
+	})
+
 	// ---- State B with real credential already present (from credentials.go at Order 19) ----
 	Context("State B: PCC present, real d8-credentials Secret already populated by credentials.go", func() {
 		// Simulate that credentials.go (Order 19) has already run and written the real secret
