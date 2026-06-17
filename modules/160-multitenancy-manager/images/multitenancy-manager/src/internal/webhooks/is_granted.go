@@ -42,13 +42,18 @@ var _ http.Handler = &IsGrantedValidator{}
 // object by availability (which cluster-scoped resources the project may reference).
 type IsGrantedValidator struct {
 	log     logr.Logger
-	cl      client.Client
+	cl      client.Reader
 	mapper  meta.RESTMapper
 	factory jsonpath.Factory
 }
 
-// NewIsGrantedValidator builds the /is-granted validating webhook.
-func NewIsGrantedValidator(log logr.Logger, cl client.Client, mapper meta.RESTMapper, factory jsonpath.Factory) *IsGrantedValidator {
+// NewIsGrantedValidator builds the /is-granted validating webhook. cl is a direct (uncached) API reader
+// on purpose: the cache-backed client lazily starts an informer on first read of a type and blocks on
+// its sync inside the admission request; on a large cluster that first sync can exceed the webhook
+// deadline, and the per-request cancellation prevents it from ever completing — every call then times
+// out and (with failurePolicy: Fail) piles up retries into a queue lock. A direct reader never depends
+// on informer sync, so reads are bounded and the webhook cannot hang.
+func NewIsGrantedValidator(log logr.Logger, cl client.Reader, mapper meta.RESTMapper, factory jsonpath.Factory) *IsGrantedValidator {
 	return &IsGrantedValidator{log: log.WithValues("component", "is-granted"), cl: cl, mapper: mapper, factory: factory}
 }
 
@@ -68,7 +73,11 @@ func (v *IsGrantedValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req := review.Request
 	log := v.log.WithValues("namespace", req.Namespace, "name", req.Name, "resource", req.Resource.String())
 
-	resp, err := v.decide(r.Context(), req, log)
+	// Hard-bound the decision so the webhook always answers quickly and can never become a queue lock.
+	ctx, cancel := context.WithTimeout(r.Context(), webhookDecisionTimeout)
+	defer cancel()
+
+	resp, err := v.decide(ctx, req, log)
 	if err != nil {
 		log.Error(err, "is-granted decision failed")
 		http.Error(w, "is-granted decision failed", http.StatusInternalServerError)

@@ -131,8 +131,11 @@ func main() {
 	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
 		panic(err)
 	}
-	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetClient(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
-	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetClient(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	// Use the direct (uncached) API reader for the admission webhooks: a cache-backed read lazily
+	// starts an informer and blocks on its sync inside the request, which can exceed the webhook
+	// deadline and pile up into a queue lock. A direct reader keeps reads bounded.
+	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
 
 	// start runtime manager
@@ -183,7 +186,11 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		logger.Error(err, "unable to set up health check")
 		return nil, err
 	}
-	if err = runtimeManager.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// Honest readiness: report Ready only once the webhook server is actually serving, instead of an
+	// unconditional Ping. Otherwise the pod is Ready while its webhooks cannot answer, and the apiserver
+	// keeps routing admission calls to it — turning a not-yet-serving replica into webhook timeouts (and,
+	// with failurePolicy: Fail, a queue lock).
+	if err = runtimeManager.AddReadyzCheck("readyz", runtimeManager.GetWebhookServer().StartedChecker()); err != nil {
 		logger.Error(err, "unable to set up ready check")
 		return nil, err
 	}
