@@ -223,6 +223,25 @@ func TestIsGranted_SystemNamespaceBypass(t *testing.T) {
 	}
 }
 
+func TestIsGranted_SystemRequestBypass(t *testing.T) {
+	// A module's Helm release applies its resources into project namespaces as the deckhouse-controller
+	// (group system:serviceaccounts:d8-system). Denying — or, with failurePolicy: Fail, even stalling —
+	// such a request fails the install and addon-operator retries it forever, deadlocking the module's
+	// queue. A system request must therefore ALWAYS pass, even for a value a project user would be
+	// denied. (At the apiserver level matchConditions skip the webhook for these writers entirely; this
+	// asserts the handler-level backstop.)
+	v := isGranted(t, projectNS("proj", map[string]string{"env": "prod"}), lbDef(v1alpha1.AvailabilityNone), lbRef(v1alpha1.DefaultingNone), lbGrant())
+	r := review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)
+	r.Request.UserInfo.Groups = []string{"system:serviceaccounts:d8-system"}
+	if resp := serve(t, v, "/is-granted", r); !resp.Allowed {
+		t.Fatal("a system (d8-system) writer must bypass the grant allow-list — it must never lock a module's Helm release")
+	}
+	// A normal project user with the same forbidden value is still denied (fast, terminal — no retry).
+	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); resp.Allowed {
+		t.Fatal("a normal user must still be denied an ungranted value")
+	}
+}
+
 func TestIsGranted_UnboundReferenceIgnored(t *testing.T) {
 	// A reference whose definition does not exist enforces nothing.
 	v := isGranted(t, projectNS("proj", map[string]string{"env": "prod"}), lbRef(v1alpha1.DefaultingNone), lbGrant())

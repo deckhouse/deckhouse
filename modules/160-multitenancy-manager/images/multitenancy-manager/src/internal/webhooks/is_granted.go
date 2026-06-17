@@ -81,6 +81,15 @@ func (v *IsGrantedValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // decide returns the admission response. Availability is enforced for every matched reference; on
 // UPDATE values already present in the old object are grandfathered so existing objects are not broken.
 func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.AdmissionRequest, log logr.Logger) (*admissionv1.AdmissionResponse, error) {
+	// Never police a system / cluster-component / module writer. Every module's resources land in
+	// project namespaces via that module's Helm release applied by the deckhouse-controller (group
+	// system:serviceaccounts:d8-system); denying or even stalling such a request fails the install,
+	// which addon-operator retries forever, deadlocking the module's queue. The grant allow-list is for
+	// PROJECT USERS only. This mirrors (and backstops) the apiserver-level matchConditions on the
+	// webhook configuration in case the request still reaches the handler. See protect.go.
+	if isSystemRequest(req) {
+		return allowedResponse(req.UID), nil
+	}
 	if namespaces.IsSystem(req.Namespace) || req.SubResource != "" || req.Namespace == "" {
 		return allowedResponse(req.UID), nil
 	}
