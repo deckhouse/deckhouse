@@ -233,7 +233,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{dvpCandiDiscoverySecretNamespace},
+					MatchNames: []string{dvpNamespace},
 				},
 			},
 			NameSelector: &types.NameSelector{

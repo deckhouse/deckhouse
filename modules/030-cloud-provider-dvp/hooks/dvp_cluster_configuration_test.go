@@ -584,7 +584,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: d8-candi-cloud-provider-discovery-data
-  namespace: kube-system
+  namespace: d8-cloud-provider-dvp
 data:
   "cloud-provider-discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(discoveryJSON)))
