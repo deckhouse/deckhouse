@@ -448,7 +448,18 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		nodesParams["zones"] = *pcc.Zones
 	}
 	if len(nodesParams) > 0 {
-		input.Values.Set("cloudProviderDvp.nodes.parameters", nodesParams)
+		// Set the whole nodes object at once: a JSON-patch "add" cannot create the
+		// missing intermediate "cloudProviderDvp.nodes" path when MC v2 has not
+		// populated it yet (nodes has no own default, only nodes.disabled does).
+		// Read-merge preserves nodes.disabled when it is already present.
+		nodes := make(map[string]any)
+		if v, ok := input.Values.GetOk("cloudProviderDvp.nodes"); ok {
+			if err := json.Unmarshal([]byte(v.Raw), &nodes); err != nil {
+				return fmt.Errorf("unmarshal nodes: %w", err)
+			}
+		}
+		nodes["parameters"] = nodesParams
+		input.Values.Set("cloudProviderDvp.nodes", nodes)
 	}
 
 	// storage - not touched; PCC does not control subsystem enablement.
