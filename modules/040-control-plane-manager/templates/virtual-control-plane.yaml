@@ -122,4 +122,12 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
             {{- include "control_plane_manager_resources" . | nindent 12 }}
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 2Mi
 {{- end }}
