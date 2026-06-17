@@ -42,11 +42,7 @@ const globalValues = `
   modulesImages:
     digests:
       controlPlaneManager:
-        controlPlaneManager131: sha256:abcdefgh
-        controlPlaneManager132: sha256:abcdefgh
-        controlPlaneManager133: sha256:abcdefgh
-        controlPlaneManager134: sha256:abcdefgh
-        controlPlaneManager135: sha256:abcdefgh
+        controlPlaneManager: sha256:abcdefgh
         etcd: sha256:abcdefgh
         etcdBackup: sha256:abcdefgh
         kubeApiserver131: sha256:abcdefgh

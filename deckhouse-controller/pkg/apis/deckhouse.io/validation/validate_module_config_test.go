@@ -193,13 +193,13 @@ func newTestHandler(t *testing.T, storage *fakeModuleStorage, manager *fakeModul
 func newTestHandlerWithObjects(t *testing.T, storage *fakeModuleStorage, manager *fakeModuleManager, dependencyExtender moduleDependencyExtender, allowExperimental bool, objs ...client.Object) http.Handler {
 	t.Helper()
 
-	return newTestHandlerWithValidator(t, storage, manager, dependencyExtender, allowExperimental, configtools.NewValidator(nil, nil), objs...)
+	return newTestHandlerWithValidator(t, storage, manager, dependencyExtender, allowExperimental, nil, configtools.NewValidator(nil, nil), objs...)
 }
 
 // newTestHandlerWithValidator is the most flexible builder: it also lets a test
 // supply the config validator, which is needed to exercise the
 // configValidator.Validate branch in the handler.
-func newTestHandlerWithValidator(t *testing.T, storage *fakeModuleStorage, manager *fakeModuleManager, dependencyExtender moduleDependencyExtender, allowExperimental bool, validator *configtools.Validator, objs ...client.Object) http.Handler {
+func newTestHandlerWithValidator(t *testing.T, storage *fakeModuleStorage, manager *fakeModuleManager, dependencyExtender moduleDependencyExtender, allowExperimental bool, allowedExperimental []string, validator *configtools.Validator, objs ...client.Object) http.Handler {
 	t.Helper()
 
 	scheme := runtime.NewScheme()
@@ -212,6 +212,7 @@ func newTestHandlerWithValidator(t *testing.T, storage *fakeModuleStorage, manag
 
 	deckhouseSettings := helpers.DefaultDeckhouseSettings()
 	deckhouseSettings.AllowExperimentalModules = allowExperimental
+	deckhouseSettings.AllowedExperimentalModules = allowedExperimental
 	settings := helpers.NewDeckhouseSettingsContainer(deckhouseSettings, metricStorage)
 
 	return moduleConfigValidationHandler(fakeClient, storage, metricStorage, manager, validator, settings, dependencyExtender)
@@ -971,7 +972,7 @@ func TestModuleConfigValidationHandler_ConfigValidation(t *testing.T) {
 		// a validator with a (empty) conversions store but no values validator emits
 		// a warning for a spec.version without spec.settings
 		validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, validator, newModuleCR(moduleName, []string{"alpha"}, ""))
+		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, newModuleCR(moduleName, []string{"alpha"}, ""))
 
 		cfg := newModuleConfigFull(moduleName, boolPtr(true), "alpha", "")
 		cfg.Spec.Version = 1
@@ -1093,6 +1094,7 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 	tests := []struct {
 		name                string
 		allowExperimental   bool
+		allowedExperimental []string
 		storageStage        string
 		moduleCRStage       string
 		expectCheckEnabling bool
@@ -1119,6 +1121,36 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 			expectCheckEnabling: true,
 			wantAllowed:         true,
 		},
+		{
+			name:                "experimental module is allowed when listed in allowedExperimentalModules",
+			allowedExperimental: []string{moduleName},
+			storageStage:        moduletypes.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
+		{
+			name:                "experimental module is rejected when a different module is allowlisted",
+			allowedExperimental: []string{"other-experimental-module"},
+			storageStage:        moduletypes.ExperimentalModuleStage,
+			wantAllowed:         false,
+			wantMessage:         "experimental",
+		},
+		{
+			name:                "experimental module is allowed when allowExperimentalModules is true and it is also listed",
+			allowExperimental:   true,
+			allowedExperimental: []string{moduleName},
+			storageStage:        moduletypes.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
+		{
+			name:                "experimental module is allowed when allowExperimentalModules is true and a different module is listed",
+			allowExperimental:   true,
+			allowedExperimental: []string{"other-experimental-module"},
+			storageStage:        moduletypes.ExperimentalModuleStage,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1136,7 +1168,7 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 			}
 
 			moduleCR := newModuleCR(moduleName, []string{"alpha"}, tt.moduleCRStage)
-			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, tt.allowExperimental, moduleCR)
+			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, tt.allowExperimental, tt.allowedExperimental, configtools.NewValidator(nil, nil), moduleCR)
 
 			// CREATE that enables the module triggers the experimental gate
 			review := newModuleConfigAdmissionReview("CREATE", newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""), nil)

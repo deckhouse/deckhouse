@@ -48,6 +48,9 @@ properties:
               Дополнительные аннотации для сервиса ingressgateway.
 
               Полезно, например, для настройки локального LB в Yandex Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
+          gatewayPodAnnotations:
+            description: |
+              Дополнительные аннотации для подов DaemonSet'а ingressgateway.
           nodeSelector:
             description: |
               Селектор для DaemonSet'а ingressgateway.

@@ -1128,6 +1128,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs ul p, .docs ol p {
     font-size: 14px;
+    line-height: 1.5;
 
     @include breakpoints.max-w(s) {
       font-size: 13px;
@@ -1187,7 +1188,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
   border-radius: 6px;
   position: absolute;
   left: -15px;
-  top: 7px;
+  top: 8px;
 
   @include breakpoints.max-w(xs) {
     width: 5px;
@@ -1674,7 +1675,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
   position: relative;
 }
 
-.docs pre {
+.docs pre.code__transfer {
     font-family: 'Source Code Pro', monospace;
     border-radius: 4px;
     padding: 10px;
@@ -2022,6 +2023,16 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs img {
     max-width: 100%;
+
+    &.image-scheme {
+      @include breakpoints.min-w(m) {
+        max-width: 80%;
+      }
+
+      @include breakpoints.min-w(l) {
+        max-width: 60%;
+      }
+    }
 }
 
 .docs .clickable-header {
@@ -2204,17 +2215,35 @@ ul .resources__prop_name.deprecated {
 
 .pdf-slider {
   &__canvas {
+    max-width: 70%;
     border: 1px solid rgba(241, 243, 244, .949);
+
+    @include breakpoints.max-w(l) {
+      max-width: 80%;
+    }
+
+    @include breakpoints.max-w(m) {
+      max-width: 100%;
+    }
   }
 
   &__nav {
     display: flex;
     align-items: center;
     box-sizing:  border-box;
+    max-width: calc(70% + 2px);
     margin-top: -4px;
     padding: 2px 8px;
     background: rgba(241, 243, 244, .949);
     box-shadow: none;
+
+    @include breakpoints.max-w(l) {
+      max-width: calc(80% + 2px);
+    }
+
+    @include breakpoints.max-w(m) {
+      max-width: calc(100% + 2px);
+    }
   }
 
   &__nav--button {

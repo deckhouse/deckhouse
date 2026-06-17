@@ -1,5 +1,5 @@
 ---
-title: The module core
+title: The virtualization core
 permalink: en/architecture/virtualization/core.html
 search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, kubevirt, virt-operator, core
 description: Architecture of the virtualization module core in Deckhouse Kubernetes Platform.
@@ -9,7 +9,7 @@ The [`Virtualization`](/modules/virtualization/) module core is directly respons
 
 To manage VMs, the module core uses custom resources of the following API groups:
 
-1. `Internal.virtualization.deckhouse.io`: The main group, an analog of the `kubevirt.io` API group of the original KubeVirt. It includes the following custom resources:
+1. `internal.virtualization.deckhouse.io`: The main group, an analog of the `kubevirt.io` API group of the original KubeVirt. It includes the following custom resources:
 
    - InternalVirtualizationVirtualMachine: A resource that describes the VM configuration and status.
    - InternalVirtualizationVirtualMachineInstance: A resource that describes a running VM.
@@ -47,7 +47,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module core and its interactions with other components of DKP are shown in the following diagrams:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Architecture of the virtualization module core](../../../images/architecture/virtualization/c4-l2-virtualization-core.png)
+![Architecture of the virtualization module core](../../images/architecture/virtualization/c4-l2-virtualization-core.png)
 
 ## Module core components
 
@@ -95,7 +95,7 @@ The module core consists of the following components:
    - **virt-operator**: Main container.
    - **proxy** (aka **kube-api-rewriter**): Sidecar container that performs modification of API requests passing through it (described above).
 
-1. **Virt-launcher-[VMI name]**: The pod where the VM is running (more exactly VirtualMachineInstance).
+1. **Virt-launcher-\<VMI name\>**: The pod where the VM is running (more exactly VirtualMachineInstance).
 
    It consists of one container:
 
@@ -111,7 +111,7 @@ The module core consists of the following components:
 
 ## Module core interactions
 
-The module core (CORE) interacts with the following components:
+The module core interacts with the following components:
 
 1. **Kube-apiserver**:
 

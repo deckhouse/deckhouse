@@ -540,6 +540,14 @@ jobs:
         with:
           name: pr_diff
 
+      - name: Validate spelling wordlist <-> dev_OPS.dic sync
+        env:
+          WORDLIST_PATH: tools/docs/spelling/wordlist
+          DICT_PATH: tools/docs/spelling/dictionaries/dev_OPS.dic
+          DIFF_PATH: ./pr.diff
+        run: |
+          ./tools/docs/spelling/validate_dictionary_sync.sh "${DIFF_PATH}"
+
        # <template: spellcheck_template>
       - name: Spell check
         run: |

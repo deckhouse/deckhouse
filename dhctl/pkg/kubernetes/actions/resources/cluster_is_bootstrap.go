@@ -46,7 +46,7 @@ type kubeNgGetter struct {
 
 func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) {
 	var ngs []unstructured.Unstructured
-	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get machine failed events", 9, 1*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
@@ -80,7 +80,7 @@ func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) 
 
 func (n *kubeNgGetter) MachineFailedEvents(ctx context.Context) ([]eventsv1.Event, error) {
 	var list *eventsv1.EventList
-	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get machine failed events", 9, 1*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
@@ -150,7 +150,7 @@ func (n *clusterIsBootstrapCheck) lastEvents(ctx context.Context, lastTime time.
 
 func (n *clusterIsBootstrapCheck) hasBootstrappedCM(ctx context.Context) (bool, error) {
 	hasCm := false
-	err := retry.NewSilentLoop("get is-bootstrapped cm", 3, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get is-bootstrapped cm", 9, 1*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err

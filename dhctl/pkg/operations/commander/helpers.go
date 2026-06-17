@@ -105,7 +105,7 @@ func ConstructManagedByCommanderConfigMapTask(ctx context.Context, commanderUUID
 }
 
 func DeleteManagedByCommanderConfigMap(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete commander-uuid ConfigMap", 20, 5*time.Second).
+	return retry.NewLoop("Delete commander-uuid ConfigMap", 100, 1*time.Second).
 		WithShowError(false).
 		RunContext(ctx, func() error {
 			err := kubeCl.

@@ -541,15 +541,9 @@ jobs:
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Build.gitlab-ci.yml
     ```
 
-    Пример добавления ссылок расположен в [GitLab](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L2).
-
 1. После подключения шаблонов, в той же конфигурации `.gitlab-ci.yml` добавьте шаг для выполнения проверки:
 
     ```yaml
     Lint:
       extends: .lint
     ```
-
-    Пример добавления шага проверки расположен в [GitLab](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L48).
-
-> Если проект находится в группе [https://fox.flant.com/deckhouse](https://fox.flant.com/deckhouse), переменные для отправки метрик уже заданы. Дополнительно ничего конфигурировать не требуется.

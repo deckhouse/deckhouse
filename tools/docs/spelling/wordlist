@@ -122,7 +122,6 @@ Bashible
 BashibleTemplateData
 basicAuditPolicyEnabled
 BasicAuth
-Basis Dynamix
 baz
 bcrypt
 BDU
@@ -150,6 +149,7 @@ boto3
 BPF
 bpfLBMode
 Buildah
+builtin
 bunble
 Burstable
 BusyBox
@@ -247,6 +247,7 @@ clusterlocal
 ClusterLogDestination
 ClusterLoggingConfig
 ClusterName
+ClusterObservabilityAlert
 ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
@@ -477,6 +478,7 @@ EmailConfig
 emptyDir
 enableMultiTenancy
 endofftopic
+entrypoint
 enum
 env
 EnvoyFilter
@@ -936,6 +938,7 @@ MostAllocated
 MQL
 MRA
 MRs
+msg
 mTLS
 MTLS
 MTU
@@ -976,6 +979,8 @@ Nehalem
 neighbour
 Netfilter
 NetworkAddress
+NetworkID
+NetworkLoadBalancer
 NetworkPolicy
 nexthop
 nexthops
@@ -1236,6 +1241,7 @@ regionTagCategory
 registryDockerCfg
 registryImagesRepo
 registrysecret
+Rego
 releaseChannel
 RemoveDuplicates
 RemovePodsHavingTooManyRestarts
@@ -1249,6 +1255,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+repos
 reprovisioning
 repurposed
 RequestAuthentication
@@ -1264,7 +1271,6 @@ RESTful
 Restic
 RHEL
 RockSolid
-RoleBinding
 roleRef
 RollingUpdate
 rollout
@@ -1353,6 +1359,7 @@ SomeRegion
 SonarQube
 Sonatype
 sourceRanges
+SPE
 spellchecker
 Spellchecking
 SPIFFE
@@ -1413,11 +1420,13 @@ Stribog
 struct
 Struct
 stylesheets
+subdomain
 subdomains
 Subfolder
 subGID
 subGIDs
 SubjectAccessReview
+SubnetID
 subresource
 subresources
 subUID
@@ -1451,6 +1460,7 @@ SystemTag
 TaintToleration
 tarball
 tarballs
+TargetGroup
 targetRef
 Taskfile
 TATLIN
@@ -1465,6 +1475,7 @@ terraform
 Terraform
 TestConvert
 testEnum
+TG
 Thanos
 THENEWSTACK
 Thev1
@@ -1526,6 +1537,8 @@ UUID
 UUIDs
 uwsgi
 v1
+ValidatingAdmissionPolicy
+ValidatingAdmissionPolicyBinding
 ValidationWebhook
 validator
 vApp
@@ -1657,10 +1670,10 @@ YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses
 YC
+YCC
 YCloud
 yml
 YouTube
-YYYY
 zabbix
 Zabbix
 ZFS
@@ -1677,6 +1690,7 @@ ZvirtInstanceClass
 Автообновление
 автообновлений
 автообновления
+автоподменой
 авторизовывать
 авторизовываться
 автоскейлерам
@@ -1781,6 +1795,7 @@ ZvirtInstanceClass
 валиден
 валидирования
 валидировать
+валидироваться
 валидирует
 валидируется
 валидируются
@@ -1819,6 +1834,7 @@ ZvirtInstanceClass
 воркеров
 выгрузок
 выдаватель
+выполнений
 высокогранулярной
 высокодоступном
 высокодоступную
@@ -1926,6 +1942,7 @@ ZvirtInstanceClass
 инстанс
 инстанса
 инстансам
+инстансами
 инстансах
 инстансов
 инстансом
@@ -2115,8 +2132,14 @@ ZvirtInstanceClass
 неизменяем
 неинтерактивном
 неймспейс
+неймспейса
+неймспейсам
+неймспейсами
 неймспейсах
 неймспейсе
+неймспейсов
+неймспейсом
+неймспейсу
 неймспейсы
 некоммитнутые
 некоммитнутыми
@@ -2146,7 +2169,9 @@ ZvirtInstanceClass
 несекретных
 несистемных
 неунифицированных
+неуспешной
 неуспешные
+неуспешных
 нешифрованные
 ноде
 нуть
@@ -2194,8 +2219,11 @@ ZvirtInstanceClass
 паттерна
 паттернов
 паттерну
+паттерны
 патч
 патча
+патчах
+патчей
 патчем
 патчи
 патчится
@@ -2212,6 +2240,7 @@ ZvirtInstanceClass
 перегенерации
 перегенерация
 перегенерировать
+Перегенерируйте
 передеплоятся
 Перезаказ
 перезапускает
@@ -2250,6 +2279,7 @@ ZvirtInstanceClass
 пересобирает
 пересоздаваться
 пересоздает
+пересоздаёт
 пересоздается
 пересоздастся
 переупорядочивание
@@ -2265,6 +2295,7 @@ ZvirtInstanceClass
 ПК
 плейсхолдер
 плейсхолдеров
+побайтово
 поддомен
 поддоменам
 поддоменами
@@ -2285,6 +2316,7 @@ ZvirtInstanceClass
 подсетях
 покоммитное
 помотрим
+Пошагово
 превью
 предзагрузки
 преднастроенного
@@ -2420,6 +2452,7 @@ ZvirtInstanceClass
 сгенерировали
 сгенерирован
 сгенерированного
+сгенерированном
 сгенерированному
 сгенерированную
 сгенерированные
@@ -2543,6 +2576,11 @@ ZvirtInstanceClass
 уязвимостями
 файл
 фейловер
+фикстур
+фикстура
+фикстурой
+фикстуру
+фикстуры
 фич
 фичах
 фичи

@@ -304,3 +304,83 @@ To implement validation for resources with a different label (for example, `heri
      labels:
        heritage: my-custom-label
    ```
+
+## Granting cluster-scoped resources to projects
+
+The `multitenancy-manager` lets cluster administrators control which cluster-scoped resources (for example StorageClass) may be referenced from within project namespaces.
+
+To do this, custom resources are used:
+
+- `GrantableClusterResourceDefinition` (cluster-scoped) — registers a cluster resource that can be
+  granted to projects: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
+  the baseline availability (`defaultAvailability`), and how the per-project default is discovered
+  (`defaultFrom`). Each reference opts into defaulting individually with `default: true` — set it only
+  for a field whose value the resource always needs (such as a `PersistentVolumeClaim`'s
+  `storageClassName`). Leave it off for a reference whose absence is meaningful, such as an annotation
+  that merely toggles a feature; that reference is still validated and counted, just never filled in.
+- `ClusterResourceGrantPolicy` (cluster-scoped) — selects projects (by namespace labels via
+  `projectSelector`) and, per resource (`resourceName`), the granted names (`allowed`,
+  `allowedSelector`) and the per-project `default`. An allow-list restricts the resource to it.
+- `AvailableClusterResource` (namespaced, read-only, short name `available`) — the controller-rendered
+  catalog of what a project may use; tenants read it to discover the available names.
+- `ClusterResourceGrant` (namespaced) — the per-project object-quota pool (limits on object count and
+  on measured quantities such as requested storage); its status reports current usage.
+
+{% raw %}
+
+```yaml
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: storageclasses
+spec:
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+  enforcement: Managed
+  defaultAvailability: All
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
+  usageReferences:
+    - rule:
+        apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - persistentvolumeclaims
+      fieldPath: $.spec.storageClassName
+      default: true
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: production-storage
+spec:
+  projectSelector:
+    matchLabels:
+      environment: production
+  resources:
+    - resourceName: storageclasses
+      default: fast-ssd          # Overrides the annotation-based default.
+      allowed:
+        - fast-ssd
+        - standard
+      allowedSelector:           # Plus any StorageClass with label shared=true.
+        matchLabels:
+          shared: "true"
+```
+
+{% endraw %}
+
+Enforcement notes:
+
+- The validating webhook denies creating/updating objects in matched projects whose
+  referenced value is not granted. On update, values already present in the object are
+  grandfathered in, so pre-existing objects are not broken.
+- The defaulting webhook fills in the granted default on creation only, and only into references
+  marked `default: true`. References left without it (such as feature-toggling annotations) are never
+  filled in.
+- A grant that matches no project, or a project with no matching grant, imposes no
+  restriction.

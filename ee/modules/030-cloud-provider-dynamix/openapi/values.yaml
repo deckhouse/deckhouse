@@ -307,6 +307,8 @@ properties:
             description: List of storage classes.
       cniSecretData:
         type: string
+        x-examples:
+        - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lsWllURUZPSW4wPQo="
       storageClasses:
         type: array
         items:
