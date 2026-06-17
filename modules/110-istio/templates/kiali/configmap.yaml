@@ -1,5 +1,6 @@
 {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
 {{- $revision := get $versionInfo "revision" }}
+{{- $fullVersion := get $versionInfo "fullVersion" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -33,7 +34,7 @@ data:
         istiod_deployment_name: istiod-{{ $revision }}
         config_map_name: istio-{{ $revision }}
         istio_sidecar_injector_config_map_name: istio-sidecar-injector-{{ $revision }}
-{{- if .Values.istio.kiali.validationReconcileInterval }}
+{{- if and .Values.istio.kiali.validationReconcileInterval (semverCompare ">= 1.25.0" $fullVersion) }}
         validation_reconcile_interval: {{ .Values.istio.kiali.validationReconcileInterval }}
 {{- end }}
       prometheus:

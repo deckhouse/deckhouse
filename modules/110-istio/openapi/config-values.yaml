@@ -1007,6 +1007,8 @@ properties:
           When not configured, Kiali uses the default interval of "1m".
 
           Zero values ("0", "0s", "0m", "0h") are not allowed.
+
+          > **Caution!**: this setting only works with Istio 1.25+. Older versions of Kiali do not validate anything at all.
         x-examples: ["30s", "5m", "1h"]
   https:
     type: object
