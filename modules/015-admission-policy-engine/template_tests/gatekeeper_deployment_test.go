@@ -92,7 +92,6 @@ admissionPolicyEngine:
 			Expect(rendered).To(ContainSubstring("key: node-role.deckhouse.io/admission-policy-engine"))
 			Expect(rendered).To(ContainSubstring("key: node-role.kubernetes.io/control-plane"))
 			Expect(rendered).To(ContainSubstring("key: node-role.kubernetes.io/master"))
-			Expect(rendered).To(ContainSubstring("key: node-role.kubernetes.io/master"))
 		})
 	})
 
