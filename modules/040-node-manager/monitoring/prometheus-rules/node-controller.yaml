@@ -21,6 +21,12 @@
 
           This may indicate that the controller cannot process reconciliation events fast enough.
 
+          To inspect node-controller logs:
+
+          ```bash
+          kubectl -n d8-cloud-instance-manager logs deploy/node-controller
+          ```
+
     - alert: D8NodeControllerReconcileP99High
       expr: |
         histogram_quantile(
@@ -45,6 +51,12 @@
 
           This may indicate slow reconciliation, Kubernetes API latency, or degraded controller performance.
 
+          To inspect node-controller logs:
+
+          ```bash
+          kubectl -n d8-cloud-instance-manager logs deploy/node-controller
+          ```
+
     - alert: D8NodeControllerReconcileErrorsHigh
       expr: |
         sum by (controller) (
@@ -64,4 +76,8 @@
         description: |
           Controller `{{ $labels.controller }}` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
 
-          Check node-controller logs and recent NodeGroup or Node changes.
+          Check node-controller logs:
+
+          ```bash
+          kubectl -n d8-cloud-instance-manager logs deploy/node-controller
+          ```
