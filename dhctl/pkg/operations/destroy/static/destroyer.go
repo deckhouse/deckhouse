@@ -542,7 +542,7 @@ func (d *Destroyer) logger() *slog.Logger {
 	return d.params.Logger
 }
 
-var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(5, 15*time.Second)
+var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(75, 1*time.Second)
 
 func (d *Destroyer) destroyMasterLoopParams(host session.Host) retry.Params {
 	return retry.SafeCloneOrNewParams(d.params.Loops.DestroyMaster, getDestroyMastersDefaultOpts...).

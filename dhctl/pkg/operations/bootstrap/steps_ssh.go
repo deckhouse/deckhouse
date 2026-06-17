@@ -54,8 +54,8 @@ func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path st
 func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
 	p := retry.NewEmptyParams(
 		retry.WithName("Read remote file %s", path),
-		retry.WithAttempts(5),
-		retry.WithWait(3*time.Second),
+		retry.WithAttempts(15),
+		retry.WithWait(1*time.Second),
 		retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
 	)
 	var value string
@@ -83,8 +83,8 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 		})
 
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
-			retry.WithWait(5*time.Second),
-			retry.WithAttempts(50),
+			retry.WithWait(1*time.Second),
+			retry.WithAttempts(250),
 			retry.WithLogger(dhlog.NewLibdhctlAdapter(ctx)),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)

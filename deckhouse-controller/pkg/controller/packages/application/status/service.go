@@ -17,12 +17,15 @@ package status
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
@@ -51,38 +54,50 @@ func NewService(client client.Client, getter getter, logger *log.Logger) *Servic
 	}
 }
 
-// Start begins the status service event loop in a goroutine
-// It listens for package status change events and updates Application resources accordingly
-func (s *Service) Start(ctx context.Context, ch <-chan string) {
+// Start begins the status service event loop in a goroutine. It pulls changed
+// package names from the queue and reflects them onto Application resources.
+// The loop exits when the queue is shut down.
+func (s *Service) Start(ctx context.Context, queue workqueue.TypedRateLimitingInterface[string]) {
 	go func() {
 		for {
-			select {
-			case <-ctx.Done():
+			name, shutdown := queue.Get()
+			if shutdown {
 				return
-			case event := <-ch:
-				s.handleEvent(ctx, event)
 			}
+
+			if err := s.handleEvent(ctx, name); err != nil {
+				s.logger.Warn("handle status event, requeued", slog.String("name", name), log.Err(err))
+				queue.AddRateLimited(name)
+			} else {
+				queue.Forget(name)
+			}
+
+			queue.Done(name)
 		}
 	}()
 }
 
-// handleEvent processes a status change event for a package
-// Event format is "namespace.name" identifying the Application resource
-func (s *Service) handleEvent(ctx context.Context, ev string) {
+// handleEvent reflects a package status change onto its Application resource.
+// Event format is "namespace.name". A returned error is retryable; nil means
+// done — including a malformed name or a missing Application, which never
+// become valid on retry.
+func (s *Service) handleEvent(ctx context.Context, ev string) error {
 	logger := s.logger.With(slog.String("name", ev))
 
 	// Parse event name: "namespace.name"
 	splits := strings.Split(ev, ".")
 	if len(splits) != 2 {
 		logger.Warn("invalid event format, expected 'namespace.name'")
-		return
+		return nil
 	}
 
 	// Fetch the Application resource
 	app := new(v1alpha1.Application)
 	if err := s.client.Get(ctx, client.ObjectKey{Namespace: splits[0], Name: splits[1]}, app); err != nil {
-		logger.Warn("failed to get application", log.Err(err))
-		return
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get application: %w", err)
 	}
 
 	original := app.DeepCopy()
@@ -91,8 +106,10 @@ func (s *Service) handleEvent(ctx context.Context, ev string) {
 	s.computeAndApplyConditions(ev, app)
 
 	if err := s.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-		logger.Warn("failed to patch application status", log.Err(err))
+		return fmt.Errorf("patch application status: %w", err)
 	}
+
+	return nil
 }
 
 func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application) {

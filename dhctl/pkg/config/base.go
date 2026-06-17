@@ -185,7 +185,7 @@ func ParseConfigFromCluster(
 	var err error
 
 	return metaConfig, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Get cluster configuration", func(ctx context.Context) error {
-		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 10, 5*time.Second).
+		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 50, 1*time.Second).
 			RunContext(ctx, func() error {
 				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
 				return err
@@ -204,7 +204,7 @@ func ParseConfigInCluster(
 		err        error
 	)
 
-	err = retry.NewSilentLoop("Get cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
+	err = retry.NewSilentLoop("Get cluster configuration from inside Kubernetes cluster", 25, 1*time.Second).
 		RunContext(ctx, func() error {
 			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
 			return err

@@ -49,7 +49,7 @@ var ErrNoInfrastructureState = errors.New("Infrastructure state was not found in
 
 func GetClusterStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) ([]byte, error) {
 	var st []byte
-	err := retry.NewLoop("Get Cluster infrastructure state from Kubernetes cluster", 5, 5*time.Second).
+	err := retry.NewLoop("Get Cluster infrastructure state from Kubernetes cluster", 25, 1*time.Second).
 		RunContext(ctx, func() error {
 			clusterStateSecret, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Get(ctx, manifests.InfrastructureClusterStateName, metav1.GetOptions{})
 			if err != nil {
@@ -68,7 +68,7 @@ func GetClusterStateFromCluster(ctx context.Context, kubeCl *client.KubernetesCl
 
 func GetClusterUUID(ctx context.Context, kubeCl *client.KubernetesClient) (string, error) {
 	var clusterUUID string
-	err := retry.NewLoop("Get Cluster UUID from the Kubernetes cluster", 5, 5*time.Second).
+	err := retry.NewLoop("Get Cluster UUID from the Kubernetes cluster", 25, 1*time.Second).
 		RunContext(ctx, func() error {
 			uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Get(ctx, "d8-cluster-uuid", metav1.GetOptions{})
 			if err != nil {
@@ -105,7 +105,7 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 
 	processName := fmt.Sprintf("Get nodes infrastructure state from Kubernetes cluster for %s", action)
 
-	err = retry.NewLoop(processName, 15, 5*time.Second).RunContext(ctx, func() error {
+	err = retry.NewLoop(processName, 75, 1*time.Second).RunContext(ctx, func() error {
 		timeoutCtx, cancel := defaultRequestTimeoutCtx(ctx)
 		defer cancel()
 
@@ -299,7 +299,7 @@ func SaveNodeInfrastructureState(
 			return err
 		},
 	}
-	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 450, 1*time.Second).
 		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
 }
 
@@ -362,7 +362,7 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for master Node %s", nodeName), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for master Node %s", nodeName), 450, 1*time.Second).
 		RunContext(
 			ctx,
 			func() error {
@@ -401,7 +401,7 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		},
 	}
 
-	err := retry.NewLoop("Save Cluster infrastructure state", 45, 10*time.Second).
+	err := retry.NewLoop("Save Cluster infrastructure state", 450, 1*time.Second).
 		RunContext(
 			ctx,
 			func() error {
@@ -421,7 +421,7 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		return err
 	}
 
-	return retry.NewLoop("Update cloud discovery data", 45, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Update cloud discovery data", 450, 1*time.Second).RunContext(ctx, func() error {
 		_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
 			ctx,
 			"d8-provider-cluster-configuration",
@@ -434,7 +434,7 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 }
 
 func DeleteInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, secretName string) error {
-	return retry.NewLoop(fmt.Sprintf("Delete infrastructure state %s", secretName), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Delete infrastructure state %s", secretName), 450, 1*time.Second).
 		RunContext(ctx, func() error {
 			return kubeCl.CoreV1().Secrets("d8-system").Delete(ctx, secretName, metav1.DeleteOptions{})
 		})

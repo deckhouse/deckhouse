@@ -69,6 +69,18 @@ properties:
         - true
       capsControllerManagerEnabled:
         type: boolean
+      deployAutoscaler:
+        type: boolean
+      deployAutoscalerMCM:
+        type: boolean
+      autoscalerNodes:
+        type: array
+        items:
+          type: string
+      autoscalerMCMNodes:
+        type: array
+        items:
+          type: string
       clusterMasterAddresses:
         type: array
         x-doc-deprecated: true
@@ -341,6 +353,11 @@ properties:
               type: string
               description: |
                 Value of NodeGroup's annotation "manual-rollout-id".
+            engine:
+              type: string
+              enum: ["None", "MCM", "CAPI"]
+              description: |
+                Effective machinery selected for this NodeGroup.
             serializedLabels:
               type: string
               description: |

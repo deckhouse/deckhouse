@@ -370,6 +370,8 @@ lint-doc-spellcheck-pr:
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
 	@echo "Sorting wordlist..."
 	@sort ./tools/docs/spelling/wordlist -o ./tools/docs/spelling/wordlist
+	@echo "Validating wordlist..."
+	@./tools/docs/spelling/validate_wordlist.sh
 	@echo "Generating dictionary..."
 	@test -f ./tools/docs/spelling/dictionaries/dev_OPS.dic && rm ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@touch ./tools/docs/spelling/dictionaries/dev_OPS.dic
@@ -607,7 +609,7 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.31.0
-DMT_VERSION ?= 0.1.81
+DMT_VERSION ?= 0.1.84
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2

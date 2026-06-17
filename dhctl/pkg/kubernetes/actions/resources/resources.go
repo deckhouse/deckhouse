@@ -154,7 +154,7 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 	// or after state is set to "cluster is bootstrapped" (some namespaces will be created by the deckhouse after that)
 	resourcesToSkipInCurrentIteration := make(map[int]struct{})
 
-	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("Ensure that required namespaces exist", 100, 1*time.Second).RunContext(ctx, func() error {
 		for i, res := range c.resources {
 			nsName := res.Object.GetNamespace()
 
@@ -255,7 +255,7 @@ func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*sch
 
 func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource, apires metav1.APIResource) error {
 	// Wait up to 10 minutes
-	return retry.NewSilentLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewSilentLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 600, 1*time.Second).RunContext(ctx, func() error {
 		gvr, docCopy := resourceToGVR(resource, apires)
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
@@ -299,7 +299,7 @@ func (c *Creator) invalidateDiscovery() {
 
 func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfigTask) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(task.Title, 300, 1*time.Second).RunContext(ctx, func() error {
 		return task.Do(c.kubeCl)
 	})
 }
