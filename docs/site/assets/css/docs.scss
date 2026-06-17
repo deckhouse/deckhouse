@@ -2021,10 +2021,16 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs img {
-    max-width: 60%;
+    max-width: 100%;
 
-    @include breakpoints.max-w(l) {
-      max-width: 100%;
+    &.image-scheme {
+      @include breakpoints.min-w(m) {
+        max-width: 80%;
+      }
+
+      @include breakpoints.min-w(l) {
+        max-width: 60%;
+      }
     }
 }
 
@@ -2212,6 +2218,10 @@ ul .resources__prop_name.deprecated {
     border: 1px solid rgba(241, 243, 244, .949);
 
     @include breakpoints.max-w(l) {
+      max-width: 80%;
+    }
+
+    @include breakpoints.max-w(m) {
       max-width: 100%;
     }
   }
@@ -2220,14 +2230,18 @@ ul .resources__prop_name.deprecated {
     display: flex;
     align-items: center;
     box-sizing:  border-box;
-    max-width: 70%;
+    max-width: calc(70% + 2px);
     margin-top: -4px;
     padding: 2px 8px;
     background: rgba(241, 243, 244, .949);
     box-shadow: none;
 
     @include breakpoints.max-w(l) {
-      max-width: 100%;
+      max-width: calc(80% + 2px);
+    }
+
+    @include breakpoints.max-w(m) {
+      max-width: calc(100% + 2px);
     }
   }
 
