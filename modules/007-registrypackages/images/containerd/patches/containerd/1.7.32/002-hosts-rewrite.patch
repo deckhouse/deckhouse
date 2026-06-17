@@ -1,8 +1,8 @@
 diff --git a/remotes/docker/config/hosts.go b/remotes/docker/config/hosts.go
-index c138c952e..ce655a587 100644
+index cafc2eebd..dfdabbad6 100644
 --- a/remotes/docker/config/hosts.go
 +++ b/remotes/docker/config/hosts.go
-@@ -28,6 +28,7 @@ import (
+@@ -27,6 +27,7 @@ import (
  	"os"
  	"path"
  	"path/filepath"
@@ -10,7 +10,7 @@ index c138c952e..ce655a587 100644
  	"sort"
  	"strings"
  	"time"
-@@ -55,9 +56,16 @@ type hostConfig struct {
+@@ -54,9 +55,16 @@ type hostConfig struct {
  
  	header http.Header
  
@@ -27,7 +27,7 @@ index c138c952e..ce655a587 100644
  // HostOptions is used to configure registry hosts
  type HostOptions struct {
  	HostDir       func(string) (string, error)
-@@ -266,6 +274,16 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+@@ -265,6 +273,16 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
  			rhosts[i].Path = host.path
  			rhosts[i].Capabilities = host.capabilities
  			rhosts[i].Header = host.header
@@ -44,7 +44,7 @@ index c138c952e..ce655a587 100644
  		}
  
  		return rhosts, nil
-@@ -355,6 +373,11 @@ type hostFileConfig struct {
+@@ -354,6 +372,11 @@ type hostFileConfig struct {
  	// API root endpoint.
  	OverridePath bool `toml:"override_path"`
  
@@ -56,7 +56,7 @@ index c138c952e..ce655a587 100644
  	// TODO: Credentials: helper? name? username? alternate domain? token?
  }
  
-@@ -524,6 +547,23 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
+@@ -523,6 +546,23 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
  		result.header = header
  	}
  

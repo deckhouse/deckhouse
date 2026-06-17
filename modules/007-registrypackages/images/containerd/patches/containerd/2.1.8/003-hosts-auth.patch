@@ -265,7 +265,7 @@ index bfa1dde8c..2faebea32 100644
  	}
  	return b.String()
 diff --git a/core/remotes/docker/registry.go b/core/remotes/docker/registry.go
-index 574a5dc35..e0a9850ef 100644
+index 64da7352e..da3f3a0cf 100644
 --- a/core/remotes/docker/registry.go
 +++ b/core/remotes/docker/registry.go
 @@ -78,6 +78,7 @@ type RegistryHost struct {

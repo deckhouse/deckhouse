@@ -29,7 +29,7 @@ index d7ecbf9d6..dbd76662c 100644
 @@ -183,6 +184,12 @@ func (l *local) Update(ctx context.Context, req *imagesapi.UpdateImageRequest, _
  func (l *local) Delete(ctx context.Context, req *imagesapi.DeleteImageRequest, _ ...grpc.CallOption) (*ptypes.Empty, error) {
  	log.G(ctx).WithField("name", req.Name).Debugf("delete image")
-
+ 
 +	if image, err := l.store.Get(ctx, req.Name); err == nil && image.Labels[labels.PinnedImageLabelKey] == labels.PinnedImageLabelValue {
 +		return nil, status.Errorf(codes.FailedPrecondition, "image %q is pinned, cannot be removed", req.Name)
 +	} else if err != nil {
