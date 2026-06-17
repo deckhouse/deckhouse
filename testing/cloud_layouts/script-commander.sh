@@ -273,7 +273,7 @@ function prepare_environment() {
     ssh_user="altlinux"
     bastion_host="185.120.186.151"
     bastion_user="ubuntu"
-    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}"
 
     values="{
       \"branch\": \"${DEV_BRANCH}\",
@@ -288,7 +288,6 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
-      \"sshBastionPort\": \"${bastion_port}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
