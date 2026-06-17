@@ -327,9 +327,31 @@ failCgroupV1: false
 {{- end }}
 seccompDefault: {{ dig "kubelet" "seccompDefault" false .nodeGroup }}
 tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_128_GCM_SHA256"]
-{{- if ne .runType "ClusterBootstrap" }}
-# serverTLSBootstrap flag should be enable after bootstrap of first master.
-# This flag affects logs from kubelet, for period of time between kubelet start and certificate request approve by Deckhouse hook.
+{{- /*
+Whether the cluster uses dual-stack networking. Detected by looking for
+a comma-separated clusterDNSAddress, which is how the global discovery
+hook merges dual-stack DNS service IPs.
+*/ -}}
+{{- $clusterDNS := "" }}
+{{- if eq .runType "Normal" }}
+  {{- $clusterDNS = .normal.clusterDNSAddress | toString }}
+{{- else if eq .runType "ClusterBootstrap" }}
+  {{- $clusterDNS = .clusterBootstrap.clusterDNSAddress | toString }}
+{{- end }}
+{{- $dualStack := contains "," $clusterDNS }}
+{{- if or (ne .runType "ClusterBootstrap") $dualStack }}
+# serverTLSBootstrap makes kubelet request a serving certificate via CSR.
+# Outside ClusterBootstrap the node-manager hook approves these CSRs, so the
+# brief gap with the self-signed certificate is harmless. During the very
+# first bootstrap we keep the self-signed certificate (which carries the node
+# hostname as a DNS SAN) so that kube-apiserver can still reach the kubelet
+# while the deckhouse pod is starting.
+#
+# Exception: dual-stack clusters cannot rely on the hostname fallback,
+# because kube-apiserver picks the InternalIP (no IP SAN on the self-signed
+# certificate). For them we enable serverTLSBootstrap from the beginning;
+# the kubelet-serving CSR is approved by an in-place step
+# (075_approve_kubelet_serving_csr.sh.tpl) until node-manager takes over.
 serverTLSBootstrap: true
 {{- end }}
 {{/*

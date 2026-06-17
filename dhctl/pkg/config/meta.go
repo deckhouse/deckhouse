@@ -408,9 +408,21 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		data["kubernetesVersion"] = DefaultKubernetesVersion
 	}
 
+	// On dual-stack clusters expose both DNS addresses to bashible as a
+	// single comma-separated string. Templates that need a single value
+	// (kubelet clusterDNS, etc.) can split on ",".
+	clusterDNSAddress := m.ClusterDNSAddress
+	if m.ClusterDNSAddressIPv6 != "" {
+		if clusterDNSAddress == "" {
+			clusterDNSAddress = m.ClusterDNSAddressIPv6
+		} else {
+			clusterDNSAddress = clusterDNSAddress + "," + m.ClusterDNSAddressIPv6
+		}
+	}
+
 	clusterBootstrap := map[string]any{
 		"clusterDomain":     data["clusterDomain"],
-		"clusterDNSAddress": m.ClusterDNSAddress,
+		"clusterDNSAddress": clusterDNSAddress,
 	}
 
 	if nodeIP != "" {
