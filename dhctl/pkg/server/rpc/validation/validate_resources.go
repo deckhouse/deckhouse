@@ -28,7 +28,7 @@ func (s *Service) ValidateResources(
 	ctx context.Context,
 	request *pb.ValidateResourcesRequest,
 ) (*pb.ValidateResourcesResponse, error) {
-	if err := s.ensureProviderSchemas(ctx, "", request.Config); err != nil {
+	if err := s.ensureProviderSchemas(ctx, "", request.RegistryConfig); err != nil {
 		errResponse, convErr := errorToResponse(err)
 		if convErr != nil {
 			return nil, status.Errorf(codes.Internal, "%s", convErr)

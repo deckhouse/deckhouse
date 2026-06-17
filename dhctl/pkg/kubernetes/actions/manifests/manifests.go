@@ -674,6 +674,20 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 	)
 }
 
+// SecretWithCandiCloudProviderDiscoveryData carries the terraform-derived cloud
+// discovery payload for mc-flow clusters, where the legacy
+// d8-provider-cluster-configuration Secret is absent. The Secret lives in the
+// provider's d8-cloud-provider-<name> namespace, alongside the module's
+// workloads.
+func SecretWithCandiCloudProviderDiscoveryData(namespace string, discoveryData []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-candi-cloud-provider-discovery-data",
+		namespace,
+		map[string][]byte{"cloud-provider-discovery-data.json": discoveryData},
+		map[string]string{"name": "d8-candi-cloud-provider-discovery-data"},
+	)
+}
+
 func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 	data := make(map[string][]byte)
 	if configData != nil {
