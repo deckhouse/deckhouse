@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -41,7 +40,6 @@ import (
 
 const (
 	capiNamespace       = "d8-cloud-instance-manager"
-	deploymentName      = "capi-controller-manager"
 	webhookServiceName  = "capi-webhook-service"
 	webhookSecretName   = "capi-webhook-tls"
 	webhookServicePort  = int32(443)
@@ -157,21 +155,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-// checkPreconditions verifies that capi-controller-manager is ready and CA is available.
+// checkPreconditions verifies that the CA bundle for the conversion webhook is available.
+// We do NOT wait for capi-controller-manager Deployment — it may be failing because CRDs
+// are not yet served in v1beta2. We only need the CA to configure the conversion webhook.
 func (r *Reconciler) checkPreconditions(ctx context.Context) ([]byte, error) {
-	// Check deployment readiness.
-	deploy := &appsv1.Deployment{}
-	if err := r.apiReader.Get(ctx, types.NamespacedName{
-		Name:      deploymentName,
-		Namespace: capiNamespace,
-	}, deploy); err != nil {
-		return nil, fmt.Errorf("deployment %s/%s: %w", capiNamespace, deploymentName, err)
-	}
-	if deploy.Status.ReadyReplicas < 1 {
-		return nil, fmt.Errorf("deployment %s/%s has no ready replicas", capiNamespace, deploymentName)
-	}
-
-	// Get CA bundle from webhook TLS secret.
 	secret := &corev1.Secret{}
 	if err := r.apiReader.Get(ctx, types.NamespacedName{
 		Name:      webhookSecretName,
