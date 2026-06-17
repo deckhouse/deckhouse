@@ -423,7 +423,7 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 	}
 
 	if metaConfig.HasLegacyProviderConfig() {
-		if err := patchLegacyProviderDiscoveryData(ctx, kubeCl, outputs.CloudDiscovery); err != nil {
+		if err := saveLegacyProviderDiscoveryData(ctx, kubeCl, outputs.CloudDiscovery); err != nil {
 			return err
 		}
 	}
@@ -437,10 +437,12 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 	return nil
 }
 
-// patchLegacyProviderDiscoveryData merges cloud-provider-discovery-data.json
-// into the legacy d8-provider-cluster-configuration Secret. A missing Secret is
-// tolerated: the cluster has migrated to mc-flow and the Secret is gone.
-func patchLegacyProviderDiscoveryData(ctx context.Context, kubeCl *client.KubernetesClient, discoveryData []byte) error {
+// saveLegacyProviderDiscoveryData merge-patches cloud-provider-discovery-data.json
+// into the legacy d8-provider-cluster-configuration Secret. The Secret is owned
+// by the bootstrap pipeline and carries other keys, so this is a Patch rather
+// than a Create-or-Update. A missing Secret is tolerated: the cluster has
+// migrated to mc-flow and the Secret is gone.
+func saveLegacyProviderDiscoveryData(ctx context.Context, kubeCl *client.KubernetesClient, discoveryData []byte) error {
 	patch, err := json.Marshal(map[string]interface{}{
 		"data": map[string]interface{}{
 			"cloud-provider-discovery-data.json": discoveryData,

@@ -50,6 +50,7 @@ type DeckhouseInstaller struct {
 	InfrastructureState      []byte
 	NodesInfrastructureState map[string][]byte
 	CloudDiscovery           []byte
+	ProviderName             string
 	ModuleConfigs            []*ModuleConfig
 
 	KubeadmBootstrap   bool
@@ -216,6 +217,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		ProviderClusterConfig: providerClusterConfig,
 		StaticClusterConfig:   staticClusterConfig,
 		ClusterConfig:         clusterConfig,
+		ProviderName:          metaConfig.ProviderName,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
 		InstallerVersion:      metaConfig.InstallerVersion,
 		VersionFilePath:       metaConfig.VersionFilePath,
