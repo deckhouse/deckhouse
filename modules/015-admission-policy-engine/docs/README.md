@@ -17,6 +17,8 @@ Policies are divided into three categories:
 These policies complement each other. If multiple policies are applied to a single namespace, objects are validated against each of them. If even one policy is violated, the object will not be created.
 {% endalert %}
 
+In addition to policies that prohibit using parameters different from the allowed ones, there are resources that provide fine-grained exceptions to policies — [`security-policy-exceptions`](#security-policy-exceptions). These resources allow overriding checks for specific pods without changing all policies applied to the namespace.
+
 ## How validation failure messages are displayed
 
 Depending on how pods are created, there are differences in how the API generates messages regarding validation failures (violations of established policies):
@@ -450,6 +452,90 @@ The following modes are supported:
 - `Deny`: Prohibit starting pods that do not satisfy the policy.
 - `Warn`: Start pods that do not satisfy the policy, but issue a warning.
 - `Dryrun`: Start pods that do not satisfy the policy, do not issue a warning to the user, but record violations in security reports.
+
+## Security policy exceptions
+
+`SecurityPolicyException` is a mechanism for fine-grained exceptions to security policy checks for individual Pods and containers. It allows you to avoid excluding an entire namespace from checks and instead define only the specific allowances required for a Pod or a container inside a Pod.
+
+Exceptions are defined using the [`SecurityPolicyException`](/modules/admission-policy-engine/cr.html#securitypolicyexception) resource.
+
+### How the mechanism works
+
+1. Create a `SecurityPolicyException` object with the required allowances in `spec`.
+   It is recommended to immediately document the reason for each exception in the rule's `metadata` field (for example, `metadata.description`) — this simplifies auditing and maintenance.
+2. Add a reference to the exception on the Pod (usually via `spec.template.metadata.labels` in `Deployment`/`StatefulSet`/`DaemonSet`):
+   - `security.deckhouse.io/security-policy-exception: <exception-name>` — exception for the whole Pod (pod-level);
+   - `security.deckhouse.io/security-policy-exception.container.<container-name>: <exception-name>` — exception for a specific container (container-level).
+
+Priority when selecting an exception for a container:
+
+- first, `security.deckhouse.io/security-policy-exception.container.<container-name>`;
+- if the container-specific label is absent, the exception from `security.deckhouse.io/security-policy-exception` is used.
+
+{% alert level="warning" %}
+If a container-specific label is set for a container but points to an invalid/non-existent `SecurityPolicyException` object, it still has priority over the global label and may lead to Pod placement denial.
+{% endalert %}
+
+### Example
+
+For this example, consider a Pod that requires:
+
+1. `hostNetwork` enabled for the whole Pod.
+2. `privileged` mode enabled only for the `sample-init` container.
+
+With the classic approach (without `SecurityPolicyException` resources), allowing these parameters would require implementing a custom security policy where these settings could be allowed for any Pod in the cluster.
+
+With `SecurityPolicyException`, create the following resources:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-hostnetwork-pod
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: >-
+          Pod requires host network mode for node-level network diagnostics.
+```
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-privileged-init-container
+spec:
+  securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: >-
+          Container init requires privileged mode to access host-level networking features.
+```
+
+Then set labels to apply these resources to the created Pods:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example
+spec:
+  template:
+    metadata:
+      labels:
+        security.deckhouse.io/security-policy-exception: allow-hostnetwork-pod
+        security.deckhouse.io/security-policy-exception.container.sample-init: allow-privileged-init-container
+    spec:
+      hostNetwork: true
+    ...
+    containers:
+    - name: sample-init
+      securityContext:
+        privileged: true
+```
 
 ## Modifying Kubernetes resources
 
