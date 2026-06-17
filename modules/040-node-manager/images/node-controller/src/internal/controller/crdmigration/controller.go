@@ -181,6 +181,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Patch CRD: switch storage to v1beta2 and set conversion webhook.
 	logger.Info("migrating CRD", "crd", crdName)
 	patch := existing.DeepCopy()
+	// Use versions from embedded CRD — existing CRD may not have v1beta2 yet.
+	patch.Spec.Versions = embeddedCRD.Spec.DeepCopy().Versions
 	setMigrationSpec(patch, caBundle)
 
 	if err := r.Client.Patch(ctx, patch, client.MergeFrom(existing)); err != nil {
@@ -249,8 +251,18 @@ func isMigrated(crd *apiextensionsv1.CustomResourceDefinition, caBundle []byte) 
 // setMigrationSpec modifies the CRD spec to v1beta2 storage + conversion webhook.
 func setMigrationSpec(crd *apiextensionsv1.CustomResourceDefinition, caBundle []byte) {
 	// Switch storage to v1beta2, clear on all others.
-	for i := range crd.Spec.Versions {
-		crd.Spec.Versions[i].Storage = crd.Spec.Versions[i].Name == "v1beta2"
+	// Safety: only change storage if v1beta2 actually exists in versions.
+	hasV1beta2 := false
+	for _, v := range crd.Spec.Versions {
+		if v.Name == "v1beta2" {
+			hasV1beta2 = true
+			break
+		}
+	}
+	if hasV1beta2 {
+		for i := range crd.Spec.Versions {
+			crd.Spec.Versions[i].Storage = crd.Spec.Versions[i].Name == "v1beta2"
+		}
 	}
 
 	// Set conversion webhook.
