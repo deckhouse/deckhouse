@@ -111,6 +111,8 @@ memory: 50Mi
   {{- $csiControllerHostNetwork := $config.csiControllerHostNetwork | default "true" }}
   {{- $csiControllerHostPID := $config.csiControllerHostPID | default "false" }}
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
+  {{- $livenessProbeTimeoutSeconds := $config.livenessProbeTimeoutSeconds | default 5 }}
+  {{- $livenessProbeInitialDelaySeconds := $config.livenessProbeInitialDelaySeconds | default 5 }}
   {{- $initContainers := $config.initContainers }}
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
@@ -148,7 +150,7 @@ spec:
     kind: Deployment
     name: {{ $fullname }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "provisioner"
@@ -465,6 +467,7 @@ spec:
         image: {{ $livenessprobeImage | quote }}
         args:
         - "--csi-address=$(ADDRESS)"
+        - "--probe-timeout={{ $livenessProbeTimeoutSeconds }}s"
   {{- if eq $csiControllerHostNetwork "true" }}
         - "--http-endpoint=$(HOST_IP):{{ $livenessProbePort }}"
   {{- else }}
@@ -512,6 +515,9 @@ spec:
           httpGet:
             path: /healthz
             port: {{ $livenessProbePort }}
+          initialDelaySeconds: {{ $livenessProbeInitialDelaySeconds }}
+          timeoutSeconds: {{ $livenessProbeTimeoutSeconds }}
+
     {{- if $additionalControllerPorts }}
         ports:
         {{- $additionalControllerPorts | toYaml | nindent 8 }}
@@ -641,16 +647,22 @@ spec:
           The CSI Controller requires hostPath volumes for accessing host-level resources needed for storage management operations specific to the cloud provider implementation.
     hostPath:
       allowedValues:
-      {{- range $vol := $additionalControllerVolumes }}
-        {{- if $vol.hostPath }}
-        - path: {{ $vol.hostPath.path }}
-          readOnly: false
+    {{- range $volume := $additionalControllerVolumes }}
+      {{- if $volume.hostPath }}
+      {{- $readOnly := false }}
+        {{- range $volumeMount := $additionalControllerVolumeMounts }}
+          {{- if eq $volumeMount.name $volume.name }}
+            {{- $readOnly = (default false $volumeMount.readOnly) }}
+          {{- end }}
+        {{- end }}
+        - path: {{ $volume.hostPath.path }}
+          readOnly: {{ $readOnly }}
           metadata:
             description: |
-              Allow access to additional hostPath volume at {{ $vol.hostPath.path }}.
+              Allow access to additional hostPath volume at {{ $volume.hostPath.path }}.
               This hostPath volume is required by the CSI Controller for storage management operations specific to the cloud provider implementation.
-        {{- end }}
       {{- end }}
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- end }}

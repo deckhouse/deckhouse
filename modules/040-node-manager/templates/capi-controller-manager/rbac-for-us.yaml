@@ -231,6 +231,14 @@ rules:
     - delete
   ## storage
   - apiGroups:
+      - ""
+    resources:
+      - persistentvolumes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
       - "storage.k8s.io"
     resources:
       - volumeattachments
@@ -265,6 +273,9 @@ rules:
     - huaweicloudclusters
     - huaweicloudmachines
     - huaweicloudmachinetemplates
+    - yandexclusters
+    - yandexmachines
+    - yandexmachinetemplates
     - deckhouseclusters
     - deckhousemachines
     - deckhousemachinetemplates

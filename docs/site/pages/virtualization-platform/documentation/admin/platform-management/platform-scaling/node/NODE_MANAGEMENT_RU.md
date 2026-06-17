@@ -82,7 +82,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
   установите аннотацию `update.node.deckhouse.io/disruption-approved=` на каждый узел в группе, следуя примеру:
 
   ```shell
-  d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=
   ```
 
   > **Важно**. В этом режиме не выполняется автоматический drain узла.

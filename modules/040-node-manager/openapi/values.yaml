@@ -61,7 +61,6 @@ properties:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
 
-
       machineControllerManagerEnabled:
         type: boolean
       capiControllerManagerEnabled:
@@ -70,15 +69,65 @@ properties:
         - true
       capsControllerManagerEnabled:
         type: boolean
+      deployAutoscaler:
+        type: boolean
+      deployAutoscalerMCM:
+        type: boolean
+      autoscalerNodes:
+        type: array
+        items:
+          type: string
+      autoscalerMCMNodes:
+        type: array
+        items:
+          type: string
       clusterMasterAddresses:
         type: array
+        x-doc-deprecated: true
         description: |
+          Deprecated. Use `clusterMasterEndpoints`.
+
           Array of API servers addresses.
         x-examples:
           - ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
         items:
           type: string
           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
+      clusterMasterEndpoints:
+        type: array
+        description: |
+          Array of cluster master endpoints with ports for kube-apiserver and registry-packages-proxy services.
+        default: []
+        x-examples:
+          - [
+              {"address":"10.0.0.1","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4282},
+              {"address":"10.0.0.2","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4282},
+              {"address":"10.0.0.3","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4282}
+            ]
+        items:
+          type: object
+          additionalProperties: false
+          required:
+            - address
+            - kubeApiPort
+            - rppServerPort
+            - rppBootstrapServerPort
+          properties:
+            address:
+              type: string
+              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+            kubeApiPort:
+              type: integer
+              minimum: 1
+              maximum: 65535
+            rppServerPort:
+              type: integer
+              minimum: 1
+              maximum: 65535
+            rppBootstrapServerPort:
+              type: integer
+              minimum: 1
+              maximum: 65535
 
       packagesProxy:
         type: object
@@ -304,6 +353,11 @@ properties:
               type: string
               description: |
                 Value of NodeGroup's annotation "manual-rollout-id".
+            engine:
+              type: string
+              enum: ["None", "MCM", "CAPI"]
+              description: |
+                Effective machinery selected for this NodeGroup.
             serializedLabels:
               type: string
               description: |
@@ -336,7 +390,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.31"
+                - "1.32"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -346,6 +400,7 @@ properties:
               type: string
               enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
             gpu:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
             cri:
@@ -403,6 +458,8 @@ properties:
             nodeDrainTimeoutSecond:
               type: [integer]
               additionalProperties: true
+              minimum: 30
+              maximum: 7200
             fencing:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
@@ -420,7 +477,7 @@ properties:
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.31"
+              kubernetesVersion: "1.32"
               cri:
                 type: "Docker"
               cloudInstances:

@@ -162,7 +162,7 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: "regular"
+    runs-on: "ubuntu-slim"
     needs:
       - discover
       - pull_request_info
@@ -214,19 +214,6 @@ jobs:
               `);
               throw(error);
             }
-
-  gitleaks_scan:
-    name: Secret scan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Run Gitleaks diff scan
-        uses: deckhouse/modules-actions/gitleaks@main
-        continue-on-error: true
-        with:
-          scan_mode: "diff"
 
 
 {!{/* Template for validation jobs. */}!}
@@ -286,7 +273,7 @@ needs:
   - discover
   - pull_request_info
 if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
-runs-on: ubuntu-24.04
+runs-on: [self-hosted, regular]
 permissions:
   contents: read
   id-token: write
@@ -303,6 +290,14 @@ steps:
     uses: {!{ index (ds "actions") "actions/download-artifact" }!}
     with:
       name: pr_diff
+
+  - name: Validate spelling wordlist <-> dev_OPS.dic sync
+    env:
+      WORDLIST_PATH: tools/docs/spelling/wordlist
+      DICT_PATH: tools/docs/spelling/dictionaries/dev_OPS.dic
+      DIFF_PATH: ./pr.diff
+    run: |
+      ./tools/docs/spelling/validate_dictionary_sync.sh "${DIFF_PATH}"
 
    # <template: spellcheck_template>
   - name: Spell check

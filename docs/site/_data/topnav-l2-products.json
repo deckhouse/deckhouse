@@ -412,7 +412,7 @@
           "id": 5393,
           "parent_id": 5349,
           "title": "Быстрый старт",
-          "url": "/products/kubernetes-platform/gs/",
+          "url": "/products/kubernetes-platform/gs/installer",
           "target": "",
           "rel": ""
         },

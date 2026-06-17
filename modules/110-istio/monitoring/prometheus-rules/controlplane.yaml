@@ -30,8 +30,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioGlobalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-        plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioGlobalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_create_group_if_not_exists__istio_global_controlplane_unhealthy: IstioGlobalControlplaneUnhealthy,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__istio_global_controlplane_unhealthy: IstioGlobalControlplaneUnhealthy,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         summary: Global control plane isn't working.
         description: |
           Deckhouse has detected that the global Istio control plane `{{$labels.label_istio_io_rev}}` isn't working.
@@ -77,8 +77,8 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_istio_multicluster_remote_api_host_failed: D8IstioAdditionalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-        plk_grouped_by__d8_istio_multicluster_remote_api_host_failed: D8IstioAdditionalControlplaneDoesntWork,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_create_group_if_not_exists__istio_additional_controlplane_unhealthy: IstioAdditionalControlplaneUnhealthy,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__istio_additional_controlplane_unhealthy: IstioAdditionalControlplaneUnhealthy,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         summary: Additional control plane isn't working.
         description: |
           Deckhouse has detected that the additional Istio control plane `{{$labels.label_istio_io_rev}}` isn't working.

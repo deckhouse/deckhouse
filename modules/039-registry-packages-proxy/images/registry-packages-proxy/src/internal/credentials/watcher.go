@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	toolsWatch "k8s.io/client-go/tools/watch"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -41,16 +42,24 @@ import (
 type Watcher struct {
 	k8sClient                     *kubernetes.Clientset
 	k8sDynamicClient              dynamic.Interface
+	packageRepositoryClient       ctrlclient.Client
 	registrySecretDiscoveryPeriod time.Duration
 	sync.RWMutex
 	registryClientConfigs map[string]*registry.ClientConfig
 	logger                *log.Logger
 }
 
-func NewWatcher(k8sClient *kubernetes.Clientset, k8sDynamicClient dynamic.Interface, registrySecretDiscoveryPeriod time.Duration, logger *log.Logger) *Watcher {
+func NewWatcher(
+	k8sClient *kubernetes.Clientset,
+	k8sDynamicClient dynamic.Interface,
+	packageRepositoryClient ctrlclient.Client,
+	registrySecretDiscoveryPeriod time.Duration,
+	logger *log.Logger,
+) *Watcher {
 	return &Watcher{
 		k8sClient:                     k8sClient,
 		k8sDynamicClient:              k8sDynamicClient,
+		packageRepositoryClient:       packageRepositoryClient,
 		registrySecretDiscoveryPeriod: registrySecretDiscoveryPeriod,
 		registryClientConfigs:         make(map[string]*registry.ClientConfig),
 		logger:                        logger,

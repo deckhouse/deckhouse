@@ -532,6 +532,56 @@ spec:
 
 {% endraw %}
 
+### Local user operations
+
+Use the `d8 iam user` commands for administrative actions on local users. They create a [UserOperation](cr.html#useroperation) resource, wait for the operation to complete, and print the result.
+
+The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
+
+Interactive password reset example:
+
+```shell
+d8 iam user reset-password admin
+```
+
+Example of reading the new password from stdin:
+
+```shell
+echo "N3wPa$$wo#d" | d8 iam user reset-password admin --password-stdin
+```
+
+Example of generating a new password automatically:
+
+```shell
+d8 iam user reset-password admin --generate-password
+```
+
+If the password is already hashed, pass the bcrypt hash without Base64 encoding:
+
+```shell
+d8 iam user reset-password admin --password-hash '$2y$10$abcdef...'
+```
+
+2FA reset example:
+
+```shell
+d8 iam user reset2fa admin
+```
+
+Example of locking a user for 30 minutes:
+
+```shell
+d8 iam user lock admin 30m
+```
+
+User unlock example:
+
+```shell
+d8 iam user unlock admin
+```
+
+By default, commands wait for the operation to complete. To only create a UserOperation and print its name, use the `--wait=false` flag.
+
 ### Adding a user to a group
 
 Users can be grouped to manage access rights. Example manifest of the Group resource for a group:
@@ -583,13 +633,45 @@ spec:
 
 Field description:
 
-* `complexityLevel`: Password complexity level.
+* `complexityLevel`: Password complexity level. One of `None`, `Low`, `Fair`, `Good`, `Excellent` or `Custom`.
+* `custom`: Custom complexity rules (used only with `complexityLevel: Custom`):
+  * `custom.minLength`: Minimum number of characters in a password.
+  * `custom.specialCharacters`: If `true`, require at least one special character.
+  * `custom.numbers`: If `true`, require at least one digit.
+  * `custom.capitalized`: If `true`, require at least one uppercase letter.
+  * `custom.repeatedChars`: If `true`, forbid more than 2 identical characters in a row.
 * `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
 * `lockout`: Lockout settings after exceeding the limit of failed login attempts:
   * `lockout.maxAttempts`: Limit of allowed failed login attempts.
   * `lockout.lockDuration`: User lockout duration.
 * `rotation`: Password rotation settings:
   * `rotation.interval`: Period for mandatory password change.
+
+Example with a custom complexity rules:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Custom
+      custom:
+        minLength: 10
+        specialCharacters: true
+        numbers: false
+        capitalized: true
+        repeatedChars: false
+      passwordHistoryLimit: 10
+```
+
+{% endraw %}
 
 ### Two-factor authentication (2FA)
 

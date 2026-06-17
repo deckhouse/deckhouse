@@ -289,7 +289,7 @@ func TestWaitNodeUserPresentOnNodeWithParams(t *testing.T) {
 	}
 
 	assertDefaultParams := func(t *testing.T, w *NodeUserPresentsWaiter) {
-		assertParams(t, w, 50, 5*time.Second)
+		assertParams(t, w, 250, 1*time.Second)
 	}
 
 	t.Run("nil params", func(t *testing.T) {
@@ -446,7 +446,6 @@ func testNodeUserExistsOnLabel(node corev1.Node) bool {
 
 	_, ok = labels["some-label"]
 	return ok
-
 }
 
 func testNodeUserOnNodeGroups(t *testing.T, nodeGroups []string) func() testNodeUserWithChecker {

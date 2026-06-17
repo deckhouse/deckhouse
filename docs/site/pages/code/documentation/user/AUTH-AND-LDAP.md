@@ -239,3 +239,9 @@ For synchronization to work correctly, all required user DNs must be present dir
 If nested groups must be taken into account, this must be implemented on the LDAP server side. For example, the `submember` attribute can be populated with the full list of transitive members.
 
 This approach simplifies synchronization and avoids issues related to recursive group processing.
+
+#### Creating a local account when LDAP synchronization is enabled
+
+Local accounts can still be created and used even when LDAP synchronization is enabled.
+
+To allow such users to sign in through the web interface, the ["Enable password and passkey authentication for the web interface"](https://docs.gitlab.com/administration/settings/sign_in_restrictions/#password-and-passkey-authentication) setting must be enabled.

@@ -26,6 +26,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - deckhouse.io
+  resources:
+  - hubblemonitoringconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
@@ -67,6 +75,16 @@ rules:
   resources:
   - egressgateways
   - egressgatewaypolicies
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - hubblemonitoringconfigs
   verbs:
   - create
   - delete

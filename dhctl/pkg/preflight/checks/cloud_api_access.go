@@ -25,12 +25,12 @@ import (
 	"net/url"
 	"time"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils"
 	cca "github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils/check-cloud-api"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 var ErrCloudAPIUnreachable = errors.New("could not reach Cloud API from master node")
@@ -38,8 +38,12 @@ var ErrCloudAPIUnreachable = errors.New("could not reach Cloud API from master n
 const ProxyTunnelPort = "22323"
 
 type CloudAPICheck struct {
-	MetaConfig *config.MetaConfig
-	Node       node.Interface
+	MetaConfig  *config.MetaConfig
+	SSHProvider libcon.SSHProvider
+	// LegacyMode reflects whether the supplied SSHProvider is using the
+	// legacy clissh backend (true) or modern gossh (false). Set at suite
+	// construction from sshclient.Config.IsLegacyMode().
+	LegacyMode bool
 }
 
 const CloudAPICheckName preflight.CheckName = "cloud-api-accessibility"
@@ -61,8 +65,8 @@ func (c CloudAPICheck) Run(ctx context.Context) error {
 		return nil
 	}
 
-	wrapper, ok := c.Node.(*ssh.NodeInterfaceWrapper)
-	if !ok {
+	sshClient, err := c.SSHProvider.Client(ctx)
+	if err != nil {
 		return nil
 	}
 
@@ -85,7 +89,7 @@ func (c CloudAPICheck) Run(ctx context.Context) error {
 		proxyURL = nil
 	}
 
-	tun, err := utils.SetupSSHTunnelToProxyAddr(wrapper.Client(), targetURL)
+	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, sshClient, targetURL, c.LegacyMode)
 	if err != nil {
 		return wrapTunnelErr(err)
 	}
@@ -94,7 +98,7 @@ func (c CloudAPICheck) Run(ctx context.Context) error {
 	return c.check(ctx, cloudAPIConfig, proxyURL)
 }
 
-func (c CloudAPICheck) check(ctx context.Context, cloudAPIConfig *cca.CloudApiConfig, proxyURL *url.URL) error {
+func (c CloudAPICheck) check(ctx context.Context, cloudAPIConfig *cca.CloudAPIConfig, proxyURL *url.URL) error {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
@@ -108,7 +112,7 @@ func (c CloudAPICheck) check(ctx context.Context, cloudAPIConfig *cca.CloudApiCo
 	return nil
 }
 
-func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.CloudApiConfig, proxyUrl *url.URL) (*http.Response, error) {
+func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.CloudAPIConfig, proxyURL *url.URL) (*http.Response, error) {
 	cloudAPIUrlString := cloudAPIConfig.URL.String()
 	req, err := http.NewRequestWithContext(ctx, method, cloudAPIUrlString, nil)
 	if err != nil {
@@ -116,13 +120,13 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.
 	}
 
 	var client *http.Client
-	if proxyUrl == nil {
+	if proxyURL == nil {
 		client, err = buildSSHTunnelHTTPClient(cloudAPIConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build HTTP client: %w", err)
 		}
 	} else {
-		client = utils.BuildHTTPClientWithLocalhostProxy(proxyUrl)
+		client = utils.BuildHTTPClientWithLocalhostProxy(proxyURL)
 	}
 
 	resp, err := client.Do(req)
@@ -132,7 +136,7 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.
 	return resp, nil
 }
 
-func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudApiConfig) (*http.Client, error) {
+func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudAPIConfig) (*http.Client, error) {
 	tlsConfig := &tls.Config{
 		ServerName: cloudAPIConfig.URL.Hostname(),
 	}
@@ -168,7 +172,7 @@ func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudApiConfig) (*http.Client,
 	return client, nil
 }
 
-func getCloudAPIConfig(meta *config.MetaConfig) (*cca.CloudApiConfig, error) {
+func getCloudAPIConfig(meta *config.MetaConfig) (*cca.CloudAPIConfig, error) {
 	if meta == nil {
 		return nil, nil
 	}
@@ -185,20 +189,21 @@ func getCloudAPIConfig(meta *config.MetaConfig) (*cca.CloudApiConfig, error) {
 	return configProvider(providerConfig)
 }
 
-var cloudAPIConfigsProviders = map[string]func(providerClusterConfig []byte) (*cca.CloudApiConfig, error){
+var cloudAPIConfigsProviders = map[string]func(providerClusterConfig []byte) (*cca.CloudAPIConfig, error){
 	"openstack": cca.HandleOpenStackProvider,
 	"vsphere":   cca.HandleVSphereProvider,
 }
 
 func wrapTunnelErr(err error) error {
-	return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
-Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
+	return fmt.Errorf(`cannot set up tunnel to the control-plane host: %w.
+Please check connectivity to the control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
 }
 
-func CloudAPIAccess(meta *config.MetaConfig, nodeInterface node.Interface) preflight.Check {
+func CloudAPIAccess(meta *config.MetaConfig, sshProvider libcon.SSHProvider, legacyMode bool) preflight.Check {
 	check := CloudAPICheck{
-		MetaConfig: meta,
-		Node:       nodeInterface,
+		MetaConfig:  meta,
+		SSHProvider: sshProvider,
+		LegacyMode:  legacyMode,
 	}
 	return preflight.Check{
 		Name:        CloudAPICheckName,

@@ -12,7 +12,6 @@ git:
       install:
         - go.mod
         - go.sum
-      setup:
         - "**/*.go"
 shell:
   install:

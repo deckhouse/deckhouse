@@ -68,10 +68,10 @@ spec:
                         Проставляется как верхняя граница в `cluster-autoscaler`.
                     maxUnavailablePerZone:
                       description: |
-                        Недоступное количество инстансов при RollingUpdate'е.
+                        Максимальное количество недоступных инстансов в группе в каждой зоне во время последовательного обновления.
                     maxSurgePerZone:
                       description: |
-                        Количество одновременно создаваемых инстансов при scale-up.
+                         Максимальное количество инстансов, которые могут одновременно создаваться при последовательном обновлении группы в каждой зоне.
                     standby:
                       description: |
                         Количество резервных (*подогретых*) узлов в этой `NodeGroup` во всех зонах.
@@ -234,6 +234,87 @@ spec:
                         > **Внимание.** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
+            status:
+              properties:
+                conditionSummary:
+                  description: |
+                    Сводная информация о состоянии группы узлов.
+                  properties:
+                    ready:
+                      description: |
+                        Готовность группы узлов по сводному состоянию.
+                    statusMessage:
+                      description: |
+                        Сообщение о состоянии обработки группы узлов.
+                desired:
+                  description: |
+                    Желаемое количество машин в группе.
+                engine:
+                  description: |
+                    Фактический механизм управления узлами в этой группе.
+
+                    Значение поля определяет, каким компонентом управляются узлы:
+
+                    - `None` — узлы группы не управляются через Machine Controller Manager или CAPI;
+                    - `MCM` — узлы группы управляются через Machine Controller Manager;
+                    - `CAPI` — узлы группы управляются через Cluster API.
+                error:
+                  description: |
+                    Сообщение об ошибке при обработке группы узлов.
+                instances:
+                  description: |
+                    Количество инстансов в группе в любом состоянии.
+                kubernetesVersion:
+                  description: |
+                    Текущая версия Kubernetes на узлах или версия, до которой узлы будут обновлены.
+                lastMachineFailures:
+                  description: |
+                    Список последних ошибок машин в группе узлов.
+                  items:
+                    properties:
+                      lastOperation:
+                        description: |
+                          Последняя операция с машиной.
+                        properties:
+                          description:
+                            description: |
+                              Описание последней операции.
+                          lastUpdateTime:
+                            description: |
+                              Время последнего обновления статуса операции.
+                          state:
+                            description: |
+                              Состояние операции с машиной.
+                          type:
+                            description: |
+                              Тип операции.
+                      name:
+                        description: |
+                          Имя машины.
+                      ownerRef:
+                        description: |
+                          Имя владельца машины.
+                      providerID:
+                        description: |
+                          ProviderID машины.
+                max:
+                  description: |
+                    Максимальное количество инстансов в группе.
+                min:
+                  description: |
+                    Минимальное количество инстансов в группе.
+                nodes:
+                  description: |
+                    Количество Kubernetes-узлов в группе в любом состоянии.
+                ready:
+                  description: |
+                    Количество готовых Kubernetes-узлов в группе.
+                standby:
+                  description: |
+                    Количество резервных инстансов в группе.
+                upToDate:
+                  description: |
+                    Количество узлов в актуальном состоянии.
     - name: v1alpha2
       schema:
         openAPIV3Schema:
@@ -462,6 +543,87 @@ spec:
                         > **Внимание.** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
+            status:
+              properties:
+                conditionSummary:
+                  description: |
+                    Сводная информация о состоянии группы узлов.
+                  properties:
+                    ready:
+                      description: |
+                        Готовность группы узлов по сводному состоянию.
+                    statusMessage:
+                      description: |
+                        Сообщение о состоянии обработки группы узлов.
+                desired:
+                  description: |
+                    Желаемое количество машин в группе.
+                engine:
+                  description: |
+                    Фактический механизм управления узлами в этой группе.
+
+                    Значение поля определяет, каким компонентом управляются узлы:
+
+                    - `None` — узлы группы не управляются через MCM или CAPI;
+                    - `MCM` — узлы группы управляются через machine-controller-manager;
+                    - `CAPI` — узлы группы управляются через Cluster API.
+                error:
+                  description: |
+                    Сообщение об ошибке при обработке группы узлов.
+                instances:
+                  description: |
+                    Количество инстансов в группе в любом состоянии.
+                kubernetesVersion:
+                  description: |
+                    Текущая версия Kubernetes на узлах или версия, до которой узлы будут обновлены.
+                lastMachineFailures:
+                  description: |
+                    Список последних ошибок машин в группе узлов.
+                  items:
+                    properties:
+                      lastOperation:
+                        description: |
+                          Последняя операция с машиной.
+                        properties:
+                          description:
+                            description: |
+                              Описание последней операции.
+                          lastUpdateTime:
+                            description: |
+                              Время последнего обновления статуса операции.
+                          state:
+                            description: |
+                              Состояние операции с машиной.
+                          type:
+                            description: |
+                              Тип операции.
+                      name:
+                        description: |
+                          Имя машины.
+                      ownerRef:
+                        description: |
+                          Имя владельца машины.
+                      providerID:
+                        description: |
+                          ProviderID машины.
+                max:
+                  description: |
+                    Максимальное количество инстансов в группе.
+                min:
+                  description: |
+                    Минимальное количество инстансов в группе.
+                nodes:
+                  description: |
+                    Количество Kubernetes-узлов в группе в любом состоянии.
+                ready:
+                  description: |
+                    Количество готовых Kubernetes-узлов в группе.
+                standby:
+                  description: |
+                    Количество резервных инстансов в группе.
+                upToDate:
+                  description: |
+                    Количество узлов в актуальном состоянии.
     - name: v1
       schema:
         openAPIV3Schema:
@@ -677,7 +839,7 @@ spec:
                       description: |
                         Приоритет группы узлов.
 
-                        При масштабировании кластера cluster autoscaler будет выбирать сначала группы узлов с установленным бОльшим приоритетом. Если существует несколько групп узлов с одинаковым приоритетом, группа будет выбрана из них случайным образом.
+                        При масштабировании кластера cluster autoscaler будет выбирать сначала группы узлов с установленным бОльшим приоритетом. Если существует несколько групп узлов с одинаковым приоритетом, группа будет выбрана из них случайным образом. Скоростью переключения на заказ узлов из групп с меньшим приоритетом можно управлять (подробнее — в разделе [«FAQ»](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных)).
 
                         Использование приоритетов может быть удобно, например, для предпочтения заказа более дешевых узлов (например, spot-инстансов) перед более дорогими.
                     maxUnavailablePerZone:
@@ -874,6 +1036,12 @@ spec:
                         enabled:
                           description: |
                             Включение использования менеджера топологий.
+
+                            Если менеджер топологий включен, активируются режимы строгого выделения ресурсов для контейнеров подов класса Guaranteed. В настройках kubelet устанавливаются следующие значения параметров:
+
+                            - `cpuManagerPolicy: static` — kubelet эксклюзивно закрепляет целые физические ядра за контейнером с целочисленным запросом CPU;
+                            - `memoryManagerPolicy: Static` — kubelet закрепляет память контейнера за минимальным числом NUMA-узлов (предпочтительно одним).
+                            
                         scope:
                           description: |
                             Определение гранулярности выравнивания ресурсов:
@@ -928,29 +1096,40 @@ spec:
                 fencing:
                   type: object
                   description: |
-                    Включение fencing-контроллер для группы узлов.
+                    Включает fencing-controller для группы узлов.
                   required: [ mode ]
                   properties:
                     mode:
                       type: string
                       enum:
                         - "Watchdog"
-                        - "Notify"
                       description: |
-                        Режимы работы fencing:
-                          - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером. Также в этом режиме fencing-agent следит за доступными в кластере нодами.
-                          - `Notify` — запускает fencing-агент, но не активирует watchdog (режим проверки, без перезагрузок). В этом режиме fencing-agent следит за доступными в кластере нодами.
+                        Устанавливает режим работы fencing-controller.
+                        
+                        Поддерживаемые режимы работы:
+                        
+                        - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером. Также в этом режиме fencing-agent отслеживает доступность узлов в кластере.
 
-                        При включении fencing скрипт NodeGroupConfiguration загружает модуль ядра softdog с параметрами `soft_margin=<timeout>` и `soft_panic=1`.
+                        При включении `fencing` скрипт NodeGroupConfiguration загружает модуль ядра `softdog` с параметром `soft_margin`, равным значению `spec.fencing.watchdog.timeout` (по умолчанию 60 секунд), и параметром `soft_panic=1`.
 
-                        Как работает fencing-агент:
-                          - Открывает устройство `/dev/watchdog` и устанавливает на узле лейбл `node-manager.deckhouse.io/fencing-enabled`.
-                          - Объединяется с агентами этой же NodeGroup в gossip-кластер (`memberlist`).
-                          - Регулярно проверяет кворум (доступность большинства узлов NodeGroup).
-                          - Если кворума нет (`quorum=false`), выполняет резервную проверку доступности Kubernetes API.
-                          - Если кворум есть или Kubernetes API доступен, агент сбрасывает таймер watchdog.
-                          - Если ни кворума, ни доступа к Kubernetes API нет, watchdog перестает сбрасываться, таймер истекает, что приводит к kernel panic и перезагрузке узла.
-                          - Учитывает аннотации обслуживания `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, `update.node.deckhouse.io/disruption-approved`, чтобы временно отключать watchdog на время плановых операций.
+                        Как работает fencing-agent:
+
+                        - Агент открывает устройство `/dev/watchdog` и устанавливает на узле лейбл `node-manager.deckhouse.io/fencing-enabled`, а также лейбл `node-manager.deckhouse.io/fencing-mode` со значением `Watchdog`.
+                        - Fencing-agent объединяется с агентами той же группы узлов в gossip-кластер (`memberlist`).
+                        - Агент регулярно проверяет кворум (доступность большинства узлов группы):
+                        - если кворума нет (`quorum=false`), агент выполняет дополнительную проверку доступности Kubernetes API;
+                        - если кворум есть или Kubernetes API доступен, агент сбрасывает таймер watchdog;
+                        - если ни кворума, ни доступа к Kubernetes API нет, watchdog перестает сбрасываться, таймер истекает, что приводит к kernel panic.
+                        - Агент учитывает аннотации обслуживания `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved` и `update.node.deckhouse.io/disruption-approved`, чтобы временно отключать watchdog на время плановых операций.
+
+                        При включённом `fencing` автоматическая перезагрузка узла после kernel panic отключается на уровне ОС. Это исключает возврат узла с неопределённым состоянием до его корректной обработки (для статических узлов — вручную, для облачных узлов — через cloud-provider-controller).
+
+                        Fencing-controller учитывает тип узла (`node.deckhouse.io/type`) при реакции на сбойный узел:
+
+                        - для облачных узлов (`CloudEphemeral`, `CloudPermanent`) контроллер удаляет объект Node, после чего cloud-provider-controller пересоздаёт соответствующую виртуальную машину;
+                        - для статических узлов (`Static`, `CloudStatic`) контроллер только вытесняет нагрузку, оставляя объект Node в кластере.
+
+                        Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов).
                     watchdog:
                       type: object
                       properties:
@@ -963,3 +1142,128 @@ spec:
                           x-doc-default: 60s
                       required:
                         - timeout
+            status:
+              properties:
+                conditionSummary:
+                  description: |
+                    Сводная информация о состоянии группы узлов.
+                  properties:
+                    ready:
+                      description: |
+                        Готовность группы узлов по сводному состоянию.
+                    statusMessage:
+                      description: |
+                        Сообщение о состоянии обработки группы узлов.
+                conditions:
+                  description: |
+                    Список условий, отражающих текущее состояние группы узлов.
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        description: |
+                          Время последнего перехода условия из одного состояния в другое.
+                      message:
+                        description: |
+                          Человекочитаемое сообщение с подробностями последнего перехода.
+                      status:
+                        description: |
+                          Статус условия: `True` или `False`.
+                      type:
+                        description: |
+                          Тип условия группы узлов.
+                deckhouse:
+                  description: |
+                    Состояние обработки ресурса оператором Deckhouse.
+                  properties:
+                    observed:
+                      description: |
+                        Содержит время последнего обнаруженного оператором изменения ресурса и его контрольную сумму.
+                      properties:
+                        checkSum:
+                          description: |
+                            Контрольная сумма последней обнаруженной версии ресурса.
+                        lastTimestamp:
+                          description: |
+                            Время, когда оператор в последний раз обнаружил изменение ресурса.
+                    processed:
+                      description: |
+                        Содержит время последнего применения ресурса в кластере оператором и его контрольную сумму.
+                      properties:
+                        checkSum:
+                          description: |
+                            Контрольная сумма последней применённой версии ресурса.
+                        lastTimestamp:
+                          description: |
+                            Время, когда ресурс был в последний раз применён в кластере.
+                    synced:
+                      description: |
+                        Указывает, была ли последняя обнаруженная версия ресурса успешно применена в кластере.
+                desired:
+                  description: |
+                    Желаемое количество машин в группе.
+                engine:
+                  description: |
+                    Фактический механизм управления узлами в этой группе.
+
+                    Значение поля определяет, каким компонентом управляются узлы:
+                    
+                    - `None` — узлы группы не управляются через Machine Controller Manager или CAPI;
+                    - `MCM` — узлы группы управляются через Machine Controller Manager;
+                    - `CAPI` — узлы группы управляются через Cluster API.
+                error:
+                  description: |
+                    Сообщение об ошибке при обработке группы узлов.
+                instances:
+                  description: |
+                    Количество инстансов в группе в любом состоянии.
+                kubernetesVersion:
+                  description: |
+                    Текущая версия Kubernetes на узлах или версия, до которой узлы будут обновлены.
+                lastMachineFailures:
+                  description: |
+                    Список последних ошибок машин в группе узлов.
+                  items:
+                    properties:
+                      lastOperation:
+                        description: |
+                          Последняя операция с машиной.
+                        properties:
+                          description:
+                            description: |
+                              Описание последней операции.
+                          lastUpdateTime:
+                            description: |
+                              Время последнего обновления статуса операции.
+                          state:
+                            description: |
+                              Состояние операции с машиной.
+                          type:
+                            description: |
+                              Тип операции.
+                      name:
+                        description: |
+                          Имя машины.
+                      ownerRef:
+                        description: |
+                          Имя владельца машины.
+                      providerID:
+                        description: |
+                          ProviderID машины.
+                max:
+                  description: |
+                    Максимальное количество инстансов в группе.
+                min:
+                  description: |
+                    Минимальное количество инстансов в группе.
+                nodes:
+                  description: |
+                    Количество Kubernetes-узлов в группе в любом состоянии.
+                ready:
+                  description: |
+                    Количество готовых Kubernetes-узлов в группе.
+                standby:
+                  description: |
+                    Количество резервных инстансов в группе.
+                upToDate:
+                  description: |
+                    Количество узлов в актуальном состоянии.

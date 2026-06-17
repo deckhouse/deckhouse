@@ -2,22 +2,18 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
-  finalizers:
-  - applicationpackageversion.deckhouse.io/used-by-application
   labels:
     packages.deckhouse.io/draft: "true"
   name: deckhouse-test-v1.0.0
-  resourceVersion: "3"
+  resourceVersion: "2"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.0
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'failed to get image: registry error'
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'get image: get package image: registry error'
     reason: GetImageError
     status: "False"
     type: MetadataLoaded
@@ -25,7 +21,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -35,4 +30,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
-  syncTime: null
+  lastNewVersions: 0
+  partialScanAvailable: false

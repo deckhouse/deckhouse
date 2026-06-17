@@ -1,10 +1,11 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: e2e-opentofu-eks
 # we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
 # current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
 fromImage: common/alt-p11-artifact
 import:
-  {{- $k8sVersion := "1.31"}}
+  {{- $k8sVersion := "1.32"}}
   {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
   - image: common/kubernetes-artifact-{{ $image_version }}
     add: /src/_output/bin/kubectl
@@ -14,28 +15,12 @@ import:
     add: /opentofu/opentofu
     to: /image/bin/opentofu
     before: setup
-    {{- range $_, $edition := $.Editions }}
-      {{- if $edition.terraformProviders }}
-        {{- range $_, $tfProvider := $edition.terraformProviders }}
-          {{- $tf := index $.TF $tfProvider }}
-            {{- if eq $tf.type "vcd" }}
-              {{- range $version := $tf.versions }}
-  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-    add: /{{ $tf.artifactBinary }}-v{{ $version }}
-    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}//linux_amd64/{{ $tf.destinationBinary }}
-    before: setup
-              {{- end }}
-            {{- else }}
-  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  {{- if ne $.Env "CSE" }}
+  {{- $tf := index $.TF "aws" }}
+  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
     add: /{{ $tf.artifactBinary }}
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
     before: setup
-            {{- end }}
-      {{- end }}
-    {{- end }}
-    {{- if eq $.Env $edition.name }}
-      {{- break -}}
-    {{- end }}
   {{- end }}
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-random
@@ -114,3 +99,4 @@ shell:
   - mv /src/provider-kubernetes/terraform-provider-kubernetes /terraform-provider-kubernetes
   - chmod 755 /terraform-provider-*
   - chown 64535:64535 /terraform-provider-*
+{{- end }}

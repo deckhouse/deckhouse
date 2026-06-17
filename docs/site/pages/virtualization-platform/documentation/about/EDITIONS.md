@@ -15,7 +15,7 @@ Supplied as a virtualization module:
 - DKP SE+: Extended version of the virtualization module.
 - DKP EE: Extended version of the virtualization module.
 
-The table below provides brief a comparison of editions listing its main features and functions:
+The table below provides a brief comparison of editions, listing their main features and functions:
 
 {% alert level="info" %}
 The feature set corresponds to the latest release on the **stable** release channel.

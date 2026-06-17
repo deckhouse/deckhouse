@@ -1,0 +1,30 @@
+csi-vsphere:
+  fixes:
+    - summary: Fixed the Deckhouse queue getting stuck
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20092
+docs:
+  features:
+    - summary: Update deckhouse web modules architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19758
+  fixes:
+    - summary: Change network-policy-engine and cni-flannel to deprecated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19666
+monitoring-deckhouse:
+  fixes:
+    - summary: >-
+        Fix module-release alerts (`ModuleReleaseIsWaitingManualApproval`,
+        `ModuleReleaseIsOutdated`, `ModuleReleaseIsBlockedByRequirements`,
+        `ModuleIsInMaintenanceMode`, `D8ModuleOutdatedByMajorVersion`) that never fired on 1.75.x
+        clusters due to a `moduleName`→`module` label mismatch introduced when addon-operator was
+        bumped to v1.19.7 in v1.75.1.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20112
+registry:
+  fixes:
+    - summary: Updated auth image Go dependencies to fix Go CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19894
+      impact: Registry pods will be restarted.
+user-authn:
+  fixes:
+    - summary: Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20076
+

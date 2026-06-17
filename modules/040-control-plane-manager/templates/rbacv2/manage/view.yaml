@@ -29,3 +29,14 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - control-plane.deckhouse.io
+  resources:
+  - controlplanenodes
+  - controlplaneoperations
+  - controlplanenodes/status
+  - controlplaneoperations/status
+  verbs:
+  - get
+  - list
+  - watch

@@ -19,79 +19,23 @@ import (
 	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-var PreflightSkipAll = false
-
-var PreflightSkipChecks []string
-
-var legacyPreflightSkipAliases = map[string]string{
-	"preflight-skip-one-ssh-host": "static-single-ssh-host",
-}
-
-func ApplyPreflightSkips(skipsList []string) {
-	for _, skip := range skipsList {
-		PreflightSkipChecks = append(PreflightSkipChecks, mapLegacyPreflightSkipAlias(skip))
-	}
-}
-
-func DisabledPreflightChecks() []string {
-	if PreflightSkipAll {
-		return append(generatedChecks(), PreflightSkipChecks...)
-	}
-	return PreflightSkipChecks
-}
-
-func IsPreflightCheckDisabled(name string) bool {
-	if PreflightSkipAll {
-		return true
-	}
-	for _, skip := range PreflightSkipChecks {
-		if skip == name {
-			return true
-		}
-	}
-	return false
-}
-
-func DefinePreflight(cmd *kingpin.CmdClause) {
+// DefinePreflight registers preflight skip flags into o and validates them in a PreAction.
+func DefinePreflight(cmd *kingpin.CmdClause, o *options.PreflightOptions) {
 	cmd.Flag("preflight-skip-all-checks", "Skip all preflight checks").
 		Envar(configEnvName("PREFLIGHT_SKIP_ALL_CHECKS")).
-		BoolVar(&PreflightSkipAll)
+		BoolVar(&o.SkipAll)
 
-	desc := fmt.Sprintf("Disable specific preflight checks by name (repeatable). Known checks: %s", strings.Join(generatedChecks(), ", "))
+	desc := fmt.Sprintf("Disable specific preflight checks by name (repeatable). Known checks: %s", strings.Join(options.GeneratedChecks(), ", "))
 	cmd.Flag("preflight-skip-check", desc).
 		Envar(configEnvName("PREFLIGHT_SKIP_CHECKS")).
 		PlaceHolder("name").
-		StringsVar(&PreflightSkipChecks)
+		StringsVar(&o.SkipChecks)
 
 	cmd.PreAction(func(_ *kingpin.ParseContext) error {
-		return validatePreflightSkipChecks()
+		return o.Validate()
 	})
-}
-
-func mapLegacyPreflightSkipAlias(name string) string {
-	if mapped, ok := legacyPreflightSkipAliases[name]; ok {
-		return mapped
-	}
-	return name
-}
-
-func validatePreflightSkipChecks() error {
-	if len(PreflightSkipChecks) == 0 {
-		return nil
-	}
-
-	known := make(map[string]struct{}, len(generatedPreflightChecks))
-	for _, name := range generatedPreflightChecks {
-		known[name] = struct{}{}
-	}
-
-	for _, name := range PreflightSkipChecks {
-		if _, ok := known[name]; !ok {
-			return fmt.Errorf("unknown preflight check name: %s", name)
-		}
-	}
-
-	return nil
 }

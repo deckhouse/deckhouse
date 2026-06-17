@@ -23,20 +23,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 )
 
 func TestEditionBad(t *testing.T) {
-	origEdition, origVersion := app.AppEdition, app.AppVersion
-	t.Cleanup(func() {
-		app.AppEdition = origEdition
-		app.AppVersion = origVersion
-	})
-
-	app.AppVersion = "dev"
-	app.AppEdition = "test"
 	t.Setenv("DHCTL_TEST_VERSION_TAG", "v1.2.3")
 
 	registryCfg := registry_mocks.ConfigBuilder(
@@ -67,6 +59,7 @@ func TestEditionBad(t *testing.T) {
 	check := DhctlEditionCheck{
 		MetaConfig: metaCfg,
 		Installer:  installer,
+		BuildInfo:  options.BuildInfo{AppVersion: "dev", AppEdition: "test"},
 		descriptor: provider,
 	}
 
@@ -76,14 +69,6 @@ func TestEditionBad(t *testing.T) {
 }
 
 func TestOk(t *testing.T) {
-	origEdition, origVersion := app.AppEdition, app.AppVersion
-	t.Cleanup(func() {
-		app.AppEdition = origEdition
-		app.AppVersion = origVersion
-	})
-
-	app.AppVersion = "dev"
-	app.AppEdition = "test"
 	t.Setenv("DHCTL_TEST_VERSION_TAG", "v1.2.3")
 
 	registryCfg := registry_mocks.ConfigBuilder(
@@ -114,6 +99,7 @@ func TestOk(t *testing.T) {
 	check := DhctlEditionCheck{
 		MetaConfig: metaCfg,
 		Installer:  installer,
+		BuildInfo:  options.BuildInfo{AppVersion: "dev", AppEdition: "test"},
 		descriptor: provider,
 	}
 
@@ -122,15 +108,6 @@ func TestOk(t *testing.T) {
 }
 
 func TestCheckDisable(t *testing.T) {
-	origEdition, origVersion := app.AppEdition, app.AppVersion
-	t.Cleanup(func() {
-		app.AppEdition = origEdition
-		app.AppVersion = origVersion
-	})
-
-	app.AppVersion = "local"
-	app.AppEdition = "local"
-
-	check := DhctlEdition(nil, nil)
+	check := DhctlEdition(nil, nil, options.BuildInfo{AppVersion: "local", AppEdition: "local"})
 	assert.True(t, check.Disabled)
 }

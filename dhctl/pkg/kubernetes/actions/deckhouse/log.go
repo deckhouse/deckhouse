@@ -24,12 +24,14 @@ import (
 	"strings"
 	"time"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -37,9 +39,9 @@ var (
 	ErrListPods      = errors.New("No Deckhouse pod found.")
 	ErrReadLease     = errors.New("No Deckhouse leader election lease found.")
 	ErrBadLease      = errors.New("Deckhouse leader election lease is malformed.")
-	ErrTimedOut      = errors.New("Time is out waiting for Deckhouse readiness.")
-	ErrRequestFailed = errors.New("Request failed. Probably pod was restarted during installation.")
-	ErrIncorrectNode = errors.New("Deckhouse on wrong node")
+	ErrTimedOut      = errors.New("Timed out waiting for Deckhouse readiness.")
+	ErrRequestFailed = errors.New("Request failed. The pod was probably restarted during installation.")
+	ErrIncorrectNode = errors.New("Deckhouse is on the wrong node")
 )
 
 type logLine struct {
@@ -250,7 +252,10 @@ func (d *LogPrinter) printLogsByLine(ctx context.Context, content []byte) {
 		}
 
 		if isModuleSuccess(line) {
-			log.InfoF("\tModule %q run successfully\n", line.Module)
+			log.InfoF("\tModule %q ran successfully\n", line.Module)
+			_, span := telemetry.StartSpan(ctx, "deckhouse-module."+line.Module)
+			span.SetAttributes(otattribute.String("module", line.Module))
+			span.End()
 			return true
 		}
 

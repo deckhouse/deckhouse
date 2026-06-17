@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func CEFNameAndSeverity() *DynamicTransform {
+func cefNameAndSeverity() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "cef_values",
@@ -35,7 +35,7 @@ func CEFNameAndSeverity() *DynamicTransform {
 	}
 }
 
-func GELFCodecRelabeling() *DynamicTransform {
+func gelfCodecRelabeling() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "gelf_host",

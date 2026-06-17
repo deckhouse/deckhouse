@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: required-labels
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: metadata.labels.foo
+      level: pod
+      description: Required label key foo must be present.
+      requiredScenarios: [positive, negative]
+    - path: metadata.labels.bar
+      level: pod
+      description: Label key bar must be present and match allowedRegex when configured.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

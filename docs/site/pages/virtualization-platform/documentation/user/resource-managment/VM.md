@@ -174,6 +174,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%
@@ -184,6 +185,8 @@ Example of creating a virtual machine with Ubuntu 22.04.
    NAME                                                 PHASE     NODE           IPADDRESS     AGE
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   virtlab-pt-2   10.66.10.2    7h46m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Connect to the virtual machine using the console (press `Ctrl+]` to exit the console):
 
@@ -296,10 +299,13 @@ d8 k get vm linux-vm
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     NODE           IPADDRESS     AGE
 linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 After creation, the virtual machine will automatically get an IP address from the range specified in the module settings (`virtualMachineCIDRs` block).
 
@@ -561,6 +567,32 @@ The change step indicates by how much the total number of cores can be increased
 
 The maximum possible number of cores is 248.
 
+Summary table by `spec.cpu.cores` range:
+
+| Cores range        | Number of sockets | Change step | Minimum cores per socket | Maximum cores per socket |
+|--------------------|-------------------|-------------|--------------------------|--------------------------|
+| `1 ≤ cores ≤ 16`   | 1                 | 1           | 1                        | 16                       |
+| `16 < cores ≤ 32`  | 2                 | 2           | 9                        | 16                       |
+| `32 < cores ≤ 64`  | 4                 | 4           | 9                        | 16                       |
+| `64 < cores ≤ 248` | 8                 | 8           | 9                        | 16                       |
+
+Memory overhead does not depend on the maximum possible vCPU topology; it is calculated from actively used cores: (sockets × cores per socket × threads per core) × 8 MiB per logical CPU.
+
+Example: with `spec.cpu.cores: 20`, the status shows a topology of two sockets with 10 cores each:
+
+```yaml
+spec:
+  cpu:
+    cores: 20
+# ...
+status:
+  resources:
+    cpu:
+      topology:
+        coresPerSocket: 10
+        sockets: 2
+```
+
 The current VM topology (number of sockets and cores in each socket) is displayed in the VM status in the following format:
 
 ```yaml
@@ -802,10 +834,13 @@ How will the agent help?
 
   Example output (see `AGENT` column):
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 How to install QEMU Guest Agent:
 
@@ -980,15 +1015,17 @@ If the virtual machine is in a shutdown state (`.status.phase: Stopped`), the ch
 
 If the virtual machine is running (`.status.phase: Running`), the way the changes are applied depends on the type of change:
 
-| Configuration block                     | How changes are applied                                 |
-| --------------------------------------- | --------------------------------------------------------|
-| `.metadata.annotations`                 | Applies immediately                                     |
-| `.spec.liveMigrationPolicy`             | Applies immediately                                     |
-| `.spec.runPolicy`                       | Applies immediately                                     |
-| `.spec.disruptions.restartApprovalMode` | Applies immediately                                     |
-| `.spec.affinity`                        | EE, SE+: Applies immediately, CE: Only after VM restart |
-| `.spec.nodeSelector`                    | EE, SE+: Applies immediately, CE: Only after VM restart |
-| `.spec.*`                               | Only after VM restart                                   |
+| Configuration block                     | How changes are applied                                                                                                  |
+|-----------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| `.metadata.labels`                      | Applies immediately and propagates to the VM pod                                                                         |
+| `.metadata.annotations`                 | Applies immediately and propagates to the VM pod                                                                         |
+| `.spec.liveMigrationPolicy`             | Applies immediately                                                                                                      |
+| `.spec.runPolicy`                       | Applies immediately                                                                                                      |
+| `.spec.disruptions.restartApprovalMode` | Applies immediately                                                                                                      |
+| `.spec.affinity`                        | EE, SE+: Applies immediately, CE: Only after VM restart                                                                  |
+| `.spec.nodeSelector`                    | EE, SE+: Applies immediately, CE: Only after VM restart                                                                  |
+| `.spec.cpu.cores`                       | May apply immediately if hotplug is enabled (EE, SE+), see [CPU hotplug](#cpu-hotplug); otherwise a restart is required. |
+| `.spec.*`                               | Only after VM restart                                                                                                    |
 
 How to change the VM configuration in the web interface:
 
@@ -1067,10 +1104,13 @@ d8 k get vm linux-vm -o wide
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 In the `NEED RESTART` column we see the value `True`, which means that a reboot is required to apply the changes.
 
@@ -1110,6 +1150,51 @@ How to perform the operation in the web interface:
 - On the "Configuration" tab, scroll down to the "Additional Settings" section.
 - Enable the "Auto-apply changes" switch.
 - Click on the "Save" button that appears.
+
+### CPU hotplug
+
+CPU hotplug lets you change `spec.cpu.cores` for a running VM without restart when the change can be applied through live migration. Within the current CPU topology, you can both increase and decrease the number of cores.
+
+This functionality is disabled by default.
+
+To enable this functionality, add `HotplugCPUWithLiveMigration` to `.spec.settings.featureGates` array in the ModuleConfig/virtualization:
+
+```yaml
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  settings:
+    featureGates:
+    - HotplugCPUWithLiveMigration
+```
+
+If the new `.spec.cpu.cores` value falls within the hotplug range for the current topology and the VM is migratable, the change is applied through live migration. If the new value requires a different CPU topology or the VM cannot be migrated, a VM restart is required. The need for restart is reflected by the `AwaitingRestartToApplyConfiguration` condition.
+
+Topology calculation rules and allowed change steps for `spec.cpu.cores` are described in [Automatic CPU topology configuration](#automatic-cpu-topology-configuration).
+
+Guest OS specifics:
+
+- After live migration, new vCPUs may require explicit activation inside the guest OS.
+- On Linux, added CPUs can be enabled through sysfs:
+
+  ```bash
+  echo 1 > /sys/devices/system/cpu/cpu1/online
+  ```
+
+- To automatically enable new CPUs on Linux, configure a `udev` rule. After that, added CPUs become visible in `cat /proc/cpuinfo` and `top`:
+
+  ```bash
+  cat <<'EOF' > /etc/udev/rules.d/99-hotplug-cpu.rules
+  SUBSYSTEM=="cpu",ACTION=="add",RUN+="/bin/sh -c '[ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
+  EOF
+  ```
+
+Limitations:
+
+- Changing `spec.cpu.cores` without restart is possible only within the hotplug range of the current CPU topology.
+- If the change requires CPU topology reconfiguration, a VM restart is required.
+- When decreasing CPU count within the current topology, CPU distribution across sockets may become uneven.
 
 ### Placement of VMs by nodes
 
@@ -1360,7 +1445,12 @@ How to work with bootable block devices in the web interface:
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
-- You can add, extract, delete, resize, and reorder bootable block devices in the "Boot Disks" section.
+- In the "Boot Disks" section you can:
+  - `Add`: Attach a new disk or image to the VM.
+  - `Extract`: Detach the device from the VM (the image or disk remains in the project and can be attached again to this or another VM).
+  - `Delete`: Remove the image or disk resource from the cluster (after deletion it cannot be reused).
+  - `Resize`: Change the size of the disk.
+  - `Reorder`: Change the boot order of devices.
 
 #### Additional Block Devices
 
@@ -1400,10 +1490,13 @@ d8 k get vmbda attach-blank-disk
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              PHASE      VIRTUAL MACHINE NAME   AGE
 attach-blank-disk   Attached   linux-vm              3m7s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Connect to the virtual machine and make sure the disk is connected:
 
@@ -1413,6 +1506,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 sda       8:0    0   10G  0 disk <--- statically mounted linux-vm-root disk
@@ -1422,6 +1516,8 @@ sda       8:0    0   10G  0 disk <--- statically mounted linux-vm-root disk
 sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- dynamically mounted disk blank-disk
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To detach the disk from the virtual machine, delete the previously created resource:
 
@@ -1451,7 +1547,11 @@ How to work with additional block devices in the web interface:
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
-- You can add, extract, delete, and resize additional block devices in the "Additional Disks" section.
+- In the "Additional Disks" section you can:
+  - `Add`: Attach a new disk or image to the VM.
+  - `Extract`: Detach the device from the VM (the image or disk remains in the project and can be attached again to this or another VM).
+  - `Delete`: Remove the image or disk resource from the cluster (after deletion it cannot be reused).
+  - `Resize`: Change the size of the disk.
 
 #### Disk naming in guest OS
 
@@ -1528,6 +1628,10 @@ Use stable identifiers instead of `ethX`:
 - **MAC address binding** — in `netplan`, `systemd-networkd`, or `/etc/network/interfaces` configuration (preferred for guaranteed stability)
 
 In configuration files and scripts, use stable interface names (`enpXsY`) or MAC address binding instead of `ethX` names.
+
+{% alert level="info" %}
+Predictable interface order works only on guest OS with systemd (e.g. Ubuntu, Debian). On Alpine and other distros without systemd the order may not match.
+{% endalert %}
 
 ### Organizing interaction with virtual machines
 
@@ -1805,10 +1909,13 @@ d8 k get vm
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                   PHASE     NODE           IPADDRESS     AGE
 linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 We can see that it is currently running on the `virtlab-pt-1` node.
 
@@ -1848,6 +1955,7 @@ d8 k get vm -w
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                  PHASE       NODE           IPADDRESS     AGE
 linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
@@ -1855,6 +1963,8 @@ linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   7
 linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 You can interrupt any live migration while it is in the `Pending` or `InProgress` phase by deleting the corresponding VirtualMachineOperations resource.
 
@@ -2055,12 +2165,21 @@ d8 k get vmipl
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             VIRTUALMACHINEIPADDRESS                              STATUS   AGE
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
-`VirtualMachineIPAddress` (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
+[VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
+
+After creation, the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource can have the following `Phase` values:
+
+- `Pending`: Resource is being created.
+- `Bound`: [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) is bound to the [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) resource.
+- `Attached`: [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) is attached to the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
 By default, an ip address is automatically assigned to a virtual machine from the subnets defined in the module and is assigned to it until it is deleted. You can check the assigned ip address using the command:
 
@@ -2070,10 +2189,13 @@ d8 k get vmip
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              ADDRESS       STATUS     VM          AGE
 linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The algorithm for automatically assigning an ip address to a virtual machine is as follows:
 
@@ -2187,6 +2309,29 @@ Important considerations when working with additional network interfaces:
 When configuring network interfaces in the guest OS, use stable identifiers (predictable names `enpXsY` or MAC address binding) instead of `ethX` names. For more details, see the [Network interface naming in guest OS](#network-interface-naming-in-guest-os) section.
 {% endalert %}
 
+{% alert level="info" %}
+On a Linux guest system with multiple interfaces in the same subnet, the ARP Flux issue may occur, where the kernel responds to ARP requests via any arbitrary interface rather than the one the request was received on, leading to unstable connections and packet loss due to an incorrect MAC address in the router's ARP cache.
+
+To resolve this, set the following parameters to force the system to respond to requests strictly via the interface holding the target IP and to use the correct source address:
+
+```bash
+sysctl -w net.ipv4.conf.all.arp_ignore=1
+sysctl -w net.ipv4.conf.all.arp_announce=2
+```
+
+Cloud-init example:
+
+```yaml
+write_files:
+  - path: /etc/sysctl.d/90-arp-strict.conf
+    content: |
+      net.ipv4.conf.all.arp_ignore=1
+      net.ipv4.conf.all.arp_announce=2
+```
+
+For more details, see the [IP sysctl](https://docs.kernel.org/networking/ip-sysctl.html) documentation.
+{% endalert %}
+
 Example of connecting a VM to the main cluster network and the project network `user-net`:
 
 ```yaml
@@ -2251,12 +2396,15 @@ d8 k get vmmacl
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    VIRTUALMACHINEMACADDRESS                      STATUS   AGE
 mac-5e-e6-19-22-0f-d8   {"name":"vm-01-fz9cr","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-29-89-cf   {"name":"vm-01-99qj6","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    45s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 `VirtualMachineMACAddress` (`vmmac`) is a project-level resource that is responsible for reserving leased MAC addresses and binding them to virtual machines.
 
@@ -2270,12 +2418,15 @@ d8 k get vmmac
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          ADDRESS             STATUS     VM      AGE
 vm-01-5jqxg   5e:e6:19:54:f9:be   Attached   vm-01   5m42s
 vm-01-99qj6   5e:e6:19:29:89:cf   Attached   vm-01   5m42s
 vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 When a network is removed from the VM configuration:
 

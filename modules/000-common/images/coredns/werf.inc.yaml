@@ -25,7 +25,7 @@ shell:
     - rm -rf /src/coredns-kubeforward/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -51,12 +51,13 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-    add: /coredns
-    to: /coredns
-    before: setup
-git:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /coredns
+  to: /coredns
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/coredns"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

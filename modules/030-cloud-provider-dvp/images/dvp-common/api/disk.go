@@ -238,6 +238,23 @@ func (d *DiskService) ResizeDisk(ctx context.Context, diskName string, newSize s
 	return nil
 }
 
+func (d *DiskService) MigrateDiskStorageClass(ctx context.Context, diskName string, newStorageClass string) error {
+	vmd, err := d.GetDiskByName(ctx, diskName)
+	if err != nil {
+		return err
+	}
+
+	if vmd.Spec.PersistentVolumeClaim.StorageClass != nil &&
+		*vmd.Spec.PersistentVolumeClaim.StorageClass == newStorageClass {
+		return nil
+	}
+
+	patch := client.MergeFrom(vmd.DeepCopy())
+	vmd.Spec.PersistentVolumeClaim.StorageClass = &newStorageClass
+
+	return d.client.Patch(ctx, vmd, patch)
+}
+
 func (d *DiskService) GetStorageClassList(ctx context.Context) (*storagev1.StorageClassList, error) {
 	storageClassList, err := d.clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
 	if err != nil {

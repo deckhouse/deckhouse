@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -301,6 +301,10 @@ type KubeletSpec struct {
 
 // NodeGroupStatus defines the observed state of NodeGroup
 type NodeGroupStatus struct {
+	// Engine specifies machinery used to control nodes in this group
+	// +optional
+	Engine string `json:"engine,omitempty"`
+
 	// Ready specifies the number of ready nodes
 	Ready int32 `json:"ready,omitempty"`
 

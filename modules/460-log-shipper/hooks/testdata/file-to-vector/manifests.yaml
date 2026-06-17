@@ -11,7 +11,7 @@ spec:
     - test-vector-dest
     - non-existed
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-vector-dest

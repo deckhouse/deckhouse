@@ -46,7 +46,7 @@ spec:
       containers:
         - name: web
           image: {{ index .Values.werf.image "web-frontend" }}
-          {{- include "resources" . | nindent 10 }}
+          {{- include "resources-moduleslibrary-web" . | nindent 10 }}
           ports:
           - containerPort: 8080
             name: http
@@ -91,7 +91,7 @@ spec:
             - "/app/server"
             - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
           image: {{ index .Values.werf.image "website-docs/builder" }}
-          {{- include "resources" . | nindent 10 }}
+          {{- include "resources-moduleslibrary-builder" . | nindent 10 }}
           env:
             - name: HUGO_ENVIRONMENT
               value: production
@@ -199,6 +199,7 @@ spec:
     name: moduleslibrary
   updatePolicy:
     updateMode: {{ pluck .Values.werf.env .Values.vpa.updateMode | first | default .Values.vpa.updateMode._default | quote }}
+
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

@@ -2,15 +2,12 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
-  creationTimestamp: null
-  finalizers:
-  - modulepackageversion.deckhouse.io/used-by-module
   labels:
     packages.deckhouse.io/draft: "false"
     packages.deckhouse.io/package: test-module
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-module-v1.0.0
-  resourceVersion: "2"
+  resourceVersion: "1"
 spec:
   packageName: test-module
   packageRepositoryName: deckhouse
@@ -20,7 +17,6 @@ status: {}
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -30,4 +26,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
-  syncTime: null
+  lastNewVersions: 0
+  partialScanAvailable: false

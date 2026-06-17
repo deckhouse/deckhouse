@@ -22,7 +22,7 @@ Adding group entity to kubernetes authentication.
 This patch adds support for two-factor authentication (2FA) in Dex.
 It allows users to enable 2FA for their accounts, enhancing security by requiring a second form of verification during the login process.
 
-Upstream PR: https://github.com/dexidp/dex/pull/3712
+Upstream PR: <https://github.com/dexidp/dex/pull/3712>
 
 ### 005-password-policy.patch
 
@@ -34,6 +34,14 @@ for local user accounts. The following features are added:
 3. Password reuse prevention
 4. Account lockout after failed attempts
 
+Password complexity supports both predefined levels (`None`, `Low`, `Fair`,
+`Good`, `Excellent`) and a `Custom` level. When `Custom` is selected, the
+individual checks (`minLength`, `specialCharacters`, `numbers`, `capitalized`,
+`repeatedChars`) are wired through the new `WithCustomComplexity`
+`PasswordPolicy` option. The login handler enforces the policy via
+`Complexity.Validate(password)` so the same code path works for both predefined
+and custom levels.
+
 ### 006-fix-render-error.patch
 
 This patch changes the Internal Error message to a human-readable 'Access Denied' when login with a local user is restricted by group or email.
@@ -42,7 +50,7 @@ This patch changes the Internal Error message to a human-readable 'Access Denied
 
 In the latest go versions (1.25.2, 1.24.8) the bug was fixed, and without this patch Dex fails with an error
 
-Upstream PR: https://github.com/dexidp/dex/pull/4363
+Upstream PR: <https://github.com/dexidp/dex/pull/4363>
 
 ### 008-hide-internal-500-error-details.patch
 
@@ -51,6 +59,7 @@ It replaces detailed error messages (including stack traces, database errors, an
 with safe, user-friendly messages while ensuring all error details are properly logged server-side.
 
 Key changes:
+
 - Centralized safe error messages in `server/errors.go`
 - Replaced `err.Error()` calls in HTTP responses with generic messages
 - Added proper logging for all internal errors
@@ -61,23 +70,56 @@ Key changes:
 
 Adds optional Kerberos (SPNEGO) SSO to the LDAP connector with an opt-in SPNEGOAware hook in the password handler. Server-side validation uses `gokrb5` and a keytab only (no `krb5.conf` required). Includes principal mapping strategies and preserves the existing LDAP identity building and groups logic. Backward compatible when disabled.
 
-### 010-fix-cves.patch
-
-This patch fixes:
-
-- CVE-2025-47914
-- CVE-2025-58181
-
-### 011-provide-custom-CA-to-gitlab-connector.patch
+### 010-provide-custom-CA-to-gitlab-connector.patch
 
 This patch allows Gitlab connector to use custom CA for HTTPS connections.
 
-### 012-forced-password-change.patch
+### 011-forced-password-change.patch
 
 This patch adds a forced password change flag (`requireResetHashOnNextSuccLogin`) for local users.
 The flag can be set externally (e.g. by a controller). After a successful login, the user is redirected to the password change page.
 The flag is reset on successful password change.
 
-### 013-saml-support.patch
+### 012-saml-support.patch
 
 Adds refresh token support to the SAML connector. The SAML connector now implements `RefreshConnector` by caching the user identity in `ConnectorData` during initial authentication and returning it on refresh. Also persists `ConnectorData` in `OfflineSessions` for proper session management. Includes comprehensive tests.
+
+### 013-build-id-cache-invalidation.patch
+
+Added cache get parameter to main CSS file URL that gets opaque dex build identifier assigned to it. This prevents stale caches from breaking the login page.
+
+### 014-fix-cve.patch
+
+This patch fixes:
+
+- CVE-2025-47914
+- CVE-2025-58181
+- CVE-2026-26958
+- CVE-2026-32952
+- CVE-2026-33487 
+- CVE-2026-34986
+- CVE-2026-33186
+- CVE-2026-29181
+
+### 015-ratelimit-lock-unlock-users.patch
+
+Adds per-IP rate limiting on Dex password endpoints (`/auth/{conn}/login`, `/token`)
+and extends the existing local-user account-lockout to all password connectors
+(`local`, `ldap`, `atlassian-crowd`).
+
+Key changes:
+
+- Token-bucket per-IP `IPRateLimiter` middleware, configurable via the new `rateLimit`
+  section in Dex config.
+- `OfflineSessions` is extended with `Email`, `IncorrectPasswordLoginAttempts`,
+  `LockedUntil` (across `storage`, `kubernetes`, `etcd`, `sql` migration, `ent`);
+  used as the per-user lockout store for non-local connectors.
+- `passwordPolicy.lockout.applyToConnectors` selects which connector types lockout
+  applies to.
+- LDAP and Atlassian Crowd `Login()` returns a partial `Identity{UserID, Email}` on
+  failed auth when the user exists, so the lockout counter can be indexed by a
+  stable handle.
+
+  ### 016-fix-error-template-buildid.patch
+
+  Fix error template

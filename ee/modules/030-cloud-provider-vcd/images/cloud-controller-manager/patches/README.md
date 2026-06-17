@@ -23,3 +23,23 @@ Update klog to klog/v2 in other files
 ### 005-add-vapptemplate-search-by-org.patch
 
 Add support for searching vAppTemplates in a given org
+
+### 006-fix-lb-health-monitor.patch
+
+Fixes TCP health monitors removal during an update of the pool
+
+### 007-support-load-balancer-ip-annotation.patch
+
+Files:
+
+- pkg/ccm/loadbalancer.go
+
+Changes:
+
+- Add support for the `vcd.cpi.flant.com/load-balancer-ip` annotation
+
+### 008-fix-ccm-command-signature.patch
+
+Fix NewCloudControllerManagerCommand call signature for k8s.io v0.34.3
+
+In k8s.io v0.34.3, the function signature changed to include an additional `map[string]string` parameter for feature gates between `DefaultInitFuncConstructors` and `NamedFlagSets`.

@@ -138,6 +138,7 @@ currency_sign: "₽"
 commercial: Доступно в некоторых коммерческих редакциях.
 notAvailableInThisEdition: Доступно в других коммерческих редакциях.
 default_value: по умолчанию
+default_empty_string_value: ‘’
 platform: платформа
 example: пример
 examples: примеры
@@ -149,12 +150,12 @@ max_length: максимальная длина
 moduleLinkTitleADVANCED_USAGE: Расширенная конфигурация
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры
-moduleLinkTitleCONFIGURATION: Настройка
+moduleLinkTitleCONFIGURATION: Настройки
 moduleLinkTitleUSAGE: Примеры использования
 moduleLinkTitleSETUP: Настройка
 moduleLinkTitleFAQ: FAQ
-moduleLinkTitleCRD: Custom Resources
-moduleLinkTitleCR: Custom Resources
+moduleLinkTitleCRD: Кастомные ресурсы
+moduleLinkTitleCR: Кастомные ресурсы
 module_is_available_in_ee_only: Модуль доступен только в Deckhouse Enterprise Edition.
 module_available_editions_prefix: Доступно в редакциях
 module_available_with_limitations_prefix: Доступно с ограничениями в редакциях

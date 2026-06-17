@@ -18,7 +18,7 @@ The control plane management functionality includes:
 
 - Managing the etcd cluster configuration and its members. DKP scales master nodes and performs migrations between single-master and multi-master modes.
 
-- Configuring kubeconfig. DKP generates an up-to-date configuration file (with `cluster-admin` privileges), handles automatic renewal and updates, and creates a `symlink` for the `root` user.
+- Configuring kubeconfig. DKP generates an up-to-date configuration file (with `cluster-admin` permissions), creates, renews, and updates the kubeconfig for control-plane components and the admin kubeconfig (`admin.conf`), and creates a symlink for the `root` user (`/root/.kube/config` -> `admin.conf`). When the [`user-authz`](/modules/user-authz/) module is enabled, the symlink can be disabled using the [`rootKubeconfigSymlink`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) parameter in the `control-plane-manager` module (for more details, see the [FAQ](/modules/control-plane-manager/faq.html#cluster-admin-access-model) of the `control-plane-manager` module). DKP also tightens access permissions for the `admin.conf` and `super-admin.conf` files to enhance security.
 
 > Some parameters affecting control plane behavior are taken from the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource.
 
@@ -69,7 +69,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 3
   enabled: true
   settings:
     apiserver:
@@ -77,7 +77,7 @@ spec:
       certSANs:
       - bakery.infra
       - devs.infra
-      loadBalancer: {}
+      publishAPI: {}
 ```
 
 ### Checking DKP status and queues
@@ -206,7 +206,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 3
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50

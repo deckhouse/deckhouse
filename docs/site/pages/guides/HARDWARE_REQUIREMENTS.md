@@ -113,7 +113,7 @@ Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integ
       <td style="text-align: center;">60</td>
     </tr>
     <tr>
-      <td>Worker node</td>
+      <td>Worker node<a href="#storage">*</a></td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">60</td>
@@ -152,7 +152,7 @@ Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integ
       <td style="text-align: center;">60</td>
     </tr>
     <tr>
-      <td>Worker node</td>
+      <td>Worker node<a href="#storage">*</a></td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">12</td>
       <td style="text-align: center;">60</td>

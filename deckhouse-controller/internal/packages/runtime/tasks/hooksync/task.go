@@ -51,12 +51,6 @@ type nelmI interface {
 	ResumeMonitor(name string)
 }
 
-// statusService provides condition updates and error handling.
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 // task synchronizes a single hook binding during package startup.
 // Runs the hook with initial resource snapshot, then unlocks the monitor.
 type task struct {
@@ -66,14 +60,14 @@ type task struct {
 	info hookctrl.BindingExecutionInfo // contains binding context and sync options
 
 	nelm   nelmI
-	status statusService
+	status *status.Service
 
 	logger *log.Logger
 }
 
 // NewTask creates a sync task for a specific hook binding.
 // Created by the Startup task for each Kubernetes hook binding.
-func NewTask(pkg packageI, hook string, info hookctrl.BindingExecutionInfo, nelm nelmI, status statusService, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, hook string, info hookctrl.BindingExecutionInfo, nelm nelmI, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:    pkg,
 		hook:   hook,
@@ -105,7 +99,7 @@ func (t *task) Execute(ctx context.Context) error {
 	if err := t.runPackageSyncHook(ctx); err != nil {
 		// If AllowFailure=true, log warning and continue
 		if !t.info.AllowFailure {
-			t.status.HandleError(t.pkg.GetName(), err)
+			t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
 			return fmt.Errorf("run hook '%s': %w", t.hook, err)
 		}
 		t.logger.Warn("hook failed", log.Err(err))
@@ -138,7 +132,7 @@ func (t *task) runPackageSyncHook(ctx context.Context) error {
 
 	if err := t.pkg.RunHookByName(ctx, t.hook, t.info.BindingContext); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newEventHookErr(err)
+		return status.NewError("SyncHookFailed", err)
 	}
 
 	return nil

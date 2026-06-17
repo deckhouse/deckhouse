@@ -27,14 +27,14 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -47,7 +47,7 @@ type LoopsParams struct {
 }
 
 type DestroyerParams struct {
-	SSHClientProvider    sshclient.SSHProvider
+	SSHClientProvider    libcon.SSHProvider
 	KubeProvider         kube.ClientProviderWithCleanup
 	State                *State
 	LoggerProvider       log.LoggerProvider
@@ -105,11 +105,11 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 
 	var err error
 
-	d.nodesWithCredentials, err = d.params.State.NodeUser()
+	d.nodesWithCredentials, err = d.params.State.NodeUser(ctx)
 
 	if err != nil {
 		if !errors.Is(err, errNotFoundCredentials) {
-			return fmt.Errorf("Error while getting node user from cache: %w", err)
+			return fmt.Errorf("Error getting node user from cache: %w", err)
 		}
 
 		d.nodesWithCredentials, err = d.createAndSaveCredentials(ctx, logger)
@@ -117,7 +117,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 			return err
 		}
 	} else {
-		logger.LogDebugLn("Found existing nodes with credentials. Saved to destroyer and skipping creating")
+		logger.LogDebugLn("Found existing nodes with credentials. Saved to destroyer and skipping creation")
 	}
 
 	return d.waitNodeUserExists(ctx)
@@ -127,17 +127,17 @@ func (d *Destroyer) AfterResourcesDelete(context.Context) error {
 	return nil
 }
 
-func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
-	d.params.KubeProvider.Cleanup(false)
+func (d *Destroyer) CleanupBeforeDestroy(ctx context.Context) error {
+	d.params.KubeProvider.Cleanup(ctx, false)
 	return nil
 }
 
 func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	if govalue.IsNil(d.params.SSHClientProvider) {
-		return errors.New("Internal error. SSH provider did not pass")
+		return errors.New("Internal error. SSH provider was not passed")
 	}
 
-	return d.params.PhasedActionProvider().Run(phases.AllNodesPhase, true, func() (phases.DefaultContextType, error) {
+	return d.params.PhasedActionProvider().Run(ctx, phases.AllNodesPhase, true, func() (phases.DefaultContextType, error) {
 		err := d.destroyCluster(ctx, autoApprove)
 		if err != nil {
 			return nil, err
@@ -150,13 +150,13 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error {
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
-			return fmt.Errorf("Cleanup master nodes disallow")
+			return fmt.Errorf("Cleaning up master nodes is not allowed")
 		}
 	}
 
 	logger := d.logger()
 
-	sshClient, err := d.params.SSHClientProvider.Client()
+	sshClient, err := d.params.SSHClientProvider.Client(ctx)
 	if err != nil {
 		return err
 	}
@@ -177,14 +177,17 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	}
 
 	if len(ips) > 0 {
-		err := logger.LogProcess("default", "Get internal node IP for passed control-plane host", func() error {
+		err := logger.LogProcessCtx(ctx, "default", "Get internal node IP for passed control-plane host", func(ctx context.Context) error {
 			file := sshClient.File()
+
 			bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 			if err != nil {
 				return err
 			}
+
 			hostToExclude = strings.TrimSpace(string(bytes))
 			logger.LogDebugF("Got internal node IP for passed control-plane host: %s\n", hostToExclude)
+
 			return nil
 		})
 		if err != nil {
@@ -231,7 +234,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 				continue
 			}
 			settings.SetAvailableHosts([]session.Host{host})
-			sshClient, err = d.switchToNodeUser(ctx, sshClient, settings)
+			sshClient, err = d.switchToNodeUser(ctx, d.params.SSHClientProvider, settings)
 			if err != nil {
 				return err
 			}
@@ -257,7 +260,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 			settings := userPassedSSHSetting.Copy()
 			settings.SetAvailableHosts([]session.Host{host})
 
-			sshClient, err = d.switchToNodeUser(ctx, sshClient, settings)
+			sshClient, err = d.switchToNodeUser(ctx, d.params.SSHClientProvider, settings)
 			if err != nil {
 				return err
 			}
@@ -272,7 +275,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	return nil
 }
 
-func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
+func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
 	d.logger().LogDebugF("Starting cleanup process for host %s\n", host)
 
 	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
@@ -282,7 +285,6 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHCli
 		c.WithStdoutHandler(stdOutErrHandler)
 		c.WithStderrHandler(stdOutErrHandler)
 		err := c.Run(ctx)
-
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -297,17 +299,16 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHCli
 
 		return err
 	})
-
 	if err != nil {
 		return err
 	}
 
-	return d.addHostAsProcessed(host)
+	return d.addHostAsProcessed(ctx, host)
 }
 
-func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHClient, settings *session.Session) (node.SSHClient, error) {
+func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSHProvider, settings *session.Session) (libcon.SSHClient, error) {
 	if d.nodesWithCredentials == nil {
-		return nil, fmt.Errorf("Internal error. No nodes with credentials in destroyer. Probably Prepare did not call or try destroy when abort")
+		return nil, fmt.Errorf("Internal error. No nodes with credentials in destroyer. Probably Prepare was not called, or destroy was attempted during an abort")
 	}
 
 	if d.params.TmpDir == "" {
@@ -367,6 +368,11 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 
 	privateKeys := []session.AgentPrivateKey{convergerPrivateKey}
 
+	oldSSHClient, err := sshProvider.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	oldPrivateKeys := oldSSHClient.PrivateKeys()
 	for _, oldKey := range oldPrivateKeys {
 		// skip another temp keys for another hosts
@@ -376,7 +382,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 		}
 	}
 
-	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, privateKeys, oldSSHClient)
+	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, privateKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -398,25 +404,25 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 
 func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 	if d.params.PhasedActionProvider == nil {
-		return fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you try to destroy when need abort")
+		return fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you tried to destroy when an abort was needed")
 	}
 
 	if d.nodesWithCredentials == nil {
-		return fmt.Errorf("Internal error. nodesWithCredentials not initialized. Probably you try to destroy when need abort")
+		return fmt.Errorf("Internal error. nodesWithCredentials not initialized. Probably you tried to destroy when an abort was needed")
 	}
 
 	if len(d.nodesWithCredentials.IPs) == 0 {
-		return fmt.Errorf("Internal error. nodesWithCredentials ips is empty")
+		return fmt.Errorf("Internal error. nodesWithCredentials IPs are empty")
 	}
 
 	logger := d.logger()
 
-	if d.params.State.IsNodeUserExists() {
+	if d.params.State.IsNodeUserExists(ctx) {
 		logger.LogDebugLn("NodeUser for static destroyer exists getting from cache")
 		return nil
 	}
 
-	return d.params.PhasedActionProvider().Run(phases.WaitStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
+	return d.params.PhasedActionProvider().Run(ctx, phases.WaitStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
 		if !isSingleMaster(d.nodesWithCredentials.IPs) {
 			// waiter checks if nil params
 			waiter := entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
@@ -429,7 +435,7 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 			logger.LogDebugLn("No wait NodeUser for single-master cluster")
 		}
 
-		return nil, d.params.State.SetNodeUserExists()
+		return nil, d.params.State.SetNodeUserExists(ctx)
 	})
 }
 
@@ -456,7 +462,7 @@ func (d *Destroyer) createNodeUserCredentials(ctx context.Context, ips []entity.
 
 func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Logger) (*NodesWithCredentials, error) {
 	if d.params.PhasedActionProvider == nil {
-		return nil, fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you try to destroy when need abort")
+		return nil, fmt.Errorf("Internal error. PhasedActionProvider not initialized. Probably you tried to destroy when an abort was needed")
 	}
 
 	nodeIPs, err := entity.GetMasterNodesIPs(ctx, d.params.KubeProvider, d.params.Loops.GetMastersIPs)
@@ -473,7 +479,7 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 	// always create node user creds so we have only master
 	var nodesWithCredentials *NodesWithCredentials
 
-	err = d.params.PhasedActionProvider().Run(phases.CreateStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
+	err = d.params.PhasedActionProvider().Run(ctx, phases.CreateStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
 		nodeUserCredentials, err := d.createNodeUserCredentials(ctx, nodeIPs, logger)
 		if err != nil {
 			return nil, err
@@ -484,7 +490,7 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 			IPs:      nodeIPs,
 		}
 
-		if err := d.params.State.SaveNodeUser(nodesWithCredentials); err != nil {
+		if err := d.params.State.SaveNodeUser(ctx, nodesWithCredentials); err != nil {
 			return nil, err
 		}
 
@@ -508,16 +514,16 @@ func (d *Destroyer) hostProcessed(host session.Host) bool {
 	return d.nodesWithCredentials.SetHostAsProcessed(host)
 }
 
-func (d *Destroyer) addHostAsProcessed(host session.Host) error {
+func (d *Destroyer) addHostAsProcessed(ctx context.Context, host session.Host) error {
 	// for abort we do not have nodesWithCredentials
 	if d.nodesWithCredentials == nil {
 		return nil
 	}
 
-	return d.params.PhasedActionProvider().Run(phases.UpdateStaticDestroyerIPs, false, func() (phases.DefaultContextType, error) {
+	return d.params.PhasedActionProvider().Run(ctx, phases.UpdateStaticDestroyerIPs, false, func() (phases.DefaultContextType, error) {
 		d.nodesWithCredentials.AddToProcessed(host)
 
-		if err := d.params.State.SaveNodeUser(d.nodesWithCredentials); err != nil {
+		if err := d.params.State.SaveNodeUser(ctx, d.nodesWithCredentials); err != nil {
 			return nil, err
 		}
 
@@ -531,7 +537,7 @@ func (d *Destroyer) logger() log.Logger {
 	return log.SafeProvideLogger(d.params.LoggerProvider)
 }
 
-var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(5, 15*time.Second)
+var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(75, 1*time.Second)
 
 func (d *Destroyer) destroyMasterLoopParams(host session.Host) retry.Params {
 	return retry.SafeCloneOrNewParams(d.params.Loops.DestroyMaster, getDestroyMastersDefaultOpts...).

@@ -20,6 +20,9 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
@@ -30,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type GetAbortDestroyerParams struct {
@@ -39,12 +41,17 @@ type GetAbortDestroyerParams struct {
 	InfrastructureContext  *infrastructure.Context
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
-	SSHClientProvider sshclient.SSHProvider
+	SSHClientProvider libcon.SSHProvider
 	LoggerProvider    log.LoggerProvider
 
 	TmpDir        string
 	IsDebug       bool
 	CommanderMode bool
+	// SSHUser is recorded into the converge lock lease as the holder identity
+	// (informational only).
+	SSHUser string
+
+	GlobalOptions *options.GlobalOptions
 
 	overridePhaseProvider phases.DefaultActionProvider
 	staticLoopsParams     static.LoopsParams
@@ -101,6 +108,7 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 		controller.ClusterInfraOptions{
 			PhasedExecutionContext: a.params.PhasedExecutionContext,
 			TmpDir:                 a.params.TmpDir,
+			GlobalOptions:          a.params.GlobalOptions,
 			Logger:                 logger,
 			IsDebug:                a.params.IsDebug,
 		},
@@ -115,6 +123,7 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 		StateLoader:  terraStateLoader,
 
 		CommanderMode: a.params.CommanderMode,
+		SSHUser:       a.params.SSHUser,
 
 		// for abort we cannot have resources
 		SkipResources: true,

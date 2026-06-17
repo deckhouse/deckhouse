@@ -9,7 +9,7 @@ lang: ru
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%BC%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80 -->
 
 {% alert level="info" %}
-Доступно только в DKP Enterprise Edition (EE) и DKP Certified Security Edition Pro (CSE Pro 1.67+).
+Доступно только в DKP Enterprise Edition (EE) и DKP Certified Security Edition Pro (CSE Pro).
 {% endalert %}
 
 ### Требования к кластерам
@@ -21,11 +21,10 @@ lang: ru
   > - При анализе HTTP и HTTPS запросов *(в терминологии Istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно по заголовкам.
   > - А при анализе TCP запросов *(в терминологии Istio)* идентифицировать их и принять решение о дальнейшей маршрутизации, запрещении или разрешении возможно только по IP-адресу назначения и номеру порта.
   >
-  > Если IP адреса сервисов или подов пересекутся между кластерами, то под маршрутизирующие, запрещающие или разрешающие правила Istio могут попасть запросы других подов иных кластеров.
-  > Пересечение подсетей сервисов и подов жестко запрещено в single-network-режиме, и не рекомендуется в режиме multiple-networks (подробнее — [в документации Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network))
+  > Если IP-адреса сервисов или подов пересекутся между кластерами, то под маршрутизирующие, запрещающие или разрешающие правила Istio могут попасть запросы из подов других кластеров.
+  > Пересечение подсетей сервисов и подов не рекомендуется (подробнее — [в документации Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
   >
-  > - В режиме single-network поды разных кластеров могут взаимодействовать друг с другом напрямую.
-  > - В режиме multiple-networks поды разных кластеров могут взаимодействовать друг с другом только при использовании Istio gateway.
+  > Istio работает в режиме [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) — поды разных кластеров взаимодействуют друг с другом только через Istio ingress gateway. Прямое взаимодействие между подами разных кластеров не поддерживается.
 
 ### Общие принципы
 

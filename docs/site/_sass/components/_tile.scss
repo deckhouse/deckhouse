@@ -14,6 +14,10 @@
   @media (max-width: 1200px) {
     gap: 16px;
   }
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+  }
 }
 
 .search__input-tile {
@@ -82,6 +86,7 @@
     align-items: center;
     gap: 8px;
     align-self: stretch;
+    min-height: 24px;
   }
 
   &__tags {

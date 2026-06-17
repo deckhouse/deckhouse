@@ -153,6 +153,20 @@ data:
   bpf-map-dynamic-size-ratio: "0.005"
   bpf-policy-map-max: "65536"
 
+  # Aggregate datapath monitor events to keep cilium-agent CPU bounded under high flow rate.
+  # `monitor-aggregation: medium` matches the upstream Cilium Helm chart default; combined
+  # with `monitor-aggregation-flags: all` it still emits a notification on the first
+  # occurrence of each TCP flag bit per connection (SYN/ACK/PSH/FIN/RST/...), preserving
+  # connection-lifecycle visibility. All three keys can be overridden per-node via
+  # CiliumNodeConfig (monitor-aggregation, monitor-aggregation-flags, monitor-aggregation-interval).
+  monitor-aggregation: "medium"
+  monitor-aggregation-flags: "all"
+
+  # BPF trace events dominate cilium-agent CPU/memory on dense nodes; disabled
+  # cluster-wide. `drop` and `policy verdict` events are unaffected. To enable
+  # on specific or all nodes, use CiliumNodeConfig (see docs/EXAMPLES.md).
+  bpf-events-trace-enabled: "false"
+
   # Local hubble sever section
   {{- if or (has "cilium-hubble" .Values.global.enabledModules) .Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled .Values.cniCilium.internal.hubble.settings.flowLogs.enabled }}
   enable-hubble: "true"
@@ -217,4 +231,8 @@ data:
   encrypt-node: "true"
       {{- end }}
     {{- end }}
+  {{- end }}
+
+  {{- if .Values.cniCilium.nodePortAddresses }}
+  nodeport-addresses: {{ join "," .Values.cniCilium.nodePortAddresses | quote }}
   {{- end }}

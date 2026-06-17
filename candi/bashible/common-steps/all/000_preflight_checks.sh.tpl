@@ -17,14 +17,14 @@ if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
   CONTAINERD_PATH="$(command -v containerd 2>/dev/null || true)"
   if [[ -n "$CONTAINERD_PATH" ]]; then
     if [[ "$CONTAINERD_PATH" != "/opt/deckhouse/bin/containerd" ]]; then
-    bb-log-error "containerd is detected on $HOSTNAME. Deckhouse does not support pre-provisioned containerd installations. Please uninstall containerd and try again."
+    bb-log-error "containerd is already installed on $HOSTNAME. Deckhouse does not support pre-provisioned containerd installations, please uninstall it and retry."
     exit 1
     fi
   fi
 else
   if systemctl list-unit-files containerd.service >/dev/null 2>&1; then
     if systemctl is-enabled containerd >/dev/null 2>&1 || systemctl is-active containerd >/dev/null 2>&1; then
-      bb-log-error "containerd.service is enabled or running on $HOSTNAME. Deckhouse use only containerd-deckhouse.service. Please disable/stop/uninstall containerd.service to avoid further conflicts."
+      bb-log-error "containerd.service is enabled or running on $HOSTNAME. Deckhouse uses containerd-deckhouse.service only, please disable and stop containerd.service to avoid conflicts."
       exit 1
     fi
   fi

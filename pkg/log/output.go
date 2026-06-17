@@ -122,13 +122,19 @@ func (r *Render) RawJSONKeyValue(key, value string) {
 
 func (r *Render) string(s string) {
 	for _, c := range []byte(s) {
-		if escapes[c] {
+		// Per RFC 8259 every byte in 0x00..0x1F must be escaped in a JSON
+		// string literal. The lookup table covers the special non-control
+		// characters; all other control bytes are routed to escapes() and
+		// emitted as \u00XX.
+		if escapes[c] || c < 0x20 {
 			r.escapes(s)
 			return
 		}
 	}
 	r.buf = append(r.buf, s...)
 }
+
+const hexDigits = "0123456789abcdef"
 
 func (r *Render) escapes(s string) {
 	n := len(s)
@@ -176,10 +182,15 @@ func (r *Render) escapes(s string) {
 		// 	e.buf = append(e.buf, s[j:i]...)
 		// 	e.buf = append(e.buf, '\\', 'u', '0', '0', '2', '7')
 		// 	j = i + 1
-		case 0:
-			r.buf = append(r.buf, s[j:i]...)
-			r.buf = append(r.buf, '\\', 'u', '0', '0', '0', '0')
-			j = i + 1
+		default:
+			// Catch every remaining control byte (NUL, BEL, VT, ESC, etc.)
+			// and emit it as a six-character \u00XX escape so the resulting
+			// bytes are valid JSON regardless of what callers log.
+			if c := s[i]; c < 0x20 {
+				r.buf = append(r.buf, s[j:i]...)
+				r.buf = append(r.buf, '\\', 'u', '0', '0', hexDigits[c>>4], hexDigits[c&0x0F])
+				j = i + 1
+			}
 		}
 	}
 	r.buf = append(r.buf, s[j:]...)

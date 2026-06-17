@@ -20,7 +20,7 @@
 node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
 
-API_SERVERS="{{ .normal.apiserverEndpoints | join " " }}"
+API_SERVERS="{{ .clusterMasterKubeAPIEndpoints | join " " }}"
 read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
 
 
@@ -41,17 +41,20 @@ function nodeuser_patch() {
   local failure_count=0
   local failure_limit=1
 
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+  if test -f /etc/kubernetes/kubelet.conf ; then
     json_file=$( mktemp -t patch_json.XXXXX )
     echo "${data}" > $json_file
 
-    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch-file="${json_file}" --subresource=status; do
+    until bb-curl-kube "/apis/deckhouse.io/v1/nodeusers/${username}/status" \
+          -X PATCH \
+          -H "Content-Type: application/json-patch+json" \
+          --data "@${json_file}" >/dev/null; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
-        bb-log-error "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+        bb-log-error "Failed to patch NodeUser ${username}, retry limit reached, skipping patch"
         break
       fi
-      bb-log-error "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+      bb-log-error "Failed to patch NodeUser ${username}, retrying in 10 seconds"
       sleep 10
     done
     rm $json_file
@@ -62,13 +65,12 @@ function nodeuser_patch() {
     while [ "$patch_pending" = true ] ; do
       if [ ${#AVAILABLE_API_SERVERS[@]} -eq 0 ]; then
         read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
-        bb-log-info "All servers failed once, resetting to original list and retrying"
+        bb-log-info "All API servers failed once, resetting candidate list and retrying"
       fi
-      bb-log-info "Current AVAILABLE_API_SERVERS: ${AVAILABLE_API_SERVERS[*]}"
       for server in "${AVAILABLE_API_SERVERS[@]}"; do
         local server_addr=$(echo $server | cut -f1 -d":")
         until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
-          bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."
+          bb-log-info "Network is not ready for connecting to $server_addr, waiting"
           sleep 1
         done
 
@@ -82,30 +84,30 @@ function nodeuser_patch() {
           --data "${data}" \
           "https://$server/apis/deckhouse.io/v1/nodeusers/${username}/status" > /dev/null; then
 
-          bb-log-info "Successfully patched NodeUser."
+          bb-log-info "Patched NodeUser ${username} via $server"
           patch_pending=false
           break
         else
 
           AVAILABLE_API_SERVERS=($(printf '%s\n' "${AVAILABLE_API_SERVERS[@]}" | grep -v "^$server$"))
-          bb-log-info "Server $server failed once, removing from current list"
+          bb-log-info "API server $server failed, removing from candidate list"
 
           failure_count=$((failure_count + 1))
 
           if [[ $failure_count -eq $failure_limit ]]; then
-            bb-log-error "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
+            bb-log-error "Failed to patch NodeUser ${username}, retry limit reached, skipping patch"
             patch_pending=false
             break
           fi
 
-          bb-log-error "Failed to patch NodeUser via $server. ${failure_count} of ${failure_limit} attempts..."
+          bb-log-error "Failed to patch NodeUser ${username} via $server (attempt ${failure_count} of ${failure_limit})"
           sleep 3
         fi
       done
     done
 
   else
-    bb-log-error "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
+    bb-log-error "Failed to patch NodeUser ${username}: neither kubelet.conf nor bootstrap-token is available"
     exit 1
   fi
 }
@@ -355,4 +357,3 @@ set +e
 main
 set -e
 {{- end  }}
-

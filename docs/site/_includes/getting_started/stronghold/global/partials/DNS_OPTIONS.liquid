@@ -47,11 +47,9 @@
   <p>Make the following steps to add records to the <code>/etc/hosts</code> file <b>on Linux</b>, from which you need access to Deckhouse services (<b>the PC</b>)</p>
 <ul>
 <li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Specify the DNS name template used in the <code>DOMAIN_TEMPLATE</code> variable (e.g., <code>%s.kube.company.my</code>):
-{% snippetcut %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 ```
-{% endsnippetcut %}
 </p></li>
 {% if page.platform_code != 'vsphere' and page.platform_code != 'existing' %}
 <li><p><b>[On the master node]</b> Get the IP of the load balancer:
@@ -59,19 +57,15 @@ DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 </li>
 {%- endif -%}
 <li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Specify the load balancer IP used in the <code>BALANCER_IP</code> variable:
-{% snippetcut %}
 ```shell
 BALANCER_IP='<BALANCER_IP>'
 ```
-{% endsnippetcut %}
 </p>
 </li>
 <li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Add records to the <code>/etc/hosts</code> file:</p>
-{% snippetcut %}
 ```shell
 for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin registry prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
-{% endsnippetcut %}
 </li>
 </ul></li>
 </ul>

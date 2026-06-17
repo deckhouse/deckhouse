@@ -22,10 +22,14 @@ relatedLinks:
 {% alert %}
 В разделе {% if site.mode == 'module' %}[«Быстрый старт»]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Быстрый старт](/products/kubernetes-platform/gs/){% endif %} доступны пошаговые инструкции по установке Deckhouse Kubernetes Platform.
 
-Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install)! <span class="beta-badge">Beta</span>
+Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
 {% endalert %}
 
 На этой странице представлена обзорная информация по установке Deckhouse Kubernetes Platform (DKP).
+
+{% alert level="info" %}
+Администрирование платформы подробно разобрано в курсе [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+{% endalert %}
 
 ## Способы установки
 
@@ -90,7 +94,7 @@ relatedLinks:
 
    * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
    * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-   * [DynamixClusterConfiguration](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration) — Базис.DynamiX;
+   * [DynamixClusterConfiguration](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration) — Basis Dynamix;
    * [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration) — Deckhouse Virtualization Platform;
    * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
    * [HuaweiCloudClusterConfiguration](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration) — Huawei Cloud;
@@ -129,22 +133,8 @@ relatedLinks:
 
 {% offtopic title="Пример файла конфигурации установки..." %}
 
-<div class="tabs">
-  <a id='tab_variant_new_config'
-     href="javascript:void(0)"
-     class="tabs__btn tabs__btn_variant active"
-     onclick="openTabAndSaveStatus(event,'tabs__btn_variant','tabs__content_variant','block_variant_new_config');">
-     Конфигурация, применимая с версии 1.75 DKP
-  </a>
-  <a id='tab_variant_legacy_config'
-     href="javascript:void(0)"
-     class="tabs__btn tabs__btn_variant"
-     onclick="openTabAndSaveStatus(event,'tabs__btn_variant','tabs__content_variant','block_variant_legacy_config');">
-     Устаревший вариант конфигурации
-  </a>
-</div>
-
-<div id='block_variant_new_config' class="tabs__content tabs__content_variant active" markdown="1">
+{% tabs variant %}
+{% tab "Конфигурация, применимая с версии 1.75 DKP" %}
 В этом примере доступ к хранилищу образов DKP настраивается с помощью ModuleConfig `deckhouse`.
 
 ```yaml
@@ -298,10 +288,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
-
-<div id='block_variant_legacy_config' class="tabs__content tabs__content_variant" markdown="1">
-
+{% endtab %}
+{% tab "Устаревший вариант конфигурации" %}
 В этом примере доступ к хранилищу образов DKP настраивается с помощью InitConfiguration.
 
 ```yaml
@@ -453,7 +441,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
+{% endtab %}
+{% endtabs %}
 
 {% endofftopic %}
 
@@ -1080,7 +1069,7 @@ echo "$MYRESULTSTRING"
 ### Использование прокси-сервера
 
 {% alert level="warning" %}
-Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite, CSE Pro.
 {% endalert %}
 
 {% offtopic title="Пример шагов по настройке прокси-сервера на базе Squid..." %}

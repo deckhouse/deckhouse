@@ -24,7 +24,7 @@ while [[ "$#" -gt 0 ]]; do
     --webhook)
       webhook_type="$2"
       message="$3"
-      shift
+      shift 2
       ;;
     --direct-post)
       direct_post_flag=true
@@ -43,13 +43,21 @@ server_url="${LOOP_SERVICE_NOTIFICATIONS}"
 job_name="${JOB_NAME}"
 workflow_name="${WORKFLOW_NAME}"
 workflow_url="${WORKFLOW_URL}"
-
+branch="${GITHUB_REF_NAME}"
 if [[ -z "$webhook_type" ]]; then
   webhook_type="ci_fail"
 fi
+
 if [[ -z "$message" ]]; then
-  message="🛑 Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
+  if [[ "$branch" =~ ^release-[0-9]+\.[0-9]+$ ]] || [[ "$branch" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    message="🛑 Branch: **${branch}** Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
+  else
+    message="🛑 Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
+  fi
 fi
+
+
+
 
 file_id_array=()
 
@@ -71,11 +79,11 @@ function send_post() {
     --data "{\"channel_id\": \"${channel_id}\",\"message\": \"${message}\",\"file_ids\": ${file_ids}}"
 }
 function send_post_with_webhook() {
-  file_ids=$(IFS=,; echo "[${file_id_array[*]}]")
   curl -f -L -X POST $server_url \
     -H "Content-Type: application/json" \
     --data "{\"type\": \"${webhook_type}\",\"message\":\"${message}\"}"
 }
+
 if [ "$upload" = true ]; then
   for file_path in ${upload_files[@]}; do
     file_id=$(upload_file "$file_path")

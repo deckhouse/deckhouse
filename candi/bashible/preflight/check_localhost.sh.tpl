@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 {{- /*
 # Copyright 2023 Flant JSC
 #
@@ -15,6 +16,6 @@
 */}}
 
 if ! getent ahosts localhost | grep -q 127.0.0.1; then
-  echo "localhost domain is not resolved. You should add a line '127.0.0.1 localhost' to this node's /etc/hosts file."
+  echo "The 'localhost' hostname does not resolve. Add the line '127.0.0.1 localhost' to this node's /etc/hosts file."
   exit 1
 fi

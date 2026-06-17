@@ -576,6 +576,7 @@ const (
 	Validation_ValidateProviderSpecificClusterConfig_FullMethodName = "/dhctl.Validation/ValidateProviderSpecificClusterConfig"
 	Validation_ValidateChanges_FullMethodName                       = "/dhctl.Validation/ValidateChanges"
 	Validation_ParseConnectionConfig_FullMethodName                 = "/dhctl.Validation/ParseConnectionConfig"
+	Validation_ConfigExtender_FullMethodName                        = "/dhctl.Validation/ConfigExtender"
 )
 
 // ValidationClient is the client API for Validation service.
@@ -589,6 +590,7 @@ type ValidationClient interface {
 	ValidateProviderSpecificClusterConfig(ctx context.Context, in *ValidateProviderSpecificClusterConfigRequest, opts ...grpc.CallOption) (*ValidateProviderSpecificClusterConfigResponse, error)
 	ValidateChanges(ctx context.Context, in *ValidateChangesRequest, opts ...grpc.CallOption) (*ValidateChangesResponse, error)
 	ParseConnectionConfig(ctx context.Context, in *ParseConnectionConfigRequest, opts ...grpc.CallOption) (*ParseConnectionConfigResponse, error)
+	ConfigExtender(ctx context.Context, in *ConfigExtenderRequest, opts ...grpc.CallOption) (*ConfigExtenderResponse, error)
 }
 
 type validationClient struct {
@@ -662,6 +664,15 @@ func (c *validationClient) ParseConnectionConfig(ctx context.Context, in *ParseC
 	return out, nil
 }
 
+func (c *validationClient) ConfigExtender(ctx context.Context, in *ConfigExtenderRequest, opts ...grpc.CallOption) (*ConfigExtenderResponse, error) {
+	out := new(ConfigExtenderResponse)
+	err := c.cc.Invoke(ctx, Validation_ConfigExtender_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ValidationServer is the server API for Validation service.
 // All implementations must embed UnimplementedValidationServer
 // for forward compatibility
@@ -673,6 +684,7 @@ type ValidationServer interface {
 	ValidateProviderSpecificClusterConfig(context.Context, *ValidateProviderSpecificClusterConfigRequest) (*ValidateProviderSpecificClusterConfigResponse, error)
 	ValidateChanges(context.Context, *ValidateChangesRequest) (*ValidateChangesResponse, error)
 	ParseConnectionConfig(context.Context, *ParseConnectionConfigRequest) (*ParseConnectionConfigResponse, error)
+	ConfigExtender(context.Context, *ConfigExtenderRequest) (*ConfigExtenderResponse, error)
 	mustEmbedUnimplementedValidationServer()
 }
 
@@ -700,6 +712,9 @@ func (UnimplementedValidationServer) ValidateChanges(context.Context, *ValidateC
 }
 func (UnimplementedValidationServer) ParseConnectionConfig(context.Context, *ParseConnectionConfigRequest) (*ParseConnectionConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ParseConnectionConfig not implemented")
+}
+func (UnimplementedValidationServer) ConfigExtender(context.Context, *ConfigExtenderRequest) (*ConfigExtenderResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfigExtender not implemented")
 }
 func (UnimplementedValidationServer) mustEmbedUnimplementedValidationServer() {}
 
@@ -840,6 +855,24 @@ func _Validation_ParseConnectionConfig_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Validation_ConfigExtender_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfigExtenderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidationServer).ConfigExtender(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Validation_ConfigExtender_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidationServer).ConfigExtender(ctx, req.(*ConfigExtenderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Validation_ServiceDesc is the grpc.ServiceDesc for Validation service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -874,6 +907,10 @@ var Validation_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ParseConnectionConfig",
 			Handler:    _Validation_ParseConnectionConfig_Handler,
+		},
+		{
+			MethodName: "ConfigExtender",
+			Handler:    _Validation_ConfigExtender_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -125,6 +125,6 @@
       description: |
         Deckhouse has detected that CronJob `{{$labels.namespace}}/{{$labels.cronjob}}` failed to schedule on time.
 
-        - Current schedule: `{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | label "schedule" }}`
-        - Last scheduled time: `{{ printf "kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%`
-        - Next projected schedule time: `{{ printf "kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%`
+        - Current schedule: `{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"} or vector(0)" $labels.namespace $labels.cronjob | query | first | label "schedule" | reReplaceAll "^$" "unknown" }}`
+        - Last scheduled time: `{{ printf "clamp(kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}, 0, 2147483647) or vector(0)" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp | reReplaceAll "^1970.+" "unknown" }}`
+        - Next projected schedule time: `{{ printf "clamp(kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}, 0, 2147483647) or vector(0)" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp | reReplaceAll "^1970.+" "unknown" }}`

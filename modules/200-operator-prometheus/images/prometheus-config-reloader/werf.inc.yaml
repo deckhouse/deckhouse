@@ -6,8 +6,9 @@ import:
   add: /prometheus-config-reloader
   to: /bin/prometheus-config-reloader
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/prometheus-config-reloader"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

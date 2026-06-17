@@ -5,3 +5,4 @@
   license: Apache License 2.0
   id: cert-manager
   version: 1.20.0
+  # Do not forget update flant patch branch in 3p repo!

@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -104,10 +104,6 @@ type NodeGroupSpec struct {
 	// Update specifies update settings
 	// +optional
 	Update *UpdateSpec `json:"update,omitempty"`
-
-	// Fencing specifies fencing settings
-	// +optional
-	Fencing *FencingSpec `json:"fencing,omitempty"`
 
 	// GPU specifies GPU settings
 	// +optional
@@ -426,13 +422,6 @@ type UpdateSpec struct {
 	MaxConcurrent *intstr.IntOrString `json:"maxConcurrent,omitempty"`
 }
 
-// FencingSpec defines fencing settings
-type FencingSpec struct {
-	// Mode specifies the fencing mode
-	// +optional
-	Mode string `json:"mode,omitempty"`
-}
-
 // GPUSpec defines GPU settings
 type GPUSpec struct {
 	// Mode specifies the GPU mode
@@ -473,6 +462,10 @@ type ExclusiveGPUSpec struct {
 
 // NodeGroupStatus defines the observed state of NodeGroup
 type NodeGroupStatus struct {
+	// Engine specifies machinery used to control nodes in this group
+	// +optional
+	Engine string `json:"engine,omitempty"`
+
 	// Ready specifies the number of ready nodes
 	Ready int32 `json:"ready,omitempty"`
 

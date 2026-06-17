@@ -129,6 +129,8 @@ git:
     - site/_includes/head.html
 {{ if eq .ModuleName "documentation" }}
     - site/_includes/header.html
+    - site/_includes/header-mobile.liquid
+    - site/_includes/header-menu-fill-items.html
 {{ end }}
     - documentation
   excludePaths:
@@ -147,7 +149,6 @@ git:
     - documentation/*.svg
     - documentation/site.webmanifest
   stageDependencies:
-    install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
 {{ if eq .ModuleName "documentation" }}
 - add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html

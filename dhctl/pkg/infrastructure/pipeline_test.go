@@ -23,9 +23,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -86,7 +87,7 @@ func TestGetMasterNodeResult(t *testing.T) {
 				WithName("test").
 				WithStatePath("./mocks/pipeline/empty_state.json")
 
-			res, err := GetMasterNodeResult(context.Background(), runner)
+			res, err := GetMasterNodeResult(context.Background(), runner, &options.New().Global)
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
@@ -99,8 +100,7 @@ func TestGetMasterNodeResult(t *testing.T) {
 }
 
 func TestCheckBaseInfrastructurePipeline(t *testing.T) {
-	app.TmpDirName = "/tmp"
-
+	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	okPlan, err := os.ReadFile("./mocks/pipeline/base_infra_ok_plan.json")
 	require.NoError(t, err)
 
@@ -152,7 +152,7 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 				WithName("test").
 				WithStatePath("./mocks/pipeline/empty_state.json")
 
-			res, pl, _, err := CheckBaseInfrastructurePipeline(context.Background(), runner, "test")
+			res, pl, _, err := CheckBaseInfrastructurePipeline(context.Background(), runner, "test", nil)
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {

@@ -59,6 +59,7 @@ type Strategies struct {
 	RemovePodsViolatingNodeAffinity             *RemovePodsViolatingNodeAffinity             `json:"removePodsViolatingNodeAffinity,omitempty" yaml:"removePodsViolatingNodeAffinity,omitempty"`
 	RemovePodsViolatingInterPodAntiAffinity     *RemovePodsViolatingInterPodAntiAffinity     `json:"removePodsViolatingInterPodAntiAffinity,omitempty" yaml:"removePodsViolatingInterPodAntiAffinity,omitempty"`
 	RemovePodsViolatingTopologySpreadConstraint *RemovePodsViolatingTopologySpreadConstraint `json:"removePodsViolatingTopologySpreadConstraint,omitempty" yaml:"removePodsViolatingTopologySpreadConstraint,omitempty"`
+	RemovePodsHavingTooManyRestarts             *RemovePodsHavingTooManyRestarts             `json:"removePodsHavingTooManyRestarts,omitempty" yaml:"removePodsHavingTooManyRestarts,omitempty"`
 }
 
 // HasValidStrategies returns true if at least one strategy is defined.
@@ -71,7 +72,8 @@ func (s Strategies) HasValidStrategies() bool {
 		s.RemoveDuplicates != nil ||
 		s.RemovePodsViolatingNodeAffinity != nil ||
 		s.RemovePodsViolatingInterPodAntiAffinity != nil ||
-		s.RemovePodsViolatingTopologySpreadConstraint != nil
+		s.RemovePodsViolatingTopologySpreadConstraint != nil ||
+		s.RemovePodsHavingTooManyRestarts != nil
 }
 
 type LowNodeUtilization struct {
@@ -102,4 +104,9 @@ type RemovePodsViolatingTopologySpreadConstraint struct {
 	Enabled                bool     `json:"enabled" yaml:"enabled"`
 	Constraints            []string `json:"constraints,omitempty" yaml:"constraints,omitempty"`
 	TopologyBalanceNodeFit *bool    `json:"topologyBalanceNodeFit,omitempty" yaml:"topologyBalanceNodeFit,omitempty"`
+}
+
+type RemovePodsHavingTooManyRestarts struct {
+	Enabled             bool  `json:"enabled" yaml:"enabled"`
+	PodRestartThreshold int32 `json:"podRestartThreshold,omitempty" yaml:"podRestartThreshold,omitempty"`
 }

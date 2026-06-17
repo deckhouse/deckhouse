@@ -20,6 +20,8 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -28,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type infraDestroyerProvider struct {
@@ -41,7 +42,8 @@ type infraDestroyerProvider struct {
 	skipResources      bool
 	cloudStateProvider func() (controller.StateLoader, cloud.ClusterInfraDestroyer, error)
 
-	sshClientProvider sshclient.SSHProvider
+	sshClientProvider libcon.SSHProvider
+	sshUser           string
 	tmpDir            string
 	staticLoopsParams static.LoopsParams
 }
@@ -52,7 +54,7 @@ func (f *infraDestroyerProvider) Cloud(context.Context, *config.MetaConfig) (inf
 	}
 
 	if govalue.IsNil(f.cloudStateProvider) {
-		return nil, fmt.Errorf("Cloud state provider should provided to infraDestroyerProvider")
+		return nil, fmt.Errorf("Cloud state provider should be provided to infraDestroyerProvider")
 	}
 
 	stateLoader, clusterInfra, err := f.cloudStateProvider()
@@ -61,11 +63,11 @@ func (f *infraDestroyerProvider) Cloud(context.Context, *config.MetaConfig) (inf
 	}
 
 	if govalue.IsNil(stateLoader) {
-		return nil, fmt.Errorf("Cloud state loader should provided from cloudStateProvider")
+		return nil, fmt.Errorf("Cloud state loader should be provided by cloudStateProvider")
 	}
 
 	if govalue.IsNil(clusterInfra) {
-		return nil, fmt.Errorf("Cluster infrastructure should provided from cloudStateProvider")
+		return nil, fmt.Errorf("Cluster infrastructure should be provided by cloudStateProvider")
 	}
 
 	return cloud.NewDestroyer(&cloud.DestroyerParams{
@@ -78,6 +80,7 @@ func (f *infraDestroyerProvider) Cloud(context.Context, *config.MetaConfig) (inf
 
 		CommanderMode: f.commanderMode,
 		SkipResources: f.skipResources,
+		SSHUser:       f.sshUser,
 	}), nil
 }
 
@@ -87,7 +90,7 @@ func (f *infraDestroyerProvider) Static(context.Context, *config.MetaConfig) (in
 	}
 
 	if govalue.IsNil(f.sshClientProvider) {
-		return nil, fmt.Errorf("SSH client provider should provided to infraDestroyerProvider")
+		return nil, fmt.Errorf("SSH client provider should be provided to infraDestroyerProvider")
 	}
 
 	return static.NewDestroyer(&static.DestroyerParams{
@@ -109,19 +112,19 @@ func (f *infraDestroyerProvider) Incorrect(_ context.Context, metaConfig *config
 
 func (f *infraDestroyerProvider) checkGeneralParams() error {
 	if govalue.IsNil(f.stateCache) {
-		return fmt.Errorf("State cache should provided to infraDestroyerProvider")
+		return fmt.Errorf("State cache should be provided to infraDestroyerProvider")
 	}
 
 	if govalue.IsNil(f.kubeProvider) {
-		return fmt.Errorf("Kubernetes provider should provided to infraDestroyerProvider")
+		return fmt.Errorf("Kubernetes provider should be provided to infraDestroyerProvider")
 	}
 
 	if govalue.IsNil(f.phasesActionProvider) {
-		return fmt.Errorf("Phases action provider should provided to infraDestroyerProvider")
+		return fmt.Errorf("Phases action provider should be provided to infraDestroyerProvider")
 	}
 
 	if f.tmpDir == "" {
-		return fmt.Errorf("Temp directory should provided to infraDestroyerProvider")
+		return fmt.Errorf("Temp directory should be provided to infraDestroyerProvider")
 	}
 
 	// wait params can be nil

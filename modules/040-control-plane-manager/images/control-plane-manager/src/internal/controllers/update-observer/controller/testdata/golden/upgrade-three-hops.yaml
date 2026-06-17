@@ -1,0 +1,42 @@
+---
+data:
+  spec: |
+    desiredVersion: "1.36"
+    updateMode: Automatic
+  status: |
+    currentVersion: "1.33"
+    supportedVersions:
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    - "1.35"
+    - "1.36"
+    availableVersions:
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    - "1.35"
+    - "1.36"
+    automaticVersion: "1.34"
+    phase: ControlPlaneUpdating
+    progress: 20%
+    controlPlane:
+    - name: master-1
+      phase: Updating
+      components:
+        kube-apiserver: "1.34"
+        kube-controller-manager: "1.34"
+        kube-scheduler: "1.34"
+    nodes:
+      desiredCount: 2
+      upToDateCount: 0
+metadata:
+  annotations:
+    cause: upgradeK8s
+    lastReconciliationTime: "2000-01-01T00:00:30Z"
+  labels:
+    heritage: deckhouse
+    k8s-version: "1.33"
+    max-k8s-version: "1.33"
+  name: d8-cluster-kubernetes
+  namespace: kube-system

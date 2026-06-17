@@ -11,7 +11,7 @@ The control-plane-manager:
 - **Configures components**. The CPM module automatically creates the required configs and manifests of the control plane components.
 - **Upgrades/downgrades components**. Makes sure that the versions of the components in the cluster are the same.
 - **Manages the configuration of the etcd cluster** and its members. The CPM module scales master nodes and migrates the cluster from single-master to multi-master (and vice versa).
-- **Configures kubeconfig**. The CPM module maintains an up-to-date configuration for smooth kubectl operation. It generates, renews, updates kubeconfig with the cluster-admin rights, and creates a symlink for the root user so that kubeconfig can be used by default.
+- **Configures kubeconfig**. The CPM module maintains up-to-date kubeconfig files on control-plane nodes. It generates, renews, and updates kubeconfigs for control-plane components and the admin kubeconfig (`admin.conf`). By default, it creates a symlink for the root user (`/root/.kube/config` -> `admin.conf`). When the [user-authz](/modules/user-authz/) module is enabled, the symlink can be turned off via the `rootKubeconfigSymlink` parameter in the **control-plane-manager** module (see [FAQ](faq.html#cluster-admin-access-model)). The CPM also hardens file permissions on `admin.conf` and `super-admin.conf`.
 - **Extends scheduler functionality** by integrating external plugins via webhooks. Manages by [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration) resource. Allows more complex logic to be used in workload scheduling tasks within the cluster. For example:
   - placing data storage application pods closer to the data itself,
   - state-based node prioritization (network load, storage subsystem status, etc.),
@@ -76,11 +76,37 @@ Automatically configures the optimal `--terminated-pod-gc-threshold` based on cl
 Note. This feature only takes effect in environments where the `--terminated-pod-gc-threshold` parameter is configurable. On managed Kubernetes services (such as EKS, GKE, AKS), this setting is controlled by managed provider.
 {% endalert %}
 
+## Configuring Control Plane Resource Requests
+
+The module allows you to configure the total CPU and memory resource requests for control plane components on each master node: `kube-apiserver`, `etcd`, `kube-controller-manager`, and `kube-scheduler`.
+
+Use the [`resourcesRequests`](configuration.html#parameters-resourcesrequests) parameter in the `control-plane-manager` ModuleConfig:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    resourcesRequests:
+      cpu: 1000m
+      memory: 500Mi
+```
+
+The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
+
+{% alert level="info" %}
+These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.
+{% endalert %}
+
 ## Version control
 
-**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.
+**Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the DKP version updates. You can't manage patch version upgrades.
 
-Upgrading **minor versions** of control plane components (e.g. from `1.31.*` to `1.32.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
 
@@ -89,17 +115,55 @@ If the target version (set with the [kubernetesVersion](/products/kubernetes-pla
 - General remarks
   - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
 - When upgrading:
-  - Upgrades are carried out sequentially, one minor version at a time: 1.31 -> 1.32, 1.32 -> 1.33, 1.33 -> 1.34.
+  - Upgrades are carried out sequentially, one minor version at a time: 1.32 -> 1.33, 1.33 -> 1.34, 1.35 -> 1.36.
   - At each step, the control plane version is upgraded first, followed by kubelet upgrades on the cluster nodes.
 - When downgrading:
   - Successful downgrading is only guaranteed for a single version down from the maximum minor version of the control plane ever used in the cluster.
   - kubelets on the cluster nodes are downgraded first, followed by the control plane components.
 
+## Exposing the Kubernetes API
+
+The kube-apiserver component is only available within the internal cluster network by default. This module solves the problem of providing simple and secure external access to the Kubernetes API from outside the cluster.
+
+### Via Ingress
+
+By configuring the [`apiserver.publishAPI.ingress`](configuration.html#parameters-apiserver-publishapi-ingress) parameters, you can publish the API server on a dedicated domain (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+During configuration, you can specify:
+
+* The list of network addresses and subnets from which connections are allowed;
+* The Ingress controller on which the publication occurs;
+* Whether to use a manually provided TLS certificate, one obtained via cert-manager, or an automatic self-signed certificate.
+
+By default, a special CA certificate will be generated and a kubeconfig generator will be automatically configured.
+
+### Via a Service of type LoadBalancer
+
+By configuring the [`apiserver.publishAPI.loadBalancer`](configuration.html#parameters-apiserver-publishapi-loadbalancer) parameters, you can create a service of type LoadBalancer named `kube-system/d8-control-plane-apiserver`.
+
+During configuration, you can specify:
+
+* The list of network addresses and subnets from which connections are allowed;
+* The external port of the service;
+* Annotations on the service for load balancer provider settings.
+
+## Exposing the Kubernetes API over Ingress
+
+The kube-apiserver component (without advanced configuration) is only accessible in the internal cluster network. This module enables easy and secure access to Kubernetes API from outside the cluster. The API server is exposed on a dedicated domain (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+When configuring, you can:
+
+* list network addresses from which connection is allowed;
+* list groups that are allowed to access the API server;
+* specify Ingress-controller to authenticate on.
+
+By default, a special CA certificate will be generated and the kubeconfig generator will be automatically configured.
+
 ## Auditing
 
 Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy). As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.
 
-By default, in a cluster with Deckhouse, a basic policy is created for logging events:
+By default, in a cluster with DKP, a basic policy is created for logging events:
 
 - related to the creation, deletion, and changing of resources;
 - committed from the names of ServiceAccounts from the "system" Namespace `kube-system`, `d8-*`;
@@ -128,7 +192,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     enabledFeatureGates:
@@ -145,3 +209,56 @@ The Kubernetes version update (controlled by the [kubernetesVersion](/products/k
 More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Protecting sensitive fields in custom resources
+
+The `CRDSensitiveData` feature gate provides field-level protection for sensitive data in resources
+marked with the `x-kubernetes-sensitive-data: true` annotation.
+This feature is implemented as a patch to `kube-apiserver` (`apiextensions-apiserver`)
+and is supported starting from Kubernetes version 1.31.
+
+The `x-kubernetes-sensitive-data` marker is validated by `kube-apiserver` when applying a resource:
+
+- Marker requires the `CRDSensitiveData` feature gate to be enabled. It is enabled by default and shouldn't be specified manually.
+- Marker can't be set on the root of the schema (the `openAPIV3Schema` node).
+  To protect all fields of a resource, add the marker to the `spec` property (or a subtree below it),
+  not to the schema root — the root also includes system fields (`apiVersion`, `kind`, `metadata`), which cannot be encrypted.
+- Field type must be one of the OpenAPI v3 types: `string`, `integer`, `number`, `boolean`, `object`, or `array`.
+  Applying the marker to `object` or `array` makes the entire subtree sensitive.
+- Fields defined with `x-kubernetes-int-or-string: true` are supported.
+- Marker is not allowed inside `anyOf`, `oneOf`, `allOf`, or `not` branches (this is enforced by the structural schema validator).
+
+If at least one field in the resource schema is marked with `x-kubernetes-sensitive-data: true`,
+the following protection mechanisms are applied to all custom resources of this type:
+
+- **Encryption in etcd**: Entire resource is encrypted using the same mechanism as Kubernetes Secrets.
+  Requires enabling the `apiserver.encryptionEnabled` parameter.
+- **RBAC-based field filtering**: For `get`, `list`, and `watch` requests, sensitive fields are removed from API responses
+  if the caller does not have the corresponding permissions on the `<resource>/sensitive` subresource.
+- **Audit log masking**: Values of sensitive fields are replaced with `"******"` in audit logs,
+  regardless of RBAC permissions and audit level.
+
+To add encryption in etcd to sensitive data protection, set the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter to `true`.
+The `CRDSensitiveData` feature gate is enabled by default and it shouldn't be specified manually:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+```
+
+{% alert level="warning" %}
+Enabling `encryptionEnabled` is irreversible and triggers a `kube-apiserver` restart.
+{% endalert %}
+
+For details, see the following sections:
+
+- [FAQ](faq.html#how-do-i-protect-sensitive-fields-in-custom-resources): Instructions for enabling sensitive data protection.
+- [Examples](examples.html#protecting-resources-with-sensitive-fields): Configuration examples and results.

@@ -108,7 +108,7 @@ func (e *Executor) Init(ctx context.Context) error {
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
 
 	return err
 }
@@ -134,14 +134,14 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
 
 	return err
 }
 
 func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int, error) {
 	if opts.Target != "" {
-		return 1, fmt.Errorf("Cannot run plan with target '%s' for terraform. It does not support", opts.Target)
+		return 1, fmt.Errorf("Cannot run plan with target '%s' for terraform: targets are not supported", opts.Target)
 	}
 
 	args := []string{
@@ -172,7 +172,7 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int,
 		e.cmd.Stdout = io.Discard
 		e.cmd.Stderr = io.Discard
 	}
-	return infraexec.Exec(ctx, e.cmd, e.logger)
+	return infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
 }
 
 func (e *Executor) Output(ctx context.Context, opts infrastructure.OutputOpts) ([]byte, error) {
@@ -193,7 +193,7 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
 
 	return err
 }
@@ -215,7 +215,7 @@ func (e *Executor) SetExecutorLogger(logger log.Logger) {
 }
 
 func (e *Executor) Stop() {
-	log.DebugF("Interrupt terraform process by pid: %d\n", e.cmd.Process.Pid)
+	log.DebugF("Interrupting terraform process with pid: %d\n", e.cmd.Process.Pid)
 
 	// 1. Terraform exits immediately on SIGTERM, so SIGINT is used here
 	//    to interrupt it gracefully even when main process caught the SIGTERM.

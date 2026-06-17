@@ -1,0 +1,55 @@
+{% for entry in topnav %}
+  {% for item in entry.items %}
+    {%- if site.mode == 'module' and item.editions.size > 0  %}
+      {% unless item.editions contains site.d8Revision %}{% continue %}{% endunless %}
+    {% endif %}
+    {%- if item.title == site.data.i18n.common.products[page.lang] %}{% continue %}{% endif %}
+    {%- assign page_url_without_lang = page.url | regex_replace: '^(/)?(ru/|en/)', '\1'-%}
+    {%- assign item_url_parts = item.url | split: '/' -%}
+    {%- assign is_getting_started_item = page_url_without_lang | startswith: '/gs/' -%}
+    <li class="header__navigation-item
+                    {%- unless item.external_url.size > 0 %}
+                    {%- if page.mode == 'ssi' and site.mode != 'module' and item_url_parts[1] == 'documentation' %} header__navigation-item active{% endif %}
+                    {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item active{% endif %}
+                    {%- if item.url.size>1 and page.url == item.url %} header__navigation-item active{% endif %}
+                    {%- if page_url_without_lang == item.url %} header__navigation-item active{% endif %}
+                    {%- if item.items %} current-menu-parent menu-item-has-children{% endif %}
+                    {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item active{% endif %}
+                    {%- endunless %}"
+        {%- if item.items %} data-proofer-ignore{% endif %}
+    >
+      <a
+        {%- if item.external_url %} href="{{ item.external_url }}"
+        {%- elsif item.url %} href="{% if site.mode == 'module' %}/{{ page.lang }}{% endif %}{{ item.url }}"
+        {%- else %} href="#"
+        {%- endif %}
+        {%- if item.target.size> 0 %} target="{{ item.target }}"{% elsif item.external_url.size > 0 %} target="_blank"{%
+        endif %}>{{- item.title -}}
+      </a>
+
+      {% if item.items %}
+      <div class="sub-menu-container">
+        <ul class="sub-menu">
+          {% for subitem in item.items %}
+          {%- assign item_url_parts = subitem.url | split: '/' -%}
+          <li data-proofer-ignore>
+            <a
+              {%- if subitem.external_url %}
+              href="{{ subitem.external_url }}" {%- if !subitem.target %} target="_blank" {% endif %}
+              {%- elsif subitem.url %}
+              href="{% if site.mode == 'module' %}/{{ page.lang }}{% endif %}{{ subitem.url }}"
+              {%- else %}
+              href="#"
+              {% endif %}
+              {%- if subitem.target.size> 0 %} target="{{ subitem.target }}"{% endif %}
+              >
+              {{ subitem.title }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </li>
+  {% endfor %}
+{% endfor %}

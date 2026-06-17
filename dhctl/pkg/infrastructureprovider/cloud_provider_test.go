@@ -29,6 +29,7 @@ import (
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -36,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
@@ -105,6 +107,7 @@ func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProvid
 		FSDIParams:       getTestFSDIParams(t, logger),
 		IsDebug:          false,
 		ProvidersCache:   newCloudProvidersMapCache(),
+		GlobalOptions:    &options.New().Global,
 	}
 }
 
@@ -189,9 +192,7 @@ func TestCloudProviderGetForStatic(t *testing.T) {
 func TestCloudProviderGet(t *testing.T) {
 	testName := "TestCloudProviderGet"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	getMetaConfig := func(t *testing.T, providerName, layout string) *config.MetaConfig {
 		cfg := &config.MetaConfig{}
@@ -300,9 +301,7 @@ func TestCloudProviderGet(t *testing.T) {
 func TestDefaultCloudProvidersCache(t *testing.T) {
 	testName := "TestDefaultCloudProvidersCache"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	getMetaConfig := func(t *testing.T, providerName, layout string) *config.MetaConfig {
 		cfg := &config.MetaConfig{}
@@ -458,9 +457,7 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTofuExecutorGetting"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
@@ -594,9 +591,7 @@ terraform {
 func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTerraformExecutorGetting"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
@@ -730,9 +725,7 @@ terraform {
 func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTofuOutputExecutorGetting"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
@@ -768,9 +761,7 @@ func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
 func TestCloudProviderWithTerraformOutputExecutorGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTerraformOutputExecutorGetting"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
@@ -806,9 +797,7 @@ func TestCloudProviderWithTerraformOutputExecutorGetting(t *testing.T) {
 func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 	testName := "TestTofuInitAndPlanWithCreatingWorkerFilesInRoot"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
@@ -869,9 +858,7 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 	testName := "TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
@@ -932,9 +919,7 @@ func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 func TestTofuApplyWithCreatingWorkerFilesInRoot(t *testing.T) {
 	testName := "TestTofuApplyWithCreatingWorkerFilesInRoot"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
@@ -963,7 +948,7 @@ func prepareLocalRun(t *testing.T, logger log.Logger) {
 		require.NoError(t, err, "Could not stat cloud-provider directory %s", cloudProvidersDir)
 	}
 
-	err = os.MkdirAll(cloudProvidersDir, 0755)
+	err = os.MkdirAll(cloudProvidersDir, 0o755)
 	require.NoError(t, err, "Could not create cloud-provider directory %s", cloudProvidersDir)
 
 	t.Cleanup(func() {
@@ -1246,7 +1231,7 @@ func assertCorrectExecutorStatesDir(t *testing.T, executor infrastructure.Execut
 	require.Equal(t, executorStatesDir, filepath.Join(provider.RootDir(), pluginVersion))
 }
 
-func assertFileExistsAndSymlink(t *testing.T, source string, destination string) {
+func assertFileExistsAndSymlink(t *testing.T, source, destination string) {
 	t.Helper()
 
 	stat, err := os.Lstat(destination)
@@ -1282,7 +1267,7 @@ func assertFileExistsAndHasAnyContent(t *testing.T, filePath string) {
 	require.True(t, len(content) > 0, filePath)
 }
 
-func assertFileExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
+func assertFileExistsAndHasContent(t *testing.T, filePath, expectedContent string) {
 	t.Helper()
 
 	assertFileExists(t, filePath)
@@ -1595,7 +1580,7 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 
 	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{
 		logger: params.logger,
-	}))
+	}), &options.New().Global)
 
 	require.NoError(t, err)
 	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)

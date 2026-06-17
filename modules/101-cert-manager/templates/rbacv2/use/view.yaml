@@ -15,7 +15,6 @@ rules:
   - certificaterequests
   - certificates
   - issuers
-  - challenges
   - clusterissuers
   verbs:
   - get
@@ -24,6 +23,7 @@ rules:
 - apiGroups:
   - acme.cert-manager.io
   resources:
+  - challenges
   - orders
   verbs:
   - get

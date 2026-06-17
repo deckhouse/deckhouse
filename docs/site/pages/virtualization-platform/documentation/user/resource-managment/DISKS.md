@@ -45,6 +45,7 @@ d8 k get storageclass
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                 PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 i-sds-replicated-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
@@ -57,6 +58,8 @@ rv-thin-r1 (default)                 replicated.csi.storage.deckhouse.io   Delet
 rv-thin-r2                           replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/modules/virtualization/cr.html#virtualdisk).
 
@@ -85,21 +88,25 @@ spec:
 EOF
 ```
 
-After creation, the `VirtualDisk` resource can be in the following states (phases):
+After creation, the [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource can be in the following phase:
 
 - `Pending`: Waiting for all dependent resources required for disk creation to be ready.
 - `Provisioning`: Disk creation process is in progress.
 - `Resizing`: Process of resizing the disk is in progress.
 - `WaitForFirstConsumer`: Disk is waiting for the virtual machine that will use it to be created.
-- `WaitForUserUpload`: Disk is waiting for the user to upload an image (type: Upload).
+- `WaitForUserUpload`: Disk is waiting for the user to upload an image (`type: Upload`).
 - `Ready`: Disk has been created and is ready for use.
-- `Migrating`: Live migration of a disk.
+- `Migrating`: Live migration of a disk is in progress.
 - `Exporting`: The disk export process is in progress.
 - `Failed`: An error occurred during the creation process.
 - `PVCLost`: System error, PVC with data has been lost.
 - `Terminating`: Disk is being deleted. The disk may "hang" in this state if it is still connected to the virtual machine.
 
 As long as the disk has not reached the `Ready` phase, you can modify any fields in the `.spec` block. When changes are made, the disk creation process is restarted.
+
+{% alert level="info" %}
+After the disk reaches the `Ready` phase, you can still change [`.spec.persistentVolumeClaim.size`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-size) and [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualdisk-v1alpha2-spec-persistentvolumeclaim-storageclassname). All other `.spec` fields are immutable.
+{% endalert %}
 
 If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in [module settings](/products/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html).
 
@@ -113,10 +120,13 @@ d8 k get vd blank-disk
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE   CAPACITY   AGE
 blank-disk   Ready   100Mi      1m2s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to create an empty disk in the web interface (this step can be skipped and performed when creating a VM):
 
@@ -143,10 +153,13 @@ d8 k get vi ubuntu-24-04 -o wide
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
 ubuntu-24-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-24-04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The size you are looking for is specified in the **UNPACKEDSIZE** column and is 2.5Gi.
 
@@ -204,11 +217,14 @@ d8 k get vd
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE   CAPACITY   AGE
 linux-vm-root    Ready   10Gi       7m52s
 linux-vm-root-2  Ready   2590Mi     7m15s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to create a disk from an image in the web interface (this step can be skipped and performed when creating a VM):
 
@@ -287,10 +303,13 @@ d8 k get vd linux-vm-root
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   10Gi       10m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Let's apply the changes:
 
@@ -310,10 +329,13 @@ d8 k get vd linux-vm-root
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   11Gi       12m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to change the disk size in the web interface:
 

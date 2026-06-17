@@ -18,42 +18,50 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-type SSHCredentialCheck struct{ Node node.Interface }
+type SSHCredentialCheck struct {
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+}
 
 var ErrAuthSSHFailed = fmt.Errorf("authentication failed")
 
 const SSHCredentialCheckName preflight.CheckName = "static-ssh-credential"
 
-func (SSHCredentialCheck) Description() string {
+func (*SSHCredentialCheck) Description() string {
 	return "ssh credentials are valid"
 }
 
-func (SSHCredentialCheck) Phase() preflight.Phase {
+func (*SSHCredentialCheck) Phase() preflight.Phase {
 	return preflight.PhasePostInfra
 }
 
-func (SSHCredentialCheck) RetryPolicy() preflight.RetryPolicy {
+func (*SSHCredentialCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.DefaultRetryPolicy
 }
 
-func (c SSHCredentialCheck) Run(ctx context.Context) error {
-	wrapper, ok := c.Node.(*ssh.NodeInterfaceWrapper)
+func (c *SSHCredentialCheck) Run(ctx context.Context) error {
+	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
+	}
+	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil
 	}
 	if err := wrapper.Client().Check().CheckAvailability(ctx); err != nil {
-		return fmt.Errorf("ssh %w. Please check ssh credential and try again. Error: %w", ErrAuthSSHFailed, err)
+		return fmt.Errorf("ssh %w. Please check your ssh credentials and try again. Error: %w", ErrAuthSSHFailed, err)
 	}
 	return nil
 }
 
-func SSHCredential(nodeInterface node.Interface) preflight.Check {
-	check := SSHCredentialCheck{Node: nodeInterface}
+func SSHCredential(sshProvider *providerinitializer.SSHProviderInitializer) preflight.Check {
+	check := SSHCredentialCheck{SSHProviderInitializer: sshProvider}
 	return preflight.Check{
 		Name:        SSHCredentialCheckName,
 		Description: check.Description(),

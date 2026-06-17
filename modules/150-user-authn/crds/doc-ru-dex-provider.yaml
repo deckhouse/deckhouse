@@ -239,18 +239,26 @@ spec:
                     insecureNoSSL:
                       description: |
                         Подключаться к каталогу LDAP не по защищенному порту.
+
+                        Несовместимо с `startTLS`, `insecureSkipVerify` и `rootCAData`: если `insecureNoSSL: true`, TLS отключён и эти параметры не имеют эффекта.
                     startTLS:
                       description: |
                         Использовать [STARTTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) для шифрования.
+
+                        Несовместимо с `insecureNoSSL`.
                     usernamePrompt:
                       description: |
                         Строка, которая будет отображаться возле поля для имени пользователя в форме ввода логина и пароля.
                     rootCAData:
                       description: |
                         Цепочка CA в формате PEM, используемая для валидации TLS.
+
+                        Не используется при `insecureNoSSL: true`.
                     insecureSkipVerify:
                       description: |
                         Не производить проверку подлинности провайдера с помощью TLS. Небезопасно, не рекомендуется использовать в production-окружениях.
+
+                        Не используется при `insecureNoSSL: true`.
                     bindDN:
                       description: |
                         Путь до сервис-аккаунта приложения в LDAP.

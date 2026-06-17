@@ -1,0 +1,32 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: deny-exec-heritage
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: metadata.labels.heritage
+      level: pod
+
+      description: Heritage label of the pod
+      requiredScenarios: [positive, negative]
+    - path: operation
+      level: pod
+
+      description: Admission operation (gator provides only positive CONNECT context for this template)
+      requiredScenarios: [positive]
+    - path: requestSubResource
+      level: pod
+
+      description: Subresource of the request (gator provides only positive pods/exec|attach context for this template)
+      requiredScenarios: [positive]
+    - path: userInfo.username
+      level: pod
+
+      description: User performing the request in AdmissionReview context
+      requiredScenarios: [positive]
+  speFields: []
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

@@ -12,7 +12,7 @@ The internal registry allows for optimizing the downloading and storage of image
 
 The [`registry`](/modules/registry/) module, which implements internal storage, operates in the following modes:
 
-- `Direct`: Enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Direct Mode Architecture](../../../architecture/registry-direct-mode.html).
+- `Direct`: Enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Direct Mode Architecture](../../../architecture/deckhouse/registry-direct-mode.html).
 - `Unmanaged`: Operation without using the internal registry. Access within the cluster is performed directly to the external registry.
   There are two types of the `Unmanaged` mode:
   - Configurable: A mode managed via the `registry` module. Switching between modes and registries is handled through the ModuleConfig of `deckhouse`. The switch is performed automatically (for more details, see the switching examples below).
@@ -66,10 +66,13 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
 
@@ -79,21 +82,27 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready    control-plane,master  ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Ensure the Deckhouse job queue is empty and contains no errors:
 
@@ -166,10 +175,13 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Ensure the Deckhouse job queue is empty and contains no errors:
 

@@ -23,6 +23,10 @@ spec:
           type: object
           description: |
             Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+
+            For local users, the `ResetPassword`, `Reset2FA`, and `Lock` operations also delete
+            the user's Dex OfflineSessions and RefreshToken objects. This terminates active
+            offline sessions and requires the user to authenticate again.
           required:
             - spec
           properties:
@@ -38,6 +42,11 @@ spec:
                   x-doc-examples: ['jane.doe']
                 type:
                   type: string
+                  enum:
+                    - "ResetPassword"
+                    - "Reset2FA"
+                    - "Lock"
+                    - "Unlock"
                   description: |
                     Type of the user operation. Possible values:
                     
@@ -63,10 +72,25 @@ spec:
                 lock:
                   type: object
                   description: "Parameters for locking the user."
+                  required:
+                    - for
                   properties:
                     for:
                       type: string
-                      description: "Lock duration. Should be specified in the following format: `30s`, `10m`, `1h`, `2h30m`."
+                      description: |
+                        Lock duration as a Go-style duration string (`30s`, `10m`, `1h`, `2h30m`, `7d`),
+                        or `permanent` for an indefinite lock released only by `Unlock`.
+                        Days are expanded as `1d = 24h` by the hook before parsing.
+                      pattern: '^(permanent|([0-9]+(\.[0-9]+)?(s|m|h|d))+)$'
+                      x-kubernetes-validations:
+                        # Self-sufficient: re-asserts shape (so garbage like "permanent7d" or
+                        # "abc1d" cannot slip through if `pattern` ever regresses) and then
+                        # requires at least one non-zero digit, which — combined with the
+                        # all-segments-are-non-negative shape — guarantees a positive total
+                        # ("30m" passes, "0s" / "0d0h" do not). We avoid CEL's `duration()`
+                        # because it does not accept the "d" unit we surface here.
+                        - rule: 'self == "permanent" || (self.matches("^([0-9]+(\\.[0-9]+)?(s|m|h|d))+$") && self.matches("[1-9]"))'
+                          message: 'lock.for must be "permanent" or a positive Go-style duration using s/m/h/d (e.g. "30m", "1h", "2h30m", "7d").'
             status:
               type: object
               properties:
@@ -109,21 +133,71 @@ spec:
           type: object
           description: |
             Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+
+            For local users, the `ResetPassword`, `Reset2FA`, and `Lock` operations also delete
+            the user's Dex OfflineSessions and RefreshToken objects. This terminates active
+            offline sessions and requires the user to authenticate again.
           required:
             - spec
           properties:
             spec:
               type: object
               required:
-                - user
                 - type
+              oneOf:
+                - required: [user]
+                - required: [target]
+              x-kubernetes-validations:
+                # target identifies an external (LDAP/Crowd/...) account and is
+                # only meaningful for Lock/Unlock against OfflineSessions.
+                # ResetPassword and Reset2FA operate on a local user (spec.user).
+                - rule: 'self.type in ["Lock", "Unlock"] || !has(self.target)'
+                  message: 'spec.target is only supported for Lock and Unlock operations; ResetPassword and Reset2FA apply to local users (spec.user) only.'
               properties:
                 user:
                   type: string
-                  description: "Name (username) of the target User resource."
+                  description: |
+                    Name (username) of the target local User resource.
+
+                    Used for operations on users that are managed
+                    by DKP via the User CRD (the built-in local connector).
+                    
+                    > Only one of the fields can be specified at the same time: `user` or `target`.
                   x-doc-examples: ['jane.doe']
+                target:
+                  type: object
+                  description: |
+                    Identifier of an external (non-local) account managed by an external authentication
+                    provider (LDAP, Atlassian Crowd, etc.).
+
+                    The `Lock` and `Unlock` operations against `target` are performed against the
+                    OfflineSessions object that holds the failed-attempt counter and lock state for
+                    the corresponding `(connectorID, email)` pair.
+                    
+                    > Only one of the fields can be specified at the same time: `user` or `target`.
+                  required:
+                    - connectorID
+                    - email
+                  properties:
+                    connectorID:
+                      type: string
+                      description: |
+                        ID of the DexProvider (connector) through which the user logs in.
+                      x-doc-examples: ['my-ldap', 'my-crowd']
+                    email:
+                      type: string
+                      description: |
+                        Email of the external user, as reported by the connector.
+
+                        Stored in `OfflineSessions.email` and used as a stable handle for administrative actions.
+                      x-doc-examples: ['jane.doe@example.org']
                 type:
                   type: string
+                  enum:
+                    - "ResetPassword"
+                    - "Reset2FA"
+                    - "Lock"
+                    - "Unlock"
                   description: |
                     Type of the user operation. Possible values:
                     
@@ -149,10 +223,25 @@ spec:
                 lock:
                   type: object
                   description: "Parameters for locking the user."
+                  required:
+                    - for
                   properties:
                     for:
                       type: string
-                      description: "Lock duration. Should be specified in the following format: `30s`, `10m`, `1h`, `2h30m`."
+                      description: |
+                        Lock duration as a Go-style duration string (`30s`, `10m`, `1h`, `2h30m`, `7d`),
+                        or `permanent` for an indefinite lock released only by `Unlock`.
+                        Days are expanded as `1d = 24h` by the hook before parsing.
+                      pattern: '^(permanent|([0-9]+(\.[0-9]+)?(s|m|h|d))+)$'
+                      x-kubernetes-validations:
+                        # Self-sufficient: re-asserts shape (so garbage like "permanent7d" or
+                        # "abc1d" cannot slip through if `pattern` ever regresses) and then
+                        # requires at least one non-zero digit, which — combined with the
+                        # all-segments-are-non-negative shape — guarantees a positive total
+                        # ("30m" passes, "0s" / "0d0h" do not). We avoid CEL's `duration()`
+                        # because it does not accept the "d" unit we surface here.
+                        - rule: 'self == "permanent" || (self.matches("^([0-9]+(\\.[0-9]+)?(s|m|h|d))+$") && self.matches("[1-9]"))'
+                          message: 'lock.for must be "permanent" or a positive Go-style duration using s/m/h/d (e.g. "30m", "1h", "2h30m", "7d").'
             status:
               type: object
               properties:

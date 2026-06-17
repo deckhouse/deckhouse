@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-repos
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].image
+      level: container
+      description: Container image repository prefix must match one of allowed repos.
+      requiredScenarios: [positive, negative, initContainer, ephemeralContainer]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

@@ -34,6 +34,54 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ConfigExtensionKind enumerates the kinds of recommended config extensions a
+// client may request. Adding a kind is an additive enum change.
+type ConfigExtensionKind int32
+
+const (
+	ConfigExtensionKind_CONFIG_EXTENSION_KIND_UNSPECIFIED ConfigExtensionKind = 0
+	ConfigExtensionKind_CONFIG_EXTENSION_KIND_CNI         ConfigExtensionKind = 1
+)
+
+// Enum value maps for ConfigExtensionKind.
+var (
+	ConfigExtensionKind_name = map[int32]string{
+		0: "CONFIG_EXTENSION_KIND_UNSPECIFIED",
+		1: "CONFIG_EXTENSION_KIND_CNI",
+	}
+	ConfigExtensionKind_value = map[string]int32{
+		"CONFIG_EXTENSION_KIND_UNSPECIFIED": 0,
+		"CONFIG_EXTENSION_KIND_CNI":         1,
+	}
+)
+
+func (x ConfigExtensionKind) Enum() *ConfigExtensionKind {
+	p := new(ConfigExtensionKind)
+	*p = x
+	return p
+}
+
+func (x ConfigExtensionKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ConfigExtensionKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_validation_proto_enumTypes[0].Descriptor()
+}
+
+func (ConfigExtensionKind) Type() protoreflect.EnumType {
+	return &file_validation_proto_enumTypes[0]
+}
+
+func (x ConfigExtensionKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ConfigExtensionKind.Descriptor instead.
+func (ConfigExtensionKind) EnumDescriptor() ([]byte, []int) {
+	return file_validation_proto_rawDescGZIP(), []int{0}
+}
+
 type ValidateOptions struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -859,6 +907,122 @@ func (x *ParseConnectionConfigResponse) GetErr() string {
 	return ""
 }
 
+type ConfigExtenderRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Source cluster YAML (Cluster/Provider/MC documents).
+	Config string `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	// Which single extension kind to compute.
+	Kind ConfigExtensionKind `protobuf:"varint,2,opt,name=kind,proto3,enum=dhctl.ConfigExtensionKind" json:"kind,omitempty"`
+}
+
+func (x *ConfigExtenderRequest) Reset() {
+	*x = ConfigExtenderRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_validation_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ConfigExtenderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigExtenderRequest) ProtoMessage() {}
+
+func (x *ConfigExtenderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_validation_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfigExtenderRequest.ProtoReflect.Descriptor instead.
+func (*ConfigExtenderRequest) Descriptor() ([]byte, []int) {
+	return file_validation_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ConfigExtenderRequest) GetConfig() string {
+	if x != nil {
+		return x.Config
+	}
+	return ""
+}
+
+func (x *ConfigExtenderRequest) GetKind() ConfigExtensionKind {
+	if x != nil {
+		return x.Kind
+	}
+	return ConfigExtensionKind_CONFIG_EXTENSION_KIND_UNSPECIFIED
+}
+
+// ConfigExtenderResponse returns the recommended config for the requested kind
+// as a single generic string. "Nothing to recommend" = empty config, not an error.
+type ConfigExtenderResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Err string `protobuf:"bytes,1,opt,name=err,proto3" json:"err,omitempty"`
+	// Recommended ModuleConfig (JSON) for the requested kind. Distinct from
+	// ConfigExtenderRequest.config.
+	Config string `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`
+}
+
+func (x *ConfigExtenderResponse) Reset() {
+	*x = ConfigExtenderResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_validation_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ConfigExtenderResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigExtenderResponse) ProtoMessage() {}
+
+func (x *ConfigExtenderResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_validation_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfigExtenderResponse.ProtoReflect.Descriptor instead.
+func (*ConfigExtenderResponse) Descriptor() ([]byte, []int) {
+	return file_validation_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ConfigExtenderResponse) GetErr() string {
+	if x != nil {
+		return x.Err
+	}
+	return ""
+}
+
+func (x *ConfigExtenderResponse) GetConfig() string {
+	if x != nil {
+		return x.Config
+	}
+	return ""
+}
+
 var File_validation_proto protoreflect.FileDescriptor
 
 var file_validation_proto_rawDesc = []byte{
@@ -954,8 +1118,24 @@ var file_validation_proto_rawDesc = []byte{
 	0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x10, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e,
 	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x10, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x03, 0x65, 0x72, 0x72, 0x42, 0x0a, 0x5a, 0x08, 0x70, 0x62, 0x2f, 0x64,
-	0x68, 0x63, 0x74, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x01, 0x28, 0x09, 0x52, 0x03, 0x65, 0x72, 0x72, 0x22, 0x5f, 0x0a, 0x15, 0x43, 0x6f, 0x6e, 0x66,
+	0x69, 0x67, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x2e, 0x0a, 0x04, 0x6b, 0x69, 0x6e,
+	0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x1a, 0x2e, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e,
+	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x4b,
+	0x69, 0x6e, 0x64, 0x52, 0x04, 0x6b, 0x69, 0x6e, 0x64, 0x22, 0x42, 0x0a, 0x16, 0x43, 0x6f, 0x6e,
+	0x66, 0x69, 0x67, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x65, 0x72, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x03, 0x65, 0x72, 0x72, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x2a, 0x5b, 0x0a,
+	0x13, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e,
+	0x4b, 0x69, 0x6e, 0x64, 0x12, 0x25, 0x0a, 0x21, 0x43, 0x4f, 0x4e, 0x46, 0x49, 0x47, 0x5f, 0x45,
+	0x58, 0x54, 0x45, 0x4e, 0x53, 0x49, 0x4f, 0x4e, 0x5f, 0x4b, 0x49, 0x4e, 0x44, 0x5f, 0x55, 0x4e,
+	0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x1d, 0x0a, 0x19, 0x43,
+	0x4f, 0x4e, 0x46, 0x49, 0x47, 0x5f, 0x45, 0x58, 0x54, 0x45, 0x4e, 0x53, 0x49, 0x4f, 0x4e, 0x5f,
+	0x4b, 0x49, 0x4e, 0x44, 0x5f, 0x43, 0x4e, 0x49, 0x10, 0x01, 0x42, 0x0a, 0x5a, 0x08, 0x70, 0x62,
+	0x2f, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -970,37 +1150,42 @@ func file_validation_proto_rawDescGZIP() []byte {
 	return file_validation_proto_rawDescData
 }
 
-var file_validation_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_validation_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_validation_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_validation_proto_goTypes = []interface{}{
-	(*ValidateOptions)(nil),                               // 0: dhctl.ValidateOptions
-	(*ValidateResourcesRequest)(nil),                      // 1: dhctl.ValidateResourcesRequest
-	(*ValidateResourcesResponse)(nil),                     // 2: dhctl.ValidateResourcesResponse
-	(*ValidateInitConfigRequest)(nil),                     // 3: dhctl.ValidateInitConfigRequest
-	(*ValidateInitConfigResponse)(nil),                    // 4: dhctl.ValidateInitConfigResponse
-	(*ValidateClusterConfigRequest)(nil),                  // 5: dhctl.ValidateClusterConfigRequest
-	(*ValidateClusterConfigResponse)(nil),                 // 6: dhctl.ValidateClusterConfigResponse
-	(*ValidateStaticClusterConfigRequest)(nil),            // 7: dhctl.ValidateStaticClusterConfigRequest
-	(*ValidateStaticClusterConfigResponse)(nil),           // 8: dhctl.ValidateStaticClusterConfigResponse
-	(*ValidateProviderSpecificClusterConfigRequest)(nil),  // 9: dhctl.ValidateProviderSpecificClusterConfigRequest
-	(*ValidateProviderSpecificClusterConfigResponse)(nil), // 10: dhctl.ValidateProviderSpecificClusterConfigResponse
-	(*ValidateChangesRequest)(nil),                        // 11: dhctl.ValidateChangesRequest
-	(*ValidateChangesResponse)(nil),                       // 12: dhctl.ValidateChangesResponse
-	(*ParseConnectionConfigRequest)(nil),                  // 13: dhctl.ParseConnectionConfigRequest
-	(*ParseConnectionConfigResponse)(nil),                 // 14: dhctl.ParseConnectionConfigResponse
+	(ConfigExtensionKind)(0),                              // 0: dhctl.ConfigExtensionKind
+	(*ValidateOptions)(nil),                               // 1: dhctl.ValidateOptions
+	(*ValidateResourcesRequest)(nil),                      // 2: dhctl.ValidateResourcesRequest
+	(*ValidateResourcesResponse)(nil),                     // 3: dhctl.ValidateResourcesResponse
+	(*ValidateInitConfigRequest)(nil),                     // 4: dhctl.ValidateInitConfigRequest
+	(*ValidateInitConfigResponse)(nil),                    // 5: dhctl.ValidateInitConfigResponse
+	(*ValidateClusterConfigRequest)(nil),                  // 6: dhctl.ValidateClusterConfigRequest
+	(*ValidateClusterConfigResponse)(nil),                 // 7: dhctl.ValidateClusterConfigResponse
+	(*ValidateStaticClusterConfigRequest)(nil),            // 8: dhctl.ValidateStaticClusterConfigRequest
+	(*ValidateStaticClusterConfigResponse)(nil),           // 9: dhctl.ValidateStaticClusterConfigResponse
+	(*ValidateProviderSpecificClusterConfigRequest)(nil),  // 10: dhctl.ValidateProviderSpecificClusterConfigRequest
+	(*ValidateProviderSpecificClusterConfigResponse)(nil), // 11: dhctl.ValidateProviderSpecificClusterConfigResponse
+	(*ValidateChangesRequest)(nil),                        // 12: dhctl.ValidateChangesRequest
+	(*ValidateChangesResponse)(nil),                       // 13: dhctl.ValidateChangesResponse
+	(*ParseConnectionConfigRequest)(nil),                  // 14: dhctl.ParseConnectionConfigRequest
+	(*ParseConnectionConfigResponse)(nil),                 // 15: dhctl.ParseConnectionConfigResponse
+	(*ConfigExtenderRequest)(nil),                         // 16: dhctl.ConfigExtenderRequest
+	(*ConfigExtenderResponse)(nil),                        // 17: dhctl.ConfigExtenderResponse
 }
 var file_validation_proto_depIdxs = []int32{
-	0, // 0: dhctl.ValidateResourcesRequest.opts:type_name -> dhctl.ValidateOptions
-	0, // 1: dhctl.ValidateInitConfigRequest.opts:type_name -> dhctl.ValidateOptions
-	0, // 2: dhctl.ValidateClusterConfigRequest.opts:type_name -> dhctl.ValidateOptions
-	0, // 3: dhctl.ValidateStaticClusterConfigRequest.opts:type_name -> dhctl.ValidateOptions
-	0, // 4: dhctl.ValidateProviderSpecificClusterConfigRequest.opts:type_name -> dhctl.ValidateOptions
-	0, // 5: dhctl.ValidateChangesRequest.opts:type_name -> dhctl.ValidateOptions
-	0, // 6: dhctl.ParseConnectionConfigRequest.opts:type_name -> dhctl.ValidateOptions
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	1, // 0: dhctl.ValidateResourcesRequest.opts:type_name -> dhctl.ValidateOptions
+	1, // 1: dhctl.ValidateInitConfigRequest.opts:type_name -> dhctl.ValidateOptions
+	1, // 2: dhctl.ValidateClusterConfigRequest.opts:type_name -> dhctl.ValidateOptions
+	1, // 3: dhctl.ValidateStaticClusterConfigRequest.opts:type_name -> dhctl.ValidateOptions
+	1, // 4: dhctl.ValidateProviderSpecificClusterConfigRequest.opts:type_name -> dhctl.ValidateOptions
+	1, // 5: dhctl.ValidateChangesRequest.opts:type_name -> dhctl.ValidateOptions
+	1, // 6: dhctl.ParseConnectionConfigRequest.opts:type_name -> dhctl.ValidateOptions
+	0, // 7: dhctl.ConfigExtenderRequest.kind:type_name -> dhctl.ConfigExtensionKind
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_validation_proto_init() }
@@ -1189,19 +1374,44 @@ func file_validation_proto_init() {
 				return nil
 			}
 		}
+		file_validation_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ConfigExtenderRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_validation_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ConfigExtenderResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_validation_proto_rawDesc,
-			NumEnums:      0,
-			NumMessages:   15,
+			NumEnums:      1,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_validation_proto_goTypes,
 		DependencyIndexes: file_validation_proto_depIdxs,
+		EnumInfos:         file_validation_proto_enumTypes,
 		MessageInfos:      file_validation_proto_msgTypes,
 	}.Build()
 	File_validation_proto = out.File

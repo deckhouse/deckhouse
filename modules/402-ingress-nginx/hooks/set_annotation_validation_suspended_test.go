@@ -30,7 +30,7 @@ import (
 
 var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHandleIngressNginxControllers ::", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"internal":{"ingressControllers":[]}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
+	f.RegisterCRD("deckhouse.io", "v2", "IngressNginxController", false)
 	f.RegisterCRD(internal.IngressNginxControllerGVR.Group, internal.IngressNginxControllerGVR.Version, "IngressNginxController", false)
 
 	Context("No controllers, no ConfigMap", func() {
@@ -43,7 +43,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 		It("does nothing", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(BeEmpty())
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeFalse())
 		})
 	})
 
@@ -57,7 +57,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 		It("does nothing and does not set metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(BeEmpty())
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeFalse())
 		})
 	})
 
@@ -81,7 +81,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 				Expect(has).To(BeTrue(), "controller %s is missing the suspended annotation", item.GetName())
 			}
 
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeTrue())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeTrue())
 		})
 	})
 
@@ -95,7 +95,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 		It("does nothing because ConfigMap exists", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(BeEmpty())
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeFalse())
 		})
 	})
 
@@ -114,15 +114,25 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 
 		It("expires the validation suspended metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeFalse())
+			Expect(hasExpireForGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeTrue())
 		})
 	})
 })
 
-func hasMetric(metrics []operation.MetricOperation) bool {
+func hasMetricInGroup(metrics []operation.MetricOperation, group string) bool {
 	const metricName = "ingress_nginx_validation_suspended"
 	for _, m := range metrics {
-		if m.Name == metricName {
+		if m.Name == metricName && m.Group == group && m.Action != operation.ActionExpireMetrics {
+			return true
+		}
+	}
+	return false
+}
+
+func hasExpireForGroup(metrics []operation.MetricOperation, group string) bool {
+	for _, m := range metrics {
+		if m.Action == operation.ActionExpireMetrics && m.Group == group {
 			return true
 		}
 	}
@@ -139,21 +149,21 @@ metadata:
 `
 
 	threeControllers = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-1
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-2
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-3
@@ -162,35 +172,35 @@ spec:
 `
 
 	fiveControllers = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-1
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-2
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-3
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-4
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-5
@@ -200,33 +210,33 @@ spec:
 )
 
 const fiveControllersWithAnnotation = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-1
   annotations:
     network.deckhouse.io/ingress-nginx-validation-suspended: ""
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-2
   annotations:
     network.deckhouse.io/ingress-nginx-validation-suspended: ""
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-3
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-4
   annotations:
     network.deckhouse.io/ingress-nginx-validation-suspended: ""
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-5

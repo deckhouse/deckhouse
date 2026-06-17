@@ -15,6 +15,7 @@ d8 k get deckhouserelease
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME       PHASE        TRANSITIONTIME   MESSAGE
 v1.46.8    Superseded   13d
@@ -22,6 +23,8 @@ v1.46.9    Superseded   11d
 v1.47.0    Superseded   4h12m
 v1.47.1    Deployed     4h12m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The `Deployed` status means the cluster has switched to the corresponding version,
 but it doesn’t guarantee that the update has been successful.
@@ -34,10 +37,13 @@ d8 k -n d8-system get pods -l app=deckhouse
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   READY  STATUS   RESTARTS  AGE
 deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 - If the Pod is `Running` and shows `1/1` under `READY`, it means the update completed successfully.
 - If the Pod is `Running` but shows `0/1` under `READY`, it means the update is still in progress.

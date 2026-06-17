@@ -75,7 +75,7 @@ func TestCheckLocalhostDomain(t *testing.T) {
 			mockScript := &mocks.MockScript{}
 			tt.setupMock(mockNode, mockScript)
 
-			check := LocalhostDomainCheck{Node: mockNode}
+			check := LocalhostDomainCheck{NodeInterface: mockNode}
 			err := check.Run(context.Background())
 
 			if tt.expectedError != "" {

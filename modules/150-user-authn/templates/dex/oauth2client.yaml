@@ -8,7 +8,7 @@
 
 
 {{- $context := . }}
-{{- if or (include "dex_authenticators_with_access_to_kubernetes_api" $context) $context.Values.userAuthn.publishAPI.enabled $context.Values.userAuthn.kubeconfigGenerator }}
+{{- if or (include "dex_authenticators_with_access_to_kubernetes_api" $context) $context.Values.userAuthn.internal.publishAPI.enabled $context.Values.userAuthn.kubeconfigGenerator }}
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
@@ -33,12 +33,17 @@ trustedPeers:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- if $context.Values.userAuthn.publishAPI.enabled }}
+{{- if $context.Values.userAuthn.internal.publishAPI.enabled }}
 - kubeconfig-generator
+  {{- if $context.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry }}
+- kubeconfig-publish-api
+  {{- end }}
 {{- end }}
 {{- if $context.Values.userAuthn.kubeconfigGenerator}}
   {{- range $index, $cluster := $context.Values.userAuthn.kubeconfigGenerator }}
 - kubeconfig-generator-{{ $index }}
+    {{- $slug := $cluster.id | replace "@" "-at-" | replace ":" "-" }}
+- kubeconfig-{{ $slug }}
   {{- end }}
 {{- end }}
 redirectURIs:
@@ -47,7 +52,7 @@ redirectURIs:
 - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/{{ $index }}
     {{- end }}
   {{- end }}
-  {{- if $context.Values.userAuthn.publishAPI.enabled }}
+  {{- if $context.Values.userAuthn.internal.publishAPI.enabled }}
 - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/
   {{- end }}
   {{- if $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}

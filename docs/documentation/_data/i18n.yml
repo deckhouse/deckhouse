@@ -190,6 +190,9 @@ common:
   search_placeholder_text_filter:
     en: Enter a&nbsp;name
     ru: Введите название
+  search_placeholder_text_404:
+    en: Search Documentation
+    ru: Поиск по документации
   search_context_dkpdocs_and_modules:
     en: The search is performed throughout DKP documentation and modules.
     ru: Поиск выполняется по всей документации DKP и модулям.
@@ -199,6 +202,9 @@ common:
   search_context_only_product_docs:
     en: The search is performed throughout the product documentation, excluding modules.
     ru: Поиск выполняется по всей документации продукта, не включая модули.
+  modules_of_a_subsystem:
+    en: Subsystem modules
+    ru: Модули подсистемы
   module_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
@@ -211,6 +217,9 @@ common:
   parameter_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
+  subsystem:
+    en: Subsystem
+    ru: Подсистема
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -354,10 +363,10 @@ common:
     ru: пространства имен
   namespaces_used_by_modules:
     en: Namespaces in which modules of a scope operate
-    ru: Пространства имен используемых модулями области
+    ru: Неймспейсы, используемые модулями подсистемы
   all_namespaces:
     en: All namespaces
-    ru: Все пространства имен
+    ru: Все неймспейсы
   all_modules:
     en: All modules
     ru: Все модули
@@ -418,10 +427,10 @@ common:
   requirements_modules_optional_text_first:
     en: Conditional dependency on the module
     ru: Условная зависимость от модуля
-  requirements_modules_more: 
+  requirements_modules_more:
     en: more
     ru: подробнее
-  requirements_modules_optional_text_second: 
+  requirements_modules_optional_text_second:
     en: about conditional dependencies
     ru: про условные зависимости
   requirements_modules_optional_text_for_link:
@@ -443,6 +452,24 @@ common:
       ## Внешние компоненты
 
       Список стороннего программного обеспечения, используемого в модуле <MODULE> (информация представлена на английском языке):
+  pdf_download_button:
+    en: Download PDF
+    ru: Скачать в PDF
+  pdf_download_title:
+    en: Download PDF
+    ru: Скачать PDF
+  pdf_download_choose:
+    en: "Choose a guide to download:"
+    ru: "Выберите руководство для скачивания:"
+  pdf_admin_guide:
+    en: "Administrator's guide"
+    ru: Справочник администратора
+  pdf_user_guide:
+    en: "User's guide"
+    ru: Руководство пользователя
+  pdf_download_cancel:
+    en: Cancel
+    ru: Отмена
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

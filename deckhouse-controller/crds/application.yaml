@@ -27,13 +27,18 @@ spec:
       name: Repository
       priority: 1
       type: string
+    - jsonPath: .status.summary.state
+      name: State
+      type: string
     - jsonPath: .status.conditions[?(@.type=='Installed')].status
       name: Installed
+      priority: 1
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
+      priority: 1
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].message
+    - jsonPath: .status.summary.message
       name: Message
       type: string
     - jsonPath: .metadata.creationTimestamp
@@ -49,7 +54,7 @@ spec:
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
             description: |-
@@ -57,12 +62,13 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+
             type: string
           metadata:
             type: object
           spec:
-            description: Spec defines the behavior of an Application.
+            description: Defines the application configuration.
             properties:
               packageName:
                 description: Name of the application package to install.
@@ -87,14 +93,12 @@ spec:
             - packageVersion
             type: object
           status:
-            description: Status of an Application.
+            description: Application status.
             properties:
               conditions:
-                description: Conditions represent the latest available observations
-                  of the application's state.
+                description: Conditions reflecting the latest observations of the application state.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition describing one aspect of the current application state.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -158,6 +162,35 @@ spec:
                     type: string
                   version:
                     description: Semantic version of the installed application.
+                    type: string
+                type: object
+              lastAppliedConfiguration:
+                description: |-
+                  LastAppliedConfiguration is the effective settings (user configuration merged
+                  with config-schema defaults) that drove the most recent successful apply.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              summary:
+                description: |-
+                  Summary aggregates the high-level user-facing state, message and
+                  resolution hint for the application. The controller always populates it
+                  on reconcile — every application maps to exactly one lifecycle state — so
+                  it is the single source of truth for the UI; clients should not re-derive
+                  these values from the conditions. The pointer leaves it absent only
+                  before the first status computation.
+                properties:
+                  message:
+                    description: Message is a human-readable description of the current state.
+                    type: string
+                  state:
+                    description: |-
+                      State is the high-level lifecycle state observed for the application.
+                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+                    type: string
+                  tip:
+                    description: |-
+                      Tip is a human-readable instruction on how to resolve the current
+                      state. Empty when no action is required.
                     type: string
                 type: object
               tracking:

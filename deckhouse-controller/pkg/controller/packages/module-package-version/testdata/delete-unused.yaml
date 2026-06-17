@@ -3,6 +3,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
   name: deckhouse-test-module-v1.0.0
+  finalizers:
+    - modulepackageversion.deckhouse.io/used-by-module
   labels:
     packages.deckhouse.io/package: test-module
     packages.deckhouse.io/repository: deckhouse

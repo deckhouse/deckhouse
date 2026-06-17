@@ -30,6 +30,7 @@
 {{- $_ := set $csiControllerConfig "fullname" "csi-controller-legacy" }}
 {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
 {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
+{{- $_ := set $csiControllerConfig "securityPolicyExceptionEnabled" true }}
 {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_legacy_envs" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_legacy_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_legacy_volume_mounts" . | fromYamlArray) }}
@@ -66,6 +67,7 @@
 {{- $_ := set $csiNodeConfig "fullname" "csi-node-legacy" }}
 {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
 {{- $_ := set $csiNodeConfig "driverFQDN" "vsphere.csi.vmware.com" }}
+{{- $_ := set $csiNodeConfig "securityPolicyExceptionEnabled" true }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_legacy_envs" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
 {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_legacy_volumes" . | fromYamlArray) }}

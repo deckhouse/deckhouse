@@ -47,6 +47,58 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 * `apache2-htpasswd` — для ALT Linux.
 {% endalert %}
 
+## Операции над локальным пользователем
+
+Для административных действий над локальными пользователями используйте команды [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam). Они создают ресурс [UserOperation](/modules/user-authn/cr.html#useroperation), дожидаются выполнения операции и выводят результат.
+
+При выполнении операций `ResetPassword`, `Reset2FA` и `Lock` удаляются объекты Dex OfflineSessions и RefreshToken, принадлежащие пользователю. Это завершает активные offline-сессии пользователя и требует повторной аутентификации.
+
+Примеры использования команд [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam):
+
+- интерактивный сброс пароля:
+
+  ```shell
+  d8 iam user reset-password admin
+  ```
+
+- сброс пароля с чтением нового из stdin:
+
+  ```shell
+  echo "N3wPa$$wo#d" | d8 iam user reset-password admin --password-stdin
+  ```
+
+- сброс пароля с автоматической генерацией нового:
+
+  ```shell
+  d8 iam user reset-password admin --generate-password
+  ```
+
+- сброс пароля в захешированном виде (если пароль захеширован, передайте bcrypt-хеш без кодирования в Base64):
+
+  ```shell
+  d8 iam user reset-password admin --password-hash '$2y$10$abcdef...'
+  ```
+
+- сброс 2FA:
+
+  ```shell
+  d8 iam user reset2fa admin
+  ```
+
+- блокировка пользователя на 30 минут:
+
+  ```shell
+  d8 iam user lock admin 30m
+  ```
+
+- разблокировка пользователя:
+
+  ```shell
+  d8 iam user unlock admin
+  ```
+
+По умолчанию команды ожидают завершения операции. Чтобы только создать UserOperation и вывести его имя, используйте флаг `--wait=false`.
+
 ## Добавление пользователя в группу
 
 {% alert level="warning" %}
@@ -72,13 +124,18 @@ spec:
 
 Здесь `members` — список пользователей, которые входят в группу.
 
-После создания группы и добавления в неё пользователей, необходимо настроить [авторизацию](../../access/authorization/).
+После создания группы и добавления в неё пользователей необходимо настроить [авторизацию](../authorization/).
 
 ## Настройка парольной политики
 
 Парольная политика позволяет контролировать сложность пароля, ротацию и блокировку пользователей.
 
-Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`:
+Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`.
+
+Примеры политик:
+
+{% tabs Примеры парольных политик%}
+{% tab "Без пользовательских правил сложности" %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -99,15 +156,31 @@ spec:
         interval: "30d"
 ```
 
-Описание полей:
+{% endtab %}
+{% tab "С пользовательскими правилами сложности" %}
 
-- `complexityLevel` — уровень сложности пароля;
-- `passwordHistoryLimit` — число предыдущих паролей, которые хранит система, чтобы предотвратить их повторное использование;
-- `lockout` — настройки блокировки при превышении лимита неудачных попыток входа:
-  - `lockout.maxAttempts` — лимит неудачных попыток;
-  - `lockout.lockDuration` — длительность блокировки пользователя;
-- `rotation` — настройки ротации паролей:
-  - `rotation.interval` — период обязательной смены пароля.
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Custom
+      custom:
+        minLength: 10
+        specialCharacters: true
+        numbers: false
+        capitalized: true
+        repeatedChars: false
+      passwordHistoryLimit: 10
+```
+
+{% endtab %}
+{% endtabs %}
 
 ## Настройка двухфакторной аутентификации (2FA)
 

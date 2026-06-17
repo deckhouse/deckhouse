@@ -6,10 +6,226 @@ lang: ru
 search: security policies, pod security standards, gatekeeper, security enforcement, policy management, политики безопасности
 ---
 
-Deckhouse Kubernetes Platform (DKP) позволяет управлять безопасностью приложений в кластере с помощью набора политик,
-соответствующих модели [Kubernetes Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и дополнительно расширяемых через встроенные механизмы DKP.
+Deckhouse Kubernetes Platform (DKP) позволяет управлять безопасностью приложений в кластере с помощью набора admission-политик. Это правила, которые применяются к объектам (например Pod и Service) в момент их создания и изменения в кластере (но не в процессе их работы) на основе информации, представленной в их манифесте. Эти политики направлены на формализацию параметров, которые разрешены или запрещены в манифестах объектов. Поддержка admission-политик безопасности в кластере DKP реализуется с помощью модуля [`admission-policy-engine`](/modules/admission-policy-engine/).
 
-Для реализации политик безопасности в DKP используется [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
+В DKP политики разделены на три категории:
+
+- [Pod Security Standards](#применение-pod-security-standards) — политики, реализующие соответствующие [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+- [Операционные политики](#операционные-политики) — политики для создания дополнительных требований к объектам с помощью валидации значений параметров, **не связанных напрямую** с безопасностью (например, список допустимых префиксов для образов контейнеров, политика скачивания образов, список необходимых проб для контейнеров и т. д.).
+- [Политики безопасности](#политики-безопасности) — политики для создания дополнительных требований к объектам с помощью валидации значений параметров, связанных с безопасностью (например, доступ контейнеров к IPC- или PID-неймспейсу хоста, список привилегий для контейнеров и т. д.).
+
+{% alert level="info" %}
+Эти политики дополняют друг друга. Если для одного неймспейса применены несколько политик, выполняется валидация объектов по каждой из них. Если будет нарушена хотя бы одна политика, объект не будет создан.
+{% endalert %}
+
+## Особенности отображения сообщений о неудачной валидации объектов
+
+В зависимости от способа создания подов есть следующие особенности формирования сообщений от API о неудачной валидации (нарушении установленных политик):
+
+- Если под создается напрямую, ошибка валидации возвращается в ответе от API о неудачной валидации (нарушении политики).
+- Если поды создаются через Deployment, создаётся требуемое количество ReplicaSet, которые, в свою очередь, пытаются создать поды. В этом случае ошибка валидации не возвращается в ответе API, а отображается в событиях неймспейса или соответствующего ReplicaSet.
+
+## Валидация подов при изменении политики или добавлении новой
+
+Для всех трех категорий политик (Pod Security Standards, операционные и политики безопасности) не предусмотрено автоматическое пересоздание существующих подов при изменении действующих или добавлении новых политик. Поды, существовавшие до момента внесения изменений в используемую политику или до добавления новой, продолжат работать до перезапуска. А при перезапуске они будут валидироваться по новым правилам.
+
+В DKP для таких случаев предусмотрены алерты (ресурсы ClusterObservabilityAlert), информирующие о наличии в неймспейсе подов с нарушениями после изменения существующей политики или добавления новой.
+
+Для получения списка алертов используйте команду:
+
+```bash
+d8 k get clusterobservabilityalerts
+```
+
+Пример вывода:
+
+<!-- markdownlint-disable MD031 -->
+```console
+NAME                                                  SEVERITY   STATUS   DURATION   SUMMARY                          AGE
+SecurityPolicyViolation-f3a77d1dd2175402-1777370195   1          Firing   5h         Alerting PrometheusUnavailable   5h1m
+OperationPolicyViolation-9b21d0c871796913-1777370435  1          Firing   6h         Alerting PrometheusUnavailable   6h1m
+```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
+
+Для просмотра информации о конкретном алерте используйте команду:
+
+```bash
+d8 k get clusterobservabilityalert OperationPolicyViolation-9b21d0c871796913-1777370435 -oyaml
+```
+
+{% offtopic title="Пример алерта при нарушении политики Pod Security Standards..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: PodSecurityStandardsViolation-91e71759e048a397-1777369535
+  resourceVersion: "7454828154578800069"
+  creationTimestamp: 2026-04-28T09:45:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: PodSecurityStandardsViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: |-
+      You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
+
+      To identify violating pods:
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            violating_namespace=~".*",
+            violating_kind="Pod",
+            source_type="PSS"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one pod violates the configured cluster pod security standards.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="PSS",violating_kind="Pod",violating_namespace=~".*",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T09:45:35Z
+  resolvedAt: null
+  duration: 20h40m1.015261771s
+```
+
+{% endofftopic %}
+
+{% offtopic title="Пример алерта при нарушении операционной политики..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: OperationPolicyViolation-9b21d0c871796913-1777370435
+  resourceVersion: "7454831929456594373"
+  creationTimestamp: 2026-04-28T10:00:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: OperationPolicyViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: >-
+      You have configured operation policies for the cluster, and one or more
+      existing objects are violating these policies.
+
+
+      To identify violating objects:
+
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            source_type="OperationPolicy"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one object violates the configured cluster operation policies.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="OperationPolicy",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T10:00:35Z
+  resolvedAt: null
+  duration: 20h23m41.023025059s
+```
+
+{% endofftopic %}
+
+{% offtopic title="Пример алерта при нарушении политики безопасности..." %}
+
+```yaml
+kind: ClusterObservabilityAlert
+apiVersion: alerts.observability.deckhouse.io/v1alpha1
+metadata:
+  name: SecurityPolicyViolation-f3a77d1dd2175402-1777370195
+  resourceVersion: "7454830922622307781"
+  creationTimestamp: 2026-04-28T09:56:35Z
+  labels:
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+alert:
+  labels:
+    alertname: SecurityPolicyViolation
+    d8_component: gatekeeper
+    d8_module: admission-policy-engine
+    prometheus: deckhouse
+    severity_level: "3"
+  annotations:
+    description: >-
+      You have configured security policies for the cluster, and one or more
+      existing objects are violating these policies.
+
+
+      To identify violating objects:
+
+
+      - Run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            violation_enforcement="deny",
+            source_type="SecurityPolicy"
+          }
+        )
+        ```
+
+      - Alternatively, check the admission-policy-engine Grafana dashboard.
+    plk_markup_format: markdown
+    plk_protocol_version: "1"
+    summary: At least one object violates the configured cluster security policies.
+  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="SecurityPolicy",violation_enforcement="deny"}))
+    > 0
+  created_by: observability
+  rule_group_name: admission-policy-engine-audit-0
+status:
+  alertStatus: Firing
+  silencedBy: []
+  startsAt: 2026-04-28T09:56:35Z
+  resolvedAt: null
+  duration: 20h29m21.015479019s
+```
+
+{% endofftopic %}
 
 ## Применение Pod Security Standards
 
@@ -20,6 +236,10 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
   которая предотвращает наиболее известные и популярные способы повышения привилегий.
   Позволяет использовать стандартную (минимально заданную) конфигурацию пода;
 - `restricted` — политика со значительными ограничениями. Предъявляет самые жесткие требования к подам.
+
+{% alert level="info" %}
+Эти политики реализуются средствами Gatekeeper и контролируются admission-контроллерами модуля `admission-policy-engine`, а не контролером [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) от Kubernetes. Из Kubernetes взяты только описания политик.
+{% endalert %}
 
 ### Политика по умолчанию
 
@@ -75,7 +295,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 
 Чтобы расширить политику, выполните следующее:
 
-1. Создайте шаблон проверки с помощью ConstraintTemplate.
+1. Создайте шаблон проверки с помощью `ConstraintTemplate`.
 1. Примените созданный шаблон к политике `baseline` или `restricted`.
 
 Пример шаблона для проверки адреса репозитория с образом контейнера:
@@ -607,7 +827,7 @@ spec:
 ## Проверка подписи образов
 
 {% alert level="warning" %}
-Доступно в следующих редакциях DKP: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Доступно в следующих редакциях DKP: SE+, EE, CSE Lite, CSE Pro.
 
 Поддерживается Cosign не выше v2. Версии v3 и выше не поддерживаются.
 {% endalert %}
@@ -662,7 +882,7 @@ DKP поддерживает проверку подписей образов к
        namespaceSelector:
          labelSelector:
            matchLabels:
-             kubernetes.io/metadata.name: test-namespace
+             example-security-policy/enabled: true
      policies:
        allowHostIPC: true
        allowHostNetwork: true
@@ -679,6 +899,10 @@ DKP поддерживает проверку подписей образов к
            reference: registry.private.ru/labs/application/*
    ```
 
+    Название лейбла указанного в `match.namespaceSelector.labelSelector.matchLabels` может быть любым. Требуется лишь совпадение лейбла в селекторе политик и соответствующего неймспейса.
+
+    Более подробную информацию о использовании селекторов вы можете прочитать в [описании настройки селекторов](/modules/admission-policy-engine/docs/faq.html#как-настроить-селекторы-политик).
+
 1. Создайте [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy), ограничивающий запуск подов со сторонних registry:
 
    ```yaml
@@ -690,18 +914,28 @@ DKP поддерживает проверку подписей образов к
     enforcementAction: Deny
     match:
       namespaceSelector:
-      labelSelector:
-        matchLabels:
-           operation-policy.deckhouse.io/enabled: "true"
+        labelSelector:
+          matchLabels:
+            example-operation-policy/enabled: "true"
    policies:
      allowedRepos:
      - registry.private.ru
    ```
 
+    Название лейбла указанного в `match.namespaceSelector.labelSelector.matchLabels` может быть любым. Требуется лишь совпадение лейбла в селекторе политик и соответствующего неймспейса.
+
+    Более подробную информацию о использовании селекторов вы можете прочитать в [описании настройки селекторов](/modules/admission-policy-engine/docs/faq.html#как-настроить-селекторы-политик).
+
 1. Добавьте метку на неймспейс, где необходимо включить проверку подписи командой (укажите нужный неймспейс):
 
    ```shell
-   d8 k label ns <NAMESPACE> security.deckhouse.io/verify-image-test=
+   d8 k label ns <NAMESPACE> example-security-policy/enabled=true
+   ```
+
+1. Добавьте метку на неймспейс, где необходимо ограничить запуск подов со сторонних registry (укажите нужный неймспейс):
+
+   ```shell
+   d8 k label ns <NAMESPACE> example-operation-policy/enabled=true
    ```
 
 1. Для проверки работы механизма подписи образов разверните поды в неймспейсе, с подписанным и неподписанным образами (укажите нужный неймспейс):

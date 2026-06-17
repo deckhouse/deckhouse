@@ -1,0 +1,79 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-ffc0ec4119e1fc154ff048bb42d1d9e67ef4a4f3608ce32d9eb2fd513668b779",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-06-02T15:00:00.000000+03:00",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "timestamp": "2026-04-26T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-34040 представляет собой обход авторизации в подсистеме AuthZ-плагинов Docker-демона (Moby). Prometheus использует исключительно клиентский SDK Docker (github.com/docker/docker/client) для обнаружения сервисов (service discovery) Docker и Docker Swarm контейнеров. Prometheus не содержит, не запускает и не взаимодействует с подсистемой авторизационных плагинов Docker-демона. Уязвимый код существует исключительно в бинарнике Docker-демона, который не компилируется и не выполняется в составе Prometheus. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Prometheus."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "timestamp": "2026-04-26T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33997 связана с обходом проверки привилегий при установке Docker-плагинов через команду 'docker plugin install'. Prometheus использует исключительно клиентский SDK Docker (github.com/docker/docker/client) для запросов к Docker API с целью перечисления контейнеров и сервисов в рамках механизма обнаружения сервисов (service discovery). Prometheus никогда не устанавливает, не управляет и не взаимодействует с Docker-плагинами. Уязвимый код находится в обработчике установки плагинов Docker-демона, который не компилируется и не вызывается в составе Prometheus. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Prometheus."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "timestamp": "2026-06-02T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41567 позволяет вредоносному образу выполнить произвольный код с привилегиями демона Docker (root на хосте) при загрузке сжатого архива в контейнер через 'docker cp' или endpoint 'PUT /containers/{id}/archive': при распаковке демон вызывает бинарники декомпрессии из файловой системы контейнера, а не хоста. Prometheus использует исключительно клиентский SDK Docker (github.com/docker/docker/client) для обнаружения сервисов (service discovery) Docker и Docker Swarm контейнеров и никогда не загружает архивы в контейнеры и не выполняет операции 'docker cp' / 'PUT /containers/{id}/archive'. Уязвимый код существует исключительно в бинарнике Docker-демона, который не компилируется и не выполняется в составе Prometheus. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Prometheus."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "timestamp": "2026-06-02T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42306 представляет собой состояние гонки (race condition) при настройке bind-монтирования во время операции 'docker cp' демона Docker, позволяющее вредоносному контейнеру через подмену символьной ссылки перенаправить целевую точку монтирования на произвольный путь хоста. Prometheus использует исключительно клиентский SDK Docker (github.com/docker/docker/client) для обнаружения сервисов (service discovery) Docker и Docker Swarm контейнеров и никогда не выполняет операции 'docker cp' / 'PUT /containers/{id}/archive'. Уязвимый код находится в логике настройки монтирования Docker-демона, который не компилируется и не вызывается в составе Prometheus. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Prometheus."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "timestamp": "2026-06-02T15:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41568 представляет собой состояние гонки (race condition) при создании точки монтирования во время операции 'docker cp' демона Docker, позволяющее вредоносному контейнеру через подмену символьной ссылки создавать пустые файлы или каталоги по произвольным путям на файловой системе хоста с правами root (отказ в обслуживании). Prometheus использует исключительно клиентский SDK Docker (github.com/docker/docker/client) для обнаружения сервисов (service discovery) Docker и Docker Swarm контейнеров и никогда не выполняет операции 'docker cp' / 'PUT /containers/{id}/archive'. Уязвимый код находится в функции createIfNotExists Docker-демона, который не компилируется и не вызывается в составе Prometheus. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Prometheus."
+    }
+  ]
+}

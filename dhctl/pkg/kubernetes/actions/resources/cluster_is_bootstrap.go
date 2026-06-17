@@ -46,7 +46,7 @@ type kubeNgGetter struct {
 
 func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) {
 	var ngs []unstructured.Unstructured
-	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get machine failed events", 9, 1*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
@@ -54,7 +54,6 @@ func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) 
 		ngs, err = entity.GetNodeGroups(ctx, kubeCl)
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +80,7 @@ func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) 
 
 func (n *kubeNgGetter) MachineFailedEvents(ctx context.Context) ([]eventsv1.Event, error) {
 	var list *eventsv1.EventList
-	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get machine failed events", 9, 1*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
@@ -94,7 +93,6 @@ func (n *kubeNgGetter) MachineFailedEvents(ctx context.Context) ([]eventsv1.Even
 
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +150,7 @@ func (n *clusterIsBootstrapCheck) lastEvents(ctx context.Context, lastTime time.
 
 func (n *clusterIsBootstrapCheck) hasBootstrappedCM(ctx context.Context) (bool, error) {
 	hasCm := false
-	err := retry.NewSilentLoop("get is-bootstrapped cm", 3, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get is-bootstrapped cm", 9, 1*time.Second).RunContext(ctx, func() error {
 		kubeCl, err := n.kubeProvider.KubeClientCtx(ctx)
 		if err != nil {
 			return err
@@ -261,7 +259,7 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	if len(n.outputNodeGroups(ctx)) > 0 {
-		_ = logger.LogProcess("Create Resources", "NodeGroups status", func() error {
+		_ = logger.LogProcessCtx(ctx, "Create Resources", "NodeGroups status", func(ctx context.Context) error {
 			logger.LogInfoLn(n.outputNodeGroups(ctx))
 			return nil
 		})

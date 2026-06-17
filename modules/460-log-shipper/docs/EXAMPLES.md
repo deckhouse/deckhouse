@@ -519,11 +519,16 @@ If you need logs from only one or from a small group of a Pods, try to use the k
 
 ## Log transformations
 
+In a ClusterLogDestination resource, you can chain transformations in order. The following actions are supported: `ParseMessage`, `ReplaceKeys`, `ReplaceValue`, `AddLabels`, and `DropLabels`.
+
 ### Transforming logs into a structured object
 
 You can use the `ParseMessage` transformation
 to convert a string in the `message` field into a structured object.
+For `sourceFormat: String`, provide a regular expression with named capture groups and a `setLabels` map. Output keys are filled from `{{ group_name }}` templates.
 If multiple `ParseMessage` transformations are used, the one that parses the string must be applied last.
+
+You cannot set `parseMessage.targetLabel` to `.parsed_data`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -537,7 +542,9 @@ spec:
       parseMessage:
         sourceFormat: String
         string:
-          targetField: msg
+          regex: "^(?P<msg>.*)$"
+          setLabels:
+            msg: "{{ msg }}"
 ```
 
 Example original log entry:
@@ -608,7 +615,7 @@ spec:
   transformations:
     - action: ParseMessage
       parseMessage:
-        sourceFormat: Syslog
+        sourceFormat: SysLog
 ```
 
 Example original log entry:
@@ -769,15 +776,17 @@ spec:
   transformations:
   - action: ParseMessage
     parseMessage:
-      sourseFormat: JSON
+      sourceFormat: JSON
   - action: ParseMessage
     parseMessage:
       sourceFormat: Klog
   - action: ParseMessage
     parseMessage:
       sourceFormat: String
-        string:
-          targetField: "text"
+      string:
+        regex: "^(?P<text>.*)$"
+        setLabels:
+          text: "{{ text }}"
 ```
 
 Example original log entry:
@@ -852,9 +861,78 @@ Transformed result:
 }
 ```
 
+### Replacing substrings in string fields
+
+You can use the `ReplaceValue` transformation to replace matches of a regular expression (`source`) in scalar string fields. The `target` string can be a literal or use `{{ name }}` for named capture groups from `source`.
+
+> Apply [`ParseMessage`](#transforming-logs-into-a-structured-object) first if you need to run replacement on a field inside a structured `message`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: redact-digits
+spec:
+  ...
+  transformations:
+    - action: ReplaceValue
+      replaceValue:
+        source: \d+
+        target: REDACTED
+        labels:
+          - .message
+```
+
+Example original log entry:
+
+```text
+user id 12345 connected from 10.0.0.1
+```
+
+Transformed result:
+
+```json
+{... "message": "user id REDACTED connected from REDACTED"
+}
+```
+
+### Adding labels from literals and templates
+
+You can use the `AddLabels` transformation to add fields using static values or templates such as `{{ .pod_labels.app }}`. Transformations run after applying `extraLabels`. If label names overlap, the value from `AddLabels` has priority.
+
+The `when` field is an optional list of conditions combined with logical AND. The left-hand side of a condition is a path to a field on the log event: a leading dot and dot-separated segments (for example, `.namespace`, `.pod_labels.app`, `.message.level`). Each list item can be one of the following types:
+
+- Value comparison: `.namespace == "production"`. Supported operators are `==`, `!=`, `=~`, and `!=~`.
+- Field existence check: Only a path with no operator, for example, `.pod_labels.team` (the field must exist).
+- Field absence check: `!.pod_labels.legacy`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: add-env-from-pod
+spec:
+  ...
+  transformations:
+    - action: AddLabels
+      addLabels:
+        when:
+          - '.namespace == "production"'
+        setLabels:
+          .env: prod
+          .source_app: "{{ .pod_labels.app }}"
+```
+
+Transformed result for an event in namespace `production` with pod label `app=api`:
+
+```json
+{..."namespace": "production", "pod_labels": { "app": "api" } "env": "prod", "source_app": "api", ...
+}
+```
+
 ### Removing labels
 
-You can use the `DropLabels` transformation to remove specific labels from log messages.
+You can use the `DropLabels` transformation to remove specific labels from log records. Each item under `dropLabels.labels` has a `label` field (the path) and optional `keepKeys`. If `keepKeys` is set for an item, `label` must point to an **object**; inside it, every nested key not listed in `keepKeys` is removed (key names without a leading dot). If `keepKeys` is unset for that item, the path in `label` is removed entirely.
 
 > To apply the `DropLabels` transformation to the `message` field or its nested fields,
 > the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
@@ -870,7 +948,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .example
+          - label: .example
 ```
 
 #### Example of removing a specific label from a structured message
@@ -893,7 +971,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .message.example
+          - label: .message.example
 ```
 
 Example original log entry:
@@ -908,6 +986,68 @@ Transformed result:
 {... "message": {
   "msg" : "fetching.module.release"
   }
+}
+```
+
+## Sending logs to Elasticsearch with transformations
+
+The following is an example of a ClusterLogDestination resource for sending logs to Elasticsearch.
+
+In this example:
+
+- JSON from the `message` field is parsed and moved into the event root (`targetLabel: "."`).
+- Dots are replaced with underscores in `pod_labels` key names.
+- The source `message` field is deleted.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: es-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://elasticsearch:9200
+    index: logs-%F
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+        targetLabel: "."
+    - action: ReplaceKeys
+      replaceKeys:
+        source: "."
+        target: "_"
+        labels:
+          - .pod_labels
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - label: .message
+```
+
+Example source log line: a Java app emits structured JSON to stdout, therefore the JSON line is stored in the `message` field of the event. The `msg` field inside that line holds the program log text.
+
+```text
+{... "namespace": "prod", "pod_labels": {"app.kubernetes.io/name": "orders", "app": "api"}, "message": "{\"@timestamp\":\"2025-03-25T10:15:00.123Z\",\"level\":\"INFO\",\"logger\":\"com.example.OrderService\",\"msg\":\"Order id=42 created; user=1001\"}"}
+```
+
+Transformation result:
+
+- JSON fields are moved into the event root.
+- Dots in `pod_labels` key names are replaced with underscores.
+- The `message` field is removed.
+
+```json
+{... "namespace": "prod",
+  "pod_labels": {
+    "app_kubernetes_io/name": "orders",
+    "app": "api"
+  },
+  "@timestamp": "2025-03-25T10:15:00.123Z",
+  "level": "INFO",
+  "logger": "com.example.OrderService",
+  "msg": "Order id=42 created; user=1001"
 }
 ```
 

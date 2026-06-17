@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
-	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -54,10 +54,10 @@ const (
 )
 
 type reconciler struct {
-	init     *sync.WaitGroup
-	client   client.Client
-	operator packageOperator
-	status   *status.Service
+	init    *sync.WaitGroup
+	client  client.Client
+	runtime packageRuntime
+	status  *status.Service
 
 	moduleManager moduleManager
 	dc            dependency.Container
@@ -68,15 +68,16 @@ type moduleManager interface {
 	AreModulesInited() bool
 }
 
-type packageOperator interface {
-	UpdateApp(repo registry.Remote, inst packageoperator.App)
+type packageRuntime interface {
+	UpdateApp(repo registry.Remote, inst packageruntime.App)
 	RemoveApp(namespace, name string)
 	Status() *packagestatus.Service
+	Cleanup(ctx context.Context, preserve []packageruntime.PreservePackage)
 }
 
 func RegisterController(
 	runtimeManager manager.Manager,
-	operator packageOperator,
+	packageRuntime packageRuntime,
 	moduleManager moduleManager,
 	dc dependency.Container,
 	logger *log.Logger,
@@ -84,7 +85,7 @@ func RegisterController(
 	r := &reconciler{
 		init:          new(sync.WaitGroup),
 		client:        runtimeManager.GetClient(),
-		operator:      operator,
+		runtime:       packageRuntime,
 		moduleManager: moduleManager,
 		dc:            dc,
 		logger:        logger,
@@ -97,21 +98,15 @@ func RegisterController(
 		return fmt.Errorf("add preflight: %w", err)
 	}
 
-	r.status = status.NewService(r.client, operator.Status().GetStatus, r.logger)
-	r.status.Start(context.Background(), operator.Status().GetCh())
-
-	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		MaxConcurrentReconciles: maxConcurrentReconciles,
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("create controller: %w", err)
-	}
+	r.status = status.NewService(r.client, packageRuntime.Status().GetStatus, r.logger)
+	r.status.Start(context.Background(), packageRuntime.Status().Queue())
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&v1alpha1.Application{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(applicationController)
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
+		Complete(r)
 }
 
 func (r *reconciler) preflight(ctx context.Context) error {
@@ -124,6 +119,25 @@ func (r *reconciler) preflight(ctx context.Context) error {
 	}); err != nil {
 		return fmt.Errorf("init module manager: %w", err)
 	}
+
+	appsList := new(v1alpha1.ApplicationList)
+	if err := r.client.List(ctx, appsList); err != nil {
+		return fmt.Errorf("list applications: %w", err)
+	}
+
+	preserve := make([]packageruntime.PreservePackage, 0, len(appsList.Items))
+	for _, app := range appsList.Items {
+		preserve = append(preserve, packageruntime.PreservePackage{
+			PackageName: app.Spec.PackageName,
+			Repository:  app.Spec.PackageRepositoryName,
+			Version:     app.Spec.PackageVersion,
+
+			ReleaseName:      apps.BuildName(app.Namespace, app.Name),
+			ReleaseNamespace: app.Namespace,
+		})
+	}
+
+	r.runtime.Cleanup(ctx, preserve)
 
 	r.logger.Debug("controller is ready")
 
@@ -183,8 +197,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
 		logger.Debug("application package not found", slog.String("package", app.Spec.PackageName), log.Err(err))
 
-		// TODO: Completed = "false"
-
 		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
 
@@ -196,16 +208,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
 		logger.Debug("application package version not found", slog.String("apv", apvName), log.Err(err))
 
-		// TODO: Completed = "false"
-
 		return fmt.Errorf("get application package version '%s': %w", apv.Name, err)
 	}
 
 	// check if application package version is not draft
 	if apv.IsDraft() {
 		logger.Debug("application package version is in draft", slog.String("apv", apvName))
-
-		// TODO: Completed = "false"
 
 		return fmt.Errorf("application package version '%s' is draft", apvName)
 	}
@@ -301,7 +309,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
 	}
 
-	r.operator.UpdateApp(registry.BuildRemote(repo), packageoperator.App{
+	r.runtime.UpdateApp(registry.BuildRemote(repo), packageruntime.App{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
@@ -310,8 +318,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		},
 		Settings: app.Spec.Settings.GetMap(),
 	})
-
-	// TODO: Completed = "true"
 
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
@@ -382,7 +388,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	logger.Debug("delete application")
 
 	// call PackageOperator method (PackageRemover interface)
-	r.operator.RemoveApp(app.Namespace, app.Name)
+	r.runtime.RemoveApp(app.Namespace, app.Name)
 
 	patch := client.MergeFrom(app.DeepCopy())
 

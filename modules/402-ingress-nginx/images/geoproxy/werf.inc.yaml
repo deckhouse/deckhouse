@@ -10,6 +10,9 @@ git:
     - '**/*.go'
     - '**/*.sum'
     - '**/*.mod'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/geoproxy-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
@@ -39,6 +42,7 @@ import:
   add: /geoproxy
   to: /geoproxy
   before: setup
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/geoproxy"]

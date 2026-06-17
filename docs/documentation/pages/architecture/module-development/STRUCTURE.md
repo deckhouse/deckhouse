@@ -381,6 +381,7 @@ When using CEL validations, keep the following features in mind:
 
 - Validations can be placed at the root level or inside any property (including inside objects, arrays, and additionalProperties).
 - All parameters at the current level are available in expressions via the `self` variable.
+- The previous value at the same level is available in expressions via the `oldSelf` variable. Rules that reference `oldSelf` are treated as transition rules and are evaluated only on updates (when a previous value exists at this level); on the initial create or for newly added subtrees they are silently skipped. This is the same model as `x-kubernetes-validations`.
 - Validation works recursively: all nested objects, arrays, and maps can also contain their own `x-deckhouse-validations`.
 - Supported types: scalars, arrays, objects, and maps (`additionalProperties`).
 - If there are multiple validation errors, the user will see all messages from the corresponding rules.
@@ -424,6 +425,27 @@ Below are examples of complex validation rules described in CEL:
   ```yaml
   - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
     message: "All values must contain only letters"
+  ```
+
+- Marking a field as immutable using the `oldSelf` variable (transition rule):
+
+  ```yaml
+  type: object
+  properties:
+    clusterDomain:
+      type: string
+  x-deckhouse-validations:
+    - expression: "self.clusterDomain == oldSelf.clusterDomain"
+      message: "clusterDomain is immutable"
+  ```
+
+  The rule is only evaluated on updates: on the initial create (when there is no previous value) it is automatically skipped, just like a transition rule in `x-kubernetes-validations`.
+
+- Allowing a list to only grow (each existing item must be preserved on update):
+
+  ```yaml
+  - expression: "oldSelf.items.all(x, x in self.items)"
+    message: "items can only be appended to, not removed"
   ```
 
 ##### Scalar and array value validation
@@ -566,6 +588,7 @@ If `stage` is set to `Experimental`, the module cannot be enabled by default. To
 - `weight` — *Number.* The weight of the module. Used to determine the startup order among modules — the lower the weight, the earlier the module will start. Default: 900.
 
   The startup order can also be influenced by the list of [module dependencies](../dependencies/).
+- `critical` — *Boolean.* Marks the module as critical for cluster bootstrapping. These modules (if used in the cluster) are started during the initial boot process, before the cluster is considered fully operational. Other modules (not critical) start only after the cluster is fully ready for operation. Default: `false`.
 
 Example of metadata description for the `hello-world` module:
 

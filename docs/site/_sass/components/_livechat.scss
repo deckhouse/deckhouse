@@ -1,0 +1,46 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+.bx-livechat-wrapper {
+
+    @include breakpoints.max-w(m) {
+        height: 500px !important;
+        width: 400px !important;
+    }
+
+    @include breakpoints.max-w(s) {
+        height: 450px !important;
+        width: 300px !important;
+    }
+
+    @include breakpoints.max-w(xs) {
+        right: 23px !important;
+    }
+
+    @include breakpoints.max-w(s) {
+        height: 400px !important;
+        width: 250px !important;
+    }
+
+    &.bx-livechat-help-title {
+        font-size: 23px !important;
+
+        > div {
+            font-size: 13px !important;
+        }
+    }
+
+    &.bx-livechat-user {
+        max-width: 60px !important;
+    }
+ 
+}
+
+.b24-widget-button-position-bottom-right {
+    z-index: 99 !important;
+    
+    @include breakpoints.max-w(xs) {
+        right: 20px !important;
+    }
+}

@@ -1,0 +1,66 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: image-pull-policy
+spec:
+  suiteName: d8imagepullpolicy
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8imagepullpolicy
+      gatorBlock: d8imagepullpolicy
+      defaultObjectBase: ""
+      template: ../../templates/operation/image-pull-policy.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].imagePullPolicy
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+                    imagePullPolicy: Always
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: 'Container <nginx> in your Pod <disallowed> has invalid pull policy: <IfNotPresent>'
+          fields:
+            - path: spec.containers[].imagePullPolicy
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+                    imagePullPolicy: IfNotPresent

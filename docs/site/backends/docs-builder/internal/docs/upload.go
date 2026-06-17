@@ -151,7 +151,7 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
 	}
 
-	if strings.HasPrefix(fileName, "crds") ||
+	if isAllowedCRDPath(fileName) ||
 		fileName == "openapi" ||
 		fileName == "openapi/conversions" ||
 		fileName == "openapi/config-values.yaml" ||
@@ -164,6 +164,46 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	return "", false
+}
+
+// isAllowedCRDPath reports whether the given path under crds/ may be uploaded
+// to Hugo's data directory.
+//
+// Two constraints shape the rule:
+//
+//  1. Hugo loads everything in data/ as structured data and supports only
+//     yaml/yml/json/toml/xml formats. Non-data files (e.g. crds/README.md,
+//     crds/update.sh) fail the whole build with
+//     `unmarshal of format "" is not supported` and the module gets dropped
+//     as "broken".
+//  2. The docs-builder-template renders crds/ as a flat map — one file per
+//     CRD spec (see layouts/_partials/module-resources.html and
+//     openapi/format-crd.html). Subdirectories like crds/native/foo.yaml
+//     would be loaded into a nested map and silently corrupt the CRD section
+//     of the page.
+//
+// So we accept only:
+//   - the crds directory entry itself (needed so MkdirAll can create it);
+//   - direct children of crds/ with a data extension (.yaml/.yml/.json).
+//
+// Everything else (subdirectories and non-data files at any depth) is
+// rejected.
+func isAllowedCRDPath(path string) bool {
+	if path == "crds" {
+		return true
+	}
+
+	rest, ok := strings.CutPrefix(path, "crds/")
+	if !ok || strings.Contains(rest, "/") {
+		return false
+	}
+
+	switch filepath.Ext(rest) {
+	case ".yaml", ".yml", ".json":
+		return true
+	default:
+		return false
+	}
 }
 
 func hasBlockedPrefix(path string) bool {

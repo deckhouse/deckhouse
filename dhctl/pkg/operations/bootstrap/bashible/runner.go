@@ -1,0 +1,394 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package bashible
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os/exec"
+	"strings"
+	"time"
+
+	"go.opentelemetry.io/otel/trace"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/relay"
+)
+
+const (
+	endPipelineFileMark = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
+)
+
+var (
+	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(300, 1*time.Second)
+	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(300, 1*time.Second)
+	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(100, 1*time.Second)
+	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(30, 1*time.Second)
+)
+
+type LoopsParams struct {
+	AlreadyRun      retry.Params
+	Prepare         retry.Params
+	ExecuteBundle   retry.Params
+	ReadFileForInfo retry.Params
+}
+
+type NodeInfo struct {
+	NodeName string
+	NodeIP   string
+}
+
+type Runner struct {
+	loggerProvider log.LoggerProvider
+	nodeInterface  libcon.Interface
+	loopsParams    LoopsParams
+}
+
+func NewRunner(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *Runner {
+	return &Runner{
+		nodeInterface:  nodeInterface,
+		loggerProvider: loggerProvider,
+	}
+}
+
+func (r *Runner) WithLoopParams(p LoopsParams) *Runner {
+	r.loopsParams = p
+	return r
+}
+
+func (r *Runner) Prepare(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.Prepare")
+	defer span.End()
+
+	if err := r.createDir(ctx, app.NodeDeckhouseDirectoryPath, "0755"); err != nil {
+		return err
+	}
+
+	if err := r.createDir(ctx, app.DeckhouseNodeTmpPath, "1777"); err != nil {
+		return err
+	}
+
+	// in end of pipeline steps bashible write "OK" to this file
+	// we need creating it before because we do not want handle errors from cat
+	return r.touchFile(ctx, endPipelineFileMark)
+}
+
+func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
+	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.AlreadyRun, alreadyRunDefaultOpts...).
+		Clone(
+			retry.WithName("Checking whether Bashible already ran"),
+			retry.WithLogger(r.loggerProvider()),
+		)
+
+	isReady := false
+
+	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		cmd := r.nodeInterface.Command("cat", endPipelineFileMark)
+		cmd.Sudo(ctx)
+		cmd.WithTimeout(10 * time.Second)
+		stdout, stderr, err := cmd.Output(ctx)
+		if err != nil {
+			return err
+		}
+
+		r.loggerProvider().DebugF("cat %s stdout: '%s'; stderr: '%s'\n", endPipelineFileMark, stdout, stderr)
+
+		isReady = strings.Contains(string(stdout), "OK")
+
+		return nil
+	})
+
+	return isReady, err
+}
+
+func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
+	res := NodeInfo{}
+
+	infoFiles := map[string]*string{
+		"/var/lib/bashible/discovered-node-name": &res.NodeName,
+		"/var/lib/bashible/discovered-node-ip":   &res.NodeIP,
+	}
+
+	logger := r.loggerProvider()
+
+	for fileName, resPointer := range infoFiles {
+		loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ReadFileForInfo, readFileForInfoDefaultOpts...).
+			Clone(
+				retry.WithName("Read info file %s", fileName),
+				retry.WithLogger(logger),
+			)
+
+		err := retry.NewLoopWithParams(loopParams).
+			RunContext(ctx, func() error {
+				f := r.nodeInterface.File()
+				content, err := f.DownloadBytes(ctx, fileName)
+				if err != nil {
+					return err
+				}
+
+				*resPointer = strings.TrimSpace(string(content))
+				return nil
+			})
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &res, nil
+}
+
+type ExecuteBundleParams struct {
+	BundleDir     string
+	CommanderMode bool
+	GlobalOpts    *options.GlobalOptions
+}
+
+func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.ExecuteBundle")
+	defer span.End()
+
+	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ExecuteBundle, executeBundleDefaultOpts...).
+		Clone(
+			retry.WithName("Execute bundle"),
+			retry.WithLogger(r.loggerProvider()),
+		)
+
+	var relaySpanUpdater = func(trace.Span) {}
+
+	if telemetry.IsEnabled() {
+		stopRelay, updateRelaySpan, err := relay.InitRelay(ctx, relay.RelayParams{
+			TracerName: "bashible",
+			Span:       span,
+			Node:       r.nodeInterface,
+			Logger:     r.loggerProvider(),
+			GlobalOpts: params.GlobalOpts,
+		})
+		if err != nil {
+			return fmt.Errorf("init OTel relay: %w", err)
+		}
+		defer stopRelay()
+		relaySpanUpdater = updateRelaySpan
+
+		telemetryEnvs := fmt.Sprintf(
+			"DHCTL_TELEMETRY_ENABLED=%t\nOTEL_RELAY_ADDRESS=%s\n",
+			telemetry.IsEnabled(),
+			fmt.Sprintf("http://%s:%s", relay.RelayAddress, relay.RelayPort),
+		)
+		writeTelemetryCmd := r.nodeInterface.Command(fmt.Sprintf("echo -e %q > /var/lib/bashible/telemetry.env", telemetryEnvs))
+		writeTelemetryCmd.Sudo(ctx)
+
+		if err := writeTelemetryCmd.Run(ctx); err != nil {
+			r.loggerProvider().ErrorF("failed to write telemetry.env: %v", err)
+		}
+	}
+
+	return retry.NewLoopWithParams(loopParams).
+		RunContext(ctx, func() error {
+			// we do not need to restart tunnel because we have HealthMonitor
+			logger := r.loggerProvider()
+
+			logger.DebugF("Stopping Bashible if needed")
+
+			if err := r.cleanupPreviousBashibleIfNeed(ctx); err != nil {
+				return err
+			}
+
+			logger.DebugF("Starting Bashible bundle execution routine")
+
+			return r.attemptExecuteBundle(ctx, params, relaySpanUpdater)
+		})
+}
+
+func (r *Runner) attemptExecuteBundle(
+	ctx context.Context,
+	params ExecuteBundleParams,
+	spanUpdater func(trace.Span),
+) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.attemptExecuteBundle")
+	defer span.End()
+
+	// we need this, due to not create relay in every attempt, but we need to correct hook data from bashible
+	spanUpdater(span)
+
+	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
+	bundleCmd.WithCleanupAfterExec(false)
+	bundleCmd.Sudo()
+	parentDir := params.BundleDir + "/var/lib"
+	bundleDir := "bashible"
+
+	_, err := bundleCmd.ExecuteBundle(ctx, parentDir, bundleDir)
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			return fmt.Errorf("bundle '%s' error: %w\nstderr: %s", bundleDir, err, string(ee.Stderr))
+		}
+
+		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
+	}
+	return nil
+}
+
+func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
+	logger := r.loggerProvider()
+
+	return logger.Process("bootstrap", "Clean up previous Bashible run if needed", func() error {
+		logger.DebugF("Getting Bashible PIDs")
+		pids, err := r.getBashiblePIDs(ctx)
+		if err != nil {
+			return err
+		}
+
+		logger.DebugLn("Got Bashible PIDs: %v", pids)
+		if len(pids) == 0 {
+			logger.InfoF("Bashible instance not found. Starting it!")
+			return nil
+		}
+
+		if err := r.killBashible(ctx, pids); err != nil {
+			return err
+		}
+
+		return r.unlockBashible(ctx)
+	})
+}
+
+func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
+	logger := r.loggerProvider()
+
+	var psStrings []string
+	h := func(l string) {
+		psStrings = append(psStrings, l)
+	}
+
+	bashCmd := `ps a --no-headers -o args:64 -o "|%p"`
+	cmd := r.nodeInterface.Command("bash", "-c", bashCmd)
+	cmd.WithStdoutHandler(h)
+	if err := r.runCmd(ctx, cmd, bashCmd); err != nil {
+		return nil, err
+	}
+
+	var res []string
+	for _, l := range psStrings {
+		logger.DebugF("ps string: '%s'\n", l)
+
+		parts := strings.SplitN(l, "|", 2)
+		if len(parts) < 2 {
+			logger.DebugLn("Skipping ps line without PID")
+			continue
+		}
+
+		if !strings.Contains(parts[0], "bashible.sh") {
+			continue
+		}
+
+		pid := strings.TrimSpace(parts[1])
+		logger.DebugF("Found bashible PID: %s\n", pid)
+
+		res = append(res, pid)
+	}
+
+	return res, nil
+}
+
+func (r *Runner) killBashible(ctx context.Context, pids []string) error {
+	cmd := r.nodeInterface.Command("kill", pids...)
+	return r.runCmd(ctx, cmd, "kill"+strings.Join(pids, " "))
+}
+
+func (r *Runner) runCmd(ctx context.Context, cmd libcon.Command, desc string) error {
+	logger := r.loggerProvider()
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(10 * time.Second)
+	if err := cmd.Run(ctx); err != nil {
+		var ee *exec.ExitError
+		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
+		if errors.As(err, &ee) {
+			logger.DebugF("'%s' got exit code: %d and stderr %s", desc, ee.ExitCode(), string(ee.Stderr))
+			if ee.ExitCode() == 255 {
+				return err
+			}
+
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func (r *Runner) unlockBashible(ctx context.Context) error {
+	cmd := r.nodeInterface.Command("rm", "-f", "/var/lock/bashible")
+	return r.runCmd(ctx, cmd, "remove lock file")
+}
+
+func (r *Runner) createDir(ctx context.Context, dir, access string) error {
+	loopParams := r.prepareLoopParams(dir)
+
+	bashCmd := withUmask("mkdir -p -m %s %s", access, dir)
+
+	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		return r.runWithSH(ctx, bashCmd)
+	})
+	if err != nil {
+		return fmt.Errorf("Cannot create %s directory: %w", dir, err)
+	}
+
+	return nil
+}
+
+func (r *Runner) touchFile(ctx context.Context, file string) error {
+	loopParams := r.prepareLoopParams(file)
+
+	bashCmd := withUmask("touch %s", file)
+
+	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		return r.runWithSH(ctx, bashCmd)
+	})
+	if err != nil {
+		return fmt.Errorf("Cannot touch %s file: %w", file, err)
+	}
+
+	return nil
+}
+
+func (r *Runner) runWithSH(ctx context.Context, bashCmd string) error {
+	cmd := r.nodeInterface.Command("sh", "-c", bashCmd)
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(10 * time.Second)
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("ssh: %s: %w", bashCmd, err)
+	}
+
+	return nil
+}
+
+func (r *Runner) prepareLoopParams(target string) retry.Params {
+	return retry.SafeCloneOrNewParams(r.loopsParams.Prepare, prepareDefaultOpts...).
+		Clone(
+			retry.WithName("Prepare %s", target),
+			retry.WithLogger(r.loggerProvider()),
+		)
+}
+
+func withUmask(f string, args ...any) string {
+	return fmt.Sprintf("umask 0022 ; "+f, args...)
+}

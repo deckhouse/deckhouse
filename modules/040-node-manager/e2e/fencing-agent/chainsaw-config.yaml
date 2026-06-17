@@ -1,0 +1,17 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: fencing-agent-e2e
+spec:
+  timeouts:
+    apply: 30s
+    assert: 5m
+    error: 2m
+    delete: 30s
+    cleanup: 2m
+    exec: 30s
+  execution:
+    failFast: true
+    parallel: 1            # cluster-scoped resources must run sequentially
+  discovery:
+    testFile: chainsaw-test.yaml

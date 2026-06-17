@@ -45,11 +45,11 @@ const (
 	infraStateSecretNodeNameLabelKey  = "node.deckhouse.io/node-name"
 )
 
-var ErrNoInfrastructureState = errors.New("Infrastructure state is not found in outputs.")
+var ErrNoInfrastructureState = errors.New("Infrastructure state was not found in outputs.")
 
 func GetClusterStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) ([]byte, error) {
 	var st []byte
-	err := retry.NewLoop("Get Cluster infrastructure state from Kubernetes cluster", 5, 5*time.Second).
+	err := retry.NewLoop("Get Cluster infrastructure state from Kubernetes cluster", 25, 1*time.Second).
 		RunContext(ctx, func() error {
 			clusterStateSecret, err := kubeCl.CoreV1().Secrets(global.D8SystemNamespace).Get(ctx, manifests.InfrastructureClusterStateName, metav1.GetOptions{})
 			if err != nil {
@@ -68,7 +68,7 @@ func GetClusterStateFromCluster(ctx context.Context, kubeCl *client.KubernetesCl
 
 func GetClusterUUID(ctx context.Context, kubeCl *client.KubernetesClient) (string, error) {
 	var clusterUUID string
-	err := retry.NewLoop("Get Cluster UUID from the Kubernetes cluster", 5, 5*time.Second).
+	err := retry.NewLoop("Get Cluster UUID from the Kubernetes cluster", 25, 1*time.Second).
 		RunContext(ctx, func() error {
 			uuidConfigMap, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Get(ctx, "d8-cluster-uuid", metav1.GetOptions{})
 			if err != nil {
@@ -82,12 +82,13 @@ func GetClusterUUID(ctx context.Context, kubeCl *client.KubernetesClient) (strin
 }
 
 func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, action string, additionalLabels ...kubernetes.LabelSelector) ([]*v1.Secret, error) {
-	selectors := []kubernetes.LabelSelector{
-		{
-			Label:    manifests.NodeInfrastructureStateLabelKey,
-			Operator: selection.Exists,
-		},
-	}
+	selectors := make([]kubernetes.LabelSelector, 0, 1+len(additionalLabels))
+
+	selectors = append(selectors, kubernetes.LabelSelector{
+
+		Label:    manifests.NodeInfrastructureStateLabelKey,
+		Operator: selection.Exists,
+	})
 
 	selectors = append(selectors, additionalLabels...)
 
@@ -104,7 +105,7 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 
 	processName := fmt.Sprintf("Get nodes infrastructure state from Kubernetes cluster for %s", action)
 
-	err = retry.NewLoop(processName, 15, 5*time.Second).RunContext(ctx, func() error {
+	err = retry.NewLoop(processName, 75, 1*time.Second).RunContext(ctx, func() error {
 		timeoutCtx, cancel := defaultRequestTimeoutCtx(ctx)
 		defer cancel()
 
@@ -118,17 +119,17 @@ func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.Kuberne
 
 			name := nodeState.Labels[infraStateSecretNodeNameLabelKey]
 			if name == "" {
-				return fmt.Errorf("Cannot determine Node name for %q secret", secretName)
+				return fmt.Errorf("Cannot determine Node name for secret %q", secretName)
 			}
 
 			if _, ok := nodeState.Labels[global.InfrastructureStateBackupLabelKey]; ok {
-				log.DebugF("Found backup state secret %s for node: %s. Skip.\n", secretName, name)
+				log.DebugF("Found backup state secret %s for node: %s. Skipping.\n", secretName, name)
 				continue
 			}
 
 			nodeGroup := nodeState.Labels[infraStateSecretNodeGroupLabelKey]
 			if nodeGroup == "" {
-				return fmt.Errorf("can't determine NodeGroup for %q secret", nodeState.GetName())
+				return fmt.Errorf("Cannot determine NodeGroup for secret %q", nodeState.GetName())
 			}
 			secrets = append(secrets, &nodeState)
 		}
@@ -168,12 +169,12 @@ func (p HasNodeStateInClusterParams) String() string {
 func HasNodeStateInCluster(ctx context.Context, kubeCl *client.KubernetesClient, params HasNodeStateInClusterParams) (bool, error) {
 	nodeName := params.Name
 	if nodeName == "" {
-		return false, fmt.Errorf("HasNodeStateInCluster: internal error. node name not passed")
+		return false, fmt.Errorf("HasNodeStateInCluster: internal error. node name was not passed")
 	}
 
 	nodeGroup := params.NodeGroup
 	if nodeGroup == "" {
-		return false, fmt.Errorf("HasNodeStateInCluster: internal error. node group not passed for %s", nodeName)
+		return false, fmt.Errorf("HasNodeStateInCluster: internal error. node group was not passed for %s", nodeName)
 	}
 
 	selectors := []kubernetes.LabelSelector{
@@ -211,9 +212,13 @@ func HasNodeStateInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	}
 }
 
-func GetMasterNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string][]byte, error) {
+func GetMasterNodesStateFromCluster(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx) (map[string][]byte, error) {
 	ngSelector := getInfraStateSecretsSelectorForNodeGroup(global.MasterNodeGroupName)
-	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeCl, "all control-planes", ngSelector)
+	kubeClient, err := kubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
+	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeClient, "all control-planes", ngSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +230,7 @@ func GetMasterNodesStateFromCluster(ctx context.Context, kubeCl *client.Kubernet
 
 	states, ok := statesForNgMap[global.MasterNodeGroupName]
 	if !ok {
-		return nil, fmt.Errorf("GetMasterNodesStateFromCluster: states for master node group not found")
+		return nil, fmt.Errorf("GetMasterNodesStateFromCluster: states for the master node group were not found")
 	}
 
 	return states.State, nil
@@ -239,12 +244,12 @@ func extractNodesStatesFromSecrets(secrets []*v1.Secret) (map[string]state.NodeG
 
 		name := nodeState.Labels[infraStateSecretNodeNameLabelKey]
 		if name == "" {
-			return nil, fmt.Errorf("Cannot determine Node name for %q secret", secretName)
+			return nil, fmt.Errorf("Cannot determine Node name for secret %q", secretName)
 		}
 
 		nodeGroup := nodeState.Labels[infraStateSecretNodeGroupLabelKey]
 		if nodeGroup == "" {
-			return nil, fmt.Errorf("Cannot determine NodeGroup for %q secret", secretName)
+			return nil, fmt.Errorf("Cannot determine NodeGroup for secret %q", secretName)
 		}
 
 		if _, ok := extractedState[nodeGroup]; !ok {
@@ -264,7 +269,13 @@ func extractNodesStatesFromSecrets(secrets []*v1.Secret) (map[string]state.NodeG
 	return extractedState, nil
 }
 
-func SaveNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {
+func SaveNodeInfrastructureState(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	nodeName, nodeGroup string,
+	tfState, settings []byte,
+	logger log.Logger,
+) error {
 	if len(tfState) == 0 {
 		return ErrNoInfrastructureState
 	}
@@ -274,17 +285,24 @@ func SaveNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesC
 		Manifest: func() interface{} {
 			return manifests.SecretWithNodeInfrastructureState(nodeName, nodeGroup, tfState, settings)
 		},
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets("d8-system").
+				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
 			return err
 		},
-		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets("d8-system").
+				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+
 			return err
 		},
 	}
-	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 45, 10*time.Second).
-		WithLogger(logger).RunContext(ctx, task.CreateOrUpdate)
+	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 450, 1*time.Second).
+		WithLogger(logger).
+		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
 }
 
 func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
@@ -303,27 +321,37 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getInfrastructureStateManifest,
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+				_, err := kubeCl.
+					CoreV1().Secrets("d8-system").
+					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+				_, err := kubeCl.
+					CoreV1().Secrets("d8-system").
+					Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+
 				return err
 			},
 		},
 		{
 			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 			Manifest: getDevicePathManifest,
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+				_, err := kubeCl.
+					CoreV1().Secrets("d8-system").
+					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 				data, err := json.Marshal(manifest.(*v1.Secret))
 				if err != nil {
 					return err
 				}
+
 				_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
 					ctx,
 					"d8-masters-kubernetes-data-device-path",
@@ -336,15 +364,19 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for master Node %s", nodeName), 45, 10*time.Second).RunContext(ctx, func() error {
-		var allErrs *multierror.Error
-		for _, task := range tasks {
-			if err := task.CreateOrUpdate(); err != nil {
-				allErrs = multierror.Append(allErrs, err)
-			}
-		}
-		return allErrs.ErrorOrNil()
-	})
+	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for master Node %s", nodeName), 450, 1*time.Second).
+		RunContext(
+			ctx,
+			func() error {
+				var allErrs *multierror.Error
+				for _, task := range tasks {
+					if err := task.CreateOrUpdate(ctx); err != nil {
+						allErrs = multierror.Append(allErrs, err)
+					}
+				}
+				return allErrs.ErrorOrNil()
+			},
+		)
 }
 
 func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, outputs *infrastructure.PipelineOutputs) error {
@@ -355,17 +387,29 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-cluster-terraform-state"`,
 		Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets("d8-system").
+				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
 			return err
 		},
-		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets("d8-system").
+				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+
 			return err
 		},
 	}
 
-	err := retry.NewLoop("Save Cluster infrastructure state", 45, 10*time.Second).RunContext(ctx, task.CreateOrUpdate)
+	err := retry.NewLoop("Save Cluster infrastructure state", 450, 1*time.Second).
+		RunContext(
+			ctx,
+			func() error {
+				return task.CreateOrUpdate(ctx)
+			},
+		)
 	if err != nil {
 		return err
 	}
@@ -379,7 +423,7 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		return err
 	}
 
-	return retry.NewLoop("Update cloud discovery data", 45, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Update cloud discovery data", 450, 1*time.Second).RunContext(ctx, func() error {
 		_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
 			ctx,
 			"d8-provider-cluster-configuration",
@@ -392,7 +436,7 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 }
 
 func DeleteInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, secretName string) error {
-	return retry.NewLoop(fmt.Sprintf("Delete infrastructure state %s", secretName), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Delete infrastructure state %s", secretName), 450, 1*time.Second).
 		RunContext(ctx, func() error {
 			return kubeCl.CoreV1().Secrets("d8-system").Delete(ctx, secretName, metav1.DeleteOptions{})
 		})

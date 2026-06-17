@@ -1,4 +1,7 @@
 {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+{{- $version := $.Values.istio.internal.globalVersion }}
+{{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -13,15 +16,32 @@ data:
       "name": "istio-cni",
       "type": "istio-cni",
       "log_level": "info",
-      "log_uds_address": "__LOG_UDS_ADDRESS__",
+      "log_uds_address": "/var/run/istio-cni/log.sock",
+      {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+      "cni_event_address": "/var/run/istio-cni/pluginevent.sock",
+      {{- end }}
       "kubernetes": {
         "kubeconfig": "__KUBECONFIG_FILEPATH__",
         "cni_bin_dir": "/opt/cni/bin",
         "exclude_namespaces": [
-          "d8-istio",
           "d8-system",
           "kube-system"
         ]
       }
     }
+  AMBIENT_ENABLED: {{ ternary "true" "false" (and $supportsAmbient $.Values.istio.ambient.enabled) | quote }}
+  AMBIENT_DNS_CAPTURE: "true"
+  AMBIENT_IPV6: "true"
+  AMBIENT_RECONCILE_POD_RULES_ON_STARTUP: "false"
+  CHAINED_CNI_PLUGIN: "true"
+  CNI_NET_DIR: "/etc/cni/net.d"
+  EXCLUDE_NAMESPACES: "d8-system,kube-system"
+  LOG_LEVEL: "debug"
+  REPAIR_ENABLED: "true"
+  REPAIR_LABEL_PODS: "false"
+  REPAIR_DELETE_PODS: "true"
+  REPAIR_REPAIR_PODS: "false"
+  REPAIR_INIT_CONTAINER_NAME: "istio-validation"
+  REPAIR_BROKEN_POD_LABEL_KEY: "cni.istio.io/uninitialized"
+  REPAIR_BROKEN_POD_LABEL_VALUE: "true"
 {{- end }}

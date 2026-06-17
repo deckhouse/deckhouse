@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: max-revision-history-limit
+spec:
+  testDirectory: max-revision-history-limit
+  suite:
+    expectedTestBlockNames:
+      - d8-revision-history-limit

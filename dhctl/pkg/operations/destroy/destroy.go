@@ -17,12 +17,13 @@ package destroy
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
@@ -34,9 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type Destroyer interface {
@@ -52,12 +50,13 @@ type infraDestroyer interface {
 }
 
 type metaConfigPopulator interface {
-	PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, globalOptions *options.GlobalOptions) (*config.MetaConfig, error)
 }
 
 type Params struct {
-	NodeInterface node.Interface
-	StateCache    dhctlstate.Cache
+	StateCache   dhctlstate.Cache
+	SSHProvider  libcon.SSHProvider
+	KubeProvider libcon.KubeProvider
 
 	// todo pass pipeline provider here
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
@@ -75,6 +74,11 @@ type Params struct {
 	TmpDir         string
 	LoggerProvider log.LoggerProvider
 	IsDebug        bool
+
+	// Options carries the per-operation parsed configuration. RPC handlers
+	// must populate this with a fresh *options.Options to avoid sharing global
+	// state between concurrent requests.
+	Options *options.Options
 }
 
 func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
@@ -144,6 +148,7 @@ type ClusterDestroyer struct {
 
 	d8Destroyer   *deckhouse.Destroyer
 	infraProvider *infraDestroyerProvider
+	globalOptions *options.GlobalOptions
 }
 
 // NewClusterDestroyer
@@ -153,26 +158,10 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		return nil, fmt.Errorf("State cache is required")
 	}
 
-	wrapper, ok := params.NodeInterface.(*ssh.NodeInterfaceWrapper)
-	if !ok {
-		return nil, fmt.Errorf("Cluster destruction requires usage of ssh node interface")
-	}
-
-	sshClientProviderOnceFunc := sync.OnceValues(func() (node.SSHClient, error) {
-		sshClient := wrapper.Client()
-		if err := sshClient.Start(); err != nil {
-			return nil, err
-		}
-
-		return sshClient, nil
-	})
-
-	sshClientProvider := sshclient.NewDefaultSSHProviderWithFunc(sshClientProviderOnceFunc).WithLoggerProvider(params.LoggerProvider)
-
 	logger := log.SafeProvideLogger(params.LoggerProvider)
 
-	if app.ProgressFilePath != "" {
-		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	if params.Options != nil && params.Options.Global.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(params.Options.Global.ProgressFilePath)
 	}
 
 	pec := params.getExecutionContext()
@@ -186,7 +175,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 	phaseActionProvider := phases.NewDefaultPhaseActionProviderFromPipeline(pipeline)
 
-	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(sshClientProvider)
+	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(params.KubeProvider, params.SSHProvider)
 
 	terraStateLoader, kubeProvider, err := initStateLoader(ctx, params.getStateLoaderParams(), kubeProvider)
 	if err != nil {
@@ -223,11 +212,13 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 					TmpDir:                 params.TmpDir,
 					IsDebug:                params.IsDebug,
 					Logger:                 logger,
+					GlobalOptions:          &params.Options.Global,
 				},
 			), nil
 		},
 
-		sshClientProvider: sshClientProvider,
+		sshClientProvider: params.SSHProvider,
+		sshUser:           params.Options.SSH.User,
 		tmpDir:            params.TmpDir,
 	}
 
@@ -239,11 +230,12 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 		d8Destroyer:   d8Destroyer,
 		infraProvider: infraProvider,
+		globalOptions: &params.Options.Global,
 	}, nil
 }
 
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	return d.pipeline.Run(func(switcher phases.DefaultPipelinePhaseSwitcher) error {
+	return d.pipeline.Run(ctx, func(switcher phases.DefaultPipelinePhaseSwitcher) error {
 		return d.destroy(ctx, autoApprove)
 	})
 }
@@ -254,7 +246,7 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 	}
 
 	// populate cluster state in cache
-	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx)
+	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.globalOptions)
 	if err != nil {
 		return err
 	}
@@ -295,7 +287,7 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
-	d.stateCache.Clean()
+	d.stateCache.Clean(ctx)
 
 	return nil
 }

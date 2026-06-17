@@ -9,7 +9,6 @@ import:
   add: /node-controller
   to: /node-controller
   before: setup
-git:
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -27,14 +26,32 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
+- add: /{{ $.ModulePath }}go_lib/dependency/k8s/drain
+  to: /go_lib/dependency/k8s/drain
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
+  before: install
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go_lib/dependency/k8s/drain
+  to: /go_lib/dependency/k8s/drain
   before: install
 mount:
 {{ include "mount points for golang builds" . }}

@@ -40,7 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "controller",
-			ApiVersion: "deckhouse.io/v1",
+			ApiVersion: "deckhouse.io/v2",
 			Kind:       "IngressNginxController",
 			FilterFunc: applyControllerFilter,
 		},
@@ -81,44 +81,68 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	setDefaultEmptyObject("hstsOptions", spec)
 	setDefaultEmptyObject("geoIP2", spec)
-	setDefaultEmptyObject("resourcesRequests", spec)
+	setDefaultEmptyObject("resourcesManagement", spec)
 
-	mode, _, err := unstructured.NestedString(spec, "resourcesRequests", "mode")
+	mode, _, err := unstructured.NestedString(spec, "resourcesManagement", "mode")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get resourcesRequests.mode from ingress controller spec: %v", err)
+		return nil, fmt.Errorf("cannot get resourcesManagement.mode from ingress controller spec: %v", err)
 	}
 
 	if mode == "" {
-		err := unstructured.SetNestedField(spec, "VPA", "resourcesRequests", "mode")
+		err := unstructured.SetNestedField(spec, "VPA", "resourcesManagement", "mode")
 		if err != nil {
-			return nil, fmt.Errorf("cannot set resourcesRequests.mode from ingress controller spec: %v", err)
+			return nil, fmt.Errorf("cannot set resourcesManagement.mode from ingress controller spec: %v", err)
 		}
 	}
 
-	resourcesRequests, _, err := unstructured.NestedMap(spec, "resourcesRequests")
+	resourcesManagement, _, err := unstructured.NestedMap(spec, "resourcesManagement")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get resourcesRequests from ingress controller spec: %v", err)
+		return nil, fmt.Errorf("cannot get resourcesManagement from ingress controller spec: %v", err)
 	}
 
-	setDefaultEmptyObject("static", resourcesRequests)
-	setDefaultEmptyObject("vpa", resourcesRequests)
+	setDefaultEmptyObject("static", resourcesManagement)
+	setDefaultEmptyObject("vpa", resourcesManagement)
 
-	vpa, _, err := unstructured.NestedMap(resourcesRequests, "vpa")
+	staticResources, _, err := unstructured.NestedMap(resourcesManagement, "static")
 	if err != nil {
-		return nil, fmt.Errorf("cannot get resourcesRequests.vpa from ingress controller spec: %v", err)
+		return nil, fmt.Errorf("cannot get resourcesManagement.static from ingress controller spec: %v", err)
+	}
+
+	setDefaultEmptyObject("requests", staticResources)
+	setDefaultEmptyObject("limits", staticResources)
+	err = unstructured.SetNestedMap(resourcesManagement, staticResources, "static")
+	if err != nil {
+		return nil, fmt.Errorf("cannot set resourcesManagement.static from ingress controller spec: %v", err)
+	}
+
+	vpa, _, err := unstructured.NestedMap(resourcesManagement, "vpa")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get resourcesManagement.vpa from ingress controller spec: %v", err)
 	}
 
 	setDefaultEmptyObject("cpu", vpa)
 	setDefaultEmptyObject("memory", vpa)
 
-	err = unstructured.SetNestedMap(resourcesRequests, vpa, "vpa")
+	vpamode, _, err := unstructured.NestedString(vpa, "mode")
 	if err != nil {
-		return nil, fmt.Errorf("cannot set resourcesRequests.vpa from ingress controller spec: %v", err)
+		return nil, fmt.Errorf("cannot get resourcesManagement.vpa.mode from ingress controller spec: %v", err)
 	}
 
-	err = unstructured.SetNestedMap(spec, resourcesRequests, "resourcesRequests")
+	if vpamode == "" {
+		err := unstructured.SetNestedField(vpa, "Initial", "mode")
+		if err != nil {
+			return nil, fmt.Errorf("cannot set resourcesManagement.vpa.mode from ingress controller spec: %v", err)
+		}
+	}
+
+	err = unstructured.SetNestedMap(resourcesManagement, vpa, "vpa")
 	if err != nil {
-		return nil, fmt.Errorf("cannot set resourcesRequests from ingress controller spec: %v", err)
+		return nil, fmt.Errorf("cannot set resourcesManagement.vpa from ingress controller spec: %v", err)
+	}
+
+	err = unstructured.SetNestedMap(spec, resourcesManagement, "resourcesManagement")
+	if err != nil {
+		return nil, fmt.Errorf("cannot set resourcesManagement from ingress controller spec: %v", err)
 	}
 
 	logLevel, found, err := unstructured.NestedString(spec, "controllerLogLevel")
@@ -192,23 +216,6 @@ func setInternalValues(_ context.Context, input *go_hook.HookInput) error {
 			"controller_name":    controller.Name,
 			"controller_version": version,
 		})
-
-		nginxEnabledMemoryProfiling, npeFound, err := unstructured.NestedBool(controller.Spec, "nginxProfilingEnabled")
-
-		if err != nil {
-			input.Logger.Error(fmt.Sprintf("cannot get nginxProfilingEnabled from ingress controller spec: %v", err))
-			continue
-		}
-
-		if npeFound && nginxEnabledMemoryProfiling {
-			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 1, map[string]string{
-				"controller_name": controller.Name,
-			})
-		} else {
-			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 0, map[string]string{
-				"controller_name": controller.Name,
-			})
-		}
 
 		// fire alert if maxmindAccountID not set.
 		_, licFound, err := unstructured.NestedString(controller.Spec, "geoIP2", "maxmindLicenseKey")

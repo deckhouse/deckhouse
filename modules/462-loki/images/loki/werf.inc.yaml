@@ -48,12 +48,13 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/loki
-    to: /usr/bin/loki
-    after: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/loki
+  to: /usr/bin/loki
+  after: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/loki"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

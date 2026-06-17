@@ -1,18 +1,16 @@
-/*
-Copyright 2025 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package modulepackageversion
 
@@ -20,76 +18,89 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	controllerName          = "d8-module-package-version-controller"
+	controllerName = "d8-module-package-version-controller"
+
+	// maxConcurrentReconciles is set to 1 to serialize status and label patches,
+	// preventing conflicts on the same ModulePackageVersion resource.
 	maxConcurrentReconciles = 1
-	requeueTime             = 30 * time.Second
-	defaultPathSegment      = "version"
-	legacyPathSegment       = "release"
+
+	defaultRequeue = 15 * time.Second
+
+	// defaultPathSegment is the registry sub-path for v2 module images.
+	defaultPathSegment = "version"
+
+	// legacyPathSegment is the registry sub-path for legacy module images
+	// produced before the registry layout was unified under "version".
+	legacyPathSegment = "release"
 )
 
+// reconciler promotes draft ModulePackageVersion resources by loading package
+// metadata from the registry image and removing the draft label.
 type reconciler struct {
-	client client.Client
-	dc     dependency.Container
-	logger *log.Logger
+	client   client.Client
+	logger   *log.Logger
+	registry *registry.Service
+	dc       dependency.Container
 }
 
-func RegisterController(
-	runtimeManager manager.Manager,
-	dc dependency.Container,
-	logger *log.Logger,
-) error {
+// RegisterController creates and registers the ModulePackageVersion controller.
+// It watches ModulePackageVersion resources and reconciles draft versions by
+// fetching metadata from the package registry and promoting them to non-draft status.
+func RegisterController(runtimeManager manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	r := &reconciler{
-		client: runtimeManager.GetClient(),
-		dc:     dc,
-		logger: logger,
-	}
-
-	mpvController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		MaxConcurrentReconciles: maxConcurrentReconciles,
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("create controller: %w", err)
+		client:   runtimeManager.GetClient(),
+		logger:   logger,
+		registry: registry.NewService(dc, logger),
+		dc:       dc,
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&v1alpha1.ModulePackageVersion{}).
-		Complete(mpvController)
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
+		Complete(r)
 }
 
+// Reconcile handles a single ModulePackageVersion event. Draft resources are
+// promoted by loading metadata; deleted resources have their finalizers removed
+// once no Module references remain (usedByCount == 0).
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", req.Name))
 
-	logger.Debug("reconciling ModulePackageVersion")
+	logger.Debug("reconcile resource")
 
 	mpv := new(v1alpha1.ModulePackageVersion)
 	if err := r.client.Get(ctx, req.NamespacedName, mpv); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Debug("module package version not found")
+			logger.Debug("resource not found")
+
 			return ctrl.Result{}, nil
 		}
 
-		logger.Warn("failed to get module package version", log.Err(err))
+		logger.Warn("failed to get resource", log.Err(err))
+
 		return ctrl.Result{}, err
 	}
 
@@ -98,235 +109,238 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.handleDelete(ctx, mpv)
 	}
 
-	// add finalizer if not set
-	if !controllerutil.ContainsFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer) {
-		logger.Debug("adding finalizer to module package version")
-
-		patch := client.MergeFrom(mpv.DeepCopy())
-		controllerutil.AddFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer)
-
-		if err := r.client.Patch(ctx, mpv, patch); err != nil {
-			return ctrl.Result{}, fmt.Errorf("add finalizer to ModulePackageVersion %s: %w", mpv.Name, err)
-		}
-	}
-
-	// skip non-draft resources
-	if !mpv.IsDraft() {
-		logger.Debug("package is not draft")
-		return ctrl.Result{}, nil
-	}
-
-	if err := r.handleCreateOrUpdate(ctx, logger, mpv); err != nil {
+	// handle create/update events
+	if err := r.handleCreateOrUpdate(ctx, mpv); err != nil {
 		logger.Warn("failed to handle module package version", log.Err(err))
-		return ctrl.Result{RequeueAfter: requeueTime}, nil
+
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) handleCreateOrUpdate(ctx context.Context, logger *log.Logger, mpv *v1alpha1.ModulePackageVersion) error {
-	original := mpv.DeepCopy()
+// handleCreateOrUpdate processes draft ModulePackageVersions through a promotion pipeline:
+//  1. Fetch the package image from the registry using the repository config and
+//     either the default "version" sub-path or the legacy "release" sub-path
+//  2. Extract metadata (package.yaml or module.yaml, changelog.yaml, version.json)
+//     from the image tar
+//  3. Populate status.packageMetadata with the extracted information
+//  4. Set the MetadataLoaded condition to True
+//  5. Check if the package image exists in the registry and label accordingly
+//  6. Add a finalizer and remove the draft label, completing promotion
+//
+// Non-draft resources are skipped since they have already been promoted.
+func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
+	logger := r.logger.With(
+		slog.String("name", mpv.Name),
+		slog.String("package", mpv.Spec.PackageName),
+		slog.String("version", mpv.Spec.PackageVersion),
+		slog.String("repository", mpv.Spec.PackageRepositoryName))
 
-	logger.Debug("handling ModulePackageVersion")
-	defer logger.Debug("handle ModulePackageVersion complete")
+	// Non-draft MPVs have already been promoted — nothing to do.
+	if !mpv.IsDraft() {
+		logger.Debug("package is not draft")
 
-	// Get registry credentials from PackageRepository resource
-	var packageRepo v1alpha1.PackageRepository
-	if err := r.client.Get(ctx, types.NamespacedName{Name: mpv.Spec.PackageRepositoryName}, &packageRepo); err != nil {
-		r.markEnrichmentFailed(
+		return nil
+	}
+
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: mpv.Spec.PackageRepositoryName}, repo); err != nil {
+		original := mpv.DeepCopy()
+		r.setMetadataLoadedConditionFalse(
 			mpv,
 			v1alpha1.ModulePackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get packageRepository %s: %s", mpv.Spec.PackageRepositoryName, err.Error()),
+			fmt.Sprintf("failed to get repository '%s': %s", mpv.Spec.PackageRepositoryName, err.Error()),
 		)
 
-		if patchErr := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); patchErr != nil {
-			return fmt.Errorf("patch status ModulePackageVersion %s: %w", mpv.Name, patchErr)
+		if err := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
 		}
 
-		return fmt.Errorf("get packageRepository %s: %w", mpv.Spec.PackageRepositoryName, err)
+		return fmt.Errorf("get repository '%s': %w", mpv.Spec.PackageRepositoryName, err)
 	}
 
-	// Determine registry path segment: "version" (default) or "release" (legacy)
-	pathSegment := defaultPathSegment
+	// Pick "version" by default; legacy images live under "release".
+	segment := defaultPathSegment
 	if mpv.Labels[v1alpha1.ModulePackageVersionLabelLegacy] == "true" {
-		pathSegment = legacyPathSegment
+		segment = legacyPathSegment
 	}
 
-	registryPath := path.Join(packageRepo.Spec.Registry.Repo, mpv.Spec.PackageName, pathSegment)
+	remote := registry.BuildRemote(repo)
+	version := mpv.Spec.PackageVersion
+	versionPath := filepath.Join(mpv.Spec.PackageName, segment)
 
-	logger.Debug(
-		"registry path",
-		slog.String("path", registryPath),
-		slog.String("segment", pathSegment),
-	)
+	logger.Debug("registry path",
+		slog.String("path", versionPath),
+		slog.String("segment", segment))
 
-	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
-		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
-		CA:           packageRepo.Spec.Registry.CA,
-		Scheme:       packageRepo.Spec.Registry.Scheme,
-	}, r.logger)
-
-	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
+	img, err := r.registry.GetImageReader(ctx, remote, versionPath, version)
 	if err != nil {
-		r.markEnrichmentFailed(
-			mpv,
-			v1alpha1.ModulePackageVersionConditionReasonGetRegistryClientErr,
-			fmt.Sprintf("failed to get registry client: %s", err.Error()),
-		)
-
-		if patchErr := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); patchErr != nil {
-			return fmt.Errorf("patch status ModulePackageVersion %s: %w", mpv.Name, patchErr)
-		}
-
-		return fmt.Errorf("get registry client for %s: %w", mpv.Name, err)
-	}
-
-	img, err := registryClient.Image(ctx, mpv.Spec.PackageVersion)
-	if err != nil {
-		r.markEnrichmentFailed(
+		original := mpv.DeepCopy()
+		r.setMetadataLoadedConditionFalse(
 			mpv,
 			v1alpha1.ModulePackageVersionConditionReasonGetImageErr,
-			fmt.Sprintf("failed to get image: %s", err.Error()),
+			fmt.Sprintf("get image: %s", err.Error()),
 		)
 
-		if patchErr := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); patchErr != nil {
-			return fmt.Errorf("patch status ModulePackageVersion %s: %w", mpv.Name, patchErr)
+		if err := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
 		}
 
-		return fmt.Errorf("get image for %s: %w", mpv.Name+":"+mpv.Spec.PackageVersion, err)
+		return fmt.Errorf("get image for '%s': %w", mpv.Name, err)
 	}
 
-	meta, err := r.fetchModuleMetadata(ctx, img)
+	defer img.Close()
+
+	meta, err := r.parseVersionMetadataByImage(ctx, img)
 	if err != nil {
-		r.markEnrichmentFailed(
+		original := mpv.DeepCopy()
+		r.setMetadataLoadedConditionFalse(
 			mpv,
 			v1alpha1.ModulePackageVersionConditionReasonFetchErr,
-			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
+			fmt.Sprintf("fetch package metadata: %s", err.Error()),
 		)
 
-		if patchErr := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); patchErr != nil {
-			return fmt.Errorf("patch status ModulePackageVersion %s: %w", mpv.Name, patchErr)
+		if err := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
 		}
 
-		return fmt.Errorf("failed to fetch package metadata %s: %w", mpv.Name, err)
+		return fmt.Errorf("fetch package metadata '%s': %w", mpv.Name, err)
 	}
 
-	mpv = enrichWithMetadata(mpv, meta)
-	r.markEnriched(mpv)
+	original := mpv.DeepCopy()
+	setPackageMetadata(mpv, meta)
+	r.setMetadataLoadedConditionTrue(mpv)
 
-	logger.Debug("patch module package version status")
 	if err = r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch status ModulePackageVersion %s: %w", mpv.Name, err)
+		return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
 	}
 
-	// Remove draft label
 	original = mpv.DeepCopy()
+
+	if mpv.Labels == nil {
+		mpv.Labels = make(map[string]string)
+	}
+
+	// Check whether the package image exists in the registry and label accordingly.
+	// The image may legitimately not exist (e.g. metadata-only bundle), so both outcomes are valid.
+	if _, err = r.registry.GetImageDigest(ctx, remote, mpv.Spec.PackageName, version); err != nil {
+		mpv.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry] = "false"
+	} else {
+		mpv.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry] = "true"
+	}
+
+	// Finalizer prevents deletion while Modules reference this version.
+	if !controllerutil.ContainsFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer) {
+		controllerutil.AddFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer)
+	}
+
 	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)
 
 	if err = r.client.Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch ModulePackageVersion %s: %w", mpv.Name, err)
+		return fmt.Errorf("patch '%s': %w", mpv.Name, err)
 	}
 
 	return nil
 }
 
+// handleDelete removes the finalizer from the ModulePackageVersion once it is
+// no longer referenced by any Module (usedByCount == 0). While references exist,
+// the reconcile is requeued every 15 seconds to wait for Modules to release the MPV.
 func (r *reconciler) handleDelete(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) (ctrl.Result, error) {
-	logger := r.logger.With(slog.String("name", mpv.Name))
-	logger.Debug("deleting ModulePackageVersion")
+	logger := r.logger.With(
+		slog.String("name", mpv.Name),
+		slog.String("package", mpv.Spec.PackageName),
+		slog.String("version", mpv.Spec.PackageVersion),
+		slog.String("repository", mpv.Spec.PackageRepositoryName))
 
 	if mpv.Status.UsedByCount > 0 {
-		logger.Warn(
-			"module package version is used by modules, skipping deletion",
-			slog.Int("used_by_count", mpv.Status.UsedByCount),
-		)
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: defaultRequeue}, nil
 	}
 
 	if controllerutil.ContainsFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer) {
 		logger.Debug("removing finalizer from module package version")
 
-		patch := client.MergeFrom(mpv.DeepCopy())
+		original := mpv.DeepCopy()
+
 		controllerutil.RemoveFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer)
 
-		if err := r.client.Patch(ctx, mpv, patch); err != nil {
-			return ctrl.Result{}, fmt.Errorf("remove finalizer from ModulePackageVersion %s: %w", mpv.Name, err)
+		if err := r.client.Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
+			logger.Warn("failed to remove finalizer", log.Err(err))
+
+			return ctrl.Result{}, fmt.Errorf("remove finalizer from '%s': %w", mpv.Name, err)
 		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func enrichWithMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata) *v1alpha1.ModulePackageVersion {
+// setMetadataLoadedConditionTrue sets the MetadataLoaded condition to True, clearing reason and message.
+func (r *reconciler) setMetadataLoadedConditionTrue(mpv *v1alpha1.ModulePackageVersion) {
+	metautils.SetStatusCondition(&mpv.Status.Conditions, metav1.Condition{
+		Type:               v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Succeeded",
+		ObservedGeneration: mpv.Generation,
+		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
+	})
+}
+
+// setMetadataLoadedConditionFalse sets the MetadataLoaded condition to False with a reason and message.
+func (r *reconciler) setMetadataLoadedConditionFalse(mpv *v1alpha1.ModulePackageVersion, reason, message string) {
+	metautils.SetStatusCondition(&mpv.Status.Conditions, metav1.Condition{
+		Type:               v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded,
+		Status:             metav1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: mpv.Generation,
+		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
+	})
+}
+
+// setPackageMetadata projects parsed module metadata onto the ModulePackageVersion
+// status. Dispatches to the v2 package.yaml path or the legacy module.yaml path,
+// then attaches the changelog if present. A nil meta is a no-op so callers may
+// invoke unconditionally after a best-effort parse.
+func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata) {
 	if meta == nil {
-		return mpv
+		return
 	}
 
-	// v2 format: package.yaml
-	if meta.PackageDefinition != nil {
-		mpv = enrichWithPackageDefinition(mpv, meta.PackageDefinition)
-	} else if meta.ModuleDefinition != nil {
-		// legacy format: module.yaml
-		mpv = enrichWithModuleDefinition(mpv, meta.ModuleDefinition)
+	switch {
+	case meta.packageDefinition != nil:
+		setFromPackageDefinition(mpv, meta.packageDefinition)
+	case meta.moduleDefinition != nil:
+		setFromModuleDefinition(mpv, meta.moduleDefinition)
 	}
 
-	if mpv.Status.PackageMetadata != nil {
-		mpv.Status.PackageMetadata.Changelog = meta.Changelog
+	mpv.Status.PackageMetadata.Changelog = &v1alpha1.PackageChangelog{
+		Features: meta.changelog.Features,
+		Fixes:    meta.changelog.Fixes,
 	}
-
-	return mpv
 }
 
-func enrichWithPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *PackageDefinition) *v1alpha1.ModulePackageVersion {
+// setFromPackageDefinition projects a parsed v2 package.yaml onto the MPV status.
+// Mirrors the APV controller: only fields present on dto.ModuleDefinition are
+// surfaced (stage, descriptions, requirements). Module-only status fields
+// (category, licensing, version-compatibility) are intentionally not populated
+// here — extend dto.ModuleDefinition if you need to surface them.
+func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.ModuleDefinition) {
 	mpv.Status.PackageMetadata = &v1alpha1.ModulePackageVersionStatusMetadata{
-		Category: pd.Category,
-		Stage:    pd.Stage,
+		Stage: pd.Stage,
+		Description: &v1alpha1.PackageDescription{
+			Ru: pd.Descriptions.Ru,
+			En: pd.Descriptions.En,
+		},
+		Requirements: requirementsToCR(pd.Requirements),
 	}
-
-	if pd.Description != nil {
-		mpv.Status.PackageMetadata.Description = &v1alpha1.PackageDescription{
-			Ru: pd.Description.Ru,
-			En: pd.Description.En,
-		}
-	}
-
-	if pd.Licensing != nil {
-		mpv.Status.PackageMetadata.Licensing = &v1alpha1.PackageLicensing{
-			Editions: convertLicensingEditions(pd.Licensing.Editions),
-		}
-	}
-
-	if pd.Requirements != nil {
-		mpv.Status.PackageMetadata.Requirements = &v1alpha1.PackageRequirements{
-			Deckhouse:  pd.Requirements.Deckhouse,
-			Kubernetes: pd.Requirements.Kubernetes,
-			Modules:    pd.Requirements.Modules,
-		}
-	}
-
-	if pd.VersionCompatibilityRules != nil {
-		if pd.VersionCompatibilityRules.Upgrade.From != "" || pd.VersionCompatibilityRules.Downgrade.To != "" {
-			mpv.Status.PackageMetadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
-				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
-					From:             pd.VersionCompatibilityRules.Upgrade.From,
-					AllowSkipPatches: int(pd.VersionCompatibilityRules.Upgrade.AllowSkipPatches),
-					AllowSkipMinor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMinor),
-					AllowSkipMajor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMajor),
-				},
-				Downgrade: &v1alpha1.PackageVersionCompatibilityRule{
-					To:               pd.VersionCompatibilityRules.Downgrade.To,
-					AllowSkipPatches: int(pd.VersionCompatibilityRules.Downgrade.AllowSkipPatches),
-					AllowSkipMinor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMinor),
-					AllowSkipMajor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMajor),
-					MaxRollback:      int(pd.VersionCompatibilityRules.Downgrade.MaxRollback),
-				},
-			}
-		}
-	}
-
-	return mpv
 }
 
-func enrichWithModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletypes.Definition) *v1alpha1.ModulePackageVersion {
+// setFromModuleDefinition projects a legacy module.yaml onto the MPV status.
+// The legacy format carries flat deckhouse/kubernetes strings and a single
+// parentModules map. Dependencies whose constraint ends in the "!optional"
+// suffix are surfaced as conditional; the rest become mandatory.
+func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletypes.Definition) {
 	mpv.Status.PackageMetadata = &v1alpha1.ModulePackageVersionStatusMetadata{
 		Stage: def.Stage,
 	}
@@ -339,58 +353,147 @@ func enrichWithModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *modulet
 	}
 
 	if def.Requirements != nil {
-		mpv.Status.PackageMetadata.Requirements = &v1alpha1.PackageRequirements{
-			Deckhouse:  def.Requirements.Deckhouse,
-			Kubernetes: def.Requirements.Kubernetes,
-			Modules:    def.Requirements.ParentModules,
-		}
+		mpv.Status.PackageMetadata.Requirements = legacyRequirementsToCR(def.Requirements)
 	}
-
-	return mpv
 }
 
-func convertLicensingEditions(editions map[string]PackageEdition) map[string]v1alpha1.PackageEdition {
-	if editions == nil {
+// requirementsToCR projects parsed package requirements onto the v1alpha1
+// PackageRequirements CR shape. Returns nil when no requirements are configured
+// so the status field omits cleanly via omitempty.
+func requirementsToCR(r dto.Requirements) *v1alpha1.PackageRequirements {
+	kubernetes := versionConstraintToCR(r.Kubernetes.Constraint)
+	deckhouse := versionConstraintToCR(r.Deckhouse.Constraint)
+	modulesCR := moduleRequirementsToCR(r.Modules)
+
+	if kubernetes == nil && deckhouse == nil && modulesCR == nil {
 		return nil
 	}
-	result := make(map[string]v1alpha1.PackageEdition)
-	for k, v := range editions {
-		result[k] = v1alpha1.PackageEdition{
-			Available: v.Available,
-		}
+
+	return &v1alpha1.PackageRequirements{
+		Kubernetes: kubernetes,
+		Deckhouse:  deckhouse,
+		Modules:    modulesCR,
 	}
-	return result
 }
 
-func (r *reconciler) markEnriched(mpv *v1alpha1.ModulePackageVersion) {
-	r.setCondition(mpv, metav1.ConditionTrue, "MetadataLoaded", "")
-}
+// legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
+// conditional (skippable if the parent module is absent). See
+// go_lib/dependency/extenders/moduledependency for the original parser.
+const legacyOptionalSuffix = "!optional"
 
-func (r *reconciler) markEnrichmentFailed(mpv *v1alpha1.ModulePackageVersion, reason, message string) {
-	r.setCondition(mpv, metav1.ConditionFalse, reason, message)
-}
+// legacyRequirementsToCR projects a legacy v1alpha1.ModuleRequirements (flat strings
+// plus a name → constraint map) onto the new PackageRequirements CR shape. A constraint
+// ending in "!optional" maps to a conditional dependency; the suffix is stripped from
+// the surfaced constraint string.
+func legacyRequirementsToCR(req *v1alpha1.ModuleRequirements) *v1alpha1.PackageRequirements {
+	kubernetes := versionConstraintToCR(req.Kubernetes)
+	deckhouse := versionConstraintToCR(req.Deckhouse)
 
-func (r *reconciler) setCondition(mpv *v1alpha1.ModulePackageVersion, status metav1.ConditionStatus, reason, message string) {
-	condType := v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded
-	now := metav1.NewTime(r.dc.GetClock().Now())
+	var moduleReqs *v1alpha1.PackageModulesRequirements
+	if len(req.ParentModules) > 0 {
+		var (
+			mandatory   []v1alpha1.PackageModuleDependency
+			conditional []v1alpha1.PackageModuleDependency
+		)
 
-	for idx, cond := range mpv.Status.Conditions {
-		if cond.Type == condType {
-			if cond.Status != status {
-				mpv.Status.Conditions[idx].LastTransitionTime = now
-				mpv.Status.Conditions[idx].Status = status
+		for name, constraint := range req.ParentModules {
+			raw, optional := strings.CutSuffix(constraint, legacyOptionalSuffix)
+			dep := v1alpha1.PackageModuleDependency{
+				Name:       name,
+				Constraint: strings.TrimSpace(raw),
 			}
-			mpv.Status.Conditions[idx].Reason = reason
-			mpv.Status.Conditions[idx].Message = message
-			return
+
+			if optional {
+				conditional = append(conditional, dep)
+			} else {
+				mandatory = append(mandatory, dep)
+			}
+		}
+
+		if len(mandatory) > 0 || len(conditional) > 0 {
+			moduleReqs = &v1alpha1.PackageModulesRequirements{
+				Mandatory:   mandatory,
+				Conditional: conditional,
+			}
 		}
 	}
 
-	mpv.Status.Conditions = append(mpv.Status.Conditions, metav1.Condition{
-		Type:               condType,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: now,
-	})
+	if kubernetes == nil && deckhouse == nil && moduleReqs == nil {
+		return nil
+	}
+
+	return &v1alpha1.PackageRequirements{
+		Kubernetes: kubernetes,
+		Deckhouse:  deckhouse,
+		Modules:    moduleReqs,
+	}
+}
+
+// versionConstraintToCR wraps a raw semver constraint string into the v1alpha1
+// VersionConstraint CR shape, returning nil when the string is empty.
+func versionConstraintToCR(raw string) *v1alpha1.VersionConstraint {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	return &v1alpha1.VersionConstraint{Constraint: raw}
+}
+
+// moduleRequirementsToCR projects dto.ModulesRequirements onto the v1alpha1
+// PackageModulesRequirements CR shape, returning nil when mandatory, conditional,
+// anyOf, and noneOf are all empty.
+func moduleRequirementsToCR(mr dto.ModulesRequirements) *v1alpha1.PackageModulesRequirements {
+	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 && len(mr.AnyOf) == 0 && len(mr.NoneOf) == 0 {
+		return nil
+	}
+
+	return &v1alpha1.PackageModulesRequirements{
+		Mandatory:   moduleDependenciesToCR(mr.Mandatory),
+		Conditional: moduleDependenciesToCR(mr.Conditional),
+		AnyOf:       moduleGroupsToCR(mr.AnyOf),
+		NoneOf:      moduleGroupsToCR(mr.NoneOf),
+	}
+}
+
+// moduleDependenciesToCR projects a slice of dto.ModuleDependency onto the
+// v1alpha1 PackageModuleDependency CR slice. Returns nil for empty input so
+// the parent CR omitempty fields render cleanly.
+func moduleDependenciesToCR(deps []dto.ModuleDependency) []v1alpha1.PackageModuleDependency {
+	if len(deps) == 0 {
+		return nil
+	}
+
+	out := make([]v1alpha1.PackageModuleDependency, 0, len(deps))
+	for _, dep := range deps {
+		out = append(out, v1alpha1.PackageModuleDependency{
+			Name:       dep.Name,
+			Constraint: dep.Constraint,
+		})
+	}
+
+	return out
+}
+
+// moduleGroupsToCR projects a slice of dto.ModuleGroup onto the v1alpha1
+// PackageModuleGroup CR slice. Used for both anyOf and noneOf — the shape is
+// identical at the CR layer; the bucket semantics live on the field they're
+// attached to. Returns nil for empty input so the parent CR omitempty field
+// renders cleanly. The legacy module.yaml path does not carry anyOf or noneOf
+// groups and never reaches this function — only the v2 package.yaml path
+// (setFromPackageDefinition) emits group metadata.
+func moduleGroupsToCR(groups []dto.ModuleGroup) []v1alpha1.PackageModuleGroup {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	out := make([]v1alpha1.PackageModuleGroup, 0, len(groups))
+	for _, g := range groups {
+		out = append(out, v1alpha1.PackageModuleGroup{
+			Name:        g.Name,
+			Description: g.Description,
+			Modules:     moduleDependenciesToCR(g.Modules),
+		})
+	}
+
+	return out
 }

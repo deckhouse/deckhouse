@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,13 +23,12 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
+	otcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/ptr"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -38,8 +37,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type bootstrapParams struct {
@@ -167,6 +166,9 @@ func (s *Service) bootstrapSafe(ctx context.Context, p *bootstrapParams) (result
 }
 
 func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.BootstrapResult {
+	ctx, span := telemetry.StartSpan(ctx, "grpc.bootstrap")
+	defer span.End()
+
 	var err error
 
 	cleanuper := callback.NewCallback()
@@ -174,10 +176,12 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -188,7 +192,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		postBootstrapScriptPath string
 		cleanup                 func() error
 	)
-	err = loggerFor.LogProcess("default", "Preparing configuration", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing configuration", func(ctx context.Context) error {
 		for _, cfg := range []string{
 			p.request.ClusterConfig,
 			p.request.InitConfig,
@@ -230,7 +234,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	}
 
 	var initialState phases.DhctlState
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
@@ -243,31 +247,14 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
-	var sshClient node.SSHClient
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.params.SchemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
 		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
+			return fmt.Errorf("preparing providers: %w", err)
 		}
-
-		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-
-		if !govalue.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
-			err = sshClient.Start()
-			if err != nil {
-				return fmt.Errorf("cannot start sshClient: %w", err)
-			}
-		}
 
 		return nil
 	})
@@ -283,8 +270,12 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		}
 	}
 
+	opts.Global.ConfigPaths = configPaths
+	opts.Bootstrap.PostBootstrapScriptPath = postBootstrapScriptPath
+
+	span.SetAttributes(opts.ToSpanAttributes()...)
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		NodeInterface:              ssh.NewNodeInterfaceWrapper(sshClient),
 		InitialState:               initialState,
 		ResetInitialState:          true,
 		DisableBootstrapClearCache: true,
@@ -292,21 +283,25 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		OnProgressFunc:             p.sendProgress,
 		CommanderMode:              p.request.Options.CommanderMode,
 		CommanderUUID:              commanderUUID,
-		ConfigPaths:                configPaths,
-		ResourcesTimeout:           p.request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:           p.request.Options.DeckhouseTimeout.AsDuration(),
-		PostBootstrapScriptPath:    postBootstrapScriptPath,
-		UseTfCache:                 ptr.To(true),
-		AutoApprove:                ptr.To(true),
 		KubernetesInitParams:       nil,
 		TmpDir:                     s.params.TmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		SSHProviderInitializer:     sshProviderInitializer,
+		KubeProvider:               kubeProvider,
+		Options:                    opts,
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
+
 	err = errors.Join(bootstrapErr, stateErr)
+
+	if err != nil {
+		span.SetStatus(otcodes.Error, err.Error())
+	} else {
+		span.SetStatus(otcodes.Ok, "")
+	}
 
 	return &pb.BootstrapResult{State: string(state), Err: util.ErrToString(err)}
 }

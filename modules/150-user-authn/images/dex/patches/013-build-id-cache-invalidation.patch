@@ -1,0 +1,223 @@
+diff --git a/server/templates.go b/server/templates.go
+index 1f9da468..09f68e1b 100644
+--- a/server/templates.go
++++ b/server/templates.go
+@@ -1,6 +1,7 @@
+ package server
+ 
+ import (
++	"crypto/sha256"
+ 	"errors"
+ 	"fmt"
+ 	"html/template"
+@@ -9,8 +10,10 @@ import (
+ 	"net/http"
+ 	"net/url"
+ 	"path"
++	"runtime/debug"
+ 	"sort"
+ 	"strings"
++	"sync"
+ 
+ 	"github.com/Masterminds/sprig/v3"
+ )
+@@ -269,24 +272,71 @@ func (n byName) Len() int           { return len(n) }
+ func (n byName) Less(i, j int) bool { return n[i].Name < n[j].Name }
+ func (n byName) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+ 
++var (
++	// buildID is used as a cache invalidating GET-parameter in the header template's URL to the main CSS file.
++	// It is represented as a substring of sha256 hash taken from the combination of the following:
++	//
++	// * Git commit hash used to build this dex binary;
++	// * Main module revison string as defined by Go compiler (usually this matches the git tag name);
++	// * Status of the VCS working tree: clean or dirty.
++	//
++	// This is used to prevent browser caches getting stuck between dex updates and can be
++	// extended onto other resources if deemed nececcsary.
++	buildID     string
++	buildIDOnce sync.Once
++)
++
++// buildIdentifier performs lazy initialization and returns a short string that
++// somewhat uniquely identifies this specific build of dex. It can be used as a
++// cache key to prevent browsers from using stale assets after an upgrade.
++//
++// See the comment on buildID field for details.
++func buildIdentifier() string {
++	buildIDOnce.Do(func() {
++		version := "dev"
++		revision := "unknown"
++		modifiedWorktree := "false"
++
++		if info, ok := debug.ReadBuildInfo(); ok {
++			if v := info.Main.Version; v != "" {
++				version = v
++			}
++			for _, s := range info.Settings {
++				if s.Key == "vcs.revision" {
++					revision = s.Value
++				}
++				if s.Key == "vcs.modified" {
++					modifiedWorktree = s.Value
++				}
++			}
++		}
++
++		sum := sha256.Sum256([]byte(version + revision + modifiedWorktree))
++		buildID = fmt.Sprintf("%x", sum[:4])
++	})
++	return buildID
++}
++
+ func (t *templates) device(r *http.Request, w http.ResponseWriter, postURL string, userCode string, lastWasInvalid bool) error {
+ 	if lastWasInvalid {
+ 		w.WriteHeader(http.StatusBadRequest)
+ 	}
+ 	data := struct {
+-		PostURL  string
+-		UserCode string
+-		Invalid  bool
+-		ReqPath  string
+-	}{postURL, userCode, lastWasInvalid, r.URL.Path}
++		PostURL         string
++		UserCode        string
++		Invalid         bool
++		ReqPath         string
++		BuildIdentifier string
++	}{postURL, userCode, lastWasInvalid, r.URL.Path, buildIdentifier()}
+ 	return renderTemplate(w, t.deviceTmpl, data)
+ }
+ 
+ func (t *templates) deviceSuccess(r *http.Request, w http.ResponseWriter, clientName string) error {
+ 	data := struct {
+-		ClientName string
+-		ReqPath    string
+-	}{clientName, r.URL.Path}
++		ClientName      string
++		ReqPath         string
++		BuildIdentifier string
++	}{clientName, r.URL.Path, buildIdentifier()}
+ 	return renderTemplate(w, t.deviceSuccessTmpl, data)
+ }
+ 
+@@ -295,22 +345,24 @@ func (t *templates) totpVerify(r *http.Request, w http.ResponseWriter, postURL,
+ 		w.WriteHeader(http.StatusUnauthorized)
+ 	}
+ 	data := struct {
+-		PostURL   string
+-		Invalid   bool
+-		Issuer    string
+-		Connector string
+-		QRCode    string
+-		ReqPath   string
+-	}{postURL, lastWasInvalid, issuer, connector, qrCode, r.URL.Path}
++		PostURL         string
++		Invalid         bool
++		Issuer          string
++		Connector       string
++		QRCode          string
++		ReqPath         string
++		BuildIdentifier string
++	}{postURL, lastWasInvalid, issuer, connector, qrCode, r.URL.Path, buildIdentifier()}
+ 	return renderTemplate(w, t.tmplTOTPVerify, data)
+ }
+ 
+ func (t *templates) login(r *http.Request, w http.ResponseWriter, connectors []connectorInfo) error {
+ 	sort.Sort(byName(connectors))
+ 	data := struct {
+-		Connectors []connectorInfo
+-		ReqPath    string
+-	}{connectors, r.URL.Path}
++		Connectors      []connectorInfo
++		ReqPath         string
++		BuildIdentifier string
++	}{connectors, r.URL.Path, buildIdentifier()}
+ 	return renderTemplate(w, t.loginTmpl, data)
+ }
+ 
+@@ -319,13 +371,14 @@ func (t *templates) password(r *http.Request, w http.ResponseWriter, postURL, la
+ 		w.WriteHeader(http.StatusUnauthorized)
+ 	}
+ 	data := struct {
+-		PostURL        string
+-		BackLink       string
+-		Username       string
+-		UsernamePrompt string
+-		Invalid        bool
+-		ReqPath        string
+-	}{postURL, backLink, lastUsername, usernamePrompt, lastWasInvalid, r.URL.Path}
++		PostURL         string
++		BackLink        string
++		Username        string
++		UsernamePrompt  string
++		Invalid         bool
++		ReqPath         string
++		BuildIdentifier string
++	}{postURL, backLink, lastUsername, usernamePrompt, lastWasInvalid, r.URL.Path, buildIdentifier()}
+ 	return renderTemplate(w, t.passwordTmpl, data)
+ }
+ 
+@@ -379,10 +432,12 @@ func (t *templates) passwordChange(r *http.Request, w http.ResponseWriter, param
+ 		PasswordPolicy struct {
+ 			ComplexityRequirements string
+ 		}
+-		ReqPath string
++		ReqPath         string
++		BuildIdentifier string
+ 	}{
+-		Username: params.Username,
+-		ReqPath:  r.URL.String(),
++		Username:        params.Username,
++		ReqPath:         r.URL.String(),
++		BuildIdentifier: buildIdentifier(),
+ 	}
+ 
+ 	switch params.ChangeReason {
+@@ -427,20 +482,22 @@ func (t *templates) approval(r *http.Request, w http.ResponseWriter, authReqID,
+ 	}
+ 	sort.Strings(accesses)
+ 	data := struct {
+-		User      string
+-		Client    string
+-		AuthReqID string
+-		Scopes    []string
+-		ReqPath   string
+-	}{username, clientName, authReqID, accesses, r.URL.Path}
++		User            string
++		Client          string
++		AuthReqID       string
++		Scopes          []string
++		ReqPath         string
++		BuildIdentifier string
++	}{username, clientName, authReqID, accesses, r.URL.Path, buildIdentifier()}
+ 	return renderTemplate(w, t.approvalTmpl, data)
+ }
+ 
+ func (t *templates) oob(r *http.Request, w http.ResponseWriter, code string) error {
+ 	data := struct {
+-		Code    string
+-		ReqPath string
+-	}{code, r.URL.Path}
++		Code            string
++		ReqPath         string
++		BuildIdentifier string
++	}{code, r.URL.Path, buildIdentifier()}
+ 	return renderTemplate(w, t.oobTmpl, data)
+ }
+ 
+diff --git a/web/templates/header.html b/web/templates/header.html
+index 8cf744e5..4b4a6f69 100644
+--- a/web/templates/header.html
++++ b/web/templates/header.html
+@@ -5,8 +5,8 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+     <title>{{ issuer }}</title>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-    <link href="{{ url .ReqPath "static/main.css" }}" rel="stylesheet">
+-    <link href="{{ url .ReqPath "theme/styles.css" }}" rel="stylesheet">
++    <link href="{{ printf "%s?cache=%s" (url .ReqPath "static/main.css") .BuildIdentifier }}" rel="stylesheet">
++    <link href="{{ printf "%s?cache=%s" (url .ReqPath "theme/styles.css") .BuildIdentifier }}" rel="stylesheet">
+     <link rel="icon" href="{{ url .ReqPath "theme/favicon.png" }}">
+   </head>
+ 

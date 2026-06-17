@@ -9,7 +9,7 @@ layout: sidebar-guides
 This guide describes how to deploy a Deckhouse Kubernetes Platform cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
 
 {% alert level="warning" %}
-Note that installing DKP in a private environment is available in the following editions: SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Note that installing DKP in a private environment is available in the following editions: SE, SE+, EE.
 {% endalert %}
 
 ## Private environment specifics
@@ -608,6 +608,7 @@ docker ps
 
 {% offtopic title="Example command output..." %}
 
+<!-- markdownlint-disable MD031 -->
 ```console
 CONTAINER ID   IMAGE                                 COMMAND                  CREATED         STATUS                   PORTS                                                                                NAMES
 df1636bd1295   goharbor/nginx-photon:v2.14.1         "nginx -g 'daemon of…"   3 minutes ago   Up 3 minutes (healthy)   0.0.0.0:80->8080/tcp, [::]:80->8080/tcp, 0.0.0.0:443->8443/tcp, [::]:443->8443/tcp   nginx
@@ -620,6 +621,8 @@ a78d9a1a5b0b   goharbor/harbor-db:v2.14.1            "/docker-entrypoint.…"   
 ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   3 minutes ago   Up 3 minutes (healthy)                                                                                        redis
 9330bcce48be   goharbor/harbor-log:v2.14.1           "/bin/sh -c /usr/loc…"   3 minutes ago   Up 3 minutes (healthy)   127.0.0.1:1514->10514/tcp                                                            harbor-log
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endofftopic %}
 
@@ -779,6 +782,7 @@ Depending on your Internet connection, the process may take 30 to 40 minutes.
 
 Example log when all platform components are pulled:
 
+<!-- markdownlint-disable MD031 -->
 ```text
 Feb 26 17:49:04.520 INFO  ║║ [822 / 824] Pulling registry.deckhouse.io/deckhouse/ee@sha256:4e5c17098d2a884cc971676fa9a7980f0d784a787d21e113d28a72da96ea8b2b 
 Feb 26 17:49:05.099 INFO  ║║ [823 / 824] Pulling registry.deckhouse.io/deckhouse/ee@sha256:d229564f423a1ca7a59e0be28a71218e362cc8f07d979ce63a15bb505c6ccb40 
@@ -786,6 +790,8 @@ Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.io/deckh
 Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
 
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Example log when modules are packed:
 
@@ -1220,23 +1226,6 @@ proxy:
   httpsProxy: https://proxy.local:3128
   noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
-# Initial cluster bootstrap settings for Deckhouse.
-# https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  # Docker registry address that hosts Deckhouse images.
-  imagesRepo: harbor.example/deckhouse/ee
-  # Docker registry credentials string.
-  registryDockerCfg: <DOCKER_CFG_BASE64>
-  # Registry access scheme (HTTP or HTTPS).
-  registryScheme: HTTPS
-  # Root CA certificate used to validate the registry certificate (if the registry uses a self-signed certificate).
-  registryCA: |
-    -----BEGIN CERTIFICATE-----
-    ...
-    -----END CERTIFICATE-----
----
 # deckhouse module settings.
 # https://deckhouse.io/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
@@ -1250,6 +1239,22 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
+    # Settings for accessing the container registry with Deckhouse images.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Address of the Docker registry where the Deckhouse images are located.
+        imagesRepo: <IMAGES_REPO_URI>
+        # The username for authenticating with the container registry.
+        username: <USERNAME>
+        # The password for authenticating with the container image repository.
+        password: <PASSWORD>
+        scheme: HTTPS
+        # The root CA certificate (in PEM format) for validating the container registry’s server certificate.
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
 ---
 # Global Deckhouse settings.
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
@@ -1527,11 +1532,14 @@ sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 
 Starting the Ingress controller after DKP installation may take some time. Before you proceed, make sure the Ingress controller is running (run the following command on the master node):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Creating a user to access the cluster web-interface
 

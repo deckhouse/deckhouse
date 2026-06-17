@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: storage-class
+spec:
+  objectKind: PersistentVolumeClaim
+  objectFields:
+    - path: spec.storageClassName
+      level: pod
+      description: PersistentVolumeClaim storageClassName must be in allowed storageClassNames list.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

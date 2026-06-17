@@ -21,7 +21,27 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func SyslogEncoding() *DynamicTransform {
+func syslogLabelsTransform(sortedLabelKeys []string) (*DynamicTransform, error) {
+	rule, err := vrl.SyslogLabelsRule.Render(vrl.Args{
+		"labels": sortedLabelKeys,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "syslog_labels",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        rule,
+			"drop_on_abort": false,
+		},
+	}, nil
+}
+
+func syslogEncoding() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "syslog_encoding",

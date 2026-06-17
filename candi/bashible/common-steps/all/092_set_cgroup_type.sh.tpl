@@ -21,7 +21,7 @@ fi
 
 node=$(bb-d8-node-name)
 cgroup="$(stat -fc %T /sys/fs/cgroup)" || {
-  bb-log-error "failed to get cgroup version from node $node"
+  bb-log-error "Failed to detect cgroup version on node $node"
   exit 1
 }
 
@@ -30,13 +30,13 @@ if [[ "$cgroup" != "cgroup2fs" && "$cgroup" != "tmpfs" ]]; then
 fi
 
 max_attempts=5
-until bb-kubectl --kubeconfig $kubeconfig label --overwrite=true node "$node" node.deckhouse.io/cgroup="$cgroup"; do
+until bb-curl-helper-patch-node-metadata "$node" "labels" "node.deckhouse.io/cgroup=$cgroup"; do
   attempt=$(( attempt + 1 ))
   if [ "$attempt" -gt "$max_attempts" ]; then
-    bb-log-error "failed to label node $node after $max_attempts attempts"
+    bb-log-error "Failed to label node $node after $max_attempts attempts"
     exit 1
   fi
-  echo "Waiting for label node $node (attempt $attempt of $max_attempts)..."
+  echo "Retrying to set cgroup label on node $node (attempt $attempt of $max_attempts)"
   sleep 5
 done
 {{- end  }}

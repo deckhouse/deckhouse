@@ -91,7 +91,7 @@ func TestCheckTimeDrift(t *testing.T) {
 			mockCmd := &mocks.MockCommand{}
 			tt.setupMock(mockNode, mockCmd)
 
-			check := TimeDriftCheck{Node: mockNode}
+			check := TimeDriftCheck{NodeInterface: mockNode}
 			err := check.Run(context.Background())
 
 			if tt.expectedError != "" {

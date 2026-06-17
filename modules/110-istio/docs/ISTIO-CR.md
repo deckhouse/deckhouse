@@ -32,10 +32,12 @@ Allows you to configure request routing:
 * Parameters of the resulting directions:
   * The new host;
   * The new URI;
-  * If the host is defined using [DestinationRule](#destinationrule), then requests can be sent to subsets;
+  * If the host is defined using [DestinationRule](#destinationrule), then requests can be sent to `subsets`;
   * Timeout and retry settings.
 
-> **Caution!** Istio must be aware of the `destination`; if you use an external API, register it via [ServiceEntry](#serviceentry).
+{% alert level="warning" %}
+Istio must be aware of the `destination`; if you use an external API, register it via [ServiceEntry](#serviceentry).
+{% endalert %}
 
 ### ServiceEntry
 
@@ -55,7 +57,7 @@ There are two authentication methods:
 
 [Reference](https://istio.io/v1.21/docs/reference/config/security/peer_authentication/).
 
-Allows you to define the mTLS strategy for an individual NS. Defines how traffic will be tunneled (or not) to the sidecar. Each mTLS request can automatically identify the source and allows you to use it in the authorization rules.
+Allows you to define the mTLS strategy for an individual namespace. Defines how traffic will be tunneled (or not) to the sidecar. Each mTLS request can automatically identify the source and allows you to use it in the authorization rules.
 
 ### RequestAuthentication
 
@@ -65,13 +67,15 @@ Allows you to configure JWT authentication for requests.
 
 ## Authorization
 
-**Caution!** Authorization without the use of mTLS or JWT authentication will not work fully. In this case, you will be able to use only basic arguments, such as `source.ip` and `request.headers`, for defining policies.
+{% alert level="warning" %}
+Authorization without the use of mTLS or JWT authentication will not work fully. In this case, you will be able to use only basic arguments, such as `source.ip` and `request.headers`, for defining policies.
+{% endalert %}
 
 ### AuthorizationPolicy
 
 [Reference](https://istio.io/v1.21/docs/reference/config/security/authorization-policy/).
 
-Enables and defines access control to the workload. The `AuthorizationPolicy` custom resource supports both ALLOW and DENY rules. The following decision-making algorithm is used if at least one policy is defined for a workload:
+Enables and defines access control to the `workload`. The `AuthorizationPolicy` custom resource supports both ALLOW and DENY rules. The following decision-making algorithm is used if at least one policy is defined for a workload:
 
 * The request is denied if it falls under the DENY policy.
 * The request is allowed if there are no ALLOW policies for the service.
@@ -98,4 +102,4 @@ The following arguments are used in the decision-making algorithm:
 
 [Reference](https://istio.io/v1.21/docs/reference/config/networking/sidecar/)
 
-This resource limits the number of services for which information is transmitted to the istio-proxy sidecar.
+This resource limits the number of services for which information is transmitted to the `istio-proxy` sidecar.

@@ -78,7 +78,7 @@ var file_services_proto_rawDesc = []byte{
 	0x61, 0x6e, 0x64, 0x65, 0x72, 0x44, 0x65, 0x74, 0x61, 0x63, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65,
 	0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e, 0x43, 0x6f, 0x6d, 0x6d, 0x61,
 	0x6e, 0x64, 0x65, 0x72, 0x44, 0x65, 0x74, 0x61, 0x63, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x00, 0x28, 0x01, 0x30, 0x01, 0x32, 0xf2, 0x05, 0x0a, 0x0a, 0x56, 0x61, 0x6c,
+	0x73, 0x65, 0x22, 0x00, 0x28, 0x01, 0x30, 0x01, 0x32, 0xc3, 0x06, 0x0a, 0x0a, 0x56, 0x61, 0x6c,
 	0x69, 0x64, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x58, 0x0a, 0x11, 0x56, 0x61, 0x6c, 0x69, 0x64,
 	0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x12, 0x1f, 0x2e, 0x64,
 	0x68, 0x63, 0x74, 0x6c, 0x2e, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73,
@@ -125,13 +125,18 @@ var file_services_proto_rawDesc = []byte{
 	0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65,
 	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x24, 0x2e, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e, 0x50, 0x61,
 	0x72, 0x73, 0x65, 0x43, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6e,
-	0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x32, 0x4a, 0x0a,
-	0x06, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x40, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x53, 0x74,
-	0x61, 0x74, 0x75, 0x73, 0x12, 0x17, 0x2e, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e, 0x47, 0x65, 0x74,
-	0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18, 0x2e,
-	0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x0a, 0x5a, 0x08, 0x70, 0x62, 0x2f,
-	0x64, 0x68, 0x63, 0x74, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x4f, 0x0a,
+	0x0e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x12,
+	0x1c, 0x2e, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x78,
+	0x74, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1d, 0x2e,
+	0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x78, 0x74, 0x65,
+	0x6e, 0x64, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x32, 0x4a,
+	0x0a, 0x06, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x40, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x53,
+	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x17, 0x2e, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e, 0x47, 0x65,
+	0x74, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x18,
+	0x2e, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x0a, 0x5a, 0x08, 0x70, 0x62,
+	0x2f, 0x64, 0x68, 0x63, 0x74, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var file_services_proto_goTypes = []interface{}{
@@ -149,22 +154,24 @@ var file_services_proto_goTypes = []interface{}{
 	(*ValidateProviderSpecificClusterConfigRequest)(nil),  // 11: dhctl.ValidateProviderSpecificClusterConfigRequest
 	(*ValidateChangesRequest)(nil),                        // 12: dhctl.ValidateChangesRequest
 	(*ParseConnectionConfigRequest)(nil),                  // 13: dhctl.ParseConnectionConfigRequest
-	(*GetStatusRequest)(nil),                              // 14: dhctl.GetStatusRequest
-	(*CheckResponse)(nil),                                 // 15: dhctl.CheckResponse
-	(*BootstrapResponse)(nil),                             // 16: dhctl.BootstrapResponse
-	(*DestroyResponse)(nil),                               // 17: dhctl.DestroyResponse
-	(*AbortResponse)(nil),                                 // 18: dhctl.AbortResponse
-	(*ConvergeResponse)(nil),                              // 19: dhctl.ConvergeResponse
-	(*CommanderAttachResponse)(nil),                       // 20: dhctl.CommanderAttachResponse
-	(*CommanderDetachResponse)(nil),                       // 21: dhctl.CommanderDetachResponse
-	(*ValidateResourcesResponse)(nil),                     // 22: dhctl.ValidateResourcesResponse
-	(*ValidateInitConfigResponse)(nil),                    // 23: dhctl.ValidateInitConfigResponse
-	(*ValidateClusterConfigResponse)(nil),                 // 24: dhctl.ValidateClusterConfigResponse
-	(*ValidateStaticClusterConfigResponse)(nil),           // 25: dhctl.ValidateStaticClusterConfigResponse
-	(*ValidateProviderSpecificClusterConfigResponse)(nil), // 26: dhctl.ValidateProviderSpecificClusterConfigResponse
-	(*ValidateChangesResponse)(nil),                       // 27: dhctl.ValidateChangesResponse
-	(*ParseConnectionConfigResponse)(nil),                 // 28: dhctl.ParseConnectionConfigResponse
-	(*GetStatusResponse)(nil),                             // 29: dhctl.GetStatusResponse
+	(*ConfigExtenderRequest)(nil),                         // 14: dhctl.ConfigExtenderRequest
+	(*GetStatusRequest)(nil),                              // 15: dhctl.GetStatusRequest
+	(*CheckResponse)(nil),                                 // 16: dhctl.CheckResponse
+	(*BootstrapResponse)(nil),                             // 17: dhctl.BootstrapResponse
+	(*DestroyResponse)(nil),                               // 18: dhctl.DestroyResponse
+	(*AbortResponse)(nil),                                 // 19: dhctl.AbortResponse
+	(*ConvergeResponse)(nil),                              // 20: dhctl.ConvergeResponse
+	(*CommanderAttachResponse)(nil),                       // 21: dhctl.CommanderAttachResponse
+	(*CommanderDetachResponse)(nil),                       // 22: dhctl.CommanderDetachResponse
+	(*ValidateResourcesResponse)(nil),                     // 23: dhctl.ValidateResourcesResponse
+	(*ValidateInitConfigResponse)(nil),                    // 24: dhctl.ValidateInitConfigResponse
+	(*ValidateClusterConfigResponse)(nil),                 // 25: dhctl.ValidateClusterConfigResponse
+	(*ValidateStaticClusterConfigResponse)(nil),           // 26: dhctl.ValidateStaticClusterConfigResponse
+	(*ValidateProviderSpecificClusterConfigResponse)(nil), // 27: dhctl.ValidateProviderSpecificClusterConfigResponse
+	(*ValidateChangesResponse)(nil),                       // 28: dhctl.ValidateChangesResponse
+	(*ParseConnectionConfigResponse)(nil),                 // 29: dhctl.ParseConnectionConfigResponse
+	(*ConfigExtenderResponse)(nil),                        // 30: dhctl.ConfigExtenderResponse
+	(*GetStatusResponse)(nil),                             // 31: dhctl.GetStatusResponse
 }
 var file_services_proto_depIdxs = []int32{
 	0,  // 0: dhctl.DHCTL.Check:input_type -> dhctl.CheckRequest
@@ -181,24 +188,26 @@ var file_services_proto_depIdxs = []int32{
 	11, // 11: dhctl.Validation.ValidateProviderSpecificClusterConfig:input_type -> dhctl.ValidateProviderSpecificClusterConfigRequest
 	12, // 12: dhctl.Validation.ValidateChanges:input_type -> dhctl.ValidateChangesRequest
 	13, // 13: dhctl.Validation.ParseConnectionConfig:input_type -> dhctl.ParseConnectionConfigRequest
-	14, // 14: dhctl.Status.GetStatus:input_type -> dhctl.GetStatusRequest
-	15, // 15: dhctl.DHCTL.Check:output_type -> dhctl.CheckResponse
-	16, // 16: dhctl.DHCTL.Bootstrap:output_type -> dhctl.BootstrapResponse
-	17, // 17: dhctl.DHCTL.Destroy:output_type -> dhctl.DestroyResponse
-	18, // 18: dhctl.DHCTL.Abort:output_type -> dhctl.AbortResponse
-	19, // 19: dhctl.DHCTL.Converge:output_type -> dhctl.ConvergeResponse
-	20, // 20: dhctl.DHCTL.CommanderAttach:output_type -> dhctl.CommanderAttachResponse
-	21, // 21: dhctl.DHCTL.CommanderDetach:output_type -> dhctl.CommanderDetachResponse
-	22, // 22: dhctl.Validation.ValidateResources:output_type -> dhctl.ValidateResourcesResponse
-	23, // 23: dhctl.Validation.ValidateInitConfig:output_type -> dhctl.ValidateInitConfigResponse
-	24, // 24: dhctl.Validation.ValidateClusterConfig:output_type -> dhctl.ValidateClusterConfigResponse
-	25, // 25: dhctl.Validation.ValidateStaticClusterConfig:output_type -> dhctl.ValidateStaticClusterConfigResponse
-	26, // 26: dhctl.Validation.ValidateProviderSpecificClusterConfig:output_type -> dhctl.ValidateProviderSpecificClusterConfigResponse
-	27, // 27: dhctl.Validation.ValidateChanges:output_type -> dhctl.ValidateChangesResponse
-	28, // 28: dhctl.Validation.ParseConnectionConfig:output_type -> dhctl.ParseConnectionConfigResponse
-	29, // 29: dhctl.Status.GetStatus:output_type -> dhctl.GetStatusResponse
-	15, // [15:30] is the sub-list for method output_type
-	0,  // [0:15] is the sub-list for method input_type
+	14, // 14: dhctl.Validation.ConfigExtender:input_type -> dhctl.ConfigExtenderRequest
+	15, // 15: dhctl.Status.GetStatus:input_type -> dhctl.GetStatusRequest
+	16, // 16: dhctl.DHCTL.Check:output_type -> dhctl.CheckResponse
+	17, // 17: dhctl.DHCTL.Bootstrap:output_type -> dhctl.BootstrapResponse
+	18, // 18: dhctl.DHCTL.Destroy:output_type -> dhctl.DestroyResponse
+	19, // 19: dhctl.DHCTL.Abort:output_type -> dhctl.AbortResponse
+	20, // 20: dhctl.DHCTL.Converge:output_type -> dhctl.ConvergeResponse
+	21, // 21: dhctl.DHCTL.CommanderAttach:output_type -> dhctl.CommanderAttachResponse
+	22, // 22: dhctl.DHCTL.CommanderDetach:output_type -> dhctl.CommanderDetachResponse
+	23, // 23: dhctl.Validation.ValidateResources:output_type -> dhctl.ValidateResourcesResponse
+	24, // 24: dhctl.Validation.ValidateInitConfig:output_type -> dhctl.ValidateInitConfigResponse
+	25, // 25: dhctl.Validation.ValidateClusterConfig:output_type -> dhctl.ValidateClusterConfigResponse
+	26, // 26: dhctl.Validation.ValidateStaticClusterConfig:output_type -> dhctl.ValidateStaticClusterConfigResponse
+	27, // 27: dhctl.Validation.ValidateProviderSpecificClusterConfig:output_type -> dhctl.ValidateProviderSpecificClusterConfigResponse
+	28, // 28: dhctl.Validation.ValidateChanges:output_type -> dhctl.ValidateChangesResponse
+	29, // 29: dhctl.Validation.ParseConnectionConfig:output_type -> dhctl.ParseConnectionConfigResponse
+	30, // 30: dhctl.Validation.ConfigExtender:output_type -> dhctl.ConfigExtenderResponse
+	31, // 31: dhctl.Status.GetStatus:output_type -> dhctl.GetStatusResponse
+	16, // [16:32] is the sub-list for method output_type
+	0,  // [0:16] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name

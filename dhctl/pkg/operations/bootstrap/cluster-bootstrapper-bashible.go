@@ -18,46 +18,87 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
-	metaConfig, err := config.ParseConfig(
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromConfig(
 		ctx,
-		app.ConfigPaths,
+		b.loggerProvider(),
+		b.Options.Global.ConfigPaths,
+		b.Options.Registry.ImgBundlePath,
+	)
+	if err != nil {
+		return err
+	}
+	defer registryStop()
+
+	metaConfig, err := config.LoadConfigFromFile(
+		ctx,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
+		&b.Options.Global,
 	)
 	if err != nil {
 		return err
 	}
 
-	err = terminal.AskBecomePassword()
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	if interactive {
+		intLogger, ok := b.logger.(*log.InteractiveLogger)
+		if !ok {
+			return fmt.Errorf("logger is not interactive")
+		}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Bashible bundle", labelChan, phasesChan, intLogger.GetLogChan())
+
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			return err
+		}
+
+		defer progressbar.FinishDefaultProgressBar()
+	}
+
+	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
 	if err != nil {
 		return err
 	}
-	if err := terminal.AskBastionPassword(); err != nil {
-		return err
-	}
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if err = wrapper.Client().Start(); err != nil {
-			return fmt.Errorf("unable to start ssh client: %w", err)
-		}
-		if err = WaitForSSHConnectionOnMaster(ctx, wrapper.Client()); err != nil {
-			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+	sshClient, err := sshProvider.Client(ctx)
+	if err == nil {
+		if err = WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
+			return fmt.Errorf("failed to wait for SSH connection on master: %w", err)
 		}
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath, b.CommanderMode); err != nil {
+	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return fmt.Errorf("Could not get NodeInterface: %w", err)
+	}
+
+	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
+		Node:           nodeInterface,
+		NodeIP:         b.Options.Bootstrap.InternalNodeIP,
+		DevicePath:     b.Options.Bootstrap.DevicePath,
+		MetaConfig:     metaConfig,
+		CommanderMode:  b.CommanderMode,
+		IsDebug:        b.IsDebug,
+		GlobalOpts:     &b.Options.Global,
+		LoggerProvider: b.loggerProvider,
+	})
+
+	if err != nil {
 		return err
 	}
 

@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: container-resources
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].resources
+      level: container
+      description: Every container must define required limits and requests (cpu/memory) according to policy parameters.
+      requiredScenarios: [positive, negative, initContainer, ephemeralContainer]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

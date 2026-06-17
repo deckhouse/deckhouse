@@ -46,6 +46,7 @@ const labels = {
   'e2e/use/k8s/1.33': { type: 'e2e-use', ver: '1.33' },
   'e2e/use/k8s/1.34': { type: 'e2e-use', ver: '1.34' },
   'e2e/use/k8s/1.35': { type: 'e2e-use', ver: '1.35' },
+  'e2e/use/k8s/1.36': { type: 'e2e-use', ver: '1.36' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
   // E2E: use multimaster configuration
@@ -92,11 +93,7 @@ const labels = {
   'edition/cse': { type: 'edition', edition: 'CSE' },
 
   // Enable operator-trivy to get CIS benchmark report
-  'e2e/use/cis': { type: 'e2e-use', cis: true },
-
-  // security validation for images
-  'security/rootless': { type: 'security', security: 'rootless' },
-  'security/cve': { type: 'security', security: 'cve' }
+  'e2e/use/cis': { type: 'e2e-use', cis: true }
 };
 module.exports.knownLabels = labels;
 

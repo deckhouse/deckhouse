@@ -97,6 +97,24 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/cse/modules/007-registrypackages/images/d8-bcheck/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/cse/modules/007-registrypackages/images/logpipe/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
@@ -143,6 +161,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/ee/modules/040-node-manager/images/d8-shutdown-inhibitor/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/alliance-healthcheck/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -259,6 +286,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/controlplane"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/dependency/k8s/drain"
   labels:
   - "type/dependencies"
@@ -278,6 +314,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/go_lib/registry"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/registry-bundle"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -358,7 +403,25 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/rpp-get/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/007-registrypackages/images/systemctl-power-commands-wrapper/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/tail-log/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -556,6 +619,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/038-registry/images/syncer/app"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/039-registry-packages-proxy/images/registry-packages-proxy/src"
   labels:
   - "type/dependencies"
@@ -565,16 +637,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/control-plane-manager/controller"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/update-observer/src"
+  directory: "/modules/040-control-plane-manager/images/control-plane-manager/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -683,6 +746,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/150-user-authn/images/self-signed-generator/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/150-user-authn/images/user-api/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -818,6 +890,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/402-ingress-nginx/images/proxy-failover-iptables/failover"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/sandbox/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

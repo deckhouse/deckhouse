@@ -59,9 +59,14 @@ properties:
       Максимальное количество одновременных Challenges в статусе `Processing`
   enableCAInjector:
     description: |
-      Включить CAInjector. Он необходим только для инъекции CA-сертификатов в `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` и `APIService`.
-      Deckhouse не использует CAInjector, поэтому включать нужно только в том случае, если вы используете в своих сервисах пользовательские инъекции CA.
+      Включить CAInjector вручную.
+      По умолчанию CAInjector включается автоматически, когда в кластере обнаруживаются ресурсы с аннотациями для инъекции CA (`cert-manager.io/inject-ca-from`, `cert-manager.io/inject-ca-from-secret`, `cert-manager.io/inject-apiserver-ca`).
 
+  enableListenerSet:
+    description: |
+      Включить поддержку ListenerSet в cert-manager через feature gate `ListenerSets`.
+
+      Также включает интеграцию ListenerSet для Gateway API, если включена интеграция Gateway API.
   ingressClassHttp01:
     type: string
     x-examples: ["nginx"]

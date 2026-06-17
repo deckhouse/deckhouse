@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
-  creationTimestamp: null
   finalizers:
   - application.deckhouse.io/statistic-registered
   name: test-app
@@ -26,12 +25,12 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: v1.0.2
 status:
+  lastAppliedConfiguration: null
   tracking: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
   name: test
@@ -48,7 +47,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
@@ -60,8 +58,9 @@ spec:
   packageVersion: v1.0.2
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
     status: "True"
     type: IsEnriched
   packageMetadata:
@@ -70,8 +69,10 @@ status:
       en: example — test
       ru: example — test
     requirements:
-      deckhouse: '>=1.0.0'
-      kubernetes: '>=1.26'
+      deckhouse:
+        constraint: '>=1.0.0'
+      kubernetes:
+        constraint: '>=1.26'
     stage: Preview
   usedBy:
   - name: test-app
@@ -81,7 +82,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -91,4 +91,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
-  syncTime: null
+  lastNewVersions: 0
+  partialScanAvailable: false

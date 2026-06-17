@@ -1,0 +1,31 @@
+{%- assign faqs = site.faq | where: "product_code", page.product_code |where: "lang", page.lang %}
+
+{%- assign all_sections = "" | split: "" %}
+{%- for faq in faqs %}
+  {%- assign all_sections = all_sections | push: faq.section %}
+{%- endfor %}
+
+{%- assign all_sections = all_sections | push: "_common" %}
+{%- assign unique_sections = all_sections | uniq | sort %}
+
+<div markdown="0">
+{%- for section in unique_sections %}
+
+{%- if section == "_common" %}
+  {%- assign section_faqs = faqs | where_exp: "item", "item.section == section or item.section == nil" | sort: "weight" %}
+{%- else %}
+  {%- assign section_faqs = faqs | where_exp: "item", "item.section == section" | sort: "weight" %}
+{%- endif %}
+
+{%- if section_faqs.size > 0 -%}
+  <h2 id="section-{{ section | slugify }}">{{ site.data[page.product_code]["sections"][section][page.lang] }}</h2>
+
+  {%- for faq in section_faqs -%}
+    <h3>{{ faq.title }}</h3>
+    <div markdown="0">
+    {{ faq.content | markdownify }}
+    </div>
+  {%- endfor %}
+{%- endif %}
+{%- endfor %}
+</div>

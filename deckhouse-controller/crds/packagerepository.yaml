@@ -18,10 +18,10 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .status.syncTime
-      name: Sync
+    - jsonPath: .status.lastScanTime
+      name: Scan
       type: date
-    - jsonPath: .status.conditions[?(@.type=='LastOperationScanFinished')].message
+    - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
       name: MSG
       type: string
     - jsonPath: .status.packagesCount
@@ -31,14 +31,14 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PackageRepository is a source of packages for Deckhouse.
+        description: PackageRepository is a source of packages for Deckhouse Kubernetes Platform.
         properties:
           apiVersion:
             description: |-
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
             description: |-
@@ -46,40 +46,45 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+
             type: string
           metadata:
             type: object
           spec:
-            description: Spec defines the behavior of a PackageRepository.
+            description: Defines the package repository configuration.
             properties:
               registry:
-                description: Configuration for the package registry.
+                description: Configuration for accessing the container registry with packages.
                 properties:
                   ca:
-                    description: Certificate authority data for TLS verification.
+                    description: |
+                      Root CA certificate (PEM format) used to verify the container registry certificate over HTTPS
+                      (if the container registry uses self-signed SSL certificates).
                     type: string
                   dockerCfg:
-                    description: Docker configuration for authentication.
+                    description: |
+                      Container registry access token in Base64 (`~/.docker/config.json` format).
+                      Leave this field empty if anonymous access to the container registry is used.
                     type: string
                   login:
-                    description: Login for authentication.
+                    description: Username for authenticating to the container registry.
                     type: string
                   password:
-                    description: Password for authentication.
+                    description: Password for authenticating to the container registry.
                     type: string
                   repo:
-                    description: Repository path in the registry.
+                    description: Address of the package repository in the container registry.
                     type: string
                   scheme:
-                    description: Scheme to use for accessing the registry (e.g., https).
+                    description: Protocol for accessing the repository (for example, `https`).
                     type: string
                 required:
                 - repo
                 type: object
               scanInterval:
                 description: |
-                  Interval for registry scan.
+                  Interval for container registry scan.
 
                   Defines the frequency of checking the container registry for new packages.
                 pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
@@ -90,14 +95,12 @@ spec:
             - registry
             type: object
           status:
-            description: Status of a PackageRepository.
+            description: Package repository status.
             properties:
               conditions:
-                description: Conditions represent the latest available observations
-                  of the repository's state.
+                description: Conditions reflecting the latest observations of the repository state.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition describing one aspect of the current repository state.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -150,6 +153,21 @@ spec:
                   - type
                   type: object
                 type: array
+              lastChangeTime:
+                description: |-
+                  Time of the most recent scan that found at least one new version.
+                  Scans that found nothing new do not advance this timestamp.
+                format: date-time
+                type: string
+              lastNewVersions:
+                description: |-
+                  Number of new versions found by the most recent scan.
+                  Set to zero when the last scan found nothing new.
+                type: integer
+              lastScanTime:
+                description: Time of the most recent scan of any outcome.
+                format: date-time
+                type: string
               message:
                 description: Human-readable message about the repository status.
                 type: string
@@ -171,12 +189,11 @@ spec:
               packagesCount:
                 description: Total number of packages in this repository.
                 type: integer
+              partialScanAvailable:
+                description: Indicates whether the container registry supports pagination when listing tags.
+                type: boolean
               phase:
                 description: Current phase of the repository.
-                type: string
-              syncTime:
-                description: Last time the repository was synchronized.
-                format: date-time
                 type: string
             type: object
         required:

@@ -1,6 +1,6 @@
 {{ $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-14" $ ) }}
 {{ $controllerBranch := printf "controller-v%s" $controllerVersion }}
-{{ $nginxVersion := "1.29.5" }}
+{{ $nginxVersion := "1.30.2" }}
 {{ $modsecurityDepsVersion := "1.0.4" }}
 {{ $nginxDepsBranch := (printf "controller-v%s-nginx-v%s-modsecurity-v%s" $controllerVersion $nginxVersion $modsecurityDepsVersion) }}
 {{ $nlohmannJsonBranch := printf "v%s" (include "get_oss_version_by_id" (list "nlohmannjson" $ )) }}
@@ -46,11 +46,6 @@ git:
   stageDependencies:
     install:
       - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/curl-chroot-wrapper.sh
-  to: /src/curl-chroot-wrapper.sh
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx-chroot-wrapper.sh
   to: /src/nginx-chroot-wrapper.sh
   stageDependencies:
@@ -59,8 +54,27 @@ git:
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
+mount:
+- from: build_dir
+  to: /extra_apps
+import:
+- from: {{ index $.Images "tools/coreutils" }}
+  add: /usr/bin/cp
+  to: /tools/cp
+  owner: "0"
+  group: "0"
+  before: install
+- from: {{ index $.Images "tools/libcap" }}
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: install
+  owner: "0"
+  group: "0"
 shell:
   install:
+  # copy extra tools
+  - cp -av /tools/* /extra_apps
+  #
   - mkdir -p /src
   - cd /src
   - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
@@ -659,7 +673,7 @@ shell:
   - mkdir -p /etc/ingress-controller/telemetry && touch /etc/ingress-controller/telemetry/opentelemetry.toml
   - chown -R deckhouse:deckhouse /etc/nginx/opentelemetry.toml /etc/ingress-controller/telemetry/opentelemetry.toml
   #
-  - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
+  - mkdir -p /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   - cp -a /etc/nginx/* /chroot/etc/nginx/
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
@@ -667,14 +681,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
-mount:
-- from: build_dir
-  to: /apps
 import:
-- from: {{ index $.Images "tools/libcap" }}
-  add: /usr/sbin/setcap
-  to: /tools/setcap
-  before: install
 #/bin/sh is required for modsecurity lib to work
 - from: {{ index $.Images "tools/bash" }}
   add: /usr
@@ -682,12 +689,8 @@ import:
   includePaths:
   - bin/bash
   - bin/sh
-  before: install
-- from: {{ index $.Images "tools/curl" }}
-  add: /usr/bin/curl-static
-  to: /chroot/usr/bin/curl
-  owner: "64535"
-  group: "64535"
+  owner: "0"
+  group: "0"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
@@ -868,20 +871,7 @@ shell:
   # Put libs of newer modules under `/modules_mount/<other>/lib` and add that path below
   # Could get complicated arch specific paths become a need
   - echo "/lib:/usr/lib:/usr/local/lib:/modules_mount/etc/nginx/modules/otel" > /chroot/etc/ld-musl-x86_64.path
-  #
-  - ln -sf /chroot/etc/nginx /etc/nginx
-  - rm -rf /tmp
-  - ln -sf /chroot/tmp /tmp
-  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
-  # a hack to let the controller update files via symlinks on a read-only file system
-  - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
-  - ln -sf /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json
-  - mkdir /etc/ingress-controller/resolv/ -p && touch /etc/ingress-controller/resolv/resolv.conf
-  - ln -sf /etc/ingress-controller/resolv/resolv.conf /chroot/etc/resolv.conf
-  - mkdir /etc/ingress-controller/nginx/ -p && touch /etc/ingress-controller/nginx/nginx.conf
-  - ln -sf /etc/ingress-controller/nginx/nginx.conf /chroot/etc/nginx/nginx.conf
-  - ln -sf /chroot/var/log/nginx /var/log/nginx
-  - chown -R deckhouse:deckhouse /chroot/var/log/nginx
+
   - mknod -m 0666 /chroot/dev/null c 1 3
   - mknod -m 0666 /chroot/dev/random c 1 8
   - mknod -m 0666 /chroot/dev/urandom c 1 9
@@ -891,16 +881,27 @@ shell:
   - mknod -m 0666 /chroot/dev/tty c 5 0
 
   - mkdir -p /chroot/modules_mount
-  - ln -s /chroot/modules_mount /modules_mount
 
-  # Utils for final image
-  - cp -a /tools/setcap /apps
+  # Dedicated real dir for K8s emptyDir.
+  - mkdir -p /chroot/tmp/nginx
+  - chown -R deckhouse:deckhouse /chroot/tmp
+
+  - ln -sf /chroot/etc/nginx /etc/nginx
+  - rm -rf /tmp
+  - ln -sf /chroot/tmp /tmp
+  # a hack to let the controller update files via symlinks on a read-only file system
+  - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
+  - ln -sf /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json
+  - mkdir /etc/ingress-controller/resolv/ -p && touch /etc/ingress-controller/resolv/resolv.conf
+  - ln -sf /etc/ingress-controller/resolv/resolv.conf /chroot/etc/resolv.conf
+  - mkdir /etc/ingress-controller/nginx/ -p && touch /etc/ingress-controller/nginx/nginx.conf
+  - ln -sf /etc/ingress-controller/nginx/nginx.conf /chroot/etc/nginx/nginx.conf
+  - ln -sf /chroot/var/log/nginx /var/log/nginx
+  - chown -R deckhouse:deckhouse /chroot/var/log/nginx
+  - ln -s /chroot/modules_mount /modules_mount
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
-mount:
-- from: build_dir
-  to: /apps
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
@@ -911,7 +912,6 @@ import:
   - var/log
   - etc/nginx
   - tmp
-  - etc/ingress-controller
   - var/log/nginx
   - sbin/nginx
   before: install
@@ -933,9 +933,9 @@ import:
   owner: "64535"
   group: "64535"
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
+- image: {{ $.ModuleName }}/sandbox-artifact
+  add: /sandbox
+  to: /usr/bin/sandbox
   owner: "64535"
   group: "64535"
   before: install
@@ -948,15 +948,6 @@ import:
 - from: {{ index $.Images "tools/dumb-init" }}
   add: /dumb-init
   to: /usr/bin/dumb-init
-  before: install
-- from: {{ index $.Images "tools/bash" }}
-  add: /usr
-  to: /
-  owner: "0"
-  group: "0"
-  includePaths:
-  - bin/bash
-  - bin/sh
   before: install
 - from: {{ index $.Images "tools/procps" }}
   add: /
@@ -986,23 +977,25 @@ import:
   group: "0"
   includePaths:
   - usr/bin/test
-  - usr/bin/chroot
   - usr/bin/cat
-  - usr/bin/cp
   - usr/bin/tail
   before: install
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}
+mount:
+- from: build_dir
+  to: /extra_apps
 shell:
   install:
-  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - /apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /extra_apps/cp -alf /chroot/. /validation-chroot/
+  - /extra_apps/cp -alf /chroot/bin/. /bin/
+  - /extra_apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /extra_apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /extra_apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /extra_apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /extra_apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /extra_apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /extra_apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /extra_apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
   config:
     workingDir: /chroot/etc/nginx

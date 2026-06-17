@@ -1,0 +1,504 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-volume-types
+spec:
+  suiteName: d8-allowed-volume-types
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: pss-restricted
+      gatorBlock: pss-restricted
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 009-allowed-no-volumes
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-volumes
+        - name: 008-allowed-multiple-volumes
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-multiple-volumes
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /etc/config
+                        name: config
+                      - mountPath: /etc/secret
+                        name: secret
+                volumes:
+                  - configMap:
+                      name: my-config
+                    name: config
+                  - name: secret
+                    secret:
+                      secretName: my-secret
+        - name: 015-disallowed-hostpath-volume
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostpath-volume
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /hostpath
+                        name: hostpath
+                volumes:
+                  - hostPath:
+                      path: /var/lib
+                    name: hostpath
+        - name: 017-disallowed-nfs-volume
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-nfs-volume
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /nfs
+                        name: nfs
+                volumes:
+                  - name: nfs
+                    nfs:
+                      path: /exports
+                      server: nfs-server.example.com
+        - name: 016-disallowed-multiple-volumes-one-disallowed
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-volumes-one-disallowed
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /etc/config
+                        name: config
+                      - mountPath: /hostpath
+                        name: hostpath
+                volumes:
+                  - configMap:
+                      name: my-config
+                    name: config
+                  - hostPath:
+                      path: /var/lib
+                    name: hostpath
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 026-allowed-no-volumes
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-volumes
+        - name: 023-allowed-hostpath-volume
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-hostpath-volume
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /hostpath
+                        name: hostpath
+                volumes:
+                  - hostPath:
+                      path: /var/lib
+                    name: hostpath
+        - name: 025-allowed-nfs-volume
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-nfs-volume
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /nfs
+                        name: nfs
+                volumes:
+                  - name: nfs
+                    nfs:
+                      path: /exports
+                      server: nfs-server.example.com
+        - name: 024-allowed-multiple-volumes
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes[].type
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-multiple-volumes
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /etc/config
+                        name: config
+                      - mountPath: /hostpath
+                        name: hostpath
+                volumes:
+                  - configMap:
+                      name: my-config
+                    name: config
+                  - hostPath:
+                      path: /var/lib
+                    name: hostpath
+    - name: pss-restricted-with-exception
+      gatorBlock: pss-restricted-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 028-031-allowed-by-exception-hostpath-volume
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes.types.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpath-volume
+                spec:
+                  volumes:
+                    types:
+                      allowedValues:
+                        - hostPath
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpath-volume
+                name: allowed-by-exception-hostpath-volume
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /hostpath
+                        name: hostpath
+                volumes:
+                  - hostPath:
+                      path: /var/lib
+                    name: hostpath
+        - name: 029-033-allowed-by-exception-multiple-volume-types
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes.types.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-multiple-volume-types
+                spec:
+                  volumes:
+                    types:
+                      allowedValues:
+                        - hostPath
+                        - nfs
+                        - iscsi
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-multiple-volume-types
+                name: allowed-by-exception-multiple-volume-types
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /hostpath
+                        name: hostpath
+                      - mountPath: /nfs
+                        name: nfs
+                volumes:
+                  - hostPath:
+                      path: /var/lib
+                    name: hostpath
+                  - name: nfs
+                    nfs:
+                      path: /exports
+                      server: nfs-server.example.com
+        - name: 028-032-allowed-by-exception-mismatch-but-constraint-allows
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes.types.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpath-volume
+                spec:
+                  volumes:
+                    types:
+                      allowedValues:
+                        - hostPath
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpath-volume
+                name: allowed-by-exception-mismatch-but-constraint-allows
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /etc/config
+                        name: config
+                volumes:
+                  - configMap:
+                      name: my-config
+                    name: config
+        - name: 028-035-disallowed-by-exception-volume-type-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes.types.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpath-volume
+                spec:
+                  volumes:
+                    types:
+                      allowedValues:
+                        - hostPath
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpath-volume
+                name: disallowed-by-exception-volume-type-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /nfs
+                        name: nfs
+                volumes:
+                  - name: nfs
+                    nfs:
+                      path: /exports
+                      server: nfs-server.example.com
+        - name: 036-disallowed-no-exception-label
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes.types.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /hostpath
+                        name: hostpath
+                volumes:
+                  - hostPath:
+                      path: /var/lib
+                    name: hostpath
+        - name: 028-034-disallowed-by-exception-multiple-volumes-one-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes.types.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostpath-volume
+                spec:
+                  volumes:
+                    types:
+                      allowedValues:
+                        - hostPath
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostpath-volume
+                name: disallowed-by-exception-multiple-volumes-one-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /hostpath
+                        name: hostpath
+                      - mountPath: /nfs
+                        name: nfs
+                volumes:
+                  - hostPath:
+                      path: /var/lib
+                    name: hostpath
+                  - name: nfs
+                    nfs:
+                      path: /exports
+                      server: nfs-server.example.com
+        - name: 030-037-disallowed-by-exception-empty-spec
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.volumes.types.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: empty-spec
+                name: disallowed-by-exception-empty-spec
+              spec:
+                volumes:
+                  - hostPath:
+                      path: /proc
+                    name: hostpath

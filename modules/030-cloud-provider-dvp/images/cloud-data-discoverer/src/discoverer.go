@@ -36,8 +36,10 @@ import (
 )
 
 const (
-	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
-	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
+	stableDefaultAnnotation  = "storageclass.kubernetes.io/is-default-class"
+	betaDefaultAnnotation    = "storageclass.beta.kubernetes.io/is-default-class"
+	skipSCAnnotation         = "cloud-provider.deckhouse.io/skip-storage-class"
+	defaultVolumeBindingMode = storagev1.VolumeBindingWaitForFirstConsumer
 )
 
 type CloudConfig struct {
@@ -154,11 +156,6 @@ func mergeStorageDomains(
 	result := []cloudDataV1.DVPStorageClass{}
 	cloudSdsMap := make(map[string]cloudDataV1.DVPStorageClass)
 	for _, sc := range cloudSds {
-		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
-		if sc.VolumeBindingMode != nil {
-			volumeBindingMode = *sc.VolumeBindingMode
-		}
-
 		reclaimPolicy := corev1.PersistentVolumeReclaimDelete
 		if sc.ReclaimPolicy != nil {
 			reclaimPolicy = *sc.ReclaimPolicy
@@ -171,7 +168,7 @@ func mergeStorageDomains(
 
 		cloudSdsMap[sc.Name] = cloudDataV1.DVPStorageClass{
 			Name:                 sc.Name,
-			VolumeBindingMode:    string(volumeBindingMode),
+			VolumeBindingMode:    string(defaultVolumeBindingMode),
 			ReclaimPolicy:        string(reclaimPolicy),
 			AllowVolumeExpansion: allowVolumeExpansion,
 			IsEnabled:            true,
@@ -203,22 +200,26 @@ func mergeStorageDomains(
 			betaDefaultAnnotation,
 		}
 
+		isEnabled := true
 		isDefault := false
-		for _, annot := range annotToCheck {
-			if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
-				isDefault = true
-				break
-			}
-		}
 
-		if isDefault {
-			for i := range result {
-				if result[i].Name == sc.Name {
-					result[i].IsDefault = true
+		if v, ok := annotations[skipSCAnnotation]; ok && strings.ToLower(v) == "true" {
+			isEnabled = false
+		} else {
+			for _, annot := range annotToCheck {
+				if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
+					isDefault = true
 					break
 				}
 			}
-			break
+		}
+
+		for i := range result {
+			if result[i].Name == sc.Name {
+				result[i].IsEnabled = isEnabled
+				result[i].IsDefault = isDefault
+				break
+			}
 		}
 	}
 

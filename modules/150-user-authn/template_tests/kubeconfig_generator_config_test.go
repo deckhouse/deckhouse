@@ -92,8 +92,8 @@ Multiline
 
 	Context("Default config", func() {
 		BeforeEach(func() {
-			hec.ValuesSet("userAuthn.publishAPI.enabled", true)
-			hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
+			hec.ValuesSet("userAuthn.internal.publishAPI.enabled", true)
+			hec.ValuesSet("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", true)
 
 			hec.HelmRender()
 		})
@@ -119,8 +119,8 @@ Multiline
 
 		Context("With discoveredDexCA", func() {
 			BeforeEach(func() {
-				hec.ValuesSet("userAuthn.publishAPI.enabled", true)
-				hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
+				hec.ValuesSet("userAuthn.internal.publishAPI.enabled", true)
+				hec.ValuesSet("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", true)
 				hec.ValuesSet("userAuthn.internal.discoveredDexCA", "discoveredDexCAText")
 				hec.HelmRender()
 			})
@@ -136,15 +136,15 @@ Multiline
 
 		Context("Publish API", func() {
 			JustBeforeEach(func() {
-				hec.ValuesSet("userAuthn.publishAPI.enabled", true)
-				hec.ValuesSet("userAuthn.publishAPI.addKubeconfigGeneratorEntry", true)
+				hec.ValuesSet("userAuthn.internal.publishAPI.enabled", true)
+				hec.ValuesSet("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", true)
 				hec.HelmRender()
 			})
 
 			Context("With https mode 'Global'", func() {
 				BeforeEach(func() {
-					hec.ValuesSet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA", "test_cert")
-					hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
+					hec.ValuesSet("userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA", "test_cert")
+					hec.ValuesSet("userAuthn.internal.publishAPI.https.mode", "Global")
 				})
 
 				It("Should add k8s_ca_pem param with publishedAPIKubeconfigGeneratorMasterCA for first cluster", func() {
@@ -180,6 +180,7 @@ Multiline
 
 			JustBeforeEach(func() {
 				encodedNames := make([]string, 0)
+				clientEncodedNames := make([]string, 0)
 				for i, a := range apis {
 					hec.ValuesSet(fmt.Sprintf("userAuthn.kubeconfigGenerator.%v.id", i), a.id)
 					hec.ValuesSet(fmt.Sprintf("userAuthn.kubeconfigGenerator.%v.masterCA", i), a.masterCA)
@@ -188,9 +189,13 @@ Multiline
 
 					name := encoding.ToFnvLikeDex(fmt.Sprintf("kubeconfig-generator-%d", i))
 					encodedNames = append(encodedNames, name)
+
+					clientEncodedNames = append(clientEncodedNames,
+						encoding.ToFnvLikeDex(fmt.Sprintf("kubeconfig-%s", a.id)))
 				}
 
 				hec.ValuesSet("userAuthn.internal.kubeconfigEncodedNames", encodedNames)
+				hec.ValuesSet("userAuthn.internal.kubeconfigClientEncodedNames", clientEncodedNames)
 
 				hec.HelmRender()
 			})

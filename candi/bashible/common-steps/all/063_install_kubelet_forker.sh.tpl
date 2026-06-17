@@ -18,7 +18,10 @@ set -e
 
 # Start sysctl-tuner to set appropriate values to system variables before kubelet start
 if [ -x /opt/deckhouse/bin/sysctl-tuner ]; then
-  /opt/deckhouse/bin/sysctl-tuner
+  if ! /opt/deckhouse/bin/sysctl-tuner; then
+    >&2 echo "d8-kubelet-forker [ERROR] sysctl-tuner exited with code $?"
+    exit 1
+  fi
 fi
 
 $@ &
@@ -30,15 +33,15 @@ until ss -nltp4 | grep -qE "127.0.0.1:10248.*pid=$CHILDREN_PID" && /opt/deckhous
   attempt=$(( attempt + 1 ))
 
   if ! kill -0 $CHILDREN_PID 2>/dev/null; then
-    >&2 echo "d8-kubelet-forker [ERROR] kubelet with PID $CHILDREN_PID is not running."
+    >&2 echo "d8-kubelet-forker [ERROR] kubelet (PID $CHILDREN_PID) is not running"
     exit 1
   fi
 
   if [ "$attempt" -gt "$max_attempts" ]; then
-    >&2 echo "d8-kubelet-forker [ERROR] Could not reach /healthz HTTP-endpoint of kubelet with PID $CHILDREN_PID after $max_attempts attempts. Exiting."
+    >&2 echo "d8-kubelet-forker [ERROR] kubelet (PID $CHILDREN_PID) /healthz did not return 200 after $max_attempts attempts, giving up"
     exit 1
   fi
-  echo "d8-kubelet-forker [INFO] Waiting for HTTP 200 response from /healthz endpoing of kubelet with PID $CHILDREN_PID (attempt $attempt of $max_attempts)..."
+  echo "d8-kubelet-forker [INFO] Waiting for /healthz on kubelet (PID $CHILDREN_PID) to return 200 (attempt $attempt of $max_attempts)"
   sleep 1
 done
 

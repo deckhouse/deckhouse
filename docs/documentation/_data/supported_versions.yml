@@ -8,15 +8,15 @@ osDistributions:
       - version: '8 СП (релиз 10)'
         editions: [cse, be, se, se-plus, ee]
       - version: 'p10'
-        editions: [ce, be, se, se-plus, ee]
+        editions: [ce, cse, be, se, se-plus, ee]
       - version: '10.0'
-        editions: [ce, be, se, se-plus, ee]
+        editions: [ce, cse, be, se, se-plus, ee]
       - version: '10.1'
-        editions: [ce, be, se, se-plus, ee]
+        editions: [ce, cse, be, se, se-plus, ee]
       - version: '10.2'
-        editions: [ce, be, se, se-plus, ee]
+        editions: [ce, cse, be, se, se-plus, ee]
       - version: '11'
-        editions: [ce, be, se, se-plus, ee]
+        editions: [ce, cse, be, se, se-plus, ee]
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/
@@ -29,7 +29,7 @@ osDistributions:
           ru: |
             В версии <b>1.7.6</b> модуль <b>runtime-audit-engine будет работать с ядром <a href='/modules/runtime-audit-engine/#требования'>5.15-generic</a></b>.
       - version: '1.8'
-        editions: [ce, be, se, se-plus, ee]
+        editions: [ce, cse, be, se, se-plus, ee]
         note_content:
           ru: |
             В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>.<br>
@@ -61,6 +61,13 @@ osDistributions:
             <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
       - version: '9'
         editions: [ce, be, se, se-plus, ee]
+      - version: '10*'
+        editions: [ce, be, se, se-plus, ee]
+        note_content:
+          ru: |
+            В базовом образе <b>CentOS 10</b> не поддерживается ContainerdV2. Для поддержки ContainerdV2, версия ядра должна быть вне диапазонов 6.12.0–6.12.28 и 6.14.0–6.14.6.
+          en: |
+            The base image <b>CentOS 10</b> does not support ContainerdV2. To support ContainerdV2, the kernel version must not fall within the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6.
   debian:
     name: Debian
     url: https://www.debian.org/download
@@ -120,6 +127,8 @@ osDistributions:
         editions: [ce, be, se, se-plus, ee]
       - version: '24.04'
         editions: [ce, be, se, se-plus, ee]
+      - version: '26.04'
+        editions: [ce, be, se, se-plus, ee]
   'redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
@@ -129,7 +138,7 @@ osDistributions:
       - version: '7.3'
         editions: [ce, cse, be, se, se-plus, ee]
       - version: '8.0'
-        editions: [ce, be, se, se-plus, ee]
+        editions: [ce, cse, be, se, se-plus, ee]
   'rosa':
     name: 'РОСА Сервер'
     url: https://rosa.ru
@@ -162,9 +171,9 @@ osDistributions:
     en_support: false
     versions:
       - version: '15.4'
-        editions: [be, se, se-plus, ee]
+        editions: [cse, be, se, se-plus, ee]
       - version: '15.5'
-        editions: [be, se, se-plus, ee]
+        editions: [cse, be, se, se-plus, ee]
 
 k8s_statuses:
   end-of-life:

@@ -45,12 +45,19 @@ type moduleStorage interface {
 
 type packageManager interface {
 	ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error)
-	CheckConstraints(constraints schedule.Constraints) error
+	CheckConstraints(name string, constraints schedule.Constraints) error
 }
 
 type moduleManager interface {
 	IsModuleEnabled(name string) bool
 	GetEnabledModuleNames() []string
+}
+
+// moduleDependencyExtender validates that a module can be enabled with respect to
+// the constraints of already enabled dependent modules. It is satisfied by
+// *moduledependency.Extender (extenders.ExtendersStack.GetModuleDependency()).
+type moduleDependencyExtender interface {
+	CheckEnabling(name string) error
 }
 
 // RegisterAdmissionHandlers registers validation webhook handlers for admission server built-in in addon-operator
@@ -64,15 +71,15 @@ func RegisterAdmissionHandlers(
 	metricStorage metricsstorage.Storage,
 	schemaStore *config.SchemaStore,
 	settings *helpers.DeckhouseSettingsContainer,
-	exts *extenders.ExtendersStack,
+	exts extenders.IExtendersStack,
 ) {
-	reg.RegisterHandler("/validate/v1/deckhouse-registry-secret", RegistrySecretHandler())
-	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts))
-	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
-	reg.RegisterHandler("/validate/v1/configuration-secret", clusterConfigurationHandler(mm, cli, schemaStore))
-	reg.RegisterHandler("/validate/v1/provider-configuration-secret", providerConfigurationHandler(schemaStore))
-	reg.RegisterHandler("/validate/v1/static-configuration-secret", staticConfigurationHandler(schemaStore))
-	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
-	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts))
-	reg.RegisterHandler("/validate/v1alpha1/applications", applicationValidationHandler(cli, pm))
+	reg.RegisterHandler("/validate/v1/deckhouse-registry-secret", withInvalidReason(RegistrySecretHandler()))
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts.GetModuleDependency())))
+	reg.RegisterHandler("/validate/v1alpha1/modules", withInvalidReason(moduleValidationHandler()))
+	reg.RegisterHandler("/validate/v1/configuration-secret", withInvalidReason(clusterConfigurationHandler(mm, cli, schemaStore)))
+	reg.RegisterHandler("/validate/v1/provider-configuration-secret", withInvalidReason(providerConfigurationHandler(schemaStore)))
+	reg.RegisterHandler("/validate/v1/static-configuration-secret", withInvalidReason(staticConfigurationHandler(schemaStore)))
+	reg.RegisterHandler("/validate/v1alpha1/update-policies", withInvalidReason(updatePolicyHandler(cli)))
+	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", withInvalidReason(DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts)))
+	reg.RegisterHandler("/validate/v1alpha1/applications", withInvalidReason(applicationValidationHandler(cli, pm)))
 }

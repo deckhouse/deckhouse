@@ -24,6 +24,14 @@
   passwordPolicy:
     id: local
     complexityLevel: {{ .complexityLevel | quote }}
+    {{- if and (eq .complexityLevel "Custom") .custom }}
+    custom:
+      minLength: {{ .custom.minLength | default 8 }}
+      specialCharacters: {{ .custom.specialCharacters | default false }}
+      numbers: {{ .custom.numbers | default false }}
+      capitalized: {{ .custom.capitalized | default false }}
+      repeatedChars: {{ .custom.repeatedChars | default false }}
+    {{- end }}
     passwordHistoryLimit: {{ .passwordHistoryLimit }}
     {{- if .rotation }}
     rotation:
@@ -33,7 +41,29 @@
     lockout:
       maxAttempts: {{ .lockout.maxAttempts }}
       lockDuration: {{ .lockout.lockDuration | quote }}
+      {{- if .lockout.applyToConnectors }}
+      applyToConnectors:
+        {{- /* Map module-level pretty names to the connector type used inside Dex.
+              The built-in "local" connector is always covered by passwordPolicy.lockout
+              and is intentionally not exposed in this list. */}}
+        {{- range $name := .lockout.applyToConnectors }}
+        {{- if eq $name "LDAP" }}
+        - ldap
+        {{- else if eq $name "Crowd" }}
+        - atlassian-crowd
+        {{- end }}
+        {{- end }}
+      {{- end }}
     {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- with $context.Values.userAuthn.rateLimit }}
+  {{- if .enabled }}
+  rateLimit:
+    enabled: true
+    perIP:
+      requestsPerMinute: {{ .perIP.requestsPerMinute | default 10 }}
+      burst: {{ .perIP.burst | default 10 }}
   {{- end }}
   {{- end }}
   {{- with $context.Values.userAuthn.staticUsers2FA }}

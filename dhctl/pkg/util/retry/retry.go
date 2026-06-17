@@ -287,7 +287,7 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 		return fmt.Errorf("Attempts quantity must be greater than zero for loop '%s'", l.name)
 	}
 
-	loopBody := func() error {
+	loopBody := func(ctx context.Context) error {
 		var err error
 		for i := 1; i <= l.attemptsQuantity; i++ {
 			// Check if process is interrupted.
@@ -303,7 +303,7 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 			}
 
 			if l.breakPredicate != nil && l.breakPredicate(err) {
-				l.logger.LogDebugF(l.prefix+"Client break loop with %v\n", err)
+				l.logger.LogDebugF(l.prefix+"Client broke the loop with %v\n", err)
 				return err
 			}
 
@@ -327,5 +327,5 @@ func (l *Loop) run(ctx context.Context, task func() error) error {
 		return fmt.Errorf("Timeout while %q: last error: %w", l.name, err)
 	}
 
-	return l.logger.LogProcess("default", l.name, loopBody)
+	return l.logger.LogProcessCtx(ctx, "default", l.name, loopBody)
 }

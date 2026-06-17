@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-rm -rf /var/lib/bashible/kubeadm
-bb-package-remove kubeadm
+rm -rf /var/lib/bashible/control-plane
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
-bb-package-remove module-registry-auth module-registry-distribution cfssl
+bb-package-remove module-registry-auth \
+                  module-registry-distribution \
+                  module-registry-syncer \
+                  cfssl
 rm -rf "${REGISTRY_MODULE_IGNITER_DIR}"
 {{- end }}
 
 rm -f /tmp/bootstrap.sh
 rm -rf /tmp/candi-bundle*
 rm -f /tmp/bundle*.tar
-rm -f /tmp/kubeadm-config*
+rm -f /tmp/control-plane*
 
 # needs for dhctl bootstrap restarting check
 echo "OK" > /opt/deckhouse/first-control-plane-bashible-ran

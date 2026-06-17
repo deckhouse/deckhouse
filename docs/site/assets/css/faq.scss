@@ -4,6 +4,7 @@
 
 @use "components/common/_variables.scss";
 @use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
 
 .docs.faq__container {
     .docs__wrap-title {
@@ -15,12 +16,12 @@
     }
 
     .post-content {
-        p {
-            margin: 0;
-        }
-
         &> p:first-child {
             margin-bottom: 56px;
+
+            @include breakpoints.max-w(l) {
+                margin-bottom: 40px;
+            }
         }
     }
 
@@ -35,6 +36,10 @@
         letter-spacing: 0.16px;
         color: mixins.$ntrl-400;
         cursor: pointer;
+
+        @include breakpoints.max-w(s) {
+            font-size: 15px;
+        }
 
         &.active {
             color: variables.$primary-700;
@@ -52,12 +57,26 @@
     
     h3 {
         position: relative;
+        display: block;
+        max-width: fit-content;
         padding-left: 24px;
         font-size: 20px;
         font-weight: 400;
         letter-spacing: -0.4px;
         color: variables.$primary-700;
         cursor: pointer;
+
+        @include breakpoints.max-w(l) {
+            font-size: 18px;
+        }
+
+        @include breakpoints.max-w(m) {
+            font-size: 16px;
+        }
+
+        @include breakpoints.max-w(xs) {
+            font-size: 14px;
+        }
 
         &::before {
             position: absolute;
@@ -69,6 +88,14 @@
             background: url(../../images/faq-title.svg) no-repeat;
             background-size: contain;
             margin-left: -21px;
+
+            @include breakpoints.max-w(l) {
+                top: 9px;
+            }
+
+            @include breakpoints.max-w(m) {
+                top: 6px;
+            }
         }
 
         &.hide {
@@ -84,6 +111,8 @@
         }
 
         &> a {
+            position: absolute;
+            bottom: 3px;
             color: #00122C;
 
             &:hover {

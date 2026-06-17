@@ -12,14 +12,16 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/controller"
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/layer2"
@@ -33,7 +35,7 @@ const (
 
 var (
 	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	setupLog = log.Default().With("logger", "setup")
 )
 
 func init() {
@@ -46,13 +48,10 @@ func init() {
 func main() {
 	var probeAddr string
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":9870", "The address the probe endpoint binds to.")
-	opts := zap.Options{
-		Development: false,
-	}
-	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	// Set Deckhouse standard logger for controller-runtime
+	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -80,21 +79,21 @@ func main() {
 		Metrics:                metricsserver.Options{BindAddress: ":0"},
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error("unable to start manager", "error", err)
 		os.Exit(1)
 	}
 
 	nodeName := os.Getenv("NODE_NAME") // we need node name for label filters
 	if nodeName == "" {
-		setupLog.Error(errors.New("environment variable NODE_NAME not set"), "unable to start manager")
+		setupLog.Error("environment variable NODE_NAME not set", "error", errors.New("NODE_NAME not set"))
 		os.Exit(1)
 	}
 
-	anounceLogger := EmptyLogger{}
+	announceLogger := EmptyLogger{}
 	excludeRegex := regexp.MustCompile(excludeInterfacesPrefixes)
-	virtualIPAnnounces, err := layer2.New(anounceLogger, excludeRegex)
+	virtualIPAnnounces, err := layer2.New(announceLogger, excludeRegex)
 	if err != nil {
-		setupLog.Error(err, "unable to create virtual IP announcement")
+		setupLog.Error("unable to create virtual IP announcement", "error", err)
 		os.Exit(1)
 	}
 
@@ -104,22 +103,22 @@ func main() {
 		Scheme:             mgr.GetScheme(),
 		VirtualIPAnnounces: virtualIPAnnounces,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EgressGateway")
+		setupLog.Error("unable to create controller", "controller", "EgressGateway", "error", err)
 		os.Exit(1)
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
+		setupLog.Error("unable to set up health check", "error", err)
 		os.Exit(1)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
+		setupLog.Error("unable to set up ready check", "error", err)
 		os.Exit(1)
 	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.Error("problem running manager", "error", err)
 		os.Exit(1)
 	}
 }

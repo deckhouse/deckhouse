@@ -31,31 +31,29 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          container := input_containers[_]
-          tags := [forbid | tag = input.parameters.tags[_] ; forbid = endswith(container.image, concat(":", ["", tag]))]
-          any(tags)
-          msg := sprintf("container <%v> uses a disallowed tag <%v>; disallowed tags are %v", [container.name, container.image, input.parameters.tags])
-        }
+              import data.lib.common.input_containers
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          container := input_containers[_]
-          tag := [contains(container.image, ":")]
-          not all(tag)
-          msg := sprintf("container <%v> didn't specify an image tag <%v>", [container.name, container.image])
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := input_containers[_]
+                disallowed_tags := [tag | tag := input.parameters.tags[_]; endswith(container.image, concat(":", ["", tag]))]
+                count(disallowed_tags) > 0
+                msg := sprintf("container <%v> uses a disallowed tag <%v>; disallowed tags are %v", [container.name, container.image, input.parameters.tags])
+              }
 
-        input_containers[c] {
-          c := input.review.object.spec.containers[_]
-        }
-        input_containers[c] {
-          c := input.review.object.spec.initContainers[_]
-        }
-        input_containers[c] {
-          c := input.review.object.spec.ephemeralContainers[_]
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := input_containers[_]
+                not contains(container.image, ":")
+                msg := sprintf("container <%v> didn't specify an image tag <%v>", [container.name, container.image])
+              }
