@@ -9,5 +9,5 @@ spec:
     service:
       name: capdvp-webhook
       namespace: d8-cloud-provider-dvp
-      port: 9443
+      port: 4202
     caBundle: {{ .Values.cloudProviderDvp.internal.capdvpControllerManagerWebhookCert.ca | b64enc }}

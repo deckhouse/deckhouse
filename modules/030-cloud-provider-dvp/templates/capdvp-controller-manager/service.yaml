@@ -7,7 +7,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capdvp-controller-manager")) | nindent 2 }}
 spec:
   ports:
-  - port: 9443
+  - port: 4202
     targetPort: webhook-server
     protocol: TCP
   selector:

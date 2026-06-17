@@ -34,7 +34,7 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
 
 {{- define "capdvp_controller_manager_ports" -}}
 - name: webhook-server
-  containerPort: 9443
+  containerPort: 4202
   protocol: TCP
 {{- end -}}
 
