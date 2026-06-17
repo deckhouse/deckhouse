@@ -17,7 +17,7 @@ extractedLinksMax: 0
 * [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) — позволяет автоскейлерам HPA и VPA  использовать метрики мониторинга для принятия решений о масштабировании;
 * [`log-shipper`](/modules/log-shipper/) — упрощает настройку сбора логов в Kubernetes-кластере;
 * [`loki`](/modules/loki/) — разворачивает в кластере хранилище оперативных логов на базе [Grafana Loki](https://grafana.com/oss/loki/);
-* [`observability`](/modules/observability/) — расширяет функциональность модулей [`prometheus`](/modules/prometheus/) и [`console`](/modules/console/stable/), предоставляя дополнительные возможности для гибкого управления визуализацией метрик и разграничения доступа к ним;
+* [`observability`](/modules/observability/) — расширяет функциональность модуля [`prometheus`](/modules/prometheus/) и [веб-интерфейса Deckhouse](/modules/console/), предоставляя дополнительные возможности для гибкого управления метриками, дашбордами и алертами, а также средства разграничения доступа к ним;
 * [`extended-monitoring`](/modules/extended-monitoring/) — расширяет возможности мониторинга кластера за счёт дополнительных Prometheus-экспортеров, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов;
 * [`monitoring-custom`](/modules/monitoring-custom/) — упрощает настройку мониторинга пользовательских приложений, требуя только указания определенного лейбла для нужного приложения;
 * [`monitoring-deckhouse`](/modules/monitoring-deckhouse/) — обеспечивает мониторинг компонентов и сервисов DKP;
@@ -28,4 +28,5 @@ extractedLinksMax: 0
 В подразделе на данный момент описаны:
 
 * [архитектура мониторинга в DKP](monitoring.html);
+* [модуль `observability`](observability.html);
 * [модули логирования](logging.html).

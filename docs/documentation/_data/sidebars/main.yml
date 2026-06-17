@@ -1591,6 +1591,10 @@ entries:
                 ru: Мониторинг
               url: /architecture/observability/monitoring.html
             - title:
+                en: Observability module
+                ru: Модуль observability
+              url: /architecture/observability/observability.html                
+            - title:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging.html
@@ -1617,11 +1621,7 @@ entries:
             - title:
                 en: Containerized Data Importer (CDI)
                 ru: Containerized Data Importer (CDI)
-              url: /architecture/virtualization/cdi.html
-            - title:
-                en: Observability module
-                ru: Модуль observability
-              url: /architecture/observability/observability.html              
+              url: /architecture/virtualization/cdi.html           
     - title:
         en: Reference
         ru: Справка
