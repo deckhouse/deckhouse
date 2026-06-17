@@ -220,7 +220,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 			for _, cpo := range cpos {
 				spec, _ := cpo["spec"].(map[string]interface{})
 				Expect(spec["component"]).To(Equal("Etcd"))
-				Expect(spec["approved"]).To(Equal(false))
+				Expect(spec["approved"]).To(Equal(true))
 				steps, _ := spec["steps"].([]interface{})
 				Expect(steps).To(ConsistOf("DefragEtcd"))
 
@@ -246,6 +246,28 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 			Expect(f).To(ExecuteSuccessfully())
 			count, _ := listCPOs(f)
 			Expect(count).To(Equal(3))
+		})
+	})
+
+	Context("grace period exceeded: slot missed by more than 5 minutes", func() {
+		f := newDefragHook(valuesDefragEnabled)
+		// missedSlot is 10 minutes before fixedNow — outside 5-min grace period.
+		const missedSlot = "2024-06-15T10:20:00Z"
+		BeforeEach(func() {
+			state := defragMaster0 + defragMaster1 + defragMaster2 + defragStateCMYAML(missedSlot)
+			f.BindingContexts.Set(f.KubeStateSet(state))
+			f.RunHook()
+		})
+		It("creates no CPOs and advances lastHandledCronSlot past the missed slot", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			count, _ := listCPOs(f)
+			Expect(count).To(Equal(0))
+			cm := f.KubernetesResource("ConfigMap", "kube-system", defragStateCMName)
+			Expect(cm.Exists()).To(BeTrue())
+			// lastHandledCronSlot must be updated so the hook does not retry the stale slot.
+			slot := cm.Field("data.lastHandledCronSlot").String()
+			Expect(slot).NotTo(BeEmpty())
+			Expect(slot).NotTo(Equal(missedSlot))
 		})
 	})
 
