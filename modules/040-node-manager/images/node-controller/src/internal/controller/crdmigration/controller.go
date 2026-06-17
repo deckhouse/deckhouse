@@ -29,8 +29,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	sigsyaml "sigs.k8s.io/yaml"
@@ -84,19 +86,53 @@ func (r *Reconciler) Setup(mgr ctrl.Manager) error {
 
 func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// On fresh install, CAPI CRDs don't exist yet — the informer is empty.
-	// Enqueue all 8 CRD names at startup to trigger creation.
+	// Enqueue all managed CRD names at startup.
 	w.WatchesRawSource(source.Func(func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
 		for name := range capiCRDNames {
 			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
 		}
+		for _, name := range conversionCRDNames {
+			q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+		}
 		return nil
 	}))
+
+	// Watch webhook TLS Secrets — on CA rotation, re-reconcile corresponding CRDs.
+	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(
+		func(_ context.Context, obj client.Object) []reconcile.Request {
+			if obj.GetNamespace() != capiNamespace {
+				return nil
+			}
+			switch obj.GetName() {
+			case nodeControllerWebhookSecretName:
+				reqs := make([]reconcile.Request, len(conversionCRDNames))
+				for i, name := range conversionCRDNames {
+					reqs[i] = reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}
+				}
+				return reqs
+			case webhookSecretName:
+				reqs := make([]reconcile.Request, 0, len(capiCRDNames))
+				for name := range capiCRDNames {
+					reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+				}
+				return reqs
+			default:
+				return nil
+			}
+		},
+	))
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	crdName := req.Name
+
+	// Handle conversion webhook CRDs (nodegroups, instances).
+	if isConversionCRD(crdName) {
+		return r.reconcileConversionWebhook(ctx, logger, crdName)
+	}
+
 	if !capiCRDNames[crdName] {
 		return ctrl.Result{}, nil
 	}
@@ -268,4 +304,39 @@ func loadCRDs(dir string) (map[string]*apiextensionsv1.CustomResourceDefinition,
 
 func ptrInt32(v int32) *int32 {
 	return &v
+}
+
+func isConversionCRD(name string) bool {
+	for _, n := range conversionCRDNames {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Reconciler) reconcileConversionWebhook(ctx context.Context, logger logr.Logger, crdName string) (ctrl.Result, error) {
+	secret := &corev1.Secret{}
+	if err := r.apiReader.Get(ctx, types.NamespacedName{
+		Name:      nodeControllerWebhookSecretName,
+		Namespace: capiNamespace,
+	}, secret); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("node-controller-webhook-tls secret not found, requeue", "crd", crdName)
+			return ctrl.Result{RequeueAfter: requeuePrecondition}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("get %s secret: %w", nodeControllerWebhookSecretName, err)
+	}
+
+	caBundle := secret.Data["ca.crt"]
+	if len(caBundle) == 0 {
+		logger.Info("node-controller-webhook-tls has empty ca.crt, requeue", "crd", crdName)
+		return ctrl.Result{RequeueAfter: requeuePrecondition}, nil
+	}
+
+	if err := patchConversionWebhook(ctx, r.Client, crdName, caBundle); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
 }
