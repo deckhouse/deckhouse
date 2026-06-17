@@ -41,6 +41,12 @@ func CloudProviderModuleName(providerName string) string {
 	return cloudProviderModuleNamePrefix + strings.ToLower(providerName)
 }
 
+// CloudProviderNamespace returns the canonical d8-cloud-provider-<name>
+// namespace that hosts the provider module's workloads.
+func CloudProviderNamespace(providerName string) string {
+	return "d8-" + CloudProviderModuleName(providerName)
+}
+
 func IsCloudPermanentNodeGroup(obj map[string]interface{}) bool {
 	nodeType, _, _ := unstructured.NestedString(obj, "spec", "nodeType")
 	return nodeType == "CloudPermanent"
