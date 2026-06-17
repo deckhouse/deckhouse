@@ -212,14 +212,9 @@ func isMigrated(crd *apiextensionsv1.CustomResourceDefinition, caBundle []byte) 
 
 // setMigrationSpec modifies the CRD spec to v1beta2 storage + conversion webhook.
 func setMigrationSpec(crd *apiextensionsv1.CustomResourceDefinition, caBundle []byte) {
-	// Switch storage versions.
+	// Switch storage to v1beta2, clear on all others.
 	for i := range crd.Spec.Versions {
-		switch crd.Spec.Versions[i].Name {
-		case "v1beta2":
-			crd.Spec.Versions[i].Storage = true
-		case "v1beta1":
-			crd.Spec.Versions[i].Storage = false
-		}
+		crd.Spec.Versions[i].Storage = crd.Spec.Versions[i].Name == "v1beta2"
 	}
 
 	// Set conversion webhook.
