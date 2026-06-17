@@ -34,7 +34,6 @@ editions:
 
   # exclude modules from templates and images
   excludeModules:
-  - openvpn
 
 - name: SE
   modulesDir: "ee/se/modules"
