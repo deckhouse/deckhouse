@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	healthProbeBindAddress   = "127.0.0.1:8095"
+	healthProbeBindAddress   = ":8095"
 	metricsserverBindAddress = ":4296"
 )
 

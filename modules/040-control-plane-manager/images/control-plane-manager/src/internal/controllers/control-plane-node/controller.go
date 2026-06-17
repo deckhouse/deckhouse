@@ -521,6 +521,7 @@ func operationBase(
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
 				constants.ControlPlaneComponentLabelKey: component.LabelValue(),
+				constants.ControlPlaneTypeLabelKey:      string(constants.ControlPlaneTypeNormal),
 				constants.HeritageLabelKey:              constants.HeritageLabelValue,
 			},
 			OwnerReferences: []metav1.OwnerReference{
