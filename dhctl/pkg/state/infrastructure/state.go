@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
@@ -380,7 +381,13 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		)
 }
 
-func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, outputs *infrastructure.PipelineOutputs) error {
+// SaveClusterInfrastructureState persists the terraform pipeline outputs.
+// Discovery data is routed by metaConfig:
+//   - legacy provider config (PCC present) → patch d8-provider-cluster-configuration;
+//   - mc-flow (cloud-provider-<name> ModuleConfig present) → write
+//     d8-candi-cloud-provider-discovery-data into d8-cloud-provider-<name>;
+//   - mid-migration (both present) → both are written; mc-flow data wins on read.
+func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, outputs *infrastructure.PipelineOutputs) error {
 	if outputs == nil || len(outputs.InfrastructureState) == 0 {
 		return ErrNoInfrastructureState
 	}
@@ -415,19 +422,33 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		return err
 	}
 
-	if err := saveCandiCloudProviderDiscoveryData(ctx, kubeCl, providerName, outputs.CloudDiscovery); err != nil {
-		return err
+	if metaConfig.HasLegacyProviderConfig() {
+		if err := patchLegacyProviderDiscoveryData(ctx, kubeCl, outputs.CloudDiscovery); err != nil {
+			return err
+		}
 	}
 
+	if metaConfig.HasProviderModuleConfig() {
+		if err := saveCandiCloudProviderDiscoveryData(ctx, kubeCl, metaConfig.ProviderName, outputs.CloudDiscovery); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// patchLegacyProviderDiscoveryData merges cloud-provider-discovery-data.json
+// into the legacy d8-provider-cluster-configuration Secret. A missing Secret is
+// tolerated: the cluster has migrated to mc-flow and the Secret is gone.
+func patchLegacyProviderDiscoveryData(ctx context.Context, kubeCl *client.KubernetesClient, discoveryData []byte) error {
 	patch, err := json.Marshal(map[string]interface{}{
 		"data": map[string]interface{}{
-			"cloud-provider-discovery-data.json": outputs.CloudDiscovery,
+			"cloud-provider-discovery-data.json": discoveryData,
 		},
 	})
 	if err != nil {
 		return err
 	}
-
 	return retry.NewLoop("Update cloud discovery data", 45, 10*time.Second).RunContext(ctx, func() error {
 		_, err = kubeCl.CoreV1().Secrets("kube-system").Patch(
 			ctx,
@@ -437,9 +458,6 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 			metav1.PatchOptions{},
 		)
 		if k8errors.IsNotFound(err) {
-			// mc-flow cluster: the legacy Secret is intentionally absent and
-			// discovery data lives in d8-candi-cloud-provider-discovery-data
-			// (written above) — nothing to patch here.
 			log.WarnLn("Skipping cloud discovery data update: legacy Secret d8-provider-cluster-configuration not present (mc-flow cluster)")
 			return nil
 		}
