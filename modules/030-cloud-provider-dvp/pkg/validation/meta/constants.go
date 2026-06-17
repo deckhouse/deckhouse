@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package validation provides DVP-specific cloud-provider validation rules.
-package validation
+// Package meta contains shared DVP validation constants.
+package meta
 
 import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"

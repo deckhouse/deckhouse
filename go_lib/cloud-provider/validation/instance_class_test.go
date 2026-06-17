@@ -21,10 +21,10 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
-func TestValidateInstanceClassEtcdDiskAttachmentAllowsUnattachedEtcdDisk(t *testing.T) {
+func TestValidateInstanceClassesEtcdDiskAllowsUnattachedEtcdDisk(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
+	result := ValidateInstanceClassesEtcdDisk(instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
@@ -63,10 +63,10 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsUnattachedEtcdDisk(t *test
 	}
 }
 
-func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *testing.T) {
+func TestValidateInstanceClassesEtcdDiskReportsAllNonMasterConsumers(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
+	result := ValidateInstanceClassesEtcdDisk(instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
@@ -122,10 +122,10 @@ func TestValidateInstanceClassEtcdDiskAttachmentReportsAllNonMasterConsumers(t *
 	}
 }
 
-func TestValidateInstanceClassEtcdDiskAttachmentAllowsMasterOnly(t *testing.T) {
+func TestValidateInstanceClassesEtcdDiskAllowsMasterOnly(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
+	result := ValidateInstanceClassesEtcdDisk(instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
@@ -147,14 +147,14 @@ func TestValidateInstanceClassEtcdDiskAttachmentAllowsMasterOnly(t *testing.T) {
 	))
 
 	if result.HasErrors() {
-		t.Fatalf("ValidateInstanceClassEtcdDiskAttachment() unexpected errors: %s", result.Error())
+		t.Fatalf("ValidateInstanceClassesEtcdDisk() unexpected errors: %s", result.Error())
 	}
 }
 
-func TestValidateInstanceClassEtcdDiskAttachmentSkipsOtherKinds(t *testing.T) {
+func TestValidateInstanceClassesEtcdDiskSkipsOtherKinds(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
+	result := ValidateInstanceClassesEtcdDisk(instanceClassState(
 		"DVPInstanceClass",
 		nil,
 		[]cpapi.InstanceClass{
@@ -167,14 +167,14 @@ func TestValidateInstanceClassEtcdDiskAttachmentSkipsOtherKinds(t *testing.T) {
 	))
 
 	if result.HasErrors() {
-		t.Fatalf("ValidateInstanceClassEtcdDiskAttachment() = %q, want skip other kinds", result.Error())
+		t.Fatalf("ValidateInstanceClassesEtcdDisk() = %q, want skip other kinds", result.Error())
 	}
 }
 
-func TestValidateInstanceClassEtcdDiskAttachmentRequiresMasterWhenAttached(t *testing.T) {
+func TestValidateInstanceClassesEtcdDiskRequiresMasterWhenAttached(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
+	result := ValidateInstanceClassesEtcdDisk(instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{
 			{
@@ -196,21 +196,21 @@ func TestValidateInstanceClassEtcdDiskAttachmentRequiresMasterWhenAttached(t *te
 	))
 
 	if !result.HasErrors() || !strings.Contains(result.Error(), "attached to NodeGroup master") {
-		t.Fatalf("ValidateInstanceClassEtcdDiskAttachment() = %q", result.Error())
+		t.Fatalf("ValidateInstanceClassesEtcdDisk() = %q", result.Error())
 	}
 }
 
-func TestValidateInstanceClassEtcdDiskAttachmentSkipsNilEtcdDisk(t *testing.T) {
+func TestValidateInstanceClassesEtcdDiskSkipsNilEtcdDisk(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInstanceClassEtcdDiskAttachment(instanceClassState(
+	result := ValidateInstanceClassesEtcdDisk(instanceClassState(
 		"DVPInstanceClass",
 		nil,
 		[]cpapi.InstanceClass{{ObjectMeta: cpapi.ObjectMeta{Name: "plain"}}},
 	))
 
 	if result.HasErrors() {
-		t.Fatalf("ValidateInstanceClassEtcdDiskAttachment() = %q, want no errors", result.Error())
+		t.Fatalf("ValidateInstanceClassesEtcdDisk() = %q, want no errors", result.Error())
 	}
 }
 
@@ -286,7 +286,7 @@ func TestValidateInstanceClassDeleteUsesDeletedClassName(t *testing.T) {
 func TestValidateMasterInstanceClassRequiresEtcdDisk(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateMasterInstanceClass(instanceClassState(
+	state := instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{{
 			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
@@ -299,16 +299,23 @@ func TestValidateMasterInstanceClassRequiresEtcdDisk(t *testing.T) {
 		[]cpapi.InstanceClass{{
 			ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
 		}},
-	))
+	)
+
+	result := ValidateInstanceClassesEtcdDisk(state)
 	if !hasViolationCode(result, "master_etcd_disk_required") {
-		t.Fatalf("ValidateMasterInstanceClass() = %q", result.Error())
+		t.Fatalf("ValidateInstanceClassesEtcdDisk() = %q", result.Error())
+	}
+
+	result = ValidateMasterInstanceClassReference(state)
+	if result.HasErrors() {
+		t.Fatalf("ValidateMasterInstanceClassReference() unexpected errors: %s", result.Error())
 	}
 }
 
 func TestValidateMasterInstanceClassRequiresExistingClass(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateMasterInstanceClass(instanceClassState(
+	state := instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{{
 			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
@@ -319,16 +326,23 @@ func TestValidateMasterInstanceClassRequiresExistingClass(t *testing.T) {
 			},
 		}},
 		nil,
-	))
+	)
+
+	result := ValidateMasterInstanceClassReference(state)
 	if !hasViolationCode(result, "master_instance_class_not_found") {
-		t.Fatalf("ValidateMasterInstanceClass() = %q", result.Error())
+		t.Fatalf("ValidateMasterInstanceClassReference() = %q", result.Error())
+	}
+
+	result = ValidateInstanceClassesEtcdDisk(state)
+	if result.HasErrors() {
+		t.Fatalf("ValidateInstanceClassesEtcdDisk() unexpected errors: %s", result.Error())
 	}
 }
 
 func TestValidateMasterInstanceClassAllowsConfiguredMaster(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateMasterInstanceClass(instanceClassState(
+	state := instanceClassState(
 		"DVPInstanceClass",
 		[]cpapi.NodeGroup{{
 			ObjectMeta: cpapi.ObjectMeta{Name: "master"},
@@ -342,8 +356,15 @@ func TestValidateMasterInstanceClassAllowsConfiguredMaster(t *testing.T) {
 			ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
 			Spec:       cpapi.InstanceClassSpec{EtcdDisk: map[string]any{"size": "10Gi"}},
 		}},
-	))
-	if result.HasErrors() {
-		t.Fatalf("ValidateMasterInstanceClass() unexpected errors: %s", result.Error())
+	)
+
+	for name, validate := range map[string]func(*State) Result{
+		"ValidateMasterInstanceClassReference": ValidateMasterInstanceClassReference,
+		"ValidateInstanceClassesEtcdDisk":  ValidateInstanceClassesEtcdDisk,
+	} {
+		result := validate(state)
+		if result.HasErrors() {
+			t.Fatalf("%s() unexpected errors: %s", name, result.Error())
+		}
 	}
 }

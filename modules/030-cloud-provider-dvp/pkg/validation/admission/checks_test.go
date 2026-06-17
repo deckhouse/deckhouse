@@ -12,43 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation
+package admission
 
 import (
 	"testing"
 
+	admissionv1 "k8s.io/api/admission/v1"
+
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 	"k8s.io/utils/ptr"
 )
 
-func TestValidateInvariantsAllowsUnattachedEtcdDisk(t *testing.T) {
+func hasViolationCode(result cpval.Result, code string) bool {
+	for _, violation := range result.Errors() {
+		if violation.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
+func TestValidateInstanceClassAllowsUnattachedEtcdDisk(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
 	state.InstanceClasses = append(state.InstanceClasses, cpapi.InstanceClass{
-		TypeMeta:   cpapi.TypeMeta{Kind: InstanceClassKind},
+		TypeMeta:   cpapi.TypeMeta{Kind: dvpmeta.InstanceClassKind},
 		ObjectMeta: cpapi.ObjectMeta{Name: "orphan-dvp"},
 		Spec: cpapi.InstanceClassSpec{
 			EtcdDisk: map[string]any{},
 		},
 	})
 
-	result := ValidateInvariants(state)
+	result := ValidateInstanceClass(state, admissionv1.Update, nil)
 	if result.HasErrors() {
-		t.Fatalf("ValidateInvariants() = %q, want unattached etcdDisk allowed", result.Error())
+		t.Fatalf("ValidateInstanceClass() = %q, want unattached etcdDisk allowed", result.Error())
 	}
 }
 
-func TestValidateInvariantsSkipsPendingMigration(t *testing.T) {
+func TestValidateAdmissionSkipsPendingMigration(t *testing.T) {
 	t.Parallel()
 
 	state := &cpval.State{
-		ModuleName:        ModuleName,
-		NamespaceName:     Namespace,
-		InstanceClassKind: InstanceClassKind,
+		ModuleName:        dvpmeta.ModuleName,
+		NamespaceName:     dvpmeta.Namespace,
+		InstanceClassKind: dvpmeta.InstanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: cpapi.ObjectMeta{Name: ModuleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: dvpmeta.ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: ptr.To(true),
 				Version: 2,
@@ -64,25 +76,40 @@ func TestValidateInvariantsSkipsPendingMigration(t *testing.T) {
 		},
 	}
 
-	result := ValidateInvariants(state)
-	if result.HasErrors() {
-		t.Fatalf("ValidateInvariants() during migration = %q, want no errors", result.Error())
+	for name, validate := range map[string]func(*cpval.State) cpval.Result{
+		"ValidateModuleConfig": func(state *cpval.State) cpval.Result {
+			return ValidateModuleConfig(state, admissionv1.Update)
+		},
+		"ValidateCredentialSecret": func(state *cpval.State) cpval.Result {
+			return ValidateCredentialSecret(state, admissionv1.Update)
+		},
+		"ValidateInstanceClass": func(state *cpval.State) cpval.Result {
+			return ValidateInstanceClass(state, admissionv1.Update, nil)
+		},
+		"ValidateNodeGroup": func(state *cpval.State) cpval.Result {
+			return ValidateNodeGroup(state, admissionv1.Update)
+		},
+	} {
+		result := validate(state)
+		if result.HasErrors() {
+			t.Fatalf("%s() during migration = %q, want no errors", name, result.Error())
+		}
 	}
 }
 
-func TestValidateInvariantsRequiresMasterEtcdDisk(t *testing.T) {
+func TestValidateInstanceClassRequiresMasterEtcdDisk(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
 	state.InstanceClasses[0].Spec.EtcdDisk = nil
 
-	result := ValidateInvariants(state)
+	result := ValidateInstanceClass(state, admissionv1.Update, nil)
 	if !hasViolationCode(result, "master_etcd_disk_required") {
-		t.Fatalf("ValidateInvariants() = %q, want master etcdDisk requirement", result.Error())
+		t.Fatalf("ValidateInstanceClass() = %q, want master etcdDisk requirement", result.Error())
 	}
 }
 
-func TestValidateInvariantsAllowsWorkerWithoutClassReference(t *testing.T) {
+func TestValidateNodeGroupAllowsWorkerWithoutClassReference(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
@@ -93,13 +120,13 @@ func TestValidateInvariantsAllowsWorkerWithoutClassReference(t *testing.T) {
 		},
 	})
 
-	result := ValidateInvariants(state)
+	result := ValidateNodeGroup(state, admissionv1.Update)
 	if result.HasErrors() {
-		t.Fatalf("ValidateInvariants() unexpected errors: %s", result.Error())
+		t.Fatalf("ValidateNodeGroup() unexpected errors: %s", result.Error())
 	}
 }
 
-func TestValidateInvariantsIgnoresNodeParameterFields(t *testing.T) {
+func TestValidateModuleConfigIgnoresNodeParameterFields(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
@@ -115,30 +142,44 @@ func TestValidateInvariantsIgnoresNodeParameterFields(t *testing.T) {
 		},
 	}
 
-	result := ValidateInvariants(state)
+	result := ValidateModuleConfig(state, admissionv1.Update)
 	if result.HasErrors() {
-		t.Fatalf("ValidateInvariants() unexpected errors: %s", result.Error())
+		t.Fatalf("ValidateModuleConfig() unexpected errors: %s", result.Error())
 	}
 }
 
-func TestValidateInvariantsNilState(t *testing.T) {
+func TestValidateNodeGroupAllowsMissingMasterInstanceClass(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateInvariants(nil)
-	if !hasViolationCode(result, cpval.CodeInternalStateNil) {
-		t.Fatalf("ValidateInvariants(nil) = %q, want %s", result.Error(), cpval.CodeInternalStateNil)
+	state := validState(t)
+	state.InstanceClasses = nil
+
+	for _, operation := range []admissionv1.Operation{admissionv1.Create, admissionv1.Update} {
+		result := ValidateNodeGroup(state, operation)
+		if result.HasErrors() {
+			t.Fatalf("ValidateNodeGroup(%s) = %q, want allow missing InstanceClass", operation, result.Error())
+		}
 	}
 }
 
-func TestValidateInvariantsDoesNotRequirePrimaryCredentialSecret(t *testing.T) {
+func TestValidateModuleConfigNilState(t *testing.T) {
+	t.Parallel()
+
+	result := ValidateModuleConfig(nil, admissionv1.Update)
+	if !hasViolationCode(result, cpval.CodeInternalStateNil) {
+		t.Fatalf("ValidateModuleConfig(nil) = %q, want %s", result.Error(), cpval.CodeInternalStateNil)
+	}
+}
+
+func TestValidateCredentialSecretDoesNotRequirePrimaryCredentialSecret(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
 	state.CredentialSecrets = nil
 
-	result := ValidateInvariants(state)
+	result := ValidateCredentialSecret(state, admissionv1.Update)
 	if result.HasErrors() {
-		t.Fatalf("ValidateInvariants() = %q, want no primary credential requirement", result.Error())
+		t.Fatalf("ValidateCredentialSecret() = %q, want no primary credential requirement", result.Error())
 	}
 }
 
@@ -146,18 +187,18 @@ func validState(t *testing.T) *cpval.State {
 	t.Helper()
 
 	state := &cpval.State{
-		ModuleName:        ModuleName,
-		NamespaceName:     Namespace,
-		InstanceClassKind: InstanceClassKind,
+		ModuleName:        dvpmeta.ModuleName,
+		NamespaceName:     dvpmeta.Namespace,
+		InstanceClassKind: dvpmeta.InstanceClassKind,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: cpapi.ObjectMeta{Name: ModuleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: dvpmeta.ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: ptr.To(true),
 				Version: 2,
 				Settings: cpapi.ModuleConfigSpecSettings{
 					Provider: &cpapi.ModuleConfigSpecProviderSettings{
 						Parameters: map[string]any{
-							"namespace": Namespace,
+							"namespace": dvpmeta.Namespace,
 						},
 					},
 					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
@@ -174,7 +215,7 @@ func validState(t *testing.T) *cpval.State {
 			{
 				ObjectMeta: cpapi.ObjectMeta{
 					Name:      cpapi.CredentialSecretName,
-					Namespace: Namespace,
+					Namespace: dvpmeta.Namespace,
 				},
 				Type: cpapi.CredentialsSecretType,
 				StringData: cpapi.CredentialSecretStringData{
@@ -190,7 +231,7 @@ func validState(t *testing.T) *cpval.State {
 					NodeType: cpapi.NodeTypeCloudPermanent,
 					CloudInstances: &cpapi.CloudInstances{
 						ClassReference: &cpapi.ClassReference{
-							Kind: InstanceClassKind,
+							Kind: dvpmeta.InstanceClassKind,
 							Name: "master-dvp",
 						},
 					},
@@ -199,7 +240,7 @@ func validState(t *testing.T) *cpval.State {
 		},
 		InstanceClasses: []cpapi.InstanceClass{
 			{
-				TypeMeta:   cpapi.TypeMeta{Kind: InstanceClassKind},
+				TypeMeta:   cpapi.TypeMeta{Kind: dvpmeta.InstanceClassKind},
 				ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
 				Spec: cpapi.InstanceClassSpec{
 					EtcdDisk: map[string]any{},

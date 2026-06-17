@@ -59,12 +59,12 @@ func findNodeGroup(state *State, name string) (cpapi.NodeGroup, bool) {
 	return cpapi.NodeGroup{}, false
 }
 
-func findInstanceClass(state *State, name string) (cpapi.InstanceClass, bool) {
+func existsInstanceClass(state *State, name string) bool {
 	for _, class := range state.InstanceClasses {
 		if class.Name == name {
-			return class, true
+			return true
 		}
 	}
 
-	return cpapi.InstanceClass{}, false
+	return false
 }

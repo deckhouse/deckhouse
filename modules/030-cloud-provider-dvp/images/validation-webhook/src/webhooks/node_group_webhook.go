@@ -30,7 +30,8 @@ import (
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 type NodeGroupValidator struct {
@@ -111,7 +112,7 @@ func (v *NodeGroupValidator) validate(
 		return nil, nil
 	}
 
-	result := dvpval.ValidateInvariants(state)
+	result := dvpadmission.ValidateNodeGroup(state, operation)
 
 	warnings, admissionErr := resultToAdmission(result)
 	if admissionErr != nil {
@@ -165,7 +166,7 @@ func isDVPRelevantNodeGroup(nodeGroup cpapi.NodeGroup) bool {
 		return false
 	}
 
-	return nodeGroup.Spec.CloudInstances.ClassReference.Kind == dvpval.InstanceClassKind
+	return nodeGroup.Spec.CloudInstances.ClassReference.Kind == dvpmeta.InstanceClassKind
 }
 
 func decodeNodeGroup(obj runtime.Object) (cpapi.NodeGroup, error) {

@@ -22,7 +22,7 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 func testModuleSettings() map[string]any {
@@ -56,7 +56,7 @@ users:
 	return map[string]any{
 		"metadata": map[string]any{
 			"name":      cpapi.CredentialSecretName,
-			"namespace": dvpval.Namespace,
+			"namespace": dvpmeta.Namespace,
 		},
 		"type": cpapi.CredentialsSecretType,
 		"stringData": map[string]any{

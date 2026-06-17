@@ -25,7 +25,8 @@ import (
 
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 type ModuleConfigValidator struct {
@@ -72,7 +73,7 @@ func (v *ModuleConfigValidator) validate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	name := objectName(obj)
-	if name != dvpval.ModuleName {
+	if name != dvpmeta.ModuleName {
 		moduleConfigLog.V(2).Info("skipping validation", "reason", "not cloud-provider module", "name", name)
 		return nil, nil
 	}
@@ -96,7 +97,7 @@ func (v *ModuleConfigValidator) validate(
 		return nil, nil
 	}
 
-	result := dvpval.ValidateInvariants(state)
+	result := dvpadmission.ValidateModuleConfig(state, operation)
 
 	warnings, admissionErr := resultToAdmission(result)
 	if admissionErr != nil {

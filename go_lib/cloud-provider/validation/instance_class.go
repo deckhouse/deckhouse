@@ -21,60 +21,39 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
-// ValidateMasterInstanceClass checks master InstanceClass existence and etcdDisk requirements.
-func ValidateMasterInstanceClass(state *State) Result {
+// ValidateMasterInstanceClassReference checks that master NodeGroup references an existing InstanceClass.
+func ValidateMasterInstanceClassReference(state *State) Result {
 	if state == nil {
 		return ResultForNilState()
 	}
 
 	result := Result{}
 
-	masterNodeGroup, found := findNodeGroup(state, "master")
-	if !found {
+	classRef, ok := masterInstanceClassReference(state)
+	if !ok {
 		return result
 	}
 
-	if masterNodeGroup.Spec.CloudInstances == nil || masterNodeGroup.Spec.CloudInstances.ClassReference == nil {
-		return result
-	}
-
-	classRef := masterNodeGroup.Spec.CloudInstances.ClassReference
-	if strings.TrimSpace(classRef.Name) == "" {
-		return result
-	}
-
-	class, found := findInstanceClass(state, classRef.Name)
-	if !found {
+	if !existsInstanceClass(state, classRef.Name) {
 		result.AddError(
 			"NodeGroup/master.spec.cloudInstances.classReference.name",
 			"master_instance_class_not_found",
 			classRef.Name,
 			fmt.Sprintf("%s %q was not found", state.InstanceClassKind, classRef.Name),
 		)
-
-		return result
-	}
-
-	if class.Spec.EtcdDisk == nil {
-		result.AddError(
-			state.InstanceClassKind+"/"+classRef.Name+".spec.etcdDisk",
-			"master_etcd_disk_required",
-			nil,
-			fmt.Sprintf("master %s must define spec.etcdDisk", state.InstanceClassKind),
-		)
 	}
 
 	return result
 }
 
-// ValidateInstanceClassEtcdDiskAttachment checks etcdDisk usage against NodeGroup attachments.
-func ValidateInstanceClassEtcdDiskAttachment(state *State) Result {
+// ValidateInstanceClassesEtcdDisk checks spec.etcdDisk for all InstanceClasses:
+// master-attached classes must define etcdDisk; etcdDisk is forbidden on non-master attachments.
+func ValidateInstanceClassesEtcdDisk(state *State) Result {
 	if state == nil {
 		return ResultForNilState()
 	}
 
 	result := Result{}
-
 	consumers := collectInstanceClassConsumers(state.InstanceClassKind, state.NodeGroups)
 
 	for _, class := range state.InstanceClasses {
@@ -82,17 +61,30 @@ func ValidateInstanceClassEtcdDiskAttachment(state *State) Result {
 			continue
 		}
 
-		if class.Spec.EtcdDisk == nil {
-			continue
-		}
-
 		path := namedResourcePath(state.InstanceClassKind, class.Name)
+		nodeGroups := consumers[class.Name]
 
-		for _, nodeGroupName := range consumers[class.Name] {
+		hasMaster := false
+		hasNonMaster := false
+		for _, nodeGroupName := range nodeGroups {
 			if nodeGroupName == "master" {
+				hasMaster = true
 				continue
 			}
 
+			hasNonMaster = true
+		}
+
+		if hasMaster && class.Spec.EtcdDisk == nil {
+			result.AddError(
+				path+".spec.etcdDisk",
+				"master_etcd_disk_required",
+				nil,
+				fmt.Sprintf("master %s must define spec.etcdDisk", state.InstanceClassKind),
+			)
+		}
+
+		if hasNonMaster && class.Spec.EtcdDisk != nil {
 			result.AddError(
 				path+".spec.etcdDisk",
 				"etcd_disk_forbidden_for_non_master",
@@ -147,6 +139,24 @@ func ValidateInstanceClassDelete(state *State, className string, deletedClass *c
 	}
 
 	return result
+}
+
+func masterInstanceClassReference(state *State) (cpapi.ClassReference, bool) {
+	masterNodeGroup, found := findNodeGroup(state, "master")
+	if !found {
+		return cpapi.ClassReference{}, false
+	}
+
+	if masterNodeGroup.Spec.CloudInstances == nil || masterNodeGroup.Spec.CloudInstances.ClassReference == nil {
+		return cpapi.ClassReference{}, false
+	}
+
+	classRef := masterNodeGroup.Spec.CloudInstances.ClassReference
+	if strings.TrimSpace(classRef.Name) == "" {
+		return cpapi.ClassReference{}, false
+	}
+
+	return *classRef, true
 }
 
 func collectInstanceClassConsumers(instanceClassKind string, nodeGroups []cpapi.NodeGroup) map[string][]string {

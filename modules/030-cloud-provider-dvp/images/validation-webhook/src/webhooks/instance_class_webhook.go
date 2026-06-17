@@ -23,10 +23,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 type DVPInstanceClassValidator struct {
@@ -76,7 +76,7 @@ func (v *DVPInstanceClassValidator) validate(
 	instanceClassLog.Info(
 		"validating resource",
 		"operation", operation,
-		"resource", dvpval.InstanceClassKind,
+		"resource", dvpmeta.InstanceClassKind,
 		"name", name,
 		"namespace", objectNamespace(obj),
 	)
@@ -92,12 +92,7 @@ func (v *DVPInstanceClassValidator) validate(
 		return nil, nil
 	}
 
-	result := dvpval.ValidateInvariants(state)
-
-	if operation == admissionv1.Delete {
-		deleteResult := cpval.ValidateInstanceClassDelete(state, name, deletedClass)
-		result.Merge(deleteResult)
-	}
+	result := dvpadmission.ValidateInstanceClass(state, operation, deletedClass)
 
 	warnings, admissionErr := resultToAdmission(result)
 	if admissionErr != nil {
@@ -113,7 +108,7 @@ func (v *DVPInstanceClassValidator) validate(
 	instanceClassLog.Info(
 		"validation allowed",
 		"operation", operation,
-		"resource", dvpval.InstanceClassKind,
+		"resource", dvpmeta.InstanceClassKind,
 		"name", name,
 		"namespace", objectNamespace(obj),
 	)

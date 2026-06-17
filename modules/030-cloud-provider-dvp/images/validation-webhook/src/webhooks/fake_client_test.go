@@ -26,7 +26,7 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 func newWebhookAdmissionStateBuilder(t *testing.T, objects ...runtime.Object) *cpvaladmission.StateBuilder {
@@ -39,9 +39,9 @@ func newWebhookAdmissionStateBuilder(t *testing.T, objects ...runtime.Object) *c
 
 	client := clientfake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objects...).Build()
 	return cpvaladmission.NewStateBuilder(client, cpvaladmission.StateBuilderConfig{
-		ModuleName:                   dvpval.ModuleName,
-		NamespaceName:                dvpval.Namespace,
-		InstanceClassKind:            dvpval.InstanceClassKind,
+		ModuleName:                   dvpmeta.ModuleName,
+		NamespaceName:                dvpmeta.Namespace,
+		InstanceClassKind:            dvpmeta.InstanceClassKind,
 	})
 }
 
@@ -57,7 +57,7 @@ func validDVPClusterObjects() []runtime.Object {
 func dvpModuleConfigObject() *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"})
-	obj.SetName(dvpval.ModuleName)
+	obj.SetName(dvpmeta.ModuleName)
 	obj.Object["spec"] = map[string]any{"enabled": true, "version": int64(2)}
 	return obj
 }
@@ -70,7 +70,7 @@ func dvpNodeGroupObject(name string, nodeType cpapi.NodeType) *unstructured.Unst
 	if name == "master" {
 		spec["cloudInstances"] = map[string]any{
 			"classReference": map[string]any{
-				"kind": dvpval.InstanceClassKind,
+				"kind": dvpmeta.InstanceClassKind,
 				"name": "master-dvp",
 			},
 		}
@@ -89,7 +89,7 @@ func dvpStaticNodeGroupObject(name string) *unstructured.Unstructured {
 
 func dvpInstanceClassObject(name string) *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpval.InstanceClassKind})
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpmeta.InstanceClassKind})
 	obj.SetName(name)
 	if name == "master-dvp" {
 		obj.Object["spec"] = map[string]any{"etcdDisk": map[string]any{}}
@@ -101,7 +101,7 @@ func dvpCredentialSecret(token string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cpapi.CredentialSecretName,
-			Namespace: dvpval.Namespace,
+			Namespace: dvpmeta.Namespace,
 		},
 		Type: cpapi.CredentialsSecretType,
 		StringData: map[string]string{

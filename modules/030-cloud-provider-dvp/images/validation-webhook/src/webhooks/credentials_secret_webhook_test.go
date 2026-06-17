@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 func TestCredentialSecretValidatorWithFakeClientValidateCreate(t *testing.T) {
@@ -102,7 +102,7 @@ func TestCredentialSecretValidatorWithFakeClientSkipsMigration(t *testing.T) {
 	objects = append(objects, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cpapi.MigrationConfigMapName,
-			Namespace: dvpval.Namespace,
+			Namespace: dvpmeta.Namespace,
 		},
 	})
 	builder := newWebhookAdmissionStateBuilder(t, objects...)

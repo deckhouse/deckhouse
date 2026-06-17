@@ -19,8 +19,8 @@ import (
 	"strings"
 )
 
-// ValidateMasterNodeGroup checks master NodeGroup topology requirements.
-func ValidateMasterNodeGroup(state *State) Result {
+// ValidateMasterNodeGroupClassReference checks that master NodeGroup references a provider InstanceClass.
+func ValidateMasterNodeGroupClassReference(state *State) Result {
 	if state == nil {
 		return ResultForNilState()
 	}

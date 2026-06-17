@@ -44,81 +44,81 @@ func validMasterNodeGroup() cpapi.NodeGroup {
 	}
 }
 
-func TestValidateMasterNodeGroupNilState(t *testing.T) {
+func TestValidateMasterNodeGroupClassReferenceNilState(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateMasterNodeGroup(nil)
+	result := ValidateMasterNodeGroupClassReference(nil)
 	if !hasViolationCode(result, CodeInternalStateNil) {
-		t.Fatalf("ValidateMasterNodeGroup(nil) = %q, want %s", result.Error(), CodeInternalStateNil)
+		t.Fatalf("ValidateMasterNodeGroupClassReference(nil) = %q, want %s", result.Error(), CodeInternalStateNil)
 	}
 }
 
-func TestValidateMasterNodeGroupRequiresMaster(t *testing.T) {
+func TestValidateMasterNodeGroupClassReferenceRequiresMaster(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateMasterNodeGroup(masterNodeGroupState(nil))
+	result := ValidateMasterNodeGroupClassReference(masterNodeGroupState(nil))
 	if !hasViolationCode(result, "master_node_group_required") {
-		t.Fatalf("ValidateMasterNodeGroup() = %q", result.Error())
+		t.Fatalf("ValidateMasterNodeGroupClassReference() = %q", result.Error())
 	}
 }
 
-func TestValidateMasterNodeGroupRequiresClassReference(t *testing.T) {
+func TestValidateMasterNodeGroupClassReferenceRequiresClassReference(t *testing.T) {
 	t.Parallel()
 
 	master := validMasterNodeGroup()
 	master.Spec.CloudInstances = nil
 
-	result := ValidateMasterNodeGroup(masterNodeGroupState([]cpapi.NodeGroup{master}))
+	result := ValidateMasterNodeGroupClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}))
 	if !hasViolationCode(result, "master_class_reference_required") {
-		t.Fatalf("ValidateMasterNodeGroup() = %q", result.Error())
+		t.Fatalf("ValidateMasterNodeGroupClassReference() = %q", result.Error())
 	}
 }
 
-func TestValidateMasterNodeGroupRejectsInvalidInstanceClassKind(t *testing.T) {
+func TestValidateMasterNodeGroupClassReferenceRejectsInvalidInstanceClassKind(t *testing.T) {
 	t.Parallel()
 
 	master := validMasterNodeGroup()
 	master.Spec.CloudInstances.ClassReference.Kind = "WrongKind"
 
-	result := ValidateMasterNodeGroup(masterNodeGroupState([]cpapi.NodeGroup{master}))
+	result := ValidateMasterNodeGroupClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}))
 	if !hasViolationCode(result, "master_invalid_instance_class_kind") {
-		t.Fatalf("ValidateMasterNodeGroup() = %q", result.Error())
+		t.Fatalf("ValidateMasterNodeGroupClassReference() = %q", result.Error())
 	}
 }
 
-func TestValidateMasterNodeGroupRequiresInstanceClassName(t *testing.T) {
+func TestValidateMasterNodeGroupClassReferenceRequiresInstanceClassName(t *testing.T) {
 	t.Parallel()
 
 	master := validMasterNodeGroup()
 	master.Spec.CloudInstances.ClassReference.Name = "  "
 
-	result := ValidateMasterNodeGroup(masterNodeGroupState([]cpapi.NodeGroup{master}))
+	result := ValidateMasterNodeGroupClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}))
 	if !hasViolationCode(result, "master_instance_class_name_required") {
-		t.Fatalf("ValidateMasterNodeGroup() = %q", result.Error())
+		t.Fatalf("ValidateMasterNodeGroupClassReference() = %q", result.Error())
 	}
 }
 
-func TestValidateMasterNodeGroupReportsKindAndNameErrors(t *testing.T) {
+func TestValidateMasterNodeGroupClassReferenceReportsKindAndNameErrors(t *testing.T) {
 	t.Parallel()
 
 	master := validMasterNodeGroup()
 	master.Spec.CloudInstances.ClassReference.Kind = "WrongKind"
 	master.Spec.CloudInstances.ClassReference.Name = ""
 
-	result := ValidateMasterNodeGroup(masterNodeGroupState([]cpapi.NodeGroup{master}))
+	result := ValidateMasterNodeGroupClassReference(masterNodeGroupState([]cpapi.NodeGroup{master}))
 	if !hasViolationCode(result, "master_invalid_instance_class_kind") {
-		t.Fatalf("ValidateMasterNodeGroup() = %q, want invalid kind", result.Error())
+		t.Fatalf("ValidateMasterNodeGroupClassReference() = %q, want invalid kind", result.Error())
 	}
 	if !hasViolationCode(result, "master_instance_class_name_required") {
-		t.Fatalf("ValidateMasterNodeGroup() = %q, want missing name", result.Error())
+		t.Fatalf("ValidateMasterNodeGroupClassReference() = %q, want missing name", result.Error())
 	}
 }
 
-func TestValidateMasterNodeGroupSuccess(t *testing.T) {
+func TestValidateMasterNodeGroupClassReferenceSuccess(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateMasterNodeGroup(masterNodeGroupState([]cpapi.NodeGroup{validMasterNodeGroup()}))
+	result := ValidateMasterNodeGroupClassReference(masterNodeGroupState([]cpapi.NodeGroup{validMasterNodeGroup()}))
 	if result.HasErrors() {
-		t.Fatalf("ValidateMasterNodeGroup() unexpected errors: %s", result.Error())
+		t.Fatalf("ValidateMasterNodeGroupClassReference() unexpected errors: %s", result.Error())
 	}
 }

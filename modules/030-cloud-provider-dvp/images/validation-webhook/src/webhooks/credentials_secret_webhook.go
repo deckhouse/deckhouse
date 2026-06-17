@@ -31,7 +31,8 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 type CredentialSecretValidator struct {
@@ -84,7 +85,7 @@ func (v *CredentialSecretValidator) validate(
 	namespace := objectNamespace(obj)
 	name := objectName(obj)
 
-	if namespace != dvpval.Namespace {
+	if namespace != dvpmeta.Namespace {
 		credentialSecretLog.V(2).Info("skipping validation", "reason", "not module namespace", "namespace", namespace, "name", name)
 		return nil, nil
 	}
@@ -119,7 +120,7 @@ func (v *CredentialSecretValidator) validate(
 		return nil, nil
 	}
 
-	result := dvpval.ValidateInvariants(state)
+	result := dvpadmission.ValidateCredentialSecret(state, operation)
 
 	warnings, admissionErr := resultToAdmission(result)
 	if admissionErr != nil {
@@ -171,7 +172,7 @@ func validateCredentialSecretTypeChange(oldObj, newObj runtime.Object) error {
 		return internalBuildError(fmt.Errorf("decode new Secret: %w", errNew))
 	}
 
-	if objectNamespace(oldSecret) != dvpval.Namespace {
+	if objectNamespace(oldSecret) != dvpmeta.Namespace {
 		return nil
 	}
 

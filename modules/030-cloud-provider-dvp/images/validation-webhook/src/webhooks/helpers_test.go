@@ -18,13 +18,15 @@ import (
 	"strings"
 	"testing"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 func TestShouldSkipState(t *testing.T) {
@@ -121,16 +123,16 @@ func TestValidateAdmissionStateRunsOnlyInvariants(t *testing.T) {
 	t.Parallel()
 
 	state := &cpval.State{
-		ModuleName: dvpval.ModuleName,
+		ModuleName: dvpmeta.ModuleName,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: cpapi.ObjectMeta{Name: dvpval.ModuleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: dvpmeta.ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: boolPtr(true),
 				Version: 2,
 			},
 		},
 	}
-	result := dvpval.ValidateInvariants(state)
+	result := dvpadmission.ValidateModuleConfig(state, admissionv1.Update)
 	if result.HasErrors() {
 		t.Fatalf("validateAdmissionState() = %q, want only invariants without preflight requirements", result.Error())
 	}
@@ -140,16 +142,16 @@ func TestValidateAdmissionStateDoesNotEnforceMasterTopology(t *testing.T) {
 	t.Parallel()
 
 	state := &cpval.State{
-		ModuleName: dvpval.ModuleName,
+		ModuleName: dvpmeta.ModuleName,
 		ModuleConfig: &cpapi.ModuleConfig{
-			ObjectMeta: cpapi.ObjectMeta{Name: dvpval.ModuleName},
+			ObjectMeta: cpapi.ObjectMeta{Name: dvpmeta.ModuleName},
 			Spec: cpapi.ModuleConfigSpec{
 				Enabled: boolPtr(true),
 				Version: 2,
 			},
 		},
 	}
-	if strings.Contains(dvpval.ValidateInvariants(state).Error(), `NodeGroup "master" is required`) {
+	if strings.Contains(dvpadmission.ValidateModuleConfig(state, admissionv1.Update).Error(), `NodeGroup "master" is required`) {
 		t.Fatal("validateAdmissionState() enforced preflight master topology")
 	}
 }
@@ -157,8 +159,8 @@ func TestValidateAdmissionStateDoesNotEnforceMasterTopology(t *testing.T) {
 func TestObjectNameAndNamespace(t *testing.T) {
 	t.Parallel()
 
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: dvpval.Namespace}}
-	if objectName(secret) != "s" || objectNamespace(secret) != dvpval.Namespace {
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: dvpmeta.Namespace}}
+	if objectName(secret) != "s" || objectNamespace(secret) != dvpmeta.Namespace {
 		t.Fatalf("objectName/Namespace() = (%q, %q)", objectName(secret), objectNamespace(secret))
 	}
 	if objectName(&metav1.Status{}) != "" {

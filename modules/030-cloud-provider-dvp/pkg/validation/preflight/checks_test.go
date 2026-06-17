@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation
+package preflight
 
 import (
 	"strings"
@@ -20,7 +20,9 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 func hasViolationCode(result cpval.Result, code string) bool {
@@ -185,4 +187,76 @@ func TestValidatePreflightInvalidKindStillChecksNameWhenPresent(t *testing.T) {
 		!hasViolationCode(result, "master_instance_class_name_required") {
 		t.Fatalf("ValidatePreflight() = %q", result.Error())
 	}
+}
+
+func validState(t *testing.T) *cpval.State {
+	t.Helper()
+
+	state := &cpval.State{
+		ModuleName:        dvpmeta.ModuleName,
+		NamespaceName:     dvpmeta.Namespace,
+		InstanceClassKind: dvpmeta.InstanceClassKind,
+		ModuleConfig: &cpapi.ModuleConfig{
+			ObjectMeta: cpapi.ObjectMeta{Name: dvpmeta.ModuleName},
+			Spec: cpapi.ModuleConfigSpec{
+				Enabled: ptr.To(true),
+				Version: 2,
+				Settings: cpapi.ModuleConfigSpecSettings{
+					Provider: &cpapi.ModuleConfigSpecProviderSettings{
+						Parameters: map[string]any{
+							"namespace": dvpmeta.Namespace,
+						},
+					},
+					Storage: &cpapi.ModuleConfigSpecSubsystemSettings{
+						Disabled:   ptr.To(false),
+						Parameters: map[string]any{},
+					},
+					Nodes: &cpapi.ModuleConfigSpecSubsystemSettings{
+						Disabled: ptr.To(true),
+					},
+				},
+			},
+		},
+		CredentialSecrets: []cpapi.CredentialSecret{
+			{
+				ObjectMeta: cpapi.ObjectMeta{
+					Name:      cpapi.CredentialSecretName,
+					Namespace: dvpmeta.Namespace,
+				},
+				Type: cpapi.CredentialsSecretType,
+				StringData: cpapi.CredentialSecretStringData{
+					AuthScheme: cpapi.AuthSchemeKubeconfig,
+					Secret:     validKubeconfigB64ForTest(),
+				},
+			},
+		},
+		NodeGroups: []cpapi.NodeGroup{
+			{
+				ObjectMeta: cpapi.ObjectMeta{Name: "master"},
+				Spec: cpapi.NodeGroupSpec{
+					NodeType: cpapi.NodeTypeCloudPermanent,
+					CloudInstances: &cpapi.CloudInstances{
+						ClassReference: &cpapi.ClassReference{
+							Kind: dvpmeta.InstanceClassKind,
+							Name: "master-dvp",
+						},
+					},
+				},
+			},
+		},
+		InstanceClasses: []cpapi.InstanceClass{
+			{
+				TypeMeta:   cpapi.TypeMeta{Kind: dvpmeta.InstanceClassKind},
+				ObjectMeta: cpapi.ObjectMeta{Name: "master-dvp"},
+				Spec: cpapi.InstanceClassSpec{
+					EtcdDisk: map[string]any{},
+				},
+			},
+		},
+	}
+	return state
+}
+
+func validKubeconfigB64ForTest() string {
+	return "YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgotIG5hbWU6IHRlc3QKICBjbHVzdGVyOgogICAgc2VydmVyOiBodHRwczovLzEyNy4wLjAuMTo2NDQzCiAgICBpbnNlY3VyZS1za2lwLXRscy12ZXJpZnk6IHRydWUKY29udGV4dHM6Ci0gbmFtZTogdGVzdAogIGNvbnRleHQ6CiAgICBjbHVzdGVyOiB0ZXN0CiAgICB1c2VyOiB0ZXN0CmN1cnJlbnQtY29udGV4dDogdGVzdAp1c2VyczoKLSBuYW1lOiB0ZXN0CiAgdXNlcjoKICAgIHRva2VuOiB0ZXN0LXRva2Vu"
 }

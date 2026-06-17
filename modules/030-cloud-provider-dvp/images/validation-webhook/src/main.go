@@ -28,13 +28,13 @@ import (
 
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 
 	"cloud-provider-dvp-validation-webhook/webhooks"
 )
 
 var (
-	instanceClassGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpval.InstanceClassKind}
+	instanceClassGVK = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpmeta.InstanceClassKind}
 	moduleConfigGVK  = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleConfig"}
 	nodeGroupGVK     = schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroup"}
 )
@@ -82,9 +82,9 @@ func main() {
 		builder := cpvaladmission.NewStateBuilder(
 			server.Client(),
 			cpvaladmission.StateBuilderConfig{
-				ModuleName:        dvpval.ModuleName,
-				NamespaceName:     dvpval.Namespace,
-				InstanceClassKind: dvpval.InstanceClassKind,
+				ModuleName:        dvpmeta.ModuleName,
+				NamespaceName:     dvpmeta.Namespace,
+				InstanceClassKind: dvpmeta.InstanceClassKind,
 			},
 		)
 

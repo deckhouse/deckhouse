@@ -54,8 +54,8 @@ func TestFindHelpers(t *testing.T) {
 		t.Fatal("findNodeGroup() = false, want true")
 	}
 
-	if _, ok := findInstanceClass(state, "master-dvp"); !ok {
-		t.Fatal("findInstanceClass() = false, want true")
+	if !existsInstanceClass(state, "master-dvp") {
+		t.Fatal("existsInstanceClass() = false, want true")
 	}
 }
 

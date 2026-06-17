@@ -20,7 +20,24 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
+
+func TestNodeGroupValidatorWithFakeClientAllowsMasterCreateBeforeInstanceClass(t *testing.T) {
+	t.Parallel()
+
+	objects := []runtime.Object{
+		dvpModuleConfigObject(),
+		dvpCredentialSecret(validWebhookKubeconfigB64()),
+	}
+	builder := newWebhookAdmissionStateBuilder(t, objects...)
+	validator := NewNodeGroupValidator(builder, &unstructured.Unstructured{})
+
+	_, err := validator.ValidateCreate(context.Background(), dvpNodeGroupObject("master", cpapi.NodeTypeCloudPermanent))
+	if err != nil {
+		t.Fatalf("ValidateCreate() error = %v, want allow master NodeGroup before InstanceClass exists", err)
+	}
+}
 
 func TestNodeGroupValidatorWithFakeClientValidateUpdate(t *testing.T) {
 	t.Parallel()

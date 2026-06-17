@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation
+package preflight
 
 import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 // ValidatePreflight checks resources required before cluster bootstrap or converge.
@@ -31,10 +33,13 @@ func ValidatePreflight(state *cpval.State) cpval.Result {
 		return result
 	}
 
+	result.Merge(cpval.ValidateModuleConfig(state))
 	result.Merge(cpval.ValidateCredentialSecretPresence(state))
-	result.Merge(cpval.ValidateProviderClusterConfigKubeconfig(state, ProviderClusterConfigKubeconfigPath))
-	result.Merge(cpval.ValidateMasterNodeGroup(state))
-	result.Merge(cpval.ValidateMasterInstanceClass(state))
+	result.Merge(cpval.ValidateCredentialSecretContent(state, dvpmeta.AllowedCredentialAuthSchemes))
+	result.Merge(cpval.ValidateProviderClusterConfigKubeconfig(state, dvpmeta.ProviderClusterConfigKubeconfigPath))
+	result.Merge(cpval.ValidateMasterNodeGroupClassReference(state))
+	result.Merge(cpval.ValidateMasterInstanceClassReference(state))
+	result.Merge(cpval.ValidateInstanceClassesEtcdDisk(state))
 
 	return result
 }

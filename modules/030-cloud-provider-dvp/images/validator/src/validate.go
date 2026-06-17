@@ -21,7 +21,8 @@ import (
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
 	dhctlproto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
+	dvppreflight "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/preflight"
 )
 
 func validate(_ context.Context, input dhctlproto.PrepareInput) error {
@@ -31,10 +32,10 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 
 	stateBuilder := cpvalprotocol.NewStateBuilder(
 		cpvalprotocol.StateBuilderConfig{
-			ModuleName:        dvpval.ModuleName,
-			NamespaceName:     dvpval.Namespace,
-			InstanceClassKind: dvpval.InstanceClassKind,
-			MigrationRules:    &dvpval.MigrationRules,
+			ModuleName:        dvpmeta.ModuleName,
+			NamespaceName:     dvpmeta.Namespace,
+			InstanceClassKind: dvpmeta.InstanceClassKind,
+			MigrationRules:    &dvpmeta.MigrationRules,
 		},
 	)
 
@@ -47,10 +48,7 @@ func validate(_ context.Context, input dhctlproto.PrepareInput) error {
 		return nil
 	}
 
-	result := dvpval.ValidatePreflight(state)
-	result.Merge(dvpval.ValidateInvariants(state))
-
-	return result.ErrorOrNil()
+	return dvppreflight.ValidatePreflight(state).ErrorOrNil()
 }
 
 func prepare(_ context.Context, input dhctlproto.PrepareInput) (*dhctlproto.PrepareResult, error) {

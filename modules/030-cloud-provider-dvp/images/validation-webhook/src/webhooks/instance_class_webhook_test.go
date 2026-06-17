@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/meta"
 )
 
 func TestDVPInstanceClassValidatorWithFakeClientValidateUpdate(t *testing.T) {
@@ -62,7 +62,7 @@ func TestDVPInstanceClassValidatorRejectsWorkerEtcdDiskWithReadableValue(t *test
 		"nodeType": string(cpapi.NodeTypeCloudPermanent),
 		"cloudInstances": map[string]any{
 			"classReference": map[string]any{
-				"kind": dvpval.InstanceClassKind,
+				"kind": dvpmeta.InstanceClassKind,
 				"name": "worker-dvp",
 			},
 		},
