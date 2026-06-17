@@ -21,3 +21,11 @@
   license: Apache License 2.0
   id: csi-yandex
   version: v0.15.1
+
+- name: Yandex Cloud Cluster API provider
+  link: https://github.com/yandex-cloud/cluster-api-provider-yandex
+  description: Infrastructure provider for Kubernetes Cluster API in Yandex Cloud.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+  id: capy-yandex
+  version: v0.2.0
