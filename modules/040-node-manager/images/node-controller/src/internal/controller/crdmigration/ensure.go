@@ -213,6 +213,8 @@ func ensureSingleCRD(ctx context.Context, c client.Client, crdName string, embed
 	}
 
 	patch := existing.DeepCopy()
+	// Use versions from embedded CRD — existing CRD may not have v1beta2 yet.
+	patch.Spec.Versions = embeddedCRD.Spec.DeepCopy().Versions
 	setMigrationSpec(patch, caBundle)
 	if err := c.Patch(ctx, patch, client.MergeFrom(existing)); err != nil {
 		return fmt.Errorf("patching: %w", err)
