@@ -487,12 +487,12 @@ func CreateDeckhouseManifests(
 	}
 
 	if len(cfg.CloudDiscovery) > 0 && cfg.ProviderName != "" {
-		candiNamespace := providerdata.CloudProviderNamespace(cfg.ProviderName)
+		providerNamespace := providerdata.CloudProviderNamespace(cfg.ProviderName)
 		tasks = append(tasks,
 			actions.ManifestTask{
-				Name: fmt.Sprintf(`Namespace %q`, candiNamespace),
+				Name: fmt.Sprintf(`Namespace %q`, providerNamespace),
 				Manifest: func() interface{} {
-					return manifests.DeckhouseNamespace(candiNamespace)
+					return manifests.DeckhouseNamespace(providerNamespace)
 				},
 				CreateFunc: func(ctx context.Context, manifest interface{}) error {
 					_, err := kubeCl.CoreV1().Namespaces().
@@ -506,17 +506,17 @@ func CreateDeckhouseManifests(
 				UpdateFunc: func(_ context.Context, _ interface{}) error { return nil },
 			},
 			actions.ManifestTask{
-				Name: fmt.Sprintf(`Secret %q`, candiNamespace+"/d8-candi-cloud-provider-discovery-data"),
+				Name: fmt.Sprintf(`Secret %q`, providerNamespace+"/d8-candi-cloud-provider-discovery-data"),
 				Manifest: func() interface{} {
-					return manifests.SecretWithCandiCloudProviderDiscoveryData(candiNamespace, cfg.CloudDiscovery)
+					return manifests.SecretWithCandiCloudProviderDiscoveryData(providerNamespace, cfg.CloudDiscovery)
 				},
 				CreateFunc: func(ctx context.Context, manifest interface{}) error {
-					_, err := kubeCl.CoreV1().Secrets(candiNamespace).
+					_, err := kubeCl.CoreV1().Secrets(providerNamespace).
 						Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 					return err
 				},
 				UpdateFunc: func(ctx context.Context, manifest interface{}) error {
-					_, err := kubeCl.CoreV1().Secrets(candiNamespace).
+					_, err := kubeCl.CoreV1().Secrets(providerNamespace).
 						Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 					return err
 				},
