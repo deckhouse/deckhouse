@@ -546,3 +546,20 @@ properties:
         type: string
         description: |
           The name of the default storage class discovered from the parent DVP cluster.
+      capdvpControllerManagerWebhookCert:
+        type: object
+        description: |
+          TLS certificate for the capdvp-controller-manager Runtime Extension webhook.
+        properties:
+          crt:
+            type: string
+            description: |
+              Base64-encoded certificate.
+          key:
+            type: string
+            description: |
+              Base64-encoded private key.
+          ca:
+            type: string
+            description: |
+              Base64-encoded CA certificate.

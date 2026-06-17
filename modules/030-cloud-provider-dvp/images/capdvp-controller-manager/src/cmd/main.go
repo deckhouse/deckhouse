@@ -40,6 +40,7 @@ import (
 
 	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
 	"cluster-api-provider-dvp/internal/controller"
+	"cluster-api-provider-dvp/internal/runtimeextension"
 )
 
 var (
@@ -143,6 +144,7 @@ func main() {
 	}
 
 	webhookServer := webhook.NewServer(webhook.Options{
+		Port:    9443,
 		TLSOpts: webhookTLSOpts,
 	})
 
@@ -235,6 +237,9 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	runtimeExt := runtimeextension.NewExtension(cloudAPI, mgr.GetClient(), cloudConfig.ClusterUUID)
+	runtimeExt.SetupWithWebhookServer(mgr.GetWebhookServer())
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")

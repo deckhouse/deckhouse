@@ -1,5 +1,6 @@
 {{- define "capdvp_controller_manager_pod_annotations" -}}
 checksum/config: {{ include (print $.Template.BasePath "/capdvp-controller-manager/secret.yaml") . | sha256sum }}
+checksum/tls: {{ include (print $.Template.BasePath "/capdvp-controller-manager/secret-tls.yaml") . | sha256sum }}
 {{- end -}}
 
 {{- define "capdvp_controller_manager_pod_labels" -}}
@@ -10,6 +11,7 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
 
 {{- define "capdvp_controller_manager_args" -}}
 - "--leader-elect"
+- "--webhook-cert-path=/tmp/k8s-webhook-server/serving-certs"
 {{- end -}}
 
 {{- define "capdvp_controller_manager_envs" -}}
@@ -30,6 +32,25 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
       key: clusterUUID
 {{- end -}}
 
+{{- define "capdvp_controller_manager_ports" -}}
+- name: webhook-server
+  containerPort: 9443
+  protocol: TCP
+{{- end -}}
+
+{{- define "capdvp_controller_manager_volume_mounts" -}}
+- name: capdvp-webhook-tls
+  mountPath: "/tmp/k8s-webhook-server/serving-certs"
+  readOnly: true
+{{- end -}}
+
+{{- define "capdvp_controller_manager_volumes" -}}
+- name: capdvp-webhook-tls
+  secret:
+    secretName: capdvp-webhook-tls
+    defaultMode: 420
+{{- end -}}
+
 {{- $capiConfig := dict -}}
 {{- $_ := set $capiConfig "fullname" "capdvp-controller-manager" -}}
 {{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "capdvpControllerManager")) -}}
@@ -38,6 +59,9 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
 {{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
 {{- $_ := set $capiConfig "additionalArgs" (include "capdvp_controller_manager_args" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalEnv" (include "capdvp_controller_manager_envs" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalPorts" (include "capdvp_controller_manager_ports" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumeMounts" (include "capdvp_controller_manager_volume_mounts" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumes" (include "capdvp_controller_manager_volumes" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "capdvp_controller_manager_pod_annotations" . | fromYaml) -}}
 {{- $_ := set $capiConfig "additionalPodLabels" (include "capdvp_controller_manager_pod_labels" . | fromYaml) -}}
 {{- $_ := set $capiConfig "hostNetwork" true -}}
