@@ -57,6 +57,19 @@ func createRequest(t *testing.T, namespace string, pns *v1alpha3.ProjectNamespac
 	}}
 }
 
+func updateRequest(t *testing.T, namespace string, pns *v1alpha3.ProjectNamespace) admission.Request {
+	t.Helper()
+	pns.Namespace = namespace
+	raw, err := json.Marshal(pns)
+	require.NoError(t, err)
+	return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+		Operation: admissionv1.Update,
+		Namespace: namespace,
+		Object:    runtime.RawExtension{Raw: raw},
+		OldObject: runtime.RawExtension{Raw: raw},
+	}}
+}
+
 func pns(name string) *v1alpha3.ProjectNamespace {
 	return &v1alpha3.ProjectNamespace{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -163,4 +176,23 @@ func TestHandle_DeleteAllowed(t *testing.T) {
 		Namespace: "team-a",
 	}})
 	assert.True(t, resp.Allowed)
+}
+
+func TestHandle_AllowsFinalizerRemovalDuringProjectTeardown(t *testing.T) {
+	// During project teardown the controller removes the ProjectNamespace finalizer with an Update,
+	// by which time the owning project (and its main namespace) is already gone. The placement
+	// check must not run on Update, or the finalizer removal - and the additional-namespace
+	// cleanup - would deadlock exactly like the ProjectRoleBinding regression (R2).
+	v := newValidator(t)
+	resp := v.Handle(context.Background(), updateRequest(t, "ghost", pns("backend")))
+	assert.True(t, resp.Allowed)
+}
+
+func TestHandle_CreateInNonMainNamespaceStillDenied(t *testing.T) {
+	// The placement gate remains enforced on Create regardless of the caller: a real create in a
+	// namespace that is not a project's main namespace is rejected.
+	v := newValidator(t)
+	resp := v.Handle(context.Background(), createRequest(t, "ghost", pns("backend")))
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "is not the main namespace of a project")
 }

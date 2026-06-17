@@ -147,15 +147,15 @@ func (m *Manager) Wrap(ctx context.Context, namespace *corev1.Namespace) (ctrl.R
 
 	// A project with the namespace name already exists. Only manage it when it is a
 	// managed-by-namespace project; regular and detached projects must be left untouched (and our
-	// finalizer, if any lingers from a previous detach, removed).
+	// finalizer/marker, if any lingers from a previous detach, removed).
 	if !isManagedByNamespace(project) {
-		if err := m.removeNamespaceFinalizer(ctx, namespace); err != nil {
+		if err := m.clearNamespaceManaged(ctx, namespace); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
 
-	if err := m.ensureNamespaceFinalizer(ctx, namespace); err != nil {
+	if err := m.ensureNamespaceManaged(ctx, namespace); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, m.syncParameters(ctx, namespace, project)
@@ -183,7 +183,7 @@ func (m *Manager) HandleDeletion(ctx context.Context, namespace *corev1.Namespac
 		return ctrl.Result{}, fmt.Errorf("get the '%s' project: %w", namespace.Name, err)
 	}
 
-	return ctrl.Result{}, m.removeNamespaceFinalizer(ctx, namespace)
+	return ctrl.Result{}, m.clearNamespaceManaged(ctx, namespace)
 }
 
 // createManagedProject creates the managed-by-namespace Project for the namespace and then sets the
@@ -212,7 +212,7 @@ func (m *Manager) createManagedProject(ctx context.Context, namespace *corev1.Na
 		// lost a race with another reconcile; the next pass syncs it.
 	}
 
-	return ctrl.Result{}, m.ensureNamespaceFinalizer(ctx, namespace)
+	return ctrl.Result{}, m.ensureNamespaceManaged(ctx, namespace)
 }
 
 // syncParameters mirrors the namespace user labels/annotations into the managed project's
@@ -241,8 +241,17 @@ func (m *Manager) syncParameters(ctx context.Context, namespace *corev1.Namespac
 	})
 }
 
-func (m *Manager) ensureNamespaceFinalizer(ctx context.Context, namespace *corev1.Namespace) error {
-	if controllerutil.ContainsFinalizer(namespace, v1alpha3.NamespaceFinalizerManagedProject) {
+// ensureNamespaceManaged marks the namespace as actively auto-wrapped. It adds the managed-project
+// finalizer (so the namespace deletion is observed and cascades to the project) and stamps the
+// project-managed-by-namespace marker label on the namespace itself. The marker lets the
+// d8-multitenancy-manager admission policy tell a namespace-managed namespace apart from a regular
+// project's main namespace: per card-16/ADR-2 the namespace is the source of truth, so the user may
+// edit its labels/annotations and delete it (cascading the project), whereas a regular project's
+// namespace stays protected. The marker carries the multitenancy.deckhouse.io/ prefix, so it is
+// filtered out of the spec.parameters.namespace mirror and never feeds a reconcile loop.
+func (m *Manager) ensureNamespaceManaged(ctx context.Context, namespace *corev1.Namespace) error {
+	if controllerutil.ContainsFinalizer(namespace, v1alpha3.NamespaceFinalizerManagedProject) &&
+		namespace.Labels[v1alpha3.ProjectLabelManagedByNamespace] == v1alpha3.ManagedByNamespace {
 		return nil
 	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -253,15 +262,28 @@ func (m *Manager) ensureNamespaceFinalizer(ctx context.Context, namespace *corev
 		if !current.DeletionTimestamp.IsZero() {
 			return nil
 		}
-		if !controllerutil.AddFinalizer(current, v1alpha3.NamespaceFinalizerManagedProject) {
+		changed := controllerutil.AddFinalizer(current, v1alpha3.NamespaceFinalizerManagedProject)
+		if current.Labels == nil {
+			current.Labels = make(map[string]string)
+		}
+		if current.Labels[v1alpha3.ProjectLabelManagedByNamespace] != v1alpha3.ManagedByNamespace {
+			current.Labels[v1alpha3.ProjectLabelManagedByNamespace] = v1alpha3.ManagedByNamespace
+			changed = true
+		}
+		if !changed {
 			return nil
 		}
 		return m.client.Update(ctx, current)
 	})
 }
 
-func (m *Manager) removeNamespaceFinalizer(ctx context.Context, namespace *corev1.Namespace) error {
-	if !controllerutil.ContainsFinalizer(namespace, v1alpha3.NamespaceFinalizerManagedProject) {
+// clearNamespaceManaged reverses ensureNamespaceManaged: it removes the managed-project finalizer
+// and the project-managed-by-namespace marker label. It runs both on detach (the project lost the
+// managed-by-namespace label and becomes a regular project, whose namespace must be re-protected by
+// the admission policy) and during teardown (releasing the finalizer so the namespace can vanish).
+func (m *Manager) clearNamespaceManaged(ctx context.Context, namespace *corev1.Namespace) error {
+	if !controllerutil.ContainsFinalizer(namespace, v1alpha3.NamespaceFinalizerManagedProject) &&
+		namespace.Labels[v1alpha3.ProjectLabelManagedByNamespace] != v1alpha3.ManagedByNamespace {
 		return nil
 	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -272,7 +294,12 @@ func (m *Manager) removeNamespaceFinalizer(ctx context.Context, namespace *corev
 			}
 			return fmt.Errorf("get the '%s' namespace: %w", namespace.Name, err)
 		}
-		if !controllerutil.RemoveFinalizer(current, v1alpha3.NamespaceFinalizerManagedProject) {
+		changed := controllerutil.RemoveFinalizer(current, v1alpha3.NamespaceFinalizerManagedProject)
+		if _, ok := current.Labels[v1alpha3.ProjectLabelManagedByNamespace]; ok {
+			delete(current.Labels, v1alpha3.ProjectLabelManagedByNamespace)
+			changed = true
+		}
+		if !changed {
 			return nil
 		}
 		return m.client.Update(ctx, current)

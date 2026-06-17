@@ -70,10 +70,16 @@ func TestWrap_CreatesManagedProjectAndFinalizer(t *testing.T) {
 	assert.Equal(t, map[string]any{"team": "blue"}, nsParams["labels"])
 	assert.Equal(t, map[string]any{"note": "hi"}, nsParams["annotations"])
 
-	// the namespace gets the managed-project finalizer
+	// the namespace gets the managed-project finalizer and the project-managed-by-namespace marker
+	// label (so the d8-multitenancy-manager admission policy exempts it from edit/delete protection).
 	updated := new(corev1.Namespace)
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
 	assert.True(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
+	assert.Equal(t, v1alpha3.ManagedByNamespace, updated.Labels[v1alpha3.ProjectLabelManagedByNamespace])
+
+	// the marker is filtered out of the mirrored spec.parameters.namespace.labels.
+	nsLabels, _ := nsParams["labels"].(map[string]any)
+	assert.NotContains(t, nsLabels, v1alpha3.ProjectLabelManagedByNamespace)
 }
 
 func TestWrap_Idempotent(t *testing.T) {
@@ -109,6 +115,27 @@ func TestWrap_SkipsRegularProject(t *testing.T) {
 	updated := new(corev1.Namespace)
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "bar"}, updated))
 	assert.False(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
+}
+
+func TestWrap_DetachRemovesFinalizerAndMarker(t *testing.T) {
+	// The project lost its managed-by-namespace label (detached) but the namespace still carries
+	// the finalizer and marker from when it was wrapped. Wrap must strip both so the now-regular
+	// project's namespace is re-protected by the admission policy.
+	ns := namespace("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+		v1alpha3.ResourceLabelProject:           "foo",
+	}, nil)
+	ns.Finalizers = []string{v1alpha3.NamespaceFinalizerManagedProject}
+	detached := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+	m, c := newManager(t, ns, detached)
+
+	_, err := m.Wrap(context.Background(), ns)
+	require.NoError(t, err)
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.False(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
+	assert.NotContains(t, updated.Labels, v1alpha3.ProjectLabelManagedByNamespace)
 }
 
 func TestSyncParameters_MirrorsLabelChanges(t *testing.T) {

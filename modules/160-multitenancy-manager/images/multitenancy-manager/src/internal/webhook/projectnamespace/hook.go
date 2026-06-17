@@ -62,18 +62,28 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	// The object must live in the main namespace of an existing, non-virtual project. The main
 	// namespace equals the project name, so a ProjectNamespace created in an additional namespace
 	// (whose name never matches a Project name) is rejected here too - no recursion.
-	if req.Namespace == "default" || req.Namespace == "deckhouse" {
-		return admission.Denied("ProjectNamespace cannot be created in a virtual project namespace")
-	}
-	project := new(v1alpha3.Project)
-	if err := v.client.Get(ctx, client.ObjectKey{Name: req.Namespace}, project); err != nil {
-		if apierrors.IsNotFound(err) {
-			return admission.Denied(fmt.Sprintf("namespace %q is not the main namespace of a project; ProjectNamespace may only be created in a project's main namespace", req.Namespace))
+	//
+	// This is a *placement* check, so it runs on CREATE alone (mirroring the ProjectRoleBinding
+	// webhook). Enforcing it on UPDATE would deadlock project teardown: the controller removes the
+	// ProjectNamespace finalizer with an Update, and by then the owning project (and its main
+	// namespace) is terminating or already gone, so the lookup below would deny the finalizer
+	// removal and the additional namespace could never be cleaned up. An UPDATE can never relocate
+	// a ProjectNamespace, and spec.name is immutable (enforced by the CRD), so the resulting-name
+	// length and collision invariants below stay correct on UPDATE without the placement gate.
+	if req.Operation == admissionv1.Create {
+		if req.Namespace == "default" || req.Namespace == "deckhouse" {
+			return admission.Denied("ProjectNamespace cannot be created in a virtual project namespace")
 		}
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-	if project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
-		return admission.Denied("ProjectNamespace cannot be created in a virtual project namespace")
+		project := new(v1alpha3.Project)
+		if err := v.client.Get(ctx, client.ObjectKey{Name: req.Namespace}, project); err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.Denied(fmt.Sprintf("namespace %q is not the main namespace of a project; ProjectNamespace may only be created in a project's main namespace", req.Namespace))
+			}
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		if project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+			return admission.Denied("ProjectNamespace cannot be created in a virtual project namespace")
+		}
 	}
 
 	// Defense in depth: the CRD CEL rule already enforces this, but keep the webhook authoritative.
