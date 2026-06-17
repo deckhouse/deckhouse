@@ -477,6 +477,7 @@ func buildTargetControlPlaneNode(
 			Namespace: constants.VirtualControlPlaneNamespacePrefix + vcp.Name,
 			Labels: map[string]string{
 				constants.HeritageLabelKey:                       constants.HeritageLabelValue,
+				constants.ControlPlaneTypeLabelKey:               string(constants.ControlPlaneTypeVirtual),
 				constants.VirtualControlPlaneNodeOrdinalLabelKey: fmt.Sprintf("%d", ordinal),
 			},
 		},
