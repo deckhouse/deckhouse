@@ -1,9 +1,5 @@
 # Patches
 
-## 000-go-mod.patch
-
-Fix CVE, update go.mod and go.sum.
-
 ## 001-request-ip.patch
 
 Add the oportunity to request specific IP-address using annotation:
@@ -51,12 +47,6 @@ Please remove this change after `CES` becomes Stable. <https://github.com/cilium
 
 Changing the hardcoded wireguard port from `51871` to `4287` (a port within our range).
 
-## 010-fix-cilium-local-redirect-policy.patch
-
-When the `bpf-lb-algorithm-annotation` option is enabled, the `CiliumLocalRedirectPolicy` in Cilium version 1.17.4 stops working. This patch solves the problem with the way the LoadBalancerAlgorithm processes.
-
-Upstream PR <https://github.com/cilium/cilium/pull/40246>.
-
 ## 011-bpf-lb-use-random-lb-algo-for-hostport-serives-fixed.patch
 
 For HostPort pseudo-serivces always use random LB algo. When bpf-lb-algorithm-annotation feature activated - use default LB algo if it incorrectly choosed in service map.
@@ -84,15 +74,3 @@ Add import/export conntrack http endpoints. See usage example here modules/021-c
 ## 017-bpf-lb-generate-icmp-reply.patch
 
 An ICMP echo reply feature has been added to reply on LoadBalancer's service IP
-
-## 018-bugtool-remove-sensitive-files.patch
-
-Verbatim cherry-pick of the upstream fix for **CVE-2026-41520** (GHSA-gj49-89wh-h4gj): `cilium-bugtool` was archiving the entire state directory, which on nodes with WireGuard Transparent Encryption enabled included `cilium_wg0.key` — leaking the node's WireGuard private key in any bugtool / `cilium sysdump` archive.
-
-The patch removes `*.key` files from the state directory copy before archiving.
-
-- Advisory: <https://github.com/cilium/cilium/security/advisories/GHSA-gj49-89wh-h4gj>
-- Upstream backport into release-1.17 branch: <https://github.com/cilium/cilium/commit/3e26bef96e1ec6ea1b5034fee3f0bc6ddfabcae6>
-- Released in cilium v1.17.15 / v1.18.9 / v1.19.3.
-
-**Remove this patch when the base cilium version in `modules/021-cni-cilium/oss.yaml` is bumped to v1.17.15 or newer** — the fix is then already in the upstream sources and this patch will fail to apply.

@@ -1,20 +1,20 @@
-{{- $ciliumProxyRev := "0f602c28cb2aa57b29078195049fb257d5b5246c" }}
-{{- $bazelVersions := "6.5.0" }}
-{{- $envoySHA := "93466adc53567315e3114d6d1774c56f8066d24e" }}
-{{- $ciliumProxyCacheRev := "v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c-alt-p11-llvm17-gcc11-v2" }}
-{{- $ciliumProxyDepsRev := "v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c-alt-p11-llvm17-gcc11-lfs-v2" }}
+{{- $ciliumProxyRev := "a7f42a3390781539911b5b9107881b35ecc4e752" }}
+{{- $bazelVersions := "7.7.1" }}
+{{- $envoySHA := "ee7784f95f506e2a606ae668f0d9f70f9d26af83" }}
+{{- $ciliumProxyCacheRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc11-v1" }}
+{{- $ciliumProxyDepsRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc11-lfs-v1" }}
 #  to force manual creation of fresh build cache
-{{- $buildWithPreparedCacheAndDeps := true }}
+{{- $buildWithPreparedCacheAndDeps := false }}
 #
 ---
 # #####################################################################
 # Build cilium-envoy binaries
-# Original IMAGE_TAG of cilium-envoy is v1.32.6-1746661844-0f602c28cb2aa57b29078195049fb257d5b5246c
-# Corresponding commit is 0f602c28cb2aa57b29078195049fb257d5b5246c
-# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile#L9
-# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/Dockerfile.builder
-# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/Dockerfile
-# and https://github.com/cilium/proxy/blob/0f602c28cb2aa57b29078195049fb257d5b5246c/.github/workflows/build-envoy-images-release.yaml
+# Original IMAGE_TAG of cilium-envoy is v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752
+# Corresponding commit is a7f42a3390781539911b5b9107881b35ecc4e752
+# Based on https://github.com/cilium/cilium/blob/v1.17.17/images/cilium/Dockerfile#L9
+# and https://github.com/cilium/proxy/blob/a7f42a3390781539911b5b9107881b35ecc4e752/Dockerfile.builder
+# and https://github.com/cilium/proxy/blob/a7f42a3390781539911b5b9107881b35ecc4e752/Dockerfile
+# and https://github.com/cilium/proxy/blob/a7f42a3390781539911b5b9107881b35ecc4e752/.github/workflows/build-envoy-images-release.yaml
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -135,7 +135,7 @@ shell:
   - cd /cilium/proxy
   - sudo -u cilium echo "{{ $ciliumProxyRev }}" >SOURCE_VERSION
   #
-  - sudo -u cilium sed -i "30,56d" WORKSPACE
+  - sudo -u cilium sed -i "30,52d" WORKSPACE
   - sudo -u cilium sed -i '30i local_repository(' WORKSPACE
   - sudo -u cilium sed -i '31i \    name = "envoy",' WORKSPACE
   - sudo -u cilium sed -i '32i \    path = "/src/envoy",' WORKSPACE
