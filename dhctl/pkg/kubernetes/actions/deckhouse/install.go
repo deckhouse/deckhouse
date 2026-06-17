@@ -486,7 +486,7 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	if len(cfg.CloudDiscovery) > 0 && cfg.ProviderName != "" {
+	if cfg.HasProviderModuleConfig() {
 		providerNamespace := providerdata.CloudProviderNamespace(cfg.ProviderName)
 		tasks = append(tasks,
 			actions.ManifestTask{
