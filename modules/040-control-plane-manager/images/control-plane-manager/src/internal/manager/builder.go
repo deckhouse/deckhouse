@@ -1,3 +1,19 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package manager
 
 import (
@@ -24,18 +40,19 @@ type builder struct {
 	configurator
 }
 
-func NewBuilder(ctType constants.ControlPlaneType) builder {
+func NewBuilder(ctType constants.ControlPlaneType) (builder, error) {
 	var c configurator
 
 	switch ctType {
 	case constants.ControlPlaneTypeNormal:
 		c = &normalConfigurator{}
 	case constants.ControlPlaneTypeVirtual:
+		c = &virtualConfigurator{}
+	default:
+		return builder{}, fmt.Errorf("unsupported control plane manager mode %q", ctType)
 	}
 
-	return builder{
-		c,
-	}
+	return builder{configurator: c}, nil
 }
 
 func (b builder) Build(ctx context.Context) (*Manager, error) {
@@ -47,7 +64,7 @@ func (b builder) Build(ctx context.Context) (*Manager, error) {
 	}
 
 	return &Manager{
-		runtimeManager,
+		runtimeManager: runtimeManager,
 	}, nil
 }
 
@@ -68,7 +85,7 @@ func (b builder) buildOptions(ctx context.Context) controllerruntime.Options {
 		GracefulShutdownTimeout: ptr.To(10 * time.Second),
 	}
 
-	b.configurator.configurateOptions(&opts)
+	b.configurator.configureOptions(&opts)
 
 	return opts
 }
@@ -86,7 +103,7 @@ func (b builder) buildRuntimeManager(opts controllerruntime.Options) (manager.Ma
 		return nil, fmt.Errorf("add ready check: %w", err)
 	}
 
-	if err := b.configurator.configurateRuntimeManager(runtimeManager); err != nil {
+	if err := b.configurator.configureRuntimeManager(runtimeManager); err != nil {
 		return nil, fmt.Errorf("configurate controller runtime manager: %w", err)
 	}
 

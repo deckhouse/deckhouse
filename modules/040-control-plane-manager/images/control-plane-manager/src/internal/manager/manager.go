@@ -26,20 +26,22 @@ import (
 )
 
 type Manager struct {
-	manager.Manager
+	runtimeManager manager.Manager
 }
 
 func (m *Manager) Start(ctx context.Context) error {
 	go func() {
-		if err := m.Start(ctx); err != nil {
+		if err := m.runtimeManager.Start(ctx); err != nil {
 			log.Fatal("failed to start runtime manager", log.Err(err))
 		}
 	}()
+
 	log.Info("Control plane manager started")
 
-	if ok := m.GetCache().WaitForCacheSync(ctx); !ok {
+	if ok := m.runtimeManager.GetCache().WaitForCacheSync(ctx); !ok {
 		return fmt.Errorf("wait for cache sync")
 	}
+
 	log.Info("Cache synced")
 
 	return nil
