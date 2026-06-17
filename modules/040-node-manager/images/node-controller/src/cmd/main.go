@@ -97,6 +97,17 @@ func main() {
 	cfg := ctrl.GetConfigOrDie()
 	ctx := ctrl.SetupSignalHandler()
 
+	setupLog.Info("ensuring CAPI CRDs")
+	directClient, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "unable to create direct client for CRD migration")
+		os.Exit(1)
+	}
+	if err := crdmigration.EnsureCRDs(ctx, directClient); err != nil {
+		setupLog.Error(err, "unable to ensure CAPI CRDs")
+		os.Exit(1)
+	}
+
 	cacheOpts, clientOpts := common.CacheOptions()
 	clientOpts.Cache.DisableFor = append(clientOpts.Cache.DisableFor, webhook.DisableFor()...)
 
@@ -154,17 +165,6 @@ func main() {
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
-	}
-
-	setupLog.Info("ensuring CAPI CRDs")
-	directClient, err := client.New(cfg, client.Options{Scheme: scheme})
-	if err != nil {
-		setupLog.Error(err, "unable to create direct client for CRD migration")
-		os.Exit(1)
-	}
-	if err := crdmigration.EnsureCRDs(ctx, directClient); err != nil {
-		setupLog.Error(err, "unable to ensure CAPI CRDs")
 		os.Exit(1)
 	}
 
