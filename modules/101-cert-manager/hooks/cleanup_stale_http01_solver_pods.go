@@ -31,10 +31,10 @@ import (
 const solverPodsSnapshot = "solverPods"
 
 type solverPod struct {
-	Namespace      string
-	Name           string
-	Phase          corev1.PodPhase
-	BeingDeleted   bool
+	Namespace    string
+	Name         string
+	Phase        corev1.PodPhase
+	BeingDeleted bool
 }
 
 func applySolverPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
