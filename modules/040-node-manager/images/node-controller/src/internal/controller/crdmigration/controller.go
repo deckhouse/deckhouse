@@ -172,24 +172,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("getting CRD %s: %w", crdName, err)
 	}
 
-	// Check if already fully migrated.
-	if isMigrated(existing, caBundle) {
-		logger.V(1).Info("CRD already migrated", "crd", crdName)
-		return ctrl.Result{}, nil
-	}
-
-	// Patch CRD: switch storage to v1beta2 and set conversion webhook.
-	logger.Info("migrating CRD", "crd", crdName)
+	// Full apply: take entire spec from embedded CRD, then apply migration on top.
+	logger.Info("ensuring CRD", "crd", crdName)
 	patch := existing.DeepCopy()
-	// Use versions from embedded CRD — existing CRD may not have v1beta2 yet.
-	patch.Spec.Versions = embeddedCRD.Spec.DeepCopy().Versions
+	patch.Spec = *embeddedCRD.Spec.DeepCopy()
 	setMigrationSpec(patch, caBundle)
 
 	if err := r.Client.Patch(ctx, patch, client.MergeFrom(existing)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("patching CRD %s: %w", crdName, err)
 	}
 
-	logger.Info("CRD migrated successfully", "crd", crdName)
+	logger.Info("CRD ensured successfully", "crd", crdName)
 	return ctrl.Result{}, nil
 }
 
@@ -211,41 +204,6 @@ func (r *Reconciler) checkPreconditions(ctx context.Context) ([]byte, error) {
 	}
 
 	return caBundle, nil
-}
-
-// isMigrated checks if the CRD is already in the target state.
-func isMigrated(crd *apiextensionsv1.CustomResourceDefinition, caBundle []byte) bool {
-	// Check v1beta2 is storage version.
-	v1beta2Storage := false
-	for _, v := range crd.Spec.Versions {
-		if v.Name == "v1beta2" && v.Storage {
-			v1beta2Storage = true
-		}
-	}
-	if !v1beta2Storage {
-		return false
-	}
-
-	// Check conversion webhook is set correctly.
-	conv := crd.Spec.Conversion
-	if conv == nil || conv.Strategy != apiextensionsv1.WebhookConverter {
-		return false
-	}
-	wh := conv.Webhook
-	if wh == nil || wh.ClientConfig == nil || wh.ClientConfig.Service == nil {
-		return false
-	}
-	svc := wh.ClientConfig.Service
-	if svc.Name != webhookServiceName || svc.Namespace != capiNamespace {
-		return false
-	}
-
-	// Check caBundle matches.
-	if string(wh.ClientConfig.CABundle) != string(caBundle) {
-		return false
-	}
-
-	return true
 }
 
 // setMigrationSpec modifies the CRD spec to v1beta2 storage + conversion webhook.

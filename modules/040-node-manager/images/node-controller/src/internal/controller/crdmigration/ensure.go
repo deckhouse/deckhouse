@@ -207,19 +207,14 @@ func ensureSingleCRD(ctx context.Context, c client.Client, crdName string, embed
 		return fmt.Errorf("getting: %w", err)
 	}
 
-	if isMigrated(existing, caBundle) {
-		klog.V(1).Infof("CRD %s already migrated", crdName)
-		return nil
-	}
-
+	// Full apply: take entire spec from embedded CRD, then apply migration on top.
 	patch := existing.DeepCopy()
-	// Use versions from embedded CRD — existing CRD may not have v1beta2 yet.
-	patch.Spec.Versions = embeddedCRD.Spec.DeepCopy().Versions
+	patch.Spec = *embeddedCRD.Spec.DeepCopy()
 	setMigrationSpec(patch, caBundle)
 	if err := c.Patch(ctx, patch, client.MergeFrom(existing)); err != nil {
 		return fmt.Errorf("patching: %w", err)
 	}
 
-	klog.Infof("CRD %s migrated", crdName)
+	klog.Infof("CRD %s ensured", crdName)
 	return nil
 }
