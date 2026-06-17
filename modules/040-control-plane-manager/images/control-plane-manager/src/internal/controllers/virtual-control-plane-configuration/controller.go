@@ -51,8 +51,8 @@ func BuildController(mgr manager.Manager) error {
 			CacheSyncTimeout:        cacheSyncTimeout,
 			NeedLeaderElection:      ptr.To(true),
 			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](
-				100*time.Millisecond,
-				3*time.Second,
+				5*time.Second,
+				5*time.Minute,
 			),
 		}).
 		Named(name).
