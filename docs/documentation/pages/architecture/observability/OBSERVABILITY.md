@@ -30,7 +30,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`observability`](/modules/observability/) module and its interactions with other components of DKP are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Observability module architecture](../../images/architecture/observability/c4-l2-observability.ru.svg)
+![Observability module architecture](../../images/architecture/observability/c4-l2-observability.svg)
 
 ## Module components
 
@@ -60,17 +60,17 @@ The module consists of the following components:
    It consists of the following containers:
 
    * **grafana**: Main container.
-   * **grafana-kube-storage**: Sidecar container that implements a backend for grafana container and providing management of Dashboard resources and reading Datasource resources of grafana component API. These resources allow you to view and manage dashboards within namespaces (projects), as well as to connect [custom data sources](/modules/observability/#%D0%BF%D0%BE%D0%B4%D0%B4%D0%B5%D1%80%D0%B6%D0%BA%D0%B0-%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C%D1%81%D0%BA%D0%B8%D1%85-%D0%B8%D1%81%D1%82%D0%BE%D1%87%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2-%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85).
+   * **grafana-kube-storage**: Sidecar container that implements a backend for grafana container and providing management of Dashboard resources and reading Datasource resources of grafana component API. These resources allow you to view and manage dashboards within namespaces (projects), as well as to connect custom data sources.
 
    * **nginx**: Sidecar container that is NGINX proxy server, which is used to publish static files. It is an [open-source project](https://github.com/nginx/nginx).
 
-1. **Label-enforcer**: A component that authorizes and proxyes user requests to metrics (prometheus-main via the label-proxy service) and logs (loki via the logs-gateway service) sources, specified in the Datasource resources of grafana component API. Label-enforcer verifies RBAC access to monitoring data based on user rights, retrieves a list of available namespaces, and enriches requests with labels to filter requested data within user namespaces. For more information about access control, refer to [the module documentation](/modules/observability/#%D1%80%D0%B0%D0%B7%D0%B3%D1%80%D0%B0%D0%BD%D0%B8%D1%87%D0%B5%D0%BD%D0%B8%D0%B5-%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF%D0%B0-%D0%BA-%D0%BC%D0%B5%D1%82%D1%80%D0%B8%D0%BA%D0%B0%D0%BC) section. Label-enforcer handles not only read requests, but also write requests.
+1. **Label-enforcer**: A component that authorizes and proxyes user requests to metrics (prometheus-main via the label-proxy service) and logs (loki via the logs-gateway service) sources, specified in the Datasource resources of grafana component API. Label-enforcer verifies RBAC access to monitoring data based on user rights, retrieves a list of available namespaces, and enriches requests with labels to filter requested data within user namespaces. For more information about access control, refer to [the module documentation](/modules/observability/metrics.html) section. Label-enforcer handles not only read requests, but also write requests.
 
    It consists of a single container:
 
    **enforcer**.
 
-1. **Opagent** (DaemonSet): An agent designed to collect metrics from both the operating system and the application software installed on the servers. opAgent is developed by Flant for the [Deckhouse Observability Platform (DOP)](/products/observability-platform/) based on [Okagent (Okmeter agent)](https://okmeter.ru/docs/features/), also part of the [Okmeter](https://okmeter.ru/docs/overview/) monitoring system.
+1. **Opagent** (DaemonSet): An agent designed to collect metrics from both the operating system and the application software installed on the servers. opAgent is developed by Flant for the [Deckhouse Observability Platform (DOP)](/products/observability-platform/) based on [Okagent (Okmeter agent)](https://okmeter.ru/docs/features/), that is also a part of the [Okmeter](https://okmeter.ru/docs/overview/) monitoring system.
 
    In the [`observability`](/modules/observability/) module opAgent connects to managed services, for example [`managed-postgres`](/modules/managed-postgres/), [`managed-memcached`](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/), etc. (the list of supported managed services is constantly expanding), collects metrics from them, and sends them to prometheus-main component of the [`prometheus`](/modules/prometheus/) module. If the [`observability-platform`](/modules/observability-platform/) module is enabled, opAgent collects metrics from the cluster nodes and sends them to the [DOP](/products/observability-platform/).
 
