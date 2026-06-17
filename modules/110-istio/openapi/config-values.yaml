@@ -438,6 +438,32 @@ properties:
               format: int64
             value:
               type: string
+      env:
+        type: object
+        additionalProperties:
+          type: string
+        default: {}
+        description: |
+          Additional environment variables for the istiod (pilot) container.
+
+          Keys reserved by the module cannot be overridden:
+
+          - `ISTIO_MULTIROOT_MESH`
+          - `ENABLE_ENHANCED_RESOURCE_SCOPING`
+          - `PILOT_HTTP10`
+          - `PILOT_ENABLE_AMBIENT`
+          - `PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER`
+          - `PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER`
+        x-examples:
+        - GODEBUG: "gctrace=1"
+        not:
+          anyOf:
+          - required: ["ISTIO_MULTIROOT_MESH"]
+          - required: ["ENABLE_ENHANCED_RESOURCE_SCOPING"]
+          - required: ["PILOT_HTTP10"]
+          - required: ["PILOT_ENABLE_AMBIENT"]
+          - required: ["PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER"]
+          - required: ["PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER"]
       replicasManagement:
         description: |
           Replication management settings and scaling of istiod.

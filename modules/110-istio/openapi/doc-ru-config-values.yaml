@@ -192,6 +192,18 @@ properties:
           Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
           Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      env:
+        description: |
+          Дополнительные переменные окружения для контейнера istiod (pilot).
+
+          Зарезервированные модулем ключи нельзя переопределить:
+
+          - `ISTIO_MULTIROOT_MESH`
+          - `ENABLE_ENHANCED_RESOURCE_SCOPING`
+          - `PILOT_HTTP10`
+          - `PILOT_ENABLE_AMBIENT`
+          - `PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER`
+          - `PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER`
       replicasManagement:
         description: |
           Настройки управления репликами и горизонтальным масштабированием istiod.

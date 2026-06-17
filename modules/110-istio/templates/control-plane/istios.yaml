@@ -182,6 +182,9 @@ spec:
   {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
         PILOT_ENABLE_AMBIENT: "true"
   {{- end }}
+  {{- range $name, $value := $.Values.istio.controlPlane.env }}
+        {{ $name }}: {{ $value | quote }}
+  {{- end }}
       autoscaleEnabled: false
       taint:
         enabled: false
