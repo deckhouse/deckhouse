@@ -263,6 +263,39 @@ internal:
       name: ceph-pool-r2-csi-rbd
 `
 
+const moduleValuesWithoutCCM = `
+nodes:
+  disabled: false
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  disabled: false
+  parameters: {}
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses:
+    - dvpStorageClass: 1test
+      name: 1test
+    - dvpStorageClass: ceph-pool-r2-csi-rbd
+      name: ceph-pool-r2-csi-rbd
+`
+
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -793,6 +826,24 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			// cloud-data-discoverer must still be present.
 			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("DVP without ccm section", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesWithoutCCM)
+			f.HelmRender()
+		})
+
+		It("must render CCM Deployment when ccm section is omitted", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
 		})
 	})
 
