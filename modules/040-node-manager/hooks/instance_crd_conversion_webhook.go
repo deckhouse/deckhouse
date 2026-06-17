@@ -25,7 +25,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager/instance-crd-conversion",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
 }, patchInstanceCRDConversionWebhook)
 
 func patchInstanceCRDConversionWebhook(_ context.Context, input *go_hook.HookInput) error {

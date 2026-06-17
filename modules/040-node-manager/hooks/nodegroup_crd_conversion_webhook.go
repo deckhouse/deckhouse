@@ -27,7 +27,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager/nodegroup-crd-conversion",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 6},
 }, patchNodeGroupCRDConversionWebhook)
 
 func patchNodeGroupCRDConversionWebhook(_ context.Context, input *go_hook.HookInput) error {
