@@ -95,3 +95,19 @@ if [ ! -f /root/.kube/config ]; then
   ln -s /etc/kubernetes/admin.conf /root/.kube/config
 fi
 
+# Allow kube-apiserver to proxy kubelet requests (kubectl logs/exec/port-forward) during bootstrap.
+# The same CRB is applied with heritage/module labels by module 040-control-plane-manager; nelm adopts it.
+kubectl --kubeconfig=/etc/kubernetes/super-admin.conf apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:control-plane-manager:apiserver-kubelet-client
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kubelet-api-admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: kube-apiserver-kubelet-client
+EOF
