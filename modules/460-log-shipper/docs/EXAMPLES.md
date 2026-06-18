@@ -824,8 +824,9 @@ Transformed result:
 
 You can use the `ReplaceKeys` transformation to replace `source` with `target` in the specified label keys.
 
-> To apply the `ReplaceKeys` transformation to the `message` field or its nested fields,
-> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+{% alert level="info" %}
+To apply the `ReplaceKeys` transformation to the `message` field or its nested fields, the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -865,7 +866,9 @@ Transformed result:
 
 You can use the `ReplaceValue` transformation to replace matches of a regular expression (`source`) in scalar string fields. The `target` string can be a literal or use `{{ name }}` for named capture groups from `source`.
 
-> Apply [`ParseMessage`](#transforming-logs-into-a-structured-object) first if you need to run replacement on a field inside a structured `message`.
+{% alert level="info" %}
+Apply [`ParseMessage`](#transforming-logs-into-a-structured-object) first if you need to run replacement on a field inside a structured `message`.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -934,8 +937,9 @@ Transformed result for an event in namespace `production` with pod label `app=ap
 
 You can use the `DropLabels` transformation to remove specific labels from log records. Each item under `dropLabels.labels` has a `label` field (the path) and optional `keepKeys`. If `keepKeys` is set for an item, `label` must point to an **object**; inside it, every nested key not listed in `keepKeys` is removed (key names without a leading dot). If `keepKeys` is unset for that item, the path in `label` is removed entirely.
 
-> To apply the `DropLabels` transformation to the `message` field or its nested fields,
-> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+{% alert level="info" %}
+To apply the `DropLabels` transformation to the `message` field or its nested fields, the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+{%-endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
