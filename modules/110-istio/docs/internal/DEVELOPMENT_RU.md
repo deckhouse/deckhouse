@@ -38,7 +38,7 @@ searchable: false
 
 Deckhouse создаёт ConfigMap **`istio-sidecar-injector-<revision>`** ([`configmap-inject.yaml`](../../templates/control-plane/configmap-inject.yaml)) из каталога:
 
-```
+```none
 files/<revision>/
 ├── static/   sidecar-injection-template.yaml, gateway-injection-template.yaml
 └── templates/   sidecar-injection-values.yaml, sidecar-injection-config.yaml
@@ -54,7 +54,7 @@ Mesh (`istio-<revision>`) — в [`configmap-mesh.yaml`](../../templates/control
 
 **A. Модуль в целом** — images, oss, CRD, hooks, `_rules_v-1-28.tpl`, тесты (как в общих шагах выше).
 
-**B. Каталог inject — обычно 3 команды и всё**
+**B. Каталог files/<revision>** — обычно 3 команды и всё
 
 ```bash
 # 1. Клон нужного тега Istio
