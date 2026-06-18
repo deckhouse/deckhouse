@@ -121,12 +121,18 @@ func (r *Runtime) ProcessFunctionalModules(names []string) {
 		desired[name] = struct{}{}
 	}
 
+	var adopted, failed int
 	for _, name := range names {
 		if err := r.adoptModule(context.Background(), name); err != nil {
+			failed++
 			r.logger.Error("adopt functional module",
 				slog.String("module", name),
 				slog.Any("error", err))
+
+			continue
 		}
+
+		adopted++
 	}
 
 	// The handoff list is authoritative for the set of enabled functional
@@ -148,6 +154,12 @@ func (r *Runtime) ProcessFunctionalModules(names []string) {
 			slog.String("module", name))
 		r.RemoveModule(name)
 	}
+
+	r.logger.Info("processed functional modules handoff",
+		slog.Int("received", len(names)),
+		slog.Int("adopted", adopted),
+		slog.Int("failed", failed),
+		slog.Int("removed", len(stale)))
 }
 
 // adoptModule brings a module that is already present on the filesystem (loaded
