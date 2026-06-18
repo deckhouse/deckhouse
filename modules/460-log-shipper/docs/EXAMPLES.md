@@ -270,7 +270,7 @@ spec:
 {% endraw %}
 {% alert level="info" %}
 Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
-{% endalert %}
+{%-endalert %}
 {% raw %}
 
 ```yaml
@@ -688,10 +688,10 @@ Transformed result:
 }
 ```
 
-### Transforming logs in Logfmt format into a structured object
+### Transforming logs in logfmt format into a structured object
 
 You can use the `ParseMessage` transformation
-to parse logs in Logfmt format and convert them into a structured object.
+to parse logs in logfmt format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
