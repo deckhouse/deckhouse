@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -48,6 +49,11 @@ const (
 
 // defragNow is overridden in tests to inject a fixed time.
 var defragNow = time.Now
+
+type defragCPN struct {
+	Name string
+	UID  k8stypes.UID
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/etcd_defrag",
@@ -83,6 +89,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:          filterDefragNode,
 		},
 		{
+			Name:       "control_plane_nodes_defrag",
+			ApiVersion: "control-plane.deckhouse.io/v1alpha1",
+			Kind:       "ControlPlaneNode",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{defragStateCMNamespace},
+				},
+			},
+			ExecuteHookOnEvents: ptr.To(false),
+			FilterFunc:          filterDefragCPN,
+		},
+		{
 			Name:       "defrag_state_cm",
 			ApiVersion: "v1",
 			Kind:       "ConfigMap",
@@ -99,6 +117,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func filterDefragNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetName(), nil
+}
+
+func filterDefragCPN(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return defragCPN{
+		Name: obj.GetName(),
+		UID:  obj.GetUID(),
+	}, nil
 }
 
 func filterDefragStateCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -172,6 +197,15 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		return nil
 	}
 
+	// Build nodeName→UID map from ControlPlaneNode snapshots for OwnerReference.
+	cpnUIDs := make(map[string]k8stypes.UID)
+	for cpn, err := range sdkobjectpatch.SnapshotIter[defragCPN](input.Snapshots.Get("control_plane_nodes_defrag")) {
+		if err != nil {
+			return fmt.Errorf("iterate control_plane_nodes_defrag: %w", err)
+		}
+		cpnUIDs[cpn.Name] = cpn.UID
+	}
+
 	// Collect all etcd nodes (masters + arbiters), deduplicated by name.
 	seen := make(map[string]struct{})
 	var nodeNames []string
@@ -204,7 +238,7 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 
 	slotSuffix := nextSlot.Format("060102-1504")
 	for _, nodeName := range nodeNames {
-		input.PatchCollector.CreateIfNotExists(buildDefragCPO(nodeName, slotSuffix))
+		input.PatchCollector.CreateIfNotExists(buildDefragCPO(nodeName, slotSuffix, cpnUIDs[nodeName]))
 		input.Logger.Info("etcd defrag: CPO created", "name", "etcd-defrag-"+nodeName+"-"+slotSuffix)
 	}
 
@@ -216,29 +250,42 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	return nil
 }
 
-func buildDefragCPO(nodeName, slotSuffix string) *unstructured.Unstructured {
-	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "control-plane.deckhouse.io/v1alpha1",
-			"kind":       "ControlPlaneOperation",
-			"metadata": map[string]interface{}{
-				"name":      "etcd-defrag-" + nodeName + "-" + slotSuffix,
-				"namespace": defragStateCMNamespace,
-				"labels": map[string]interface{}{
-					"control-plane.deckhouse.io/node":      nodeName,
-					"control-plane.deckhouse.io/component": "etcd",
-					"heritage":                             "deckhouse",
-					"module":                               "control-plane-manager",
-				},
-			},
-			"spec": map[string]interface{}{
-				"nodeName":  nodeName,
-				"component": "Etcd",
-				"steps":     []interface{}{"DefragEtcd"},
-				"approved":  true,
+func buildDefragCPO(nodeName, slotSuffix string, cpnUID k8stypes.UID) *unstructured.Unstructured {
+	obj := map[string]interface{}{
+		"apiVersion": "control-plane.deckhouse.io/v1alpha1",
+		"kind":       "ControlPlaneOperation",
+		"metadata": map[string]interface{}{
+			"name":      "etcd-defrag-" + nodeName + "-" + slotSuffix,
+			"namespace": defragStateCMNamespace,
+			"labels": map[string]interface{}{
+				"control-plane.deckhouse.io/node":      nodeName,
+				"control-plane.deckhouse.io/component": "etcd",
+				"heritage":                             "deckhouse",
+				"module":                               "control-plane-manager",
 			},
 		},
+		"spec": map[string]interface{}{
+			"nodeName":  nodeName,
+			"component": "Etcd",
+			"steps":     []interface{}{"DefragEtcd"},
+			"approved":  true,
+		},
 	}
+
+	if cpnUID != "" {
+		obj["metadata"].(map[string]interface{})["ownerReferences"] = []interface{}{
+			map[string]interface{}{
+				"apiVersion":         "control-plane.deckhouse.io/v1alpha1",
+				"kind":               "ControlPlaneNode",
+				"name":               nodeName,
+				"uid":                string(cpnUID),
+				"controller":         true,
+				"blockOwnerDeletion": false,
+			},
+		}
+	}
+
+	return &unstructured.Unstructured{Object: obj}
 }
 
 func buildDefragStateCM(data map[string]string) *corev1.ConfigMap {

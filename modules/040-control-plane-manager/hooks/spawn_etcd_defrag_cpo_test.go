@@ -125,11 +125,39 @@ metadata:
   name: arbiter-0
   labels:
     node.deckhouse.io/etcd-arbiter: ""`
+
+	defragCPN0 = `
+---
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneNode
+metadata:
+  name: master-0
+  namespace: kube-system
+  uid: "uid-master-0"`
+
+	defragCPN1 = `
+---
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneNode
+metadata:
+  name: master-1
+  namespace: kube-system
+  uid: "uid-master-1"`
+
+	defragCPN2 = `
+---
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneNode
+metadata:
+  name: master-2
+  namespace: kube-system
+  uid: "uid-master-2"`
 )
 
 func newDefragHook(values string) *HookExecutionConfig {
 	f := HookExecutionConfigInit(values, "")
 	f.RegisterCRD("control-plane.deckhouse.io", "v1alpha1", "ControlPlaneOperation", true)
+	f.RegisterCRD("control-plane.deckhouse.io", "v1alpha1", "ControlPlaneNode", true)
 	return f
 }
 
@@ -208,10 +236,11 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("cron fired, 3 master nodes, no ConfigMap", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(defragMaster0 + defragMaster1 + defragMaster2))
+			state := defragMaster0 + defragMaster1 + defragMaster2 + defragCPN0 + defragCPN1 + defragCPN2
+			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
-		It("creates one CPO per master and updates the ConfigMap", func() {
+		It("creates one CPO per master with ownerReference and updates the ConfigMap", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			count, cpos := listCPOs(f)
@@ -224,9 +253,17 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 				steps, _ := spec["steps"].([]interface{})
 				Expect(steps).To(ConsistOf("DefragEtcd"))
 
-				labels, _ := cpo["metadata"].(map[string]interface{})["labels"].(map[string]interface{})
+				meta, _ := cpo["metadata"].(map[string]interface{})
+				labels, _ := meta["labels"].(map[string]interface{})
 				Expect(labels["control-plane.deckhouse.io/component"]).To(Equal("etcd"))
 				Expect(labels["heritage"]).To(Equal("deckhouse"))
+
+				ownerRefs, _ := meta["ownerReferences"].([]interface{})
+				Expect(ownerRefs).To(HaveLen(1))
+				ref, _ := ownerRefs[0].(map[string]interface{})
+				Expect(ref["kind"]).To(Equal("ControlPlaneNode"))
+				Expect(ref["apiVersion"]).To(Equal("control-plane.deckhouse.io/v1alpha1"))
+				Expect(ref["controller"]).To(Equal(true))
 			}
 
 			cm := f.KubernetesResource("ConfigMap", "kube-system", defragStateCMName)
@@ -238,7 +275,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("cron fired, 2 masters + 1 arbiter node", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
-			state := defragMaster0 + defragMaster1 + defragArbiter + defragStateCMYAML(defragPastSlot)
+			state := defragMaster0 + defragMaster1 + defragArbiter + defragCPN0 + defragCPN1 + defragStateCMYAML(defragPastSlot)
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
