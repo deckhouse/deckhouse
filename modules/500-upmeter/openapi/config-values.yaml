@@ -248,6 +248,10 @@ properties:
         type: string
         description: |
           HTTP URL of the VM image used to create VirtualImage when it does not exist. If omitted, virtualization probes are disabled.
+      virtualMachineClassName:
+        type: string
+        description: |
+          VirtualMachineClass name used by virtualization probes. If omitted, the default VirtualMachineClass is used. If neither this parameter nor the default VirtualMachineClass exists, virtualization probes are disabled.
   disabledProbes:
     type: array
     default: []

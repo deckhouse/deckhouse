@@ -81,7 +81,7 @@ func Test_virtualDiskManifest(t *testing.T) {
 }
 
 func Test_virtualMachineManifest(t *testing.T) {
-	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk")
+	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk", "")
 
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(manifest), &obj)
@@ -108,6 +108,17 @@ func Test_virtualMachineManifest(t *testing.T) {
 	ref := blockDeviceRefs[0].(map[string]interface{})
 	assert.Equal(t, "VirtualDisk", ref["kind"])
 	assert.Equal(t, "probe-disk", ref["name"])
+}
+
+func Test_virtualMachineManifest_withVirtualMachineClassName(t *testing.T) {
+	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk", "fast")
+
+	var obj map[string]interface{}
+	err := yaml.Unmarshal([]byte(manifest), &obj)
+	assert.NoError(t, err)
+
+	spec := obj["spec"].(map[string]interface{})
+	assert.Equal(t, "fast", spec["virtualMachineClassName"])
 }
 
 func Test_virtualMachineOperationManifest(t *testing.T) {

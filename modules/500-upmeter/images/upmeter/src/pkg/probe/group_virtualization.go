@@ -40,9 +40,10 @@ func initVirtualization(access kubernetes.Access, preflight checker.Doer, virtPr
 			checker.VirtualizationCreationProbeName,
 			"upmeter-vm-creation",
 			virtProbe.VirtualImageURL,
+			virtProbe.VirtualMachineClassName,
 			false,
 			virtualMachineLifecycleTimeouts{
-				period:                     5 * time.Minute,
+				period:                      5 * time.Minute,
 				waitVirtualImage:            30 * time.Second,
 				waitVirtualDisk:             60 * time.Second,
 				waitVirtualMachine:          30 * time.Second,
@@ -59,9 +60,10 @@ func initVirtualization(access kubernetes.Access, preflight checker.Doer, virtPr
 			checker.VirtualizationLifecycleProbeName,
 			"upmeter-vm-lifecycle",
 			virtProbe.VirtualImageURL,
+			virtProbe.VirtualMachineClassName,
 			true,
 			virtualMachineLifecycleTimeouts{
-				period:                     15 * time.Minute,
+				period:                      15 * time.Minute,
 				waitVirtualImage:            30 * time.Second,
 				waitVirtualDisk:             2 * time.Minute,
 				waitVirtualMachine:          time.Minute,
@@ -75,7 +77,7 @@ func initVirtualization(access kubernetes.Access, preflight checker.Doer, virtPr
 }
 
 type virtualMachineLifecycleTimeouts struct {
-	period                     time.Duration
+	period                      time.Duration
 	waitVirtualImage            time.Duration
 	waitVirtualDisk             time.Duration
 	waitVirtualMachine          time.Duration
@@ -91,7 +93,8 @@ func virtualMachineLifecycleRunner(
 	logger *logrus.Logger,
 	probeName,
 	namespaceSuffix,
-	virtualImageURL string,
+	virtualImageURL,
+	virtualMachineClassName string,
 	verifyLifecycle bool,
 	timeouts virtualMachineLifecycleTimeouts,
 ) runnerConfig {
@@ -108,12 +111,13 @@ func virtualMachineLifecycleRunner(
 				"probe": probeName,
 				"check": "virtual-machine-lifecycle",
 			}),
-			AgentID:                    run.ID(),
-			Namespace:                  run.StaticIdentifier(namespaceSuffix),
-			ProbeName:                  probeName,
-			VirtualImageName:           checker.VirtualizationImageName,
-			VirtualImageURL:            virtualImageURL,
-			VerifyLifecycle:            verifyLifecycle,
+			AgentID:                 run.ID(),
+			Namespace:               run.StaticIdentifier(namespaceSuffix),
+			ProbeName:               probeName,
+			VirtualImageName:        checker.VirtualizationImageName,
+			VirtualImageURL:         virtualImageURL,
+			VirtualMachineClassName: virtualMachineClassName,
+			VerifyLifecycle:         verifyLifecycle,
 
 			RequestTimeout:                     5 * time.Second,
 			WaitVirtualImageTimeout:            timeouts.waitVirtualImage,

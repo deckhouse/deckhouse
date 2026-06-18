@@ -73,6 +73,9 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
 		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
+	cmd.Flag("virtualization-probe-virtualmachine-class-name", "VirtualMachineClass name for virtualization VM lifecycle probes").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALMACHINE_CLASS_NAME").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualMachineClassName)
 
 	// User-Agent
 	// TODO generate from CI?
@@ -144,6 +147,9 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 	cmd.Flag("virtualization-probe-virtualimage-url", "HTTP URL used to create VirtualImage when missing").
 		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALIMAGE_URL").
 		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualImageURL)
+	cmd.Flag("virtualization-probe-virtualmachine-class-name", "VirtualMachineClass name for virtualization VM lifecycle probes").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VIRTUALMACHINE_CLASS_NAME").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VirtualMachineClassName)
 
 	// User-Agent
 	// TODO generate from CI?

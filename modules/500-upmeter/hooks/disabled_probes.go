@@ -108,7 +108,7 @@ type appPresence struct {
 	grafanaV10                     bool
 	prometheusLongterm             bool
 	virtualImageURL                bool
-	defaultVMClass                 bool
+	virtualMachineClass            bool
 	diskStorageClass               bool
 }
 
@@ -132,8 +132,9 @@ func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 		grafanaV10:         deplyments.Has("grafana-v10"),
 		prometheusLongterm: statefulsets.Has("prometheus-longterm"),
 		virtualImageURL:    input.Values.Get("upmeter.virtualizationProbe.virtualImageURL").String() != "",
-		defaultVMClass:     len(defaultVMClasses.Slice()) > 0,
-		diskStorageClass:   len(defaultStorageClasses.Slice()) > 0 || len(virtualizationModuleDiskStorageCfg.Slice()) > 0,
+		virtualMachineClass: input.Values.Get("upmeter.virtualizationProbe.virtualMachineClassName").String() != "" ||
+			len(defaultVMClasses.Slice()) > 0,
+		diskStorageClass: len(defaultStorageClasses.Slice()) > 0 || len(virtualizationModuleDiskStorageCfg.Slice()) > 0,
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	manuallyDisabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
@@ -227,7 +228,7 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 		disabledProbes.Add("extensions/observability-webhook")
 	}
 
-	if !enabledModules.Has("virtualization") || !presence.virtualImageURL || !presence.defaultVMClass || !presence.diskStorageClass {
+	if !enabledModules.Has("virtualization") || !presence.virtualImageURL || !presence.virtualMachineClass || !presence.diskStorageClass {
 		disabledProbes.Add("virtualization/")
 	}
 }

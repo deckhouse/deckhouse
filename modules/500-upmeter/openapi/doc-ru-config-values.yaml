@@ -176,6 +176,9 @@ properties:
       virtualImageURL:
         description: |
           HTTP URL образа для автоматического создания VirtualImage. Если не указан, пробы виртуализации отключаются.
+      virtualMachineClassName:
+        description: |
+          Имя VirtualMachineClass для проб виртуализации. Если не указано, используется default VirtualMachineClass. Если не задан ни этот параметр, ни default VirtualMachineClass, пробы виртуализации отключаются.
   https:
     description: |
       Тип сертификата, используемого для веб-приложений webui и status.

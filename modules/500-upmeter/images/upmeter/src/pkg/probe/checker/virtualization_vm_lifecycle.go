@@ -42,7 +42,7 @@ const (
 	// VirtualizationLifecycleProbeName is the probe name for VM lifecycle operations.
 	VirtualizationLifecycleProbeName = "vm-lifecycle"
 	// VirtualizationImageName is the VirtualImage name used by VM lifecycle probes.
-	VirtualizationImageName = "probe-image"
+	VirtualizationImageName               = "probe-image"
 	virtualizationVMName                  = "probe-vm"
 	virtualizationDiskName                = "probe-disk"
 	virtualizationExtraDiskName           = "probe-extra-disk"
@@ -101,12 +101,13 @@ type VirtualMachineLifecycle struct {
 	PreflightChecker check.Checker
 	Logger           *logrus.Entry
 
-	AgentID                    string
-	Namespace                  string
-	ProbeName                  string
-	VirtualImageName           string
-	VirtualImageURL            string
-	VerifyLifecycle            bool
+	AgentID                 string
+	Namespace               string
+	ProbeName               string
+	VirtualImageName        string
+	VirtualImageURL         string
+	VirtualMachineClassName string
+	VerifyLifecycle         bool
 
 	RequestTimeout                     time.Duration
 	WaitVirtualImageTimeout            time.Duration
@@ -120,15 +121,16 @@ type VirtualMachineLifecycle struct {
 
 func (c VirtualMachineLifecycle) Checker() check.Checker {
 	checker := &virtualMachineLifecycleChecker{
-		access:                     c.Access,
-		preflightChecker:           c.PreflightChecker,
-		logger:                     c.Logger,
-		agentID:                    fallbackString(c.AgentID, "unknown"),
-		namespace:                  c.Namespace,
-		probeName:                  fallbackString(c.ProbeName, VirtualizationCreationProbeName),
-		virtualImageName:           c.VirtualImageName,
-		virtualImageURL:            c.VirtualImageURL,
-		verifyLifecycle:            c.VerifyLifecycle,
+		access:                            c.Access,
+		preflightChecker:                  c.PreflightChecker,
+		logger:                            c.Logger,
+		agentID:                           fallbackString(c.AgentID, "unknown"),
+		namespace:                         c.Namespace,
+		probeName:                         fallbackString(c.ProbeName, VirtualizationCreationProbeName),
+		virtualImageName:                  c.VirtualImageName,
+		virtualImageURL:                   c.VirtualImageURL,
+		configuredVirtualMachineClassName: c.VirtualMachineClassName,
+		verifyLifecycle:                   c.VerifyLifecycle,
 
 		requestTimeout:                     fallbackDuration(c.RequestTimeout, 5*time.Second),
 		waitVirtualImageTimeout:            fallbackDuration(c.WaitVirtualImageTimeout, 15*time.Minute),
@@ -147,12 +149,13 @@ type virtualMachineLifecycleChecker struct {
 	preflightChecker check.Checker
 	logger           *logrus.Entry
 
-	agentID                    string
-	namespace                  string
-	probeName                  string
-	virtualImageName           string
-	virtualImageURL            string
-	verifyLifecycle            bool
+	agentID                           string
+	namespace                         string
+	probeName                         string
+	virtualImageName                  string
+	virtualImageURL                   string
+	configuredVirtualMachineClassName string
+	verifyLifecycle                   bool
 
 	requestTimeout                     time.Duration
 	waitVirtualImageTimeout            time.Duration
@@ -504,6 +507,7 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 		c.probeName,
 		virtualizationVMName,
 		virtualizationDiskName,
+		c.configuredVirtualMachineClassName,
 	)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
@@ -840,6 +844,10 @@ func (c *virtualMachineLifecycleChecker) virtualMachineClassAvailableNodes(ctx c
 }
 
 func (c *virtualMachineLifecycleChecker) virtualMachineClassName(ctx context.Context) (string, error) {
+	if c.configuredVirtualMachineClassName != "" {
+		return c.configuredVirtualMachineClassName, nil
+	}
+
 	vm, err := c.access.Kubernetes().Dynamic().
 		Resource(virtualMachineGVR).
 		Namespace(c.namespace).
@@ -1240,7 +1248,12 @@ spec:
 `, agentID, VirtualizationGroupName, probeName, name, namespace, size)
 }
 
-func virtualMachineManifest(agentID, namespace, probeName, name, diskName string) string {
+func virtualMachineManifest(agentID, namespace, probeName, name, diskName, virtualMachineClassName string) string {
+	virtualMachineClassSpec := ""
+	if virtualMachineClassName != "" {
+		virtualMachineClassSpec = fmt.Sprintf("  virtualMachineClassName: %q\n", virtualMachineClassName)
+	}
+
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
@@ -1254,7 +1267,7 @@ metadata:
   namespace: %q
 spec:
   runPolicy: AlwaysOn
-  cpu:
+%s  cpu:
     cores: 1
     coreFraction: 5%%
   memory:
@@ -1262,7 +1275,7 @@ spec:
   blockDeviceRefs:
     - kind: VirtualDisk
       name: %q
-`, agentID, VirtualizationGroupName, probeName, name, namespace, diskName)
+`, agentID, VirtualizationGroupName, probeName, name, namespace, virtualMachineClassSpec, diskName)
 }
 
 func virtualMachineOperationManifest(agentID, namespace, probeName, name, vmName string) string {

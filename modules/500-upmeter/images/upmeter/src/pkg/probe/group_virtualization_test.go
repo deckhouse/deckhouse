@@ -31,7 +31,10 @@ func Test_initVirtualizationTimeouts(t *testing.T) {
 	configs := initVirtualization(
 		kubernetes.FakeAccessor(),
 		checker.NoopDoer{},
-		VirtualizationProbeConfig{VirtualImageURL: "https://example.com/alpine.qcow2"},
+		VirtualizationProbeConfig{
+			VirtualImageURL:         "https://example.com/alpine.qcow2",
+			VirtualMachineClassName: "custom",
+		},
 		logrus.New(),
 	)
 
@@ -42,6 +45,7 @@ func Test_initVirtualizationTimeouts(t *testing.T) {
 	assert.Equal(t, 5*time.Minute, creation.period)
 	creationConfig := creation.config.(checker.VirtualMachineLifecycle)
 	assert.False(t, creationConfig.VerifyLifecycle)
+	assert.Equal(t, "custom", creationConfig.VirtualMachineClassName)
 	assert.Equal(t, 4*time.Minute+30*time.Second, creationConfig.Timeout)
 	assert.Equal(t, 60*time.Second, creationConfig.WaitVirtualDiskTimeout)
 	assert.Equal(t, 30*time.Second, creationConfig.WaitVirtualMachineTimeout)
@@ -51,6 +55,7 @@ func Test_initVirtualizationTimeouts(t *testing.T) {
 	assert.Equal(t, 15*time.Minute, lifecycle.period)
 	lifecycleConfig := lifecycle.config.(checker.VirtualMachineLifecycle)
 	assert.True(t, lifecycleConfig.VerifyLifecycle)
+	assert.Equal(t, "custom", lifecycleConfig.VirtualMachineClassName)
 	assert.Equal(t, 10*time.Minute, lifecycleConfig.Timeout)
 	assert.Equal(t, 2*time.Minute, lifecycleConfig.WaitVirtualDiskTimeout)
 	assert.Equal(t, time.Minute, lifecycleConfig.WaitVirtualMachineTimeout)

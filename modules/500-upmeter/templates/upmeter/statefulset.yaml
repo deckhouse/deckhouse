@@ -119,6 +119,9 @@ spec:
           {{- if .virtualImageURL }}
           - --virtualization-probe-virtualimage-url={{ .virtualImageURL }}
           {{- end }}
+          {{- if .virtualMachineClassName }}
+          - --virtualization-probe-virtualmachine-class-name={{ .virtualMachineClassName }}
+          {{- end }}
           {{- end }}
         env:
           - name: UPMETER_DB_PATH
