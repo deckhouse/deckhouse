@@ -62,7 +62,7 @@ func filterCapiResourceMeta(obj *unstructured.Unstructured) (go_hook.FilterResul
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/node-manager/migrate-capi-helm-ownership",
+	Queue:        "/modules/node-manager/set-keep-policy-on-capi-resources",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
