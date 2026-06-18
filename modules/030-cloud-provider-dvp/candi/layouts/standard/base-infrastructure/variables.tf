@@ -151,7 +151,7 @@ locals {
 # Extract locals needed for validation module
 locals {
   namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
-  _master_ng     = module.migration.nodeGroups["master"]
+  _master_ng     = try(module.migration.nodeGroups["master"], null)
   _master_ic_name = try(local._master_ng.spec.cloudInstances.classReference.name, "")
   instance_class = try(module.migration.instanceClasses[local._master_ic_name].spec, {})
 
