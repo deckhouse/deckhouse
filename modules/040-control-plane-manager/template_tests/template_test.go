@@ -397,9 +397,9 @@ apiserver:
 			It("should render control-plane-proxy stack, ServiceMonitors and scraper role", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				Expect(f.KubernetesResource("DaemonSet", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("Service", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("ServiceAccount", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeTrue())
 
@@ -418,7 +418,7 @@ apiserver:
 			It("should not render the scrape stack", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				Expect(f.KubernetesResource("DaemonSet", "d8-monitoring", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeFalse())
 				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeFalse())
 			})
