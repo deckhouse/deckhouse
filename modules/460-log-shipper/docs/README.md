@@ -14,10 +14,10 @@ Module features:
 ![log-shipper architecture](images/log_shipper_architecture.svg)
 <!-- Source: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
-1. Deckhouse is watching [ClusterLoggingConfig](cr.html#clusterloggingconfig), [ClusterLogDestination](cr.html#clusterlogdestination) and [PodLoggingConfig](cr.html#podloggingconfig) custom resources.
+1. Deckhouse Kubernetes Platform (DKP) is watching [ClusterLoggingConfig](cr.html#clusterloggingconfig), [ClusterLogDestination](cr.html#clusterlogdestination) and [PodLoggingConfig](cr.html#podloggingconfig) custom resources.
   The combination of a logging source and log destination is called `pipeline`.
-2. Deckhouse generates a configuration file and stores it into Kubernetes `Secret`.
-3. `Secret` is mounted to all log-shipper agent Pods and the configuration is reloaded on changes by the `reloader` sidecar container.
+1. DKP generates a configuration file and stores it into Kubernetes `Secret`.
+1. `Secret` is mounted to all log-shipper agent Pods and the configuration is reloaded on changes by the `reloader` sidecar container.
 
 ## Deployment topologies
 
@@ -80,9 +80,9 @@ The following metadata fields will be exposed:
 |--------------|-------------------------------------------|
 | `node_group` | metadata.labels[].node.deckhouse.io/group |
 
-{% alert -%}
+{% alert level="info" %}
 For Splunk, the `pod_labels` fields are not exported because it is a nested object, which is not supported by Splunk.
-{%- endalert %}
+{% endalert %}
 
 ### File
 
@@ -117,6 +117,6 @@ Both filters have the same structured configuration:
 
 More examples can be found in the [Examples](examples.html) section of the documentation.
 
-{% alert -%}
+{% alert level="warning" %}
 Extra labels are added on the `Destination` stage of the pipeline, so it is impossible to run queries against them.
-{%- endalert %}
+{% endalert %}
