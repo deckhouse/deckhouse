@@ -612,6 +612,14 @@ specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInsta
 Run the `openstack security group list` command.
 If you don’t receive any errors, it means that [security groups](https://docs.openstack.org/nova/pike/admin/security-groups.html) are supported.
 
+### Cinder CSI resilience during re-authentication in OpenStack
+
+The Cinder CSI driver supports OpenStack re-authentication with service catalog refresh. This improves the reliability of volume operations in `cinder-csi-plugin` pods that have been running for a long time without being restarted.
+
+When a token expires or a `401 Unauthorized` response is received, the driver re-authenticates with OpenStack and updates the data used to access OpenStack API services. As a result, PersistentVolume operations, including volume attachment and detachment, continue without requiring CSI driver pods to be restarted.
+
+This behavior is especially important for clusters where `cinder-csi-plugin` pods run for a long time without being restarted, while the OpenStack service catalog may change between the initial authentication and subsequent API requests.
+
 ### Configuring online volume resize
 
 When resizing a disk via the OpenStack API, Cinder does not pass updated size information to Nova.
