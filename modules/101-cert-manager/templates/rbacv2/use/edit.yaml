@@ -23,7 +23,6 @@ rules:
 - apiGroups:
   - cert-manager.io
   resources:
-  - challenges
   - certificaterequests    
   verbs:
   - delete
@@ -31,6 +30,7 @@ rules:
 - apiGroups:
   - acme.cert-manager.io
   resources:
+  - challenges
   - orders
   verbs:
   - delete

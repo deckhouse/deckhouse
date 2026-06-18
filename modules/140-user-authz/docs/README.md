@@ -146,6 +146,7 @@ To view the permissions created by source modules, use the [command](#get_rules)
 
 ```text
 read:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -159,7 +160,6 @@ read:
     - batch/jobs
     - cert-manager.io/certificaterequests
     - cert-manager.io/certificates
-    - cert-manager.io/challenges
     - cert-manager.io/clusterissuers
     - cert-manager.io/issuers
     - cilium.io/ciliumclusterwidenetworkpolicies
@@ -259,6 +259,7 @@ read:
     - limitranges
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
+    - multitenancy.deckhouse.io/availableclusterresources
     - mutations.gatekeeper.sh/assign
     - mutations.gatekeeper.sh/assignimage
     - mutations.gatekeeper.sh/assignmetadata
@@ -266,7 +267,10 @@ read:
     - namespaces
     - network.deckhouse.io/egressgatewaypolicies
     - network.deckhouse.io/egressgateways
+    - network.deckhouse.io/metalloadbalancerbgppeers
     - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/metalloadbalancerconfigurations
+    - network.deckhouse.io/metalloadbalancerpools
     - network.deckhouse.io/servicewithhealthchecks
     - networking.istio.io/destinationrules
     - networking.istio.io/gateways
@@ -388,10 +392,10 @@ write:
 create,patch,update:
     - pods
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apps/replicasets
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
     - extensions/replicasets
 read:
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -423,9 +427,9 @@ write:
 
 ```text
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
 patch,update:
     - nodes
 read:
@@ -435,6 +439,8 @@ read:
     - deckhouse.io/istiomulticlusters
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
     - install.istio.io/istiooperators
+    - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
+    - multitenancy.deckhouse.io/grantableclusterresourcereferences
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - sailoperator.io/istiocnis
@@ -449,6 +455,7 @@ read-write:
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - deckhouse.io/upmeterremotewrites
+    - multitenancy.deckhouse.io/clusterresourcegrantpolicies
 write:
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -600,7 +607,10 @@ write:
     - mutations.gatekeeper.sh/assignmetadata
     - mutations.gatekeeper.sh/modifyset
     - namespaces
+    - network.deckhouse.io/metalloadbalancerbgppeers
     - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/metalloadbalancerconfigurations
+    - network.deckhouse.io/metalloadbalancerpools
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - resourcequotas

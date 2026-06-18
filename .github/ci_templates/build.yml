@@ -2,7 +2,7 @@
 # <template: check_changelog_template>
 check_changelog:
   name: Check changelog
-  runs-on: "ubuntu-slim"
+  runs-on: "self-slim"
   steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
@@ -92,6 +92,7 @@ steps:
     id: build
     env:
       WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+      WERF_DOCKER_REGISTRY_DEBUG: 1
       WERF_TELEMETRY: "1"
       WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
 {!{- if eq $buildType "dev" }!}

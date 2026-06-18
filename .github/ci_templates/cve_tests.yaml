@@ -3,7 +3,7 @@
 # <template: set_security_scan_requirement_status>
 set_security_scan_requirement_status:
   name: Set commit status after security scan run
-  runs-on: "ubuntu-slim"
+  runs-on: "self-slim"
   needs: test_cve_report_main
   if: ${{ always() }}
   permissions:
@@ -11,7 +11,7 @@ set_security_scan_requirement_status:
     pull-requests: write
   steps:
     - name: Install GitHub CLI
-      run: sudo apt-get install gh -y
+      uses: deckhouse/modules-actions/gh@v15
     - name: Auth with GitHub CLI
       run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
     - name: Set PR Label

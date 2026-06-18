@@ -1292,7 +1292,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "count by (namespace) (\n  max_over_time(kube_pod_info{node=~\"$node\", namespace=~\"$namespace\", created_by_kind=\"VirtualMachine\"}[$__rate_interval])\n  unless on (pod, namespace)\n  (kube_pod_status_phase{phase=~\"Succeeded|Failed\"} == 1)\n)",
+          "expr": "count by (namespace) (\n  max_over_time(kube_pod_info{node=~\"$node\", namespace=~\"$namespace\", created_by_kind=\"InternalVirtualizationVirtualMachineInstance\"}[$__rate_interval])\n  unless on (pod, namespace)\n  (kube_pod_status_phase{phase=~\"Succeeded|Failed\"} == 1)\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",

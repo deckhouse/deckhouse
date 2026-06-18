@@ -35,7 +35,7 @@ func CheckPreventBreakAnotherBootstrappedCluster(
 	kubeCl *client.KubernetesClient,
 	config *config.DeckhouseInstaller,
 ) error {
-	return retry.NewSilentLoop("Check to prevent breaking another bootstrapped cluster", 15, 3*time.Second).RunContext(ctx, func() error {
+	return retry.NewSilentLoop("Check to prevent breaking another bootstrapped cluster", 45, 1*time.Second).RunContext(ctx, func() error {
 		var uuidInCluster string
 		cmInCluster, err := kubeCl.CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).Get(ctx, manifests.ClusterUUIDCm, metav1.GetOptions{})
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -68,7 +68,7 @@ func WaitForFirstMasterNodeBecomeReady(ctx context.Context, kubeCl *client.Kuber
 	defer span.End()
 
 	var nodeName string
-	err := retry.NewSilentLoop("Get master node name", 45, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("Get master node name", 135, 1*time.Second).RunContext(ctx, func() error {
 		nodes, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err

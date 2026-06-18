@@ -36,7 +36,7 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 spec:
-  maxUnavailable: 1
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   selector:
     matchLabels:
       app: node-controller
@@ -48,7 +48,7 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 spec:
-  replicas: 1
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -82,6 +82,7 @@ spec:
         - --health-probe-bind-address=0.0.0.0:4292
         - --webhook-port=4290
         - --max-concurrent-reconciles=10
+        - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
         - -v=4
         livenessProbe:
           httpGet:

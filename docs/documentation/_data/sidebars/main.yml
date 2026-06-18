@@ -41,10 +41,6 @@ entries:
                     en: Restoring registry access
                     ru: Восстановление подключения к registry
                   url: /admin/configuration/registry/restore-token.html
-                - title:
-                    en: Switching editions
-                    ru: Переключение редакций
-                  url: /admin/configuration/registry/switching-editions.html
             - title:
                 en: IAM
                 ru: IAM
@@ -390,9 +386,29 @@ entries:
                             ru: Интеграция со службами zVirt
                           url: /admin/integrations/virtualization/zvirt/services.html
                 - title:
-                    en: Hybrid cluster
-                    ru: Гибридный кластер
-                  url: /admin/integrations/hybrid/overview.html
+                    en: Hybrid clusters
+                    ru: Гибридные кластеры
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/integrations/hybrid/overview.html
+                    - title:
+                        en: Hybrid cluster with Yandex Cloud
+                        ru: Гибридный кластер с Yandex Cloud
+                      url: /admin/integrations/hybrid/yandex-hybrid.html
+                    - title:
+                        en: Hybrid cluster with VCD
+                        ru: Гибридный кластер с VCD
+                      url: /admin/integrations/hybrid/vcd-hybrid.html
+                    - title:
+                        en: Hybrid cluster with vSphere
+                        ru: Гибридный кластер с vSphere
+                      url: /admin/integrations/hybrid/vsphere-hybrid.html
+                    - title:
+                        en: Hybrid cluster with DVP
+                        ru: Гибридный кластер с DVP
+                      url: /admin/integrations/hybrid/dvp-hybrid.html  
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
@@ -921,6 +937,10 @@ entries:
                 en: Updating Kubernetes and versioning
                 ru: Обновление Kubernetes и управление версиями
               url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+            - title:
+                en: Switching editions
+                ru: Переключение редакций
+              url: /admin/configuration/update/switching-editions.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
@@ -1407,6 +1427,10 @@ entries:
                 ru: Инфраструктурные компоненты
               folders:
                 - title:
+                    en: Chrony module
+                    ru: Модуль chrony
+                  url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
@@ -1603,8 +1627,12 @@ entries:
                 ru: Обзор
               url: /architecture/virtualization/
             - title:
-                en: Module core
-                ru: Ядро модуля
+                en: Virtualization API
+                ru: Virtualization API
+              url: /architecture/virtualization/api.html
+            - title:
+                en: Virtualization core
+                ru: Ядро виртуализации
               url: /architecture/virtualization/core.html              
             - title:
                 en: Deckhouse Virtualization Container Registry (DVCR)

@@ -305,3 +305,82 @@ data:
      labels:
        heritage: my-custom-label
    ```
+
+## Выдача кластерных ресурсов проектам
+
+`multitenancy-manager` позволяет администраторам кластера управлять тем, какие кластерные ресурсы (например, StorageClass) можно использовать из неймспейсов проектов.
+
+Для этого используются кастомные ресурсы:
+
+- `GrantableClusterResourceDefinition` (cluster-scoped) — регистрирует кластерный ресурс, который
+  можно выдавать проектам: какой это ресурс (`grantedResource`), где проверяются ссылки на него
+  (`usageReferences`), базовая доступность (`defaultAvailability`) и как определяется дефолт проекта
+  (`defaultFrom`). Каждая ссылка отдельно включает подстановку дефолта через `default: true` —
+  ставьте его только для поля, значение которого ресурсу всегда нужно (например, `storageClassName`
+  у `PersistentVolumeClaim`). Для ссылки, отсутствие которой осмысленно (например, аннотация-
+  переключатель функции), не ставьте: такая ссылка по-прежнему проверяется и учитывается в квоте,
+  но никогда не заполняется.
+- `ClusterResourceGrantPolicy` (cluster-scoped) — выбирает проекты (по меткам неймспейса через
+  `projectSelector`) и для каждого ресурса (`resourceName`) задаёт разрешённые имена (`allowed`,
+  `allowedSelector`) и `default`. Allow-лист ограничивает ресурс этим списком.
+- `AvailableClusterResource` (namespaced, read-only, короткое имя `available`) — формируемый контроллером каталог доступных для проекта кластерных ресурсов. Пользователи проекта читают его, чтобы узнать
+  доступные имена.
+- `ClusterResourceGrant` (namespaced) — пул объектной квоты проекта (лимиты на количество объектов и
+  на измеряемые величины, например запрошенный объём хранилища). В статусе объекта отображается текущее потребление.
+
+{% raw %}
+
+```yaml
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: storageclasses
+spec:
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+  enforcement: Managed
+  defaultAvailability: All
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
+  usageReferences:
+    - rule:
+        apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - persistentvolumeclaims
+      fieldPath: $.spec.storageClassName
+      default: true
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: production-storage
+spec:
+  projectSelector:
+    matchLabels:
+      environment: production
+  resources:
+    - resourceName: storageclasses
+      default: fast-ssd          # Перекрывает дефолт по аннотации.
+      allowed:
+        - fast-ssd
+        - standard
+      allowedSelector:           # Плюс любой StorageClass с меткой shared=true.
+        matchLabels:
+          shared: "true"
+```
+
+{% endraw %}
+
+Особенности применения:
+
+- Проверяющий (validating) вебхук запрещает создание/обновление объектов в подходящих проектах, если
+  используемое значение не разрешено. Уже присутствующие в объекте значения при обновлении не блокируются — существующие объекты продолжают работать.
+- Мутирующий (mutating) вебхук подставляет значение по умолчанию только при создании и только в
+  ссылки, помеченные `default: true`. Ссылки без неё (например, аннотации-переключатели) никогда
+  не заполняются.
+- Grant без совпавших проектов (или проект без совпавших grant’ов) ничего не ограничивает.

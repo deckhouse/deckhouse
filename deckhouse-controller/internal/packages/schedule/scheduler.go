@@ -26,10 +26,6 @@ import (
 )
 
 const (
-	// packageGlobal is the sentinel node that all other nodes implicitly depend on.
-	// It acts as the root of the dependency graph and must complete before any scheduling begins.
-	packageGlobal = "global"
-
 	// FunctionalOrder is the Order value assigned to functional (non-critical) packages.
 	// It is higher than any critical package order, ensuring functional packages are
 	// scheduled only after all critical packages have been processed.
@@ -58,6 +54,8 @@ type Scheduler struct {
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
+
+	onScheduleHook func(enabled []string)
 
 	pause atomic.Bool // When true, no state changes are processed
 }
@@ -90,6 +88,13 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 func WithDependencyGetter(getter dependency.Getter) Option {
 	return func(s *Scheduler) {
 		s.dependencyGetter = getter
+	}
+}
+
+// WithOnScheduleHook sets the hook to be called after scheduling is computed.
+func WithOnScheduleHook(hook func(enabled []string)) Option {
+	return func(s *Scheduler) {
+		s.onScheduleHook = hook
 	}
 }
 
@@ -260,19 +265,6 @@ func (s *Scheduler) Complete(completed string) {
 		n.state = nodeStateActive
 	}
 
-	if completed == packageGlobal {
-		var enabled []string
-		for _, n := range s.compute() {
-			if n.name == packageGlobal || !n.status.Enabled {
-				continue
-			}
-
-			enabled = append(enabled, n.name)
-		}
-
-		s.send(Event{Kind: EventGlobalDone, Enabled: enabled})
-	}
-
 	s.schedule()
 }
 
@@ -351,13 +343,25 @@ func (s *Scheduler) compute() []*node {
 	}
 
 	// Disabled nodes have nothing to wait for — mark them active so they do
-	// not block higher-order nodes via canSchedule's order-tier gate. Nodes
-	// that later flip back to enabled are reset to idle by the loop above and
-	// go through normal scheduling from there.
+	// not block higher-order nodes via canSchedule's order-tier gate. This
+	// sweep is unconditional (not gated on a status flip), so nodes that are
+	// born disabled — never enabled to begin with — are parked active too.
+	// Nodes that later flip back to enabled are reset to idle by the loop
+	// above and go through normal scheduling from there.
 	for _, n := range sorted {
 		if n.state == nodeStateIdle && !n.status.Enabled {
 			n.state = nodeStateActive
 		}
+	}
+
+	if s.onScheduleHook != nil {
+		var enabled []string
+		for _, n := range sorted {
+			if n.status.Enabled {
+				enabled = append(enabled, n.name)
+			}
+		}
+		s.onScheduleHook(enabled)
 	}
 
 	return sorted

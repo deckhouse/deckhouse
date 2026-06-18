@@ -1,0 +1,21 @@
+Subject: [PATCH] Add TemplateOrg field to VCDMachine spec
+---
+Index: api/v1beta2/vcdmachine_types.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/api/v1beta2/vcdmachine_types.go b/api/v1beta2/vcdmachine_types.go
+--- a/api/v1beta2/vcdmachine_types.go
++++ b/api/v1beta2/vcdmachine_types.go
+@@ -46,6 +46,10 @@
+ 	// +optional
+ 	Template string `json:"template,omitempty"`
+ 
++	// TemplateOrg is the organization of the template OVA that is to be used
++	// +optional
++	TemplateOrg string `json:"templateOrg,omitempty"`
++
+ 	// SizingPolicy is the sizing policy to be used on this machine.
+ 	// If no sizing policy is specified, default sizing policy will be used to create the nodes
+ 	// +optional

@@ -16,8 +16,11 @@ package global
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
+	"sync/atomic"
 
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
@@ -33,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
+	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
@@ -45,6 +49,10 @@ type Module struct {
 
 	hooks  *hooks.GlobalStorage // Hook storage with indices
 	values *values.Storage      // Values storage with layering
+
+	// running tracks whether OnStartup hooks have completed successfully.
+	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
+	running atomic.Bool
 
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -76,6 +84,7 @@ func NewModuleByConfig(cfg *Config, logger *log.Logger) (*Module, error) {
 	m := new(Module)
 
 	m.name = "global"
+	m.running = atomic.Bool{}
 
 	m.path = cfg.Path
 	m.patcher = cfg.Patcher
@@ -151,9 +160,17 @@ func (m *Module) GetSettingsChecksum() string {
 	return m.values.GetSettingsChecksum()
 }
 
-// GetValues returns values for rendering
+// GetValues returns values for rendering.
+//
+// Global values are exposed both flat (.Values.replicas) and under the "global"
+// key (.Values.global.replicas) so templates written for the old addon-operator
+// layout keep working.
 func (m *Module) GetValues() addonutils.Values {
-	return m.values.GetValues()
+	v := m.values.GetValues()
+	return addonutils.MergeValues(
+		v,
+		addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): v},
+	)
 }
 
 // ValidateSettings validates settings against openAPI
@@ -242,6 +259,8 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 		}
 	}
 
+	m.running.Store(true)
+
 	return nil
 }
 
@@ -292,4 +311,28 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	}
 
 	return nil
+}
+
+// SetEnabledModules inject enabledModules to the global values
+// enabledModules are injected as a patch, to recalculate on every global values change
+func (m *Module) SetEnabledModules(enabledModules []string) {
+	if len(enabledModules) == 0 {
+		return
+	}
+
+	// keep them sorted to prevent helm rollout on each restart
+	sort.Strings(enabledModules)
+	data, _ := json.Marshal(enabledModules)
+
+	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
+		{
+			Op:    "add",
+			Path:  "/enabledModules",
+			Value: data,
+		},
+	}}
+
+	if err := m.values.ApplyValuesPatch(patch); err != nil {
+		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
+	}
 }

@@ -130,7 +130,12 @@ Once the group is created and includes all necessary users, proceed by configuri
 
 Password policy allows controlling password complexity, rotation, and user lockout.
 
-To set up a password policy, use the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) field in the configuration of the `user-authn` module:
+To set up a password policy, use the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) field in the configuration of the `user-authn` module.
+
+Examples of policies:
+
+{% tabs Examples of password policies%}
+{% tab "Without custom complexity rules" %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -151,15 +156,31 @@ spec:
         interval: "30d"
 ```
 
-Field description:
+{% endtab %}
+{% tab "With custom complexity rules" %}
 
-* `complexityLevel`: Password complexity level.
-* `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
-* `lockout`: Lockout settings after exceeding the limit of failed login attempts:
-  * `lockout.maxAttempts`: Limit of allowed failed login attempts.
-  * `lockout.lockDuration`: User lockout duration.
-* `rotation`: Password rotation settings:
-  * `rotation.interval`: Period for mandatory password change.
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Custom
+      custom:
+        minLength: 10
+        specialCharacters: true
+        numbers: false
+        capitalized: true
+        repeatedChars: false
+      passwordHistoryLimit: 10
+```
+
+{% endtab %}
+{% endtabs %}
 
 ## Configuring two-factor authentication (2FA)
 

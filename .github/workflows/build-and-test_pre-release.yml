@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.70.0"
+  WERF_VERSION: "v2.72.1"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -59,7 +59,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -284,6 +284,7 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -830,6 +831,7 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -1132,6 +1134,7 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -1434,6 +1437,7 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -1736,6 +1740,7 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -2038,6 +2043,7 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -2340,6 +2346,7 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
           WERF_TELEMETRY: "1"
           WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
@@ -2702,14 +2709,17 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:5f09a2c36ae78d40d8196ddab19797aae92c5ecce38749022d04625548d798b6"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:0827a3308a3cd84f78f6c35448bccdb35ae3061ec6be9c7f1b87936f76e1f551"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse --user $(id -u):$(id -g) -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
+          CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sleep infinity)
+          docker exec ${CONTAINER_ID} pm install git
+          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
+          docker rm -f ${CONTAINER_ID}
     # </template: tests_before_build_template>
 
   tests_python_webhooks:

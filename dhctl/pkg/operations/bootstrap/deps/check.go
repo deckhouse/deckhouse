@@ -62,7 +62,7 @@ var (
 		"join", "cat", "ps", "kill",
 	}
 
-	checkDepsDefaultOpts = retry.AttemptsWithWaitOpts(10, 5*time.Second)
+	checkDepsDefaultOpts = retry.AttemptsWithWaitOpts(50, 1*time.Second)
 )
 
 func NewDependenciesChecker(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *DependenciesChecker {
@@ -266,7 +266,7 @@ func (c *DependenciesChecker) sshErrorBreakPredicate(err error) bool {
 	}
 	var ee *exec.ExitError
 	if errors.As(err, &ee) && ee.ExitCode() == 255 {
-		c.loggerProvider().WarnF("SSH connection failed (exit 255), retrying in 5 seconds...")
+		c.loggerProvider().WarnF("SSH connection failed (exit 255), retrying in 1 second...")
 		return false
 	}
 

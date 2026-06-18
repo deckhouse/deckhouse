@@ -104,6 +104,13 @@ func newServiceWithHealthchecksUnstructured(namespace, name string) *unstructure
 	return u
 }
 
+func newServiceWithHealthchecksListUnstructured() *unstructured.UnstructuredList {
+	u := &unstructured.UnstructuredList{}
+	u.SetAPIVersion("network.deckhouse.io/v1alpha1")
+	u.SetKind("ServiceWithHealthchecksList")
+	return u
+}
+
 func setServiceWithHealthchecksSpec(
 	u *unstructured.Unstructured,
 	ports []v1.ServicePort,
