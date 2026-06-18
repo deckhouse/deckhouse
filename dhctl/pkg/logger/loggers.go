@@ -36,3 +36,25 @@ func NewBufferLogger(w io.Writer) *slog.Logger {
 	lv.Set(slog.LevelDebug)
 	return slog.New(slog.NewTextHandler(w, handlerOptions(lv)))
 }
+
+// NewStreamLogger returns a logger that renders the compact UI (process boxes framed with ┌/│/└,
+// milestones, banner, connection string) as plain ANSI-free lines to w — the format the commander
+// client expects, instead of raw slog text. It backs the gRPC client-stream logger.
+//
+// Unlike NewRoot it does not register a global rootHandler, so it is safe to build per request and
+// for concurrent operations. There is no file (JSON) sink: w is a server LogWriter that already
+// logs every rendered line to the server slog and forwards it to the client. verbose forwards every
+// Info+ detail line (e.g. terraform output) to the renderer; DEBUG never reaches the terminal sink.
+func NewStreamLogger(w io.Writer) *slog.Logger {
+	lv := new(slog.LevelVar)
+	lv.Set(slog.LevelDebug)
+	h := newTerminalUIHandler(handlerConfig{
+		fileW:       io.Discard, // no JSON file sink on the stream path
+		ttyW:        w,          // not an *os.File → real=false → plainSink (logboek tree)
+		isTTY:       true,       // enable the rendering sink
+		interactive: false,      // no pinned pterm block
+		level:       lv,
+		verbose:     true, // forward every Info+ detail line; DEBUG still excluded by the Info floor
+	})
+	return slog.New(h)
+}

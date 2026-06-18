@@ -67,8 +67,10 @@ func initLoggerOptions[T any](ctx context.Context, params *initLoggerOptionsPara
 func initDhctlLoggerCtx(ctx context.Context, action actionForInitLogger) context.Context {
 	opts := action.loggerOptions(ctx)
 
-	// streaming slog logger over the client-stream writer, carried on ctx for operations
-	streamLogger := dhlog.NewBufferLogger(opts.DefaultWriter)
+	// streaming slog logger over the client-stream writer, carried on ctx for operations.
+	// NewStreamLogger renders the compact logboek UI (process boxes, milestones) so the commander
+	// client receives the pretty tree format instead of raw slog text.
+	streamLogger := dhlog.NewStreamLogger(opts.DefaultWriter)
 	ctx = dhlog.ToContext(ctx, streamLogger)
 
 	return ctx
