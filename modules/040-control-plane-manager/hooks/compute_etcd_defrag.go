@@ -32,7 +32,7 @@ const (
 	mastersNodeInternalPath        = "controlPlaneManager.internal.mastersNode"
 	hasEtcdArbiterNodeInternalPath = "controlPlaneManager.internal.hasEtcdArbiterNode"
 
-	etcdDefragDefaultCronSchedule = "*/3 * * * *"
+	etcdDefragDefaultCronSchedule = "0 1 * * *"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

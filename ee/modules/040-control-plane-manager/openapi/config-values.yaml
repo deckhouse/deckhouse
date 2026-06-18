@@ -439,7 +439,7 @@ properties:
       defrag:
         type: object
         default:
-          cronSchedule: "*/3 * * * *"
+          cronSchedule: "0 1 * * *"
         description: |
           etcd defragmentation parameters.
         properties:
