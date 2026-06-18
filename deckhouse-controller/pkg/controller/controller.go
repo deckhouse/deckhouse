@@ -392,6 +392,24 @@ func NewDeckhouseController(
 	if os.Getenv(envEnableModulePackages) == "true" {
 		logger.Info("Module package controllers are enabled")
 
+		// Hand off functional (non-critical) modules from addon-operator to the
+		// new package runtime. addon-operator processes critical modules and,
+		// once they are done converging, emits the enabled functional module
+		// names on this channel. The consumer feeds them into the runtime.
+		functionalModulesCh := make(chan []string, 1)
+		operator.SetFunctionalModulesChannel(functionalModulesCh)
+
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case names := <-functionalModulesCh:
+					pkgRuntime.ProcessFunctionalModules(names)
+				}
+			}
+		}()
+
 		err = modulepackage.RegisterController(runtimeManager, dc, logger.Named("module-package-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register module package controller: %w", err)

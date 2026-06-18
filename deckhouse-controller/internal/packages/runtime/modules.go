@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"log/slog"
 	"path/filepath"
 	"slices"
 
@@ -89,6 +90,42 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 
 	for _, task := range tasks {
 		r.queueService.Enqueue(ctx, name, task)
+	}
+}
+
+// ProcessFunctionalModules consumes a functional-modules handoff signal from
+// addon-operator. The signal arrives once all critical modules have finished
+// converging in addon-operator and carries the names of the enabled functional
+// (non-critical) modules that the new controller should now own.
+//
+// First iteration: this logs the handoff and reschedules any functional module
+// already loaded into the runtime so the scheduler re-evaluates it. Modules not
+// yet loaded are logged and skipped — wiring the old contracts (module.yaml /
+// ModuleConfig / ModuleSource) into runtime.UpdateModule is a follow-up (stage 3
+// of the module migration plan), at which point those modules will be loaded and
+// this handler will drive them end to end.
+func (r *Runtime) ProcessFunctionalModules(names []string) {
+	r.logger.Info("received functional modules handoff from addon-operator",
+		slog.Int("count", len(names)),
+		slog.Any("modules", names))
+
+	// Collect modules already loaded into the runtime under the lock, then
+	// reschedule them outside it: Scheduler.Reschedule emits schedule events
+	// consumed by the Run loop, which itself acquires r.mu via schedulePackage.
+	r.mu.RLock()
+	known := make([]string, 0, len(names))
+	for _, name := range names {
+		if _, ok := r.modules[name]; ok {
+			known = append(known, name)
+		} else {
+			r.logger.Debug("functional module not loaded in runtime yet, skip",
+				slog.String("module", name))
+		}
+	}
+	r.mu.RUnlock()
+
+	for _, name := range known {
+		r.scheduler.Reschedule(name)
 	}
 }
 
