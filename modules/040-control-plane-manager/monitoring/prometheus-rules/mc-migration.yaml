@@ -170,7 +170,7 @@
              d8 s module enable control-plane-manager
              ```
 
-          2. Migrate the value from `ClusterConfiguration` to `ModuleConfig` in one command:
+          2. Migrate the value from ClusterConfiguration to ModuleConfig in one command:
 
              ```bash
              d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
