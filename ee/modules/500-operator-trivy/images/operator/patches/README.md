@@ -88,3 +88,11 @@ Fixec CVEs:
 Fixes CVE:
 
 - GHSA-pmwq-pjrm-6p5r
+
+
+# 018-fix-cve.patch
+
+Fixes CVE:
+
+- CVE-2026-46680
+- CVE-2026-45571
