@@ -80,9 +80,9 @@ The following metadata fields will be exposed:
 |--------------|-------------------------------------------|
 | `node_group` | metadata.labels[].node.deckhouse.io/group |
 
-{% alert -%}
+{% alert level="info" %}
 For Splunk, the `pod_labels` fields are not exported because it is a nested object, which is not supported by Splunk.
-{%- endalert %}
+{% endalert %}
 
 ### File
 
@@ -117,6 +117,6 @@ Both filters have the same structured configuration:
 
 More examples can be found in the [Examples](examples.html) section of the documentation.
 
-{% alert -%}
+{% alert level="warning" %}
 Extra labels are added on the `Destination` stage of the pipeline, so it is impossible to run queries against them.
-{%- endalert %}
+{% endalert %}

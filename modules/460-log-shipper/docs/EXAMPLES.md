@@ -268,9 +268,9 @@ spec:
 ```
 
 {% endraw %}
-{% alert -%}
+{% alert level="info" %}
 Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
-{%- endalert %}
+{% endalert %}
 {% raw %}
 
 ```yaml
@@ -512,9 +512,9 @@ spec:
 ```
 
 {% endraw %}
-{% alert -%}
+{% alert level="info" %}
 If you need logs from only one or from a small group of a Pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
-{%- endalert %}
+{% endalert %}
 {% raw %}
 
 ## Log transformations
