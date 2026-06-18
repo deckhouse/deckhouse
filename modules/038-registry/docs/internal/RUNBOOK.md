@@ -215,7 +215,9 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
     direct:
       ...
   ...
+  ```
 
+  ```bash
   $ d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
   ...
   mode: Direct
