@@ -131,6 +131,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 				DisruptionApprovalMode string                            `json:"disruptionApprovalMode"`
 				Windows                update.Windows                    `json:"windows"`
 				NotificationConfig     releaseUpdater.NotificationConfig `json:"notification"`
+				BlockOnAlerts          releaseUpdater.BlockOnAlerts      `json:"blockOnAlerts"`
 			}{},
 			ReleaseChannel:           "",
 			AllowExperimentalModules: true,
