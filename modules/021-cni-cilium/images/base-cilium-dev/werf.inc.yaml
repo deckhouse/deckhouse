@@ -83,7 +83,7 @@ shell:
     apt-get update && apt-get install -y \
     sudo \
     libcap-devel libpcap-devel \
-    clang18.0 clang18.0-tools lldb18.0 lld18.0 llvm18.0-devel \
+    clang18.1 clang18.1-tools lldb18.1 lld18.1 llvm18.1-devel \
     libcxxabi-devel \
     gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
   - apt-get autoclean && apt-get clean
