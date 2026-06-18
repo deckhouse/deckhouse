@@ -2,7 +2,7 @@
   rules:
   - alert: SecurityEventsDetected
     expr: |
-      sum(rate(vector_component_sent_events_total{component_kind="sink", component_type="loki", component_id="destination/cluster/se-d8-loki"}[5m])) > 0
+      sum(rate(vector_component_sent_events_total{source="deckhouse", component_kind="sink", component_type="loki", component_id="destination/cluster/se-d8-loki"}[5m])) > 0
     for: 1m
     labels:
       severity: warning

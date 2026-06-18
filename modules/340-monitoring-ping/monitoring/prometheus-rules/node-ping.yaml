@@ -3,12 +3,12 @@
   - alert: NodePingPacketLoss
     expr: >-
       (
-        sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))
+        sum by (destination_node) (increase(kube_node_ping_packets_sent_total{source="deckhouse"}[5m]))
         -
-        sum by (destination_node) (increase(kube_node_ping_packets_received_total[5m]))
+        sum by (destination_node) (increase(kube_node_ping_packets_received_total{source="deckhouse"}[5m]))
       )
       /
-      sum by (destination_node) (increase(kube_node_ping_packets_sent_total[5m]))  > 0.05
+      sum by (destination_node) (increase(kube_node_ping_packets_sent_total{source="deckhouse"}[5m]))  > 0.05
     for: 5m
     labels:
       severity_level: "4"

@@ -1,7 +1,7 @@
 - name: d8.monitoring-custom.reserved-domain
   rules:
   - alert: D8ReservedNodeLabelOrTaintFound
-    expr: max(reserved_domain_nodes == 1) by (name) == 1
+    expr: max(reserved_domain_nodes{source="deckhouse"} == 1) by (name) == 1
     labels:
       d8_component: monitoring-custom
       d8_module: monitoring-custom

@@ -1,7 +1,7 @@
 - name: d8.cni-check
   rules:
     - alert: D8CNIEnabledMoreThanOne
-      expr: sum by (pod) (d8_telemetry_cni_plugin) > 1
+      expr: sum by (pod) (d8_telemetry_cni_plugin{source="deckhouse"}) > 1
       for: 5m
       labels:
         severity_level: "2"
@@ -19,7 +19,7 @@
           To resolve this issue, disable any unnecessary CNI.
 
     - alert: D8CNIMisconfigured
-      expr: max(cniMisconfigured{}) by(cni, module) == 1
+      expr: max(cniMisconfigured{source="deckhouse"}) by(cni, module) == 1
       for: 5m
       labels:
         severity_level: "5"

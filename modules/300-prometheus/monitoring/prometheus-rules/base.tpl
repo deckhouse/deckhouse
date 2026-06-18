@@ -2,7 +2,7 @@
   rules:
 {{- if .Values.prometheus.longtermRetentionDays }}
     - alert: D8PrometheusLongtermTargetAbsent
-      expr: absent(up{job="prometheus", namespace="d8-monitoring", service="prometheus-longterm"} == 1)
+      expr: absent(up{job="prometheus", namespace="d8-monitoring", service="prometheus-longterm", source="deckhouse"} == 1)
       for: 30m
       labels:
         severity_level: "7"
@@ -44,7 +44,7 @@
 {{- end }}
 
     - alert: D8TricksterTargetAbsent
-      expr: (max(up{job="prometheus", service="prometheus"}) == 1) * absent(up{job="trickster", namespace="d8-monitoring"} == 1)
+      expr: (max(up{job="prometheus", service="prometheus", source="deckhouse"}) == 1) * absent(up{job="trickster", namespace="d8-monitoring", source="deckhouse"} == 1)
       for: 2m
       labels:
         severity_level: "5"
@@ -88,7 +88,7 @@
              ```
 
     - alert: D8TricksterTargetAbsent
-      expr: absent(up{job="trickster", namespace="d8-monitoring"} == 1)
+      expr: absent(up{job="trickster", namespace="d8-monitoring", source="deckhouse"} == 1)
       for: 5m
       labels:
         severity_level: "5"
@@ -132,7 +132,7 @@
              ```
 
     - alert: D8PrometheusConfigReloadFailed
-      expr: prometheus_config_last_reload_successful{job="prometheus", service="prometheus", namespace="d8-monitoring"} == 0
+      expr: prometheus_config_last_reload_successful{job="prometheus", service="prometheus", namespace="d8-monitoring", source="deckhouse"} == 0
       for: 10m
       labels:
         severity_level: "5"

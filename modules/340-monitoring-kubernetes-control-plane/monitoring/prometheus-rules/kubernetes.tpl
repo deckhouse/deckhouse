@@ -46,48 +46,71 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
 - name: coreos.kubernetes
   rules:
   - record: pod:container_memory_usage_bytes:sum
-    expr: sum(container_memory_usage_bytes{container!="POD",pod!=""}) BY
+    expr: sum(container_memory_usage_bytes{source="deckhouse", container!="POD",pod!=""}) BY
       (pod)
+    labels:
+      source: deckhouse
   - record: pod:container_spec_cpu_shares:sum
-    expr: sum(container_spec_cpu_shares{container!="POD",pod!=""}) BY (pod)
+    expr: sum(container_spec_cpu_shares{source="deckhouse", container!="POD",pod!=""}) BY (pod)
+    labels:
+      source: deckhouse
   - record: pod:container_cpu_usage:sum
-    expr: sum(rate(container_cpu_usage_seconds_total{container!="POD",pod!=""}[5m]))
+    expr: sum(rate(container_cpu_usage_seconds_total{source="deckhouse", container!="POD",pod!=""}[5m]))
       BY (pod)
+    labels:
+      source: deckhouse
   - record: pod:container_fs_usage_bytes:sum
-    expr: sum(container_fs_usage_bytes{container!="POD",pod!=""}) BY (pod)
+    expr: sum(container_fs_usage_bytes{source="deckhouse", container!="POD",pod!=""}) BY (pod)
+    labels:
+      source: deckhouse
   - record: namespace:container_memory_usage_bytes:sum
-    expr: sum(container_memory_usage_bytes{container!=""}) BY (namespace)
+    expr: sum(container_memory_usage_bytes{source="deckhouse", container!=""}) BY (namespace)
+    labels:
+      source: deckhouse
   - record: namespace:container_spec_cpu_shares:sum
-    expr: sum(container_spec_cpu_shares{container!=""}) BY (namespace)
+    expr: sum(container_spec_cpu_shares{source="deckhouse", container!=""}) BY (namespace)
+    labels:
+      source: deckhouse
   - record: namespace:container_cpu_usage:sum
-    expr: sum(rate(container_cpu_usage_seconds_total{container!="POD"}[5m]))
+    expr: sum(rate(container_cpu_usage_seconds_total{source="deckhouse", container!="POD"}[5m]))
       BY (namespace)
+    labels:
+      source: deckhouse
   - record: cluster:memory_usage:ratio
-    expr: sum(container_memory_usage_bytes{container!="POD",pod!=""}) BY
-      (cluster) / sum(machine_memory_bytes) BY (cluster)
+    expr: sum(container_memory_usage_bytes{source="deckhouse", container!="POD",pod!=""}) BY
+      (cluster) / sum(machine_memory_bytes{source="deckhouse"}) BY (cluster)
+    labels:
+      source: deckhouse
   - record: cluster:container_spec_cpu_shares:ratio
-    expr: sum(container_spec_cpu_shares{container!="POD",pod!=""}) / 1000
-      / sum(machine_cpu_cores)
+    expr: sum(container_spec_cpu_shares{source="deckhouse", container!="POD",pod!=""}) / 1000
+      / sum(machine_cpu_cores{source="deckhouse"})
+    labels:
+      source: deckhouse
   - record: cluster:container_cpu_usage:ratio
-    expr: sum(rate(container_cpu_usage_seconds_total{container!="POD",pod!=""}[5m]))
-      / sum(machine_cpu_cores)
+    expr: sum(rate(container_cpu_usage_seconds_total{source="deckhouse", container!="POD",pod!=""}[5m]))
+      / sum(machine_cpu_cores{source="deckhouse"})
+    labels:
+      source: deckhouse
   - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket[5m])) /
+    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket{source="deckhouse"}[5m])) /
       1e+06
     labels:
       quantile: "0.99"
+      source: deckhouse
   - record: apiserver_latency:quantile_seconds
-    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket[5m])) /
+    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket{source="deckhouse"}[5m])) /
       1e+06
     labels:
       quantile: "0.9"
+      source: deckhouse
   - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket[5m])) /
+    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket{source="deckhouse"}[5m])) /
       1e+06
     labels:
       quantile: "0.5"
+      source: deckhouse
   - alert: K8SApiserverDown
-    expr: absent(up{job="kube-apiserver"} == 1)
+    expr: absent(up{source="deckhouse", job="kube-apiserver"} == 1)
     for: 20m
     labels:
       severity_level: "3"
@@ -96,7 +119,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
       summary: API servers can't be reached.
       description: No API servers are reachable, or they have all disappeared from service discovery.
   - alert: K8sCertificateExpiration
-    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
+    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{source="deckhouse", le="604800", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
       severity_level: "6"
     annotations:
@@ -107,7 +130,7 @@ Consider enabling the `control-plane-manager` module for advanced debugging.
         Some clients are connecting to {{`{{$labels.component}}`}} with certificates that will expire in less than 7 days on node `{{`{{$labels.node}}`}}`.
         {{- include "instruction" . | nindent 8 }}
   - alert: K8sCertificateExpiration
-    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{le="86400", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
+    expr: sum(label_replace(rate(apiserver_client_certificate_expiration_seconds_bucket{source="deckhouse", le="86400", job=~"kubelet|kube-apiserver"}[1m]) > 0, "component", "$1", "job", "(.*)")) by (component, node)
     labels:
       severity_level: "5"
     annotations:

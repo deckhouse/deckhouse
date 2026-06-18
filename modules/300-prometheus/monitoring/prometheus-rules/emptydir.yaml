@@ -2,7 +2,7 @@
   rules:
   - alert: DeckhouseModuleUseEmptyDir
     expr: |
-      d8_emptydir_usage == 1
+      d8_emptydir_usage{source="deckhouse"} == 1
     for: 10m
     labels:
       tier: cluster

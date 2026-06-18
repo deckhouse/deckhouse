@@ -19,6 +19,9 @@ spec:
       insecureSkipVerify: true
     honorLabels: true
     scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 25) }}
+    relabelings:
+    - targetLabel: source
+      replacement: deckhouse
   selector:
     matchLabels:
       app: events-exporter

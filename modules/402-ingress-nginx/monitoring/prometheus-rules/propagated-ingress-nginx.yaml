@@ -7,7 +7,7 @@
   - record: ingress_nginx_detail_backend_info
     expr: count({__name__=~"ingress_nginx_detail_backend_.*", __name__!="ingress_nginx_detail_backend_info"}) by (job, controller, app, node, endpoint, namespace, ingress, service, service_port, vhost, location, pod_ip) * 0 + 1
   - alert: NginxIngressSslWillExpire
-    expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < (time() + (14 * 24 * 3600)))
+    expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds{source="deckhouse"} < (time() + (14 * 24 * 3600)))
     for: 1h
     labels:
       severity_level: "5"
@@ -24,7 +24,7 @@
         d8 k -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
         ```
   - alert: NginxIngressSslExpired
-    expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds < time())
+    expr: count by (secret_name, job, controller, class, host, namespace) (nginx_ingress_controller_ssl_expire_time_seconds{source="deckhouse"} < time())
     for: 1m
     labels:
       severity_level: "4"

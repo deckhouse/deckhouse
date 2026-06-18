@@ -19,7 +19,7 @@
 - name: d8.monitoring-kubernetes.storage-class
   rules:
   - alert: StorageClassDefaultDuplicate
-    expr: sum(storage_class_default_duplicate == 1) > 1
+    expr: sum(storage_class_default_duplicate{source="deckhouse"} == 1) > 1
     labels:
       d8_component: monitoring-kubernetes
       d8_module: monitoring-kubernetes
@@ -37,7 +37,7 @@
         {{ include "cloud-provider-storage-documentation-url" . }}
 
   - alert: StorageClassCloudManual
-    expr: max(storage_class_cloud_manual) by (name) == 1
+    expr: max(storage_class_cloud_manual{source="deckhouse"}) by (name) == 1
     labels:
       d8_component: monitoring-kubernetes
       d8_module: monitoring-kubernetes

@@ -3,11 +3,11 @@
   - alert: UnsupportedContainerRuntimeVersion
     expr: |
       sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (
-        kube_node_info{kubelet_version=~"v1.(1[6-9]|2[0-9]).+", container_runtime_version!~"containerd://1\\.[4-7]\\..*"}
-        * on (node) group_left(label_node_deckhouse_io_group) kube_node_labels
+        kube_node_info{source="deckhouse", kubelet_version=~"v1.(1[6-9]|2[0-9]).+", container_runtime_version!~"containerd://1\\.[4-7]\\..*"}
+        * on (node) group_left(label_node_deckhouse_io_group) kube_node_labels{source="deckhouse"}
         * on (label_node_deckhouse_io_group) group_left(cri_type)
         label_replace(
-          node_group_info{cri_type!="NotManaged"},
+          node_group_info{source="deckhouse", cri_type!="NotManaged"},
           "label_node_deckhouse_io_group", "$0", "name", ".*"
         )
       )

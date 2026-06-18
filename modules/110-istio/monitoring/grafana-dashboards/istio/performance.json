@@ -167,7 +167,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "(sum(irate(container_cpu_usage_seconds_total{pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[$__rate_interval])) / (round(sum(irate(istio_requests_total{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__rate_interval])), 0.001)/1000))",
+          "expr": "(sum(irate(container_cpu_usage_seconds_total{source=\"deckhouse\", pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[$__rate_interval])) \/ (round(sum(irate(istio_requests_total{source=\"deckhouse\", source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__rate_interval])), 0.001)\/1000))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -179,7 +179,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "(sum(irate(container_cpu_usage_seconds_total{namespace!=\"istio-system\",container=\"istio-proxy\"}[$__rate_interval]))/ (round(sum(irate(istio_requests_total[$__rate_interval])), 0.001)/1000))/ (sum(irate(istio_requests_total{source_workload=\"istio-ingressgateway\"}[$__rate_interval])) >bool 10)",
+          "expr": "(sum(irate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace!=\"istio-system\",container=\"istio-proxy\"}[$__rate_interval]))\/ (round(sum(irate(istio_requests_total{source=\"deckhouse\"}[$__rate_interval])), 0.001)\/1000))\/ (sum(irate(istio_requests_total{source=\"deckhouse\", source_workload=\"istio-ingressgateway\"}[$__rate_interval])) >bool 10)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -275,7 +275,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[$__rate_interval]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{source=\"deckhouse\", pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-ingressgateway",
@@ -286,7 +286,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace!=\"istio-system\",container=\"istio-proxy\"}[$__rate_interval]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace!=\"istio-system\",container=\"istio-proxy\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -408,7 +408,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(container_memory_working_set_bytes{pod=~\"istio-ingressgateway-.*\"}) / count(container_memory_working_set_bytes{pod=~\"istio-ingressgateway-.*\",container!=\"POD\"})",
+          "expr": "sum(container_memory_working_set_bytes{source=\"deckhouse\", pod=~\"istio-ingressgateway-.*\"}) \/ count(container_memory_working_set_bytes{source=\"deckhouse\", pod=~\"istio-ingressgateway-.*\",container!=\"POD\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "per istio-ingressgateway",
@@ -419,7 +419,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(container_memory_working_set_bytes{namespace!=\"istio-system\",container=\"istio-proxy\"}) / count(container_memory_working_set_bytes{namespace!=\"istio-system\",container=\"istio-proxy\"})",
+          "expr": "sum(container_memory_working_set_bytes{source=\"deckhouse\", namespace!=\"istio-system\",container=\"istio-proxy\"}) \/ count(container_memory_working_set_bytes{source=\"deckhouse\", namespace!=\"istio-system\",container=\"istio-proxy\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "per istio proxy",
@@ -515,7 +515,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(irate(istio_response_bytes_sum{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__rate_interval]))",
+          "expr": "sum(irate(istio_response_bytes_sum{source=\"deckhouse\", source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-ingressgateway",
@@ -526,7 +526,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(irate(istio_response_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__rate_interval])) + sum(irate(istio_request_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__rate_interval]))",
+          "expr": "sum(irate(istio_response_bytes_sum{source=\"deckhouse\", source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__rate_interval])) + sum(irate(istio_request_bytes_sum{source=\"deckhouse\", source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -648,7 +648,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(istio_build) by (component, tag)",
+          "expr": "sum(istio_build{source=\"deckhouse\"}) by (component, tag)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ component }}: {{ tag }}",
@@ -770,7 +770,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(container_memory_working_set_bytes{container=\"istio-proxy\"})",
+          "expr": "sum(container_memory_working_set_bytes{source=\"deckhouse\", container=\"istio-proxy\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -868,7 +868,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[$__rate_interval]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container=\"istio-proxy\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -966,7 +966,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(container_fs_usage_bytes{container=\"istio-proxy\"})",
+          "expr": "sum(container_fs_usage_bytes{source=\"deckhouse\", container=\"istio-proxy\"})",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Total (k8s)",
@@ -1089,7 +1089,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "process_virtual_memory_bytes{app=\"istiod\"}",
+          "expr": "process_virtual_memory_bytes{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 2,
@@ -1102,7 +1102,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "process_resident_memory_bytes{app=\"istiod\"}",
+          "expr": "process_resident_memory_bytes{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Resident Memory",
@@ -1114,7 +1114,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_memstats_heap_sys_bytes{app=\"istiod\"}",
+          "expr": "go_memstats_heap_sys_bytes{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 2,
@@ -1126,7 +1126,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_memstats_heap_alloc_bytes{app=\"istiod\"}",
+          "expr": "go_memstats_heap_alloc_bytes{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 2,
@@ -1138,7 +1138,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_memstats_alloc_bytes{app=\"istiod\"}",
+          "expr": "go_memstats_alloc_bytes{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Alloc",
@@ -1150,7 +1150,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_memstats_heap_inuse_bytes{app=\"istiod\"}",
+          "expr": "go_memstats_heap_inuse_bytes{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -1163,7 +1163,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_memstats_stack_inuse_bytes{app=\"istiod\"}",
+          "expr": "go_memstats_stack_inuse_bytes{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Stack in-use",
@@ -1175,7 +1175,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"})",
+          "expr": "sum(container_memory_working_set_bytes{source=\"deckhouse\", container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -1188,7 +1188,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
+          "expr": "container_memory_working_set_bytes{source=\"deckhouse\", container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -1286,7 +1286,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__rate_interval]))",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -1299,7 +1299,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__rate_interval])) by (container)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__rate_interval])) by (container)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -1312,7 +1312,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "irate(process_cpu_seconds_total{app=\"istiod\"}[$__rate_interval])",
+          "expr": "irate(process_cpu_seconds_total{source=\"deckhouse\", app=\"istiod\"}[$__rate_interval])",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -1410,7 +1410,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "process_open_fds{app=\"istiod\"}",
+          "expr": "process_open_fds{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
           "instant": false,
@@ -1424,7 +1424,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "container_fs_usage_bytes{ container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
+          "expr": "container_fs_usage_bytes{source=\"deckhouse\",  container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{ container }}",
@@ -1521,7 +1521,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_goroutines{app=\"istiod\"}",
+          "expr": "go_goroutines{source=\"deckhouse\", app=\"istiod\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Number of Goroutines",

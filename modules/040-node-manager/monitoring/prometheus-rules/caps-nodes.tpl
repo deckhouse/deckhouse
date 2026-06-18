@@ -1,7 +1,7 @@
 - name: d8.caps-nodes
   rules:
   - alert: CapsInstanceUnavailable
-    expr: max by (machine_deployment_name) (d8_caps_md_unavailable) > 0
+    expr: max by (machine_deployment_name) (d8_caps_md_unavailable{source="deckhouse"}) > 0
     for: 30m
     labels:
       severity_level: "8"

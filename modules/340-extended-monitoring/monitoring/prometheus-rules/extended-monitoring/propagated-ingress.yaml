@@ -3,13 +3,13 @@
   - alert: IngressResponses5xx
     expr: |
       (
-        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{status=~"5.*"}[5m]))
+        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{source="deckhouse", status=~"5.*"}[5m]))
         /
-        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total[5m]))
+        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{source="deckhouse"}[5m]))
       ) * 100
       > on (namespace, ingress) group_left()
       (
-        max by (namespace, ingress) (extended_monitoring_ingress_threshold{threshold="5xx-warning"})
+        max by (namespace, ingress) (extended_monitoring_ingress_threshold{source="deckhouse", threshold="5xx-warning"})
       )
     labels:
       severity_level: "5"
@@ -24,13 +24,13 @@
   - alert: IngressResponses5xx
     expr: |
       (
-        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{status=~"5.*"}[5m]))
+        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{source="deckhouse", status=~"5.*"}[5m]))
         /
-        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total[5m]))
+        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{source="deckhouse"}[5m]))
       ) * 100
       > on (namespace, ingress) group_left()
       (
-        max by (namespace, ingress) (extended_monitoring_ingress_threshold{threshold="5xx-critical"})
+        max by (namespace, ingress) (extended_monitoring_ingress_threshold{source="deckhouse", threshold="5xx-critical"})
       )
     labels:
       severity_level: "4"

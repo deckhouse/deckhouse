@@ -1,7 +1,7 @@
 - name: kubernetes.ingress-nginx.info
   rules:
   - alert: NginxIngressConfigTestFailed
-    expr: nginx_ingress_controller_config_last_reload_successful == 0
+    expr: nginx_ingress_controller_config_last_reload_successful{source="deckhouse"} == 0
     for: 10m
     labels:
       severity_level: "4"
@@ -30,7 +30,7 @@
 
         3. Check for errors in the `configuration-snippet` or `server-snippet` annotations.
   - alert: NginxIngressProtobufExporterHasErrors
-    expr: sum by (type, node, controller) (increase(protobuf_exporter_errors_total[5m])) > 0
+    expr: sum by (type, node, controller) (increase(protobuf_exporter_errors_total{source="deckhouse"}[5m])) > 0
     for: 10m
     labels:
       severity_level: "8"
@@ -49,7 +49,7 @@
 
   - alert: NginxIngressPodIsRestartingTooOften
     expr: |
-      max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"controller-.+"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"controller-.+"}) > 5
+      max by (pod) (increase(kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-ingress-nginx",pod=~"controller-.+"}[1h]) and kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-ingress-nginx",pod=~"controller-.+"}) > 5
     labels:
       severity_level: "4"
     annotations:
@@ -63,7 +63,7 @@
       plk_protocol_version: "1"
   - alert: D8NginxIngressKruiseControllerPodIsRestartingTooOften
     expr: |
-      max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}) > 10
+      max by (pod) (increase(kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}[1h]) and kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-ingress-nginx",pod=~"kruise-controller-manager-.+"}) > 10
     labels:
       severity_level: "8"
     annotations:
@@ -99,7 +99,7 @@
            ```
 
   - alert: NginxIngressDaemonSetReplicasUnavailable
-    expr: kruise_daemonset_status_number_unavailable{namespace="d8-ingress-nginx"} > 0
+    expr: kruise_daemonset_status_number_unavailable{source="deckhouse", namespace="d8-ingress-nginx"} > 0
     for: 5m
     labels:
       severity_level: "6"
@@ -129,7 +129,7 @@
         ```
 
   - alert: NginxIngressDaemonSetReplicasUnavailable
-    expr: (kruise_daemonset_status_number_available{namespace="d8-ingress-nginx"} == 0) * (kruise_daemonset_status_desired_number_scheduled{namespace="d8-ingress-nginx"} != 0)
+    expr: (kruise_daemonset_status_number_available{source="deckhouse", namespace="d8-ingress-nginx"} == 0) * (kruise_daemonset_status_desired_number_scheduled{source="deckhouse", namespace="d8-ingress-nginx"} != 0)
     for: 5m
     labels:
       severity_level: "4"
@@ -158,7 +158,7 @@
 
   - alert: NginxIngressDaemonSetNotUpToDate
     expr: |
-      max by (namespace, daemonset) (kruise_daemonset_status_desired_number_scheduled{namespace="d8-ingress-nginx"} - kruise_daemonset_status_updated_number_scheduled{namespace="d8-ingress-nginx"}) > 0
+      max by (namespace, daemonset) (kruise_daemonset_status_desired_number_scheduled{source="deckhouse", namespace="d8-ingress-nginx"} - kruise_daemonset_status_updated_number_scheduled{source="deckhouse", namespace="d8-ingress-nginx"}) > 0
     for: 20m
     labels:
       severity_level: "9"
@@ -191,7 +191,7 @@
 
   - alert: NginxIngressValidationIsDisabled
     expr: |
-      ingress_nginx_validation_suspended != 0
+      ingress_nginx_validation_suspended{source="deckhouse"} != 0
     for: 3m
     labels:
       severity_level: "4"
@@ -212,7 +212,7 @@
 
 
   - alert: GeoIPDownloadErrorDetectedFromMaxMind
-    expr: max by (job, namespace, pod, edition) (geoip_download_error) > 0
+    expr: max by (job, namespace, pod, edition) (geoip_download_error{source="deckhouse"}) > 0
     for: 1m
     labels:
       severity_level: "4"
@@ -228,7 +228,7 @@
 
   - alert: NginxIngressMaxMindAccountIDNotSet
     expr: |
-      d8_ingress_nginx_controller_maxmind_account_id_not_set == 1
+      d8_ingress_nginx_controller_maxmind_account_id_not_set{source="deckhouse"} == 1
     for: 5m
     labels:
       severity_level: "6"
@@ -245,7 +245,7 @@
   - alert: NginxIngressPodsReportConfigurationHashDrift
     for: 60m
     expr: |
-      max by (namespace, controller) (nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx"}) != min by (namespace, controller) (nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx"})
+      max by (namespace, controller) (nginx_ingress_controller_config_hash{source="deckhouse", namespace="d8-ingress-nginx"}) != min by (namespace, controller) (nginx_ingress_controller_config_hash{source="deckhouse", namespace="d8-ingress-nginx"})
     labels:
       severity_level: "4"
     annotations:

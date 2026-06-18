@@ -18,6 +18,8 @@ spec:
       relabelings:
         - targetLabel: tier
           replacement: cluster
+        - targetLabel: source
+          replacement: deckhouse
     - port: https
       scheme: https
       path: /promxy/metrics
@@ -28,6 +30,8 @@ spec:
       relabelings:
         - targetLabel: tier
           replacement: cluster
+        - targetLabel: source
+          replacement: deckhouse
   selector:
     matchLabels:
       app: aggregating-proxy

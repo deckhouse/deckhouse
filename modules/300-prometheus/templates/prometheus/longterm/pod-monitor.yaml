@@ -23,6 +23,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
     metricRelabelings:
     - sourceLabels: [__name__]
       regex:  'up'

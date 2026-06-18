@@ -18,6 +18,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   - targetPort: 10054
     relabelings:
     - regex: endpoint
@@ -29,6 +31,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   selector:
     matchLabels:
       k8s-app: kube-dns

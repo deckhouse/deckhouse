@@ -1,7 +1,7 @@
 - name: kubernetes.node
   rules:
     - alert: LoadBalancerServiceWithoutExternalIP
-      expr: sum(kube_service_status_load_balancer_ingress or vector(0)) < sum(kube_service_spec_type{type="LoadBalancer"})
+      expr: sum(kube_service_status_load_balancer_ingress{source="deckhouse"} or vector(0)) < sum(kube_service_spec_type{source="deckhouse", type="LoadBalancer"})
       for: 5m
       labels:
         severity_level: "4"

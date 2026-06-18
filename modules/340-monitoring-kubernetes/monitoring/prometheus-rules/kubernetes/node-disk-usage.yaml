@@ -3,8 +3,8 @@
     - alert: KubeletNodeFSInodesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{type="soft"})
+          max by (node, mountpoint) (node_filesystem_files_free{source="deckhouse"} / node_filesystem_files{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{source="deckhouse", type="soft"})
         )
       for: 10m
       labels:
@@ -26,8 +26,8 @@
     - alert: KubeletNodeFSInodesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{type="hard"} + 5)
+          max by (node, mountpoint) (node_filesystem_files_free{source="deckhouse"} / node_filesystem_files{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{source="deckhouse", type="hard"} + 5)
         )
       for: 5m
       labels:
@@ -50,8 +50,8 @@
     - alert: KubeletNodeFSInodesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{type="hard"})
+          max by (node, mountpoint) (node_filesystem_files_free{source="deckhouse"} / node_filesystem_files{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_inodes{source="deckhouse", type="hard"})
         )
       labels:
         severity_level: "6"
@@ -73,11 +73,11 @@
       expr: |
         (
           (
-            max by (node, mountpoint) (node_filesystem_files_free)
+            max by (node, mountpoint) (node_filesystem_files_free{source="deckhouse"})
           ) == 0
         )
-        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_nodefs_inodes"}))
-        and (max by (node, mountpoint) (node_filesystem_files) != 0)
+        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_nodefs_inodes", source="deckhouse"}))
+        and (max by (node, mountpoint) (node_filesystem_files{source="deckhouse"}) != 0)
       labels:
         severity_level: "5"
         tier: cluster
@@ -91,8 +91,8 @@
     - alert: KubeletImageFSInodesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{type="soft"})
+          max by (node, mountpoint) (node_filesystem_files_free{source="deckhouse"} / node_filesystem_files{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{source="deckhouse", type="soft"})
         )
       for: 10m
       labels:
@@ -114,8 +114,8 @@
     - alert: KubeletImageFSInodesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{type="hard"} + 5)
+          max by (node, mountpoint) (node_filesystem_files_free{source="deckhouse"} / node_filesystem_files{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{source="deckhouse", type="hard"} + 5)
         )
       for: 5m
       labels:
@@ -137,8 +137,8 @@
     - alert: KubeletImageFSInodesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_files_free / node_filesystem_files) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{type="hard"})
+          max by (node, mountpoint) (node_filesystem_files_free{source="deckhouse"} / node_filesystem_files{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_inodes{source="deckhouse", type="hard"})
         )
       labels:
         severity_level: "6"
@@ -160,11 +160,11 @@
       expr: |
         (
           (
-            max by (node, mountpoint) (node_filesystem_files_free)
+            max by (node, mountpoint) (node_filesystem_files_free{source="deckhouse"})
           ) == 0
         )
-        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_imagefs_inodes"}))
-        and (max by (node, mountpoint) (node_filesystem_files) != 0)
+        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_imagefs_inodes", source="deckhouse"}))
+        and (max by (node, mountpoint) (node_filesystem_files{source="deckhouse"}) != 0)
       labels:
         severity_level: "5"
         tier: cluster
@@ -180,8 +180,8 @@
     - alert: KubeletNodeFSBytesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="soft"})
+          max by (node, mountpoint) (node_filesystem_avail_bytes{source="deckhouse"} / node_filesystem_size_bytes{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{source="deckhouse", type="soft"})
         )
       for: 10m
       labels:
@@ -203,8 +203,8 @@
     - alert: KubeletNodeFSBytesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="hard"} + 5)
+          max by (node, mountpoint) (node_filesystem_avail_bytes{source="deckhouse"} / node_filesystem_size_bytes{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{source="deckhouse", type="hard"} + 5)
         )
       for: 5m
       labels:
@@ -226,8 +226,8 @@
     - alert: KubeletNodeFSBytesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{type="hard"})
+          max by (node, mountpoint) (node_filesystem_avail_bytes{source="deckhouse"} / node_filesystem_size_bytes{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_nodefs_bytes{source="deckhouse", type="hard"})
         )
       labels:
         severity_level: "6"
@@ -249,10 +249,10 @@
       expr: |
         (
           (
-            max by (node, mountpoint) (node_filesystem_avail_bytes)
+            max by (node, mountpoint) (node_filesystem_avail_bytes{source="deckhouse"})
           ) == 0
         )
-        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_nodefs_bytes"}))
+        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_nodefs_bytes", source="deckhouse"}))
       labels:
         severity_level: "5"
         tier: cluster
@@ -266,8 +266,8 @@
     - alert: KubeletImageFSBytesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="soft"})
+          max by (node, mountpoint) (node_filesystem_avail_bytes{source="deckhouse"} / node_filesystem_size_bytes{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{source="deckhouse", type="soft"})
         )
       for: 10m
       labels:
@@ -289,8 +289,8 @@
     - alert: KubeletImageFSBytesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="hard"} + 5)
+          max by (node, mountpoint) (node_filesystem_avail_bytes{source="deckhouse"} / node_filesystem_size_bytes{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{source="deckhouse", type="hard"} + 5)
         )
       for: 5m
       labels:
@@ -312,8 +312,8 @@
     - alert: KubeletImageFSBytesUsage
       expr: |
         (
-          max by (node, mountpoint) (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 <
-          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{type="hard"})
+          max by (node, mountpoint) (node_filesystem_avail_bytes{source="deckhouse"} / node_filesystem_size_bytes{source="deckhouse"}) * 100 <
+          max by (node, mountpoint) (kubelet_eviction_imagefs_bytes{source="deckhouse", type="hard"})
         )
       labels:
         severity_level: "6"
@@ -335,10 +335,10 @@
       expr: |
         (
           (
-            max by (node, mountpoint) (node_filesystem_avail_bytes)
+            max by (node, mountpoint) (node_filesystem_avail_bytes{source="deckhouse"})
           ) == 0
         )
-        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_imagefs_bytes"}))
+        * (max by (node, mountpoint) ({__name__=~"kubelet_eviction_imagefs_bytes", source="deckhouse"}))
       labels:
         severity_level: "5"
         tier: cluster

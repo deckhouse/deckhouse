@@ -116,7 +116,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "(((count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])))) * 100) / count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
+          "expr": "(((count(count(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{source=\"deckhouse\", mode='idle',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])))) * 100) / count(count(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
           "hide": false,
           "intervalFactor": 1,
           "legendFormat": "",
@@ -197,7 +197,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "avg(node_load5{node=~\"$node\",job=\"node-exporter\"}) /  count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu)) * 100",
+          "expr": "avg(node_load5{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) /  count(count(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) by (cpu)) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -278,7 +278,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "avg(node_load15{node=~\"$node\",job=\"node-exporter\"}) /  count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu)) * 100",
+          "expr": "avg(node_load15{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) /  count(count(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) by (cpu)) * 100",
           "hide": false,
           "intervalFactor": 1,
           "refId": "A",
@@ -350,7 +350,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "((node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_MemFree_bytes{node=~\"$node\",job=\"node-exporter\"}) / (node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"} )) * 100",
+          "expr": "((node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) / (node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} )) * 100",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -358,7 +358,7 @@
           "step": 240
         },
         {
-          "expr": "100 - ((node_memory_MemAvailable_bytes{node=~\"$node\",job=\"node-exporter\"} * 100) / node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"})",
+          "expr": "100 - ((node_memory_MemAvailable_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} * 100) / node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -439,7 +439,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "((node_memory_SwapTotal_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapFree_bytes{node=~\"$node\",job=\"node-exporter\"}) / (node_memory_SwapTotal_bytes{node=~\"$node\",job=\"node-exporter\"} )) * 100",
+          "expr": "((node_memory_SwapTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapFree_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) / (node_memory_SwapTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} )) * 100",
           "intervalFactor": 1,
           "refId": "A",
           "step": 240
@@ -518,7 +518,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "100 - ((node_filesystem_avail_bytes{node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"} * 100) / node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"})",
+          "expr": "100 - ((node_filesystem_avail_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"} * 100) / node_filesystem_size_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
@@ -593,7 +593,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "count(count(node_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
+          "expr": "count(count(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}) by (cpu))",
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
@@ -670,7 +670,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "node_time_seconds{node=~\"$node\",job=\"node-exporter\"} - node_boot_time_seconds{node=~\"$node\",job=\"node-exporter\"}",
+          "expr": "node_time_seconds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_boot_time_seconds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
           "intervalFactor": 1,
           "refId": "A",
           "step": 240
@@ -749,7 +749,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"}",
+          "expr": "node_filesystem_size_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",mountpoint=\"/\",fstype!=\"rootfs\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -826,7 +826,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"}",
+          "expr": "node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
           "intervalFactor": 1,
           "refId": "A",
           "step": 240
@@ -901,7 +901,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "node_memory_SwapTotal_bytes{node=~\"$node\",job=\"node-exporter\"}",
+          "expr": "node_memory_SwapTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
           "intervalFactor": 1,
           "refId": "A",
           "step": 240
@@ -1303,7 +1303,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"system\"}[$__rate_interval])) by (instance)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"system\"}[$__rate_interval])) by (instance)) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1318,7 +1318,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"user\"}[$__rate_interval])) by (instance)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"user\"}[$__rate_interval])) by (instance)) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1333,7 +1333,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"iowait\"}[$__rate_interval])) by (instance)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"iowait\"}[$__rate_interval])) by (instance)) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Iowait",
@@ -1347,7 +1347,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\".*irq\"}[$__rate_interval])) by (instance)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\".*irq\"}[$__rate_interval])) by (instance)) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy IRQs",
@@ -1361,7 +1361,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"steal\"}[$__rate_interval])) by (node)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"steal\"}[$__rate_interval])) by (node)) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Steal",
@@ -1375,7 +1375,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__rate_interval])) by (instance)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"idle\"}[$__rate_interval])) by (instance)) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Idle",
@@ -1389,7 +1389,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode!~\"(user|idle|system|iowait|irq|softirq|steal)\"}[$__rate_interval])) by (instance)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode!~\"(user|idle|system|iowait|irq|softirq|steal)\"}[$__rate_interval])) by (instance)) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1855,7 +1855,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"}",
+          "expr": "node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1864,7 +1864,7 @@
           "step": 240
         },
         {
-          "expr": "node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_MemFree_bytes{node=~\"$node\",job=\"node-exporter\"} - (node_memory_Cached_bytes{node=~\"$node\",job=\"node-exporter\"} + node_memory_Buffers_bytes{node=~\"$node\",job=\"node-exporter\"})",
+          "expr": "node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - (node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} + node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1873,7 +1873,7 @@
           "step": 240
         },
         {
-          "expr": "node_memory_Cached_bytes{node=~\"$node\",job=\"node-exporter\"} + node_memory_Buffers_bytes{node=~\"$node\",job=\"node-exporter\"}",
+          "expr": "node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} + node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RAM Cache + Buffer",
@@ -1881,7 +1881,7 @@
           "step": 240
         },
         {
-          "expr": "node_memory_MemFree_bytes{node=~\"$node\",job=\"node-exporter\"}",
+          "expr": "node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RAM Free",
@@ -1889,7 +1889,7 @@
           "step": 240
         },
         {
-          "expr": "(node_memory_SwapTotal_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapFree_bytes{node=~\"$node\",job=\"node-exporter\"})",
+          "expr": "(node_memory_SwapTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapFree_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "SWAP Used",
@@ -2341,7 +2341,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "rate(node_network_receive_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
+          "expr": "rate(node_network_receive_bytes_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "recv {{device}}",
@@ -2349,7 +2349,7 @@
           "step": 240
         },
         {
-          "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
+          "expr": "rate(node_network_transmit_bytes_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "trans {{device}} ",
@@ -2445,7 +2445,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "100 - ((node_filesystem_avail_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'})",
+          "expr": "100 - ((node_filesystem_avail_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{mountpoint}}",
@@ -2718,7 +2718,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"system\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"system\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "System - Processes executing in kernel mode",
@@ -2732,7 +2732,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"user\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"user\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "User - Normal processes executing in user mode",
@@ -2746,7 +2746,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"nice\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"nice\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Nice - Niced processes executing in user mode",
@@ -2760,7 +2760,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"idle\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Idle - Waiting for something to happen",
@@ -2774,7 +2774,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"iowait\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"iowait\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Iowait - Waiting for I/O to complete",
@@ -2788,7 +2788,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"irq\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"irq\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Irq - Servicing interrupts",
@@ -2802,7 +2802,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"softirq\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"softirq\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Softirq - Servicing softirqs",
@@ -2816,7 +2816,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"steal\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"steal\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Steal - Time spent in other operating systems when running in a virtualized environment",
@@ -2830,7 +2830,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"guest\"}[$__rate_interval])) by (instance)) * 100",
+              "expr": "(avg(irate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"guest\"}[$__rate_interval])) by (instance)) * 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Guest - Time spent running a virtual CPU for a guest operating system",
@@ -3235,7 +3235,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_MemTotal_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_MemFree_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_Buffers_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_Cached_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_Slab_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_PageTables_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapCached_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_Slab_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_PageTables_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapCached_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3244,7 +3244,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_PageTables_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_PageTables_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3253,7 +3253,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_SwapCached_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_SwapCached_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SwapCache - Memory that keeps track of pages that have been fetched from swap but not yet been modified",
@@ -3261,7 +3261,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Slab_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Slab_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3270,7 +3270,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Cached_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3279,7 +3279,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Buffers_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3288,7 +3288,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_MemFree_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3297,7 +3297,7 @@
               "step": 240
             },
             {
-              "expr": "(node_memory_SwapTotal_bytes{node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapFree_bytes{node=~\"$node\",job=\"node-exporter\"})",
+              "expr": "(node_memory_SwapTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"} - node_memory_SwapFree_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"})",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3306,7 +3306,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_HardwareCorrupted_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_HardwareCorrupted_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -3480,7 +3480,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_receive_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
+              "expr": "rate(node_network_receive_bytes_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -3488,7 +3488,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
+              "expr": "rate(node_network_transmit_bytes_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])*8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -3590,7 +3590,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'} - node_filesystem_avail_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_size_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'} - node_filesystem_avail_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{mountpoint}}",
@@ -4039,14 +4039,14 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "rate(node_disk_reads_completed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Reads completed",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "rate(node_disk_writes_completed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Writes completed",
               "refId": "B",
@@ -4261,7 +4261,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "rate(node_disk_read_bytes_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -4270,7 +4270,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
+              "expr": "rate(node_disk_written_bytes_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -4401,7 +4401,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"} [$__rate_interval])",
+              "expr": "rate(node_disk_io_time_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device=~\"$diskdevices\"} [$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -4777,7 +4777,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_Inactive_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Inactive_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Inactive - Memory which has been less recently used.  It is more eligible to be reclaimed for other purposes",
@@ -4785,7 +4785,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Active_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Active_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Active - Memory that has been used more recently and usually not reclaimed unless absolutely necessary",
@@ -5162,7 +5162,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_Committed_AS_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Committed_AS_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Committed_AS - Amount of memory presently allocated on the system",
@@ -5170,7 +5170,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_CommitLimit_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_CommitLimit_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "CommitLimit - Amount of  memory currently available to be allocated on the system",
@@ -5528,7 +5528,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_Inactive_file_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Inactive_file_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -5537,7 +5537,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Inactive_anon_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Inactive_anon_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -5546,7 +5546,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Active_file_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Active_file_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -5555,7 +5555,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Active_anon_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Active_anon_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -5943,7 +5943,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_Writeback_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Writeback_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Writeback - Memory which is actively being written back to disk",
@@ -5951,7 +5951,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_WritebackTmp_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_WritebackTmp_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "WritebackTmp - Memory used by FUSE for temporary writeback buffers",
@@ -5959,7 +5959,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Dirty_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Dirty_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Dirty - Memory which is waiting to get written back to the disk",
@@ -6341,7 +6341,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_Mapped_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Mapped_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Mapped - Used memory in mapped pages files which have been mmaped, such as libraries",
@@ -6349,7 +6349,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Shmem_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Shmem_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Shmem - Used shared memory (shared between several processes, thus including RAM disks)",
@@ -6357,7 +6357,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_ShmemHugePages_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_ShmemHugePages_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ShmemHugePages - Memory used by shared memory (shmem) and tmpfs allocated  with huge pages",
@@ -6365,7 +6365,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_ShmemPmdMapped_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_ShmemPmdMapped_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ShmemPmdMapped - Ammount of shared (shmem/tmpfs) memory backed by huge pages",
@@ -6752,7 +6752,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_SUnreclaim_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_SUnreclaim_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SUnreclaim - Part of Slab, that cannot be reclaimed on memory pressure",
@@ -6760,7 +6760,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_SReclaimable_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_SReclaimable_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SReclaimable - Part of Slab, that might be reclaimed, such as caches",
@@ -7132,7 +7132,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_VmallocChunk_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_VmallocChunk_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -7141,7 +7141,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_VmallocTotal_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_VmallocTotal_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -7150,7 +7150,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_VmallocUsed_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_VmallocUsed_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -7509,7 +7509,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_Bounce_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Bounce_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Bounce - Memory used for block device bounce buffers",
@@ -7893,7 +7893,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_AnonHugePages_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_AnonHugePages_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "AnonHugePages - Memory in anonymous huge pages",
@@ -7901,7 +7901,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_AnonPages_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_AnonPages_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "AnonPages - Memory in user pages not backed by files",
@@ -8259,7 +8259,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_KernelStack_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_KernelStack_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "KernelStack - Kernel memory stack. This is not reclaimable",
@@ -8267,7 +8267,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Percpu_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Percpu_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "PerCPU - Per CPU memory allocated dynamically by loadable modules",
@@ -8636,7 +8636,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_HugePages_Free{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_HugePages_Free{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "HugePages_Free - Huge pages in the pool that are not yet allocated",
@@ -8644,7 +8644,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_HugePages_Rsvd{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_HugePages_Rsvd{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "HugePages_Rsvd - Huge pages for which a commitment to allocate from the pool has been made, but no allocation has yet been made",
@@ -8652,7 +8652,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_HugePages_Surp{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_HugePages_Surp{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "HugePages_Surp - Huge pages in the pool above the value in /proc/sys/vm/nr_hugepages",
@@ -9021,7 +9021,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_HugePages_Total{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_HugePages_Total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "HugePages - Total size of the pool of huge pages",
@@ -9029,7 +9029,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Hugepagesize_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Hugepagesize_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Hugepagesize - Huge Page size",
@@ -9400,7 +9400,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_DirectMap1G_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_DirectMap1G_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "DirectMap1G - Amount of pages mapped as this size",
@@ -9408,7 +9408,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_DirectMap2M_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_DirectMap2M_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "DirectMap2M - Amount of pages mapped as this size",
@@ -9416,7 +9416,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_DirectMap4k_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_DirectMap4k_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "DirectMap4K - Amount of pages mapped as this size",
@@ -9774,7 +9774,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_Unevictable_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Unevictable_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Unevictable - Amount of unevictable memory that can't be swapped out for a variety of reasons",
@@ -9782,7 +9782,7 @@
               "step": 240
             },
             {
-              "expr": "node_memory_Mlocked_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_Mlocked_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "MLocked - Size of pages locked to memory using the mlock() system call",
@@ -10169,7 +10169,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_memory_NFS_Unstable_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_memory_NFS_Unstable_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NFS Unstable - Memory in NFS pages sent to the server, but not yet commited to the storage",
@@ -10299,7 +10299,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgpgin{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_vmstat_pgpgin{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pagesin - Page in operations",
@@ -10307,7 +10307,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_vmstat_pgpgout{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_vmstat_pgpgout{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pagesout - Page out operations",
@@ -10420,7 +10420,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_vmstat_pswpin{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_vmstat_pswpin{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pswpin - Pages swapped in",
@@ -10428,7 +10428,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_vmstat_pswpout{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_vmstat_pswpout{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pswpout - Pages swapped out",
@@ -10805,7 +10805,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_vmstat_pgfault{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_vmstat_pgfault{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgfault - Page major and minor fault operations",
@@ -10813,7 +10813,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_vmstat_pgmajfault{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_vmstat_pgmajfault{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgmajfault - Major page fault operations",
@@ -10821,7 +10821,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_vmstat_pgfault{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])  - rate(node_vmstat_pgmajfault{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_vmstat_pgfault{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])  - rate(node_vmstat_pgmajfault{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Pgminfault - Minor page fault operations",
@@ -11208,7 +11208,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_vmstat_oom_kill{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_vmstat_oom_kill{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "oom killer invocations ",
@@ -11342,7 +11342,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_timex_estimated_error_seconds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_timex_estimated_error_seconds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -11351,7 +11351,7 @@
               "step": 240
             },
             {
-              "expr": "node_timex_offset_seconds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_timex_offset_seconds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -11360,7 +11360,7 @@
               "step": 240
             },
             {
-              "expr": "node_timex_maxerror_seconds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_timex_maxerror_seconds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -11462,7 +11462,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_timex_loop_time_constant{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_timex_loop_time_constant{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Phase-locked loop time adjust",
@@ -11579,7 +11579,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_timex_sync_status{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_timex_sync_status{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Is clock synchronized to a reliable server (1 = yes, 0 = no)",
@@ -11587,7 +11587,7 @@
               "step": 240
             },
             {
-              "expr": "node_timex_frequency_adjustment_ratio{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_timex_frequency_adjustment_ratio{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Local clock frequency adjustment",
@@ -11688,7 +11688,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_timex_tick_seconds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_timex_tick_seconds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Seconds between clock ticks",
@@ -11696,7 +11696,7 @@
               "step": 240
             },
             {
-              "expr": "node_timex_tai_offset_seconds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_timex_tai_offset_seconds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "International Atomic Time (TAI) offset",
@@ -11814,7 +11814,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_procs_blocked{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_procs_blocked{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Processes blocked waiting for I/O to complete",
@@ -11822,7 +11822,7 @@
               "step": 240
             },
             {
-              "expr": "node_procs_running{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_procs_running{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Processes in runnable state",
@@ -11923,7 +11923,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_processes_state{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_processes_state{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ state }}",
@@ -12024,7 +12024,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_forks_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_forks_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12139,7 +12139,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "process_virtual_memory_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_virtual_memory_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Processes virtual memory size in bytes",
@@ -12147,7 +12147,7 @@
               "step": 240
             },
             {
-              "expr": "process_resident_memory_max_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_resident_memory_max_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Maximum amount of virtual memory available in bytes",
@@ -12155,7 +12155,7 @@
               "step": 240
             },
             {
-              "expr": "process_virtual_memory_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_virtual_memory_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Processes virtual memory size in bytes",
@@ -12163,7 +12163,7 @@
               "step": 240
             },
             {
-              "expr": "process_virtual_memory_max_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_virtual_memory_max_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Maximum amount of virtual memory available in bytes",
@@ -12284,7 +12284,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_processes_pids{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_processes_pids{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Number of PIDs",
@@ -12292,7 +12292,7 @@
               "step": 240
             },
             {
-              "expr": "node_processes_max_processes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_processes_max_processes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "PIDs limit",
@@ -12413,7 +12413,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_processes_threads{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_processes_threads{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Allocated threads",
@@ -12421,7 +12421,7 @@
               "step": 240
             },
             {
-              "expr": "node_processes_max_threads{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_processes_max_threads{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Threads limit",
@@ -12539,7 +12539,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_context_switches_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_context_switches_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Context switches",
@@ -12547,7 +12547,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_intr_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_intr_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -12649,7 +12649,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_load1{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_load1{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Load 1m",
@@ -12657,7 +12657,7 @@
               "step": 240
             },
             {
-              "expr": "node_load5{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_load5{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Load 5m",
@@ -12665,7 +12665,7 @@
               "step": 240
             },
             {
-              "expr": "node_load15{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_load15{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Load 15m",
@@ -12766,7 +12766,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_entropy_available_bits{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_entropy_available_bits{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Entropy available to random number generators",
@@ -12866,7 +12866,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(process_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(process_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Time spent",
@@ -12987,14 +12987,14 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "process_max_fds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_max_fds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "intervalFactor": 1,
               "legendFormat": "Maximum open file descriptors",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "process_open_fds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_open_fds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "intervalFactor": 1,
               "legendFormat": "Open file descriptors",
               "refId": "B",
@@ -13444,14 +13444,14 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_reads_completed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Reads completed",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_writes_completed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Writes completed",
               "refId": "B",
@@ -13884,7 +13884,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_read_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_read_bytes_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Read bytes",
@@ -13892,7 +13892,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_disk_written_bytes_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_written_bytes_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Written bytes",
@@ -14326,7 +14326,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_read_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval]) / rate(node_disk_reads_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_read_time_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval]) / rate(node_disk_reads_completed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "{{device}} - r_await",
@@ -14334,7 +14334,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_disk_write_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval]) / rate(node_disk_writes_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_write_time_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval]) / rate(node_disk_writes_completed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "{{device}} - w_await",
@@ -14757,7 +14757,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_weighted_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_io_time_weighted_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}}",
               "refId": "A",
@@ -15190,14 +15190,14 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_reads_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_reads_merged_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Read merged",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_writes_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_writes_merged_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Write merged",
               "refId": "B",
@@ -15619,14 +15619,14 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_io_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_io_time_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_discard_time_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_discard_time_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - discard",
               "refId": "B",
@@ -16048,7 +16048,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_io_now{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_io_now{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - IO now",
               "refId": "A",
@@ -16467,14 +16467,14 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_disk_discards_completed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_discards_completed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Discards completed",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "rate(node_disk_discards_merged_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_disk_discards_merged_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Discards merged",
               "refId": "B",
@@ -16592,7 +16592,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_filesystem_avail_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_avail_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16602,7 +16602,7 @@
               "step": 240
             },
             {
-              "expr": "node_filesystem_free_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_free_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -16611,7 +16611,7 @@
               "step": 240
             },
             {
-              "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_size_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -16719,7 +16719,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "node_filesystem_size_bytes{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_size_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -16822,7 +16822,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_filefd_maximum{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_filefd_maximum{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Max open files",
@@ -16830,7 +16830,7 @@
               "step": 240
             },
             {
-              "expr": "node_filefd_allocated{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_filefd_allocated{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Open files",
@@ -16953,7 +16953,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_filesystem_files_free{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_files_free{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17111,7 +17111,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_filesystem_readonly{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_readonly{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{mountpoint}} - ReadOnly",
@@ -17119,7 +17119,7 @@
               "step": 240
             },
             {
-              "expr": "node_filesystem_device_error{node=~\"$node\",job=\"node-exporter\",device!~'rootfs',fstype!~'tmpfs'}",
+              "expr": "node_filesystem_device_error{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs',fstype!~'tmpfs'}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{mountpoint}} - Device error",
@@ -17242,7 +17242,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_filesystem_files{node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
+              "expr": "node_filesystem_files{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\",device!~'rootfs'}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17354,7 +17354,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{source=\"deckhouse\", node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17448,7 +17448,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17542,7 +17542,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17637,7 +17637,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{source=\"deckhouse\", node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17731,7 +17731,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17825,7 +17825,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17920,7 +17920,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "(sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} * 100",
+              "expr": "(sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{source=\"deckhouse\", node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18014,7 +18014,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_free_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18108,7 +18108,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18300,7 +18300,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_receive_packets_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_receive_packets_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive",
@@ -18308,7 +18308,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_packets_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_transmit_packets_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit",
@@ -18422,7 +18422,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_receive_errs_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_receive_errs_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive errors",
@@ -18430,7 +18430,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_errs_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_transmit_errs_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Rransmit errors",
@@ -18544,7 +18544,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_receive_drop_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_receive_drop_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive drop",
@@ -18552,7 +18552,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_drop_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_transmit_drop_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit drop",
@@ -18666,7 +18666,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_receive_compressed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_receive_compressed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive compressed",
@@ -18674,7 +18674,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_compressed_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_transmit_compressed_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit compressed",
@@ -18788,7 +18788,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_receive_multicast_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_receive_multicast_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive multicast",
@@ -18902,7 +18902,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_receive_fifo_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_receive_fifo_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Receive fifo",
@@ -18910,7 +18910,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_network_transmit_fifo_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_transmit_fifo_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit fifo",
@@ -19024,7 +19024,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_receive_frame_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_receive_frame_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -19126,7 +19126,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_transmit_carrier_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_transmit_carrier_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Statistic transmit_carrier",
@@ -19240,7 +19240,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_network_transmit_colls_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_network_transmit_colls_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{device}} - Transmit colls",
@@ -19361,7 +19361,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_nf_conntrack_entries{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_nf_conntrack_entries{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NF conntrack entries",
@@ -19369,7 +19369,7 @@
               "step": 240
             },
             {
-              "expr": "node_nf_conntrack_entries_limit{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_nf_conntrack_entries_limit{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NF conntrack limit",
@@ -19470,7 +19470,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_arp_entries{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_arp_entries{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ device }} - ARP entries",
@@ -19578,7 +19578,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "node_network_mtu_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_network_mtu_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ device }} - Bytes",
@@ -19679,7 +19679,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_network_speed_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_network_speed_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ device }} - Speed",
@@ -19781,7 +19781,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_network_transmit_queue_length{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_network_transmit_queue_length{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{ device }} -   Interface transmit queue length",
@@ -19882,7 +19882,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_network_up{operstate=\"up\",node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_network_up{source=\"deckhouse\", operstate=\"up\",node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{interface}} - Operational state UP",
@@ -19890,7 +19890,7 @@
               "step": 240
             },
             {
-              "expr": "node_network_carrier{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_network_carrier{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "instant": false,
               "legendFormat": "{{device}} - Physical link state",
@@ -20008,7 +20008,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_sockstat_TCP_alloc{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_TCP_alloc{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP_alloc - Allocated sockets",
@@ -20016,7 +20016,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_TCP_inuse{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_TCP_inuse{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP_inuse - Tcp sockets currently in use",
@@ -20024,7 +20024,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_TCP_mem{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_TCP_mem{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": true,
               "intervalFactor": 1,
@@ -20033,7 +20033,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_TCP_orphan{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_TCP_orphan{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP_orphan - Orphan sockets",
@@ -20041,7 +20041,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_TCP_tw{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_TCP_tw{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP_tw - Sockets wating close",
@@ -20143,7 +20143,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_sockstat_UDPLITE_inuse{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_UDPLITE_inuse{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDPLITE_inuse - Udplite sockets currently in use",
@@ -20151,7 +20151,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_UDP_inuse{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_UDP_inuse{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDP_inuse - Udp sockets currently in use",
@@ -20159,7 +20159,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_UDP_mem{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_UDP_mem{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDP_mem - Used memory for udp",
@@ -20261,7 +20261,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_sockstat_sockets_used{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_sockets_used{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Sockets_used - Sockets currently in use",
@@ -20363,7 +20363,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_sockstat_TCP_mem_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_TCP_mem_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "mem_bytes - TCP sockets in that state",
@@ -20371,7 +20371,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_UDP_mem_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_UDP_mem_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "mem_bytes - UDP sockets in that state",
@@ -20473,7 +20473,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_sockstat_FRAG_inuse{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_FRAG_inuse{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "FRAG_inuse - Frag sockets currently in use",
@@ -20481,7 +20481,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_FRAG_memory{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_FRAG_memory{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "FRAG_memory - Used memory for frag",
@@ -20489,7 +20489,7 @@
               "step": 240
             },
             {
-              "expr": "node_sockstat_RAW_inuse{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_sockstat_RAW_inuse{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RAW_inuse - Raw sockets currently in use",
@@ -20617,7 +20617,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_IpExt_InOctets{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_IpExt_InOctets{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InOctets - Received octets",
@@ -20625,7 +20625,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_IpExt_OutOctets{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_IpExt_OutOctets{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutOctets - Sent octets",
@@ -20724,7 +20724,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_netstat_Ip_Forwarding{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_netstat_Ip_Forwarding{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Forwarding - IP forwarding",
@@ -20834,7 +20834,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InMsgs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Icmp_InMsgs{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InMsgs -  Messages which the entity received. Note that this counter includes all those counted by icmpInErrors",
@@ -20842,7 +20842,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Icmp_OutMsgs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Icmp_OutMsgs{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutMsgs - Messages which this entity attempted to send. Note that this counter includes all those counted by icmpOutErrors",
@@ -20952,7 +20952,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_Icmp_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Icmp_InErrors{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InErrors - Messages which the entity received but determined as having ICMP-specific errors (bad ICMP checksums, bad length, etc.)",
@@ -21074,7 +21074,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_Udp_InDatagrams{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Udp_InDatagrams{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InDatagrams - Datagrams received",
@@ -21082,7 +21082,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Udp_OutDatagrams{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Udp_OutDatagrams{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutDatagrams - Datagrams sent",
@@ -21179,7 +21179,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_Udp_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Udp_InErrors{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "InErrors - UDP Datagrams that could not be delivered to an application",
@@ -21187,7 +21187,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Udp_NoPorts{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Udp_NoPorts{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "NoPorts - UDP Datagrams received on a port with no listener",
@@ -21195,12 +21195,12 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_UdpLite_InErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_UdpLite_InErrors{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "legendFormat": "InErrors Lite - UDPLite Datagrams that could not be delivered to an application",
               "refId": "C"
             },
             {
-              "expr": "rate(node_netstat_Udp_RcvbufErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Udp_RcvbufErrors{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RcvbufErrors - UDP buffer errors received",
@@ -21208,7 +21208,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Udp_SndbufErrors{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Udp_SndbufErrors{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "SndbufErrors - UDP buffer errors send",
@@ -21330,7 +21330,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_Tcp_InSegs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Tcp_InSegs{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -21339,7 +21339,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Tcp_OutSegs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Tcp_OutSegs{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "OutSegs - Segments sent, including those on current connections but excluding those containing only retransmitted octets",
@@ -21438,7 +21438,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_ListenOverflows{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_ListenOverflows{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21447,7 +21447,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_TcpExt_ListenDrops{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_ListenDrops{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21456,7 +21456,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPSynRetrans{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_TCPSynRetrans{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPSynRetrans - SYN-SYN/ACK retransmits to break down retransmissions in SYN, fast/timeout retransmits",
@@ -21464,12 +21464,12 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Tcp_RetransSegs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Tcp_RetransSegs{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "legendFormat": "RetransSegs - Segments retransmitted - that is, the number of TCP segments transmitted containing one or more previously transmitted octets",
               "refId": "D"
             },
             {
-              "expr": "rate(node_netstat_Tcp_InErrs{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Tcp_InErrs{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "legendFormat": "InErrs - Segments received in error (e.g., bad TCP checksums)",
               "refId": "E"
             }
@@ -21584,7 +21584,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_netstat_Tcp_CurrEstab{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_netstat_Tcp_CurrEstab{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21593,7 +21593,7 @@
               "step": 240
             },
             {
-              "expr": "node_netstat_Tcp_MaxConn{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_netstat_Tcp_MaxConn{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21705,7 +21705,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesFailed{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesFailed{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21714,7 +21714,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesRecv{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesRecv{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21723,7 +21723,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_TcpExt_SyncookiesSent{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_SyncookiesSent{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21815,7 +21815,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_Tcp_ActiveOpens{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Tcp_ActiveOpens{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "ActiveOpens - TCP connections that have made a direct transition to the SYN-SENT state from the CLOSED state",
@@ -21823,7 +21823,7 @@
               "step": 240
             },
             {
-              "expr": "rate(node_netstat_Tcp_PassiveOpens{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_Tcp_PassiveOpens{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "PassiveOpens - TCP connections that have made a direct transition to the SYN-RCVD state from the LISTEN state",
@@ -21921,7 +21921,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(node_netstat_TcpExt_TW{node=~\"$node\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_TW{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21930,7 +21930,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TWKilled{node=~\"$node\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_TWKilled{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21939,7 +21939,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TWRecycled{node=~\"$node\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_TWRecycled{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -21948,7 +21948,7 @@
               "step": 600
             },
             {
-              "expr": "rate(node_netstat_TcpExt_TCPTimeWaitOverflow{node=~\"$node\"}[$__rate_interval])",
+              "expr": "rate(node_netstat_TcpExt_TCPTimeWaitOverflow{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCPTimeWaitOverflow - Occurences of time wait bucket overflow",
@@ -22066,7 +22066,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_scrape_collector_duration_seconds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_scrape_collector_duration_seconds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -22188,7 +22188,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "node_scrape_collector_success{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_scrape_collector_success{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -22197,7 +22197,7 @@
               "step": 240
             },
             {
-              "expr": "node_textfile_scrape_error{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "node_textfile_scrape_error{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -22258,7 +22258,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(up{job=\"node-exporter\"}, node)",
+          "query": "label_values(up{source=\"deckhouse\", job=\"node-exporter\"}, node)",
           "refId": "main-node-Variable-Query"
         },
         "refresh": 2,

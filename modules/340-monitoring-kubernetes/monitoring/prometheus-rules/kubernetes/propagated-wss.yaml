@@ -2,15 +2,19 @@
   rules:
   - record: container_memory:kmem
     expr: |
-      container_memory_usage_bytes
+      container_memory_usage_bytes{source="deckhouse"}
       -
       (
-        container_memory_swap
+        container_memory_swap{source="deckhouse"}
         +
-        container_memory_rss
+        container_memory_rss{source="deckhouse"}
         +
-        container_memory_cache
+        container_memory_cache{source="deckhouse"}
       )
+    labels:
+      source: deckhouse
   - record: container_memory_working_set_bytes:without_kmem
     expr: |
-      container_memory_working_set_bytes - container_memory:kmem
+      container_memory_working_set_bytes{source="deckhouse"} - container_memory:kmem
+    labels:
+      source: deckhouse

@@ -179,7 +179,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(avg(label_replace(DCGM_FI_DEV_GPU_UTIL{exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)) or (avg(label_replace(DCGM_FI_PROF_SM_ACTIVE{exported_namespace!=\"\"} * 100, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)) or (avg(label_replace(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace!=\"\"} * 100, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace))",
+          "expr": "(avg(label_replace(DCGM_FI_DEV_GPU_UTIL{source=\"deckhouse\", exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)) or (avg(label_replace(DCGM_FI_PROF_SM_ACTIVE{source=\"deckhouse\", exported_namespace!=\"\"} * 100, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace)) or (avg(label_replace(DCGM_FI_PROF_GR_ENGINE_ACTIVE{source=\"deckhouse\", exported_namespace!=\"\"} * 100, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace))",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -194,7 +194,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(kube_pod_container_resource_requests{namespace!=\"\",resource=~\"nvidia_com_gpu|nvidia_com_mig_.*\"}) by (namespace)",
+          "expr": "sum(kube_pod_container_resource_requests{source=\"deckhouse\", namespace!=\"\",resource=~\"nvidia_com_gpu|nvidia_com_mig_.*\"}) by (namespace)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -209,7 +209,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "100 * sum(label_replace(DCGM_FI_DEV_FB_USED{exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace) / clamp_min(sum(label_replace(DCGM_FI_DEV_FB_USED{exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace) + sum(label_replace(DCGM_FI_DEV_FB_FREE{exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace), 1)",
+          "expr": "100 * sum(label_replace(DCGM_FI_DEV_FB_USED{source=\"deckhouse\", exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace) \/ clamp_min(sum(label_replace(DCGM_FI_DEV_FB_USED{source=\"deckhouse\", exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace) + sum(label_replace(DCGM_FI_DEV_FB_FREE{source=\"deckhouse\", exported_namespace!=\"\"}, \"namespace\", \"$1\", \"exported_namespace\", \"(.+)\")) by (namespace), 1)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -338,7 +338,7 @@
       "pluginVersion": "8.2.1",
       "targets": [
         {
-          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID)) or (avg(DCGM_FI_PROF_SM_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100)",
+          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{source=\"deckhouse\", exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID)) or (avg(DCGM_FI_PROF_SM_ACTIVE{source=\"deckhouse\", exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{source=\"deckhouse\", exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100)",
           "legendFormat": "{{exported_namespace}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "refId": "A",
           "datasource": {
@@ -351,7 +351,7 @@
           "range": true
         },
         {
-          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu)) or (avg(DCGM_FI_PROF_SM_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100)",
+          "expr": "(avg(DCGM_FI_DEV_GPU_UTIL{source=\"deckhouse\", exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu)) or (avg(DCGM_FI_PROF_SM_ACTIVE{source=\"deckhouse\", exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100) or (avg(DCGM_FI_PROF_GR_ENGINE_ACTIVE{source=\"deckhouse\", exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100)",
           "legendFormat": "{{exported_namespace}} - GPU {{gpu}}",
           "refId": "B",
           "datasource": {
@@ -451,7 +451,7 @@
       },
       "targets": [
         {
-          "expr": "sum(DCGM_FI_DEV_FB_USED{ exported_namespace!=\"\"}) by(exported_namespace)",
+          "expr": "sum(DCGM_FI_DEV_FB_USED{source=\"deckhouse\",  exported_namespace!=\"\"}) by(exported_namespace)",
           "legendFormat": "{{exported_namespace}}",
           "refId": "A",
           "datasource": {
@@ -561,7 +561,7 @@
       },
       "targets": [
         {
-          "expr": "sum(DCGM_FI_PROF_PCIE_RX_BYTES{exported_namespace!=\"\"}) by(exported_namespace)",
+          "expr": "sum(DCGM_FI_PROF_PCIE_RX_BYTES{source=\"deckhouse\", exported_namespace!=\"\"}) by(exported_namespace)",
           "legendFormat": "{{exported_namespace}}",
           "refId": "A",
           "datasource": {
@@ -659,7 +659,7 @@
       },
       "targets": [
         {
-          "expr": "sum(DCGM_FI_PROF_PCIE_TX_BYTES{exported_namespace!=\"\"}) by(exported_namespace)",
+          "expr": "sum(DCGM_FI_PROF_PCIE_TX_BYTES{source=\"deckhouse\", exported_namespace!=\"\"}) by(exported_namespace)",
           "legendFormat": "{{exported_namespace}}",
           "refId": "A",
           "datasource": {
@@ -769,7 +769,7 @@
       },
       "targets": [
         {
-          "expr": "sum(DCGM_FI_DEV_SM_CLOCK{exported_namespace!=\"\"}) by(exported_namespace) * 1000000",
+          "expr": "sum(DCGM_FI_DEV_SM_CLOCK{source=\"deckhouse\", exported_namespace!=\"\"}) by(exported_namespace) * 1000000",
           "legendFormat": "{{exported_namespace}}",
           "refId": "A",
           "datasource": {
@@ -865,7 +865,7 @@
       },
       "targets": [
         {
-          "expr": "sum(DCGM_FI_DEV_MEM_CLOCK{exported_namespace!=\"\"}) by(exported_namespace) * 1000000",
+          "expr": "sum(DCGM_FI_DEV_MEM_CLOCK{source=\"deckhouse\", exported_namespace!=\"\"}) by(exported_namespace) * 1000000",
           "legendFormat": "{{exported_namespace}}",
           "refId": "A",
           "datasource": {
@@ -966,7 +966,7 @@
       "pluginVersion": "8.2.1",
       "targets": [
         {
-          "expr": "(avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100)",
+          "expr": "(avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{source=\"deckhouse\", exported_namespace!=\"\", GPU_I_PROFILE=~\".+\"}) by (exported_namespace, gpu, GPU_I_PROFILE, GPU_I_ID) * 100)",
           "legendFormat": "{{exported_namespace}} - GPU {{gpu}} {{GPU_I_PROFILE}} (ID {{GPU_I_ID}})",
           "refId": "A",
           "datasource": {
@@ -979,7 +979,7 @@
           "range": true
         },
         {
-          "expr": "(avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100)",
+          "expr": "(avg(DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{source=\"deckhouse\", exported_namespace!=\"\", GPU_I_PROFILE!~\".+\"}) by (exported_namespace, gpu) * 100)",
           "legendFormat": "{{exported_namespace}} - GPU {{gpu}}",
           "refId": "B",
           "datasource": {
