@@ -97,10 +97,15 @@ spec:
       || request.userInfo.username == "system:serviceaccount:kube-system:d8-virtual-control-plane-manager"
       || (
         request.operation == "DELETE"
-        && request.resource.resource == "controlplaneoperations"
         && (
-          request.userInfo.username == "system:kube-controller-manager"
-          || request.userInfo.username == "system:serviceaccount:kube-system:generic-garbage-collector"
+          request.userInfo.username == "system:serviceaccount:kube-system:namespace-controller"
+          || (
+            request.resource.resource == "controlplaneoperations"
+            && (
+              request.userInfo.username == "system:kube-controller-manager"
+              || request.userInfo.username == "system:serviceaccount:kube-system:generic-garbage-collector"
+            )
+          )
         )
       )
     reason: Forbidden
