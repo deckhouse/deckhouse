@@ -284,14 +284,14 @@ spec:
     matchLabels:
       app: client
   egress:
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: kube-system
-            k8s-app: kube-dns
+    - toEntities:
+        - cluster
       toPorts:
         - ports:
             - port: "53"
               protocol: UDP
+            - port: "53"
+              protocol: TCP
           rules:
             dns:
               - matchPattern: "*"
@@ -303,6 +303,10 @@ spec:
             - port: "443"
               protocol: TCP
 ```
+
+{% alert level="info" %}
+The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DKP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
+{% endalert %}
 
 ## Deny rules
 
@@ -340,7 +344,7 @@ spec:
   egress: []
 ```
 
-DNS is also subject to network policies, so egress to kube-dns over UDP/53 and TCP/53 must be allowed explicitly:
+DNS is also subject to network policies, so egress to the cluster DNS service over UDP/53 and TCP/53 must be allowed explicitly:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -351,10 +355,8 @@ metadata:
 spec:
   endpointSelector: {}
   egress:
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: kube-system
-            k8s-app: kube-dns
+    - toEntities:
+        - cluster
       toPorts:
         - ports:
             - port: "53"
@@ -362,6 +364,10 @@ spec:
             - port: "53"
               protocol: TCP
 ```
+
+{% alert level="info" %}
+The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DKP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
+{% endalert %}
 
 ## Audit mode (`policyAuditMode`)
 

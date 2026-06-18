@@ -285,14 +285,14 @@ spec:
     matchLabels:
       app: client
   egress:
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: kube-system
-            k8s-app: kube-dns
+    - toEntities:
+        - cluster
       toPorts:
         - ports:
             - port: "53"
               protocol: UDP
+            - port: "53"
+              protocol: TCP
           rules:
             dns:
               - matchPattern: "*"
@@ -304,6 +304,10 @@ spec:
             - port: "443"
               protocol: TCP
 ```
+
+{% alert level="info" %}
+В DNS-правиле используется `toEntities: cluster`, а не селектор по лейблам `kube-dns`. В DKP наряду с основным DNS-сервисом работает DaemonSet `node-local-dns`, поэтому реальный путь DNS-трафика от пода может проходить через локальный экземпляр `node-local-dns`. Использование `toEntities: cluster` надёжно покрывает любой DNS-эндпоинт внутри кластера.
+{% endalert %}
 
 ## Deny-правила
 
@@ -341,7 +345,7 @@ spec:
   egress: []
 ```
 
-DNS тоже попадает под действие политик, необходимо явно разрешить egress-запросы до kube-dns через UDP/53 и TCP/53:
+DNS тоже попадает под действие политик, необходимо явно разрешить egress-запросы к DNS-сервису кластера через UDP/53 и TCP/53:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -352,10 +356,8 @@ metadata:
 spec:
   endpointSelector: {}
   egress:
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: kube-system
-            k8s-app: kube-dns
+    - toEntities:
+        - cluster
       toPorts:
         - ports:
             - port: "53"
@@ -363,6 +365,10 @@ spec:
             - port: "53"
               protocol: TCP
 ```
+
+{% alert level="info" %}
+В DNS-правиле используется `toEntities: cluster`, а не селектор по лейблам `kube-dns`. В DKP наряду с основным DNS-сервисом работает DaemonSet `node-local-dns`, поэтому реальный путь DNS-трафика от пода может проходить через локальный экземпляр `node-local-dns`. Использование `toEntities: cluster` надёжно покрывает любой DNS-эндпоинт внутри кластера.
+{% endalert %}
 
 ## Режим аудита (`policyAuditMode`)
 

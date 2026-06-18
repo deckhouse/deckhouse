@@ -151,7 +151,7 @@ spec:
 
 ## Allow egress to specific DNS names (FQDN)
 
-For FQDN rules, Cilium must observe DNS queries, so the same policy must also allow egress to kube-dns with DNS inspection:
+For FQDN rules, Cilium must observe DNS queries, so the same policy must also allow egress to the cluster DNS with DNS inspection:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -164,14 +164,14 @@ spec:
     matchLabels:
       app: client
   egress:
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: kube-system
-            k8s-app: kube-dns
+    - toEntities:
+        - cluster
       toPorts:
         - ports:
             - port: "53"
               protocol: UDP
+            - port: "53"
+              protocol: TCP
           rules:
             dns:
               - matchPattern: "*"
@@ -183,6 +183,10 @@ spec:
             - port: "443"
               protocol: TCP
 ```
+
+{% alert level="info" %}
+The DNS egress rule uses `toEntities: cluster` rather than a label selector targeting `kube-dns` pods. DKP deploys a `node-local-dns` DaemonSet alongside the main DNS service, so the actual DNS path from a pod may go through a `node-local-dns` instance. Using `toEntities: cluster` matches any cluster-internal DNS endpoint reliably.
+{% endalert %}
 
 ## Deny access to the cloud metadata service
 

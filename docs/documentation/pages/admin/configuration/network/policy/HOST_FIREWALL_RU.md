@@ -118,16 +118,6 @@ spec:
         - kube-apiserver
         - cluster
         - remote-node
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: kube-system
-            k8s-app: kube-dns
-      toPorts:
-        - ports:
-            - port: "53"
-              protocol: UDP
-            - port: "53"
-              protocol: TCP
 ```
 
 Этот пример — стартовая точка. Дополните политику разрешениями для мониторинга, ingress-контроллеров, балансировщиков и SSH согласно вашей конфигурации.
