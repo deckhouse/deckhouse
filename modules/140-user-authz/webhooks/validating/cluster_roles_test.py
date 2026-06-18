@@ -54,6 +54,45 @@ def binding_context(name, labels=None, rules=None, selector_labels=None, annotat
 
 SOME_RULES = [{"apiGroups": [""], "resources": ["pods"], "verbs": ["get", "list"]}]
 
+RESERVED_PREFIX_MSG = (
+    'ClusterRole names with the "d8:" prefix are reserved for Deckhouse. '
+    'Use the "d8:custom:" prefix for custom roles and capabilities.'
+)
+
+
+def _cr(name, labels=None, annotations=None, rules=None, aggregation=None):
+    obj = {
+        "apiVersion": "rbac.authorization.k8s.io/v1",
+        "kind": "ClusterRole",
+        "metadata": {"name": name},
+    }
+    if labels is not None:
+        obj["metadata"]["labels"] = labels
+    if annotations is not None:
+        obj["metadata"]["annotations"] = annotations
+    if rules is not None:
+        obj["rules"] = rules
+    if aggregation is not None:
+        obj["aggregationRule"] = aggregation
+    return obj
+
+
+def update_binding_context(old_object, new_object, username="kubernetes-admin"):
+    return DotMap(
+        {
+            "binding": "rbacv2-cluster-roles.deckhouse.io",
+            "review": {
+                "request": {
+                    "uid": "5c2c5f30-5a8e-4a4e-9d52-25d44a3677b1",
+                    "operation": "UPDATE",
+                    "userInfo": {"username": username},
+                    "object": new_object,
+                    "oldObject": old_object,
+                }
+            },
+        }
+    )
+
 
 class TestClusterRolesValidation(unittest.TestCase):
     def run_hook(self, ctx):
@@ -259,6 +298,71 @@ class TestClusterRolesValidation(unittest.TestCase):
             )
         )
         tests.assert_validation_allowed(self, out, None)
+
+    # Card 6: an administrator may override a BUILT-IN role's display name by setting only the
+    # custom.meta.deckhouse.io/* annotations on it, despite the reserved "d8:" prefix.
+    def test_admin_can_set_custom_meta_on_builtin_role(self):
+        old = _cr(
+            "d8:namespace:admin",
+            labels={"rbac.deckhouse.io/kind": "role"},
+            annotations={"en.meta.deckhouse.io/title": "Namespace Administrator"},
+        )
+        new = _cr(
+            "d8:namespace:admin",
+            labels={"rbac.deckhouse.io/kind": "role"},
+            annotations={
+                "en.meta.deckhouse.io/title": "Namespace Administrator",
+                "custom.meta.deckhouse.io/title": "NS Owner",
+                "custom.meta.deckhouse.io/description": "Renamed by the platform admin",
+            },
+        )
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_builtin_role_update_changing_rules_is_denied(self):
+        old = _cr("d8:namespace:admin", rules=[])
+        new = _cr(
+            "d8:namespace:admin",
+            rules=SOME_RULES,
+            annotations={"custom.meta.deckhouse.io/title": "sneaky"},
+        )
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
+
+    def test_builtin_role_update_changing_aggregation_is_denied(self):
+        old = _cr(
+            "d8:namespace:admin",
+            aggregation={"clusterRoleSelectors": [{"matchLabels": {"a": "1"}}]},
+        )
+        new = _cr(
+            "d8:namespace:admin",
+            aggregation={"clusterRoleSelectors": [{"matchLabels": {"a": "2"}}]},
+            annotations={"custom.meta.deckhouse.io/title": "sneaky"},
+        )
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
+
+    def test_builtin_role_update_changing_non_custom_annotation_is_denied(self):
+        old = _cr("d8:namespace:admin", annotations={"en.meta.deckhouse.io/title": "A"})
+        new = _cr(
+            "d8:namespace:admin",
+            annotations={
+                "en.meta.deckhouse.io/title": "B",
+                "custom.meta.deckhouse.io/title": "x",
+            },
+        )
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
+
+    def test_builtin_role_update_changing_labels_is_denied(self):
+        old = _cr("d8:namespace:admin", labels={"rbac.deckhouse.io/kind": "role"})
+        new = _cr(
+            "d8:namespace:admin",
+            labels={"rbac.deckhouse.io/kind": "role", "evil": "1"},
+            annotations={"custom.meta.deckhouse.io/title": "x"},
+        )
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, RESERVED_PREFIX_MSG)
 
 
 if __name__ == "__main__":

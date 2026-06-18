@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package resolver
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -565,7 +567,157 @@ func TestResolveAccessibleNamespaces_RBACv2UserWithoutCAR(t *testing.T) {
 	assert.False(t, accessible, "namespace without a binding must not be accessible")
 }
 
+// The following three tests pin the net behavior after the engine was changed to
+// ignore AuthorizationRules (ARs) and build its directory from CARs ONLY, mirroring
+// the kube-apiserver user-authz webhook. AccessibleNamespaces is the union of the
+// RBAC-derived candidate namespaces, deny-filtered by an explicit CAR (if any).
+// ARs are represented here by the RoleBinding each AR creates in its namespace;
+// the engine no longer treats the AR namespace as a deny-filter.
+
+// Scenario 1: AR(ns-a) + an independent RoleBinding(ns-c), no CAR -> ANS = {ns-a, ns-c}.
+//
+// Before the fix the engine treated the AR as a deny-filter limited to ns-a, hiding
+// ns-c (under-report). Now, with no CAR, the engine imposes no filter and both
+// RBAC-derived namespaces are returned.
+func TestResolveAccessibleNamespaces_ARPlusIndependentRB_NoCAR(t *testing.T) {
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-a"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-c"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-other"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "ns-reader"},
+			Rules: []rbacv1.PolicyRule{
+				{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"get", "list"}},
+			},
+		},
+		// AR-derived RoleBinding in ns-a (named like multitenancy-manager creates it).
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:ar0:admin", Namespace: "ns-a"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "alice"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "ns-reader"},
+		},
+		// Independent RoleBinding in ns-c.
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "reader-binding", Namespace: "ns-c"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "alice"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "ns-reader"},
+		},
+	}
+
+	// Engine active but CAR-only directory is empty (the "ars" entry is ignored).
+	mtEngine := newMTEngineFromConfig(t, `{
+		"crds": [],
+		"ars": [
+			{"name": "ar0", "namespace": "ns-a", "spec": {"subjects": [{"kind": "User", "name": "alice"}]}}
+		]
+	}`)
+
+	resolver := setupResolver(t, objs, mtEngine)
+
+	userInfo := &user.DefaultInfo{Name: "alice", Groups: []string{"system:authenticated"}}
+	namespaces, err := resolver.ResolveAccessibleNamespaces(userInfo)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-a", "ns-c"}, namespaces,
+		"AR-only user must see both the AR namespace and the independent RoleBinding namespace")
+}
+
+// Scenario 2: CAR(limitNamespaces=[ns-d]) + AR(ns-a) -> ANS = {ns-d}.
+//
+// Before the fix the engine unioned the AR namespace into the filter, yielding
+// {ns-d, ns-a} (over-report). Now the engine honors only the CAR's limit, so the
+// AR namespace is filtered out — matching the real webhook, which caps the user to ns-d.
+func TestResolveAccessibleNamespaces_CARLimit_FiltersOutAR(t *testing.T) {
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-d"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-a"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-other"}},
+		// CAR's accessLevel is realized as a ClusterRoleBinding granting global namespaced access.
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "cluster-reader"},
+			Rules: []rbacv1.PolicyRule{
+				{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"get", "list"}},
+			},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "alice-cluster-reader"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "alice"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "cluster-reader"},
+		},
+		// AR-derived RoleBinding in ns-a.
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:ar0:admin", Namespace: "ns-a"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "alice"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "cluster-reader"},
+		},
+	}
+
+	mtEngine := newMTEngineFromConfig(t, `{
+		"crds": [
+			{"name": "car0", "spec": {"limitNamespaces": ["ns-d"], "subjects": [{"kind": "User", "name": "alice"}]}}
+		],
+		"ars": [
+			{"name": "ar0", "namespace": "ns-a", "spec": {"subjects": [{"kind": "User", "name": "alice"}]}}
+		]
+	}`)
+
+	resolver := setupResolver(t, objs, mtEngine)
+
+	userInfo := &user.DefaultInfo{Name: "alice", Groups: []string{"system:authenticated"}}
+	namespaces, err := resolver.ResolveAccessibleNamespaces(userInfo)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"ns-d"}, namespaces,
+		"CAR limit must cap the user to ns-d; the AR namespace must be filtered out")
+}
+
+// Scenario 3: CAR(limitNamespaces=[ns-a, ns-b]) only -> ANS = {ns-a, ns-b} (unchanged).
+func TestResolveAccessibleNamespaces_CARLimitOnly_Unchanged(t *testing.T) {
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-a"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-b"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-c"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "cluster-reader"},
+			Rules: []rbacv1.PolicyRule{
+				{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"get", "list"}},
+			},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "alice-cluster-reader"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "alice"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "cluster-reader"},
+		},
+	}
+
+	mtEngine := newMTEngineFromConfig(t, `{
+		"crds": [
+			{"name": "car0", "spec": {"limitNamespaces": ["ns-a", "ns-b"], "subjects": [{"kind": "User", "name": "alice"}]}}
+		]
+	}`)
+
+	resolver := setupResolver(t, objs, mtEngine)
+
+	userInfo := &user.DefaultInfo{Name: "alice", Groups: []string{"system:authenticated"}}
+	namespaces, err := resolver.ResolveAccessibleNamespaces(userInfo)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-a", "ns-b"}, namespaces,
+		"CAR-only user must see exactly the CAR's limited namespaces")
+}
+
 // Helper functions
+
+// newMTEngineFromConfig writes a user-authz config.json with the supplied raw body
+// and returns a multitenancy.Engine built from it. The engine's directory is loaded
+// during construction. nil listers/discovery are sufficient here because these
+// scenarios do not exercise namespaceSelector or resource-scope discovery.
+func newMTEngineFromConfig(t *testing.T, body string) *multitenancy.Engine {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+	engine, err := multitenancy.NewEngine(path, nil, nil, nil)
+	require.NoError(t, err)
+	return engine
+}
 
 // newTestScopeCache creates a ResourceScopeCache pre-populated with well-known resources.
 // This is used in tests because fake.NewSimpleClientset does not expose real API resources

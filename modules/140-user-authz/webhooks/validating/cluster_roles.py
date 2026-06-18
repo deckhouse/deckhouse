@@ -30,6 +30,10 @@ from deckhouse import hook
 from dotmap import DotMap
 
 KIND_LABEL = "rbac.deckhouse.io/kind"
+# Card 6 / ADR-1: administrators may override the DISPLAY title/description of a built-in role by
+# setting these annotations on it. The "d8:" prefix is otherwise reserved, so we allow an UPDATE to a
+# built-in role iff it touches ONLY annotations under this prefix (never rules/aggregation/labels).
+CUSTOM_META_PREFIX = "custom.meta.deckhouse.io/"
 AGGREGATE_LABEL_RE = re.compile(r"^rbac\.deckhouse\.io/aggregate-to-(.+)-as$")
 TENANT_LINEAGES = {"namespace", "project"}
 # Built-in system-side lineages: the system lineage plus one lineage per subsystem.
@@ -79,10 +83,38 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
-def validate(ctx: DotMap) -> Optional[str]:
-    obj = ctx.review.request.object
+def _as_dict(obj) -> dict:
     if hasattr(obj, "toDict"):
         obj = obj.toDict()
+    return obj or {}
+
+
+def _only_custom_meta_annotation_change(old: dict, new: dict) -> bool:
+    """True when old→new differ ONLY in custom.meta.deckhouse.io/* annotations: rules, aggregationRule,
+    labels and every non-custom.meta annotation are byte-for-byte unchanged. This lets a platform admin
+    set a display title/description on a built-in d8: role (card 6) without being able to change its
+    permissions through the same reserved-prefix bypass."""
+    if (old.get("rules") or []) != (new.get("rules") or []):
+        return False
+    if (old.get("aggregationRule") or {}) != (new.get("aggregationRule") or {}):
+        return False
+    old_meta = old.get("metadata") or {}
+    new_meta = new.get("metadata") or {}
+    if (old_meta.get("labels") or {}) != (new_meta.get("labels") or {}):
+        return False
+    old_ann = old_meta.get("annotations") or {}
+    new_ann = new_meta.get("annotations") or {}
+    for key in set(old_ann) | set(new_ann):
+        if key.startswith(CUSTOM_META_PREFIX):
+            continue
+        if old_ann.get(key) != new_ann.get(key):
+            return False
+    return True
+
+
+def validate(ctx: DotMap) -> Optional[str]:
+    request = ctx.review.request
+    obj = _as_dict(request.object)
 
     name = obj.get("metadata", {}).get("name", "")
     labels = obj.get("metadata", {}).get("labels") or {}
@@ -92,6 +124,12 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     # The d8: name prefix is reserved; users may only create objects under d8:custom:.
     if name.startswith("d8:") and not name.startswith("d8:custom:"):
+        # Card 6 exception: allow an UPDATE of a built-in role that changes ONLY its
+        # custom.meta.deckhouse.io/* annotations (display title/description) — no privilege change.
+        if request.operation == "UPDATE" and _only_custom_meta_annotation_change(
+            _as_dict(request.oldObject), obj
+        ):
+            return None
         return (
             'ClusterRole names with the "d8:" prefix are reserved for Deckhouse. '
             'Use the "d8:custom:" prefix for custom roles and capabilities.'
