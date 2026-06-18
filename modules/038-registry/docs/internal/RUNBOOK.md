@@ -220,7 +220,7 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
   ...
   mode: Direct
   target_mode: Direct
-  ```.
+  ```
 2. Выполните смену параметров registry в текущем режиме работы:
   ```bash
   $ kubectl edit mc/deckhouse
