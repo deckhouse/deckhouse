@@ -78,24 +78,33 @@ func EnsureCRDs(ctx context.Context, c client.Client) error {
 }
 
 func ensureConversionWebhooks(ctx context.Context, c client.Client) error {
-	klog.Info("reading node-controller webhook CA")
-	secret := &corev1.Secret{}
-	if err := c.Get(ctx, types.NamespacedName{
-		Name:      nodeControllerWebhookSecretName,
-		Namespace: capiNamespace,
-	}, secret); err != nil {
-		if errors.IsNotFound(err) {
-			klog.Info("node-controller-webhook-tls secret not found, skipping conversion webhook patch")
-			return nil
+	// Check if any conversion CRD actually exists and needs conversion.
+	// On bootstrap, CRDs don't exist yet — skip.
+	needsConversion := false
+	for _, crdName := range conversionCRDNames {
+		crd := &apiextensionsv1.CustomResourceDefinition{}
+		if err := c.Get(ctx, types.NamespacedName{Name: crdName}, crd); err != nil {
+			if errors.IsNotFound(err) {
+				continue
+			}
+			return fmt.Errorf("get CRD %s: %w", crdName, err)
 		}
-		return fmt.Errorf("get %s secret: %w", nodeControllerWebhookSecretName, err)
+		if len(crd.Spec.Versions) > 1 {
+			needsConversion = true
+			break
+		}
 	}
-
-	caBundle := secret.Data["ca.crt"]
-	if len(caBundle) == 0 {
-		klog.Info("node-controller-webhook-tls secret has empty ca.crt, skipping")
+	if !needsConversion {
+		klog.Info("no conversion CRDs found or all have single version, skipping conversion webhook patch")
 		return nil
 	}
+
+	klog.Info("waiting for node-controller webhook CA secret ", nodeControllerWebhookSecretName)
+	caBundle, err := waitForCABundle(ctx, c, nodeControllerWebhookSecretName)
+	if err != nil {
+		return fmt.Errorf("waiting for %s CA bundle: %w", nodeControllerWebhookSecretName, err)
+	}
+	klog.Info("node-controller webhook CA secret ready")
 
 	for _, crdName := range conversionCRDNames {
 		if err := patchConversionWebhook(ctx, c, crdName, caBundle); err != nil {
