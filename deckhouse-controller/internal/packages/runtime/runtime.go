@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"sync"
@@ -26,6 +27,8 @@ import (
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
+	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
+	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
@@ -38,6 +41,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
 	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
@@ -52,6 +56,7 @@ import (
 	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
+	taskensurecrd "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurecrd"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -99,6 +104,7 @@ type Runtime struct {
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
+	crdInstaller      *crd.Installer                      // Applies package-bundled CRDs to the cluster
 
 	global *global.Module
 
@@ -181,6 +187,11 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		return nil, fmt.Errorf("build kube events manager: %w", err)
 	}
 
+	// Build CRD installer for applying package-bundled CRDs
+	if err := r.buildCRDInstaller(); err != nil {
+		return nil, fmt.Errorf("build crd installer: %w", err)
+	}
+
 	r.hookEventHandler = hookevent.NewHandler(hookevent.Config{
 		KubeEventsManager: r.kubeEventsManager,
 		ScheduleManager:   r.scheduleManager,
@@ -192,6 +203,12 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	if err != nil {
 		return nil, fmt.Errorf("load global conf: %w", err)
 	}
+
+	// Wire the shared managers so global hooks can patch objects, register cron
+	// schedules and watch Kubernetes resources just like module/app hooks do.
+	conf.Patcher = r.objectPatcher
+	conf.ScheduleManager = r.scheduleManager
+	conf.KubeEventsManager = r.kubeEventsManager
 
 	r.global, err = global.NewModuleByConfig(conf, r.logger)
 	if err != nil {
@@ -358,6 +375,24 @@ func (r *Runtime) buildKubeEventsManager() error {
 		metricsstorage.WithNewRegistry(),
 	)
 	r.kubeEventsManager.WithMetricStorage(metricStorage)
+
+	return nil
+}
+
+// buildCRDInstaller creates a Kubernetes client used to apply CRDs that packages
+// bundle under their crds/ directory. The installer runs before hooks and Helm so
+// that custom resources referenced by later pipeline stages already exist.
+func (r *Runtime) buildCRDInstaller() error {
+	client := klient.New(klient.WithLogger(r.logger.Named("crd-installer-client")))
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithMetricPrefix("packages_crd_installer_")
+
+	if err := client.Init(); err != nil {
+		return fmt.Errorf("initialize crd installer client: %w", err)
+	}
+
+	r.crdInstaller = crd.NewInstaller(client)
 
 	return nil
 }
@@ -554,6 +589,14 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 // schedule and disable events from the scheduler and dispatches them to the
 // appropriate handler, driving the enable/disable lifecycle for all packages.
 func (r *Runtime) Run() {
+	// Bring the global module online before anything else. Global hooks populate
+	// the platform-wide values (discovery, bootstrap flags, enabledModules, ...)
+	// that module enable decisions and .Platform values depend on, so they must
+	// run before the scheduler starts processing modules.
+	if err := r.startGlobal(context.Background()); err != nil {
+		r.logger.Error("start global module", log.Err(err))
+	}
+
 	r.hookEventHandler.Start()
 	r.healthService.Start()
 
@@ -568,6 +611,77 @@ func (r *Runtime) Run() {
 			}
 		}
 	}()
+}
+
+// startGlobal brings the global module's hooks online, mirroring the
+// addon-operator bootstrap order for modules:
+//
+//  1. InitializeHooks  — create hook controllers and bind them to Kubernetes
+//     events and cron schedules.
+//  2. Enable schedule bindings — activate cron triggers.
+//  3. Enable Kubernetes bindings — start informers and collect the initial
+//     synchronization snapshot for each watched resource.
+//  4. Synchronize — run hooks that request ExecuteHookOnSynchronization with the
+//     initial snapshot, then unlock their monitors so future events flow.
+//  5. OnStartup — run the global startup hooks.
+//
+// Unlike modules, the global module is not scheduler-driven and has no Helm
+// release, so this runs once at startup instead of through the queue pipeline.
+// After this returns, ongoing Kubernetes/schedule events for global hooks are
+// handled by the hook event handler via BuildKubeTasks/BuildScheduleTasks.
+func (r *Runtime) startGlobal(ctx context.Context) error {
+	name := r.global.GetName()
+
+	if !r.global.HooksInitialized() {
+		r.logger.Debug("initialize global hooks", slog.String("name", name))
+		r.global.InitializeHooks()
+	}
+
+	// Enable cron schedules for global schedule hooks.
+	for _, hook := range r.global.GetHooksByBinding(shtypes.Schedule) {
+		hook.GetHookController().EnableScheduleBindings()
+	}
+
+	// Enable Kubernetes monitors and collect the initial synchronization snapshot.
+	syncInfos := make(map[string][]hookcontroller.BindingExecutionInfo)
+	for _, hook := range r.global.GetHooksByBinding(shtypes.OnKubernetesEvent) {
+		hookName := hook.GetName()
+		err := hook.GetHookController().HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
+			syncInfos[hookName] = append(syncInfos[hookName], info)
+		})
+		if err != nil {
+			r.status.HandleError(name, status.ConditionHooksProcessed, status.NewError("GlobalHookInitializationFailed", err))
+			return fmt.Errorf("enable kubernetes bindings for global hook %q: %w", hookName, err)
+		}
+	}
+
+	// Run initial synchronization for kube hooks, then unlock their monitors so
+	// subsequent events are delivered to the hook event handler.
+	for hookName, infos := range syncInfos {
+		for _, info := range infos {
+			if info.KubernetesBinding.ExecuteHookOnSynchronization {
+				if err := r.global.RunHookByName(ctx, hookName, info.BindingContext); err != nil {
+					if !info.AllowFailure {
+						r.status.HandleError(name, status.ConditionHooksProcessed, status.NewError("GlobalSyncHookFailed", err))
+						return fmt.Errorf("run global sync hook %q: %w", hookName, err)
+					}
+					r.logger.Warn("global sync hook failed", slog.String("hook", hookName), log.Err(err))
+				}
+			}
+
+			r.global.UnlockKubernetesMonitors(hookName, info.KubernetesBinding.Monitor.Metadata.MonitorId)
+		}
+	}
+
+	// Run global OnStartup hooks.
+	if err := r.global.RunHooksByBinding(ctx, shtypes.OnStartup); err != nil {
+		r.status.HandleError(name, status.ConditionHooksProcessed, status.NewError("GlobalStartupHookFailed", err))
+		return fmt.Errorf("run global onStartup hooks: %w", err)
+	}
+
+	r.status.SetConditionTrue(name, status.ConditionHooksProcessed)
+
+	return nil
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
@@ -606,6 +720,9 @@ func (r *Runtime) schedulePackage(name string) {
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
+		// Apply module-bundled CRDs before hooks/Helm so that custom resources
+		// referenced by later stages already exist in the cluster.
+		r.queueService.Enqueue(ctx, name, taskensurecrd.NewTask(pkg, r.crdInstaller, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)

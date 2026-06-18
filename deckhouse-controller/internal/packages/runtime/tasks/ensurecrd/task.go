@@ -17,19 +17,23 @@ package ensurecrd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
+	"go.opentelemetry.io/otel"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+const taskTracer = "ensurecrd"
 
 type packageI interface {
 	GetName() string
 	GetPath() string
 }
 
-type statusService interface {
-	HandleError(name string, err error)
-}
-
+// crdsInstaller applies CRD manifests bundled in the package directory.
 type crdsInstaller interface {
 	EnsureCRDs(ctx context.Context, packagePath string) error
 }
@@ -37,21 +41,26 @@ type crdsInstaller interface {
 // task applies CRD manifests from the package's filesystem path to the cluster.
 // It runs early in the install pipeline — before hooks or Helm — so that
 // custom resources referenced by later stages already exist.
+//
+// On success it sets ConditionCRDsEnsured to True; on failure it forwards the
+// error to the status service (ConditionCRDsEnsured = False) and returns it so
+// the task is retried with backoff.
 type task struct {
 	pkg packageI
 
 	crdsInstaller crdsInstaller
-	status        statusService
+	status        *status.Service
+
+	logger *log.Logger
 }
 
 // NewTask creates an EnsureCRD task for the given package.
-// On failure the error is forwarded to the status service so that
-// the corresponding condition is updated before the task retries.
-func NewTask(pkg packageI, crdsInstaller crdsInstaller, status statusService) queue.Task {
+func NewTask(pkg packageI, crdsInstaller crdsInstaller, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:           pkg,
 		crdsInstaller: crdsInstaller,
 		status:        status,
+		logger:        logger.Named(taskTracer).With(slog.String("name", pkg.GetName())),
 	}
 }
 
@@ -62,10 +71,17 @@ func (t *task) String() string {
 // Execute scans the package directory for CRD manifests and applies them to the cluster.
 // A returned error triggers infinite retry with exponential backoff.
 func (t *task) Execute(ctx context.Context) error {
+	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Execute")
+	defer span.End()
+
+	t.logger.Debug("ensure package CRDs")
+
 	if err := t.crdsInstaller.EnsureCRDs(ctx, t.pkg.GetPath()); err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
-		return fmt.Errorf("ensure CRDs: %v", err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionCRDsEnsured, status.NewError("EnsureCRDsFailed", err))
+		return fmt.Errorf("ensure CRDs: %w", err)
 	}
+
+	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionCRDsEnsured)
 
 	return nil
 }

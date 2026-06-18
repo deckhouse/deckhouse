@@ -71,7 +71,43 @@ func (r *Runtime) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 		}
 	}
 
+	r.appendGlobalKubeTasks(ctx, kubeEvent, res)
+
 	return res
+}
+
+// appendGlobalKubeTasks routes a Kubernetes event to global hooks bound to
+// OnKubernetesEvent, appending a hook run task per matching binding.
+//
+// When a global hook changes values it triggers a full scheduling pass instead
+// of rescheduling a single node: global values feed into every module's enable
+// decision, so the whole graph must be re-evaluated.
+func (r *Runtime) appendGlobalKubeTasks(ctx context.Context, kubeEvent shkubetypes.KubeEvent, res map[string][]queue.Task) {
+	for _, hook := range r.global.GetHooksByBinding(shtypes.OnKubernetesEvent) {
+		hookCtrl := hook.GetHookController()
+		if hookCtrl == nil || !hookCtrl.CanHandleKubeEvent(kubeEvent) {
+			continue
+		}
+
+		hookCtrl.HandleKubeEvent(ctx, kubeEvent, func(info hookcontroller.BindingExecutionInfo) {
+			r.logger.Debug("create task by kube event",
+				slog.String("hook", hook.GetName()),
+				slog.String("name", r.global.GetName()),
+				slog.String("event", kubeEvent.String()))
+
+			queueName := fmt.Sprintf("%s/%s", r.global.GetName(), info.QueueName)
+			t := taskhookrun.NewTask(r.global, hook.GetName(), info.BindingContext, r.onGlobalValuesChanged, r.nelmService, r.status, r.logger)
+			res[queueName] = append(res[queueName], t)
+		})
+	}
+}
+
+// onGlobalValuesChanged is invoked when a global hook mutates global values.
+// It forces a full scheduling pass so modules re-evaluate their enable state
+// against the new global values. The name argument is ignored: global values
+// are not tied to a single scheduler node.
+func (r *Runtime) onGlobalValuesChanged(_ string) {
+	r.scheduler.Schedule()
 }
 
 // BuildScheduleTasks converts a schedule (cron) event into executable tasks for all matching hooks.
@@ -117,5 +153,31 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 		}
 	}
 
+	r.appendGlobalScheduleTasks(ctx, crontab, res)
+
 	return res
+}
+
+// appendGlobalScheduleTasks routes a cron event to global hooks bound to
+// Schedule, appending a hook run task per matching binding. A values change in
+// a global hook triggers a full scheduling pass (see onGlobalValuesChanged).
+func (r *Runtime) appendGlobalScheduleTasks(ctx context.Context, crontab string, res map[string][]queue.Task) {
+	for _, hook := range r.global.GetHooksByBinding(shtypes.Schedule) {
+		hookCtrl := hook.GetHookController()
+		if hookCtrl == nil || !hookCtrl.CanHandleScheduleEvent(crontab) {
+			continue
+		}
+
+		hookCtrl.HandleScheduleEvent(ctx, crontab, func(info hookcontroller.BindingExecutionInfo) {
+			r.logger.Debug("create task by schedule event",
+				slog.String("hook", hook.GetName()),
+				slog.String("name", r.global.GetName()),
+				slog.String("event", crontab))
+
+			queueName := fmt.Sprintf("%s/%s", r.global.GetName(), info.QueueName)
+			t := taskhookrun.NewTask(r.global, hook.GetName(), info.BindingContext, r.onGlobalValuesChanged, r.nelmService, r.status, r.logger)
+
+			res[queueName] = append(res[queueName], t)
+		})
+	}
 }

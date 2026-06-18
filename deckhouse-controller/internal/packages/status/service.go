@@ -33,6 +33,8 @@ const (
 	ConditionReadyOnFilesystem ConditionType = "ReadyOnFilesystem"
 	// ConditionLoaded indicates package is loaded in runtime
 	ConditionLoaded ConditionType = "Loaded"
+	// ConditionCRDsEnsured indicates package-bundled CRDs were applied to the cluster
+	ConditionCRDsEnsured ConditionType = "CRDsEnsured"
 	// ConditionHooksProcessed indicates all package hooks executed successfully
 	ConditionHooksProcessed ConditionType = "HooksProcessed"
 	// ConditionManifestsApplied indicates Helm release was successfully applied

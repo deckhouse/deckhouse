@@ -189,6 +189,18 @@ func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplySettings(settings)
 }
 
+// HooksInitialized reports whether the global hooks have been initialized
+// (controllers attached). When false, the runtime must run the global startup
+// sequence before relying on global values.
+func (m *Module) HooksInitialized() bool {
+	return m.hooks.Initialized()
+}
+
+// GetHooksByBinding returns all global hooks for the specified binding type, sorted by order.
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.GlobalHook {
+	return m.hooks.GetHooksByBinding(binding)
+}
+
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
 func (m *Module) InitializeHooks() {
 	for _, hook := range m.hooks.GetHooks() {

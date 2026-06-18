@@ -64,6 +64,23 @@ func NewGlobalStorage() *GlobalStorage {
 	}
 }
 
+// Initialized reports whether the hook storage has been fully initialized.
+// It checks if any stored hook has a controller attached — the controller is set
+// during initialization, so its presence indicates that loading is complete.
+// Returns true if the storage is empty (no hooks to initialize) or if hooks
+// have their controllers set.
+func (s *GlobalStorage) Initialized() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, hook := range s.byName {
+		// if controller set - hooks storage already initialized
+		return hook.GetHookController() != nil
+	}
+
+	return true
+}
+
 // Add adds a global hook to storage, indexing it by name.
 // If a hook with the same name exists, it will be replaced.
 func (s *GlobalStorage) Add(hook GlobalHook) {
