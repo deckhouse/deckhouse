@@ -99,17 +99,7 @@ registry
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
 
 
-### Этап 3 — `InClusterProxyReady`
-
-На данном этапе на master-узлах кластера поднимается `Deployment` `registry-incluster-proxy`.
-Если кластер находится в HA режиме — поднимается несколько экземпляров.
-
-На данном этапе только поднимается компонент. Переключение на его использование пока не выполняется.
-
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `InClusterProxyReady`](RUNBOOK.md#inclusterproxyready).
-
-
-### Этап 4 — `TransitionContainerdConfigReady`
+### Этап 3 — `TransitionContainerdConfigReady`
 На узлы раскатывается переходный конфиг containerd: активны оба источника — старый и новый.
 
 Взаимодействие выполняется через секрет `registry-bashible-config`. Его конфигурирует оркестратор, который следит за версией конфигурации через аннотацию `registry.deckhouse.io/version=...` на узле.
@@ -155,6 +145,19 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 ```
 
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
+
+
+### Этап 4 — `InClusterProxyReady`
+
+На данном этапе на master-узлах кластера поднимается `Deployment` `registry-incluster-proxy`.
+Если кластер находится в HA режиме — поднимается несколько экземпляров.
+
+На данном этапе только поднимается компонент. Переключение на его использование пока не выполняется.
+
+> [!IMPORTANT]  
+> Данных этап в Direct режиме должен выполниться после раскатки bashible. Тк для раскатки bashible требудется RPP + старый registry.
+
+**Что делать, если этап не прошел**: см. [RUNBOOK.md → `InClusterProxyReady`](RUNBOOK.md#inclusterproxyready).
 
 
 ### Этап 5 — `DeckhouseRegistrySwitchReady`
