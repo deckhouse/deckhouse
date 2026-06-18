@@ -3,8 +3,10 @@
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshotClass
 metadata:
-  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
   name: {{ .Chart.Name }}
 driver: csi.dvp.deckhouse.io
 deletionPolicy: Delete
+parameters:
+  dvpRequiredConsistency: "true"
 {{- end }}
