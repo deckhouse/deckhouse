@@ -94,7 +94,7 @@ spec:
   - expression: |
       request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
       || request.userInfo.username == "system:serviceaccount:kube-system:d8-control-plane-manager"
-      || request.userInfo.username == "system:serviceaccount:kube-system:d8-virtual-control-plane"
+      || request.userInfo.username == "system:serviceaccount:kube-system:d8-virtual-control-plane-manager"
       || (
         request.operation == "DELETE"
         && request.resource.resource == "controlplaneoperations"
@@ -146,7 +146,7 @@ spec:
   - expression: |
       request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
       || request.userInfo.username == "system:serviceaccount:kube-system:d8-control-plane-manager"
-      || request.userInfo.username == "system:serviceaccount:kube-system:d8-virtual-control-plane"
+      || request.userInfo.username == "system:serviceaccount:kube-system:d8-virtual-control-plane-manager"
       || (
         object.spec == oldObject.spec
         && variables.oldAnnotations == variables.newAnnotations
