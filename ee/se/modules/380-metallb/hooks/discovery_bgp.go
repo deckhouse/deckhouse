@@ -84,7 +84,17 @@ func filterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	if err := sdk.FromUnstructured(obj, &secret); err != nil {
 		return nil, err
 	}
-	return secret, nil
+
+	data := make(map[string]string)
+	for k, v := range secret.Data {
+		data[k] = string(v)
+	}
+
+	return SecretToCopy{
+		Name:      secret.Name,
+		Namespace: secret.Namespace,
+		Data:      data,
+	}, nil
 }
 
 func handleBGP(_ context.Context, input *go_hook.HookInput) error {
@@ -121,16 +131,12 @@ func handleBGP(_ context.Context, input *go_hook.HookInput) error {
 
 	secrets := make(map[string]map[string]string)
 	for _, s := range input.Snapshots.Get("secrets") {
-		var secret v1.Secret
+		var secret SecretToCopy
 		if err := s.UnmarshalTo(&secret); err != nil {
 			input.Logger.Warn(fmt.Sprintf("failed to unmarshal Secret snapshot: %v", err))
 			continue
 		}
-		data := make(map[string]string)
-		for k, v := range secret.Data {
-			data[k] = string(v)
-		}
-		secrets[fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)] = data
+		secrets[fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)] = secret.Data
 	}
 
 	// Map peers by name for quick lookup
