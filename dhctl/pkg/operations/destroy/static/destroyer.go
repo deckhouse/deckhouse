@@ -214,11 +214,14 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	}
 
 	cmd := `if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then
-	echo "ERROR: cleanup_static_node.sh not found"
-	exit 1
+	echo "cleanup_static_node.sh not found, probably already cleaned"
+	exit 0
 fi
 
-bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing`
+bash -x /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing > /tmp/cleanup-static-node-debug.log 2>&1
+rc=$?
+echo "cleanup rc=${rc}" >> /tmp/cleanup-static-node-debug.log
+exit ${rc}`
 
 	userPassedSSHSetting := sshClient.Session().Copy()
 
@@ -286,7 +289,7 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHC
 	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
 		c := sshClient.Command(cmd)
 		c.Sudo(ctx)
-		c.WithTimeout(30 * time.Second)
+		c.WithTimeout(5 * time.Minute)
 		c.WithStdoutHandler(stdOutErrHandler)
 		c.WithStderrHandler(stdOutErrHandler)
 		err := c.Run(ctx)
