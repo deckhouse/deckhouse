@@ -591,6 +591,3 @@ flowchart TB
   class Deckhouse,OperatorTrivy client;
   class ImageRegistry ext;
 ```
-
-## Bootstrap кластера с модулем registry:
-

@@ -797,5 +797,3 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 На данном этапе компоненты режима Direct уже не используются. `Deployment` `registry-incluster-proxy` удаляется из кластера.
 
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `CleanupInClusterProxy`](RUNBOOK.md#cleanupinclusterproxy).
-
-
