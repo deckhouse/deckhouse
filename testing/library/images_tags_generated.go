@@ -143,6 +143,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vsphereCsiPluginLegacy":    "imageHash-cloudProviderVsphere-vsphereCsiPluginLegacy",
 	},
 	"cloudProviderYandex": map[string]interface{}{
+		"capyControllerManager":  "imageHash-cloudProviderYandex-capyControllerManager",
 		"cloudControllerManager": "imageHash-cloudProviderYandex-cloudControllerManager",
 		"cloudDataDiscoverer":    "imageHash-cloudProviderYandex-cloudDataDiscoverer",
 		"cloudMetricsExporter":   "imageHash-cloudProviderYandex-cloudMetricsExporter",
@@ -302,6 +303,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"proxyv2V1x21x6":      "imageHash-istio-proxyv2V1x21x6",
 		"proxyv2V1x25x2":      "imageHash-istio-proxyv2V1x25x2",
 		"proxyv2V1x27x9":      "imageHash-istio-proxyv2V1x27x9",
+		"waypointController":  "imageHash-istio-waypointController",
 		"ztunnelV1x25x2":      "imageHash-istio-ztunnelV1x25x2",
 		"ztunnelV1x27x9":      "imageHash-istio-ztunnelV1x27x9",
 	},

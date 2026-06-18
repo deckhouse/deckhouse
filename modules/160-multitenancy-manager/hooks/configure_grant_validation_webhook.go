@@ -44,6 +44,41 @@ var projectNamespaceSelector = &v1.LabelSelector{
 	MatchLabels: map[string]string{"heritage": "multitenancy-manager"},
 }
 
+// systemWriterMatchConditions make the apiserver SKIP this webhook entirely for system / module
+// writers — evaluated locally (CEL), BEFORE any network call to the webhook backend. This is the
+// anti-deadlock guarantee: the grant allow-list exists to police PROJECT USERS, but every module's
+// resources land in project namespaces via that module's Helm release applied by the
+// deckhouse-controller (system:serviceaccount:d8-system:deckhouse). With failurePolicy: Fail, if the
+// webhook is denied OR merely unreachable/slow, that server-side apply fails and addon-operator
+// retries it forever, locking the module's queue (observed: user-authz emitting
+// "RoleBinding/...:d8:user-authz:*:user" into every project namespace -> "webhook retry timed out
+// after 2m0s"). Excluding system writers at the apiserver level removes the lock unconditionally —
+// it holds even when the webhook backend is completely down, because the apiserver never calls it for
+// these requests. Project users are still policed (and get a fast, terminal denial). The in-handler
+// isSystemRequest bypass mirrors this as defense-in-depth.
+var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
+	{
+		Name:       "exclude-apiserver",
+		Expression: `request.userInfo.username != "system:apiserver"`,
+	},
+	{
+		Name:       "exclude-deckhouse-controller",
+		Expression: `request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"`,
+	},
+	{
+		Name:       "exclude-multitenancy-manager",
+		Expression: `request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"`,
+	},
+	{
+		Name:       "exclude-system-serviceaccounts",
+		Expression: `!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system")`,
+	},
+	{
+		Name:       "exclude-cluster-admins-and-nodes",
+		Expression: `!request.userInfo.groups.exists(g, g == "system:masters" || g == "system:nodes")`,
+	},
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/160-multitenancy-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -98,6 +133,7 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 						CABundle: []byte(caBundle),
 					},
 					NamespaceSelector:       projectNamespaceSelector,
+					MatchConditions:         systemWriterMatchConditions,
 					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 					AdmissionReviewVersions: []string{"v1"},
 					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
@@ -111,8 +147,10 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	}
 
 	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile selector/timeout on existing configurations too (e.g. upgrades).
+	// Reconcile selector/match-conditions/timeout on existing configurations too (e.g. upgrades), so a
+	// cluster that already has the webhook without the system-writer exclusion is healed in place.
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
+	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})

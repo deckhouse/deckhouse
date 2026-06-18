@@ -213,6 +213,23 @@ properties:
           и маскировку значений в журнале аудита.
 
           > **Внимание.** После включения этот параметр нельзя отключить.
+  encryptionAlgorithm:
+    description: |
+      Алгоритм асимметричного шифрования, используемый при генерации ключей и сертификатов для следующих компонентов control-plane:
+
+      - `apiserver`;
+      - `apiserver-kubelet-client`;
+      - `apiserver-etcd-client`;
+      - `front-proxy-client`;
+      - `etcd-server`;
+      - `etcd-peer`;
+      - `etcd-healthcheck-client`.
+
+      Сертификаты для перечисленных выше компонентов будут перевыпущены с выбранным алгоритмом и длиной ключа.
+
+      Если параметр не задан, используется значение из `ClusterConfiguration.encryptionAlgorithm` (по умолчанию `RSA-2048`).
+
+      > **Внимание.** При перевыпуске сертификатов корневой сертификат (**CA**) не ротируется. Корневой сертификат создаётся с выбранным алгоритмом только при первичном бутстрапе кластера.
   rootKubeconfigSymlink:
     description: |
       Поддерживать ли символическую ссылку `/root/.kube/config` на `/etc/kubernetes/admin.conf` на узлах control-plane.

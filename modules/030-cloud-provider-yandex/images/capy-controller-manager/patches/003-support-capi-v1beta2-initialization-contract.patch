@@ -1,0 +1,1800 @@
+diff --git a/api/v1alpha1/types.go b/api/v1alpha1/types.go
+index d26fd22..42b923c 100644
+--- a/api/v1alpha1/types.go
++++ b/api/v1alpha1/types.go
+@@ -1,7 +1,7 @@
+ package v1alpha1
+ 
+ import (
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ )
+ 
+ // InstanceStatus describes the status of a Yandex Cloud Compute instance.
+@@ -38,13 +38,13 @@ const (
+ 	// ConditionStatusProvisioning is the string representing an instance in a provisioning state.
+ 	ConditionStatusProvisioning clusterv1.ConditionType = "PROVISIONING"
+ 	// ConditionStatusRunning is the string representing an instance in a running state.
+-	ConditionStatusRunning = "RUNNING"
++	ConditionStatusRunning clusterv1.ConditionType = "RUNNING"
+ 	// ConditionStatusReady is the string representing an instance in a ready state.
+-	ConditionStatusReady = "READY"
++	ConditionStatusReady clusterv1.ConditionType = "READY"
+ 	// ConditionStatusError is the string representing an instance in a error state.
+ 	ConditionStatusError = "ERROR"
+ 	// ConditionStatusNotfound used when the instance couldn't be retrieved.
+-	ConditionStatusNotfound = "NOTFOUND"
++	ConditionStatusNotfound clusterv1.ConditionType = "NOTFOUND"
+ )
+ 
+ const (
+diff --git a/api/v1alpha1/yandexcluster_mutatingwebhook.go b/api/v1alpha1/yandexcluster_mutatingwebhook.go
+index 79eab05..993b9d4 100644
+--- a/api/v1alpha1/yandexcluster_mutatingwebhook.go
++++ b/api/v1alpha1/yandexcluster_mutatingwebhook.go
+@@ -14,11 +14,11 @@ import (
+ //+kubebuilder:webhook:verbs=create;update,path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-yandexcluster-identitylink,mutating=true,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=yandexclusters,versions=v1alpha1,name=mutation.yandexclusters.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
+ 
+ type yandexClusterAdmitter struct {
+-	decoder *admission.Decoder
++	decoder admission.Decoder
+ }
+ 
+ // NewYandexClusterAdmitter returns a new admission.Handler that adds identityRef labels to YandexCluster objects.
+-func NewYandexClusterAdmitter(decoder *admission.Decoder) admission.Handler {
++func NewYandexClusterAdmitter(decoder admission.Decoder) admission.Handler {
+ 	return &yandexClusterAdmitter{decoder: decoder}
+ }
+ 
+diff --git a/api/v1alpha1/yandexcluster_types.go b/api/v1alpha1/yandexcluster_types.go
+index 45871b5..0cb692a 100644
+--- a/api/v1alpha1/yandexcluster_types.go
++++ b/api/v1alpha1/yandexcluster_types.go
+@@ -19,7 +19,7 @@ package v1alpha1
+ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/types"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ )
+ 
+ const (
+@@ -58,7 +58,7 @@ type YandexClusterSpec struct {
+ 	// Do not set it manually when creating YandexCluster as CAPY will set this for you
+ 	// after creating load balancer based on LoadBalancer specification.
+ 	// +optional
+-	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
++	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint,omitempty,omitzero"`
+ 
+ 	// FolderID is the identifier of YandexCloud folder to deploy the cluster to.
+ 	// +required
+@@ -190,13 +190,21 @@ func (ir *IdentityReference) NamespacedName() types.NamespacedName {
+ 	}
+ }
+ 
++// ClusterInitializationStatus provides observations of the YandexCluster initialization process.
++type ClusterInitializationStatus struct {
++	// Provisioned denotes that the cluster infrastructure provisioning is completed.
++	Provisioned bool `json:"provisioned,omitempty"`
++}
++
+ // YandexClusterStatus defines the observed state of YandexCluster.
+ type YandexClusterStatus struct {
+ 	// Ready is true when the provider resource is ready.
+ 	// +kubebuilder:default=false
+-	Ready        bool                 `json:"ready"`
+-	LoadBalancer LoadBalancerStatus   `json:"loadBalancerStatus,omitempty"`
+-	Conditions   clusterv1.Conditions `json:"conditions,omitempty"`
++	Ready bool `json:"ready"`
++	// +optional
++	Initialization ClusterInitializationStatus `json:"initialization,omitempty"`
++	LoadBalancer   LoadBalancerStatus          `json:"loadBalancerStatus,omitempty"`
++	Conditions     []metav1.Condition          `json:"conditions,omitempty"`
+ }
+ 
+ // LoadBalancerStatus encapsulates load balancer resources.
+@@ -242,13 +250,13 @@ type YandexClusterList struct {
+ }
+ 
+ // GetConditions returns the list of conditions for an YandexCluster API object.
+-func (yc *YandexCluster) GetConditions() clusterv1.Conditions {
+-	return yc.Status.Conditions
++func (c *YandexCluster) GetConditions() []metav1.Condition {
++	return c.Status.Conditions
+ }
+ 
+ // SetConditions will set the given conditions on an YandexCluster API object.
+-func (yc *YandexCluster) SetConditions(conditions clusterv1.Conditions) {
+-	yc.Status.Conditions = conditions
++func (c *YandexCluster) SetConditions(conditions []metav1.Condition) {
++	c.Status.Conditions = conditions
+ }
+ 
+ func init() {
+diff --git a/api/v1alpha1/yandexcluster_webhook.go b/api/v1alpha1/yandexcluster_webhook.go
+index 356cf94..32c7672 100644
+--- a/api/v1alpha1/yandexcluster_webhook.go
++++ b/api/v1alpha1/yandexcluster_webhook.go
+@@ -24,10 +24,9 @@ import (
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apimachinery/pkg/util/validation/field"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+ 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+ )
+ 
+@@ -55,10 +54,10 @@ func (c *YandexCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+ //nolint:lll // controller-gen marker
+ //+kubebuilder:webhook:verbs=create;update,path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-yandexcluster,mutating=false,failurePolicy=fail,matchPolicy=Equivalent,groups=infrastructure.cluster.x-k8s.io,resources=yandexclusters,versions=v1alpha1,name=validation.yandexclusters.infrastructure.cluster.x-k8s.io,sideEffects=None,admissionReviewVersions=v1beta1
+ 
+-var (
+-	_ webhook.Defaulter = &YandexCluster{}
+-	_ webhook.Validator = &YandexCluster{}
+-)
++// var (
++// 	_ webhook.Defaulter = &YandexCluster{}
++// 	_ webhook.Validator = &YandexCluster{}
++// )
+ 
+ // Default implements webhook.Defaulter so a webhook will be registered for the type.
+ func (c *YandexCluster) Default() {
+@@ -84,7 +83,7 @@ func (c *YandexCluster) ValidateCreate() (admission.Warnings, error) {
+ 		)
+ 	}
+ 
+-	if !reflect.DeepEqual(c.Spec.ControlPlaneEndpoint, clusterv1.APIEndpoint{}) {
++	if !c.Spec.ControlPlaneEndpoint.IsZero() {
+ 		allErrs = append(allErrs, isControlPlaneEndpointValid(c.Spec.ControlPlaneEndpoint)...)
+ 	}
+ 
+@@ -113,7 +112,7 @@ func (c *YandexCluster) ValidateUpdate(oldRaw runtime.Object) (admission.Warning
+ 	// We allow you to change the ControlPlaneEndpoint only if this field has not been set before.
+ 	// In all other cases, this field is immutable.
+ 	if !reflect.DeepEqual(c.Spec.ControlPlaneEndpoint, old.Spec.ControlPlaneEndpoint) {
+-		if reflect.DeepEqual(old.Spec.ControlPlaneEndpoint, clusterv1.APIEndpoint{}) {
++		if old.Spec.ControlPlaneEndpoint.IsZero() {
+ 			allErrs = append(allErrs, isControlPlaneEndpointValid(c.Spec.ControlPlaneEndpoint)...)
+ 		} else {
+ 			allErrs = append(allErrs,
+diff --git a/api/v1alpha1/yandexidentity_mutatingwebhook.go b/api/v1alpha1/yandexidentity_mutatingwebhook.go
+index ca9c07a..c875232 100644
+--- a/api/v1alpha1/yandexidentity_mutatingwebhook.go
++++ b/api/v1alpha1/yandexidentity_mutatingwebhook.go
+@@ -15,12 +15,12 @@ import (
+ 
+ type yandexIdentityAdmitter struct {
+ 	platformClient client.Client
+-	decoder        *admission.Decoder
++	decoder        admission.Decoder
+ }
+ 
+ // NewYandexIdentityDeletionBlocker returns a new admission.Handler that prevents deletion of YandexIdentity objects
+ // that are linked to YandexCluster objects.
+-func NewYandexIdentityDeletionBlocker(platformClient client.Client, decoder *admission.Decoder) admission.Handler {
++func NewYandexIdentityDeletionBlocker(platformClient client.Client, decoder admission.Decoder) admission.Handler {
+ 	return &yandexIdentityAdmitter{
+ 		platformClient: platformClient,
+ 		decoder:        decoder,
+diff --git a/api/v1alpha1/yandexidentity_types.go b/api/v1alpha1/yandexidentity_types.go
+index 80c6dbd..a89f25c 100644
+--- a/api/v1alpha1/yandexidentity_types.go
++++ b/api/v1alpha1/yandexidentity_types.go
+@@ -18,7 +18,6 @@ package v1alpha1
+ 
+ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ )
+ 
+ const (
+@@ -53,7 +52,7 @@ type YandexIdentityStatus struct {
+ 
+ 	// Conditions is a list of conditions and their status.
+ 	// +optional
+-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
++	Conditions []metav1.Condition `json:"conditions,omitempty"`
+ 
+ 	// Linked clusters
+ 	// +optional
+@@ -87,12 +86,12 @@ func (i *YandexIdentity) GenerateSecretFinalizer() string {
+ }
+ 
+ // GetConditions returns the list of conditions for an YandexIdentity API object.
+-func (i *YandexIdentity) GetConditions() clusterv1.Conditions {
++func (i *YandexIdentity) GetConditions() []metav1.Condition {
+ 	return i.Status.Conditions
+ }
+ 
+ // SetConditions will set the given conditions on an YandexIdentity API object.
+-func (i *YandexIdentity) SetConditions(conditions clusterv1.Conditions) {
++func (i *YandexIdentity) SetConditions(conditions []metav1.Condition) {
+ 	i.Status.Conditions = conditions
+ }
+ 
+diff --git a/api/v1alpha1/yandexmachine_types.go b/api/v1alpha1/yandexmachine_types.go
+index b40a107..c07671f 100644
+--- a/api/v1alpha1/yandexmachine_types.go
++++ b/api/v1alpha1/yandexmachine_types.go
+@@ -21,7 +21,6 @@ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 
+ 	"k8s.io/apimachinery/pkg/api/resource"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ 	"sigs.k8s.io/cluster-api/errors"
+ )
+ 
+@@ -65,6 +64,12 @@ type YandexMachineSpec struct {
+ 	NetworkInterfaces []NetworkInterface `json:"networkInterfaces"`
+ }
+ 
++// InitializationStatus provides observations of the YandexMachine initialization process.
++type InitializationStatus struct {
++	// Provisioned denotes that the machine infrastructure provisioning is completed.
++	Provisioned bool `json:"provisioned,omitempty"`
++}
++
+ // NetworkInterface defines the network interface configuration of YandexCloud VM.
+ type NetworkInterface struct {
+ 	// SubnetID is the identifier of subnetwork to use for this instance.
+@@ -124,6 +129,10 @@ type YandexMachineStatus struct {
+ 	// +optional
+ 	Ready bool `json:"ready"`
+ 
++	// Initialization provides observations of the YandexMachine initialization process.
++	// +optional
++	Initialization InitializationStatus `json:"initialization,omitempty"`
++
+ 	// Addresses contains the YandexCloud instance associated addresses.
+ 	// +optional
+ 	Addresses []corev1.NodeAddress `json:"addresses,omitempty"`
+@@ -172,7 +181,7 @@ type YandexMachineStatus struct {
+ 
+ 	// Conditions defines current service state of the YandexMachine.
+ 	// +optional
+-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
++	Conditions []metav1.Condition `json:"conditions,omitempty"`
+ }
+ 
+ //+kubebuilder:object:root=true
+@@ -197,12 +206,12 @@ type YandexMachineList struct {
+ }
+ 
+ // GetConditions returns the list of conditions for an Yandex Machine API object.
+-func (ym *YandexMachine) GetConditions() clusterv1.Conditions {
++func (ym *YandexMachine) GetConditions() []metav1.Condition {
+ 	return ym.Status.Conditions
+ }
+ 
+ // SetConditions will set the given conditions on an Yandex Machine API object.
+-func (ym *YandexMachine) SetConditions(conditions clusterv1.Conditions) {
++func (ym *YandexMachine) SetConditions(conditions []metav1.Condition) {
+ 	ym.Status.Conditions = conditions
+ }
+ 
+diff --git a/api/v1alpha1/yandexmachine_webhook.go b/api/v1alpha1/yandexmachine_webhook.go
+index 5a56d6c..6b25dcb 100644
+--- a/api/v1alpha1/yandexmachine_webhook.go
++++ b/api/v1alpha1/yandexmachine_webhook.go
+@@ -25,7 +25,6 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/validation/field"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+ 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+ )
+ 
+@@ -42,10 +41,10 @@ func (ym *YandexMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
+ //nolint:lll // controller-gen marker
+ //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-yandexmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=yandexmachines,verbs=create;update,versions=v1alpha1,name=validation.yandexmachines.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1beta1
+ 
+-var (
+-	_ webhook.Defaulter = &YandexMachine{}
+-	_ webhook.Validator = &YandexMachine{}
+-)
++// var (
++// 	_ webhook.Defaulter = &YandexMachine{}
++// 	_ webhook.Validator = &YandexMachine{}
++// )
+ 
+ // Default implements webhook.Defaulter so a webhook will be registered for the type.
+ func (ym *YandexMachine) Default() {
+diff --git a/api/v1alpha1/yandexmachinetemplate_types.go b/api/v1alpha1/yandexmachinetemplate_types.go
+index 4b38863..747db8a 100644
+--- a/api/v1alpha1/yandexmachinetemplate_types.go
++++ b/api/v1alpha1/yandexmachinetemplate_types.go
+@@ -18,7 +18,7 @@ package v1alpha1
+ 
+ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ )
+ 
+ // YandexMachineTemplateResource describes the data needed to create am YandexMachine from a template.
+diff --git a/api/v1alpha1/yandexmachinetemplate_webhook.go b/api/v1alpha1/yandexmachinetemplate_webhook.go
+index 05bf8e1..4f9e32a 100644
+--- a/api/v1alpha1/yandexmachinetemplate_webhook.go
++++ b/api/v1alpha1/yandexmachinetemplate_webhook.go
+@@ -26,7 +26,6 @@ import (
+ 	"k8s.io/apimachinery/pkg/util/validation/field"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+ 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+ )
+ 
+@@ -50,10 +49,10 @@ func (t *YandexMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error
+ 
+ //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-yandexmachinetemplate,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=yandexmachinetemplates,verbs=create;update,versions=v1alpha1,name=validation.yandexmachinetemplates.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1beta1
+ 
+-var (
+-	_ webhook.Defaulter = &YandexMachineTemplate{}
+-	_ webhook.Validator = &YandexMachineTemplate{}
+-)
++// var (
++// 	_ webhook.Defaulter = &YandexMachineTemplate{}
++// 	_ webhook.Validator = &YandexMachineTemplate{}
++// )
+ 
+ // Default implements webhook.Defaulter so a webhook will be registered for the type.
+ func (t *YandexMachineTemplate) Default() {
+diff --git a/api/v1alpha1/zz_generated.deepcopy.go b/api/v1alpha1/zz_generated.deepcopy.go
+index 72dab6b..ab51216 100644
+--- a/api/v1alpha1/zz_generated.deepcopy.go
++++ b/api/v1alpha1/zz_generated.deepcopy.go
+@@ -22,8 +22,8 @@ package v1alpha1
+ 
+ import (
+ 	"k8s.io/api/core/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+-	"sigs.k8s.io/cluster-api/api/v1beta1"
+ 	"sigs.k8s.io/cluster-api/errors"
+ )
+ 
+@@ -323,7 +323,7 @@ func (in *YandexClusterStatus) DeepCopyInto(out *YandexClusterStatus) {
+ 	out.LoadBalancer = in.LoadBalancer
+ 	if in.Conditions != nil {
+ 		in, out := &in.Conditions, &out.Conditions
+-		*out = make(v1beta1.Conditions, len(*in))
++		*out = make([]metav1.Condition, len(*in))
+ 		for i := range *in {
+ 			(*in)[i].DeepCopyInto(&(*out)[i])
+ 		}
+@@ -419,7 +419,7 @@ func (in *YandexIdentityStatus) DeepCopyInto(out *YandexIdentityStatus) {
+ 	*out = *in
+ 	if in.Conditions != nil {
+ 		in, out := &in.Conditions, &out.Conditions
+-		*out = make(v1beta1.Conditions, len(*in))
++		*out = make([]metav1.Condition, len(*in))
+ 		for i := range *in {
+ 			(*in)[i].DeepCopyInto(&(*out)[i])
+ 		}
+@@ -575,7 +575,7 @@ func (in *YandexMachineStatus) DeepCopyInto(out *YandexMachineStatus) {
+ 	}
+ 	if in.Conditions != nil {
+ 		in, out := &in.Conditions, &out.Conditions
+-		*out = make(v1beta1.Conditions, len(*in))
++		*out = make([]metav1.Condition, len(*in))
+ 		for i := range *in {
+ 			(*in)[i].DeepCopyInto(&(*out)[i])
+ 		}
+diff --git a/controllers/yandexcluster_controller.go b/controllers/yandexcluster_controller.go
+index 5922de1..0262125 100644
+--- a/controllers/yandexcluster_controller.go
++++ b/controllers/yandexcluster_controller.go
+@@ -23,19 +23,20 @@ import (
+ 	"strconv"
+ 
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+-	"k8s.io/client-go/rest"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	"k8s.io/client-go/rest"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ 	"sigs.k8s.io/cluster-api/util"
+ 	"sigs.k8s.io/cluster-api/util/annotations"
+ 	"sigs.k8s.io/cluster-api/util/conditions"
+ 	"sigs.k8s.io/cluster-api/util/predicates"
+ 	ctrl "sigs.k8s.io/controller-runtime"
++	"sigs.k8s.io/controller-runtime/pkg/builder"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+ 	"sigs.k8s.io/controller-runtime/pkg/handler"
+ 	"sigs.k8s.io/controller-runtime/pkg/log"
+-	"sigs.k8s.io/controller-runtime/pkg/source"
+ 
+ 	infrav1 "github.com/yandex-cloud/cluster-api-provider-yandex/api/v1alpha1"
+ 	yandex "github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/client"
+@@ -44,6 +45,16 @@ import (
+ 	"github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/options"
+ )
+ 
++func setLoadBalancerReadyCondition(cluster *infrav1.YandexCluster, status metav1.ConditionStatus, reason, message string) {
++	conditions.Set(cluster, metav1.Condition{
++		Type:               string(infrav1.LoadBalancerReadyCondition),
++		Status:             status,
++		Reason:             reason,
++		Message:            message,
++		LastTransitionTime: metav1.Now(),
++	})
++}
++
+ // YandexClusterReconciler reconciles a YandexCluster object.
+ type YandexClusterReconciler struct {
+ 	client.Client
+@@ -142,7 +153,7 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+ 			Port: int32(port),
+ 		}
+ 
+-		conditions.MarkTrue(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition)
++		setLoadBalancerReadyCondition(clusterScope.YandexCluster, metav1.ConditionTrue, "ExternalControlPlaneEndpointReady", "Control plane endpoint is managed externally")
+ 		clusterScope.SetReady()
+ 		return ctrl.Result{}, nil
+ 	case "", options.ControlPlaneEndpointManagementModeManagedLoadBalancer:
+@@ -153,15 +164,13 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+ 	// Get loadbalancer service and reconcile load balancer.
+ 	lb := loadbalancer.New(clusterScope)
+ 	if err := lb.Reconcile(ctx); err != nil {
+-		conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-			"load balancer reconcile error", clusterv1.ConditionSeverityError, "%s", err.Error())
++		setLoadBalancerReadyCondition(clusterScope.YandexCluster, metav1.ConditionFalse, infrav1.LoadBalancerFailedReason, err.Error())
+ 		return ctrl.Result{}, fmt.Errorf("error reconciling load balancer: %w", err)
+ 	}
+ 
+ 	active, err := lb.IsActive(ctx)
+ 	if err != nil {
+-		conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-			"load balancer reconcile error", clusterv1.ConditionSeverityError, "%s", err.Error())
++		setLoadBalancerReadyCondition(clusterScope.YandexCluster, metav1.ConditionFalse, infrav1.LoadBalancerFailedReason, err.Error())
+ 		return ctrl.Result{}, fmt.Errorf("error reconciling load balancer: %w", err)
+ 	}
+ 	if !active {
+@@ -173,14 +182,13 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+ 	// and YandexCluster status.
+ 	state, err := lb.Describe(ctx)
+ 	if err != nil {
+-		conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-			"load balancer reconcile error", clusterv1.ConditionSeverityError, "%s", err.Error())
++		setLoadBalancerReadyCondition(clusterScope.YandexCluster, metav1.ConditionFalse, infrav1.LoadBalancerFailedReason, err.Error())
+ 		return ctrl.Result{}, fmt.Errorf("error reconciling load balancer: %w", err)
+ 	}
+ 
+ 	switch {
+ 	// The load balancer has been created.
+-	case clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Host == "" && clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Port == 0:
++	case clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.IsZero():
+ 		clusterScope.YandexCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+ 			Host: state.ListenerAddress,
+ 			Port: state.ListenerPort,
+@@ -189,7 +197,7 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+ 			ListenerAddress: state.ListenerAddress,
+ 			ListenerPort:    state.ListenerPort,
+ 		}
+-		conditions.MarkTrue(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition)
++		setLoadBalancerReadyCondition(clusterScope.YandexCluster, metav1.ConditionTrue, "LoadBalancerReady", "Control plane load balancer is ready")
+ 		clusterScope.SetReady()
+ 		return ctrl.Result{}, nil
+ 
+@@ -199,7 +207,7 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+ 			ListenerAddress: state.ListenerAddress,
+ 			ListenerPort:    state.ListenerPort,
+ 		}
+-		conditions.MarkTrue(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition)
++		setLoadBalancerReadyCondition(clusterScope.YandexCluster, metav1.ConditionTrue, "LoadBalancerReady", "Control plane load balancer is ready")
+ 		clusterScope.SetReady()
+ 		return ctrl.Result{}, nil
+ 
+@@ -231,8 +239,7 @@ func (r *YandexClusterReconciler) reconcileDelete(ctx context.Context, clusterSc
+ 	lb := loadbalancer.New(clusterScope)
+ 	deleted, err := lb.Delete(ctx)
+ 	if err != nil {
+-		conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-			clusterv1.DeletionFailedReason, clusterv1.ConditionSeverityWarning, "")
++		setLoadBalancerReadyCondition(clusterScope.YandexCluster, metav1.ConditionFalse, "DeletionFailed", err.Error())
+ 		return ctrl.Result{}, fmt.Errorf("error deleting load balancer  %w", err)
+ 	}
+ 
+@@ -243,31 +250,26 @@ func (r *YandexClusterReconciler) reconcileDelete(ctx context.Context, clusterSc
+ 	}
+ 
+ 	logger.V(1).Info("load balancer is being deleted, requeueing")
+-	conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-		clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
++	setLoadBalancerReadyCondition(clusterScope.YandexCluster, metav1.ConditionFalse, "Deleting", "Load balancer is being deleted")
+ 	return ctrl.Result{RequeueAfter: RequeueDuration}, nil
+ }
+ 
+ // SetupWithManager sets up the controller with the Manager.
+ func (r *YandexClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+-	c, err := ctrl.NewControllerManagedBy(mgr).
++	return ctrl.NewControllerManagedBy(mgr).
+ 		For(&infrav1.YandexCluster{}).
+-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
+-		Build(r)
+-	if err != nil {
+-		return err
+-	}
+-
+-	return c.Watch(
+-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+-		handler.EnqueueRequestsFromMapFunc(
+-			util.ClusterToInfrastructureMapFunc(
+-				ctx,
+-				infrav1.GroupVersion.WithKind("YandexCluster"),
+-				mgr.GetClient(),
+-				&infrav1.YandexCluster{},
++		Watches(
++			&clusterv1.Cluster{},
++			handler.EnqueueRequestsFromMapFunc(
++				util.ClusterToInfrastructureMapFunc(
++					ctx,
++					infrav1.GroupVersion.WithKind("YandexCluster"),
++					mgr.GetClient(),
++					&infrav1.YandexCluster{},
++				),
+ 			),
+-		),
+-		predicates.ClusterUnpaused(ctrl.LoggerFrom(ctx)),
+-	)
++			builder.WithPredicates(predicates.ClusterUnpaused(r.Scheme, ctrl.LoggerFrom(ctx))),
++		).
++		WithEventFilter(predicates.ResourceNotPaused(r.Scheme, ctrl.LoggerFrom(ctx))).
++		Complete(r)
+ }
+diff --git a/controllers/yandexidentity_controller.go b/controllers/yandexidentity_controller.go
+index 05cf831..a7477a4 100644
+--- a/controllers/yandexidentity_controller.go
++++ b/controllers/yandexidentity_controller.go
+@@ -21,8 +21,8 @@ import (
+ 
+ 	corev1 "k8s.io/api/core/v1"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/runtime"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ 	"sigs.k8s.io/cluster-api/util/conditions"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	"sigs.k8s.io/controller-runtime/pkg/builder"
+@@ -41,6 +41,16 @@ import (
+ 	"github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/options"
+ )
+ 
++func setIdentityCondition(identity *infrav1.YandexIdentity, conditionType string, status metav1.ConditionStatus, reason, message string) {
++	conditions.Set(identity, metav1.Condition{
++		Type:               conditionType,
++		Status:             status,
++		Reason:             reason,
++		Message:            message,
++		LastTransitionTime: metav1.Now(),
++	})
++}
++
+ // YandexIdentityReconciler reconciles a YandexIdentity object.
+ type YandexIdentityReconciler struct {
+ 	client.Client
+@@ -104,79 +114,49 @@ func (r *YandexIdentityReconciler) reconcile(ctx context.Context, identityScope
+ 	defer func() {
+ 		if rerr == nil {
+ 			identityScope.Identity.Status.Ready = true
+-			conditions.MarkTrue(identityScope.Identity, infrav1.IdentityReadyCondition)
++			setIdentityCondition(identityScope.Identity, string(infrav1.IdentityReadyCondition), metav1.ConditionTrue, "IdentityReady", "Identity reconciliation completed successfully")
+ 		} else {
+ 			identityScope.Identity.Status.Ready = false
+-			conditions.MarkFalse(identityScope.Identity,
+-				infrav1.IdentityReadyCondition,
+-				"ReconciliationError",
+-				clusterv1.ConditionSeverityError,
+-				"%s",
+-				rerr.Error())
++			setIdentityCondition(identityScope.Identity, string(infrav1.IdentityReadyCondition), metav1.ConditionFalse, "ReconciliationError", rerr.Error())
+ 		}
+ 	}()
+ 
+ 	secretChanged, err := identityScope.IsSecretChanged(ctx)
+ 	if err != nil {
+-		conditions.MarkFalse(identityScope.Identity,
+-			infrav1.IdentityValidCondition,
+-			"identity secret validation error",
+-			clusterv1.ConditionSeverityError,
+-			"%s",
+-			err.Error())
++		setIdentityCondition(identityScope.Identity, string(infrav1.IdentityValidCondition), metav1.ConditionFalse, "IdentitySecretValidationError", err.Error())
+ 		return ctrl.Result{}, errors.Wrap(err, "failed to check identity key")
+ 	}
+ 
+ 	if secretChanged {
+ 		if err := identityScope.CheckConnectWithIdentity(ctx); err != nil {
+-			conditions.MarkFalse(identityScope.Identity,
+-				infrav1.IdentityValidCondition,
+-				"identity check error",
+-				clusterv1.ConditionSeverityError,
+-				"%s",
+-				err.Error())
++			setIdentityCondition(identityScope.Identity, string(infrav1.IdentityValidCondition), metav1.ConditionFalse, "IdentityCheckError", err.Error())
+ 			return ctrl.Result{}, errors.Wrap(err, "failed to check connection with identity")
+ 		}
+ 
+ 		if err := identityScope.SetSecretHash(ctx); err != nil {
+-			conditions.MarkFalse(identityScope.Identity,
+-				infrav1.IdentityValidCondition,
+-				"identity key hash update error",
+-				clusterv1.ConditionSeverityError,
+-				"%s",
+-				err.Error())
++			setIdentityCondition(identityScope.Identity, string(infrav1.IdentityValidCondition), metav1.ConditionFalse, "IdentityKeyHashUpdateError", err.Error())
+ 			return ctrl.Result{}, errors.Wrap(err, "failed to set key hash")
+ 		}
+ 	}
+ 
+ 	// set IdentityValidCondition to true
+-	conditions.MarkTrue(identityScope.Identity, infrav1.IdentityValidCondition)
++	setIdentityCondition(identityScope.Identity, string(infrav1.IdentityValidCondition), metav1.ConditionTrue, "IdentityValid", "Identity credentials are valid")
+ 
+ 	if err := identityScope.SetSecretFinalizerAndOwner(ctx); err != nil {
+-		conditions.MarkFalse(identityScope.Identity,
+-			infrav1.IdentitySecretUpdatedCondition,
+-			"secret update error",
+-			clusterv1.ConditionSeverityError,
+-			"%s",
+-			err.Error())
++		setIdentityCondition(identityScope.Identity, string(infrav1.IdentitySecretUpdatedCondition), metav1.ConditionFalse, "SecretUpdateError", err.Error())
+ 		return ctrl.Result{}, errors.Wrap(err, "failed to set secret finalizer")
+ 	}
+ 
+ 	// set IdentitySecretUpdatedCondition to true
+-	conditions.MarkTrue(identityScope.Identity, infrav1.IdentitySecretUpdatedCondition)
++	setIdentityCondition(identityScope.Identity, string(infrav1.IdentitySecretUpdatedCondition), metav1.ConditionTrue, "IdentitySecretUpdated", "Identity secret finalizer and owner references are up to date")
+ 
+ 	if err := identityScope.UpdateLinkedClusters(ctx); err != nil {
+-		conditions.MarkFalse(identityScope.Identity,
+-			infrav1.IdentityLinkedClustersUpdatedCondition,
+-			"linked clusters update error",
+-			clusterv1.ConditionSeverityError,
+-			"%s",
+-			err.Error())
++		setIdentityCondition(identityScope.Identity, string(infrav1.IdentityLinkedClustersUpdatedCondition), metav1.ConditionFalse, "LinkedClustersUpdateError", err.Error())
+ 		return ctrl.Result{}, errors.Wrap(err, "failed to update linked clusters")
+ 	}
+ 
+ 	// set IdentityLinkedClustersUpdatedCondition to true
+-	conditions.MarkTrue(identityScope.Identity, infrav1.IdentityLinkedClustersUpdatedCondition)
++	setIdentityCondition(identityScope.Identity, string(infrav1.IdentityLinkedClustersUpdatedCondition), metav1.ConditionTrue, "LinkedClustersUpdated", "Linked clusters list is up to date")
+ 
+ 	return ctrl.Result{}, nil
+ }
+diff --git a/controllers/yandexmachine_controller.go b/controllers/yandexmachine_controller.go
+index 6ac791c..3a7b227 100644
+--- a/controllers/yandexmachine_controller.go
++++ b/controllers/yandexmachine_controller.go
+@@ -24,17 +24,17 @@ import (
+ 	"github.com/pkg/errors"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/runtime"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ 	capierrors "sigs.k8s.io/cluster-api/errors"
+ 	"sigs.k8s.io/cluster-api/util"
+ 	"sigs.k8s.io/cluster-api/util/annotations"
+ 	"sigs.k8s.io/cluster-api/util/predicates"
+ 	ctrl "sigs.k8s.io/controller-runtime"
++	"sigs.k8s.io/controller-runtime/pkg/builder"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+ 	"sigs.k8s.io/controller-runtime/pkg/handler"
+ 	"sigs.k8s.io/controller-runtime/pkg/log"
+-	"sigs.k8s.io/controller-runtime/pkg/source"
+ 
+ 	infrav1 "github.com/yandex-cloud/cluster-api-provider-yandex/api/v1alpha1"
+ 	yandex "github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/client"
+@@ -201,9 +201,14 @@ func (r *YandexMachineReconciler) reconcileDelete(ctx context.Context, machineSc
+ 
+ // SetupWithManager sets up the controller with the Manager.
+ func (r *YandexMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+-	c, err := ctrl.NewControllerManagedBy(mgr).
++	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrav1.YandexMachineList{}, mgr.GetScheme())
++	if err != nil {
++		return errors.Wrapf(err, "failed to create mapper for Cluster to YandexMachines")
++	}
++
++	return ctrl.NewControllerManagedBy(mgr).
+ 		For(&infrav1.YandexMachine{}).
+-		WithEventFilter(predicates.ResourceNotPaused(ctrl.LoggerFrom(ctx))).
++		WithEventFilter(predicates.ResourceNotPaused(r.Scheme, ctrl.LoggerFrom(ctx))).
+ 		Watches(
+ 			&clusterv1.Machine{},
+ 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrav1.GroupVersion.WithKind("YandexMachine"))),
+@@ -212,26 +217,13 @@ func (r *YandexMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl
+ 			&infrav1.YandexCluster{},
+ 			handler.EnqueueRequestsFromMapFunc(r.YandexClusterToYandexMachines(ctx)),
+ 		).
+-		Build(r)
+-	if err != nil {
+-		return errors.Wrapf(err, "error creating controller")
+-	}
+-
+-	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrav1.YandexMachineList{}, mgr.GetScheme())
+-	if err != nil {
+-		return errors.Wrapf(err, "failed to create mapper for Cluster to YandexMachines")
+-	}
+-
+-	// add a watch on clusterv1.Cluster object for unpause & ready notifications.
+-	if err := c.Watch(
+-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+-		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+-		predicates.ClusterUnpausedAndInfrastructureReady(ctrl.LoggerFrom(ctx)),
+-	); err != nil {
+-		return errors.Wrapf(err, "failed adding a watch for ready clusters")
+-	}
+-
+-	return nil
++		Watches(
++			&clusterv1.Cluster{},
++			handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
++			builder.WithPredicates(
++				predicates.ClusterUnpausedAndInfrastructureProvisioned(r.Scheme, ctrl.LoggerFrom(ctx))),
++		).
++		Complete(r)
+ }
+ 
+ // YandexClusterToYandexMachines is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
+diff --git a/go.mod b/go.mod
+index 383b761..fbb262f 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,93 +1,91 @@
+ module github.com/yandex-cloud/cluster-api-provider-yandex
+ 
+-go 1.22
++go 1.24.0
+ 
+-toolchain go1.22.2
++toolchain go1.24.7
+ 
+ require (
+ 	github.com/caarlos0/env/v10 v10.0.0
+-	github.com/onsi/ginkgo/v2 v2.17.2
+-	github.com/onsi/gomega v1.33.1
++	github.com/onsi/ginkgo/v2 v2.23.4
++	github.com/onsi/gomega v1.38.0
+ 	github.com/pkg/errors v0.9.1
+-	github.com/prometheus/client_golang v1.17.0
++	github.com/prometheus/client_golang v1.22.0
+ 	github.com/yandex-cloud/go-genproto v0.0.0-20240212082145-b6bd14d828d5
+ 	github.com/yandex-cloud/go-sdk v0.0.0-20240212083139-1cf36556be26
+ 	go.uber.org/mock v0.4.0
+-	golang.org/x/tools v0.20.0
+-	google.golang.org/grpc v1.59.0
+-	google.golang.org/protobuf v1.33.0
+-	k8s.io/api v0.28.4
+-	k8s.io/apimachinery v0.28.4
+-	k8s.io/client-go v0.28.4
+-	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
+-	sigs.k8s.io/cluster-api v1.6.1
+-	sigs.k8s.io/controller-runtime v0.16.3
++	golang.org/x/tools v0.34.0
++	gomodules.xyz/jsonpatch/v2 v2.5.0
++	google.golang.org/grpc v1.71.3
++	google.golang.org/protobuf v1.36.6
++	k8s.io/api v0.33.3
++	k8s.io/apimachinery v0.33.3
++	k8s.io/client-go v0.33.3
++	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
++	sigs.k8s.io/cluster-api v1.11.3
++	sigs.k8s.io/controller-runtime v0.21.0
+ )
+ 
+ require (
+ 	github.com/beorn7/perks v1.0.1 // indirect
+ 	github.com/blang/semver/v4 v4.0.0 // indirect
+-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
++	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+ 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+-	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
+-	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
+-	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
+-	github.com/fsnotify/fsnotify v1.6.0 // indirect
++	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
++	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
++	github.com/fsnotify/fsnotify v1.8.0 // indirect
++	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+ 	github.com/ghodss/yaml v1.0.0 // indirect
+-	github.com/go-logr/logr v1.4.1 // indirect
+-	github.com/go-logr/zapr v1.2.4 // indirect
+-	github.com/go-openapi/jsonpointer v0.19.6 // indirect
++	github.com/go-logr/logr v1.4.3 // indirect
++	github.com/go-logr/zapr v1.3.0 // indirect
++	github.com/go-openapi/jsonpointer v0.21.0 // indirect
+ 	github.com/go-openapi/jsonreference v0.20.2 // indirect
+-	github.com/go-openapi/swag v0.22.3 // indirect
++	github.com/go-openapi/swag v0.23.0 // indirect
+ 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
+-	github.com/gobuffalo/flect v1.0.2 // indirect
++	github.com/gobuffalo/flect v1.0.3 // indirect
+ 	github.com/gogo/protobuf v1.3.2 // indirect
+-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+-	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+-	github.com/golang/protobuf v1.5.3 // indirect
+-	github.com/google/gnostic-models v0.6.8 // indirect
+-	github.com/google/go-cmp v0.6.0 // indirect
+-	github.com/google/gofuzz v1.2.0 // indirect
+-	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
+-	github.com/google/uuid v1.3.1 // indirect
++	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
++	github.com/google/btree v1.1.3 // indirect
++	github.com/google/gnostic-models v0.6.9 // indirect
++	github.com/google/go-cmp v0.7.0 // indirect
++	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
++	github.com/google/uuid v1.6.0 // indirect
+ 	github.com/hashicorp/errwrap v1.0.0 // indirect
+ 	github.com/hashicorp/go-multierror v1.0.0 // indirect
+-	github.com/imdario/mergo v0.3.13 // indirect
+ 	github.com/josharian/intern v1.0.0 // indirect
+ 	github.com/json-iterator/go v1.1.12 // indirect
+ 	github.com/mailru/easyjson v0.7.7 // indirect
+-	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+-	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
+-	github.com/prometheus/common v0.44.0 // indirect
+-	github.com/prometheus/procfs v0.11.1 // indirect
+-	github.com/spf13/pflag v1.0.5 // indirect
++	github.com/prometheus/client_model v0.6.1 // indirect
++	github.com/prometheus/common v0.62.0 // indirect
++	github.com/prometheus/procfs v0.15.1 // indirect
++	github.com/spf13/pflag v1.0.7 // indirect
++	github.com/x448/float16 v0.8.4 // indirect
++	go.uber.org/automaxprocs v1.6.0 // indirect
+ 	go.uber.org/multierr v1.11.0 // indirect
+-	go.uber.org/zap v1.25.0 // indirect
+-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
+-	golang.org/x/mod v0.17.0 // indirect
+-	golang.org/x/net v0.24.0 // indirect
+-	golang.org/x/oauth2 v0.14.0 // indirect
+-	golang.org/x/sync v0.7.0 // indirect
+-	golang.org/x/sys v0.19.0 // indirect
+-	golang.org/x/term v0.19.0 // indirect
+-	golang.org/x/text v0.14.0 // indirect
+-	golang.org/x/time v0.3.0 // indirect
+-	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
+-	google.golang.org/appengine v1.6.7 // indirect
+-	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 // indirect
+-	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 // indirect
+-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a // indirect
++	go.uber.org/zap v1.27.0 // indirect
++	go.yaml.in/yaml/v2 v2.4.2 // indirect
++	golang.org/x/mod v0.25.0 // indirect
++	golang.org/x/net v0.42.0 // indirect
++	golang.org/x/oauth2 v0.30.0 // indirect
++	golang.org/x/sync v0.16.0 // indirect
++	golang.org/x/sys v0.34.0 // indirect
++	golang.org/x/term v0.33.0 // indirect
++	golang.org/x/text v0.27.0 // indirect
++	golang.org/x/time v0.9.0 // indirect
++	google.golang.org/genproto v0.0.0-20240123012728-ef4313101c80 // indirect
++	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
++	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
++	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+ 	gopkg.in/inf.v0 v0.9.1 // indirect
+ 	gopkg.in/yaml.v2 v2.4.0 // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+-	k8s.io/apiextensions-apiserver v0.28.4 // indirect
+-	k8s.io/component-base v0.28.4 // indirect
+-	k8s.io/klog/v2 v2.100.1 // indirect
+-	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
+-	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
+-	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
+-	sigs.k8s.io/yaml v1.4.0 // indirect
++	k8s.io/apiextensions-apiserver v0.33.3 // indirect
++	k8s.io/klog/v2 v2.130.1 // indirect
++	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
++	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
++	sigs.k8s.io/randfill v1.0.0 // indirect
++	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
++	sigs.k8s.io/yaml v1.6.0 // indirect
+ )
+diff --git a/go.sum b/go.sum
+index 5380ce0..9352912 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,23 +1,22 @@
++cel.dev/expr v0.19.1 h1:NciYrtDRIR0lNCnH1LFJegdjspNx9fI59O7TWcua/W4=
++cel.dev/expr v0.19.1/go.mod h1:MrpN08Q+lEBs+bGYdLxxHkZoUSsCp0nSKTs0nTymJgw=
+ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
+ cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
++dario.cat/mergo v1.0.1 h1:Ra4+bf83h2ztPIQYNP99R6m+Y7KfnARDfID+a+vLl4s=
++dario.cat/mergo v1.0.1/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
+ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+ github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
+ github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
+ github.com/Masterminds/goutils v1.1.1 h1:5nUrii3FMTL5diU80unEVvNevw1nH4+ZV4DSLVJLSYI=
+ github.com/Masterminds/goutils v1.1.1/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy863GQaJW2MFNU=
+-github.com/Masterminds/semver/v3 v3.2.0 h1:3MEsd0SM6jqZojhjLWWeBY+Kcjy9i6MQAeY7YgDP83g=
+-github.com/Masterminds/semver/v3 v3.2.0/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
+-github.com/Masterminds/sprig/v3 v3.2.3 h1:eL2fZNezLomi0uOLqjQoN6BfsDD+fyLtgbJMAj9n6YA=
+-github.com/Masterminds/sprig/v3 v3.2.3/go.mod h1:rXcFaZ2zZbLRJv/xSysmlgIM1u11eBaRMhvYXJNkGuM=
++github.com/Masterminds/semver/v3 v3.3.0 h1:B8LGeaivUe71a5qox1ICM/JLl0NqZSW5CHyL+hmvYS0=
++github.com/Masterminds/semver/v3 v3.3.0/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
++github.com/Masterminds/sprig/v3 v3.3.0 h1:mQh0Yrg1XPo6vjYXgtf5OtijNAKJRNcTdOOGZe3tPhs=
++github.com/Masterminds/sprig/v3 v3.3.0/go.mod h1:Zy1iXRYNqNLUolqCpL4uhk6SHUMAOSCzdgBfDb35Lz0=
+ github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
+ github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
+-github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h1:7RFfzj4SSt6nnvCPbCqijJi1nWCd+TqAT3bYCStRC18=
+-github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df/go.mod h1:pSwJ0fSY5KhvocuWSx4fz3BA8OrA1bQn+K1Eli3BRwM=
+-github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a h1:idn718Q4B6AGu/h5Sxe66HYVdqdGu2l9Iebqhi/AEoA=
+-github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a/go.mod h1:lB+ZfQJz7igIIfQNfa7Ml4HSf2uFQQRzpGGRXenZAgY=
+-github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
+-github.com/benbjohnson/clock v1.3.0 h1:ip6w0uFQkncKQ979AypyG0ER7mqUSBdKLOgAle/AT8A=
+-github.com/benbjohnson/clock v1.3.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
++github.com/antlr4-go/antlr/v4 v4.13.0 h1:lxCg3LAv+EUK6t1i0y1V6/SLeUi0eKEKdhQAlS8TVTI=
++github.com/antlr4-go/antlr/v4 v4.13.0/go.mod h1:pfChB/xh/Unjila75QW7+VU4TSnWnnk9UTnmpPaOR2g=
+ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
+ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
+ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
+@@ -25,29 +24,31 @@ github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2y
+ github.com/c2h5oh/datasize v0.0.0-20200112174442-28bbd4740fee/go.mod h1:S/7n9copUssQ56c7aAgHqftWO4LTf4xY6CGWt8Bc+3M=
+ github.com/caarlos0/env/v10 v10.0.0 h1:yIHUBZGsyqCnpTkbjk8asUlx6RFhhEs+h7TOBdgdzXA=
+ github.com/caarlos0/env/v10 v10.0.0/go.mod h1:ZfulV76NvVPw3tm591U4SwL3Xx9ldzBP9aGxzeN7G18=
++github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
++github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
+ github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
+ github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
+ github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
+-github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
+-github.com/cespare/xxhash/v2 v2.2.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
++github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
++github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
+ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
+ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
+ github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
+ github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
+ github.com/cncf/xds/go v0.0.0-20210805033703-aa0b78936158/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
+-github.com/coredns/caddy v1.1.0 h1:ezvsPrT/tA/7pYDBZxu0cT0VmWk75AfIaf6GSYCNMf0=
+-github.com/coredns/caddy v1.1.0/go.mod h1:A6ntJQlAWuQfFlsd9hvigKbo2WS0VUs2l1e2F+BawD4=
+-github.com/coredns/corefile-migration v1.0.21 h1:W/DCETrHDiFo0Wj03EyMkaQ9fwsmSgqTCQDHpceaSsE=
+-github.com/coredns/corefile-migration v1.0.21/go.mod h1:XnhgULOEouimnzgn0t4WPuFDN2/PJQcTxdWKC5eXNGE=
++github.com/coredns/caddy v1.1.1 h1:2eYKZT7i6yxIfGP3qLJoJ7HAsDJqYB+X68g4NYjSrE0=
++github.com/coredns/caddy v1.1.1/go.mod h1:A6ntJQlAWuQfFlsd9hvigKbo2WS0VUs2l1e2F+BawD4=
++github.com/coredns/corefile-migration v1.0.29 h1:g4cPYMXXDDs9uLE2gFYrJaPBuUAR07eEMGyh9JBE13w=
++github.com/coredns/corefile-migration v1.0.29/go.mod h1:56DPqONc3njpVPsdilEnfijCwNGC3/kTJLl7i7SPavY=
+ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
+ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
+ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+-github.com/distribution/reference v0.5.0 h1:/FUIFXtfc/x2gpa5/VGfiGLuOIdYa1t65IKK2OFGvA0=
+-github.com/distribution/reference v0.5.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
+-github.com/emicklei/go-restful/v3 v3.11.0 h1:rAQeMHw1c7zTmncogyy8VvRZwtkmkZ4FxERmMY4rD+g=
+-github.com/emicklei/go-restful/v3 v3.11.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
++github.com/distribution/reference v0.6.0 h1:0IXCQ5g4/QMHHkarYzh5l+u8T3t73zM5QvfrDyIgxBk=
++github.com/distribution/reference v0.6.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
++github.com/emicklei/go-restful/v3 v3.12.2 h1:DhwDP0vY3k8ZzE0RunuJy8GhNpPL6zqLkDf9B/a0/xU=
++github.com/emicklei/go-restful/v3 v3.12.2/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
+ github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
+ github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
+ github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
+@@ -55,41 +56,44 @@ github.com/envoyproxy/go-control-plane v0.9.9-0.20201210154907-fd9021fe5dad/go.m
+ github.com/envoyproxy/go-control-plane v0.9.9-0.20210512163311-63b5d3c536b0/go.mod h1:hliV/p42l8fGbc6Y9bQ70uLwIvmJyVE5k4iMKlh8wCQ=
+ github.com/envoyproxy/go-control-plane v0.9.10-0.20210907150352-cf90f659a021/go.mod h1:AFq3mo9L8Lqqiid3OhADV3RfLJnjiw63cSpi+fDTRC0=
+ github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
+-github.com/evanphx/json-patch v5.6.0+incompatible h1:jBYDEEiFBPxA0v50tFdvOzQQTCvpL6mnFh5mB2/l16U=
+-github.com/evanphx/json-patch v5.6.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
+-github.com/evanphx/json-patch/v5 v5.7.0 h1:nJqP7uwL84RJInrohHfW0Fx3awjbm8qZeFv0nW9SYGc=
+-github.com/evanphx/json-patch/v5 v5.7.0/go.mod h1:VNkHZ/282BpEyt/tObQO8s5CMPmYYq14uClGH4abBuQ=
+-github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4HY=
+-github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbSClcnxKAGw=
++github.com/evanphx/json-patch v5.7.0+incompatible h1:vgGkfT/9f8zE6tvSCe74nfpAVDQ2tG6yudJd8LBksgI=
++github.com/evanphx/json-patch v5.7.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
++github.com/evanphx/json-patch/v5 v5.9.11 h1:/8HVnzMq13/3x9TPvjG08wUGqBTmZBsCWzjTM0wiaDU=
++github.com/evanphx/json-patch/v5 v5.9.11/go.mod h1:3j+LviiESTElxA4p3EMKAB9HXj3/XEtnUf6OZxqIQTM=
++github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
++github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
++github.com/fsnotify/fsnotify v1.8.0 h1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=
++github.com/fsnotify/fsnotify v1.8.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
++github.com/fxamacker/cbor/v2 v2.7.0 h1:iM5WgngdRBanHcxugY4JySA0nk1wZorNOpTgCMedv5E=
++github.com/fxamacker/cbor/v2 v2.7.0/go.mod h1:pxXPTn3joSm21Gbwsv0w9OSA2y1HFR9qXEeXQVeNoDQ=
+ github.com/ghodss/yaml v1.0.0 h1:wQHKEahhL6wmXdzwWG11gIVCkOv05bNOh+Rxn0yngAk=
+ github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
+-github.com/go-logr/logr v1.2.0/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
+-github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
+-github.com/go-logr/logr v1.4.1 h1:pKouT5E8xu9zeFC39JXRDukb6JFQPXM5p5I91188VAQ=
+-github.com/go-logr/logr v1.4.1/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
+-github.com/go-logr/zapr v1.2.4 h1:QHVo+6stLbfJmYGkQ7uGHUCu5hnAFAj6mDe6Ea0SeOo=
+-github.com/go-logr/zapr v1.2.4/go.mod h1:FyHWQIzQORZ0QVE1BtVHv3cKtNLuXsbNLtpuhNapBOA=
+-github.com/go-openapi/jsonpointer v0.19.6 h1:eCs3fxoIi3Wh6vtgmLTOjdhSpiqphQ+DaPn38N2ZdrE=
++github.com/go-logr/logr v1.4.3 h1:CjnDlHq8ikf6E492q6eKboGOC0T8CDaOvkHCIg8idEI=
++github.com/go-logr/logr v1.4.3/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
++github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
++github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
++github.com/go-logr/zapr v1.3.0 h1:XGdV8XW8zdwFiwOA2Dryh1gj2KRQyOOoNmBy4EplIcQ=
++github.com/go-logr/zapr v1.3.0/go.mod h1:YKepepNBd1u/oyhd/yQmtjVXmm9uML4IXUgMOwR8/Gg=
+ github.com/go-openapi/jsonpointer v0.19.6/go.mod h1:osyAmYz/mB/C3I+WsTTSgw1ONzaLJoLCyoi6/zppojs=
++github.com/go-openapi/jsonpointer v0.21.0 h1:YgdVicSA9vH5RiHs9TZW5oyafXZFc6+2Vc1rr/O9oNQ=
++github.com/go-openapi/jsonpointer v0.21.0/go.mod h1:IUyH9l/+uyhIYQ/PXVA41Rexl+kOkAPDdXEYns6fzUY=
+ github.com/go-openapi/jsonreference v0.20.2 h1:3sVjiK66+uXK/6oQ8xgcRKcFgQ5KXa2KvnJRumpMGbE=
+ github.com/go-openapi/jsonreference v0.20.2/go.mod h1:Bl1zwGIM8/wsvqjsOQLJ/SH+En5Ap4rVB5KVcIDZG2k=
+-github.com/go-openapi/swag v0.22.3 h1:yMBqmnQ0gyZvEb/+KzuWZOXgllrXT4SADYbvDaXHv/g=
+ github.com/go-openapi/swag v0.22.3/go.mod h1:UzaqsxGiab7freDnrUUra0MwWfN/q7tE4j+VcZ0yl14=
++github.com/go-openapi/swag v0.23.0 h1:vsEVJDUo2hPJ2tu0/Xc+4noaxyEffXNIs3cOULZ+GrE=
++github.com/go-openapi/swag v0.23.0/go.mod h1:esZ8ITTYEsH1V2trKHjAN8Ai7xHb8RV+YSZ577vPjgQ=
+ github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
+ github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
+-github.com/gobuffalo/flect v1.0.2 h1:eqjPGSo2WmjgY2XlpGwo2NXgL3RucAKo4k4qQMNA5sA=
+-github.com/gobuffalo/flect v1.0.2/go.mod h1:A5msMlrHtLqh9umBSnvabjsMrCcCpAyzglnDvkbYKHs=
++github.com/gobuffalo/flect v1.0.3 h1:xeWBM2nui+qnVvNM4S3foBhCAL2XgPU+a7FdpelbTq4=
++github.com/gobuffalo/flect v1.0.3/go.mod h1:A5msMlrHtLqh9umBSnvabjsMrCcCpAyzglnDvkbYKHs=
+ github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
+ github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
+ github.com/golang-jwt/jwt/v4 v4.1.0/go.mod h1:/xlHOz8bRuivTWchD4jCa+NbatV+wEUSzwAxVc6locg=
+-github.com/golang-jwt/jwt/v4 v4.5.0 h1:7cYmW1XlMY7h7ii7UhUyChSgS5wUJEnm9uZVTGqOWzg=
+-github.com/golang-jwt/jwt/v4 v4.5.0/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
++github.com/golang-jwt/jwt/v4 v4.5.2 h1:YtQM7lnr8iZ+j5q71MGKkNw9Mn7AjHM68uc9g5fXeUI=
++github.com/golang-jwt/jwt/v4 v4.5.2/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
+ github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
+-github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da h1:oI5xCqsCo564l8iNU+DwB5epxmsaqB+rhGL0m5jtYqE=
+-github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+ github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
+ github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
+-github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
+ github.com/golang/protobuf v1.3.2/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
+ github.com/golang/protobuf v1.3.3/go.mod h1:vzj43D7+SQXF/4pzW/hwtAqwc6iTitCiVSaWz5lYuqw=
+ github.com/golang/protobuf v1.4.0-rc.1/go.mod h1:ceaxUfeHdC40wWswd/P6IGgMaK3YpKi5j83Wpe3EHw8=
+@@ -102,12 +106,14 @@ github.com/golang/protobuf v1.4.2/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw
+ github.com/golang/protobuf v1.4.3/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw735rRwI=
+ github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
+ github.com/golang/protobuf v1.5.2/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
+-github.com/golang/protobuf v1.5.3 h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=
+-github.com/golang/protobuf v1.5.3/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
+-github.com/google/cel-go v0.16.1 h1:3hZfSNiAU3KOiNtxuFXVp5WFy4hf/Ly3Sa4/7F8SXNo=
+-github.com/google/cel-go v0.16.1/go.mod h1:HXZKzB0LXqer5lHHgfWAnlYwJaQBDKMjxjulNQzhwhY=
+-github.com/google/gnostic-models v0.6.8 h1:yo/ABAfM5IMRsS1VnXjTBvUb61tFIHozhlYvRgGre9I=
+-github.com/google/gnostic-models v0.6.8/go.mod h1:5n7qKqH0f5wFt+aWF8CW6pZLLNOfYuF5OpfBSENuI8U=
++github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
++github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
++github.com/google/btree v1.1.3 h1:CVpQJjYgC4VbzxeGVHfvZrv1ctoYCAI8vbl07Fcxlyg=
++github.com/google/btree v1.1.3/go.mod h1:qOPhT0dTNdNzV6Z/lhRX0YXUafgPLFUh+gZMl761Gm4=
++github.com/google/cel-go v0.23.2 h1:UdEe3CvQh3Nv+E/j9r1Y//WO0K0cSyD7/y0bzyLIMI4=
++github.com/google/cel-go v0.23.2/go.mod h1:52Pb6QsDbC5kvgxvZhiL9QX1oZEkcUF/ZqaPx1J5Wwo=
++github.com/google/gnostic-models v0.6.9 h1:MU/8wDLif2qCXZmzncUQ/BOfxWfthHi63KqpoNbWqVw=
++github.com/google/gnostic-models v0.6.9/go.mod h1:CiWsm0s6BSQd1hRn8/QmxqB6BesYcbSZxsz9b0KuDBw=
+ github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
+ github.com/google/go-cmp v0.3.0/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
+ github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
+@@ -115,32 +121,36 @@ github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
+ github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+ github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+ github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+-github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
+-github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
++github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
++github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
+ github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
+ github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
+ github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
+-github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 h1:k7nVchz72niMH6YLQNvHSdIE7iqsQxK1P41mySCvssg=
+-github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6/go.mod h1:kf6iHlnVGwgKolg33glAes7Yg/8iWP8ukqeldJSO7jw=
++github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 h1:BHT72Gu3keYf3ZEu2J0b1vyeLSOYI8bm5wbJM/8yDe8=
++github.com/google/pprof v0.0.0-20250403155104-27863c87afa6/go.mod h1:boTsfXsheKC2y+lKOCMpSfarhxDeIzfZG1jqGcPl3cA=
+ github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+-github.com/google/uuid v1.3.1 h1:KjJaJ9iWZ3jOFZIf1Lqf4laDRCasjl0BCmnEGxkdLb4=
+-github.com/google/uuid v1.3.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
++github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
++github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
++github.com/grpc-ecosystem/grpc-gateway v1.16.0 h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=
+ github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
++github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 h1:TmHmbvxPmaegwhDubVz0lICL0J5Ka2vwTzhoePEXsGE=
++github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0/go.mod h1:qztMSjm835F2bXf+5HKAPIS5qsmQDqZna/PgVt4rWtI=
+ github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/UYA=
+ github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
+ github.com/hashicorp/go-multierror v1.0.0 h1:iVjPR7a6H0tWELX5NxNe7bYopibicUzc7uPribsnS6o=
+ github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
+-github.com/huandu/xstrings v1.3.3 h1:/Gcsuc1x8JVbJ9/rlye4xZnVAbEkGauT8lbebqcQws4=
+-github.com/huandu/xstrings v1.3.3/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
+-github.com/imdario/mergo v0.3.13 h1:lFzP57bqS/wsqKssCGmtLAb8A0wKjLGrve2q3PPVcBk=
+-github.com/imdario/mergo v0.3.13/go.mod h1:4lJ1jqUDcsbIECGy0RUJAXNIhg+6ocWgb1ALK2O4oXg=
++github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
++github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
++github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
++github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
+ github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
+ github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
+ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
+ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
+ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
+ github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
+-github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
++github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=
++github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
+ github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
+ github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
+ github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
+@@ -148,10 +158,10 @@ github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
+ github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
+ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
+ github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
++github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
++github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
+ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
+ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+-github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
+-github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
+ github.com/mitchellh/copystructure v1.2.0 h1:vpKXTN4ewci03Vljg/q9QvCGUDttBOGBIa15WveJJGw=
+ github.com/mitchellh/copystructure v1.2.0/go.mod h1:qLl+cE2AmVv+CoeAwDPye/v+N2HKCj9FbZEVFJRxO9s=
+ github.com/mitchellh/go-testing-interface v1.0.0 h1:fzU/JVNcaqHQEcVFAKeR41fkiLdIPrefOvVG1VZ96U0=
+@@ -165,114 +175,137 @@ github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9G
+ github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
+ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
+ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
+-github.com/onsi/ginkgo/v2 v2.17.2 h1:7eMhcy3GimbsA3hEnVKdw/PQM9XN9krpKVXsZdph0/g=
+-github.com/onsi/ginkgo/v2 v2.17.2/go.mod h1:nP2DPOQoNsQmsVyv5rDA8JkXQoCs6goXIvr/PRJ1eCc=
+-github.com/onsi/gomega v1.33.1 h1:dsYjIxxSR755MDmKVsaFQTE22ChNBcuuTWgkUDSubOk=
+-github.com/onsi/gomega v1.33.1/go.mod h1:U4R44UsT+9eLIaYRB2a5qajjtQYn0hauxvRm16AVYg0=
++github.com/onsi/ginkgo/v2 v2.23.4 h1:ktYTpKJAVZnDT4VjxSbiBenUjmlL/5QkBEocaWXiQus=
++github.com/onsi/ginkgo/v2 v2.23.4/go.mod h1:Bt66ApGPBFzHyR+JO10Zbt0Gsp4uWxu5mIOTusL46e8=
++github.com/onsi/gomega v1.38.0 h1:c/WX+w8SLAinvuKKQFh77WEucCnPk4j2OTUr7lt7BeY=
++github.com/onsi/gomega v1.38.0/go.mod h1:OcXcwId0b9QsE7Y49u+BTrL4IdKOBOKnD6VQNTJEB6o=
+ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
+ github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
+-github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+ github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+-github.com/prometheus/client_golang v1.17.0 h1:rl2sfwZMtSthVU752MqfjQozy7blglC+1SOtjMAMh+Q=
+-github.com/prometheus/client_golang v1.17.0/go.mod h1:VeL+gMmOAxkS2IqfCq0ZmHSL+LjWfWDUmp1mBz9JgUY=
++github.com/prashantv/gostub v1.1.0 h1:BTyx3RfQjRHnUWaGF9oQos79AlQ5k8WNktv7VGvVH4g=
++github.com/prashantv/gostub v1.1.0/go.mod h1:A5zLQHz7ieHGG7is6LLXLz7I8+3LZzsrV0P1IAHhP5U=
++github.com/prometheus/client_golang v1.22.0 h1:rb93p9lokFEsctTys46VnV1kLCDpVZ0a/Y92Vm0Zc6Q=
++github.com/prometheus/client_golang v1.22.0/go.mod h1:R7ljNsLXhuQXYZYtw6GAE9AZg8Y7vEW5scdCXrWRXC0=
+ github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
+-github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 h1:v7DLqVdK4VrYkVD5diGdl4sxJurKJEMnODWRJlxV9oM=
+-github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16/go.mod h1:oMQmHW1/JoDwqLtg57MGgP/Fb1CJEYF2imWWhWtMkYU=
+-github.com/prometheus/common v0.44.0 h1:+5BrQJwiBB9xsMygAB3TNvpQKOwlkc25LbISbrdOOfY=
+-github.com/prometheus/common v0.44.0/go.mod h1:ofAIvZbQ1e/nugmZGz4/qCb9Ap1VoSTIO7x0VV9VvuY=
+-github.com/prometheus/procfs v0.11.1 h1:xRC8Iq1yyca5ypa9n1EZnWZkt7dwcoRPQwX/5gwaUuI=
+-github.com/prometheus/procfs v0.11.1/go.mod h1:eesXgaPo1q7lBpVMoMy0ZOFTth9hBn4W/y0/p/ScXhY=
++github.com/prometheus/client_model v0.6.1 h1:ZKSh/rekM+n3CeS952MLRAdFwIKqeY8b62p8ais2e9E=
++github.com/prometheus/client_model v0.6.1/go.mod h1:OrxVMOVHjw3lKMa8+x6HeMGkHMQyHDk9E3jmP2AmGiY=
++github.com/prometheus/common v0.62.0 h1:xasJaQlnWAeyHdUBeGjXmutelfJHWMRr+Fg4QszZ2Io=
++github.com/prometheus/common v0.62.0/go.mod h1:vyBcEuLSvWos9B1+CyL7JZ2up+uFzXhkqml0W5zIY1I=
++github.com/prometheus/procfs v0.15.1 h1:YagwOFzUgYfKKHX6Dr+sHT7km/hxC76UB0learggepc=
++github.com/prometheus/procfs v0.15.1/go.mod h1:fB45yRUv8NstnjriLhBQLuOUt+WW4BsoGhij/e3PBqk=
+ github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
+-github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjRBZyWFQ=
+-github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
+-github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
+-github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
++github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
++github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWNMNyH2VO9fmH0o=
++github.com/shopspring/decimal v1.4.0 h1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp81k=
++github.com/shopspring/decimal v1.4.0/go.mod h1:gawqmDU56v4yIKSwfBSFip1HdCCXN8/+DMd9qYNcwME=
+ github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
+-github.com/spf13/cast v1.5.1 h1:R+kOtfhWQE6TVQzY+4D7wJLBgkdVasCEFxSUBYBYIlA=
+-github.com/spf13/cast v1.5.1/go.mod h1:b9PdjNptOpzXr7Rq1q9gJML/2cdGQAo69NKzQ10KN48=
+-github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
+-github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+-github.com/stoewer/go-strcase v1.2.0 h1:Z2iHWqGXH00XYgqDmNgQbIBxf3wrNq0F3feEy0ainaU=
+-github.com/stoewer/go-strcase v1.2.0/go.mod h1:IBiWB2sKIp3wVVQ3Y035++gc+knqhUQag1KpM8ahLw8=
++github.com/spf13/cast v1.7.1 h1:cuNEagBQEHWN1FnbGEjCXL2szYEXqfJPbP2HNUaca9Y=
++github.com/spf13/cast v1.7.1/go.mod h1:ancEpBxwJDODSW/UG4rDrAqiKolqNNh2DX3mk86cAdo=
++github.com/spf13/cobra v1.9.1 h1:CXSaggrXdbHK9CF+8ywj8Amf7PBRmPCOJugH954Nnlo=
++github.com/spf13/cobra v1.9.1/go.mod h1:nDyEzZ8ogv936Cinf6g1RU9MRY64Ir93oCnqb9wxYW0=
++github.com/spf13/pflag v1.0.7 h1:vN6T9TfwStFPFM5XzjsvmzZkLuaLX+HS+0SeFLRgU6M=
++github.com/spf13/pflag v1.0.7/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
++github.com/stoewer/go-strcase v1.3.0 h1:g0eASXYtp+yvN9fK8sH94oCIk0fau9uV1/ZdJ0AVEzs=
++github.com/stoewer/go-strcase v1.3.0/go.mod h1:fAH5hQ5pehh+j3nZfvwdk2RgEgQjAoM8wodgtPmh1xo=
+ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+ github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
+-github.com/stretchr/objx v0.5.0 h1:1zr/of2m5FGMsad5YfcqgdqdWrIhu+EBEJRhR1U7z/c=
+ github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
++github.com/stretchr/objx v0.5.2 h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=
++github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/8L+MA=
+ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+ github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
+ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
+ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
+ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
+ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
+-github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
+-github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
++github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
++github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
++github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
++github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
+ github.com/yandex-cloud/go-genproto v0.0.0-20240212082145-b6bd14d828d5 h1:N4a0ZN0fRI+vuAtpvY9EvqePUW5SVqSXpcIrl7RJjDM=
+ github.com/yandex-cloud/go-genproto v0.0.0-20240212082145-b6bd14d828d5/go.mod h1:HEUYX/p8966tMUHHT+TsS0hF/Ca/NYwqprC5WXSDMfE=
+ github.com/yandex-cloud/go-sdk v0.0.0-20240212083139-1cf36556be26 h1:C5kkcphX3p438gmvfQt+ADlzG8hzo6qpWNZxoYiRnq0=
+ github.com/yandex-cloud/go-sdk v0.0.0-20240212083139-1cf36556be26/go.mod h1:sfulsvMB5lLio0IDcrhfLUkLFVrAKdYJ2h2Wnunaugo=
+ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
+-github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
++go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
++go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
++go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0 h1:yd02MEjBdJkG3uabWP9apV+OuWRIXGDuJEUJbOHmCFU=
++go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0/go.mod h1:umTcuxiv1n/s/S6/c2AT/g2CQ7u5C59sHDNmfSwgz7Q=
++go.opentelemetry.io/otel v1.34.0 h1:zRLXxLCgL1WyKsPVrgbSdMN4c0FMkDAskSTQP+0hdUY=
++go.opentelemetry.io/otel v1.34.0/go.mod h1:OWFPOQ+h4G8xpyjgqo4SxJYdDQ/qmRH+wivy7zzx9oI=
++go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.33.0 h1:Vh5HayB/0HHfOQA7Ctx69E/Y/DcQSMPpKANYVMQ7fBA=
++go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.33.0/go.mod h1:cpgtDBaqD/6ok/UG0jT15/uKjAY8mRA53diogHBg3UI=
++go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.33.0 h1:5pojmb1U1AogINhN3SurB+zm/nIcusopeBNp42f45QM=
++go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.33.0/go.mod h1:57gTHJSE5S1tqg+EKsLPlTWhpHMsWlVmer+LA926XiA=
++go.opentelemetry.io/otel/metric v1.34.0 h1:+eTR3U0MyfWjRDhmFMxe2SsW64QrZ84AOhvqS7Y+PoQ=
++go.opentelemetry.io/otel/metric v1.34.0/go.mod h1:CEDrp0fy2D0MvkXE+dPV7cMi8tWZwX3dmaIhwPOaqHE=
++go.opentelemetry.io/otel/sdk v1.34.0 h1:95zS4k/2GOy069d321O8jWgYsW3MzVV+KuSPKp7Wr1A=
++go.opentelemetry.io/otel/sdk v1.34.0/go.mod h1:0e/pNiaMAqaykJGKbi+tSjWfNNHMTxoC9qANsCzbyxU=
++go.opentelemetry.io/otel/sdk/metric v1.34.0 h1:5CeK9ujjbFVL5c1PhLuStg1wxA7vQv7ce1EK0Gyvahk=
++go.opentelemetry.io/otel/sdk/metric v1.34.0/go.mod h1:jQ/r8Ze28zRKoNRdkjCZxfs6YvBTG1+YIqyFVFYec5w=
++go.opentelemetry.io/otel/trace v1.34.0 h1:+ouXS2V8Rd4hp4580a8q23bg0azF2nI8cqLYnC8mh/k=
++go.opentelemetry.io/otel/trace v1.34.0/go.mod h1:Svm7lSjQD7kG7KJ/MUHPVXSDGz2OX4h0M2jHBhmSfRE=
+ go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
+-go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
+-go.uber.org/goleak v1.1.11/go.mod h1:cwTWslyiVhfpKIDGSZEM2HlOvcqm+tG4zioyIeLoqMQ=
+-go.uber.org/goleak v1.2.1 h1:NBol2c7O1ZokfZ0LEU9K6Whx/KnwvepVetCUhtKja4A=
+-go.uber.org/goleak v1.2.1/go.mod h1:qlT2yGI9QafXHhZZLxlSuNsMw3FFLxBr+tBRlmO1xH4=
++go.opentelemetry.io/proto/otlp v1.4.0 h1:TA9WRvW6zMwP+Ssb6fLoUIuirti1gGbP28GcKG1jgeg=
++go.opentelemetry.io/proto/otlp v1.4.0/go.mod h1:PPBWZIP98o2ElSqI35IHfu7hIhSwvc5N38Jw8pXuGFY=
++go.uber.org/automaxprocs v1.6.0 h1:O3y2/QNTOdbF+e/dpXNNW7Rx2hZ4sTIPyybbxyNqTUs=
++go.uber.org/automaxprocs v1.6.0/go.mod h1:ifeIMSnPZuznNm6jmdzmU3/bfk01Fe2fotchwEFJ8r8=
++go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
++go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
+ go.uber.org/mock v0.4.0 h1:VcM4ZOtdbR4f6VXfiOpwpVJDL6lCReaZ6mw31wqh7KU=
+ go.uber.org/mock v0.4.0/go.mod h1:a6FSlNadKUHUa9IP5Vyt1zh4fC7uAwxMutEAscFbkZc=
+-go.uber.org/multierr v1.6.0/go.mod h1:cdWPpRnG4AhwMwsgIHip0KRBQjJy5kYEpYjJxpXp9iU=
+ go.uber.org/multierr v1.11.0 h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=
+ go.uber.org/multierr v1.11.0/go.mod h1:20+QtiLqy0Nd6FdQB9TLXag12DsQkrbs3htMFfDN80Y=
+-go.uber.org/zap v1.24.0/go.mod h1:2kMP+WWQ8aoFoedH3T2sq6iJ2yDWpHbP0f6MQbS9Gkg=
+-go.uber.org/zap v1.25.0 h1:4Hvk6GtkucQ790dqmj7l1eEnRdKm3k3ZUrUMS2d5+5c=
+-go.uber.org/zap v1.25.0/go.mod h1:JIAUzQIH94IC4fOJQm7gMmBJP5k7wQfdcnYdPoEXJYk=
++go.uber.org/zap v1.27.0 h1:aJMhYGrd5QSmlpLMr2MftRKl7t8J8PTZPA732ud/XR8=
++go.uber.org/zap v1.27.0/go.mod h1:GB2qFLM7cTU87MWRP2mPIjqfIDnGu+VIO4V/SdhGo2E=
++go.yaml.in/yaml/v2 v2.4.2 h1:DzmwEr2rDGHl7lsFgAHxmNz/1NlQ7xLIrlN2h5d1eGI=
++go.yaml.in/yaml/v2 v2.4.2/go.mod h1:081UH+NErpNdqlCXm3TtEran0rJZGxAYx9hb/ELlsPU=
++go.yaml.in/yaml/v3 v3.0.3 h1:bXOww4E/J3f66rav3pX3m8w6jDE4knZjGOw8b5Y6iNE=
++go.yaml.in/yaml/v3 v3.0.3/go.mod h1:tBHosrYAkRZjRAOREWbDnBXUf08JOwYq++0QNwQiWzI=
+ golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
+ golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
+ golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+-golang.org/x/crypto v0.22.0 h1:g1v0xeRhjcugydODzvb3mEM9SQ0HGp9s/nh3COQ/C30=
+-golang.org/x/crypto v0.22.0/go.mod h1:vr6Su+7cTlO45qkww3VDJlzDn0ctJvRgYbC2NvXHt+M=
++golang.org/x/crypto v0.40.0 h1:r4x+VvoG5Fm+eJcxMaY8CQM7Lb0l1lsmjGBQ6s8BfKM=
++golang.org/x/crypto v0.40.0/go.mod h1:Qr1vMER5WyS2dfPHAlsOj01wgLbsyWtFn/aY+5+ZdxY=
+ golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
+-golang.org/x/exp v0.0.0-20230905200255-921286631fa9 h1:GoHiUyI/Tp2nVkLI2mCxVkOjsbSXD66ic0XW0js0R9g=
+-golang.org/x/exp v0.0.0-20230905200255-921286631fa9/go.mod h1:S2oDrQGGwySpoQPVqRShND87VCbxmc6bL1Yd2oYrm6k=
++golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 h1:2dVuKD2vS7b0QIHQbpyTISPd0LeHDbnYEryqj5Q1ug8=
++golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56/go.mod h1:M4RDyNAINzryxdtnbRXRL/OHtkFuWGRjvuhBJpk2IlY=
+ golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
+ golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961/go.mod h1:wehouNa3lNwaWXcvxsM5YxQ5yQlVC4a0KAMCusXpPoU=
+ golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
+-golang.org/x/lint v0.0.0-20190930215403-16217165b5de/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
+ golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+ golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+-golang.org/x/mod v0.4.2/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
+-golang.org/x/mod v0.17.0 h1:zY54UmvipHiNd+pm+m0x9KhZ9hl1/7QNMyxXbc6ICqA=
+-golang.org/x/mod v0.17.0/go.mod h1:hTbmBsO62+eylJbnUtE2MGJUyE7QWk4xUqPFrRgJ+7c=
++golang.org/x/mod v0.25.0 h1:n7a+ZbQKQA/Ysbyb0/6IbB1H/X41mKgbhfv7AfG/44w=
++golang.org/x/mod v0.25.0/go.mod h1:IXM97Txy2VM4PJ3gI61r1YEk/gAj6zAHN3AdZt6S9Ww=
+ golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20190108225652-1e06a53dbb7e/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20190213061140-3a22650c66bd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+ golang.org/x/net v0.0.0-20190311183353-d8887717615a/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
+ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
+-golang.org/x/net v0.0.0-20190603091049-60506f45cf65/go.mod h1:HSz+uSET+XFnRR8LxR5pz3Of3rY3CfYBVs4xY44aLks=
+ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+ golang.org/x/net v0.0.0-20200226121028-0de0cce0169b/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+ golang.org/x/net v0.0.0-20200822124328-c89045814202/go.mod h1:/O7V0waA8r7cgGh81Ro3o1hOxt32SMVPicZroKQ2sZA=
+ golang.org/x/net v0.0.0-20201021035429-f5854403a974/go.mod h1:sp8m0HH+o8qH0wwXwYZr8TS3Oi6o0r6Gce1SSxlDquU=
+ golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4/go.mod h1:p54w0d4576C0XHj96bSt6lcn1PtDYWL6XObtHCRCNQM=
+-golang.org/x/net v0.24.0 h1:1PcaxkF854Fu3+lvBIx5SYn9wRlBzzcnHZSiaFFAb0w=
+-golang.org/x/net v0.24.0/go.mod h1:2Q7sJY5mzlzWjKtYUEXSlBWCdyaioyXzRB2RtU8KVE8=
++golang.org/x/net v0.42.0 h1:jzkYrhi3YQWD6MLBJcsklgQsoAcw89EcZbJw8Z614hs=
++golang.org/x/net v0.42.0/go.mod h1:FF1RA5d3u7nAYA4z2TkclSCKh68eSXtiFwcWQpPXdt8=
+ golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
+ golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
+-golang.org/x/oauth2 v0.14.0 h1:P0Vrf/2538nmC0H+pEQ3MNFRRnVR7RlqyVw+bvm26z0=
+-golang.org/x/oauth2 v0.14.0/go.mod h1:lAtNWgaWfL4cm7j2OV8TxGi9Qb7ECORx8DktCY74OwM=
++golang.org/x/oauth2 v0.30.0 h1:dnDm7JmhM45NNpd8FDDeLhK6FwqbOf4MLCM9zb1BOHI=
++golang.org/x/oauth2 v0.30.0/go.mod h1:B++QgG3ZKulg6sRPGD/mqlHQs5rB3Ml9erfeDY7xKlU=
+ golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+-golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+-golang.org/x/sync v0.7.0 h1:YsImfSBoP9QPYL0xyKJPq0gcaJdG3rInoqxTWbfQu9M=
+-golang.org/x/sync v0.7.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
++golang.org/x/sync v0.16.0 h1:ycBJEhp9p4vXvUZNszeOq0kGTPghopOL8q0fq3vstxw=
++golang.org/x/sync v0.16.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
+ golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+ golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+ golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+@@ -281,20 +314,18 @@ golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7w
+ golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+ golang.org/x/sys v0.0.0-20210330210617-4fbd30eecc44/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+ golang.org/x/sys v0.0.0-20210510120138-977fb7262007/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+-golang.org/x/sys v0.0.0-20220908164124-27713097b956/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+-golang.org/x/sys v0.19.0 h1:q5f1RH2jigJ1MoAWp2KTp3gm5zAGFUTarQZ5U386+4o=
+-golang.org/x/sys v0.19.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
++golang.org/x/sys v0.34.0 h1:H5Y5sJ2L2JRdyv7ROF1he/lPdvFsd0mJHFw2ThKHxLA=
++golang.org/x/sys v0.34.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
+ golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
+-golang.org/x/term v0.19.0 h1:+ThwsDv+tYfnJFhF4L8jITxu1tdTWRTZpdsWgEgjL6Q=
+-golang.org/x/term v0.19.0/go.mod h1:2CuTdWZ7KHSQwUzKva0cbMg6q2DMI3Mmxp+gKJbskEk=
++golang.org/x/term v0.33.0 h1:NuFncQrRcaRvVmgRkvM3j/F00gWIAlcmlB8ACEKmGIg=
++golang.org/x/term v0.33.0/go.mod h1:s18+ql9tYWp1IfpV9DmCtQDDSRBUjKaw9M1eAv5UeF0=
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+-golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+ golang.org/x/text v0.3.5/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+-golang.org/x/text v0.14.0 h1:ScX5w1eTa3QqT8oi6+ziP7dTV1S2+ALU0bI+0zXKWiQ=
+-golang.org/x/text v0.14.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=
+-golang.org/x/time v0.3.0 h1:rg5rLMjNzMS1RkNLzCG38eapWhnYLFYXDXj2gOlr8j4=
+-golang.org/x/time v0.3.0/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
++golang.org/x/text v0.27.0 h1:4fGWRpyh641NLlecmyl4LOe6yDdfaYNrGb2zdfo4JV4=
++golang.org/x/text v0.27.0/go.mod h1:1D28KMCvyooCX9hBiosv5Tz/+YLxj0j7XhWjpSUF7CU=
++golang.org/x/time v0.9.0 h1:EsRrnYcQiGH+5FfbgvV4AP7qEZstoyrHB0DzarOQ4ZY=
++golang.org/x/time v0.9.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
+ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+ golang.org/x/tools v0.0.0-20190114222345-bf090417da8b/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+ golang.org/x/tools v0.0.0-20190226205152-f727befe758c/go.mod h1:9Yl7xja0Znq3iFh3HoIrodX9oNMXvdceNzlUR8zjMvY=
+@@ -303,30 +334,27 @@ golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135/go.mod h1:RgjU9mgBXZiqYHBn
+ golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+ golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
+ golang.org/x/tools v0.0.0-20210106214847-113979e3529a/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
+-golang.org/x/tools v0.1.5/go.mod h1:o0xws9oXOQQZyjljx8fwUC0k7L1pTE6eaCbjGeHmOkk=
+-golang.org/x/tools v0.20.0 h1:hz/CVckiOxybQvFw6h7b/q80NTr9IUQb4s1IIzW7KNY=
+-golang.org/x/tools v0.20.0/go.mod h1:WvitBU7JJf6A4jOdg4S1tviW9bhUxkgeCui/0JHctQg=
++golang.org/x/tools v0.34.0 h1:qIpSLOxeCYGg9TrcJokLBG4KFA6d795g0xkBkiESGlo=
++golang.org/x/tools v0.34.0/go.mod h1:pAP9OwEaY1CAW3HOmg3hLZC5Z0CCmzjAF2UQMSqNARg=
+ golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+ golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+ golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+ golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+-gomodules.xyz/jsonpatch/v2 v2.4.0 h1:Ci3iUJyx9UeRx7CeFN8ARgGbkESwJK+KB9lLcWxY/Zw=
+-gomodules.xyz/jsonpatch/v2 v2.4.0/go.mod h1:AH3dM2RI6uoBZxn3LVrfvJ3E0/9dG4cSrbuBJT4moAY=
++gomodules.xyz/jsonpatch/v2 v2.5.0 h1:JELs8RLM12qJGXU4u/TO3V25KW8GreMKl9pdkk14RM0=
++gomodules.xyz/jsonpatch/v2 v2.5.0/go.mod h1:AH3dM2RI6uoBZxn3LVrfvJ3E0/9dG4cSrbuBJT4moAY=
+ google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
+ google.golang.org/appengine v1.4.0/go.mod h1:xpcJRLb0r/rnEns0DIKYYv+WjYCduHsrkT7/EB5XEv4=
+-google.golang.org/appengine v1.6.7 h1:FZR1q0exgwxzPzp/aF+VccGrSfxfPpkBqjIIEq3ru6c=
+-google.golang.org/appengine v1.6.7/go.mod h1:8WjMMxjGQR8xUklV/ARdw2HLXBOI7O7uCIDZVag1xfc=
+ google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
+ google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55/go.mod h1:DMBHOl98Agz4BDEuKkezgsaosCRResVns1a3J2ZsMNc=
+ google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
+ google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013/go.mod h1:NbSheEEYHJ7i3ixzK3sjbqSGDJWnxyFXZblF3eUsNvo=
+ google.golang.org/genproto v0.0.0-20211021150943-2b146023228c/go.mod h1:5CzLGKJ67TSI2B9POpiiyGha0AjJvZIUgRMt1dSmuhc=
+-google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 h1:SeZZZx0cP0fqUyA+oRzP9k7cSwJlvDFiROO72uwD6i0=
+-google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97/go.mod h1:t1VqOqqvce95G3hIDCT5FeO3YUc6Q4Oe24L/+rNMxRk=
+-google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97 h1:W18sezcAYs+3tDZX4F80yctqa12jcP1PUS2gQu1zTPU=
+-google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97/go.mod h1:iargEX0SFPm3xcfMI0d1domjg0ZF4Aa0p2awqyxhvF0=
+-google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a h1:a2MQQVoTo96JC9PMGtGBymLp7+/RzpFc2yX/9WfFg1c=
+-google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a/go.mod h1:4cYg8o5yUbm77w8ZX00LhMVNl/YVBFJRYWDc0uYWMs0=
++google.golang.org/genproto v0.0.0-20240123012728-ef4313101c80 h1:KAeGQVN3M9nD0/bQXnr/ClcEMJ968gUXJQ9pwfSynuQ=
++google.golang.org/genproto v0.0.0-20240123012728-ef4313101c80/go.mod h1:cc8bqMqtv9gMOr0zHg2Vzff5ULhhL2IXP4sbcn32Dro=
++google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 h1:GVIKPyP/kLIyVOgOnTwFOrvQaQUzOzGMCxgFUOEmm24=
++google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422/go.mod h1:b6h1vNKhxaSoEI+5jc3PJUCustfli/mRab7295pY7rw=
++google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f h1:OxYkA3wjPsZyBylwymxSHa7ViiW1Sml4ToBrncvFehI=
++google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f/go.mod h1:+2Yz8+CLJbIfL9z73EW45avw8Lmge3xVElCP9zEKi50=
+ google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
+ google.golang.org/grpc v1.23.0/go.mod h1:Y5yQAOtifL1yxbo5wqy6BxZv8vAUGQwXBOALyacEbxg=
+ google.golang.org/grpc v1.25.1/go.mod h1:c3i+UQWmh7LiEpx4sFZnkU36qjEYZ0imhYfXVyQciAY=
+@@ -335,8 +363,8 @@ google.golang.org/grpc v1.33.1/go.mod h1:fr5YgcSWrqhRRxogOsw7RzIpsmvOZ6IcH4kBYTp
+ google.golang.org/grpc v1.36.0/go.mod h1:qjiiYl8FncCW8feJPdyg3v6XW24KsRHe+dy9BAGRRjU=
+ google.golang.org/grpc v1.40.0/go.mod h1:ogyxbiOoUXAkP+4+xa6PZSE9DZgIHtSpzjDTB9KAK34=
+ google.golang.org/grpc v1.41.0/go.mod h1:U3l9uK9J0sini8mHphKoXyaqDA/8VyGnDee1zzIUK6k=
+-google.golang.org/grpc v1.59.0 h1:Z5Iec2pjwb+LEOqzpB2MR12/eKFhDPhuqW91O+4bwUk=
+-google.golang.org/grpc v1.59.0/go.mod h1:aUPDwccQo6OTjy7Hct4AfBPD1GptF4fyUjIkQ9YtF98=
++google.golang.org/grpc v1.71.3 h1:iEhneYTxOruJyZAxdAv8Y0iRZvsc5M6KoW7UA0/7jn0=
++google.golang.org/grpc v1.71.3/go.mod h1:H0GRtasmQOh9LkFoCPDu3ZrwUtD1YGE+b2vYBYd/8Ec=
+ google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
+ google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
+ google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQJ+fmap5saPgwCLgHXTUD7jkjRqWcaiX5VyM=
+@@ -349,12 +377,13 @@ google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlba
+ google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
+ google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
+ google.golang.org/protobuf v1.27.1/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
+-google.golang.org/protobuf v1.33.0 h1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=
+-google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
++google.golang.org/protobuf v1.36.6 h1:z1NpPI8ku2WgiWnf+t9wTPsn6eP1L7ksHUlkfLvd9xY=
++google.golang.org/protobuf v1.36.6/go.mod h1:jduwjTPXsFjZGTmRluh+L6NjiWu7pchiJ2/5YcXBHnY=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+-gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c/go.mod h1:JHkPIbrfpd72SG/EVd6muEfDQjcINNoR0C8j2r3qZ4Q=
++gopkg.in/evanphx/json-patch.v4 v4.12.0 h1:n6jtcsulIzXPJaxegRbvFNNrZDjbij7ny3gmSPG+6V4=
++gopkg.in/evanphx/json-patch.v4 v4.12.0/go.mod h1:p8EYWUEYMpynmqDbY58zCKCFZw8pRWMG4EsWvDvM72M=
+ gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
+ gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
+ gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+@@ -363,38 +392,43 @@ gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+ gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
+ gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
+ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+-gopkg.in/yaml.v3 v3.0.0/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+ gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+ gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+ honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
+ honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
+-k8s.io/api v0.28.4 h1:8ZBrLjwosLl/NYgv1P7EQLqoO8MGQApnbgH8tu3BMzY=
+-k8s.io/api v0.28.4/go.mod h1:axWTGrY88s/5YE+JSt4uUi6NMM+gur1en2REMR7IRj0=
+-k8s.io/apiextensions-apiserver v0.28.4 h1:AZpKY/7wQ8n+ZYDtNHbAJBb+N4AXXJvyZx6ww6yAJvU=
+-k8s.io/apiextensions-apiserver v0.28.4/go.mod h1:pgQIZ1U8eJSMQcENew/0ShUTlePcSGFq6dxSxf2mwPM=
+-k8s.io/apimachinery v0.28.4 h1:zOSJe1mc+GxuMnFzD4Z/U1wst50X28ZNsn5bhgIIao8=
+-k8s.io/apimachinery v0.28.4/go.mod h1:wI37ncBvfAoswfq626yPTe6Bz1c22L7uaJ8dho83mgg=
+-k8s.io/apiserver v0.28.4 h1:BJXlaQbAU/RXYX2lRz+E1oPe3G3TKlozMMCZWu5GMgg=
+-k8s.io/apiserver v0.28.4/go.mod h1:Idq71oXugKZoVGUUL2wgBCTHbUR+FYTWa4rq9j4n23w=
+-k8s.io/client-go v0.28.4 h1:Np5ocjlZcTrkyRJ3+T3PkXDpe4UpatQxj85+xjaD2wY=
+-k8s.io/client-go v0.28.4/go.mod h1:0VDZFpgoZfelyP5Wqu0/r/TRYcLYuJ2U1KEeoaPa1N4=
+-k8s.io/cluster-bootstrap v0.28.4 h1:4MKNy1Qd9QY7pl47rSMGIORF+tm3CUaqC1M8U9bjn4Q=
+-k8s.io/cluster-bootstrap v0.28.4/go.mod h1:/c4ro/R4yf4EtJgFgFtvnHkbDOHwubeKJXh5R1c89Bc=
+-k8s.io/component-base v0.28.4 h1:c/iQLWPdUgI90O+T9TeECg8o7N3YJTiuz2sKxILYcYo=
+-k8s.io/component-base v0.28.4/go.mod h1:m9hR0uvqXDybiGL2nf/3Lf0MerAfQXzkfWhUY58JUbU=
+-k8s.io/klog/v2 v2.100.1 h1:7WCHKK6K8fNhTqfBhISHQ97KrnJNFZMcQvKp7gP/tmg=
+-k8s.io/klog/v2 v2.100.1/go.mod h1:y1WjHnz7Dj687irZUWR/WLkLc5N1YHtjLdmgWjndZn0=
+-k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 h1:LyMgNKD2P8Wn1iAwQU5OhxCKlKJy0sHc+PcDwFB24dQ=
+-k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9/go.mod h1:wZK2AVp1uHCp4VamDVgBP2COHZjqD1T68Rf0CM3YjSM=
+-k8s.io/utils v0.0.0-20240102154912-e7106e64919e h1:eQ/4ljkx21sObifjzXwlPKpdGLrCfRziVtos3ofG/sQ=
+-k8s.io/utils v0.0.0-20240102154912-e7106e64919e/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
+-sigs.k8s.io/cluster-api v1.6.1 h1:I34p/fwgRlEhs+o9cUhKXDwNNfPS3no0yJsd2bJyQVc=
+-sigs.k8s.io/cluster-api v1.6.1/go.mod h1:DaxwruDvSaEYq5q6FREDaGzX6UsAVUCA99Sp8vfMHyQ=
+-sigs.k8s.io/controller-runtime v0.16.3 h1:2TuvuokmfXvDUamSx1SuAOO3eTyye+47mJCigwG62c4=
+-sigs.k8s.io/controller-runtime v0.16.3/go.mod h1:j7bialYoSn142nv9sCOJmQgDXQXxnroFU4VnX/brVJ0=
+-sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
+-sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
+-sigs.k8s.io/structured-merge-diff/v4 v4.2.3 h1:PRbqxJClWWYMNV1dhaG4NsibJbArud9kFxnAMREiWFE=
+-sigs.k8s.io/structured-merge-diff/v4 v4.2.3/go.mod h1:qjx8mGObPmV2aSZepjQjbmb2ihdVs8cGKBraizNC69E=
+-sigs.k8s.io/yaml v1.4.0 h1:Mk1wCc2gy/F0THH0TAp1QYyJNzRm2KCLy3o5ASXVI5E=
++k8s.io/api v0.33.3 h1:SRd5t//hhkI1buzxb288fy2xvjubstenEKL9K51KBI8=
++k8s.io/api v0.33.3/go.mod h1:01Y/iLUjNBM3TAvypct7DIj0M0NIZc+PzAHCIo0CYGE=
++k8s.io/apiextensions-apiserver v0.33.3 h1:qmOcAHN6DjfD0v9kxL5udB27SRP6SG/MTopmge3MwEs=
++k8s.io/apiextensions-apiserver v0.33.3/go.mod h1:oROuctgo27mUsyp9+Obahos6CWcMISSAPzQ77CAQGz8=
++k8s.io/apimachinery v0.33.3 h1:4ZSrmNa0c/ZpZJhAgRdcsFcZOw1PQU1bALVQ0B3I5LA=
++k8s.io/apimachinery v0.33.3/go.mod h1:BHW0YOu7n22fFv/JkYOEfkUYNRN0fj0BlvMFWA7b+SM=
++k8s.io/apiserver v0.33.3 h1:Wv0hGc+QFdMJB4ZSiHrCgN3zL3QRatu56+rpccKC3J4=
++k8s.io/apiserver v0.33.3/go.mod h1:05632ifFEe6TxwjdAIrwINHWE2hLwyADFk5mBsQa15E=
++k8s.io/client-go v0.33.3 h1:M5AfDnKfYmVJif92ngN532gFqakcGi6RvaOF16efrpA=
++k8s.io/client-go v0.33.3/go.mod h1:luqKBQggEf3shbxHY4uVENAxrDISLOarxpTKMiUuujg=
++k8s.io/cluster-bootstrap v0.33.3 h1:u2NTxJ5CFSBFXaDxLQoOWMly8eni31psVso+caq6uwI=
++k8s.io/cluster-bootstrap v0.33.3/go.mod h1:p970f8u8jf273zyQ5raD8WUu2XyAl0SAWOY82o7i/ds=
++k8s.io/component-base v0.33.3 h1:mlAuyJqyPlKZM7FyaoM/LcunZaaY353RXiOd2+B5tGA=
++k8s.io/component-base v0.33.3/go.mod h1:ktBVsBzkI3imDuxYXmVxZ2zxJnYTZ4HAsVj9iF09qp4=
++k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
++k8s.io/klog/v2 v2.130.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
++k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff h1:/usPimJzUKKu+m+TE36gUyGcf03XZEP0ZIKgKj35LS4=
++k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff/go.mod h1:5jIi+8yX4RIb8wk3XwBo5Pq2ccx4FP10ohkbSKCZoK8=
++k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 h1:M3sRQVHv7vB20Xc2ybTt7ODCeFj6JSWYFzOFnYeS6Ro=
++k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
++sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 h1:jpcvIRr3GLoUoEKRkHKSmGjxb6lWwrBlJsXc+eUYQHM=
++sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2/go.mod h1:Ve9uj1L+deCXFrPOk1LpFXqTg7LCFzFso6PA48q/XZw=
++sigs.k8s.io/cluster-api v1.11.3 h1:apxfugbP1X8AG7THCM74CTarCOW4H2oOc6hlbm1hY80=
++sigs.k8s.io/cluster-api v1.11.3/go.mod h1:CA471SACi81M8DzRKTlWpHV33G0cfWEj7sC4fALFVok=
++sigs.k8s.io/controller-runtime v0.21.0 h1:CYfjpEuicjUecRk+KAeyYh+ouUBn4llGyDYytIGcJS8=
++sigs.k8s.io/controller-runtime v0.21.0/go.mod h1:OSg14+F65eWqIu4DceX7k/+QRAbTTvxeQSNSOQpukWM=
++sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 h1:/Rv+M11QRah1itp8VhT6HoVx1Ray9eB4DBr+K+/sCJ8=
++sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3/go.mod h1:18nIHnGi6636UCz6m8i4DhaJ65T6EruyzmoQqI2BVDo=
++sigs.k8s.io/randfill v0.0.0-20250304075658-069ef1bbf016/go.mod h1:XeLlZ/jmk4i1HRopwe7/aU3H5n1zNUcX6TM94b3QxOY=
++sigs.k8s.io/randfill v1.0.0 h1:JfjMILfT8A6RbawdsK2JXGBR5AQVfd+9TbzrlneTyrU=
++sigs.k8s.io/randfill v1.0.0/go.mod h1:XeLlZ/jmk4i1HRopwe7/aU3H5n1zNUcX6TM94b3QxOY=
++sigs.k8s.io/structured-merge-diff/v4 v4.6.0 h1:IUA9nvMmnKWcj5jl84xn+T5MnlZKThmUW1TdblaLVAc=
++sigs.k8s.io/structured-merge-diff/v4 v4.6.0/go.mod h1:dDy58f92j70zLsuZVuUX5Wp9vtxXpaZnkPGWeqDfCps=
+ sigs.k8s.io/yaml v1.4.0/go.mod h1:Ejl7/uTz7PSA4eKMyQCUTnhZYNmLIl+5c2lQPGR2BPY=
++sigs.k8s.io/yaml v1.6.0 h1:G8fkbMSAFqgEFgh4b1wmtzDnioxFCUgTZhlbj5P9QYs=
++sigs.k8s.io/yaml v1.6.0/go.mod h1:796bPqUfzR/0jLAl6XjHl3Ck7MiyVv8dbTdyT3/pMf4=
+diff --git a/internal/pkg/cloud/scope/cluster.go b/internal/pkg/cloud/scope/cluster.go
+index 8d85c03..697b8a9 100644
+--- a/internal/pkg/cloud/scope/cluster.go
++++ b/internal/pkg/cloud/scope/cluster.go
+@@ -10,7 +10,7 @@ import (
+ 	infrav1 "github.com/yandex-cloud/cluster-api-provider-yandex/api/v1alpha1"
+ 	yandex "github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/client"
+ 
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ 	"sigs.k8s.io/cluster-api/util/patch"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ )
+@@ -77,7 +77,10 @@ type ClusterScope struct {
+ 
+ // PatchObject persists the cluster configuration and status.
+ func (c *ClusterScope) PatchObject(ctx context.Context) error {
+-	return c.patchHelper.Patch(ctx, c.YandexCluster)
++	normalizeLegacyConditions(c.YandexCluster)
++	return c.patchHelper.Patch(ctx, c.YandexCluster, patch.WithOwnedConditions{Conditions: []string{
++		string(infrav1.LoadBalancerReadyCondition),
++	}})
+ }
+ 
+ // Close closes the current scope persisting the cluster configuration and status.
+@@ -99,6 +102,7 @@ func (c *ClusterScope) Name() string {
+ // SetReady sets the YandexCluster Ready Status.
+ func (c *ClusterScope) SetReady() {
+ 	c.YandexCluster.Status.Ready = true
++	c.YandexCluster.Status.Initialization.Provisioned = true
+ }
+ 
+ // GetClient gets client for YandexCloud API.
+diff --git a/internal/pkg/cloud/scope/conditions.go b/internal/pkg/cloud/scope/conditions.go
+new file mode 100644
+index 0000000..7457234
+--- /dev/null
++++ b/internal/pkg/cloud/scope/conditions.go
+@@ -0,0 +1,45 @@
++/*
++Copyright 2024.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scope
++
++import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++
++type conditionsAware interface {
++	GetConditions() []metav1.Condition
++	SetConditions([]metav1.Condition)
++}
++
++func normalizeLegacyConditions(obj conditionsAware) {
++	conditions := obj.GetConditions()
++	if len(conditions) == 0 {
++		return
++	}
++
++	for i := range conditions {
++		if conditions[i].Reason == "" {
++			conditions[i].Reason = "MigratedFromBeta1"
++		}
++		if conditions[i].Message == "" {
++			conditions[i].Message = "Condition restored during migration to v1beta2"
++		}
++		if conditions[i].LastTransitionTime.IsZero() {
++			conditions[i].LastTransitionTime = metav1.Now()
++		}
++	}
++
++	obj.SetConditions(conditions)
++}
+diff --git a/internal/pkg/cloud/scope/identity.go b/internal/pkg/cloud/scope/identity.go
+index d38db02..90fa7dd 100644
+--- a/internal/pkg/cloud/scope/identity.go
++++ b/internal/pkg/cloud/scope/identity.go
+@@ -195,7 +195,13 @@ func (s *IdentityScope) generateIdentityLabelSelector() client.MatchingLabels {
+ 
+ // PersistIndentityChanges persists the identity changes to the API server.
+ func (s *IdentityScope) PersistIndentityChanges(ctx context.Context) error {
+-	return s.patchHelper.Patch(ctx, s.Identity)
++	normalizeLegacyConditions(s.Identity)
++	return s.patchHelper.Patch(ctx, s.Identity, patch.WithOwnedConditions{Conditions: []string{
++		string(infrav1.IdentityReadyCondition),
++		string(infrav1.IdentityValidCondition),
++		string(infrav1.IdentitySecretUpdatedCondition),
++		string(infrav1.IdentityLinkedClustersUpdatedCondition),
++	}})
+ }
+ 
+ // IsSecretChanged checks if the secret of the identity has changed.
+diff --git a/internal/pkg/cloud/scope/labels.go b/internal/pkg/cloud/scope/labels.go
+index 667a776..e78c9c1 100644
+--- a/internal/pkg/cloud/scope/labels.go
++++ b/internal/pkg/cloud/scope/labels.go
+@@ -6,7 +6,7 @@ import (
+ 	"encoding/hex"
+ 	"strings"
+ 
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ )
+ 
+ // labels mostly used in Yandex analytics to differentiate VMs created by CAPI
+diff --git a/internal/pkg/cloud/scope/machine.go b/internal/pkg/cloud/scope/machine.go
+index 9bd75e1..0bfa233 100644
+--- a/internal/pkg/cloud/scope/machine.go
++++ b/internal/pkg/cloud/scope/machine.go
+@@ -13,7 +13,7 @@ import (
+ 	corev1 "k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/types"
+ 	"k8s.io/utils/ptr"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ 	capierrors "sigs.k8s.io/cluster-api/errors"
+ 	"sigs.k8s.io/cluster-api/util"
+ 	"sigs.k8s.io/cluster-api/util/patch"
+@@ -77,7 +77,12 @@ type MachineScope struct {
+ 
+ // PatchObject persists the cluster configuration and status.
+ func (m *MachineScope) PatchObject() error {
+-	return m.patchHelper.Patch(context.TODO(), m.YandexMachine)
++	normalizeLegacyConditions(m.YandexMachine)
++	return m.patchHelper.Patch(context.TODO(), m.YandexMachine, patch.WithOwnedConditions{Conditions: []string{
++		string(infrav1.ConditionStatusProvisioning),
++		string(infrav1.ConditionStatusRunning),
++		string(infrav1.ConditionStatusNotfound),
++	}})
+ }
+ 
+ // Close closes the current scope persisting the cluster configuration and status.
+@@ -103,6 +108,7 @@ func (m *MachineScope) IsControlPlane() bool {
+ // SetReady sets the YandexMachine Ready Status.
+ func (m *MachineScope) SetReady() {
+ 	m.YandexMachine.Status.Ready = true
++	m.YandexMachine.Status.Initialization.Provisioned = true
+ }
+ 
+ // GetProviderID returns the YandexMachine providerID from the spec.
+@@ -230,11 +236,11 @@ func (m *MachineScope) GetInstanceReq() (*compute.CreateInstanceRequest, error)
+ 	metadata["user-data"] = bootstrapData
+ 
+ 	return &compute.CreateInstanceRequest{
+-		FolderId:   m.ClusterGetter.GetFolderID(),
+-		Name:       m.YandexMachine.GetName(),
+-		ZoneId:     *m.YandexMachine.Spec.ZoneID,
+-		PlatformId: *m.YandexMachine.Spec.PlatformID,
+-		Metadata:   metadata,
++		FolderId:      m.ClusterGetter.GetFolderID(),
++		Name:          m.YandexMachine.GetName(),
++		ZoneId:        *m.YandexMachine.Spec.ZoneID,
++		PlatformId:    *m.YandexMachine.Spec.PlatformID,
++		Metadata:      metadata,
+ 		Labels:        m.getMachineLabels(),
+ 		Hostname:      m.YandexMachine.GetName(),
+ 		ResourcesSpec: resourcesSpec,
+diff --git a/internal/pkg/cloud/services/compute/reconcile.go b/internal/pkg/cloud/services/compute/reconcile.go
+index f07b7e3..299827b 100644
+--- a/internal/pkg/cloud/services/compute/reconcile.go
++++ b/internal/pkg/cloud/services/compute/reconcile.go
+@@ -9,7 +9,7 @@ import (
+ 	"github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/cloud/ycerrors"
+ 	yandex_compute "github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1"
+ 	corev1 "k8s.io/api/core/v1"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"sigs.k8s.io/cluster-api/util/conditions"
+ 	"sigs.k8s.io/controller-runtime/pkg/log"
+ )
+@@ -19,6 +19,16 @@ const (
+ 	instanceNotDeleted bool = false
+ )
+ 
++func setMachineCondition(machine *infrav1.YandexMachine, conditionType, reason, message string, status metav1.ConditionStatus) {
++	conditions.Set(machine, metav1.Condition{
++		Type:               conditionType,
++		Status:             status,
++		Reason:             reason,
++		Message:            message,
++		LastTransitionTime: metav1.Now(),
++	})
++}
++
+ // Reconcile reconciles compute instance.
+ func (s *Service) Reconcile(ctx context.Context) error {
+ 	logger := log.FromContext(ctx)
+@@ -31,8 +41,7 @@ func (s *Service) Reconcile(ctx context.Context) error {
+ 	if instanceID == "" {
+ 		newInstanceID, err := s.createComputeInstance(ctx, client)
+ 		if err != nil {
+-			conditions.MarkFalse(s.scope.YandexMachine,
+-				infrav1.ConditionStatusRunning, infrav1.ConditionStatusNotfound, clusterv1.ConditionSeverityError, "%s", err.Error())
++			setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusRunning), string(infrav1.ConditionStatusNotfound), err.Error(), metav1.ConditionFalse)
+ 			return err
+ 		}
+ 
+@@ -46,39 +55,22 @@ func (s *Service) Reconcile(ctx context.Context) error {
+ 		if ycerrors.IsNotFound(err) {
+ 			logger.Info("unable to find compute instance in yandex cloud")
+ 			s.scope.SetInstanceStatus(infrav1.InstanceStatusDeleted)
+-			conditions.MarkTrue(s.scope.YandexMachine, infrav1.ConditionStatusNotfound)
+-			conditions.MarkFalse(s.scope.YandexMachine,
+-				infrav1.ConditionStatusProvisioning,
+-				infrav1.ConditionStatusError,
+-				clusterv1.ConditionSeverityError,
+-				"%s", err.Error())
+-			conditions.MarkFalse(s.scope.YandexMachine,
+-				infrav1.ConditionStatusRunning,
+-				infrav1.ConditionStatusError,
+-				clusterv1.ConditionSeverityError,
+-				"%s", err.Error())
++			setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusNotfound), string(infrav1.ConditionStatusNotfound), "Compute instance was not found", metav1.ConditionTrue)
++			setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusProvisioning), infrav1.ConditionStatusError, err.Error(), metav1.ConditionFalse)
++			setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusRunning), infrav1.ConditionStatusError, err.Error(), metav1.ConditionFalse)
+ 			return nil
+ 		}
+-		conditions.MarkUnknown(s.scope.YandexMachine,
+-			infrav1.ConditionStatusProvisioning,
+-			infrav1.ConditionStatusNotfound,
+-			"%s", err.Error())
+-		conditions.MarkUnknown(s.scope.YandexMachine,
+-			infrav1.ConditionStatusRunning,
+-			infrav1.ConditionStatusNotfound,
+-			"%s", err.Error())
++		setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusProvisioning), string(infrav1.ConditionStatusNotfound), err.Error(), metav1.ConditionUnknown)
++		setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusRunning), string(infrav1.ConditionStatusNotfound), err.Error(), metav1.ConditionUnknown)
+ 		return fmt.Errorf("unable to find compute instance %v: %w", s.scope.GetInstanceID(), err)
+ 	}
+ 
+ 	instanceState := infrav1.InstanceStatus(vm.GetStatus().String())
++	setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusNotfound), string(infrav1.ConditionStatusRunning), "Compute instance exists", metav1.ConditionFalse)
+ 	if instanceState == infrav1.InstanceStatusRunning {
+ 		instanceAddress, err := s.getInstanceAddress(vm)
+ 		if err != nil {
+-			conditions.MarkFalse(s.scope.YandexMachine,
+-				infrav1.ConditionStatusRunning,
+-				infrav1.ConditionStatusError,
+-				clusterv1.ConditionSeverityError,
+-				"%s", err.Error())
++			setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusRunning), infrav1.ConditionStatusError, err.Error(), metav1.ConditionFalse)
+ 			return err
+ 		}
+ 
+@@ -90,7 +82,11 @@ func (s *Service) Reconcile(ctx context.Context) error {
+ 				return fmt.Errorf("failed to register controlplane compute instance in load balancer: %w", err)
+ 			}
+ 		}
+-		conditions.MarkTrue(s.scope.YandexMachine, infrav1.ConditionStatusRunning)
++		setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusProvisioning), string(infrav1.ConditionStatusRunning), "Compute instance provisioning completed", metav1.ConditionFalse)
++		setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusRunning), string(infrav1.ConditionStatusRunning), "Compute instance is running", metav1.ConditionTrue)
++	} else {
++		setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusProvisioning), string(infrav1.ConditionStatusProvisioning), fmt.Sprintf("Compute instance state is %s", instanceState), metav1.ConditionTrue)
++		setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusRunning), string(infrav1.ConditionStatusProvisioning), fmt.Sprintf("Compute instance state is %s", instanceState), metav1.ConditionFalse)
+ 	}
+ 
+ 	s.scope.SetInstanceStatus(infrav1.InstanceStatus(vm.GetStatus().String()))
+diff --git a/internal/pkg/cloud/services/loadbalancers/alb.go b/internal/pkg/cloud/services/loadbalancers/alb.go
+index d35a889..4c394cf 100644
+--- a/internal/pkg/cloud/services/loadbalancers/alb.go
++++ b/internal/pkg/cloud/services/loadbalancers/alb.go
+@@ -6,7 +6,6 @@ import (
+ 	"reflect"
+ 
+ 	alb "github.com/yandex-cloud/go-genproto/yandex/cloud/apploadbalancer/v1"
+-	"sigs.k8s.io/cluster-api/util/conditions"
+ 	"sigs.k8s.io/controller-runtime/pkg/log"
+ 
+ 	infrav1 "github.com/yandex-cloud/cluster-api-provider-yandex/api/v1alpha1"
+@@ -260,7 +259,6 @@ func (s *Service) reconcileALB(ctx context.Context, backendGroupID string) error
+ 			return err
+ 		}
+ 		logger.Info("application loadbalancer created", "instance id", id)
+-		conditions.MarkTrue(s.scope.YandexCluster, infrav1.ConditionStatusReady)
+ 		return nil
+ 	}
+ 
+diff --git a/main.go b/main.go
+index 2e9ac48..1364d7f 100644
+--- a/main.go
++++ b/main.go
+@@ -35,7 +35,8 @@ import (
+ 	corev1 "k8s.io/api/core/v1"
+ 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+ 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
++	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
++	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+ 
+@@ -59,6 +60,7 @@ const defaultNamespace = "capy-system"
+ func init() {
+ 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+ 	utilruntime.Must(corev1.AddToScheme(scheme))
++	utilruntime.Must(clusterv1beta1.AddToScheme(scheme))
+ 	utilruntime.Must(clusterv1.AddToScheme(scheme))
+ 	utilruntime.Must(infrav1.AddToScheme(scheme))
+ 	//+kubebuilder:scaffold:scheme

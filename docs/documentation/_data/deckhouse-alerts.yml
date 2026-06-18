@@ -2908,6 +2908,46 @@ alerts:
         Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
       markupFormat: markdown
+    - name: D8ObsoleteEncryptionAlgorithmInClusterConfiguration
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `encryptionAlgorithm` field is set to a non-default value in ClusterConfiguration but has not been migrated to ModuleConfig `control-plane-manager` yet.
+
+        Until the migration is complete, the value from ClusterConfiguration is used to avoid unintended certificate rotation.
+
+        **To resolve this alert, migrate the setting:**
+
+        1. If ModuleConfig `control-plane-manager` does not exist, create it first:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Migrate the value from ClusterConfiguration to ModuleConfig in one command:
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
+           {"spec": {"version": 3, "settings": {"encryptionAlgorithm": "$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep encryptionAlgorithm | awk '{print $2}')"}}}
+           EOF
+           )"
+           ```
+
+        Once ModuleConfig is updated, this alert will be resolved automatically.
+
+        3. Remove `encryptionAlgorithm` from ClusterConfiguration:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete the `encryptionAlgorithm` field and save.
+      summary: |
+        Obsolete encryptionAlgorithm in ClusterConfiguration needs to be migrated to control-plane-manager ModuleConfig.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoleteGlobalControlPlaneResourcesRequests
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
@@ -7443,6 +7483,37 @@ alerts:
         Unsupported version of CRI {{$labels.container_runtime_version}} installed for Kubernetes version {{$labels.kubelet_version}}.
       severity: undefined
       markupFormat: markdown
+    - name: VerticalPodAutoscalerDeprecatedUpdateModeAuto
+      sourceFile: modules/302-vertical-pod-autoscaler/monitoring/prometheus-rules/update-mode-deprecation.yaml
+      moduleUrl: 302-vertical-pod-autoscaler
+      module: vertical-pod-autoscaler
+      edition: ce
+      description: |
+        There are `{{ $value }}` VerticalPodAutoscaler object(s) in the cluster
+        configured with the deprecated update mode (`spec.updatePolicy.updateMode: Auto`).
+
+        The `Auto` update mode is deprecated. It currently behaves like `Recreate`
+        (the VPA updater evicts pods to apply new resource requests) and its semantics
+        are reserved to change in future versions, which makes cluster behavior
+        ambiguous and potentially disruptive.
+
+        Set the affected VPA object(s) to one of the supported update modes ([`spec.updatePolicy.updateMode`](https://deckhouse.io/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode)):
+
+        - `InPlaceOrRecreate`: Apply recommendations in place when possible, fall back to recreation (recommended).
+        - `Recreate`: Evict and recreate pods to apply recommendations.
+        - `Initial`: Apply only when pods are (re)created.
+        - `Off`: Recommendations only, no changes to running pods.
+
+        To list the affected objects, open the **VPA Deprecated Update Mode** Grafana
+        dashboard, or run:
+
+        ```prometheus
+        kube_verticalpodautoscaler_spec_updatepolicy_updatemode{update_mode="Auto"} == 1
+        ```
+      summary: |
+        VerticalPodAutoscaler objects use the deprecated Auto update mode.
+      severity: "9"
+      markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
     - cert-manager
@@ -7477,3 +7548,4 @@ modules-having-alerts:
     - upmeter
     - user-authn
     - user-authz
+    - vertical-pod-autoscaler

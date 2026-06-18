@@ -111,8 +111,8 @@ func applyPostBootstrapModuleConfigs(
 		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 		p := retry.NewEmptyParams(
 			retry.WithName("%s", task.Title),
-			retry.WithAttempts(15),
-			retry.WithWait(5*time.Second),
+			retry.WithAttempts(75),
+			retry.WithWait(1*time.Second),
 			retry.WithLogger(extLogger()),
 		)
 		err := retry.NewLoopWithParams(p).
