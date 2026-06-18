@@ -553,6 +553,12 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20463
     - summary: Fix Scaled stuck Unknown on controller startup
       pull_request: https://github.com/deckhouse/deckhouse/pull/20467
+    - summary: Delete package resources on disable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20694
+    - summary: Fix package status deadlock via coalescing workqueue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20695
+    - summary: Cap package task retry backoff at 2h so chronically failing installs stop hammering.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20742
 deckhouse-controller:
   features:
     - summary: Add Module package type support to PackageRepositoryOperation controller
@@ -572,6 +578,8 @@ deckhouse-controller:
       pull_request: https://github.com/deckhouse/deckhouse/pull/18767
     - summary: validation check oldself
       pull_request: https://github.com/deckhouse/deckhouse/pull/20119
+    - summary: Added mechanism for blocking deckhouse release if cluster have alerts with high severity.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20741
   fixes:
     - summary: Fix false DeckhouseUpdatingFailed alert on registries without version tags in release-channel
         repo
@@ -780,6 +788,8 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20451
     - summary: Add chrony module architecture section
       pull_request: https://github.com/deckhouse/deckhouse/pull/20603
+    - summary: Fix URL links to diagrams
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20629
   fixes:
     - summary: Changing module descriptions
       pull_request: https://github.com/deckhouse/deckhouse/pull/18148
@@ -880,6 +890,8 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20512
     - summary: Changed descriptions for fields CRDs in the API
       pull_request: https://github.com/deckhouse/deckhouse/pull/20584
+    - summary: Fixed the conflict error in the spell checker dictionary and add validation to validations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20701
 documentation:
   features:
     - summary: Added optional Gateway API HTTPRoute/ListenerSet publishing.
@@ -1225,10 +1237,15 @@ node-manager:
         Now the agent skips watchdog arming during maintenance and arms it automatically
 
         when maintenance ends.
+    - summary: add rbac policies for persistantvolumes to manage from capi-controller-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20646
 openvpn:
   features:
     - summary: Added optional Gateway API HTTPRoute/ListenerSet publishing.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
+  fixes:
+    - summary: OpenVPN was added to the BE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20691
 operator-prometheus:
   fixes:
     - summary: op_ functions support

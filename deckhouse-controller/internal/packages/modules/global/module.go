@@ -166,9 +166,17 @@ func (m *Module) GetSettingsChecksum() string {
 	return m.values.GetSettingsChecksum()
 }
 
-// GetValues returns values for rendering
+// GetValues returns values for rendering.
+//
+// Global values are exposed both flat (.Values.replicas) and under the "global"
+// key (.Values.global.replicas) so templates written for the old addon-operator
+// layout keep working.
 func (m *Module) GetValues() addonutils.Values {
-	return m.values.GetValues()
+	v := m.values.GetValues()
+	return addonutils.MergeValues(
+		v,
+		addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): v},
+	)
 }
 
 // ValidateSettings validates settings against openAPI

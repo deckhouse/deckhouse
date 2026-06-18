@@ -305,11 +305,17 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetValues returns values with hooks patches
+// GetValues returns values with hooks patches.
+//
+// Module values are exposed both flat (.Values.replicas) and under the module's
+// camelCase key (.Values.<moduleName>.replicas) so templates written for the old
+// addon-operator layout keep working.
 func (m *Module) GetValues() addonutils.Values {
+	moduleValues := m.values.GetValues()
 	return addonutils.MergeValues(
 		addonutils.Values{"global": m.globalValuesGetter(false)},
-		m.values.GetValues(),
+		moduleValues,
+		addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): moduleValues},
 	)
 }
 

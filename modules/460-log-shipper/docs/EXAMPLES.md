@@ -268,9 +268,9 @@ spec:
 ```
 
 {% endraw %}
-{% alert -%}
+{% alert level="info" %}
 Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
-{%- endalert %}
+{% endalert %}
 {% raw %}
 
 ```yaml
@@ -512,9 +512,9 @@ spec:
 ```
 
 {% endraw %}
-{% alert -%}
+{% alert level="info" %}
 If you need logs from only one or from a small group of a Pods, try to use the kubernetesPods settings to reduce the number of reading filed. Do not use highly grained filters to read logs from a single pod.
-{%- endalert %}
+{% endalert %}
 {% raw %}
 
 ## Log transformations
@@ -688,10 +688,10 @@ Transformed result:
 }
 ```
 
-### Transforming logs in Logfmt format into a structured object
+### Transforming logs in logfmt format into a structured object
 
 You can use the `ParseMessage` transformation
-to parse logs in Logfmt format and convert them into a structured object.
+to parse logs in logfmt format and convert them into a structured object.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -824,8 +824,9 @@ Transformed result:
 
 You can use the `ReplaceKeys` transformation to replace `source` with `target` in the specified label keys.
 
-> To apply the `ReplaceKeys` transformation to the `message` field or its nested fields,
-> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+{% alert level="info" %}
+To apply the `ReplaceKeys` transformation to the `message` field or its nested fields, the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -865,7 +866,9 @@ Transformed result:
 
 You can use the `ReplaceValue` transformation to replace matches of a regular expression (`source`) in scalar string fields. The `target` string can be a literal or use `{{ name }}` for named capture groups from `source`.
 
-> Apply [`ParseMessage`](#transforming-logs-into-a-structured-object) first if you need to run replacement on a field inside a structured `message`.
+{% alert level="info" %}
+Apply [`ParseMessage`](#transforming-logs-into-a-structured-object) first if you need to run replacement on a field inside a structured `message`.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -934,8 +937,9 @@ Transformed result for an event in namespace `production` with pod label `app=ap
 
 You can use the `DropLabels` transformation to remove specific labels from log records. Each item under `dropLabels.labels` has a `label` field (the path) and optional `keepKeys`. If `keepKeys` is set for an item, `label` must point to an **object**; inside it, every nested key not listed in `keepKeys` is removed (key names without a leading dot). If `keepKeys` is unset for that item, the path in `label` is removed entirely.
 
-> To apply the `DropLabels` transformation to the `message` field or its nested fields,
-> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+{% alert level="info" %}
+To apply the `DropLabels` transformation to the `message` field or its nested fields, the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
