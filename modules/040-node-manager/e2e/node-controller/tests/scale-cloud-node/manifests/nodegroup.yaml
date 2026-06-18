@@ -1,7 +1,7 @@
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
-  name: e2e-instance
+  name: e2e-ephemeral-node
 spec:
   nodeType: CloudEphemeral
   cloudInstances:
@@ -12,4 +12,4 @@ spec:
     maxPerZone: 1
   nodeTemplate:
     labels:
-      app: e2e-instance-test
+      app: e2e-ephemeral-node-test

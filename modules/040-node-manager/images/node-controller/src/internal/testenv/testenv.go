@@ -26,10 +26,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
-	"text/tabwriter"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -195,22 +195,33 @@ func RemoveFinalizers(ctx context.Context, c client.Client, obj client.Object) {
 	}
 }
 
-// Dash returns "-" for empty strings, for kubectl-get-style table cells.
-func Dash(s string) string {
-	if s == "" {
-		return "-"
+// KubectlDumpNodeObjects runs the envtest-bundled kubectl against the running apiserver and writes
+// real `kubectl get … -o wide` output for the node-controller objects to w (Nodes plus the
+// NodeGroup/Instance/Machine CRs). Resource types whose CRD is not installed in the current suite
+// are skipped silently, so it is safe to call from any controller suite. header (e.g. the spec name)
+// labels the dump. Callers gate it on DebugEnabled(). kubectl is the binary that ships in the
+// kubebuilder assets, so no kubectl on PATH is required.
+func KubectlDumpNodeObjects(w io.Writer, env *envtest.Environment, cfg *rest.Config, header string) {
+	if err := WriteKubeconfig(env, cfg, KubeconfigPath); err != nil {
+		fmt.Fprintf(w, "kubectl dump: %v\n", err)
+		return
 	}
-	return s
+	kubectl := filepath.Join(BinaryAssetsDir(), "kubectl")
+	fmt.Fprintf(w, "\n===== state after: %s =====\n", header)
+	kubectlGet(w, kubectl, "nodes")
+	kubectlGet(w, kubectl, "nodegroups.deckhouse.io")
+	kubectlGet(w, kubectl, "instances.deckhouse.io")
+	kubectlGet(w, kubectl, "machines.cluster.x-k8s.io", "-A")
 }
 
-// PrintTable writes an aligned, kubectl-get-o-wide-style table to w.
-func PrintTable(w io.Writer, columns []string, rows [][]string) {
-	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, strings.Join(columns, "\t"))
-	for _, r := range rows {
-		fmt.Fprintln(tw, strings.Join(r, "\t"))
+func kubectlGet(w io.Writer, kubectl, resource string, extra ...string) {
+	args := append([]string{"--kubeconfig", KubeconfigPath, "get", resource, "-o", "wide"}, extra...)
+	out, _ := exec.CommandContext(context.Background(), kubectl, args...).CombinedOutput()
+	s := strings.TrimRight(string(out), "\n")
+	if strings.Contains(s, "doesn't have a resource type") || strings.Contains(s, "could not find the requested resource") {
+		return // CRD not installed in this suite — skip
 	}
-	_ = tw.Flush()
+	fmt.Fprintf(w, "$ kubectl get %s -o wide\n%s\n", resource, s)
 }
 
 // WriteKubeconfig writes a system:masters kubeconfig for the running envtest apiserver.

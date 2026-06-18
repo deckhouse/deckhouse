@@ -1,0 +1,39 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: node-controller-e2e
+spec:
+  timeouts:
+    apply: 60s
+    assert: 15m      # provisioning a real VM and bootstrapping it takes minutes
+    error: 15m       # GC of the Machine/Node after the NodeGroup is removed can take a few minutes
+    delete: 5m
+    cleanup: 20m
+    exec: 5m
+  execution:
+    failFast: true
+    parallel: 1      # NodeGroup, Node and Machine are shared cluster state; tests must not overlap
+  discovery:
+    testFile: chainsaw-test.yaml
+  # Global failure diagnostics, run on ANY step error (chainsaw combines this with step/test-level
+  # catch). Collecting controller logs here — once, not per step — is the chainsaw-recommended way
+  # and keeps the test file purely declarative. Both deployments run a kube-rbac-proxy sidecar, so
+  # the real container is named explicitly. Logs explain the controller's decisions; the events
+  # collector adds the complementary kube-level signals (VM ordering, scheduling).
+  error:
+    catch:
+      - description: node-controller logs (NodeGroup status, Instance, the node-manager controllers)
+        podLogs:
+          namespace: d8-cloud-instance-manager
+          selector: app=node-controller
+          container: node-controller
+          tail: 200
+      - description: CAPI controller logs (Machine provisioning)
+        podLogs:
+          namespace: d8-cloud-instance-manager
+          selector: app=capi-controller-manager
+          container: capi-controller-manager
+          tail: 200
+      - description: Cluster events in the cloud-instance-manager namespace
+        events:
+          namespace: d8-cloud-instance-manager

@@ -1,0 +1,6 @@
+version: "3"
+
+includes:
+  scale-cloud-node:
+    taskfile: ./tests/scale-cloud-node/Taskfile.yml
+    dir: ./tests/scale-cloud-node

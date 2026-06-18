@@ -48,13 +48,14 @@ test: envtest ## Run the whole unit + envtest suite (verbose) with coverage.
 	@go tool cover -func=cover.out | tail -1
 
 .PHONY: test-envtest
-test-envtest: envtest ## Run the Instance controller envtest suite (ENVTEST_DEBUG=1 dumps state before/after each spec; ENVTEST_LOGS=1 adds controller logs).
-	@echo "==> [test-envtest] running the Instance controller envtest specs (ENVTEST_DEBUG=1 = state dumps, ENVTEST_LOGS=1 = controller logs)..."
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-		go test ./internal/controller/instance/ -run TestInstanceControllerEnvtest -v -ginkgo.v -count=1 \
-		-coverpkg=./internal/controller/instance/... -coverprofile cover-instance.out
-	@echo "==> [test-envtest] Instance controller coverage (envtest specs only):"
-	@go tool cover -func=cover-instance.out | tail -1
+test-envtest: envtest ## Run every controller's envtest suite (ENVTEST_DEBUG=1 dumps state before/after each spec; ENVTEST_LOGS=1 adds controller logs).
+	@echo "==> [test-envtest] running each controller envtest suite live (ENVTEST_DEBUG=1 = state dumps, ENVTEST_LOGS=1 = controller logs)..."
+	@assets="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"; \
+	for pkg in $$(grep -rl 'RunSpecs' internal/controller --include=suite_test.go | xargs -n1 dirname | sort -u | sed 's#^#./#'); do \
+		echo ""; echo "==> $$pkg"; \
+		KUBEBUILDER_ASSETS="$$assets" go test $$pkg -run 'ControllerEnvtest$$' -v -ginkgo.v -count=1 || exit $$?; \
+	done
+	@echo "==> [test-envtest] done. (run a single suite, e.g. FOCUS, or 'make test' for coverage)"
 
 ##@ Build
 

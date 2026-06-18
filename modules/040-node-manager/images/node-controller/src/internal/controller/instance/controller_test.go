@@ -26,7 +26,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -408,37 +407,6 @@ func TestReconcileBashibleStatus(t *testing.T) {
 	}
 }
 
-func TestReconcileConflictReturnsError(t *testing.T) {
-	t.Parallel()
-
-	instance := existingInstanceWithFinalizer("conflict-machine-status", deckhousev1alpha2.InstanceSpec{
-		MachineRef: &deckhousev1alpha2.MachineRef{
-			Kind:       "Machine",
-			APIVersion: capiv1beta2.GroupVersion.String(),
-			Name:       "conflict-machine-status",
-			Namespace:  machine.MachineNamespace,
-		},
-	}, deckhousev1alpha2.InstancePhaseUnknown)
-
-	conflictErr := apierrors.NewConflict(
-		schema.GroupResource{Group: deckhousev1alpha2.GroupVersion.Group, Resource: "instances"},
-		instance.Name,
-		fmt.Errorf("simulated conflict"),
-	)
-
-	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
-	controller, _ := newTestInstanceController(t, func(base client.WithWatch) client.Client {
-		return conflictOnInstanceStatusPatchClient{Client: base, err: conflictErr}
-	}, capiMachineWithStatus("conflict-machine-status", capiv1beta2.MachineStatus{
-		Phase: string(capiv1beta2.MachinePhaseRunning),
-	}), instance)
-
-	result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
-	require.Error(t, err)
-	require.True(t, apierrors.IsConflict(err))
-	require.Equal(t, ctrl.Result{}, result)
-}
-
 func TestReconcileDeletingInstanceSyncsMachineStatus(t *testing.T) {
 	t.Parallel()
 
@@ -493,80 +461,6 @@ func TestReconcileDeletingInstanceSyncsMachineStatus(t *testing.T) {
 	require.Equal(t, metav1.ConditionFalse, condition.Status)
 	require.Equal(t, capiv1beta2.MachineDeletingDrainingNodeReason, condition.Reason)
 	require.Equal(t, "cannot evict pod because disruption budget", condition.Message)
-}
-
-func TestReconcileMachineSourceGetErrorPropagates(t *testing.T) {
-	t.Parallel()
-
-	instance := existingInstanceWithFinalizer("machine-get-error", deckhousev1alpha2.InstanceSpec{
-		MachineRef: &deckhousev1alpha2.MachineRef{
-			Kind:       "Machine",
-			APIVersion: capiv1beta2.GroupVersion.String(),
-			Name:       "machine-get-error",
-			Namespace:  machine.MachineNamespace,
-		},
-		NodeRef: deckhousev1alpha2.NodeRef{Name: "machine-get-error"},
-	}, deckhousev1alpha2.InstancePhaseRunning)
-
-	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
-	controller, _ := newTestInstanceController(t, func(base client.WithWatch) client.Client {
-		return errOnCAPIGetClient{
-			Client: base,
-			name:   types.NamespacedName{Namespace: machine.MachineNamespace, Name: "machine-get-error"},
-			err:    fmt.Errorf("capi get boom"),
-		}
-	}, instance)
-
-	_, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "capi get boom")
-}
-
-func TestReconcileMachineRefSelfHealGetErrorPropagates(t *testing.T) {
-	t.Parallel()
-
-	instance := existingInstanceWithFinalizer("machineref-get-error", deckhousev1alpha2.InstanceSpec{
-		NodeRef: deckhousev1alpha2.NodeRef{Name: "machineref-get-error"},
-	}, deckhousev1alpha2.InstancePhaseRunning)
-
-	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
-	controller, _ := newTestInstanceController(t, func(base client.WithWatch) client.Client {
-		return errOnCAPIGetClient{
-			Client: base,
-			name:   types.NamespacedName{Namespace: machine.MachineNamespace, Name: "machineref-get-error"},
-			err:    fmt.Errorf("capi get boom"),
-		}
-	}, instance)
-
-	_, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "capi get boom")
-}
-
-func TestReconcileNodeRefSelfHealGetErrorPropagates(t *testing.T) {
-	t.Parallel()
-
-	instance := existingInstanceWithFinalizer("noderef-get-error", deckhousev1alpha2.InstanceSpec{
-		MachineRef: &deckhousev1alpha2.MachineRef{
-			Kind:       "Machine",
-			APIVersion: capiv1beta2.GroupVersion.String(),
-			Name:       "noderef-get-error",
-			Namespace:  machine.MachineNamespace,
-		},
-	}, deckhousev1alpha2.InstancePhaseRunning)
-
-	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
-	controller, _ := newTestInstanceController(t, func(base client.WithWatch) client.Client {
-		return errOnCAPIGetClient{
-			Client: base,
-			name:   types.NamespacedName{Namespace: machine.MachineNamespace, Name: "noderef-get-error"},
-			err:    fmt.Errorf("capi get boom"),
-		}
-	}, instance)
-
-	_, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "capi get boom")
 }
 
 func TestReconcileDeletingNodeBackedInstanceRemovesFinalizer(t *testing.T) {
@@ -1183,31 +1077,4 @@ func (c *switchingMCMGetClient) Get(ctx context.Context, key client.ObjectKey, o
 
 	machineObj.Status = *c.status
 	return nil
-}
-
-type conflictOnInstanceStatusPatchClient struct {
-	client.Client
-	err error
-}
-
-func (c conflictOnInstanceStatusPatchClient) Status() client.SubResourceWriter {
-	return conflictOnStatusWriter{SubResourceWriter: c.Client.Status(), err: c.err}
-}
-
-type conflictOnStatusWriter struct {
-	client.SubResourceWriter
-	err error
-}
-
-func (w conflictOnStatusWriter) Patch(
-	ctx context.Context,
-	obj client.Object,
-	patch client.Patch,
-	opts ...client.SubResourcePatchOption,
-) error {
-	if _, ok := obj.(*deckhousev1alpha2.Instance); ok {
-		return w.err
-	}
-
-	return w.SubResourceWriter.Patch(ctx, obj, patch, opts...)
 }

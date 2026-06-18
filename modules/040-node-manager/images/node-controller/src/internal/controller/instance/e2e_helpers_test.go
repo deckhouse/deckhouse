@@ -17,8 +17,6 @@ limitations under the License.
 package instance_controller
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -69,7 +67,7 @@ func uniqueName(base string) string { return testenv.UniqueName(base) }
 // cleanupAll isolates specs — so there is nothing useful to dump before a spec runs.)
 var _ = AfterEach(func() {
 	if testenv.DebugEnabled() {
-		dumpAll("result of: " + CurrentSpecReport().LeafNodeText)
+		testenv.KubectlDumpNodeObjects(GinkgoWriter, testEnv, cfg, CurrentSpecReport().LeafNodeText)
 	}
 	cleanupAll()
 })
@@ -223,83 +221,8 @@ func capiMachineDeletionTimestamp(name string) *metav1.Time {
 // cleanupAll runs after every spec. The controller re-creates Instances from live sources,
 // so all sources (machines, nodes) are deleted and confirmed gone BEFORE deleting Instances;
 // otherwise a delete would race the controller's create-from-source and ping-pong.
-// dumpAll prints a kubectl-get-o-wide-like snapshot of the envtest cluster (Instances, CAPI
-// machines, Nodes) to GinkgoWriter. Call it anywhere in a spec, or set ENVTEST_DEBUG=1 to get
-// it before/after every spec. Shows with `-ginkgo.v`.
-func dumpAll(label string) {
-	fmt.Fprintf(GinkgoWriter, "\n========== %s ==========\n", label)
-	fmt.Fprintln(GinkgoWriter, "-- sources the test created (the controller reacts to these) --")
-	hadCAPI := dumpCAPIMachines()
-	hadNodes := dumpNodes()
-	if !hadCAPI && !hadNodes {
-		fmt.Fprintln(GinkgoWriter, "(none — sources were deleted)")
-	}
-	fmt.Fprintln(GinkgoWriter, "-- Instances the controller produced from them --")
-	dumpInstances()
-}
-
-func dumpInstances() {
-	list := &deckhousev1alpha2.InstanceList{}
-	if err := k8sClient.List(suiteCtx, list); err != nil {
-		return
-	}
-	rows := make([][]string, 0, len(list.Items))
-	for i := range list.Items {
-		in := &list.Items[i]
-		machineRef := "-"
-		if in.Spec.MachineRef != nil {
-			machineRef = in.Spec.MachineRef.Name
-		}
-		conds := make([]string, 0, len(in.Status.Conditions))
-		for _, c := range in.Status.Conditions {
-			conds = append(conds, fmt.Sprintf("%s=%s", c.Type, c.Status))
-		}
-		finalizer := "no"
-		if len(in.Finalizers) > 0 {
-			finalizer = "yes"
-		}
-		rows = append(rows, []string{
-			in.Name, testenv.Dash(string(in.Status.Phase)), testenv.Dash(in.Status.MachineStatus),
-			testenv.Dash(string(in.Status.BashibleStatus)), machineRef, testenv.Dash(in.Spec.NodeRef.Name),
-			finalizer, testenv.Dash(strings.Join(conds, ",")),
-		})
-	}
-	if len(rows) == 0 {
-		rows = append(rows, []string{"(none)"})
-	}
-	testenv.PrintTable(GinkgoWriter,
-		[]string{"INSTANCE", "PHASE", "MACHINESTATUS", "BASHIBLE", "MACHINEREF", "NODEREF", "FINALIZER", "CONDITIONS"}, rows)
-}
-
-func dumpCAPIMachines() bool {
-	list := &capiv1beta2.MachineList{}
-	if err := k8sClient.List(suiteCtx, list); err != nil || len(list.Items) == 0 {
-		return false
-	}
-	rows := make([][]string, 0, len(list.Items))
-	for i := range list.Items {
-		m := &list.Items[i]
-		rows = append(rows, []string{
-			m.Name, testenv.Dash(m.Status.Phase), testenv.Dash(m.Status.NodeRef.Name),
-			fmt.Sprintf("%v", !m.DeletionTimestamp.IsZero()),
-		})
-	}
-	testenv.PrintTable(GinkgoWriter, []string{"CAPI-MACHINE", "PHASE", "NODE", "DELETING"}, rows)
-	return true
-}
-
-func dumpNodes() bool {
-	list := &corev1.NodeList{}
-	if err := k8sClient.List(suiteCtx, list); err != nil || len(list.Items) == 0 {
-		return false
-	}
-	rows := make([][]string, 0, len(list.Items))
-	for i := range list.Items {
-		rows = append(rows, []string{list.Items[i].Name, testenv.Dash(list.Items[i].Labels[nodecommon.NodeTypeLabel])})
-	}
-	testenv.PrintTable(GinkgoWriter, []string{"NODE", "TYPE"}, rows)
-	return true
-}
+// ENVTEST_DEBUG=1 dumps cluster state after every spec via testenv.KubectlDumpNodeObjects (real
+// `kubectl get … -o wide` against the envtest apiserver); see the AfterEach above.
 
 func cleanupAll() {
 	// delete all sources and wait until they are gone, then force-delete the Instances

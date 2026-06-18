@@ -112,7 +112,6 @@ var _ = Describe("Bashible status aggregation (real SSA field ownership)", func(
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 		applyBashibleCondition(name, bashibleReadyManager,
 			bashibleReady(metav1.ConditionFalse, "StepFailed", "bashible failed", time.Now()))
-
 		Eventually(func(g Gomega) {
 			instance := getInstance(name)
 			g.Expect(instance.Status.BashibleStatus).To(Equal(deckhousev1alpha2.BashibleStatusError))
