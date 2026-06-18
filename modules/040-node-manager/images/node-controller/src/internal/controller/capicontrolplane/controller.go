@@ -63,11 +63,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// Patch status: ready, initialized, externalManagedControlPlane.
-	patch := &unstructured.Unstructured{}
-	patch.SetGroupVersionKind(obj.GroupVersionKind())
-	patch.SetName(obj.GetName())
-	patch.SetNamespace(obj.GetNamespace())
-	patch.Object["status"] = map[string]interface{}{
+	original := obj.DeepCopy()
+	obj.Object["status"] = map[string]interface{}{
 		"initialized":                 true,
 		"ready":                       true,
 		"externalManagedControlPlane": true,
@@ -76,7 +73,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		},
 	}
 
-	if err := r.Client.Status().Patch(ctx, patch, client.MergeFrom(obj)); err != nil {
+	if err := r.Client.Status().Patch(ctx, obj, client.MergeFrom(original)); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return ctrl.Result{}, nil
 		}
