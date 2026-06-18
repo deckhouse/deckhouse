@@ -116,13 +116,18 @@ kubernetesValidating:
   # rule below does not put every namespaced UPDATE/DELETE through the hook. Guarded with has()/in to
   # never error (which would otherwise fail the request under a Fail matchConditions policy).
   - name: only-marked-objects
+    # In admission matchConditions the reviewed objects are TOP-LEVEL CEL variables `object`/`oldObject`
+    # (the `request` variable is the AdmissionRequest metadata and has NO `.object`/`.oldObject`). Using
+    # `request.object` makes the expression fail CEL compilation, which invalidates the WHOLE
+    # ValidatingWebhookConfiguration and crash-loops the webhook-handler (fail-closed → every webhook on
+    # the handler stops). `object` is null on DELETE / CONNECT; `oldObject` is null on CREATE — guarded.
     expression: >-
-      (request.object != null && (
-        (has(request.object.metadata.annotations) && '{SYSTEM_RESOURCE_ANNOTATION}' in request.object.metadata.annotations && request.object.metadata.annotations['{SYSTEM_RESOURCE_ANNOTATION}'] == '{SYSTEM_RESOURCE_VALUE}')
-        || (has(request.object.metadata.labels) && '{HERITAGE_LABEL}' in request.object.metadata.labels && request.object.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
-      )) || (request.oldObject != null && (
-        (has(request.oldObject.metadata.annotations) && '{SYSTEM_RESOURCE_ANNOTATION}' in request.oldObject.metadata.annotations && request.oldObject.metadata.annotations['{SYSTEM_RESOURCE_ANNOTATION}'] == '{SYSTEM_RESOURCE_VALUE}')
-        || (has(request.oldObject.metadata.labels) && '{HERITAGE_LABEL}' in request.oldObject.metadata.labels && request.oldObject.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
+      (object != null && (
+        (has(object.metadata.annotations) && '{SYSTEM_RESOURCE_ANNOTATION}' in object.metadata.annotations && object.metadata.annotations['{SYSTEM_RESOURCE_ANNOTATION}'] == '{SYSTEM_RESOURCE_VALUE}')
+        || (has(object.metadata.labels) && '{HERITAGE_LABEL}' in object.metadata.labels && object.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
+      )) || (oldObject != null && (
+        (has(oldObject.metadata.annotations) && '{SYSTEM_RESOURCE_ANNOTATION}' in oldObject.metadata.annotations && oldObject.metadata.annotations['{SYSTEM_RESOURCE_ANNOTATION}'] == '{SYSTEM_RESOURCE_VALUE}')
+        || (has(oldObject.metadata.labels) && '{HERITAGE_LABEL}' in oldObject.metadata.labels && oldObject.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
       ))
   rules:
   - apiGroups:   ["*"]
