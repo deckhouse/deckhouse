@@ -121,7 +121,7 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
 		{Group: "virtualization", Probe: "vm-creation"},
-		{Group: "virtualization", Probe: "vm-migration"},
+		{Group: "virtualization", Probe: "vm-lifecycle"},
 	}
 
 	assert.Equal(t, allProbesSorted, unfiltered.Probes())
@@ -167,7 +167,7 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
 		{Group: "virtualization", Probe: "vm-creation"},
-		{Group: "virtualization", Probe: "vm-migration"},
+		{Group: "virtualization", Probe: "vm-lifecycle"},
 	}
 
 	assert.Equal(t, filteredProbesSorted, filtered.Probes())

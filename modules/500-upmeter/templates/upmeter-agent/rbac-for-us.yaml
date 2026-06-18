@@ -53,8 +53,8 @@ rules:
     verbs: ["get", "list"]
   # Virtualization check: VM lifecycle probe
   - apiGroups: ["virtualization.deckhouse.io"]
-    resources: ["virtualimages", "virtualdisks", "virtualmachines", "virtualmachineoperations"]
-    verbs: ["create", "delete", "get", "list", "watch"]
+    resources: ["virtualimages", "virtualdisks", "virtualmachines", "virtualmachineoperations", "virtualmachineblockdeviceattachments"]
+    verbs: ["create", "delete", "get", "list", "watch", "update"]
   - apiGroups: ["virtualization.deckhouse.io"]
     resources: ["virtualmachineclasses"]
     verbs: ["get", "list", "watch"]

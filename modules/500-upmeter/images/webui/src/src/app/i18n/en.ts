@@ -421,13 +421,13 @@ const langPack: LangPack = {
           "error occurred during VM lifecycle check, kube-apiserver is not available, or previous probe run has not finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
-      "vm-migration": {
-        title: "VM migration",
-        description: "Creates a temporary VM, evicts it to another node, verifies migration completion, then cleans up.",
-        reasonUp: "temporary VM was created and successfully migrated to another node",
-        reasonDown: "temporary VM creation or migration failed",
+      "vm-lifecycle": {
+        title: "VM lifecycle",
+        description: "Creates a temporary VM, verifies migration, attaches an extra disk, resizes it, detaches it, then cleans up.",
+        reasonUp: "temporary VM was created and lifecycle operations completed successfully",
+        reasonDown: "temporary VM creation, migration, disk attachment, disk resize or disk detachment failed",
         reasonUnknown:
-          "error occurred during VM migration check, kube-apiserver is not available, or previous probe run has not finished",
+          "error occurred during VM lifecycle check, kube-apiserver is not available, or previous probe run has not finished",
         reasonNodata: REASON_AGENTS_STOPPED,
       },
     },

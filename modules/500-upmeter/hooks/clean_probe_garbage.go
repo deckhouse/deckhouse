@@ -57,6 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			&podRepo{k},
 			&namespaceRepo{k},
 			&virtualMachineRepo{k},
+			&virtualMachineBlockDeviceAttachmentRepo{k},
 			&virtualDiskRepo{k},
 			&virtualImageRepo{k},
 			&upmeterHookProbeRepo{k},
@@ -229,6 +230,12 @@ var virtualImageGVR = schema.GroupVersionResource{
 	Resource: "virtualimages",
 }
 
+var virtualMachineBlockDeviceAttachmentGVR = schema.GroupVersionResource{
+	Group:    "virtualization.deckhouse.io",
+	Version:  "v1alpha2",
+	Resource: "virtualmachineblockdeviceattachments",
+}
+
 type virtualMachineRepo struct {
 	k k8s.Client
 }
@@ -252,6 +259,33 @@ func (r *virtualMachineRepo) Delete(ctx context.Context, qualifiedName string) e
 	}
 	return r.k.Dynamic().
 		Resource(virtualMachineGVR).
+		Namespace(namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type virtualMachineBlockDeviceAttachmentRepo struct {
+	k k8s.Client
+}
+
+func (r *virtualMachineBlockDeviceAttachmentRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.Dynamic().
+		Resource(virtualMachineBlockDeviceAttachmentGVR).
+		Namespace(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		emptyList := make([]metav1.Object, 0)
+		return emptyList, nil
+	}
+	return qualifiedGarbageObjects(list.Items), nil
+}
+
+func (r *virtualMachineBlockDeviceAttachmentRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.Dynamic().
+		Resource(virtualMachineBlockDeviceAttachmentGVR).
 		Namespace(namespace).
 		Delete(ctx, name, metav1.DeleteOptions{})
 }

@@ -41,17 +41,48 @@ func initVirtualization(access kubernetes.Access, preflight checker.Doer, virtPr
 			"upmeter-vm-creation",
 			virtProbe.VirtualImageURL,
 			false,
+			virtualMachineLifecycleTimeouts{
+				period:                     5 * time.Minute,
+				waitVirtualImage:            30 * time.Second,
+				waitVirtualDisk:             60 * time.Second,
+				waitVirtualMachine:          30 * time.Second,
+				waitVirtualMachineMigration: time.Minute,
+				waitDeletion:                30 * time.Second,
+				waitNamespaceDeleted:        30 * time.Second,
+				total:                       4*time.Minute + 30*time.Second,
+			},
 		),
 		virtualMachineLifecycleRunner(
 			access,
 			controlPlanePinger,
 			logger,
-			checker.VirtualizationMigrationProbeName,
-			"upmeter-vm-migration",
+			checker.VirtualizationLifecycleProbeName,
+			"upmeter-vm-lifecycle",
 			virtProbe.VirtualImageURL,
 			true,
+			virtualMachineLifecycleTimeouts{
+				period:                     15 * time.Minute,
+				waitVirtualImage:            30 * time.Second,
+				waitVirtualDisk:             2 * time.Minute,
+				waitVirtualMachine:          time.Minute,
+				waitVirtualMachineMigration: 2 * time.Minute,
+				waitDeletion:                time.Minute,
+				waitNamespaceDeleted:        time.Minute,
+				total:                       10 * time.Minute,
+			},
 		),
 	}
+}
+
+type virtualMachineLifecycleTimeouts struct {
+	period                     time.Duration
+	waitVirtualImage            time.Duration
+	waitVirtualDisk             time.Duration
+	waitVirtualMachine          time.Duration
+	waitVirtualMachineMigration time.Duration
+	waitDeletion                time.Duration
+	waitNamespaceDeleted        time.Duration
+	total                       time.Duration
 }
 
 func virtualMachineLifecycleRunner(
@@ -61,13 +92,14 @@ func virtualMachineLifecycleRunner(
 	probeName,
 	namespaceSuffix,
 	virtualImageURL string,
-	verifyMigration bool,
+	verifyLifecycle bool,
+	timeouts virtualMachineLifecycleTimeouts,
 ) runnerConfig {
 	return runnerConfig{
 		group:  checker.VirtualizationGroupName,
 		probe:  probeName,
 		check:  "virtual-machine-lifecycle",
-		period: 5 * time.Minute,
+		period: timeouts.period,
 		config: checker.VirtualMachineLifecycle{
 			Access:           access,
 			PreflightChecker: preflight,
@@ -81,16 +113,16 @@ func virtualMachineLifecycleRunner(
 			ProbeName:                  probeName,
 			VirtualImageName:           checker.VirtualizationImageName,
 			VirtualImageURL:            virtualImageURL,
-			VerifyMigration:            verifyMigration,
+			VerifyLifecycle:            verifyLifecycle,
 
 			RequestTimeout:                     5 * time.Second,
-			WaitVirtualImageTimeout:            30 * time.Second,
-			WaitVirtualDiskTimeout:             60 * time.Second,
-			WaitVirtualMachineTimeout:          30 * time.Second,
-			WaitVirtualMachineMigrationTimeout: time.Minute,
-			WaitDeletionTimeout:                30 * time.Second,
-			WaitNamespaceDeletedTimeout:        30 * time.Second,
-			Timeout:                            6 * time.Minute,
+			WaitVirtualImageTimeout:            timeouts.waitVirtualImage,
+			WaitVirtualDiskTimeout:             timeouts.waitVirtualDisk,
+			WaitVirtualMachineTimeout:          timeouts.waitVirtualMachine,
+			WaitVirtualMachineMigrationTimeout: timeouts.waitVirtualMachineMigration,
+			WaitDeletionTimeout:                timeouts.waitDeletion,
+			WaitNamespaceDeletedTimeout:        timeouts.waitNamespaceDeleted,
+			Timeout:                            timeouts.total,
 		},
 	}
 }

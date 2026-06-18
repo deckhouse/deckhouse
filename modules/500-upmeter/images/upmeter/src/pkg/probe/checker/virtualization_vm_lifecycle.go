@@ -25,6 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,16 +39,20 @@ const (
 	VirtualizationGroupName = "virtualization"
 	// VirtualizationCreationProbeName is the probe name for VM creation lifecycle.
 	VirtualizationCreationProbeName = "vm-creation"
-	// VirtualizationMigrationProbeName is the probe name for VM migration lifecycle.
-	VirtualizationMigrationProbeName = "vm-migration"
+	// VirtualizationLifecycleProbeName is the probe name for VM lifecycle operations.
+	VirtualizationLifecycleProbeName = "vm-lifecycle"
 	// VirtualizationImageName is the VirtualImage name used by VM lifecycle probes.
 	VirtualizationImageName = "probe-image"
-	virtualizationVMName    = "probe-vm"
-	virtualizationDiskName  = "probe-disk"
-	virtualizationEvictName = "probe-vm-evict"
+	virtualizationVMName                  = "probe-vm"
+	virtualizationDiskName                = "probe-disk"
+	virtualizationExtraDiskName           = "probe-extra-disk"
+	virtualizationExtraDiskAttachmentName = "probe-extra-disk-attachment"
+	virtualizationEvictName               = "probe-vm-evict"
 
 	virtualizationPhaseReady   = "Ready"
 	virtualizationPhaseRunning = "Running"
+	vmbdaPhaseAttached         = "Attached"
+	vmbdaPhaseFailed           = "Failed"
 	vmopPhaseCompleted         = "Completed"
 	vmopPhaseFailed            = "Failed"
 	vmopTypeEvict              = "Evict"
@@ -78,6 +83,11 @@ var (
 		Version:  "v1alpha2",
 		Resource: "virtualmachineoperations",
 	}
+	virtualMachineBlockDeviceAttachmentGVR = schema.GroupVersionResource{
+		Group:    "virtualization.deckhouse.io",
+		Version:  "v1alpha2",
+		Resource: "virtualmachineblockdeviceattachments",
+	}
 	virtualMachineClassGVR = schema.GroupVersionResource{
 		Group:    "virtualization.deckhouse.io",
 		Version:  "v1alpha3",
@@ -96,7 +106,7 @@ type VirtualMachineLifecycle struct {
 	ProbeName                  string
 	VirtualImageName           string
 	VirtualImageURL            string
-	VerifyMigration            bool
+	VerifyLifecycle            bool
 
 	RequestTimeout                     time.Duration
 	WaitVirtualImageTimeout            time.Duration
@@ -118,7 +128,7 @@ func (c VirtualMachineLifecycle) Checker() check.Checker {
 		probeName:                  fallbackString(c.ProbeName, VirtualizationCreationProbeName),
 		virtualImageName:           c.VirtualImageName,
 		virtualImageURL:            c.VirtualImageURL,
-		verifyMigration:            c.VerifyMigration,
+		verifyLifecycle:            c.VerifyLifecycle,
 
 		requestTimeout:                     fallbackDuration(c.RequestTimeout, 5*time.Second),
 		waitVirtualImageTimeout:            fallbackDuration(c.WaitVirtualImageTimeout, 15*time.Minute),
@@ -142,7 +152,7 @@ type virtualMachineLifecycleChecker struct {
 	probeName                  string
 	virtualImageName           string
 	virtualImageURL            string
-	verifyMigration            bool
+	verifyLifecycle            bool
 
 	requestTimeout                     time.Duration
 	waitVirtualImageTimeout            time.Duration
@@ -193,20 +203,11 @@ func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.
 		return result
 	}
 
-	if !c.verifyMigration {
+	if !c.verifyLifecycle {
 		return nil
 	}
 
-	if err := c.runStep("checking VirtualMachine migration", func() error {
-		return c.verifyVirtualMachineMigration(ctx)
-	}); err != nil {
-		if errors.Is(err, errConditionTimeout) {
-			return check.ErrFail("verification: VirtualMachine migration did not complete")
-		}
-		return lifecycleStepError("checking VirtualMachine migration", err)
-	}
-
-	return nil
+	return c.verifyVirtualMachineLifecycle(ctx)
 }
 
 func (c *virtualMachineLifecycleChecker) doVirtualMachineSetup(ctx context.Context) check.Error {
@@ -381,6 +382,19 @@ func (c *virtualMachineLifecycleChecker) createVirtualDisk(ctx context.Context) 
 	return err
 }
 
+func (c *virtualMachineLifecycleChecker) createBlankVirtualDisk(ctx context.Context, name, size string) error {
+	manifest := blankVirtualDiskManifest(c.agentID, c.namespace, c.probeName, name, size)
+	obj, err := decodeManifestToUnstructured(manifest)
+	if err != nil {
+		return err
+	}
+	_, err = c.access.Kubernetes().Dynamic().
+		Resource(virtualDiskGVR).
+		Namespace(c.namespace).
+		Create(ctx, obj, metav1.CreateOptions{})
+	return err
+}
+
 func (c *virtualMachineLifecycleChecker) deleteVirtualDisk(ctx context.Context) error {
 	return c.access.Kubernetes().Dynamic().
 		Resource(virtualDiskGVR).
@@ -388,11 +402,22 @@ func (c *virtualMachineLifecycleChecker) deleteVirtualDisk(ctx context.Context) 
 		Delete(ctx, virtualizationDiskName, metav1.DeleteOptions{})
 }
 
+func (c *virtualMachineLifecycleChecker) deleteVirtualDiskByName(ctx context.Context, name string) error {
+	return c.access.Kubernetes().Dynamic().
+		Resource(virtualDiskGVR).
+		Namespace(c.namespace).
+		Delete(ctx, name, metav1.DeleteOptions{})
+}
+
 func (c *virtualMachineLifecycleChecker) waitVirtualDiskReady(ctx context.Context) error {
+	return c.waitVirtualDiskReadyByName(ctx, virtualizationDiskName)
+}
+
+func (c *virtualMachineLifecycleChecker) waitVirtualDiskReadyByName(ctx context.Context, name string) error {
 	return c.waitResourcePhase(
 		ctx,
 		virtualDiskGVR,
-		virtualizationDiskName,
+		name,
 		virtualizationPhaseReady,
 		c.waitVirtualDiskTimeout,
 	)
@@ -400,6 +425,65 @@ func (c *virtualMachineLifecycleChecker) waitVirtualDiskReady(ctx context.Contex
 
 func (c *virtualMachineLifecycleChecker) waitVirtualDiskAbsent(ctx context.Context) error {
 	return c.waitResourceAbsent(ctx, virtualDiskGVR, virtualizationDiskName, c.waitDeletionTimeout)
+}
+
+func (c *virtualMachineLifecycleChecker) waitVirtualDiskAbsentByName(ctx context.Context, name string) error {
+	return c.waitResourceAbsent(ctx, virtualDiskGVR, name, c.waitDeletionTimeout)
+}
+
+func (c *virtualMachineLifecycleChecker) resizeVirtualDisk(ctx context.Context, name, size string) error {
+	obj, err := c.access.Kubernetes().Dynamic().
+		Resource(virtualDiskGVR).
+		Namespace(c.namespace).
+		Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if err := unstructured.SetNestedField(obj.Object, size, "spec", "persistentVolumeClaim", "size"); err != nil {
+		return err
+	}
+	_, err = c.access.Kubernetes().Dynamic().
+		Resource(virtualDiskGVR).
+		Namespace(c.namespace).
+		Update(ctx, obj, metav1.UpdateOptions{})
+	return err
+}
+
+func (c *virtualMachineLifecycleChecker) waitVirtualDiskCapacity(ctx context.Context, name, expectedSize string) error {
+	expected, err := resource.ParseQuantity(expectedSize)
+	if err != nil {
+		return err
+	}
+
+	return waitForCondition(
+		c.waitVirtualDiskTimeout,
+		pollingInterval(c.waitVirtualDiskTimeout),
+		func() (bool, error) {
+			obj, err := c.access.Kubernetes().Dynamic().
+				Resource(virtualDiskGVR).
+				Namespace(c.namespace).
+				Get(ctx, name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			if unstructuredNestedString(obj.Object, "status", "phase") != virtualizationPhaseReady {
+				return false, nil
+			}
+			capacity := unstructuredNestedString(obj.Object, "status", "capacity")
+			if capacity == "" {
+				return false, nil
+			}
+			actual, err := resource.ParseQuantity(capacity)
+			if err != nil {
+				return false, err
+			}
+			return actual.Cmp(expected) == 0, nil
+		},
+	)
 }
 
 func (c *virtualMachineLifecycleChecker) deleteVirtualImage(ctx context.Context) error {
@@ -448,6 +532,36 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachineEvictOperation(ctx 
 	return nil
 }
 
+func (c *virtualMachineLifecycleChecker) createVirtualMachineBlockDeviceAttachment(ctx context.Context) error {
+	manifest := virtualMachineBlockDeviceAttachmentManifest(
+		c.agentID,
+		c.namespace,
+		c.probeName,
+		virtualizationExtraDiskAttachmentName,
+		virtualizationVMName,
+		virtualizationExtraDiskName,
+	)
+	obj, err := decodeManifestToUnstructured(manifest)
+	if err != nil {
+		return err
+	}
+	_, err = c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineBlockDeviceAttachmentGVR).
+		Namespace(c.namespace).
+		Create(ctx, obj, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
+func (c *virtualMachineLifecycleChecker) deleteVirtualMachineBlockDeviceAttachment(ctx context.Context) error {
+	return c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineBlockDeviceAttachmentGVR).
+		Namespace(c.namespace).
+		Delete(ctx, virtualizationExtraDiskAttachmentName, metav1.DeleteOptions{})
+}
+
 func (c *virtualMachineLifecycleChecker) deleteVirtualMachine(ctx context.Context) error {
 	return c.access.Kubernetes().Dynamic().
 		Resource(virtualMachineGVR).
@@ -473,6 +587,62 @@ func (c *virtualMachineLifecycleChecker) waitVirtualMachineAgentReady(ctx contex
 		virtualizationConditionAgentReady,
 		string(metav1.ConditionTrue),
 		c.waitVirtualMachineTimeout,
+	)
+}
+
+func (c *virtualMachineLifecycleChecker) waitVirtualMachineBlockDeviceAttachmentAttached(ctx context.Context) error {
+	return waitForCondition(
+		c.waitVirtualMachineTimeout,
+		pollingInterval(c.waitVirtualMachineTimeout),
+		func() (bool, error) {
+			obj, err := c.access.Kubernetes().Dynamic().
+				Resource(virtualMachineBlockDeviceAttachmentGVR).
+				Namespace(c.namespace).
+				Get(ctx, virtualizationExtraDiskAttachmentName, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			if err != nil {
+				return false, err
+			}
+
+			phase := unstructuredNestedString(obj.Object, "status", "phase")
+			if phase == vmbdaPhaseFailed {
+				return false, fmt.Errorf("VirtualMachineBlockDeviceAttachment %q failed", virtualizationExtraDiskAttachmentName)
+			}
+			return phase == vmbdaPhaseAttached, nil
+		},
+	)
+}
+
+func (c *virtualMachineLifecycleChecker) waitVirtualMachineBlockDeviceAttachmentAbsent(ctx context.Context) error {
+	return c.waitResourceAbsent(
+		ctx,
+		virtualMachineBlockDeviceAttachmentGVR,
+		virtualizationExtraDiskAttachmentName,
+		c.waitDeletionTimeout,
+	)
+}
+
+func (c *virtualMachineLifecycleChecker) waitVirtualDiskAttachedToVirtualMachine(ctx context.Context, diskName string, attached bool) error {
+	return waitForCondition(
+		c.waitVirtualMachineTimeout,
+		pollingInterval(c.waitVirtualMachineTimeout),
+		func() (bool, error) {
+			vm, err := c.access.Kubernetes().Dynamic().
+				Resource(virtualMachineGVR).
+				Namespace(c.namespace).
+				Get(ctx, virtualizationVMName, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			if err != nil {
+				return false, err
+			}
+
+			currentAttached := virtualMachineHasAttachedDisk(vm.Object, diskName)
+			return currentAttached == attached, nil
+		},
 	)
 }
 
@@ -531,6 +701,112 @@ func (c *virtualMachineLifecycleChecker) verifyVirtualMachineMigration(ctx conte
 	}
 
 	return c.waitVirtualMachineMigrationCompleted(ctx, initialNode)
+}
+
+func (c *virtualMachineLifecycleChecker) verifyVirtualMachineLifecycle(ctx context.Context) check.Error {
+	if err := c.runStep("checking VirtualMachine migration", func() error {
+		return c.verifyVirtualMachineMigration(ctx)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: VirtualMachine migration did not complete")
+		}
+		return lifecycleStepError("checking VirtualMachine migration", err)
+	}
+
+	if err := c.runStep("creating extra VirtualDisk", func() error {
+		return c.createBlankVirtualDisk(ctx, virtualizationExtraDiskName, "50Mi")
+	}); err != nil {
+		return lifecycleStepError("creating extra VirtualDisk", err)
+	}
+
+	if err := c.runStep("attaching extra VirtualDisk", func() error {
+		return c.createVirtualMachineBlockDeviceAttachment(ctx)
+	}); err != nil {
+		return lifecycleStepError("attaching extra VirtualDisk", err)
+	}
+
+	if err := c.runStep("waiting for extra VirtualDisk attachment", func() error {
+		return c.waitVirtualMachineBlockDeviceAttachmentAttached(ctx)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk attachment did not become Attached")
+		}
+		return lifecycleStepError("waiting for extra VirtualDisk attachment", err)
+	}
+
+	if err := c.runStep("waiting for extra VirtualDisk", func() error {
+		return c.waitVirtualDiskReadyByName(ctx, virtualizationExtraDiskName)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk did not become Ready")
+		}
+		return lifecycleStepError("waiting for extra VirtualDisk", err)
+	}
+
+	if err := c.runStep("checking extra VirtualDisk in VM status", func() error {
+		return c.waitVirtualDiskAttachedToVirtualMachine(ctx, virtualizationExtraDiskName, true)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk did not appear attached in VirtualMachine status")
+		}
+		return lifecycleStepError("checking extra VirtualDisk in VM status", err)
+	}
+
+	if err := c.runStep("resizing extra VirtualDisk", func() error {
+		return c.resizeVirtualDisk(ctx, virtualizationExtraDiskName, "100Mi")
+	}); err != nil {
+		return lifecycleStepError("resizing extra VirtualDisk", err)
+	}
+
+	if err := c.runStep("waiting for extra VirtualDisk resize", func() error {
+		return c.waitVirtualDiskCapacity(ctx, virtualizationExtraDiskName, "100Mi")
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk capacity did not become 100Mi")
+		}
+		return lifecycleStepError("waiting for extra VirtualDisk resize", err)
+	}
+
+	if err := c.runStep("checking VirtualMachine after extra VirtualDisk resize", func() error {
+		if err := c.waitVirtualMachineRunning(ctx); err != nil {
+			return err
+		}
+		if err := c.waitVirtualMachineAgentReady(ctx); err != nil {
+			return err
+		}
+		return c.waitVirtualMachineBlockDeviceAttachmentAttached(ctx)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: VirtualMachine did not stay ready after extra VirtualDisk resize")
+		}
+		return lifecycleStepError("checking VirtualMachine after extra VirtualDisk resize", err)
+	}
+
+	if err := c.runStep("detaching extra VirtualDisk", func() error {
+		return c.deleteVirtualMachineBlockDeviceAttachment(ctx)
+	}); err != nil {
+		return lifecycleStepError("detaching extra VirtualDisk", err)
+	}
+
+	if err := c.runStep("waiting for extra VirtualDisk detach", func() error {
+		return c.waitVirtualMachineBlockDeviceAttachmentAbsent(ctx)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk attachment was not deleted")
+		}
+		return lifecycleStepError("waiting for extra VirtualDisk detach", err)
+	}
+
+	if err := c.runStep("checking extra VirtualDisk detached from VM status", func() error {
+		return c.waitVirtualDiskAttachedToVirtualMachine(ctx, virtualizationExtraDiskName, false)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk still appears attached in VirtualMachine status")
+		}
+		return lifecycleStepError("checking extra VirtualDisk detached from VM status", err)
+	}
+
+	return nil
 }
 
 func (c *virtualMachineLifecycleChecker) waitVirtualMachineAbsent(ctx context.Context) error {
@@ -750,6 +1026,20 @@ func (c *virtualMachineLifecycleChecker) hasGarbage(ctx context.Context) (bool, 
 func (c *virtualMachineLifecycleChecker) cleanup(ctx context.Context) error {
 	var errs []error
 
+	if err := c.runStep("cleanup: delete VirtualMachineBlockDeviceAttachment", func() error {
+		err := c.deleteVirtualMachineBlockDeviceAttachment(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("delete VirtualMachineBlockDeviceAttachment: %w", err))
+	}
+	if err := c.runStep("cleanup: wait VirtualMachineBlockDeviceAttachment deletion", func() error {
+		return c.waitVirtualMachineBlockDeviceAttachmentAbsent(ctx)
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("wait VirtualMachineBlockDeviceAttachment deletion: %w", err))
+	}
 	if err := c.runStep("cleanup: delete VirtualMachine", func() error {
 		err := c.deleteVirtualMachine(ctx)
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -777,6 +1067,20 @@ func (c *virtualMachineLifecycleChecker) cleanup(ctx context.Context) error {
 		return c.waitVirtualDiskAbsent(ctx)
 	}); err != nil {
 		errs = append(errs, fmt.Errorf("wait VirtualDisk deletion: %w", err))
+	}
+	if err := c.runStep("cleanup: delete extra VirtualDisk", func() error {
+		err := c.deleteVirtualDiskByName(ctx, virtualizationExtraDiskName)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("delete extra VirtualDisk: %w", err))
+	}
+	if err := c.runStep("cleanup: wait extra VirtualDisk deletion", func() error {
+		return c.waitVirtualDiskAbsentByName(ctx, virtualizationExtraDiskName)
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("wait extra VirtualDisk deletion: %w", err))
 	}
 	if err := c.runStep("cleanup: delete VirtualImage", func() error {
 		err := c.deleteVirtualImage(ctx)
@@ -852,6 +1156,30 @@ func unstructuredConditionStatus(obj map[string]interface{}, conditionType strin
 	return ""
 }
 
+func virtualMachineHasAttachedDisk(obj map[string]interface{}, diskName string) bool {
+	blockDeviceRefs, found, err := unstructured.NestedSlice(obj, "status", "blockDeviceRefs")
+	if err != nil || !found {
+		return false
+	}
+
+	for _, item := range blockDeviceRefs {
+		ref, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if unstructuredNestedString(ref, "kind") != "VirtualDisk" {
+			continue
+		}
+		if unstructuredNestedString(ref, "name") != diskName {
+			continue
+		}
+		attached, found, err := unstructured.NestedBool(ref, "attached")
+		return err == nil && found && attached
+	}
+
+	return false
+}
+
 func virtualImageManifest(agentID, namespace, probeName, name, imageURL string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -894,6 +1222,24 @@ spec:
 `, agentID, VirtualizationGroupName, probeName, name, namespace, virtualImageName)
 }
 
+func blankVirtualDiskManifest(agentID, namespace, probeName, name, size string) string {
+	return fmt.Sprintf(`
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualDisk
+metadata:
+  labels:
+    heritage: upmeter
+    upmeter-agent: %q
+    upmeter-group: %q
+    upmeter-probe: %q
+  name: %q
+  namespace: %q
+spec:
+  persistentVolumeClaim:
+    size: %q
+`, agentID, VirtualizationGroupName, probeName, name, namespace, size)
+}
+
 func virtualMachineManifest(agentID, namespace, probeName, name, diskName string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -933,6 +1279,26 @@ metadata:
   namespace: %q
 spec:
   virtualMachineName: %q
-  type: Evict
-`, agentID, VirtualizationGroupName, probeName, name, namespace, vmName)
+  type: %q
+`, agentID, VirtualizationGroupName, probeName, name, namespace, vmName, vmopTypeEvict)
+}
+
+func virtualMachineBlockDeviceAttachmentManifest(agentID, namespace, probeName, name, vmName, diskName string) string {
+	return fmt.Sprintf(`
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineBlockDeviceAttachment
+metadata:
+  labels:
+    heritage: upmeter
+    upmeter-agent: %q
+    upmeter-group: %q
+    upmeter-probe: %q
+  name: %q
+  namespace: %q
+spec:
+  blockDeviceRef:
+    kind: VirtualDisk
+    name: %q
+  virtualMachineName: %q
+`, agentID, VirtualizationGroupName, probeName, name, namespace, diskName, vmName)
 }
