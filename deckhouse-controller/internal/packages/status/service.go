@@ -420,6 +420,7 @@ func (s *Service) NewStatus(name string) {
 			{Type: ConditionRequirementsMet, Status: metav1.ConditionUnknown},
 			{Type: ConditionReadyOnFilesystem, Status: metav1.ConditionUnknown},
 			{Type: ConditionLoaded, Status: metav1.ConditionUnknown},
+			{Type: ConditionCRDsEnsured, Status: metav1.ConditionUnknown},
 			{Type: ConditionHooksProcessed, Status: metav1.ConditionUnknown},
 			{Type: ConditionManifestsApplied, Status: metav1.ConditionUnknown},
 			{Type: ConditionScaled, Status: metav1.ConditionUnknown},

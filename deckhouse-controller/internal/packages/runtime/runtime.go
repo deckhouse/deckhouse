@@ -714,6 +714,9 @@ func (r *Runtime) schedulePackage(name string) {
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
+		// Apply package-bundled CRDs before hooks/Helm so that custom resources
+		// referenced by later stages already exist in the cluster.
+		r.queueService.Enqueue(ctx, name, taskensurecrd.NewTask(pkg, r.crdInstaller, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
