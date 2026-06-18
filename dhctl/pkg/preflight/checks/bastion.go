@@ -57,10 +57,11 @@ func (BastionAvailabilityCheck) Phase() preflight.Phase {
 
 func (BastionAvailabilityCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.RetryPolicy{
-		Attempts: 1,
+		Attempts: 15,
 		Options: []backoff.ExponentialBackOffOpts{
 			backoff.WithInitialInterval(time.Second),
 			backoff.WithMultiplier(2),
+			backoff.WithMaxInterval(5 * time.Second),
 			backoff.WithMaxElapsedTime(0),
 		},
 	}
