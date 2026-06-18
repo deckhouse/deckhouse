@@ -179,7 +179,7 @@
              )"
              ```
 
-          Once `ModuleConfig` is updated, this alert will be resolved automatically.
+          Once ModuleConfig is updated, this alert will be resolved automatically.
 
           3. Remove `encryptionAlgorithm` from ClusterConfiguration:
 
