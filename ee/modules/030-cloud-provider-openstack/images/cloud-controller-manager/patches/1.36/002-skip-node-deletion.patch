@@ -1,0 +1,15 @@
+diff --git a/pkg/openstack/instances.go b/pkg/openstack/instances.go
+index 026dba1b..bf357c22 100644
+--- a/pkg/openstack/instances.go
++++ b/pkg/openstack/instances.go
+@@ -92,6 +92,10 @@ func (i *InstancesV2) InstanceExists(ctx context.Context, node *v1.Node) (bool,
+ 
+ 	_, err := i.getInstance(ctx, node)
+ 	if err == cloudprovider.InstanceNotFound {
++		if _, ok := sysos.LookupEnv("SKIP_NODE_DELETION"); ok {
++			klog.V(4).Infof("instance not found for node: %s, SKIP_NODE_DELETION is set, preventing deletion", node.Name)
++			return false, err
++		}
+ 		klog.V(6).Infof("instance not found for node: %s", node.Name)
+ 		return false, nil
+ 	}

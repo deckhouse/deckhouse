@@ -332,6 +332,12 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(ccmCRB.Exists()).To(BeTrue())
 		Expect(ccmVPA.Exists()).To(BeTrue())
 		Expect(ccmDeploy.Exists()).To(BeTrue())
+		Expect(ccmDeploy.Field("spec.template.spec.containers.0.env").Array()).To(ContainElement(
+			And(
+				WithTransform(func(v gjson.Result) string { return v.Get("name").String() }, Equal("SKIP_NODE_DELETION")),
+				WithTransform(func(v gjson.Result) string { return v.Get("value").String() }, Equal("1")),
+			),
+		))
 		Expect(ccmSecret.Exists()).To(BeTrue())
 		ccmExpectedConfig := `
 [Global]
