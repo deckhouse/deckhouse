@@ -1,4 +1,4 @@
-{{- $version := "v0.6.2" }}
+{{- $version := "fix/machine-initialization-provisioned" }}
 {{- $version_common := "v0.8.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
