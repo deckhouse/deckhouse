@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/platform"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -199,24 +200,6 @@ type RuntimeValues struct {
 	Settings addonutils.Values `json:"Settings"`
 }
 
-// PlatformValues holds platform-wide runtime values that are not part of schema.
-// These values are passed to helm templates under the .Platform prefix and
-// replace data previously provided by the addon-operator global module
-// (for example, global.enabledModules).
-type PlatformValues struct {
-	// EnabledModules lists the modules currently enabled on the platform.
-	// Mirrors global.enabledModules.
-	EnabledModules []string `json:"EnabledModules"`
-	// Capabilities describes platform capabilities available to packages.
-	Capabilities Capabilities `json:"Capabilities"`
-}
-
-// Capabilities describes platform capabilities available to packages.
-type Capabilities struct {
-	// Has lists enabled platform capabilities. Currently always empty.
-	Has []string `json:"Has"`
-}
-
 // getRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
@@ -243,42 +226,15 @@ func (a *Application) getRuntimeValues() RuntimeValues {
 }
 
 // getPlatformValues returns platform-wide values exposed under the .Platform prefix.
-// EnabledModules mirrors global.enabledModules; Capabilities.Has is currently empty.
-func (a *Application) getPlatformValues() PlatformValues {
-	return PlatformValues{
-		EnabledModules: a.getEnabledModules(),
-		Capabilities: Capabilities{
-			Has: []string{},
-		},
-	}
-}
-
-// getEnabledModules extracts the enabledModules list from the platform global values.
-// Returns an empty slice when no global values getter is configured or the key is absent.
-func (a *Application) getEnabledModules() []string {
-	if a.globalValuesGetter == nil {
-		return []string{}
+// It mirrors the full global values tree (so global.<path> resolves as
+// .Platform.<path>) plus the structured EnabledModules/Capabilities fields.
+func (a *Application) getPlatformValues() addonutils.Values {
+	var global addonutils.Values
+	if a.globalValuesGetter != nil {
+		global = a.globalValuesGetter(false)
 	}
 
-	raw, ok := a.globalValuesGetter(false)["enabledModules"]
-	if !ok {
-		return []string{}
-	}
-
-	switch v := raw.(type) {
-	case []string:
-		return v
-	case []interface{}:
-		out := make([]string, 0, len(v))
-		for _, item := range v {
-			if s, ok := item.(string); ok {
-				out = append(out, s)
-			}
-		}
-		return out
-	default:
-		return []string{}
-	}
+	return platform.BuildValues(global)
 }
 
 // GetRuntimeValues returns runtime values in string format

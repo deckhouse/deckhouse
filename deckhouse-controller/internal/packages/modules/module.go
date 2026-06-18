@@ -41,6 +41,7 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/platform"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -200,9 +201,18 @@ func (m *Module) GetRuntimeValues() string {
 	runtimeValues := m.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	marshalledGlobal := m.globalValuesGetter(false)
+	var global addonutils.Values
+	if m.globalValuesGetter != nil {
+		global = m.globalValuesGetter(false)
+	}
+	marshalledGlobal, _ := json.Marshal(global)
 
-	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
+	// .Platform mirrors the full global values tree (global.<path> -> .Platform.<path>)
+	// plus the structured EnabledModules/Capabilities fields.
+	platformValues := platform.BuildValues(global)
+	marshalledPlatform, _ := json.Marshal(platformValues)
+
+	return fmt.Sprintf("Module=%s,Deckhouse=%s,Platform=%s", marshalled, marshalledGlobal, marshalledPlatform)
 }
 
 // GetName returns the full module identifier.
