@@ -65,9 +65,9 @@ require (
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aquasecurity/go-gem-version v0.0.0-20201115065557-8eed6fe000ce // indirect
-	github.com/aquasecurity/go-npm-version v0.0.0-20201110091526-0b796d180798 // indirect
-	github.com/aquasecurity/go-pep440-version v0.0.0-20210121094942-22b2f8951d46 // indirect
-	github.com/aquasecurity/go-version v0.0.0-20240603093900-cf8a8d29271d // indirect
+	github.com/aquasecurity/go-npm-version v0.0.1 // indirect
+	github.com/aquasecurity/go-pep440-version v0.0.1 // indirect
+	github.com/aquasecurity/go-version v0.0.1 // indirect
 	github.com/aquasecurity/table v1.8.0 // indirect
 	github.com/aquasecurity/tml v0.6.1 // indirect
 	github.com/aquasecurity/trivy-checks v0.13.1-0.20240830230553-53ddbbade784 // indirect
@@ -106,11 +106,11 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
-	github.com/cheggaaa/pb/v3 v3.1.5 // indirect
+	github.com/cheggaaa/pb/v3 v3.1.7 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
-	github.com/containerd/containerd v1.7.30 // indirect
+	github.com/containerd/containerd v1.7.32 // indirect
 	github.com/containerd/containerd/api v1.8.0 // indirect
 	github.com/containerd/continuity v0.4.4 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -150,7 +150,7 @@ require (
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.9.0 // indirect
-	github.com/go-git/go-git/v5 v5.19.0 // indirect
+	github.com/go-git/go-git/v5 v5.19.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
@@ -231,12 +231,12 @@ require (
 	github.com/masahiro331/go-disk v0.0.0-20240625071113-56c933208fee // indirect
 	github.com/masahiro331/go-ebs-file v0.0.0-20240917043618-e6d2bea5c32e // indirect
 	github.com/masahiro331/go-ext4-filesystem v0.0.0-20240620024024-ca14e6327bbd // indirect
-	github.com/masahiro331/go-mvn-version v0.0.0-20210429150710-d3157d602a08 // indirect
+	github.com/masahiro331/go-mvn-version v0.0.0-20250131095131-f4974fa13b8a // indirect
 	github.com/masahiro331/go-vmdk-parser v0.0.0-20221225061455-612096e4bbbd // indirect
 	github.com/masahiro331/go-xfs-filesystem v0.0.0-20231205045356-1b22259a6c44 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/microsoft/go-rustaudit v0.0.0-20220808201409-204dfee52032 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -285,11 +285,11 @@ require (
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rubenv/sql-migrate v1.8.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
-	github.com/samber/lo v1.47.0 // indirect
+	github.com/samber/lo v1.50.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sassoftware/relic v7.2.1+incompatible // indirect
