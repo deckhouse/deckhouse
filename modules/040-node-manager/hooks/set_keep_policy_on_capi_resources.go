@@ -66,27 +66,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "capi_cluster",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
-			Kind:       "Cluster",
+			Name:                         "capi_cluster",
+			ApiVersion:                   "cluster.x-k8s.io/v1beta1",
+			Kind:                         "Cluster",
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			WaitForSynchronization:       go_hook.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{capiNamespace}},
 			},
 			FilterFunc: filterCapiResourceMeta,
 		},
 		{
-			Name:       "capi_machine_health_check",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
-			Kind:       "MachineHealthCheck",
+			Name:                         "capi_machine_health_check",
+			ApiVersion:                   "cluster.x-k8s.io/v1beta1",
+			Kind:                         "MachineHealthCheck",
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			WaitForSynchronization:       go_hook.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{capiNamespace}},
 			},
 			FilterFunc: filterCapiResourceMeta,
 		},
 		{
-			Name:       "capi_machine_deployment",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
-			Kind:       "MachineDeployment",
+			Name:                         "capi_machine_deployment",
+			ApiVersion:                   "cluster.x-k8s.io/v1beta1",
+			Kind:                         "MachineDeployment",
+			ExecuteHookOnSynchronization: go_hook.Bool(false),
+			WaitForSynchronization:       go_hook.Bool(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{capiNamespace}},
 			},
