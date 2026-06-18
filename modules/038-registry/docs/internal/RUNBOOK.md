@@ -64,6 +64,10 @@ $ d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .s
 
 <!-- TODO: описать диагностику и действия, если `registry-incluster-proxy` не поднимается. -->
 
+### `NodeServicesReady`
+
+<!-- TODO: описать диагностику и действия, если раскатка `registry-nodeservices-manager` и static pod-ов `registry-nodeservices-<node>` не завершается. -->
+
 ### `DeckhouseRegistrySwitchReady`
 
 <!-- TODO: описать диагностику и действия, если переключение DKP на новый registry не завершается. -->
@@ -71,6 +75,10 @@ $ d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .s
 ### `CleanupNodeServices`
 
 <!-- TODO: описать диагностику и действия, если node-services не удаляются. -->
+
+### `CleanupInClusterProxy`
+
+<!-- TODO: описать диагностику и действия, если `registry-incluster-proxy` не удаляется. -->
 
 ### `FinalContainerdConfigReady`
 
