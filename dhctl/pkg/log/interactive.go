@@ -286,10 +286,6 @@ func getInteractiveLoggerWrapper(loggerType string, opts LoggerOptions, interact
 		},
 	}
 
-	if loggerType == "pretty" {
-		loggerType = "simple"
-	}
-
 	extLogger, err := external.NewLoggerWithOptions(external.Type(loggerType), extOpts)
 	if err != nil {
 		return nil, err

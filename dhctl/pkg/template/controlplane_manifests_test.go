@@ -110,8 +110,12 @@ func testManifestsRendering(t *testing.T) {
 					"address": "registry.example.com",
 					"path":    "/deckhouse",
 				}
-				data["resourcesRequestsMilliCpuControlPlane"] = 1000
-				data["resourcesRequestsMemoryControlPlane"] = 1073741824
+				data["settings"] = map[string]interface{}{
+					"resourcesRequests": map[string]interface{}{
+						"milliCPU":    int64(1000),
+						"memoryBytes": int64(1073741824),
+					},
+				}
 
 				manifests, err := renderFullManifests(data)
 				if err != nil {
@@ -828,8 +832,12 @@ func testPatchesRendering(t *testing.T) {
 					"address": "registry.example.com",
 					"path":    "/deckhouse",
 				}
-				data["resourcesRequestsMilliCpuControlPlane"] = 1000
-				data["resourcesRequestsMemoryControlPlane"] = 1073741824
+				data["settings"] = map[string]interface{}{
+					"resourcesRequests": map[string]interface{}{
+						"milliCPU":    int64(1000),
+						"memoryBytes": int64(1073741824),
+					},
+				}
 
 				manifests, err := renderFullManifests(data)
 				if err != nil {

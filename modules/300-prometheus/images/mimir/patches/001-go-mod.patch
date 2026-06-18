@@ -10,7 +10,7 @@ index b77ad7f..d422436 100644
 -// Please note that this directive is ignored when building with the Mimir build image,
 -// that will always use its bundled toolchain.
 -toolchain go1.22.5
-+go 1.24.0
++go 1.25.10
  
  require (
  	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.4.0

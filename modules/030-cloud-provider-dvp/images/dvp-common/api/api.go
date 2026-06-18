@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"errors"
 
 	corev1 "k8s.io/api/core/v1"
@@ -88,4 +89,8 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 // ProjectNamespace returns the project that this DVPCloudAPI instance is bound to.
 func (a *DVPCloudAPI) ProjectNamespace() string {
 	return a.Service.namespace
+}
+
+func (a *DVPCloudAPI) CleanupClusterResources(ctx context.Context, clusterUUID string) error {
+	return a.LoadBalancerService.CleanupLoadBalancersByClusterUUID(ctx, clusterUUID)
 }

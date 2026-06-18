@@ -47,7 +47,7 @@ const (
 )
 
 var (
-	createSigDirDefaultOpts = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+	createSigDirDefaultOpts = retry.AttemptsWithWaitOpts(100, 1*time.Second)
 )
 
 type LoopsParams struct {
@@ -119,7 +119,7 @@ func (p *BootstrapPreparator) PrepareModule(ctx context.Context) error {
 	}
 
 	if signatureMode == NoSignatureMode {
-		logger.DebugF("Provide no signature mode. Skip prepare signature")
+		logger.DebugF("No signature mode provided. Skipping signature preparation")
 		return nil
 	}
 
@@ -133,11 +133,11 @@ func (p *BootstrapPreparator) Module() string {
 }
 
 func (p *BootstrapPreparator) generateKeysAndUpload(ctx context.Context, signatureMode string) error {
-	p.loggerProvider().DebugF("Got signature mode: %s. Start preparing control-plane signature", signatureMode)
+	p.loggerProvider().DebugF("Got signature mode: %s. Starting to prepare control-plane signature", signatureMode)
 
 	certs, err := tlsutils.GenerateCertificate("signature", "apiserver", tlsutils.CertKeyTypeED25519, 365)
 	if err != nil {
-		return fmt.Errorf("Cannot generate tls certificate: %w", err)
+		return fmt.Errorf("Cannot generate TLS certificate: %w", err)
 	}
 
 	keys, err := p.generateKeys(certs, p.timeNow())
@@ -182,7 +182,7 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 		return nil, fmt.Errorf("Cannot marshal private key JWK: %w", err)
 	}
 
-	logger.DebugF("Generate key for signature")
+	logger.DebugF("Generating key for signature")
 	pubKeyCert, err := x509.ParseCertificate(certs.Certificate[0])
 	if err != nil {
 		return nil, fmt.Errorf("Cannot parse certificate: %w", err)
@@ -193,7 +193,7 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 		return nil, fmt.Errorf("Unexpected public key type %T, expected ed25519.PublicKey", pubKeyCert.PublicKey)
 	}
 
-	logger.DebugF("Generate certificate for signature")
+	logger.DebugF("Generating certificate for signature")
 	pubJWK := jose.JSONWebKey{
 		Key:          pubKey,
 		KeyID:        timeNow,
@@ -217,7 +217,7 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 }
 
 func (p *BootstrapPreparator) encryptionConfig(signatureMode string) ([]byte, error) {
-	p.loggerProvider().DebugF("Generate encryption config")
+	p.loggerProvider().DebugF("Generating encryption config")
 
 	config := EncryptionConfiguration{
 		APIVersion: "apiserver.config.k8s.io/v1",
@@ -260,7 +260,7 @@ func (p *BootstrapPreparator) createSignatureDir(ctx context.Context) error {
 
 	logger := p.loggerProvider()
 
-	logger.DebugF("Create signature dir %s", signaturePath)
+	logger.DebugF("Creating signature dir %s", signaturePath)
 
 	loopParams := retry.SafeCloneOrNewParams(p.loopsParams.CreateSigDir, createSigDirDefaultOpts...).
 		Clone(
@@ -289,7 +289,7 @@ func (p *BootstrapPreparator) uploadSignatureFiles(ctx context.Context, sig *sig
 		return err
 	}
 
-	p.loggerProvider().DebugF("Upload signature files")
+	p.loggerProvider().DebugF("Uploading signature files")
 	files := map[string][]byte{
 		p.signaturePath(privKeyFilename): sig.privateKeyJSON,
 		p.signaturePath(pubKeyFilename):  sig.jwksJSON,

@@ -9,7 +9,7 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-vcd
     cluster.x-k8s.io/provider: vcd
-    cluster.x-k8s.io/v1beta1: v1beta2
+    cluster.x-k8s.io/v1beta2: v1beta2
   name: vcdclustertemplates.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -19,6 +19,17 @@ spec:
     plural: vcdclustertemplates
     singular: vcdclustertemplate
   scope: Namespaced
+  conversion:
+    strategy: Webhook
+    webhook:
+      conversionReviewVersions:
+      - v1
+      - v1beta1
+      clientConfig:
+        service:
+          name: capcd-controller-manager-webhook-service
+          namespace: d8-cloud-provider-vcd
+          path: /convert
   versions:
   - name: v1beta2
     schema:

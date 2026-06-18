@@ -60,15 +60,26 @@ func InstallDeckhouse(
 			return err
 		}
 
+		// Install the ModuleConfig CRD before pre-Deckhouse resources and
+		// ModuleConfig manifests are applied, so they don't have to wait for
+		// deckhouse-controller to start. It is a file-based precondition (with
+		// version-merge semantics matching deckhouse-controller's EnsureCRDs),
+		// not a single-object manifest, so it lives here rather than inside the
+		// CreateDeckhouseManifests task list. No-op (with a warning) when the
+		// CRD file is unavailable.
+		if err := deckhouse.EnsureModuleConfigCRD(ctx, kubeCl, config.ModuleConfigCRDPath); err != nil {
+			return fmt.Errorf("ensure ModuleConfig CRD: %w", err)
+		}
+
 		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
 		if err != nil {
-			return fmt.Errorf("Deckhouse create manifests: %w", err)
+			return fmt.Errorf("create Deckhouse manifests: %w", err)
 		}
 
 		res.ManifestResult = resManifests
 
 		if err := params.State.SaveManifestsCreated(ctx); err != nil {
-			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
+			return fmt.Errorf("set the manifests-in-cluster flag in the cache: %w", err)
 		}
 
 		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
@@ -100,8 +111,8 @@ func applyPostBootstrapModuleConfigs(
 		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 		p := retry.NewEmptyParams(
 			retry.WithName("%s", task.Title),
-			retry.WithAttempts(15),
-			retry.WithWait(5*time.Second),
+			retry.WithAttempts(75),
+			retry.WithWait(1*time.Second),
 			retry.WithLogger(extLogger()),
 		)
 		err := retry.NewLoopWithParams(p).
@@ -121,7 +132,7 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	defer span.End()
 
 	if result == nil {
-		log.DebugF("Skip post install tasks because result is nil\n")
+		log.DebugF("Skipping post-install tasks because result is nil\n")
 		return nil
 	}
 

@@ -32,23 +32,6 @@ properties:
               key:
                 x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
                 type: string
-          resourcesRequests:
-            type: object
-            default: {}
-            additionalProperties: false
-            properties:
-              milliCpuControlPlane:
-                type: integer
-                format: int64
-                minimum: 0
-                x-examples: [ 1024 ]
-                default: 0
-              memoryControlPlane:
-                type: integer
-                format: int64
-                minimum: 0
-                x-examples: [ 536870912 ]
-                default: 0
   clusterIsBootstrapped:
     type: boolean
     description: |

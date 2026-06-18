@@ -97,7 +97,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -138,7 +138,7 @@ shell:
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-src-artifact

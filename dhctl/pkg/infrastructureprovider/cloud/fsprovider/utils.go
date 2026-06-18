@@ -22,7 +22,7 @@ import (
 func checkIsExecFile(path string) error {
 	_, err := exec.LookPath(path)
 	if err != nil {
-		return fmt.Errorf("Failed to check %s of file %s. Is not executable", path, err)
+		return fmt.Errorf("Failed to check %s of file %s. It is not executable", path, err)
 	}
 
 	return nil

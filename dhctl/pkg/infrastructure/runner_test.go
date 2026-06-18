@@ -349,7 +349,7 @@ func TestConcurrentExec(t *testing.T) {
 		return exec.Plan(ctx, PlanOpts{})
 	})
 
-	require.Equal(t, "Infrastructure utility have been already executed.", err.Error())
+	require.Equal(t, "Infrastructure utility has already been executed.", err.Error())
 }
 
 var destructivelyChanged = &plan.DestructiveChanges{

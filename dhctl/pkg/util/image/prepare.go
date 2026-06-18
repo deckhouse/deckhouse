@@ -30,7 +30,7 @@ func PrepareFiles(path string) error {
 		return err
 	}
 	if !pathStat.IsDir() {
-		return fmt.Errorf("%s isn't directory", path)
+		return fmt.Errorf("%s isn't a directory", path)
 	}
 
 	bashiblePath := filepath.Join(path, "candi", "bashible")

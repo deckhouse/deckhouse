@@ -147,3 +147,11 @@ linters-settings:
     exclude-rules:
       enum:
         - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.bundles.items"
+  no-cyrillic:
+    exclude-rules:
+      files:
+        - monitoring/grafana-dashboards/nvidia-gpu/gpu_nodes.json
+        - monitoring/grafana-dashboards/nvidia-gpu/gpu_node.json
+        - monitoring/grafana-dashboards/nvidia-gpu/gpu_namespaces.json
+        - monitoring/grafana-dashboards/nvidia-gpu/gpu_namespace_pod.json
+        - monitoring/grafana-dashboards/nvidia-gpu/gpu_namespace.json

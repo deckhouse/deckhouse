@@ -86,3 +86,9 @@ Why it is needed:
 During graceful node shutdown, kubelet reports the shutdown state through the `NodeReady` condition. The scheduler must treat such nodes as unschedulable and react to `NodeReady` condition updates so pods can be queued again when the shutdown state is cleared.
 
 > Upstream PR https://github.com/kubernetes/kubernetes/pull/139249
+
+### short-del-timeout-for-mirror.patch
+Added a 5s timeout context wrapping the Delete call in DeleteMirrorPod, that kubelet can proceed immediately after the API call times out or succeeds, restoring normal static pod re-creation latency.
+
+See issues:
+- https://github.com/kubernetes/kubernetes/issues/139502

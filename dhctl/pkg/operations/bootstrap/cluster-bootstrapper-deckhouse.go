@@ -54,6 +54,10 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return err
 	}
 
+	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
+		return fmt.Errorf("apply cni bootstrap: %w", err)
+	}
+
 	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
 		intLogger, ok := b.logger.(*log.InteractiveLogger)

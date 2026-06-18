@@ -8,7 +8,7 @@ title: "The log-shipper module: FAQ"
 - изменить [протокол](cr.html#clusterlogdestination-v1alpha1-spec-loki-endpoint) подключения к Loki на HTTPS;
 - добавить секцию [auth](cr.html#clusterlogdestination-v1alpha1-spec-loki-auth), в которой:
   - параметр [strategy](cr.html#clusterlogdestination-v1alpha1-spec-loki-auth-strategy) установить в `Bearer`;
-  - в параметре [token](cr.html#clusterlogdestination-v1alpha1-spec-loki-auth-token) указать токен `log-shipper-token` из пространства имен `d8-log-shipper`.
+  - в параметре [token](cr.html#clusterlogdestination-v1alpha1-spec-loki-auth-token) указать токен `log-shipper-token` из неймспейса `d8-log-shipper`.
 
 Пример:
 
@@ -25,7 +25,7 @@ title: "The log-shipper module: FAQ"
       endpoint: "http://loki.d8-monitoring:3100"
   ```
 
-- Получите токен `log-shipper-token` из пространства имен `d8-log-shipper`:
+- Получите токен `log-shipper-token` из неймспейса `d8-log-shipper`:
 
   ```bash
   d8 k -n d8-log-shipper get secret log-shipper-token -o jsonpath='{.data.token}' | base64 -d

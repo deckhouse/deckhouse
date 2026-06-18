@@ -119,7 +119,7 @@ func (c *Creator) createAll(ctx context.Context) error {
 
 	for indx, resource := range c.resources {
 		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
-			log.DebugF("Resource %s with index % should skip to create in current iteration because namespace is not existed\n", resource.String())
+			log.DebugF("Resource %s with index % should be skipped from creation in the current iteration because the namespace does not exist\n", resource.String())
 			continue
 		}
 
@@ -154,7 +154,7 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 	// or after state is set to "cluster is bootstrapped" (some namespaces will be created by the deckhouse after that)
 	resourcesToSkipInCurrentIteration := make(map[int]struct{})
 
-	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("Ensure that required namespaces exist", 100, 1*time.Second).RunContext(ctx, func() error {
 		for i, res := range c.resources {
 			nsName := res.Object.GetNamespace()
 
@@ -162,7 +162,7 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 				// we can receive empty name space when user want to deploy in 'default' ns
 				// we keep it in our minds and skip verify therese resources because we think that
 				// default namespace always exist
-				log.DebugF("Namespace is empty for resource %s. Skip ns checking\n", res.String())
+				log.DebugF("Namespace is empty for resource %s. Skipping ns check\n", res.String())
 				continue
 			}
 
@@ -173,9 +173,9 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 					// if ns is existed then we will skip only
 					// if ns is not exists we should skip resource on current iteration and try to create on next iteration
 					resourcesToSkipInCurrentIteration[i] = struct{}{}
-					log.DebugF("Namespace not found but processed for resource %s. Adding skip to create resource in current iteration\n", res.String())
+					log.DebugF("Namespace not found but already processed for resource %s. Skipping resource creation in the current iteration\n", res.String())
 				}
-				log.DebugF("Namespace was processed for resource %s. Skip ns checking\n", res.String())
+				log.DebugF("Namespace was processed for resource %s. Skipping ns check\n", res.String())
 				continue
 			}
 
@@ -255,7 +255,7 @@ func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*sch
 
 func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource, apires metav1.APIResource) error {
 	// Wait up to 10 minutes
-	return retry.NewSilentLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewSilentLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 600, 1*time.Second).RunContext(ctx, func() error {
 		gvr, docCopy := resourceToGVR(resource, apires)
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
@@ -299,7 +299,7 @@ func (c *Creator) invalidateDiscovery() {
 
 func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfigTask) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(task.Title, 300, 1*time.Second).RunContext(ctx, func() error {
 		return task.Do(c.kubeCl)
 	})
 }
@@ -403,7 +403,7 @@ func CreateResourcesLoop(
 				)
 			}
 
-			return fmt.Errorf("Creating resources failed after %s waiting", timeout)
+			return fmt.Errorf("Creating resources failed after waiting %s", timeout)
 		case <-ticker.C:
 		}
 		attempt++

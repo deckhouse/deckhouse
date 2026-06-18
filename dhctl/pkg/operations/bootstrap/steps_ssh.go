@@ -55,8 +55,8 @@ func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface
 	extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 	p := retry.NewEmptyParams(
 		retry.WithName("Read remote file %s", path),
-		retry.WithAttempts(5),
-		retry.WithWait(3*time.Second),
+		retry.WithAttempts(15),
+		retry.WithWait(1*time.Second),
 		retry.WithLogger(extLogger()),
 	)
 	var value string
@@ -76,7 +76,7 @@ func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on Master become Ready", func(ctx context.Context) error {
+	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on master to become ready", func(ctx context.Context) error {
 		availabilityCheck := sshClient.Check()
 		_ = log.ProcessCtx(ctx, "default", "Connection string", func(ctx context.Context) error {
 			log.InfoLn(availabilityCheck.String())
@@ -86,8 +86,8 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
-			retry.WithWait(5*time.Second),
-			retry.WithAttempts(50),
+			retry.WithWait(1*time.Second),
+			retry.WithAttempts(250),
 			retry.WithLogger(extLogger()),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)

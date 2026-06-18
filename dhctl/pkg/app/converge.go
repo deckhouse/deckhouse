@@ -30,7 +30,7 @@ func DefineConvergeExporterFlags(cmd *kingpin.CmdClause, o *options.ConvergeOpti
 	cmd.Flag("listen-address", "Address to expose metrics").
 		Envar(configEnvName("LISTEN_ADDRESS")).
 		StringVar(&o.ListenAddress)
-	cmd.Flag("check-interval", "Period to check infrastructure state converge").
+	cmd.Flag("check-interval", "Period for checking infrastructure state convergence").
 		Envar(configEnvName("CHECK_INTERVAL")).
 		DurationVar(&o.CheckInterval)
 }
@@ -45,7 +45,7 @@ func DefineOutputFlag(cmd *kingpin.CmdClause, o *options.ConvergeOptions) {
 
 // DefineCheckHasTerraformStateBeforeMigrateToTofu registers the migration guard flag.
 func DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd *kingpin.CmdClause, o *options.ConvergeOptions) {
-	cmd.Flag("check-has-terraform-state-before-migrate-to-tofu", "Check cluster has terraform state before migrate state to tofu.").
+	cmd.Flag("check-has-terraform-state-before-migrate-to-tofu", "Check that the cluster has terraform state before migrating the state to tofu.").
 		Default("false").
 		BoolVar(&o.CheckHasTerraformStateBeforeMigrateToTofu)
 }

@@ -51,11 +51,13 @@ var once sync.Once
 var store *SchemaStore
 
 type validateOptions struct {
-	omitDocInError     bool
-	commanderMode      bool
-	strictUnmarshal    bool
-	validateExtensions bool
-	requiredSSHHost    bool
+	omitDocInError       bool
+	commanderMode        bool
+	strictUnmarshal      bool
+	validateExtensions   bool
+	requiredSSHHost      bool
+	collectAllErrors     bool
+	skipSchemaValidation bool
 }
 
 type ValidateOption func(o *validateOptions)
@@ -90,6 +92,27 @@ func ValidateOptionValidateExtensions(v bool) ValidateOption {
 func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	return func(o *validateOptions) {
 		o.requiredSSHHost = v
+	}
+}
+
+// ValidateOptionCollectAllErrors makes ParseConfigFromData accumulate per-doc
+// errors into a *ValidationError instead of returning on the first one. Off
+// by default — bootstrap CLI keeps its fail-fast semantics. Validators that
+// want multi-error UX enable this.
+func ValidateOptionCollectAllErrors(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.collectAllErrors = v
+	}
+}
+
+// ValidateOptionSkipSchemaValidation makes parseDocument skip schemaStore
+// OpenAPI checks and just categorize a document by its kind. Use it for
+// "intent extraction" passes — domain analyzers (e.g. CNI mismatch) that
+// must read the user's cluster intent without re-running schema checks the
+// schema-validator pass has already done.
+func ValidateOptionSkipSchemaValidation(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.skipSchemaValidation = v
 	}
 }
 
@@ -322,15 +345,15 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 			return err
 		}
 		mcName := mc.GetName()
-		log.DebugF("Found module config for validate %s\n", mcName)
+		log.DebugF("Found module config to validate %s\n", mcName)
 		if mc.Spec.Enabled == nil && mcName != "global" {
 			// we need return error because on top level we want filter module configs from modulesources and move into resources
 			// global is special mc without module
-			return fmt.Errorf("Enabled field for module config %s shoud set to true or false", mcName)
+			return fmt.Errorf("Enabled field for module config %s should be set to true or false", mcName)
 		}
 
 		if _, ok := s.modulesCache[mcName]; !ok && mcName != "global" {
-			log.DebugF("Module %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			log.DebugF("Module %s wasn't found. It is probably a module from modulesources. Skipping it\n", mc.GetName())
 			return ErrSchemaNotFound
 		}
 
@@ -341,25 +364,25 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
-			log.DebugF("Schema for module config %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			log.DebugF("Schema for module config %s wasn't found. It is probably a module from modulesources. Skipping it\n", mc.GetName())
 			return fmt.Errorf("Schema for module config %s not found", mcName)
 		}
 
 		if mc.Spec.Version == 0 {
-			return fmt.Errorf("Version field for module config %s shoud set", mcName)
+			return fmt.Errorf("Version field for module config %s should be set", mcName)
 		}
 
 		var err error
 		docForValidate, err = s.applyConversions(mc)
 		if err != nil {
-			return fmt.Errorf("Setting for validation module config failed: %v", err)
+			return fmt.Errorf("Setting up validation for module config failed: %v", err)
 		}
 	} else {
 		schema = s.getV1alpha1CompatibilitySchema(index)
 	}
 
 	if schema == nil {
-		log.DebugF("No schema for index %s. Skip it\n", index.String())
+		log.DebugF("No schema for index %s. Skipping it\n", index.String())
 		// we need return error because on top level we want filter documents without index and move into resources
 		return ErrSchemaNotFound
 	}
@@ -494,7 +517,7 @@ func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
 		if err != nil {
 			return []byte{}, fmt.Errorf("error converting to unstructured: %w", err)
 		}
-		log.DebugF("conversion successfully applyed for ModuleConfig %s\n", mc.GetName())
+		log.DebugF("conversion successfully applied for ModuleConfig %s\n", mc.GetName())
 	} else {
 		return yaml.Marshal(mc.Spec.Settings)
 	}

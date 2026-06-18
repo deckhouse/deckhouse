@@ -52,6 +52,11 @@ type DeckhouseInstaller struct {
 	CloudDiscovery           []byte
 	ModuleConfigs            []*ModuleConfig
 
+	// ModuleConfigCRDPath is the path to the ModuleConfig CRD manifest shipped
+	// in the installer image (or downloaded candi image). Empty means the file
+	// is unavailable and the CRD will be installed by deckhouse-controller.
+	ModuleConfigCRDPath string
+
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
 
@@ -81,7 +86,7 @@ func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 	}
 
 	if tag == "" {
-		panic("You are probably using a development image. please use devBranch")
+		panic("You are probably using a development image. Please use devBranch")
 	}
 	return tag
 }
@@ -130,7 +135,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 	}
 
 	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
-		return nil, fmt.Errorf("Support for 'configOverrides' was removed. Please use ModuleConfig's instead.")
+		return nil, fmt.Errorf("Support for 'configOverrides' was removed. Please use ModuleConfig instead.")
 	}
 
 	if metaConfig.DeckhouseConfig.ReleaseChannel != "" {
@@ -147,17 +152,17 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 
 	clusterConfig, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("Marshal cluster config failed: %v", err)
+		return nil, fmt.Errorf("Failed to marshal cluster config: %v", err)
 	}
 
 	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("Marshal provider config failed: %v", err)
+		return nil, fmt.Errorf("Failed to marshal provider config: %v", err)
 	}
 
 	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("Marshal static config failed: %v", err)
+		return nil, fmt.Errorf("Failed to marshal static config: %v", err)
 	}
 
 	bundle := DefaultBundle
@@ -206,6 +211,11 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, deckhouseCm)
 	}
 
+	moduleConfigCRDPath := ""
+	if globalOptions != nil {
+		moduleConfigCRDPath = globalOptions.ModuleConfigCRDPath
+	}
+
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
 		Registry:              metaConfig.Registry,
@@ -217,6 +227,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		StaticClusterConfig:   staticClusterConfig,
 		ClusterConfig:         clusterConfig,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
+		ModuleConfigCRDPath:   moduleConfigCRDPath,
 		InstallerVersion:      metaConfig.InstallerVersion,
 		VersionFilePath:       metaConfig.VersionFilePath,
 		DownloadDir:           metaConfig.DownloadRootDir,

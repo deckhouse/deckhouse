@@ -105,6 +105,8 @@ properties:
               type: string
       cniSecretData:
         type: string
+        x-examples:
+        - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lrUnBjbVZqZEZkcGRHaE9iMlJsVW05MWRHVnpJaXdnSW0xaGMzRjFaWEpoWkdWTmIyUmxJam9nSWs1bGRHWnBiSFJsY2lKOQo="
       discoveryData:
         type: object
         description: |

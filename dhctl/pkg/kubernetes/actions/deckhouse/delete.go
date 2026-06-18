@@ -39,10 +39,24 @@ import (
 const (
 	deckhouseDeploymentNamespace = "d8-system"
 	deckhouseDeploymentName      = "deckhouse"
+	deckhouseClusterNamespace    = "d8-cloud-instance-manager"
 )
 
+func isCAPIClusterUnsupportedErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.IsNotFound(err) {
+		return true
+	}
+
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "the server could not find the requested resource") ||
+		strings.Contains(msg, "no matches for kind")
+}
+
 func DeleteValidatingWebhookConfigurations(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete validating webhook configurations", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete validating webhook configurations", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		vwcs, err := kubeCl.AdmissionregistrationV1().ValidatingWebhookConfigurations().List(ctx, metav1.ListOptions{
 			LabelSelector: "heritage=deckhouse",
 		})
@@ -63,7 +77,7 @@ func DeleteValidatingWebhookConfigurations(ctx context.Context, kubeCl *client.K
 }
 
 func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete Deckhouse", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete Deckhouse", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		foregroundPolicy := metav1.DeletePropagationForeground
 		err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Delete(ctx, deckhouseDeploymentName, metav1.DeleteOptions{PropagationPolicy: &foregroundPolicy})
 		if err != nil && !errors.IsNotFound(err) {
@@ -73,8 +87,30 @@ func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 	})
 }
 
+func DeleteClusters(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete Clusters", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		clusters, err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if isCAPIClusterUnsupportedErr(err) {
+				return nil
+			}
+			return err
+		}
+
+		for _, cluster := range clusters.Items {
+			err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(cluster.GetNamespace()).Delete(ctx, cluster.GetName(), metav1.DeleteOptions{})
+			if err != nil && !errors.IsNotFound(err) {
+				return err
+			}
+			log.InfoF("%s/%s\n", cluster.GetNamespace(), cluster.GetName())
+		}
+
+		return nil
+	})
+}
+
 func DeletePDBs(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete pdbs", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete pdbs", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		foregroundPolicy := metav1.DeletePropagationForeground
 		namespaces, err := kubeCl.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -122,7 +158,7 @@ func DeleteD8StorageResources(ctx context.Context, kubeCl *client.KubernetesClie
 }
 
 func DeleteAllD8StorageResources(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete Deckhouse Storage CRs", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete Deckhouse Storage CRs", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		for _, cr := range v1alpha1.D8StoragesGVRs() {
 			storageCRs, err := ListD8StorageResources(ctx, kubeCl, cr)
 			if err != nil {
@@ -144,7 +180,7 @@ func DeleteAllD8StorageResources(ctx context.Context, kubeCl *client.KubernetesC
 }
 
 func DeleteStorageClasses(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete StorageClasses", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete StorageClasses", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		list, err := kubeCl.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
@@ -167,7 +203,7 @@ func DeleteStorageClasses(ctx context.Context, kubeCl *client.KubernetesClient) 
 }
 
 func DeletePods(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete Pods", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete Pods", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		pods, err := kubeCl.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
@@ -204,7 +240,7 @@ func DeletePods(ctx context.Context, kubeCl *client.KubernetesClient) error {
 }
 
 func DeleteServices(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete Services", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete Services", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		allServices, err := kubeCl.CoreV1().Services(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
@@ -226,7 +262,7 @@ func DeleteServices(ctx context.Context, kubeCl *client.KubernetesClient) error 
 }
 
 func DeletePVC(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete PersistentVolumeClaims", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete PersistentVolumeClaims", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		volumeClaims, err := kubeCl.CoreV1().PersistentVolumeClaims(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
@@ -244,7 +280,7 @@ func DeletePVC(ctx context.Context, kubeCl *client.KubernetesClient) error {
 }
 
 func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Wait for Deckhouse Deployment deletion", 30, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Wait for Deckhouse Deployment deletion", 150, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		_, err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Get(ctx, deckhouseDeploymentName, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			log.InfoLn("Deckhouse Deployment and its dependents are removed")
@@ -260,8 +296,33 @@ func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.Kube
 	})
 }
 
+func WaitForClustersDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Wait for Clusters deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		resources, err := kubeCl.Dynamic().Resource(capi.ClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if isCAPIClusterUnsupportedErr(err) {
+				log.InfoLn("All Clusters are deleted from the cluster")
+				return nil
+			}
+			return err
+		}
+
+		count := len(resources.Items)
+		if count != 0 {
+			builder := strings.Builder{}
+			for _, item := range resources.Items {
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.GetNamespace(), item.GetName())
+			}
+			return fmt.Errorf("%d Clusters left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
+		}
+
+		log.InfoLn("All Clusters are deleted from the cluster")
+		return nil
+	})
+}
+
 func WaitForServicesDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Wait for Services deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Wait for Services deletion", 600, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		resources, err := kubeCl.CoreV1().Services(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
@@ -288,7 +349,7 @@ func WaitForServicesDeletion(ctx context.Context, kubeCl *client.KubernetesClien
 }
 
 func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Wait for PersistentVolumes deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Wait for PersistentVolumes deletion", 600, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		resources, err := kubeCl.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
@@ -312,7 +373,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 			for _, item := range skipPVs {
 				fmt.Fprintf(&skipPVsInfo, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
-			log.InfoF("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete was skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
+			log.InfoF("%d PersistentVolumes provided manually or with a reclaimPolicy other than Delete were skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
 		}
 
 		count := len(filteredResources)
@@ -329,7 +390,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 }
 
 func WaitForPVCDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Wait for PersistentVolumeClaims deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Wait for PersistentVolumeClaims deletion", 600, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		resources, err := kubeCl.CoreV1().PersistentVolumeClaims(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
@@ -378,7 +439,7 @@ func checkMachinesAPI(kubeCl *client.KubernetesClient, gv schema.GroupVersion) e
 }
 
 func DeleteMCMMachineDeployments(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete MCM MachineDeployments", 45, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete MCM MachineDeployments", 225, 1*time.Second).RunContext(ctx, func() error {
 		allMachines, err := kubeCl.Dynamic().Resource(sapcloud.MachineGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machines: %v", err)
@@ -420,7 +481,7 @@ func DeleteMCMMachineDeployments(ctx context.Context, kubeCl *client.KubernetesC
 }
 
 func WaitForMCMMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Wait for MCM Machines deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Wait for MCM Machines deletion", 600, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		resources, err := kubeCl.Dynamic().Resource(sapcloud.MachineGVR).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
@@ -444,7 +505,7 @@ func checkMCMMachinesAPI(kubeCl *client.KubernetesClient) error {
 }
 
 func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	err := retry.NewLoop("Get Kubernetes cluster resources for MCM group/version", 5, 5*time.Second).WithShowError(false).
+	err := retry.NewLoop("Get Kubernetes cluster resources for MCM group/version", 25, 1*time.Second).WithShowError(false).
 		RunContext(ctx, func() error {
 			return checkMCMMachinesAPI(kubeCl)
 		})
@@ -469,7 +530,7 @@ func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.Kubernet
 	}
 
 	// try to remove CAPI machines it needs for static clusters and cluster with cluster api support
-	err = retry.NewLoop("Get Kubernetes cluster resources for CAPI group/version", 5, 5*time.Second).WithShowError(false).
+	err = retry.NewLoop("Get Kubernetes cluster resources for CAPI group/version", 25, 1*time.Second).WithShowError(false).
 		RunContext(ctx, func() error {
 			return checkCAPIMachinesAPI(kubeCl)
 		})
@@ -497,7 +558,7 @@ func checkCAPIMachinesAPI(kubeCl *client.KubernetesClient) error {
 }
 
 func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete CAPI MachineDeployments", 45, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Delete CAPI MachineDeployments", 225, 1*time.Second).RunContext(ctx, func() error {
 		allMachines, err := kubeCl.Dynamic().Resource(capi.MachineGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machines: %v", err)
@@ -542,7 +603,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 }
 
 func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Wait for CAPI Machines deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
+	return retry.NewLoop("Wait for CAPI Machines deletion", 600, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		resources, err := kubeCl.Dynamic().Resource(capi.MachineGVR).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err

@@ -22,7 +22,7 @@ spec:
     bb-event-on 'nodegroup-watchdog-service-changed' '_nodegroup_watchdog_service'
     function _nodegroup_watchdog_service() {
       systemctl daemon-reload
-      systemctl restart nodegroup-watchdog.service
+      systemctl reload-or-restart nodegroup-watchdog.service
       systemctl enable --now nodegroup-watchdog.service
     }
 
@@ -36,6 +36,7 @@ spec:
     RemainAfterExit=yes
     ExecStart=/opt/deckhouse/bin/nodegroup-watchdog.sh start
     ExecStop=/opt/deckhouse/bin/nodegroup-watchdog.sh stop
+    ExecReload=/opt/deckhouse/bin/nodegroup-watchdog.sh start
 
     [Install]
     WantedBy=multi-user.target
@@ -47,16 +48,56 @@ spec:
     WD="/dev/watchdog"
     MODE="{{ $mode }}"
 
-    start_wd() {
+    ensure_dev() {
       if [ -e "${WD}" ]; then
-        ls -lha /dev/watchdog* 2>/dev/null
-        rm -rf "${WD}"
+        chown 64535:root "${WD}"
+        chmod 0660 "${WD}"
+        return 0
       fi
 
+      local minor
+      minor=$(awk '/watchdog$/{print $1}' /proc/misc 2>/dev/null)
+      if [ -n "${minor}" ]; then
+        mknod "${WD}" c 10 "${minor}"
+        chown 64535:root "${WD}"
+        chmod 0660 "${WD}"
+        return 0
+      fi
+
+      return 1
+    }
+
+    start_wd() {
       if [ "${MODE}" = "Notify" ]; then
         echo "[NOTIFY] Would run: modprobe softdog soft_margin={{ $timeout }} soft_panic=1"
-      else
-        modprobe softdog soft_margin={{ $timeout }} soft_panic=1
+        return 0
+      fi
+
+      if lsmod | grep -qw softdog; then
+        if ensure_dev; then
+          echo "softdog already loaded, device permissions fixed"
+          return 0
+        fi
+        echo "softdog loaded but device missing and /proc/misc has no entry, reloading"
+        rmmod softdog 2>/dev/null || true
+        sleep 1
+        if lsmod | grep -qw softdog; then
+          echo "ERROR: cannot unload softdog (module in use)" >&2
+          exit 1
+        fi
+      fi
+
+      modprobe softdog soft_margin={{ $timeout }} soft_panic=1
+
+      local retries=0
+      while [ ! -e "${WD}" ] && [ "${retries}" -lt 10 ]; do
+        sleep 0.5
+        retries=$((retries + 1))
+      done
+
+      if ! ensure_dev; then
+        echo "ERROR: ${WD} was not created after modprobe softdog" >&2
+        exit 1
       fi
     }
 

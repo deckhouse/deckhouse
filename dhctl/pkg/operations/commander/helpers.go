@@ -31,7 +31,7 @@ import (
 )
 
 func NewErrClusterManagedByAnotherCommander(managedByCommanderUUID, requiredCommanderUUID uuid.UUID) error {
-	return fmt.Errorf("cluster managed by another commander %s unable to perform operations from your commander %s", managedByCommanderUUID.String(), requiredCommanderUUID.String())
+	return fmt.Errorf("cluster is managed by another commander %s; unable to perform operations from your commander %s", managedByCommanderUUID.String(), requiredCommanderUUID.String())
 }
 
 func doCheckShouldUpdateCommanderUUID(cm *v1.ConfigMap, requiredCommanderUUID uuid.UUID) (bool, error) {
@@ -105,7 +105,7 @@ func ConstructManagedByCommanderConfigMapTask(ctx context.Context, commanderUUID
 }
 
 func DeleteManagedByCommanderConfigMap(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Delete commander-uuid ConfigMap", 20, 5*time.Second).
+	return retry.NewLoop("Delete commander-uuid ConfigMap", 100, 1*time.Second).
 		WithShowError(false).
 		RunContext(ctx, func() error {
 			err := kubeCl.

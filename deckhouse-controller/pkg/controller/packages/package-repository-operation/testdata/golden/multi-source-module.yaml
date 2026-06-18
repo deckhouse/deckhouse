@@ -76,7 +76,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "2"
+  resourceVersion: "1"
 spec:
   packageName: test-package
   packageRepositoryName: deckhouse

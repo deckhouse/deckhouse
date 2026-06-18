@@ -22,30 +22,31 @@ import (
 )
 
 var (
-	checkPortsScriptPath              = filepath.Join("preflight", "check_ports.sh.tpl")
-	checkLocalhostScriptPath          = filepath.Join("preflight", "check_localhost.sh.tpl")
-	checkProxyRevTunnelOpenScriptPath = filepath.Join("preflight", "check_reverse_tunnel_open.sh.tpl")
-	killReverseTunnelPath             = filepath.Join("preflight", "kill_reverse_tunnel.sh.tpl")
-	checkDeckhouseUserScriptPath      = filepath.Join("preflight", "check_deckhouse_user.sh.tpl")
-	preflightScriptDirPath            = "preflight"
+	checkPortsScriptPath                  = filepath.Join("preflight", "check_ports.sh.tpl")
+	checkLocalhostScriptPath              = filepath.Join("preflight", "check_localhost.sh.tpl")
+	checkProxyRevTunnelOpenScriptPath     = filepath.Join("preflight", "check_reverse_tunnel_open.sh.tpl")
+	killReverseTunnelPath                 = filepath.Join("preflight", "kill_reverse_tunnel.sh.tpl")
+	checkReverseTunnelReachableScriptPath = filepath.Join("preflight", "check_reverse_tunnel_reachable.sh.tpl")
+	checkDeckhouseUserScriptPath          = filepath.Join("preflight", "check_deckhouse_user.sh.tpl")
+	preflightScriptDirPath                = "preflight"
 )
 
 func RenderAndSavePreflightCheckPortsScript(globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Start render check ports script")
+	log.DebugLn("Rendering check ports script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkPortsScriptPath)
 
 	return RenderAndSaveTemplate("check_ports.sh", scriptPath, map[string]interface{}{})
 }
 
 func RenderAndSavePreflightCheckDeckhouseUserScript(globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Start render check user script")
+	log.DebugLn("Rendering check user script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkDeckhouseUserScriptPath)
 
 	return RenderAndSaveTemplate("check_deckhouse_user.sh", scriptPath, map[string]interface{}{})
 }
 
 func RenderAndSavePreflightCheckLocalhostScript(globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Start render check localhost script")
+	log.DebugLn("Rendering check localhost script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkLocalhostScriptPath)
 
 	return RenderAndSaveTemplate(
@@ -56,7 +57,7 @@ func RenderAndSavePreflightCheckLocalhostScript(globalOptions *options.GlobalOpt
 }
 
 func RenderAndSavePreflightReverseTunnelOpenScript(url string, globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Start render proxy reverse tunnel open script")
+	log.DebugLn("Rendering proxy reverse tunnel open script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkProxyRevTunnelOpenScriptPath)
 
 	return RenderAndSaveTemplate(
@@ -69,7 +70,7 @@ func RenderAndSavePreflightReverseTunnelOpenScript(url string, globalOptions *op
 }
 
 func RenderAndSaveKillReverseTunnelScript(host, port string, globalOptions *options.GlobalOptions) (string, error) {
-	log.DebugLn("Start render kill reverse tunnel script")
+	log.DebugLn("Rendering kill reverse tunnel script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", killReverseTunnelPath)
 
 	return RenderAndSaveTemplate(
@@ -82,12 +83,25 @@ func RenderAndSaveKillReverseTunnelScript(host, port string, globalOptions *opti
 	)
 }
 
+func RenderAndSavePreflightReverseTunnelReachableScript(url string, globalOptions *options.GlobalOptions) (string, error) {
+	log.DebugLn("Start render proxy reverse tunnel reachable script")
+	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkReverseTunnelReachableScriptPath)
+
+	return RenderAndSaveTemplate(
+		"check_reverse_tunnel_reachable.sh",
+		scriptPath,
+		map[string]interface{}{
+			"url": url,
+		},
+	)
+}
+
 func RenderAndSavePreflightCheckScript(
 	filename string,
 	params map[string]interface{},
 	globalOptions *options.GlobalOptions,
 ) (string, error) {
-	log.DebugLn("Start render check localhost script")
+	log.DebugLn("Rendering check localhost script")
 	path := filepath.Join(globalOptions.CandiDir, "bashible", preflightScriptDirPath)
 
 	return RenderAndSaveTemplate(

@@ -122,7 +122,6 @@ Bashible
 BashibleTemplateData
 basicAuditPolicyEnabled
 BasicAuth
-Basis Dynamix
 baz
 bcrypt
 BDU
@@ -150,6 +149,7 @@ boto3
 BPF
 bpfLBMode
 Buildah
+builtin
 bunble
 Burstable
 BusyBox
@@ -247,6 +247,7 @@ clusterlocal
 ClusterLogDestination
 ClusterLoggingConfig
 ClusterName
+ClusterObservabilityAlert
 ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
@@ -477,6 +478,7 @@ EmailConfig
 emptyDir
 enableMultiTenancy
 endofftopic
+entrypoint
 enum
 env
 EnvoyFilter
@@ -609,10 +611,10 @@ healthchecks
 HEC
 helmignore
 helthcheck
+HH
 HighAvailability
 HighLoad
 HighNodeUtilization
-HH
 HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
@@ -936,6 +938,7 @@ MostAllocated
 MQL
 MRA
 MRs
+msg
 mTLS
 MTLS
 MTU
@@ -976,6 +979,8 @@ Nehalem
 neighbour
 Netfilter
 NetworkAddress
+NetworkID
+NetworkLoadBalancer
 NetworkPolicy
 nexthop
 nexthops
@@ -1236,6 +1241,7 @@ regionTagCategory
 registryDockerCfg
 registryImagesRepo
 registrysecret
+Rego
 releaseChannel
 RemoveDuplicates
 RemovePodsHavingTooManyRestarts
@@ -1249,6 +1255,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+repos
 reprovisioning
 repurposed
 RequestAuthentication
@@ -1352,6 +1359,7 @@ SomeRegion
 SonarQube
 Sonatype
 sourceRanges
+SPE
 spellchecker
 Spellchecking
 SPIFFE
@@ -1412,11 +1420,13 @@ Stribog
 struct
 Struct
 stylesheets
+subdomain
 subdomains
 Subfolder
 subGID
 subGIDs
 SubjectAccessReview
+SubnetID
 subresource
 subresources
 subUID
@@ -1450,6 +1460,7 @@ SystemTag
 TaintToleration
 tarball
 tarballs
+TargetGroup
 targetRef
 Taskfile
 TATLIN
@@ -1464,6 +1475,7 @@ terraform
 Terraform
 TestConvert
 testEnum
+TG
 Thanos
 THENEWSTACK
 Thev1
@@ -1525,6 +1537,8 @@ UUID
 UUIDs
 uwsgi
 v1
+ValidatingAdmissionPolicy
+ValidatingAdmissionPolicyBinding
 ValidationWebhook
 validator
 vApp
@@ -1656,6 +1670,7 @@ YandexClusterConfiguration
 YandexInstanceClass
 YandexInstanceClasses
 YC
+YCC
 YCloud
 yml
 YouTube
@@ -1675,6 +1690,7 @@ ZvirtInstanceClass
 Автообновление
 автообновлений
 автообновления
+автоподменой
 авторизовывать
 авторизовываться
 автоскейлерам
@@ -1776,11 +1792,14 @@ ZvirtInstanceClass
 валидации
 валидацию
 валидация
+валиден
 валидирования
 валидировать
+валидироваться
 валидирует
 валидируется
 валидируются
+валидными
 вебхук
 вебхука
 вебхуки
@@ -1815,6 +1834,7 @@ ZvirtInstanceClass
 воркеров
 выгрузок
 выдаватель
+выполнений
 высокогранулярной
 высокодоступном
 высокодоступную
@@ -1922,6 +1942,7 @@ ZvirtInstanceClass
 инстанс
 инстанса
 инстансам
+инстансами
 инстансах
 инстансов
 инстансом
@@ -1995,6 +2016,7 @@ ZvirtInstanceClass
 контейнеризации
 контейнеризация
 контейнеризированных
+контейнеризованного
 контролллер
 контролллера
 конфиг
@@ -2086,6 +2108,7 @@ ZvirtInstanceClass
 мультикластером
 мультимастер
 мультимастерного
+мультимастерной
 мультимастерном
 мультимастерный
 мультиплатформенной
@@ -2109,8 +2132,14 @@ ZvirtInstanceClass
 неизменяем
 неинтерактивном
 неймспейс
+неймспейса
+неймспейсам
+неймспейсами
 неймспейсах
 неймспейсе
+неймспейсов
+неймспейсом
+неймспейсу
 неймспейсы
 некоммитнутые
 некоммитнутыми
@@ -2140,7 +2169,9 @@ ZvirtInstanceClass
 несекретных
 несистемных
 неунифицированных
+неуспешной
 неуспешные
+неуспешных
 нешифрованные
 ноде
 нуть
@@ -2188,8 +2219,11 @@ ZvirtInstanceClass
 паттерна
 паттернов
 паттерну
+паттерны
 патч
 патча
+патчах
+патчей
 патчем
 патчи
 патчится
@@ -2201,10 +2235,12 @@ ZvirtInstanceClass
 перевыпуск
 перевыпуска
 перевыпускаются
+Перевыпустите
 перевыпустить
 перегенерации
 перегенерация
 перегенерировать
+Перегенерируйте
 передеплоятся
 Перезаказ
 перезапускает
@@ -2243,6 +2279,7 @@ ZvirtInstanceClass
 пересобирает
 пересоздаваться
 пересоздает
+пересоздаёт
 пересоздается
 пересоздастся
 переупорядочивание
@@ -2258,6 +2295,7 @@ ZvirtInstanceClass
 ПК
 плейсхолдер
 плейсхолдеров
+побайтово
 поддомен
 поддоменам
 поддоменами
@@ -2278,6 +2316,7 @@ ZvirtInstanceClass
 подсетях
 покоммитное
 помотрим
+Пошагово
 превью
 предзагрузки
 преднастроенного
@@ -2413,6 +2452,7 @@ ZvirtInstanceClass
 сгенерировали
 сгенерирован
 сгенерированного
+сгенерированном
 сгенерированному
 сгенерированную
 сгенерированные
@@ -2479,6 +2519,7 @@ ZvirtInstanceClass
 стекирования
 Столярова
 Стрибог
+субресурс
 сущностей
 сущностям
 сущностями
@@ -2529,11 +2570,17 @@ ZvirtInstanceClass
 трудозатраты
 туториала
 увереным
+УЦ
 уязвимостей
 уязвимостям
 уязвимостями
 файл
 фейловер
+фикстур
+фикстура
+фикстурой
+фикстуру
+фикстуры
 фич
 фичах
 фичи
@@ -2619,9 +2666,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-RoleBinding
-YYYY
-Перевыпустите
-валиден
-валидными
-мультимастерной

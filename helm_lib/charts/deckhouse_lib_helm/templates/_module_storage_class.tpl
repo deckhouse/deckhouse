@@ -8,7 +8,7 @@
   {{- $annotations := dict -}}
 
   {{- $volume_expansion_mode_offline := false -}}
-  {{- range $module_name := list "cloud-provider-azure" "cloud-provider-yandex" "cloud-provider-vsphere" "cloud-provider-vcd"}}
+  {{- range $module_name := list "cloud-provider-azure" "cloud-provider-vsphere" "cloud-provider-vcd"}}
     {{- if has $module_name $context.Values.global.enabledModules }}
       {{- $volume_expansion_mode_offline = true }}
     {{- end }}
@@ -17,7 +17,7 @@
   {{- if $volume_expansion_mode_offline }}
     {{- $_ := set $annotations "storageclass.deckhouse.io/volume-expansion-mode" "offline" }}
   {{- end }}
-
+  
   {{- if $context.Values.global.discovery.defaultStorageClass }}
     {{- if eq $context.Values.global.discovery.defaultStorageClass $sc_name }}
       {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
