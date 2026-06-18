@@ -1621,7 +1621,7 @@ entries:
             - title:
                 en: Containerized Data Importer (CDI)
                 ru: Containerized Data Importer (CDI)
-              url: /architecture/virtualization/cdi.html           
+              url: /architecture/virtualization/cdi.html
     - title:
         en: Reference
         ru: Справка

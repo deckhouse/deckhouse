@@ -28,7 +28,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 * Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура модуля [`observability`](/modules/observability/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`observability`](/modules/observability/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля observability](../../images/architecture/observability/c4-l2-observability.ru.svg)
@@ -37,7 +37,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 
 Модуль состоит из следующих компонентов:
 
-1. **Observability-controller** — состоит из одного контейнера **observability-controller**, управляет жизненным циклом большинства кастомных ресурсов модуля, таких как: ObservabilityMetricsRulesGroup, ObservabilityNotificationChannels, ObservabilityNotificationSilence и т.д. С полным списком ресурсов, которыми управляет модуль, можно ознакомиться [в разделе `Custom resources` документации модуля](/modules/observability/cr.html).
+1. **Observability-controller** — состоит из одного контейнера **observability-controller**, управляет жизненным циклом большинства кастомных ресурсов модуля, таких как ObservabilityMetricsRulesGroup, ObservabilityNotificationChannels, ObservabilityNotificationSilence и других. С полным списком ресурсов, которыми управляет модуль, можно ознакомиться [в разделе «Кастомные ресурсы»](/modules/observability/cr.html) документации модуля.
 
 1. **Observability-webhook** — состоит из одного контейнера **observability-webhook**, реализующего вебхук-сервер для проверки и изменения кастомных ресурсов через механизмы [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
@@ -52,33 +52,32 @@ description: Архитектура модуля observability в Deckhouse Kube
 
    Компонент содержит следующие контейнеры:
 
-   * **alertmanager** — основной контейнер. В модуле используется в форк [оригинального Alertmanager](https://github.com/prometheus/alertmanager) от компании «Флант», поддерживающий [мультитенантность](../iam/multitenancy.html): разделение алертов по системным (кластерным) и проектным, доставка алертов (политики, каналы, сайленсеры) также мультитенантная, т.е. в разных проектах можно настроить разные каналы и политики доставки.
+   * **alertmanager** — основной контейнер. В модуле используется в форк [оригинального Alertmanager](https://github.com/prometheus/alertmanager) от компании «Флант», поддерживающий [мультитенантность](../iam/multitenancy.html): разделение алертов на системные (кластерные) и проектные. Доставка алертов (политики, каналы, сайленсеры) также мультитенантная, что позволяет индивидуально настроить каналы и политики доставки в разных проектах.
 
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к API-эндпоинту Alertmanager. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Grafana** — компонент, предоставляющий веб-интерфейс для визуализации данных мониторинга. В модуле [`observability`](/modules/observability/) используется [форк](https://github.com/okmeter/grafana)  [Grafana](https://github.com/grafana/grafana) от компании «Флант». Используемая модификация Grafana обладает расширенными возможностями, такими как разграничение доступа к метрикам и дашбордам в рамках [мультитенантности](../iam/multitenancy.html). Дашборды Grafana модуля [`observability`](/modules/observability/) интегрированы в [веб-интерфейс Deckhouse](/modules/console/) (управление системой мониторинга из одного окна).
+1. **Grafana** — компонент, предоставляющий веб-интерфейс для визуализации данных мониторинга. В модуле используется [форк](https://github.com/okmeter/grafana) [Grafana](https://github.com/grafana/grafana) от компании «Флант». Используемая модификация Grafana обладает расширенными возможностями, такими как разграничение доступа к метрикам и дашбордам в рамках [мультитенантности](../iam/multitenancy.html). Дашборды Grafana модуля [`observability`](/modules/observability/) интегрированы в [веб-интерфейс Deckhouse](/modules/console/) (управление системой мониторинга из одного окна).
 
    Компонент содержит следующие контейнеры:
 
    * **grafana** — основной контейнер;
-   * **grafana-kube-storage** — сайдкар-контейнер, реализующий бэкенд для контейнера grafana и предоставляющий управление ресурсами Dashboard и чтение ресурсов Datasource API компонента Grafana. Данные ресурсы позволяют просматривать и управлять дашбордами в пределах пространств имён (проектов), а также подключать пользовательские источники данных;
-   * **nginx** — сайдкар-контейнер, представляющий собой прокси-сервер NGINX, основная задача — это раздача статических файлов. Является [Open Source-проектом](https://github.com/nginx/nginx).
+   * **grafana-kube-storage** — сайдкар-контейнер, реализующий бэкенд для контейнера grafana и предоставляющий управление ресурсами Dashboard и чтение ресурсов Datasource API компонента Grafana. Данные ресурсы позволяют просматривать и управлять дашбордами в пределах неймспейсов (проектов), а также подключать пользовательские источники данных;
+   * **nginx** — сайдкар-контейнер, представляющий собой прокси-сервер NGINX, чья основная задача — это раздача статических файлов. Является [Open Source-проектом](https://github.com/nginx/nginx).
 
-1. **Label-enforcer** — компонент, выполняющий авторизацию и проксирование запросов пользователей к источникам метрик (prometheus-main через сервис label-proxy) и логов (loki через сервис logs-gateway), указанным в ресурсах Datasource API компонента grafana. Label-enforcer проверяет RBAC-доступ к данным мониторинга в зависимости от прав пользователя, получает список доступных пространств имён и обогащает запросы лейблами для возможности фильтрации запрашиваемых данных в рамках пространств имён пользователей. Подробнее о разграничении доступа можно ознакомиться [в разделе документации модуля](/modules/observability/metrics.html). Label-enforcer обрабатывает не только запросы на чтение, но и запросы на запись.
+1. **Label-enforcer** — компонент, выполняющий авторизацию и проксирование запросов пользователей к источникам метрик (prometheus-main через сервис label-proxy) и логов (loki через сервис logs-gateway), указанным в ресурсах Datasource API компонента grafana. Label-enforcer проверяет RBAC-доступ к данным мониторинга в зависимости от прав пользователя, получает список доступных неймспейсов и обогащает запросы лейблами для возможности фильтрации запрашиваемых данных в рамках неймспейсов пользователей. Подробнее о разграничении доступа к метрикам можно ознакомиться [в документации модуля](/modules/observability/metrics.html). Label-enforcer обрабатывает запросы на чтение и запись метрик.
 
-   Состоит из одного контейнера:
+   Состоит из единственного контейнера **enforcer**.
 
-   **enforcer**.
+1. **Opagent** (DaemonSet) — агент, предназначенный для сбора метрик с операционной системы и прикладного программного обеспечения, установленного на серверы. Разработан компанией «Флант» для [Deckhouse Observability Platform (DOP)](/products/observability-platform/) на основе [Okagent (агента Okmeter)](https://okmeter.ru/docs/features/), входящего в состав системы мониторинга [Okmeter](https://okmeter.ru/docs/overview/).
 
-1. **Opagent** (DaemonSet) — агент, предназначенный для сбора метрик как с операционной системы, так и с прикладного программного обеспечения, установленного на серверы. Разработан компанией «Флант» для [Deckhouse Observability Platform (DOP)](/products/observability-platform/) на основе [Okagent (агента Okmeter)](https://okmeter.ru/docs/features/), также входящего в состав системы мониторинга [Okmeter](https://okmeter.ru/docs/overview/).
+   В модуле [`observability`](/modules/observability/) opAgent подключается к managed-сервисам, таким как [`managed-postgres`](/modules/managed-postgres/), [`managed-memcached`](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/) и другим (список поддерживаемых сервисов постоянно расширяется), собирает с них метрики, после чего отправляет их в компонент prometheus-main модуля [`prometheus`](/modules/prometheus/). Если включен модуль [`observability-platform`](/modules/observability-platform/), opAgent собирает метрики с узлов кластера и отправляет их в [DOP](/products/observability-platform/).
 
-   В модуле [`observability`](/modules/observability/) opAgent подключается к managed-сервисам, например [`managed-postgres`](/modules/managed-postgres/), [`managed-memcached`](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/) и т.д. (список поддерживаемых сервисов постоянно расширяется), собирает с них метрики, затем отправляет их в компонент prometheus-main модуля [`prometheus`](/modules/prometheus/). Если включен модуль [`observability-platform`](/modules/observability-platform/), opAgent собирает метрики с узлов кластера и отправляет в [DOP](/products/observability-platform/).
+   OpAgent отправляет собранные данные по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/):
 
-   opAgent отправляет собранные метрики по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) в Prometheus через label-enforcer (метрики managed-сервисов) и в [Deckhouse Observability Platform](/products/observability-platform/) (метрики с узлов кластера).
+   * метрики managed-сервисов — в Prometheus через label-enforcer;
+   * метрики с узлов кластера — в [DOP](/products/observability-platform/).
 
-   Состоит из одного контейнера:
-
-   **opagent**.
+   Состоит из единственного контейнера **opagent**.
 
 ## Взаимодействия модуля
 
@@ -87,7 +86,7 @@ description: Архитектура модуля observability в Deckhouse Kube
 1. **Kube-apiserver**:
 
    * для авторизации запросов к данным мониторинга;
-   * для управления кастомными ресурсами модуля;
+   * для управления кастомными ресурсами модуля.
 
 1. **Prometheus-main** — использует в качестве источника и приемника данных.
 1. **Loki** — использует в качестве источника данных.
@@ -98,8 +97,8 @@ description: Архитектура модуля observability в Deckhouse Kube
 
 1. **Kube-apiserver**:
 
-   * выполняет проверку и изменение кастомных ресурсов модуля (с помощью validating и mutating вебхуков);
+   * выполняет проверку и изменение кастомных ресурсов модуля (с помощью validating- и mutating-вебхуков);
    * пересылает в alert-kube-api запросы на кастомные ресурсы ObservabilityAlert и ClusterObservabilityAlert.
 
 1. **Prometheus-main** — отправляет алерты в Alertmanager.
-1. **[Deckhouse Веб Интерфейс](/modules/console/)** — использует Grafana для визуализации данных мониторинга.
+1. **[Веб-интерфейс Deckhouse](/modules/console/)** — использует Grafana для визуализации данных мониторинга.

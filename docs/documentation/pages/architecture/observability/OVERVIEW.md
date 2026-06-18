@@ -27,4 +27,6 @@ The Observability subsystem includes the following modules:
 The following components are currently described in this section:
 
 * [Monitoring architecture in DKP](monitoring.html)
+* [Monitoring architecture in DKP](monitoring.html)
+* [`observability`](observability.html) module
 * [Logging modules](logging.html)
