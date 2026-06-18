@@ -195,9 +195,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	}
 
-	// Unconditionally rotate terminal CPOs for every component so that
-	// externally-spawned CPOs (e.g. etcd-defrag) don't accumulate on stable clusters
-	// where ensureOperationsExist never fires.
 	for component := range controlplanev1alpha1.ComponentRegistry() {
 		currentOps, err = r.rotateComponentOperations(ctx, currentOps, component, maxTerminalCPOsPerComponent, logger)
 		if err != nil {
