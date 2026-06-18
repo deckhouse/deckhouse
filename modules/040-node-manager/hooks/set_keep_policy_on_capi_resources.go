@@ -36,7 +36,10 @@ import (
 // helm honours this annotation during upgrade and skips the orphaned-resource
 // deletion. The hook runs OnBeforeHelm to ensure it fires before helm install/upgrade.
 
-const helmResourcePolicyAnnotation = "helm.sh/resource-policy"
+const (
+	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
+	capiNamespace                = "d8-cloud-instance-manager"
+)
 
 type capiResourceMeta struct {
 	APIVersion        string

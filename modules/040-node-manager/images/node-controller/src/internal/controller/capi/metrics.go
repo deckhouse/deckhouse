@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package capimdmetrics
+package capi
 
 import (
 	"context"
@@ -59,22 +59,22 @@ var (
 
 func init() {
 	ctrlmetrics.Registry.MustRegister(mdReplicas, mdDesired, mdReady, mdUnavailable, mdPhase)
-	register.RegisterController("capi-md-metrics", &capiv1beta2.MachineDeployment{}, &Reconciler{})
+	register.RegisterController("capi-md-metrics", &capiv1beta2.MachineDeployment{}, &MetricsReconciler{})
 }
 
-type Reconciler struct {
+// MetricsReconciler exports MachineDeployment metrics to Prometheus.
+type MetricsReconciler struct {
 	register.Base
 }
 
-func (r *Reconciler) SetupWatches(_ register.Watcher) {}
+func (r *MetricsReconciler) SetupWatches(_ register.Watcher) {}
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *MetricsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	md := &capiv1beta2.MachineDeployment{}
 	if err := r.Client.Get(ctx, req.NamespacedName, md); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			// MachineDeployment deleted — clear metrics.
 			clearMetrics(req.Name)
 			return ctrl.Result{}, nil
 		}
@@ -82,7 +82,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	name := md.Name
-	labels := prometheus.Labels{"machine_deployment_name": name}
+	l := prometheus.Labels{"machine_deployment_name": name}
 
 	var specReplicas int32
 	if md.Spec.Replicas != nil {
@@ -105,11 +105,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		unavailable = statusReplicas - availableReplicas
 	}
 
-	mdReplicas.With(labels).Set(float64(statusReplicas))
-	mdDesired.With(labels).Set(float64(specReplicas))
-	mdReady.With(labels).Set(float64(readyReplicas))
-	mdUnavailable.With(labels).Set(float64(unavailable))
-	mdPhase.With(labels).Set(phaseToFloat(md.Status.Phase))
+	mdReplicas.With(l).Set(float64(statusReplicas))
+	mdDesired.With(l).Set(float64(specReplicas))
+	mdReady.With(l).Set(float64(readyReplicas))
+	mdUnavailable.With(l).Set(float64(unavailable))
+	mdPhase.With(l).Set(phaseToFloat(md.Status.Phase))
 
 	logger.V(1).Info("updated metrics", "machineDeployment", name)
 	return ctrl.Result{}, nil
@@ -131,10 +131,10 @@ func phaseToFloat(phase string) float64 {
 }
 
 func clearMetrics(name string) {
-	labels := prometheus.Labels{"machine_deployment_name": name}
-	mdReplicas.Delete(labels)
-	mdDesired.Delete(labels)
-	mdReady.Delete(labels)
-	mdUnavailable.Delete(labels)
-	mdPhase.Delete(labels)
+	l := prometheus.Labels{"machine_deployment_name": name}
+	mdReplicas.Delete(l)
+	mdDesired.Delete(l)
+	mdReady.Delete(l)
+	mdUnavailable.Delete(l)
+	mdPhase.Delete(l)
 }

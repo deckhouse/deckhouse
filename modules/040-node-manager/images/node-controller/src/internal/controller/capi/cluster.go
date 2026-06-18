@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package capicluster
+package capi
 
 import (
 	"context"
@@ -37,23 +37,17 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-const (
-	cloudProviderSecretName      = "d8-node-manager-cloud-provider"
-	cloudProviderSecretNamespace = "kube-system"
-	clusterConfigSecretName      = "d8-cluster-configuration"
-	clusterConfigSecretNamespace = "kube-system"
-	capiNamespace                = "d8-cloud-instance-manager"
-)
-
 func init() {
-	register.RegisterController("capi-cluster-resources", &corev1.Secret{}, &Reconciler{})
+	register.RegisterController("capi-cluster-resources", &corev1.Secret{}, &ClusterReconciler{})
 }
 
-type Reconciler struct {
+// ClusterReconciler creates/ensures CAPI Cluster and MachineHealthCheck resources
+// for both cloud and static node groups.
+type ClusterReconciler struct {
 	register.Base
 }
 
-func (r *Reconciler) SetupWatches(w register.Watcher) {
+func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
 		func(_ context.Context, _ client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: types.NamespacedName{
@@ -64,7 +58,7 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	))
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if req.Name != cloudProviderSecretName || req.Namespace != cloudProviderSecretNamespace {
 		return ctrl.Result{}, nil
 	}
@@ -85,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) ensureCloudCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
+func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
 	logger := log.FromContext(ctx)
 
 	secret := &corev1.Secret{}
@@ -184,7 +178,7 @@ func (r *Reconciler) ensureCloudCluster(ctx context.Context, clusterConfig *clus
 	return nil
 }
 
-func (r *Reconciler) ensureStaticCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
+func (r *ClusterReconciler) ensureStaticCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
 	logger := log.FromContext(ctx)
 
 	ngList := &deckhousev1.NodeGroupList{}
@@ -272,7 +266,7 @@ func (r *Reconciler) ensureStaticCluster(ctx context.Context, clusterConfig *clu
 	return nil
 }
 
-func (r *Reconciler) createIfNotExists(ctx context.Context, obj *unstructured.Unstructured) error {
+func (r *ClusterReconciler) createIfNotExists(ctx context.Context, obj *unstructured.Unstructured) error {
 	err := r.Client.Create(ctx, obj)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return err
@@ -286,7 +280,7 @@ type clusterConfiguration struct {
 	ClusterDomain     string `json:"clusterDomain"`
 }
 
-func (r *Reconciler) readClusterConfiguration(ctx context.Context) (*clusterConfiguration, error) {
+func (r *ClusterReconciler) readClusterConfiguration(ctx context.Context) (*clusterConfiguration, error) {
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name:      clusterConfigSecretName,
@@ -297,12 +291,10 @@ func (r *Reconciler) readClusterConfiguration(ctx context.Context) (*clusterConf
 
 	raw, ok := secret.Data["cluster-configuration.yaml"]
 	if !ok {
-		// Try string data (some clusters store it differently).
 		rawStr, ok := secret.Data["cluster-configuration.yaml"]
 		if !ok {
 			return nil, fmt.Errorf("cluster-configuration secret missing cluster-configuration.yaml key")
 		}
-		// Decode base64 if needed.
 		decoded, err := base64.StdEncoding.DecodeString(string(rawStr))
 		if err != nil {
 			raw = rawStr
@@ -318,8 +310,3 @@ func (r *Reconciler) readClusterConfiguration(ctx context.Context) (*clusterConf
 
 	return cfg, nil
 }
-
-// cacheConfig is handled in common/cache.go:
-// - Secret in kube-system with label name=d8-cluster-configuration is already cached
-// - Secret d8-node-manager-cloud-provider is watched as primary object
-// - Cluster/MHC are created in d8-cloud-instance-manager (unstructured, no cache needed)
