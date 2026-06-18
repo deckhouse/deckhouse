@@ -18,6 +18,8 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 Эти политики дополняют друг друга. Если для одного неймспейса применены несколько политик, выполняется валидация объектов по каждой из них. Если будет нарушена хотя бы одна политика, объект не будет создан.
 {% endalert %}
 
+Помимо политик, которые запрещают использование параметров, отличных от разрешённых, существуют ресурсы для точечных исключений из политик — [`SecurityPolicyException`](#SecurityPolicyException). Они позволяют переопределять проверки для отдельных подов без изменения всех политик, применённых к неймспейсу.
+
 ## Особенности отображения сообщений о неудачной валидации объектов
 
 В зависимости от способа создания подов есть следующие особенности формирования сообщений от API о неудачной валидации (нарушении установленных политик):
@@ -493,6 +495,91 @@ spec:
 ```
 
 Чтобы назначить данную политику безопасности, примените лейбл `enforce: "mypolicy"` к необходимому неймспейсу.
+
+## Исключения из политик безопасности
+<span id="securitypolicyexception"></span>
+
+`SecurityPolicyException` — это механизм точечных исключений из проверок политик безопасности для отдельных подов и контейнеров. Он позволяет не исключать весь неймспейс из проверок, а описывать только необходимые разрешения для конкретного пода или контейнера внутри пода.
+
+Исключения описываются ресурсом [`SecurityPolicyException`](/modules/admission-policy-engine/cr.html#securitypolicyexception).
+
+### Как работает механизм
+
+1. Создайте объект `SecurityPolicyException` с нужными разрешениями в `spec`.
+   Рекомендуется сразу документировать причину каждого исключения в поле `metadata` соответствующего правила (например, `metadata.description`) — это упрощает аудит и сопровождение.
+2. На под (обычно через `spec.template.metadata.labels` в `Deployment`/`StatefulSet`/`DaemonSet`) добавьте ссылку на исключение:
+   - `security.deckhouse.io/security-policy-exception: <exception-name>` — исключение для пода в целом (pod-level);
+   - `security.deckhouse.io/security-policy-exception.container.<container-name>: <exception-name>` — исключение для конкретного контейнера (container-level).
+
+Приоритет выбора исключения для контейнера:
+
+- сначала `security.deckhouse.io/security-policy-exception.container.<container-name>`;
+- если метка для конкретного контейнера отсутствует — используется исключение из `security.deckhouse.io/security-policy-exception`.
+
+{% alert level="warning" %}
+Если для контейнера задана метка для конкретного контейнера, но она указывает на невалидный/несуществующий объект `SecurityPolicyException`, она всё равно имеет приоритет над общей меткой и может привести к запрету размещения пода.
+{% endalert %}
+
+### Пример
+
+Для примера рассмотрим под, которому требуется:
+
+1. Разрешение на использование `hostNetwork` всему поду.
+2. Разрешение на `privileged` только для контейнера с именем `sample-init`.
+
+Без использования `SecurityPolicyException` для таких параметров обычно пришлось бы ослаблять политику безопасности для более широкого набора подов.
+
+При использовании `SecurityPolicyException` достаточно создать следующие ресурсы:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-hostnetwork-pod
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: >-
+          Pod requires host network mode for node-level network diagnostics.
+```
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-privileged-init-container
+spec:
+  securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: >-
+          Container init requires privileged mode to access host-level networking features.
+```
+
+И выставить метки для применения ресурсов на создаваемых подах:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example
+spec:
+  template:
+    metadata:
+      labels:
+        security.deckhouse.io/security-policy-exception: allow-hostnetwork-pod
+        security.deckhouse.io/security-policy-exception.container.sample-init: allow-privileged-init-container
+    spec:
+      hostNetwork: true
+    ...
+    containers:
+      - name: sample-init
+        securityContext:
+          privileged: true
+```
 
 ### Частичное применение политик
 
