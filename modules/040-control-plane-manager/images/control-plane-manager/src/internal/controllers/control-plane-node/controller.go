@@ -195,6 +195,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	}
 
+	// Unconditionally rotate terminal CPOs for every component so that
+	// externally-spawned CPOs (e.g. etcd-defrag) don't accumulate on stable clusters
+	// where ensureOperationsExist never fires.
+	for component := range controlplanev1alpha1.ComponentRegistry() {
+		currentOps, err = r.rotateComponentOperations(ctx, currentOps, component, maxTerminalCPOsPerComponent, logger)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("rotate CPOs for %s: %w", component, err)
+		}
+	}
+
 	if err := r.ensureObserveOperations(ctx, cpn, currentOps, logger); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -330,14 +340,6 @@ func (r *Reconciler) ensureOperationsExist(
 			slog.String("operation", op.Name),
 			slog.String("component", string(state.component)),
 			slog.Any("steps", steps))
-
-		// Keep only 5 terminal operations per component.
-		// Active operations are never deleted
-		rotatedOps, err := r.rotateComponentOperations(ctx, ops, state.component, maxTerminalCPOsPerComponent, logger)
-		if err != nil {
-			return nil, fmt.Errorf("rotate CPOs for %s: %w", state.component, err)
-		}
-		ops = rotatedOps
 	}
 
 	return ops, nil
