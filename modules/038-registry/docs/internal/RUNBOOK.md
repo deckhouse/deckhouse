@@ -200,3 +200,41 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
 - `Local` → `Proxy`;
 - `Local` → неконфигурируемый `Unmanaged` (без `imagesRepo`).
 1. Для переключения в данные режимы, необходимо выполнить переключение в промежуточный режим `Direct`/`Unmanaged`. Затем, можно выполнить переключение в необходимый режим.
+
+
+## Частые ошибки
+
+### Смена протухшего логина/пароля
+
+1. Проверьте текущий режим:
+  ```bash
+  $ kubectl get mc/deckhouse -o yaml
+  ...
+  registry:
+    mode: Direct
+    direct:
+      ...
+  ...
+
+  $ d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
+  ...
+  mode: Direct
+  target_mode: Direct
+  ```.
+2. Выполните смену параметров registry в текущем режиме работы:
+  ```bash
+  $ kubectl edit mc/deckhouse
+
+  registry:
+    mode: Direct # если в предыдущем этапе был указан Direct режим
+    direct:
+      ...
+  ```
+3. Проверьте статус переключения. Дождиесь окончания смены параметров.
+
+
+### Восстановление deckhouse пода в Direct режиме (при imgPullbackoff)
+
+1. Проверьте, что текущий 
+2. ...
+3. ...
