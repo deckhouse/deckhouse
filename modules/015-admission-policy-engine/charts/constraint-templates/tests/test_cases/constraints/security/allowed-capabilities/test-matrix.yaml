@@ -476,7 +476,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception/nginx: allow-net-admin-container
+                  security.deckhouse.io/security-policy-exception.container.nginx: allow-net-admin-container
                 name: allowed-by-container-exception-net-admin
               spec:
                 containers:
@@ -522,7 +522,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception/nginx: allow-net-admin-container
+                  security.deckhouse.io/security-policy-exception.container.nginx: allow-net-admin-container
                 name: allowed-by-container-exception-nginx-only
               spec:
                 containers:
@@ -568,7 +568,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception/nginx: allow-drop-all-container
+                  security.deckhouse.io/security-policy-exception.container.nginx: allow-drop-all-container
                 name: allowed-by-container-exception-drop-all
               spec:
                 containers:
