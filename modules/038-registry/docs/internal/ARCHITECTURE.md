@@ -367,5 +367,225 @@ flowchart LR
 
 ## Взаимодействие компонент модуля registry:
 
+
+### Direct
+
+Обращение `containerd` идёт напрямую во внешний registry через виртуальный адрес `registry.d8-system.svc:5001/system/deckhouse` за счёт механизма mirroring в containerd.
+
+In-cluster обращение выполняется через некешируемый proxy `registry-incluster-proxy`, доступный через сервис `registry.d8-system.svc:5001`. На уровне proxy обращение транслируется в upstream registry.
+
+```mermaid
+flowchart TB
+  ImageRegistry[("Внешний реестр<br/>:443 (HTTPS)")]
+
+  subgraph DKP["Deckhouse Kubernetes Platform"]
+    direction TB
+
+    subgraph K8S["Подсистема Kubernetes & Scheduling"]
+      direction LR
+      Containerd["containerd"]
+    end
+
+    subgraph InternalRegistryClients["Обращение внутренних сервисов к API registry"]
+      direction LR
+      Deckhouse["deckhouse"]
+      OperatorTrivy["operator-trivy"]
+    end
+
+    subgraph RegistryModule["Модуль registry"]
+      direction LR
+
+      subgraph RegistryInclusterProxyDeploy["registry-incluster-proxy [Deployment, master-узлы]"]
+        direction TB
+        Distribution["distribution"]
+        Auth["auth"]
+      end
+    end
+  end
+
+  Containerd -->|"mirroring, :443"| ImageRegistry
+
+  Deckhouse -->|"registry.d8-system.svc:5001"| Distribution
+
+  OperatorTrivy -->|"registry.d8-system.svc:5001"| Distribution
+
+  Distribution -->|"5051"| Auth
+
+  Distribution -->|":443"| ImageRegistry
+
+  classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
+  classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
+  classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
+  classDef client fill:#e6e6e6,stroke:#999,color:#333;
+  class Distribution,Auth work;
+  class Containerd cri;
+  class Deckhouse,OperatorTrivy client;
+  class ImageRegistry ext;
+```
+
+### Proxy
+
+Обращение `containerd` идёт через виртуальный адрес `registry.d8-system.svc:5001` в static pod `registry-proxy`, запущенный на каждом узле. `registry-proxy` балансирует запросы на компоненты `registry-nodeservices-<node>` (static pod-ы на master-узлах), работающие в proxy-режиме и кеширующие образы из upstream registry.
+
+In-cluster обращение выполняется через сервис `registry.d8-system.svc:5001` напрямую на компоненты `registry-nodeservices-<node>`.
+
+```mermaid
+flowchart TB
+  ImageRegistry[("Внешний реестр<br/>:443 (HTTPS)")]
+
+  subgraph DKP["Deckhouse Kubernetes Platform"]
+    direction TB
+
+    subgraph K8S["Подсистема Kubernetes & Scheduling"]
+      direction LR
+      Containerd["containerd"]
+    end
+
+    subgraph InternalRegistryClients["Обращение внутренних сервисов к API registry"]
+      direction LR
+      Deckhouse["deckhouse"]
+      OperatorTrivy["operator-trivy"]
+    end
+
+    subgraph RegistryModule["Модуль registry"]
+      direction LR
+
+      RegistryProxy["registry-proxy-&lt;node&gt;<br/>[static pod, все узлы]<br/>127.0.0.1:5001"]
+
+      subgraph RegistryNodeservicesStaticPod["registry-nodeservices-&lt;master-node&gt; [static pod, кеширующий]"]
+        direction TB
+        Distribution["distribution"]
+        Auth["auth"]
+      end
+    end
+  end
+
+  Containerd -->|"127.0.0.1:5001"| RegistryProxy
+
+  RegistryProxy -->|"балансировка, :5001"| Distribution
+
+  Deckhouse -->|"registry.d8-system.svc:5001"| Distribution
+
+  OperatorTrivy -->|"registry.d8-system.svc:5001"| Distribution
+
+  Distribution -->|"5051"| Auth
+
+  Distribution -->|"кеширующий proxy, :443"| ImageRegistry
+
+  classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
+  classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
+  classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
+  classDef client fill:#e6e6e6,stroke:#999,color:#333;
+  class RegistryProxy,Distribution,Auth work;
+  class Containerd cri;
+  class Deckhouse,OperatorTrivy client;
+  class ImageRegistry ext;
+```
+
+### Local
+
+Топология сети идентична режиму `Proxy`: `containerd` обращается через `registry.d8-system.svc:5001` к `registry-proxy` на каждом узле, который балансирует запросы на `registry-nodeservices-<node>` (static pod-ы на master-узлах). Отличие в том, что `registry-nodeservices-<node>` работают в Local-режиме и отдают образы из локального хранилища (`/opt/deckhouse/registry`) — обращений во внешний registry нет.
+
+Наполнение локального реестра выполняется через `ingress` (`registry.<PUBLIC_DOMAIN>`) командой `d8 mirror push`.
+
+```mermaid
+flowchart TB
+  MirrorPush["d8 mirror push"]
+
+  subgraph DKP["Deckhouse Kubernetes Platform"]
+    direction TB
+
+    subgraph K8S["Подсистема Kubernetes & Scheduling"]
+      direction LR
+      Containerd["containerd"]
+    end
+
+    subgraph InternalRegistryClients["Обращение внутренних сервисов к API registry"]
+      direction LR
+      Deckhouse["deckhouse"]
+      OperatorTrivy["operator-trivy"]
+    end
+
+    subgraph RegistryModule["Модуль registry"]
+      direction LR
+
+      Ingress(["ingress<br/>registry.&lt;PUBLIC_DOMAIN&gt; :443<br/>→ registry-push :5001"])
+      RegistryProxy["registry-proxy-&lt;node&gt;<br/>[static pod, все узлы]<br/>127.0.0.1:5001"]
+
+      subgraph RegistryNodeservicesStaticPod["registry-nodeservices-&lt;master-node&gt; [static pod, локальный]"]
+        direction TB
+        Distribution["distribution"]
+        Auth["auth"]
+      end
+    end
+
+    RegistryStorage[("/opt/deckhouse/registry")]
+  end
+
+  Containerd -->|"127.0.0.1:5001"| RegistryProxy
+
+  RegistryProxy -->|"балансировка, :5001"| Distribution
+
+  Deckhouse -->|"registry.d8-system.svc:5001"| Distribution
+
+  OperatorTrivy -->|"registry.d8-system.svc:5001"| Distribution
+
+  Distribution -->|"5051"| Auth
+
+  Distribution -->|"чтение образов"| RegistryStorage
+
+  MirrorPush -.->|"registry.&lt;PUBLIC_DOMAIN&gt;:443/system/deckhouse"| Ingress
+  Ingress -.->|"запись образов, :5001"| Distribution
+
+  classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
+  classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
+  classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
+  classDef client fill:#e6e6e6,stroke:#999,color:#333;
+  class RegistryProxy,Distribution,Auth,Ingress work;
+  class Containerd cri;
+  class Deckhouse,OperatorTrivy client;
+  class RegistryStorage ext;
+  class MirrorPush client;
+```
+
+### Unmanaged
+
+Внутренние компоненты registry не используются.
+In-cluster обращение и `containerd` идут напрямую во внешний registry.
+
+```mermaid
+flowchart TB
+  ImageRegistry[("Внешний реестр<br/>:443 (HTTPS)")]
+
+  subgraph DKP["Deckhouse Kubernetes Platform"]
+    direction TB
+
+    subgraph K8S["Подсистема Kubernetes & Scheduling"]
+      direction LR
+      Containerd["containerd"]
+    end
+
+    subgraph InternalRegistryClients["Обращение внутренних сервисов к API registry"]
+      direction LR
+      Deckhouse["deckhouse"]
+      OperatorTrivy["operator-trivy"]
+    end
+  end
+
+  Containerd -->|"прямое обращение, :443"| ImageRegistry
+
+  Deckhouse -->|"прямое обращение, :443"| ImageRegistry
+
+  OperatorTrivy -->|"прямое обращение, :443"| ImageRegistry
+
+  classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
+  classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
+  classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
+  classDef client fill:#e6e6e6,stroke:#999,color:#333;
+  class Containerd cri;
+  class Deckhouse,OperatorTrivy client;
+  class ImageRegistry ext;
+```
+
 ## Bootstrap кластера с модулем registry:
 
