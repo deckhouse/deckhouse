@@ -16,7 +16,6 @@ As long as the current step is not ready (`status: "False"`), the orchestrator d
 | `ingress`                  | public access to the local registry (`registry.<PUBLIC_DOMAIN>`) for `d8 mirror push`     | `Local`                    |
 | `checker`                  | checks for the presence of the required images in the target registry                     | all modes                  |
 
-
 | Condition                         | Description                                                                                      |
 | --------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `RegistryContainsRequiredImages`  | checks the registry for the presence of DKP images                                               |
@@ -30,7 +29,6 @@ As long as the current step is not ready (`status: "False"`), the orchestrator d
 | `CleanupInClusterProxy`           | `registry-incluster-proxy` deployment removed                                                    |
 | `Ready`                           | result, transition complete, `mode == target_mode`                                               |
 | `ErrTransitionNotSupported`       | error, an unsupported transition was requested (e.g. `Proxy` → `Local`)                          |
-
 
 ## Switching to Direct mode or changing Direct mode parameters
 
@@ -59,11 +57,11 @@ flowchart LR
     class A,B,C,D,E,F,G,H cond;
 ```
 
-
 ### Stage 1 — `RegistryContainsRequiredImages`
 
 This stage is performed by the internal `checker` component.
 The `checker` checks for the presence of the required (critical) components in the external registry.
+
 ```bash
 # The checker will verify the presence of images for the following modules
 $ kubectl get modules -o json | jq -r '.items[] | select(.properties.critical == true and .properties.source == "Embedded") | .metadata.name'
@@ -77,7 +75,6 @@ registry
 
 **What to do if the stage failed**: see [RUNBOOK.md → `RegistryContainsRequiredImages`](RUNBOOK.md#registrycontainsrequiredimages).
 
-
 ### Stage 2 — `ContainerdConfigPreflightReady`
 
 At this stage, a check is performed for the presence of the old version of custom registry configs in containerd v1, which are added through the `toml-merge` mechanism in the bashible bundle scripts.
@@ -86,7 +83,6 @@ The presence of the configs is checked through the label `node.deckhouse.io/cont
 If there are no custom configs — the subsequent steps continue.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
-
 
 ### Stage 3 — `TransitionContainerdConfigReady`
 
@@ -97,6 +93,7 @@ The interaction is performed through the `registry-bashible-config` secret. It i
 This config is received by the `bashible-api-server`. Bashible configures the registry config in containerd and sets the annotation with the accepted, rolled-out version on the node.
 
 If the switch was performed from Unmanaged mode, the configuration directory will contain 2 folders:
+
 ```bash
 $ ls -alh /etc/containerd/registry.d/
 some-nexus.io # configuration of Unmanaged mode
@@ -105,6 +102,7 @@ registry.d8-system.svc:5001 # configuration of Direct mode
 ```
 
 If the switch was performed from Proxy/Local/Direct mode to Direct mode, the configuration will contain 1 folder:
+
 ```bash
 $ ls -alh /etc/containerd/registry.d/
 registry.d8-system.svc:5001 # Old + New configuration
@@ -112,6 +110,7 @@ registry.d8-system.svc:5001 # Old + New configuration
 ```
 
 Inside it there will be a `host.toml` configuration file with a mirror array for the old and the new configuration version:
+
 ```bash
 $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 [host]
@@ -136,7 +135,6 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 
 **What to do if the stage failed**: see [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
 
-
 ### Stage 4 — `InClusterProxyReady`
 
 At this stage, the `Deployment` `registry-incluster-proxy` is brought up on the cluster master nodes.
@@ -148,7 +146,6 @@ At this stage the component is only brought up. Switching to using it is not yet
 > In Direct mode, this stage must be performed after the bashible rollout, because the bashible rollout requires RPP + the old registry.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `InClusterProxyReady`](RUNBOOK.md#inclusterproxyready).
-
 
 ### Stage 5 — `DeckhouseRegistrySwitchReady`
 
@@ -196,7 +193,6 @@ flowchart LR
 
 **What to do if the stage failed**: see [RUNBOOK.md → `DeckhouseRegistrySwitchReady`](RUNBOOK.md#deckhouseregistryswitchready).
 
-
 ### Stage 6 — `FinalContainerdConfigReady`
 
 At this stage, the old registry configuration in containerd is cleaned up.
@@ -207,6 +203,7 @@ The interaction is performed through the `registry-bashible-config` secret. It i
 This config is received by the `bashible-api-server`. Bashible configures the registry config in containerd and sets the annotation with the accepted, rolled-out config version on the node.
 
 Only one registry configuration must remain on the nodes:
+
 ```bash
 $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 [host]
@@ -222,7 +219,6 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 
 **What to do if the stage failed**: see [RUNBOOK.md → `FinalContainerdConfigReady`](RUNBOOK.md#finalcontainerdconfigready).
 
-
 ### Stage 7 — `CleanupNodeServices`
 
 At this stage the Local/Proxy mode components are no longer used. These components are removed from the cluster.
@@ -230,7 +226,6 @@ At this stage the Local/Proxy mode components are no longer used. These componen
 The `registry-nodeservices-manager` daemonset removes the `registry-nodeservices-<node>` static pods from the master nodes. After successful removal, `registry-nodeservices-manager` itself is removed from the cluster.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `CleanupNodeServices`](RUNBOOK.md#cleanupnodeservices).
-
 
 ## Switching to Unmanaged mode or changing Unmanaged mode parameters
 
@@ -266,6 +261,7 @@ flowchart LR
 
 This stage is performed by the internal `checker` component.
 The `checker` checks for the presence of the required (critical) components in the external registry.
+
 ```bash
 # The checker will verify the presence of images for the following modules
 $ kubectl get modules -o json | jq -r '.items[] | select(.properties.critical == true and .properties.source == "Embedded") | .metadata.name'
@@ -279,7 +275,6 @@ registry
 
 **What to do if the stage failed**: see [RUNBOOK.md → `RegistryContainsRequiredImages`](RUNBOOK.md#registrycontainsrequiredimages).
 
-
 ### Stage 2 — `TransitionContainerdConfigReady`
 
 The transitional containerd config is rolled out to the nodes: both sources are active — the old and the new.
@@ -291,6 +286,7 @@ This config is received by the `bashible-api-server`. Bashible configures the re
 Unlike the `Direct`/`Proxy`/`Local` modes, the new source in Unmanaged points **directly to the real address of the external registry** — without the virtual address `registry.d8-system.svc:5001` and without rewrite.
 
 If the switch was performed from Direct/Local/Proxy mode to Unmanaged mode, the configuration will contain 2 folders:
+
 ```bash
 $ ls -alh /etc/containerd/registry.d/
 registry.d8-system.svc:5001 # configuration of the previous mode (Direct/Local/Proxy)
@@ -299,6 +295,7 @@ some-nexus.io               # configuration of Unmanaged mode
 ```
 
 Inside the new source folder there will be a `host.toml` configuration file with direct access to the external registry:
+
 ```bash
 $ cat /etc/containerd/registry.d/some-nexus.io/host.toml
 [host]
@@ -310,7 +307,6 @@ $ cat /etc/containerd/registry.d/some-nexus.io/host.toml
 ```
 
 **What to do if the stage failed**: see [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
-
 
 ### Stage 3 — `DeckhouseRegistrySwitchReady`
 
@@ -355,7 +351,6 @@ flowchart LR
 
 **What to do if the stage failed**: see [RUNBOOK.md → `DeckhouseRegistrySwitchReady`](RUNBOOK.md#deckhouseregistryswitchready).
 
-
 ### Stage 4 — `FinalContainerdConfigReady`
 
 At this stage, the old registry configuration in containerd is cleaned up.
@@ -366,6 +361,7 @@ The interaction is performed through the `registry-bashible-config` secret. It i
 This config is received by the `bashible-api-server`. Bashible configures the registry config in containerd and sets the annotation with the accepted, rolled-out config version on the node.
 
 Only one registry configuration must remain on the nodes — direct access to the external registry:
+
 ```bash
 $ ls -alh /etc/containerd/registry.d/
 some-nexus.io # the only configuration
@@ -382,7 +378,6 @@ $ cat /etc/containerd/registry.d/some-nexus.io/host.toml
 
 **What to do if the stage failed**: see [RUNBOOK.md → `FinalContainerdConfigReady`](RUNBOOK.md#finalcontainerdconfigready).
 
-
 ### Stage 5 — `CleanupNodeServices`
 
 At this stage the Local/Proxy mode components are no longer used. These components are removed from the cluster.
@@ -391,14 +386,11 @@ The `registry-nodeservices-manager` daemonset removes the `registry-nodeservices
 
 **What to do if the stage failed**: see [RUNBOOK.md → `CleanupNodeServices`](RUNBOOK.md#cleanupnodeservices).
 
-
 ### Stage 6 — `CleanupInClusterProxy`
 
 At this stage the Direct mode components are no longer used. The `Deployment` `registry-incluster-proxy` is removed from the cluster.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `CleanupInClusterProxy`](RUNBOOK.md#cleanupinclusterproxy).
-
-
 
 ## Switching to Proxy mode or changing Proxy mode parameters
 
@@ -435,6 +427,7 @@ flowchart LR
 
 This stage is performed by the internal `checker` component.
 The `checker` checks for the presence of the required (critical) components in the external registry.
+
 ```bash
 # The checker will verify the presence of images for the following modules
 $ kubectl get modules -o json | jq -r '.items[] | select(.properties.critical == true and .properties.source == "Embedded") | .metadata.name'
@@ -448,7 +441,6 @@ registry
 
 **What to do if the stage failed**: see [RUNBOOK.md → `RegistryContainsRequiredImages`](RUNBOOK.md#registrycontainsrequiredimages).
 
-
 ### Stage 2 — `ContainerdConfigPreflightReady`
 
 At this stage, a check is performed for the presence of the old version of custom registry configs in containerd v1, which are added through the `toml-merge` mechanism in the bashible bundle scripts.
@@ -457,7 +449,6 @@ The presence of the configs is checked through the label `node.deckhouse.io/cont
 If there are no custom configs — the subsequent steps continue.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
-
 
 ### Stage 3 — `NodeServicesReady`
 
@@ -468,8 +459,8 @@ At this stage the components are only brought up. Switching to using them is not
 
 **What to do if the stage failed**: see [RUNBOOK.md → `NodeServicesReady`](RUNBOOK.md#nodeservicesready).
 
-
 ### Stage 4 — `TransitionContainerdConfigReady`
+
 The transitional containerd config is rolled out to the nodes: both sources are active — the old and the new.
 
 The interaction is performed through the `registry-bashible-config` secret. It is configured by the orchestrator, which tracks the configuration version through the `registry.deckhouse.io/version=...` annotation on the node.
@@ -477,6 +468,7 @@ The interaction is performed through the `registry-bashible-config` secret. It i
 This config is received by the `bashible-api-server`. Bashible configures the registry config in containerd and sets the annotation with the accepted, rolled-out version on the node.
 
 If the switch was performed from Unmanaged mode, the configuration directory will contain 2 folders:
+
 ```bash
 $ ls -alh /etc/containerd/registry.d/
 some-nexus.io # configuration of Unmanaged mode
@@ -485,6 +477,7 @@ registry.d8-system.svc:5001 # configuration of Proxy mode
 ```
 
 If the switch was performed from Direct mode to Proxy mode, the configuration will contain 1 folder:
+
 ```bash
 $ ls -alh /etc/containerd/registry.d/
 registry.d8-system.svc:5001 # Old + New configuration
@@ -492,6 +485,7 @@ registry.d8-system.svc:5001 # Old + New configuration
 ```
 
 Inside it there will be a `host.toml` configuration file with a mirror array for the old and the new configuration version:
+
 ```bash
 $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 [host]
@@ -517,7 +511,6 @@ Bashible also starts the `registry-proxy` static pod on all cluster nodes.
 This static pod is used for balancing requests to the registry located on the master nodes.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
-
 
 ### Stage 5 — `DeckhouseRegistrySwitchReady`
 
@@ -578,6 +571,7 @@ The interaction is performed through the `registry-bashible-config` secret. It i
 This config is received by the `bashible-api-server`. Bashible configures the registry config in containerd and sets the annotation with the accepted, rolled-out config version on the node.
 
 Only one registry configuration must remain on the nodes:
+
 ```bash
 $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 [host]
@@ -591,13 +585,11 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 
 **What to do if the stage failed**: see [RUNBOOK.md → `FinalContainerdConfigReady`](RUNBOOK.md#finalcontainerdconfigready).
 
-
 ### Stage 7 — `CleanupInClusterProxy`
 
 At this stage the Direct mode components are no longer used. The `Deployment` `registry-incluster-proxy` is removed from the cluster.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `CleanupInClusterProxy`](RUNBOOK.md#cleanupinclusterproxy).
-
 
 ## Switching to Local mode
 
@@ -630,7 +622,6 @@ flowchart LR
     class A,B,C,D,E,F,G,H cond;
 ```
 
-
 ### Stage 1 — `ContainerdConfigPreflightReady`
 
 At this stage, a check is performed for the presence of the old version of custom registry configs in containerd v1, which are added through the `toml-merge` mechanism in the bashible bundle scripts.
@@ -639,7 +630,6 @@ The presence of the configs is checked through the label `node.deckhouse.io/cont
 If there are no custom configs — the subsequent steps continue.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
-
 
 ### Stage 3 — `NodeServicesReady`
 
@@ -650,11 +640,11 @@ At this stage the components are only brought up. Switching to using them is not
 
 **What to do if the stage failed**: see [RUNBOOK.md → `NodeServicesReady`](RUNBOOK.md#nodeservicesready).
 
-
 ### Stage 2 — `RegistryContainsRequiredImages`
 
 This stage is performed by the internal `checker` component.
 The `checker` checks for the presence of the required (critical) components in the local registry.
+
 ```bash
 # The checker will verify the presence of images for the following modules
 $ kubectl get modules -o json | jq -r '.items[] | select(.properties.critical == true and .properties.source == "Embedded") | .metadata.name'
@@ -669,11 +659,10 @@ registry
 > [!IMPORTANT]
 > The stage will show an error until the user runs `d8 mirror push` of a previously prepared img bundle.
 
-
 **What to do if the stage failed**: see [RUNBOOK.md → `RegistryContainsRequiredImages`](RUNBOOK.md#registrycontainsrequiredimages).
 
-
 ### Stage 4 — `TransitionContainerdConfigReady`
+
 The transitional containerd config is rolled out to the nodes: both sources are active — the old and the new.
 
 The interaction is performed through the `registry-bashible-config` secret. It is configured by the orchestrator, which tracks the configuration version through the `registry.deckhouse.io/version=...` annotation on the node.
@@ -681,6 +670,7 @@ The interaction is performed through the `registry-bashible-config` secret. It i
 This config is received by the `bashible-api-server`. Bashible configures the registry config in containerd and sets the annotation with the accepted, rolled-out version on the node.
 
 If the switch was performed from Unmanaged mode, the configuration directory will contain 2 folders:
+
 ```bash
 $ ls -alh /etc/containerd/registry.d/
 some-nexus.io # configuration of Unmanaged mode
@@ -689,6 +679,7 @@ registry.d8-system.svc:5001 # configuration of Local mode
 ```
 
 If the switch was performed from Direct mode to Local mode, the configuration will contain 1 folder:
+
 ```bash
 $ ls -alh /etc/containerd/registry.d/
 registry.d8-system.svc:5001 # Old + New configuration
@@ -696,6 +687,7 @@ registry.d8-system.svc:5001 # Old + New configuration
 ```
 
 Inside it there will be a `host.toml` configuration file with a mirror array for the old and the new configuration version:
+
 ```bash
 $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 [host]
@@ -721,7 +713,6 @@ Bashible also starts the `registry-proxy` static pod on all cluster nodes.
 This static pod is used for balancing requests to the registry located on the master nodes.
 
 **What to do if the stage failed**: see [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
-
 
 ### Stage 5 — `DeckhouseRegistrySwitchReady`
 
@@ -778,6 +769,7 @@ The interaction is performed through the `registry-bashible-config` secret. It i
 This config is received by the `bashible-api-server`. Bashible configures the registry config in containerd and sets the annotation with the accepted, rolled-out config version on the node.
 
 Only one registry configuration must remain on the nodes:
+
 ```bash
 $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 [host]
@@ -790,7 +782,6 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 ```
 
 **What to do if the stage failed**: see [RUNBOOK.md → `FinalContainerdConfigReady`](RUNBOOK.md#finalcontainerdconfigready).
-
 
 ### Stage 7 — `CleanupInClusterProxy`
 

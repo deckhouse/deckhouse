@@ -4,22 +4,25 @@ This document describes diagnostics and actions for registry switching errors.
 
 Additional verification commands:
 
-**Checking the switching status**
-```bash
-watch -c "kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values registry | yq '.internal.orchestrator.state.conditions // []'"
-```
+1. Checking the switching status**
 
-**Checking the deckhouse queue**
-```bash
-watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
-```
+  ```bash
+  watch -c "kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values registry | yq '.internal.orchestrator.state.conditions // []'"
+  ```
+
+1. Checking the deckhouse queue**
+
+  ```bash
+  watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+  ```
 
 ## Diagnostics of the switching stages
 
 ### `RegistryContainsRequiredImages`
 
 1. Check the deckhouse queue. There must be no errors in the queue.
-2. Check the switching status. The status will indicate an error about the availability of the registry and the images in it:
+1. Check the switching status. The status will indicate an error about the availability of the registry and the images in it:
+
   ```Yaml
   ...
   - lastTransitionTime: "2026-06-18T08:41:23Z"
@@ -49,23 +52,23 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
   ...
   ```
 
-3. If the error is related to registry availability:
+1. If the error is related to registry availability:
    1. Check whether the registry is reachable from the cluster nodes. Example command to run the check: `ctr images pull --tlscacert=./path/to/ca --user="name:pass" --http-dump some-nexus.io/deckhouse/path:release-1.76`;
-   2. Check the correctness of the parameters entered in `mc/deckhouse`. If the parameters are entered incorrectly — fix them;
+   1. Check the correctness of the parameters entered in `mc/deckhouse`. If the parameters are entered incorrectly — fix them;
 
-4. If the error is related to images (your own image storage):
+1. If the error is related to images (your own image storage):
    1. Check whether the image is loaded into the local image storage `ctr images pull --tlscacert=./path/to/ca --user="name:pass" --http-dump some-nexus.io/deckhouse/path:release-1.76`
-   2. Check whether there are any errors in the local image storage (storage logs);
-
+   1. Check whether there are any errors in the local image storage (storage logs);
 
 > [!NOTE]
 > For `Local` mode, the stage will be in error until a previously prepared image bundle is loaded into the local registry using the `d8 mirror push` command. Load the images and wait for the recheck.
-> Example: (../EXAMPLES.md#switching-to-local-mode)[../EXAMPLES.md#switching-to-local-mode]
+> Example: [../EXAMPLES.md#switching-to-local-mode](../EXAMPLES.md#switching-to-local-mode)
 
 ### `ContainerdConfigPreflightReady`
 
 1. Check the deckhouse queue. There must be no errors in the queue.
-2. Check the switching status. The status will indicate an error from running the preflight check:
+1. Check the switching status. The status will indicate an error from running the preflight check:
+
   ```bash
   $ d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)
   ...
@@ -78,8 +81,7 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
   ...
   ```
 
-3. If the status indicates the error `has custom toml merge containerd configuration`. You need to perform a migration. Detailed example: (../FAQ.md#how-to-migrate-to-the-registry-module)[../FAQ.md#how-to-migrate-to-the-registry-module]
-
+1. If the status indicates the error `has custom toml merge containerd configuration`. You need to perform a migration. Detailed example: [../FAQ.md#how-to-migrate-to-the-registry-module](../FAQ.md#how-to-migrate-to-the-registry-module)
 
 ### `TransitionContainerdConfigReady`
 
@@ -87,9 +89,9 @@ Same as the `FinalContainerdConfigReady` item
 
 ### `FinalContainerdConfigReady`
 
-
 1. Check the deckhouse queue. There must be no errors in the queue.
-2. Check the switching status. The status will indicate the process of running the new bashible bundle version with the new registry configuration version:
+1. Check the switching status. The status will indicate the process of running the new bashible bundle version with the new registry configuration version:
+
 ```bash
 ...
 - lastTransitionTime: "2026-06-18T08:41:23Z"
@@ -104,38 +106,40 @@ Same as the `FinalContainerdConfigReady` item
 ...
 ```
 
-3. If the condition does not pass for a long time:
+1. If the condition does not pass for a long time:
    1. Check the bashible logs on the nodes: `journalctl -u bashible.service --no-pager -f`;
-   2. If there are no errors, check the logs of the `node-manager` module components in the `d8-cloud-instance-manager` namespace;
-4. Make sure that the nodes have the required containerd configuration in the `/etc/containerd/registry.d` directory
-
+   1. If there are no errors, check the logs of the `node-manager` module components in the `d8-cloud-instance-manager` namespace;
+1. Make sure that the nodes have the required containerd configuration in the `/etc/containerd/registry.d` directory
 
 ### `InClusterProxyReady`
 
-
 1. Check the deckhouse queue. There must be no errors in the queue.
-2. Check the switching status. The status will indicate a deployment error for the `registry-incluster-proxy` component.
-3. Check the deployment status of the `registry-incluster-proxy` deployment. The deployment must roll out all pods. In normal mode/HA = 1/number of master nodes. There must be no errors in the pod logs:
+1. Check the switching status. The status will indicate a deployment error for the `registry-incluster-proxy` component.
+1. Check the deployment status of the `registry-incluster-proxy` deployment. The deployment must roll out all pods. In normal mode/HA = 1/number of master nodes. There must be no errors in the pod logs:
+
   ```bash
-  $ kubectl -n d8-system get deployment registry-incluster-proxy -o yaml
-  $ kubectl -n d8-system describe deployment registry-incluster-proxy
-  $ kubectl -n d8-system logs pod registry-incluster-proxy-<replica>
+  kubectl -n d8-system get deployment registry-incluster-proxy -o yaml
+  kubectl -n d8-system describe deployment registry-incluster-proxy
+  kubectl -n d8-system logs pod registry-incluster-proxy-<replica>
   ```
 
 ### `CleanupInClusterProxy`
 
 1. Check the removal status of the `registry-incluster-proxy` deployment:
+
   ```bash
-  $ kubectl -n d8-system get deployment registry-incluster-proxy -o yaml
-  $ kubectl -n d8-system describe deployment registry-incluster-proxy
+  kubectl -n d8-system get deployment registry-incluster-proxy -o yaml
+  kubectl -n d8-system describe deployment registry-incluster-proxy
   ```
-2. If the deployment is not being removed, you can perform the removal manually.
-3. Check the switching status. The error should disappear from the status.
+
+1. If the deployment is not being removed, you can perform the removal manually.
+1. Check the switching status. The error should disappear from the status.
 
 ### `NodeServicesReady`
 
 1. Check the deckhouse queue. There must be no errors in the queue.
-2. Check the switching status. The status will indicate a deployment error for the `registry-nodeservices` component:
+1. Check the switching status. The status will indicate a deployment error for the `registry-nodeservices` component:
+
   ```yaml
   ...
   - message: |
@@ -147,38 +151,47 @@ Same as the `FinalContainerdConfigReady` item
     type: NodeServicesReady
   ...
   ```
-3. Check the deployment status of the `registry-nodeservices-manager` daemonset. The daemonset must roll out all pods. The number of pods = the number of master nodes. There must be no errors in the logs:
+
+1. Check the deployment status of the `registry-nodeservices-manager` daemonset. The daemonset must roll out all pods. The number of pods = the number of master nodes. There must be no errors in the logs:
+
   ```bash
-  $ kubectl -n d8-system get daemonset registry-nodeservices-manager -o yaml
-  $ kubectl -n d8-system describe daemonset registry-nodeservices-manager
-  $ kubectl -n d8-system logs pod registry-nodeservices-manager-<master-node>
+  kubectl -n d8-system get daemonset registry-nodeservices-manager -o yaml
+  kubectl -n d8-system describe daemonset registry-nodeservices-manager
+  kubectl -n d8-system logs pod registry-nodeservices-manager-<master-node>
   ```
-4. Check the deployment status of the registry static pods themselves `registry-nodeservices-<master-node>`. There must be no errors in the pod logs:
+
+1. Check the deployment status of the registry static pods themselves `registry-nodeservices-<master-node>`. There must be no errors in the pod logs:
+
   ```bash
-  $ kubectl -n d8-system get pod registry-nodeservices-<master-node> -o yaml
-  $ kubectl -n d8-system describe pod registry-nodeservices-<master-node>
-  $ kubectl -n d8-system logs pod registry-nodeservices-manager-<master-node>
+  kubectl -n d8-system get pod registry-nodeservices-<master-node> -o yaml
+  kubectl -n d8-system describe pod registry-nodeservices-<master-node>
+  kubectl -n d8-system logs pod registry-nodeservices-manager-<master-node>
   ```
-5. Check the node status. The node must be in the `Ready` state:
+
+1. Check the node status. The node must be in the `Ready` state:
+
   ```bash
-  $ kubectl get node <master-node> -o yaml
-  $ kubectl describe node <master-node>
+  kubectl get node <master-node> -o yaml
+  kubectl describe node <master-node>
   ```
 
 ### `CleanupNodeServices`
 
 1. Check the state of the `registry-nodeservices-manager` daemonset. The daemonset must remove the registry static pods `registry-nodeservices-<node>`;
-2. Check whether the `registry-nodeservices-manager` daemonset has been removed.
-3. If an instance of `registry-nodeservices-manager` does not get deployed on a node to remove `registry-nodeservices-<node>`. Remove the static pod manually:
+1. Check whether the `registry-nodeservices-manager` daemonset has been removed.
+1. If an instance of `registry-nodeservices-manager` does not get deployed on a node to remove `registry-nodeservices-<node>`. Remove the static pod manually:
+
    ```bash
    mv /etc/kubernetes/manifests/registry-nodeservices.yaml ~/registry-nodeservices.yaml
    mv /etc/kubernetes/manifests/registry ~/registry
    ```
-4. Check the switching status. The error should disappear from the status.
+
+1. Check the switching status. The error should disappear from the status.
 
 ### `DeckhouseRegistrySwitchReady`
 
 1. Check the switching status. The status will indicate a deployment error for the `registry-nodeservices` component:
+
   ```yaml
   ...
   - message: |
@@ -188,9 +201,10 @@ Same as the `FinalContainerdConfigReady` item
     type: DeckhouseRegistrySwitchReady
   ...
   ```
-2. If the error is: `Waiting for deckhouse-controller to become ready`:
+
+1. If the error is: `Waiting for deckhouse-controller to become ready`:
    1. Check the deckhouse queue. There must be no errors in the queue. Deckhouse must run all hooks in all modules. After running all hooks and rendering all manifests, deckhouse will transition to the `Ready` state.
-   2. Check the deckhouse logs — there must be no errors in the logs.
+   1. Check the deckhouse logs — there must be no errors in the logs.
 
 ### `ErrTransitionNotSupported`
 
@@ -201,12 +215,12 @@ unsupported transition between modes was requested. The following transitions ar
 - `Local` → non-configurable `Unmanaged` (without `imagesRepo`).
 1. To switch to these modes, you need to first switch to an intermediate `Direct`/`Unmanaged` mode. After that, you can switch to the required mode.
 
-
 ## Common errors
 
 ### Changing an expired login/password
 
 1. Check the current mode:
+
   ```bash
   $ kubectl get mc/deckhouse -o yaml
   ...
@@ -223,7 +237,9 @@ unsupported transition between modes was requested. The following transitions ar
   mode: Direct
   target_mode: Direct
   ```
-2. Change the registry parameters in the current operating mode:
+
+1. Change the registry parameters in the current operating mode:
+
   ```bash
   $ kubectl edit mc/deckhouse
 
@@ -232,8 +248,8 @@ unsupported transition between modes was requested. The following transitions ar
     direct:
       ...
   ```
-3. Check the switching status. Wait for the parameter change to complete.
 
+1. Check the switching status. Wait for the parameter change to complete.
 
 ### Recovering the deckhouse pod in Direct mode (on ImagePullBackOff)
 
@@ -241,12 +257,15 @@ The solution covers only the case where the deckhouse pod is in `ImagePullBackOf
 The case does not cover other modes or changes to other parameters.
 
 1. Save the mutable cluster parameters:
+
    ```bash
    kubectl get mc/deckhouse -o yaml > mc_deckhouse.yaml
    kubectl get ms/deckhouse -o yaml > ms_deckhouse.yaml
    kubectl -n d8-system get secret/deckhouse-registry -o yaml > secret_deckhouse_registry.yaml
    ```
-2. Prepare the new `.dockerconfig` value for `mc/deckhouse` and `ms/deckhouse`:
+
+1. Prepare the new `.dockerconfig` value for `mc/deckhouse` and `ms/deckhouse`:
+
    ```bash
    export registry_username="new-username"
    export registry_password="new-password"
@@ -254,14 +273,19 @@ The case does not cover other modes or changes to other parameters.
 
    echo -n '{"auths":{"registry.d8-system.svc:5001":{"username":"'"${registry_username}"'","password":"'"${registry_password}"'","auth":"'"${AUTH}"'"}}}' | base64 -w 0
    ```
-3. Change the new username and password registry parameters in `mc/deckhouse`:
+
+1. Change the new username and password registry parameters in `mc/deckhouse`:
+
    ```bash
-   $ kubectl --as=system:sudouser edit mc/deckhouse
+   kubectl --as=system:sudouser edit mc/deckhouse
    ```
-4. Insert the `.dockerconfig` value obtained in step 2 into `ms/deckhouse` and into `secret/deckhouse-registry`:
+
+1. Insert the `.dockerconfig` value obtained in step 2 into `ms/deckhouse` and into `secret/deckhouse-registry`:
+
    ```bash
-   $ kubectl --as=system:sudouser edit ms/deckhouse
-   $ kubectl --as=system:sudouser -n d8-system edit secret/deckhouse-registry
+   kubectl --as=system:sudouser edit ms/deckhouse
+   kubectl --as=system:sudouser -n d8-system edit secret/deckhouse-registry
    ```
-5. Make sure the `ImagePullBackOff` error has disappeared.
-6. Wait for the registry switching status to the new credentials to complete.
+
+1. Make sure the `ImagePullBackOff` error has disappeared.
+1. Wait for the registry switching status to the new credentials to complete.

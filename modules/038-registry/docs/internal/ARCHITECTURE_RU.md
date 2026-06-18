@@ -93,7 +93,7 @@ flowchart LR
 - модуль `registry` считывает его и публикует `deckhouse-registry` и `registry-bashible-config`;
 - модули `node-manager` и `global` используют полученные от модуля `registry` секреты.
 
-**Module Deckhouse**
+### Module Deckhouse
 
 ```mermaid
 flowchart LR
@@ -134,7 +134,7 @@ flowchart LR
   который извлекает текущий режим из registry, чтобы построить validation-хук, проверяющий
   допустимость редактирования `mc/deckhouse` и смену режимов.
 
-**Module Registry**
+### Module Registry
 
 ```mermaid
 flowchart LR
@@ -237,7 +237,7 @@ flowchart TD
     class comps workload;
 ```
 
-**Module Node-Manager**
+### Module Node-Manager
 
 ```mermaid
 flowchart LR
@@ -318,7 +318,7 @@ flowchart TD
     class bc decision;
 ```
 
-**Module Global**
+### Module Global
 
 ```mermaid
 flowchart LR
@@ -365,8 +365,7 @@ flowchart LR
 (operator-trivy, image-availability-exporter и т. д.) выполняется уже независимо другими
 модулями.
 
-## Взаимодействие компонент модуля registry:
-
+## Взаимодействие компонент модуля registry
 
 ### Direct
 

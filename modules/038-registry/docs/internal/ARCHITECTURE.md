@@ -93,7 +93,7 @@ The overall picture "with the registry module" is split into four parts — one 
 - the `registry` module reads it and publishes `deckhouse-registry` and `registry-bashible-config`;
 - the `node-manager` and `global` modules use the secrets received from the `registry` module.
 
-**Module Deckhouse**
+### Module Deckhouse
 
 ```mermaid
 flowchart LR
@@ -134,7 +134,7 @@ The `deckhouse` module performs:
   that extracts the current mode from the registry in order to build a validation hook that checks
   the admissibility of editing `mc/deckhouse` and switching modes.
 
-**Module Registry**
+### Module Registry
 
 ```mermaid
 flowchart LR
@@ -237,7 +237,7 @@ flowchart TD
     class comps workload;
 ```
 
-**Module Node-Manager**
+### Module Node-Manager
 
 ```mermaid
 flowchart LR
@@ -318,7 +318,7 @@ flowchart TD
     class bc decision;
 ```
 
-**Module Global**
+### Module Global
 
 ```mermaid
 flowchart LR
@@ -365,8 +365,7 @@ DKP components. Further work with `deckhouse-registry` for API access to the reg
 (operator-trivy, image-availability-exporter, etc.) is then performed independently by other
 modules.
 
-## Interaction of the registry module components:
-
+## Interaction of the registry module components
 
 ### Direct
 

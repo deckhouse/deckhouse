@@ -4,22 +4,25 @@
 
 Дополнительные команды проверок:
 
-**Проверка статуса переключения**
-```bash
-watch -c "kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values registry | yq '.internal.orchestrator.state.conditions // []'"
-```
+1. Проверка статуса переключения**
 
-**Проверка очереди deckhouse**
-```bash
-watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
-```
+  ```bash
+  watch -c "kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values registry | yq '.internal.orchestrator.state.conditions // []'"
+  ```
+
+1. Проверка очереди deckhouse**
+
+  ```bash
+  watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+  ```
 
 ## Диагностика этапов переключения
 
 ### `RegistryContainsRequiredImages`
 
 1. Проверьте очередь deckhouse. В очереди не должно быть ошибок.
-2. Проверьте статус переключения. В статусе будет указана ошибка доступности registry и образов в нем:
+1. Проверьте статус переключения. В статусе будет указана ошибка доступности registry и образов в нем:
+
   ```Yaml
   ...
   - lastTransitionTime: "2026-06-18T08:41:23Z"
@@ -49,23 +52,23 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
   ...
   ```
 
-3. Если ошибка связана с доступность registry:
+1. Если ошибка связана с доступность registry:
    1. Проверьте, доступен ли registry с узлов кластера. Пример команды для выполнения проверки: `ctr images pull --tlscacert=./path/to/ca --user="name:pass" --http-dump some-nexus.io/deckhouse/path:release-1.76`;
-   2. Проверьте корректность введенных параметров в `mc/deckhouse`. Если параметры введены неверно - исправьте их;
+   1. Проверьте корректность введенных параметров в `mc/deckhouse`. Если параметры введены неверно - исправьте их;
 
-4. Если ошибка связана с образами (свое хранилище образов):
+1. Если ошибка связана с образами (свое хранилище образов):
    1. Проверьте, загружен ли образ в локальное хранилище образов `ctr images pull --tlscacert=./path/to/ca --user="name:pass" --http-dump some-nexus.io/deckhouse/path:release-1.76`
-   2. Проверьте, нет ли в локальном хранилище образов ошибок (логи хранилища);
-
+   1. Проверьте, нет ли в локальном хранилище образов ошибок (логи хранилища);
 
 > [!NOTE]
 > Для режима `Local` этап будет в ошибке до тех пор, пока в локальный реестр не будет загружен заранее подготовленный bundle образов командой `d8 mirror push`. Загрузите образы и дождитесь повторной проверки.
-> Пример: (../EXAMPLES_RU.md#переключение-на-режим-local)[../EXAMPLES_RU.md#переключение-на-режим-local]
+> Пример: [../EXAMPLES_RU.md#переключение-на-режим-local](../EXAMPLES_RU.md#переключение-на-режим-local)
 
 ### `ContainerdConfigPreflightReady`
 
 1. Проверьте очередь deckhouse. В очереди не должно быть ошибок.
-2. Проверьте статус переключения. В статусе будет указана ошибка выполнения префлай проверки:
+1. Проверьте статус переключения. В статусе будет указана ошибка выполнения префлай проверки:
+
   ```bash
   $ d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)
   ...
@@ -78,8 +81,7 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
   ...
   ```
 
-3. Если в статусе указана ошибка `has custom toml merge containerd configuration`. Небходимо выполнить миграцию. Подробный пример: (../FAQ_RU.md#как-мигрировать-на-модуль-registry)[../FAQ_RU.md#как-мигрировать-на-модуль-registry]
-
+1. Если в статусе указана ошибка `has custom toml merge containerd configuration`. Небходимо выполнить миграцию. Подробный пример: [../FAQ_RU.md#как-мигрировать-на-модуль-registry](../FAQ_RU.md#как-мигрировать-на-модуль-registry)
 
 ### `TransitionContainerdConfigReady`
 
@@ -87,9 +89,9 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
 
 ### `FinalContainerdConfigReady`
 
-
 1. Проверьте очередь deckhouse. В очереди не должно быть ошибок.
-2. Проверьте статус переключения. В статусе будет указан процесс прогона новой версии bashible bundle c новой версией конфигурации registry:
+1. Проверьте статус переключения. В статусе будет указан процесс прогона новой версии bashible bundle c новой версией конфигурации registry:
+
 ```bash
 ...
 - lastTransitionTime: "2026-06-18T08:41:23Z"
@@ -104,38 +106,40 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
 ...
 ```
 
-3. Если condition долго не проходит:
+1. Если condition долго не проходит:
    1. Проверьте логи bashible на нодах: `journalctl -u bashible.service --no-pager -f`;
-   2. Если ошибок нет, проверьте логи компонентов модуля `node-manager` в namespace `d8-cloud-instance-manager`;
-4. Убедитесь, что на узлах имеется требуемая конфигурация containerd в директории `/etc/containerd/registry.d`
-
+   1. Если ошибок нет, проверьте логи компонентов модуля `node-manager` в namespace `d8-cloud-instance-manager`;
+1. Убедитесь, что на узлах имеется требуемая конфигурация containerd в директории `/etc/containerd/registry.d`
 
 ### `InClusterProxyReady`
 
-
 1. Проверьте очередь deckhouse. В очереди не должно быть ошибок.
-2. Проверьте статус переключения. В статусе будет указана ошибка развертывания компонента `registry-incluster-proxy`.
-3. Проверьте статут развертывания deployment `registry-incluster-proxy`. Deployment должен развернуть все поды. В обычном режиме/HA = 1/кол-во мастер узлов. В логах подов не должно быть ошибок:
+1. Проверьте статус переключения. В статусе будет указана ошибка развертывания компонента `registry-incluster-proxy`.
+1. Проверьте статут развертывания deployment `registry-incluster-proxy`. Deployment должен развернуть все поды. В обычном режиме/HA = 1/кол-во мастер узлов. В логах подов не должно быть ошибок:
+
   ```bash
-  $ kubectl -n d8-system get deployment registry-incluster-proxy -o yaml
-  $ kubectl -n d8-system describe deployment registry-incluster-proxy
-  $ kubectl -n d8-system logs pod registry-incluster-proxy-<replica>
+  kubectl -n d8-system get deployment registry-incluster-proxy -o yaml
+  kubectl -n d8-system describe deployment registry-incluster-proxy
+  kubectl -n d8-system logs pod registry-incluster-proxy-<replica>
   ```
 
 ### `CleanupInClusterProxy`
 
 1. Проверьте статут удаления deployment `registry-incluster-proxy`:
+
   ```bash
-  $ kubectl -n d8-system get deployment registry-incluster-proxy -o yaml
-  $ kubectl -n d8-system describe deployment registry-incluster-proxy
+  kubectl -n d8-system get deployment registry-incluster-proxy -o yaml
+  kubectl -n d8-system describe deployment registry-incluster-proxy
   ```
-2. Если deployment не удаляется, можно выполнить удаление вручную.
-3. Проверьте статус переключения. В статусе должна пропасть ошибка.
+
+1. Если deployment не удаляется, можно выполнить удаление вручную.
+1. Проверьте статус переключения. В статусе должна пропасть ошибка.
 
 ### `NodeServicesReady`
 
 1. Проверьте очередь deckhouse. В очереди не должно быть ошибок.
-2. Проверьте статус переключения. В статусе будет указана ошибка развертывания компонента `registry-nodeservices`:
+1. Проверьте статус переключения. В статусе будет указана ошибка развертывания компонента `registry-nodeservices`:
+
   ```yaml
   ...
   - message: |
@@ -147,38 +151,47 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
     type: NodeServicesReady
   ...
   ```
-3. Проверьте статус развертывания daemonset `registry-nodeservices-manager`. Daemonset должен развернуть все поды. Кол-во подов = кол-во мастер узлов. В логах не должно быть ошибок:
+
+1. Проверьте статус развертывания daemonset `registry-nodeservices-manager`. Daemonset должен развернуть все поды. Кол-во подов = кол-во мастер узлов. В логах не должно быть ошибок:
+
   ```bash
-  $ kubectl -n d8-system get daemonset registry-nodeservices-manager -o yaml
-  $ kubectl -n d8-system describe daemonset registry-nodeservices-manager
-  $ kubectl -n d8-system logs pod registry-nodeservices-manager-<master-node>
+  kubectl -n d8-system get daemonset registry-nodeservices-manager -o yaml
+  kubectl -n d8-system describe daemonset registry-nodeservices-manager
+  kubectl -n d8-system logs pod registry-nodeservices-manager-<master-node>
   ```
-4. Проверьте стату развертывания static pod-ов самого registry `registry-nodeservices-<master-node>`. В логах подов не должно быть ошибок:
+
+1. Проверьте стату развертывания static pod-ов самого registry `registry-nodeservices-<master-node>`. В логах подов не должно быть ошибок:
+
   ```bash
-  $ kubectl -n d8-system get pod registry-nodeservices-<master-node> -o yaml
-  $ kubectl -n d8-system describe pod registry-nodeservices-<master-node>
-  $ kubectl -n d8-system logs pod registry-nodeservices-manager-<master-node>
+  kubectl -n d8-system get pod registry-nodeservices-<master-node> -o yaml
+  kubectl -n d8-system describe pod registry-nodeservices-<master-node>
+  kubectl -n d8-system logs pod registry-nodeservices-manager-<master-node>
   ```
-5. Проверьте статус ноды. Нода должна быть в состоянии `Ready`:
+
+1. Проверьте статус ноды. Нода должна быть в состоянии `Ready`:
+
   ```bash
-  $ kubectl get node <master-node> -o yaml
-  $ kubectl describe node <master-node>
+  kubectl get node <master-node> -o yaml
+  kubectl describe node <master-node>
   ```
 
 ### `CleanupNodeServices`
 
 1. Проверьте состояние daemonset `registry-nodeservices-manager`. Daemonset должен удалить static pods registry `registry-nodeservices-<node>`;
-2. Проверьте удалился ли daemonset `registry-nodeservices-manager`.
-3. Если на ноде не разворачивается экземпляр `registry-nodeservices-manager` для удаления `registry-nodeservices-<node>`. Удалите static pod вручную:
+1. Проверьте удалился ли daemonset `registry-nodeservices-manager`.
+1. Если на ноде не разворачивается экземпляр `registry-nodeservices-manager` для удаления `registry-nodeservices-<node>`. Удалите static pod вручную:
+
    ```bash
    mv /etc/kubernetes/manifests/registry-nodeservices.yaml ~/registry-nodeservices.yaml
    mv /etc/kubernetes/manifests/registry ~/registry
    ```
-4. Проверьте статус переключения. В статусе должна пропасть ошибка.
+
+1. Проверьте статус переключения. В статусе должна пропасть ошибка.
 
 ### `DeckhouseRegistrySwitchReady`
 
 1. Проверьте статус переключения. В статусе будет указана ошибка развертывания компонента `registry-nodeservices`:
+
   ```yaml
   ...
   - message: |
@@ -188,9 +201,10 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
     type: DeckhouseRegistrySwitchReady
   ...
   ```
-2. Если ошибка: `Waiting for deckhouse-controller to become ready`:
+
+1. Если ошибка: `Waiting for deckhouse-controller to become ready`:
    1. Проверьте очередь deckhouse. В очереди не должно быть ошибок. Deckhouse должен выполнить все хуки во всех модуля. После выполнения всех хуков и рендеринга всех манифестов, deckhouse перейдет в состояние `Ready`.
-   2. Проверьте логи deckhouse - в логах не должно быть ошибок.
+   1. Проверьте логи deckhouse - в логах не должно быть ошибок.
 
 ### `ErrTransitionNotSupported`
 
@@ -201,12 +215,12 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
 - `Local` → неконфигурируемый `Unmanaged` (без `imagesRepo`).
 1. Для переключения в данные режимы, необходимо выполнить переключение в промежуточный режим `Direct`/`Unmanaged`. Затем, можно выполнить переключение в необходимый режим.
 
-
 ## Частые ошибки
 
 ### Смена протухшего логина/пароля
 
 1. Проверьте текущий режим:
+
   ```bash
   $ kubectl get mc/deckhouse -o yaml
   ...
@@ -223,7 +237,9 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
   mode: Direct
   target_mode: Direct
   ```
-2. Выполните смену параметров registry в текущем режиме работы:
+
+1. Выполните смену параметров registry в текущем режиме работы:
+
   ```bash
   $ kubectl edit mc/deckhouse
 
@@ -232,8 +248,8 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
     direct:
       ...
   ```
-3. Проверьте статус переключения. Дождитесь окончания смены параметров.
 
+1. Проверьте статус переключения. Дождитесь окончания смены параметров.
 
 ### Восстановление deckhouse пода в Direct режиме (при ImagePullBackOff)
 
@@ -241,12 +257,15 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
 Кейс не покрывает другие режимы и смену других параметров.
 
 1. Сохраните изменяемые параметры кластера:
+
    ```bash
    kubectl get mc/deckhouse -o yaml > mc_deckhouse.yaml
    kubectl get ms/deckhouse -o yaml > ms_deckhouse.yaml
    kubectl -n d8-system get secret/deckhouse-registry -o yaml > secret_deckhouse_registry.yaml
    ```
-2. Подготовьте новое значение `.dockerconfig` для `mc/deckhouse` и `ms/deckhouse`:
+
+1. Подготовьте новое значение `.dockerconfig` для `mc/deckhouse` и `ms/deckhouse`:
+
    ```bash
    export registry_username="new-username"
    export registry_password="new-password"
@@ -254,14 +273,19 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
 
    echo -n '{"auths":{"registry.d8-system.svc:5001":{"username":"'"${registry_username}"'","password":"'"${registry_password}"'","auth":"'"${AUTH}"'"}}}' | base64 -w 0
    ```
-3. Измените новые username и password параметры registry в `mc/deckhouse`:
+
+1. Измените новые username и password параметры registry в `mc/deckhouse`:
+
    ```bash
-   $ kubectl --as=system:sudouser edit mc/deckhouse
+   kubectl --as=system:sudouser edit mc/deckhouse
    ```
-4. Подставьте значение `.dockerconfig`, полученное на шаге 2, в `ms/deckhouse` и в `secret/deckhouse-registry`:
+
+1. Подставьте значение `.dockerconfig`, полученное на шаге 2, в `ms/deckhouse` и в `secret/deckhouse-registry`:
+
    ```bash
-   $ kubectl --as=system:sudouser edit ms/deckhouse
-   $ kubectl --as=system:sudouser -n d8-system edit secret/deckhouse-registry
+   kubectl --as=system:sudouser edit ms/deckhouse
+   kubectl --as=system:sudouser -n d8-system edit secret/deckhouse-registry
    ```
-5. Убедитесь, что ошибка `ImagePullBackOff` пропала.
-6. Дождитесь выполнения статуса переключения registry на новые креды.
+
+1. Убедитесь, что ошибка `ImagePullBackOff` пропала.
+1. Дождитесь выполнения статуса переключения registry на новые креды.
