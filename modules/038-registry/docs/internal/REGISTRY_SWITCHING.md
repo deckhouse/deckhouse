@@ -55,7 +55,7 @@ In-cluster обращение выполняется через внутренн
 **Переключение в режим Direct**:
 
 ```mermaid
-flowchart TD
+flowchart LR
     A["RegistryContainsRequiredImages<br/>проверка внешнего реестра"]
     B["ContainerdConfigPreflightReady<br/>preflight узлов"]
     C["TransitionContainerdConfigReady<br/>containerd: старый + новый источник"]
@@ -99,7 +99,17 @@ registry
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
 
 
-### Этап 3 — `TransitionContainerdConfigReady`
+### Этап 3 — `InClusterProxyReady`
+
+На данном этапе на master-узлах кластера поднимается `Deployment` `registry-incluster-proxy`.
+Если кластер находится в HA режиме — поднимается несколько экземпляров.
+
+На данном этапе только поднимается компонент. Переключение на его использование пока не выполняется.
+
+**Что делать, если этап не прошел**: см. [RUNBOOK.md → `InClusterProxyReady`](RUNBOOK.md#inclusterproxyready).
+
+
+### Этап 4 — `TransitionContainerdConfigReady`
 На узлы раскатывается переходный конфиг containerd: активны оба источника — старый и новый.
 
 Взаимодействие выполняется через секрет `registry-bashible-config`. Его конфигурирует оркестратор, который следит за версией конфигурации через аннотацию `registry.deckhouse.io/version=...` на узле.
@@ -147,43 +157,6 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
 
 
-### Этап 4 — `InClusterProxyReady`
-
-На данном этапе на master-узлах кластера поднимается `Deployment` `registry-incluster-proxy`.
-Если кластер находится в HA режиме — поднимается несколько экземпляров.
-
-На данном этапе только поднимается компонент. Переключение на его использование пока не выполняется.
-
-
-```mermaid
-flowchart LR
-  COND["InClusterProxyReady"]
-
-  subgraph CLUSTER["Кластер"]
-    PROXY["registry-incluster-proxy<br/>(Deployment) ✅"]
-    SVC(["registry service<br/>registry.d8-system.svc:5001"])
-    NODES["Узлы (containerd:<br/>старый + новый источник)"]
-  end
-
-  EXT[("Внешний реестр")]
-
-  SVC --> PROXY
-  PROXY -.->|"для in-cluster pull"| EXT
-  NODES ==>|"CRI pull (во внешний реестр напрямую)"| EXT
-
-  classDef cond fill:#fff3c4,stroke:#d4a72c,color:#3d3000;
-  classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
-  classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
-  classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
-  class COND cond;
-  class PROXY,SVC work;
-  class NODES cri;
-  class EXT ext;
-```
-
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `InClusterProxyReady`](RUNBOOK.md#inclusterproxyready).
-
-
 ### Этап 5 — `DeckhouseRegistrySwitchReady`
 
 К данному этапу подготовлены:
@@ -207,26 +180,21 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  COND["DeckhouseRegistrySwitchReady →<br/>FinalContainerdConfigReady"]
-
   subgraph CLUSTER["Кластер"]
     INPULL["In-cluster pull<br/>(controller, trivy, ...)"]
-    SVC(["registry service"])
-    PROXY["registry-incluster-proxy ✅"]
-    NODES["Узлы (containerd:<br/>только внешний реестр)"]
+    SVC(["registry service<br/>registry.d8-system.svc:5001"])
+    PROXY["registry-incluster-proxy<br/>(pods на master) ✅"]
+    NODES["Узлы (containerd, mirroring:<br/>только новый источник)"]
   end
 
   EXT[("Внешний реестр")]
 
-  INPULL ==>|"in-cluster pull"| SVC --> PROXY
-  PROXY ==> EXT
-  NODES ==>|"CRI pull (напрямую)"| EXT
+  INPULL ==>|"in-cluster pull<br/>registry.d8-system.svc:5001"| SVC ==> PROXY ==> EXT
+  NODES ==>|"CRI pull (mirroring)<br/>registry.d8-system.svc:5001"| EXT
 
-  classDef cond fill:#fff3c4,stroke:#d4a72c,color:#3d3000;
   classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
   classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
   classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
-  class COND cond;
   class PROXY,SVC,INPULL work;
   class NODES cri;
   class EXT ext;
@@ -267,24 +235,6 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 
 Daemonset `registry-nodeservices-manager` удаляет static pod-ы `registry-nodeservices-<node>` с master-узлов. После успешного удаления из кластера удаляется сам `registry-nodeservices-manager`.
 
-```mermaid
-flowchart LR
-  COND["CleanupNodeServices"]
-
-  subgraph CLUSTER["Кластер"]
-    MGR["registry-nodeservices-manager<br/>(DaemonSet) ❌ удаляется"]
-    SP["registry-nodeservices-&lt;node&gt;<br/>(static pods) ❌ удаляются"]
-  end
-
-  COND --> MGR
-  MGR ==>|"удаляет"| SP
-
-  classDef cond fill:#fff3c4,stroke:#d4a72c,color:#3d3000;
-  classDef gone fill:#f7d4d4,stroke:#c45c5c,color:#5c1010;
-  class COND cond;
-  class MGR,SP gone;
-```
-
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `CleanupNodeServices`](RUNBOOK.md#cleanupnodeservices).
 
 
@@ -313,7 +263,7 @@ In-cluster обращение выполняется через компонен
 **Переключение в режим Proxy**:
 
 ```mermaid
-flowchart TD
+flowchart LR
     A["RegistryContainsRequiredImages<br/>проверка внешнего реестра"]
     B["ContainerdConfigPreflightReady<br/>preflight узлов"]
     C["TransitionContainerdConfigReady<br/>containerd: старый + новый источник,<br/>registry-proxy на узлах"]
@@ -356,7 +306,17 @@ registry
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
 
 
-### Этап 3 — `TransitionContainerdConfigReady`
+### Этап 3 — `NodeServicesReady`
+
+На данном этапе на master-узлах кластера поднимается `Daemonset` `registry-nodeservices-manager`.
+Manager поднимает static pod-ы `registry-nodeservices-<node>` на master-узлах кластера.
+
+На данном этапе только поднимаются компоненты. Переключение на их использование пока не выполняется.
+
+**Что делать, если этап не прошел**: см. [RUNBOOK.md → `NodeServicesReady`](RUNBOOK.md#nodeservicesready).
+
+
+### Этап 4 — `TransitionContainerdConfigReady`
 На узлы раскатывается переходный конфиг containerd: активны оба источника — старый и новый.
 
 Взаимодействие выполняется через секрет `registry-bashible-config`. Его конфигурирует оркестратор, который следит за версией конфигурации через аннотацию `registry.deckhouse.io/version=...` на узле.
@@ -406,44 +366,6 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
 
 
-### Этап 4 — `NodeServicesReady`
-
-На данном этапе на master-узлах кластера поднимается `Daemonset` `registry-nodeservices-manager`.
-Manager поднимает static pod-ы `registry-nodeservices-<node>` на master-узлах кластера.
-
-На данном этапе только поднимаются компоненты. Переключение на их использование пока не выполняется.
-
-
-```mermaid
-flowchart LR
-  COND["NodeServicesReady"]
-
-  subgraph CLUSTER["Кластер"]
-    MGR["registry-nodeservices-manager<br/>(DaemonSet) ✅"]
-    SP["registry-nodeservices-&lt;node&gt;<br/>(static pods на master) ✅"]
-    PROXY["registry-proxy<br/>(static pod на каждом узле) ✅"]
-    NODES["Узлы (containerd:<br/>старый + новый источник)"]
-  end
-
-  EXT[("Внешний реестр")]
-
-  COND --> MGR
-  MGR ==>|"поднимает"| SP
-  SP -.->|"для in-cluster pull"| EXT
-  NODES ==>|"CRI pull (во внешний реестр напрямую)"| EXT
-
-  classDef cond fill:#fff3c4,stroke:#d4a72c,color:#3d3000;
-  classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
-  classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
-  classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
-  class COND cond;
-  class MGR,SP,PROXY work;
-  class NODES cri;
-  class EXT ext;
-```
-
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `NodeServicesReady`](RUNBOOK.md#nodeservicesready).
-
 ### Этап 5 — `DeckhouseRegistrySwitchReady`
 
 К данному этапу подготовлены:
@@ -468,27 +390,23 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  COND["DeckhouseRegistrySwitchReady →<br/>FinalContainerdConfigReady"]
-
   subgraph CLUSTER["Кластер"]
     INPULL["In-cluster pull<br/>(controller, trivy, ...)"]
+    NODES["Узлы (containerd, mirroring:<br/>только новый источник)"]
     SVC(["registry service<br/>registry.d8-system.svc:5001"])
     PROXY["registry-proxy<br/>(static pod на каждом узле) ✅"]
-    SP["registry-nodeservices-&lt;node&gt;<br/>(static pods на master) ✅"]
-    NODES["Узлы (containerd:<br/>только новый источник)"]
+    SP["registry-nodeservices-&lt;master-node&gt;<br/>(static pods на master) ✅"]
   end
 
   EXT[("Внешний реестр")]
 
-  INPULL ==>|"in-cluster pull"| SVC --> SP
-  NODES ==>|"CRI pull"| PROXY ==>|"балансировка"| SP
+  INPULL ==>|"in-cluster pull<br/>registry.d8-system.svc:5001"| SVC ==> SP
+  NODES ==>|"CRI pull<br/>registry.d8-system.svc:5001"| PROXY ==>|"балансировка"| SP
   SP ==> EXT
 
-  classDef cond fill:#fff3c4,stroke:#d4a72c,color:#3d3000;
   classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
   classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
   classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
-  class COND cond;
   class PROXY,SVC,INPULL,SP work;
   class NODES cri;
   class EXT ext;
@@ -523,21 +441,5 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 ### Этап 7 — `CleanupInClusterProxy`
 
 На данном этапе компоненты режима Direct уже не используются. `Deployment` `registry-incluster-proxy` удаляется из кластера.
-
-```mermaid
-flowchart LR
-  COND["CleanupInClusterProxy"]
-
-  subgraph CLUSTER["Кластер"]
-    PROXY["registry-incluster-proxy<br/>(Deployment) ❌ удаляется"]
-  end
-
-  COND ==>|"удаляет"| PROXY
-
-  classDef cond fill:#fff3c4,stroke:#d4a72c,color:#3d3000;
-  classDef gone fill:#f7d4d4,stroke:#c45c5c,color:#5c1010;
-  class COND cond;
-  class PROXY gone;
-```
 
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `CleanupInClusterProxy`](RUNBOOK.md#cleanupinclusterproxy).
