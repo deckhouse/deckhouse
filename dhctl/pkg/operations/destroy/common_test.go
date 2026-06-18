@@ -989,12 +989,11 @@ func assertOverDefaultBastion(t *testing.T, overBastion bool, bastion testssh.Ba
 }
 
 func testIsCleanCommand(scriptPath string) bool {
-	return strings.Contains(scriptPath, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then") &&
-		strings.Contains(scriptPath, `echo "cleanup_static_node.sh not found, probably already cleaned"`) &&
-		strings.Contains(scriptPath, "exit 0") &&
-		strings.Contains(scriptPath, "bash -x /var/lib/bashible/cleanup_static_node.sh") &&
-		strings.Contains(scriptPath, "--yes-i-am-sane-and-i-understand-what-i-am-doing") &&
-		strings.Contains(scriptPath, "/tmp/cleanup-static-node-debug.log")
+	return strings.Contains(scriptPath, "test -f /var/lib/bashible/cleanup_static_node.sh") &&
+		strings.Contains(scriptPath, `echo "ERROR: cleanup_static_node.sh not found"`) &&
+		strings.Contains(scriptPath, "exit 1") &&
+		strings.Contains(scriptPath, "bash /var/lib/bashible/cleanup_static_node.sh") &&
+		strings.Contains(scriptPath, "--yes-i-am-sane-and-i-understand-what-i-am-doing")
 }
 
 func assertStringSliceContainsUniqVals(t *testing.T, list []string, msg string) {
