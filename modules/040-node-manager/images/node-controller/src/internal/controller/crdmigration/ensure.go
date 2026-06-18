@@ -129,6 +129,7 @@ func patchConversionWebhook(ctx context.Context, c client.Client, crdName string
 				Service: &apiextensionsv1.ServiceReference{
 					Name:      nodeControllerWebhookServiceName,
 					Namespace: capiNamespace,
+					Path:      ptrString("/convert"),
 					Port:      ptrInt32(443),
 				},
 				CABundle: caBundle,

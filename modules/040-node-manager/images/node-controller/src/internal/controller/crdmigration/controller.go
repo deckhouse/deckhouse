@@ -231,6 +231,7 @@ func setMigrationSpec(crd *apiextensionsv1.CustomResourceDefinition, caBundle []
 				Service: &apiextensionsv1.ServiceReference{
 					Name:      webhookServiceName,
 					Namespace: capiNamespace,
+					Path:      ptrString("/convert"),
 					Port:      ptrInt32(webhookServicePort),
 				},
 				CABundle: caBundle,
@@ -273,6 +274,10 @@ func loadCRDs(dir string) (map[string]*apiextensionsv1.CustomResourceDefinition,
 }
 
 func ptrInt32(v int32) *int32 {
+	return &v
+}
+
+func ptrString(v string) *string {
 	return &v
 }
 
