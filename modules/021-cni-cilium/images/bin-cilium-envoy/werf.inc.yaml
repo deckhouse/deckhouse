@@ -96,7 +96,7 @@ shell:
   - chown -R 1337:1337 /home/cilium /cilium/proxy /src/envoy
   - chmod -R a+w /tmp
   setup:
-  - ln -f -s llvm-18.0 "/usr/lib/llvm-18"
+  - ln -f -s llvm-18.1 "/usr/lib/llvm-18"
   #
   # cache
 {{- if $buildWithPreparedCacheAndDeps }}
@@ -109,7 +109,7 @@ shell:
 {{- end }}
   - chown -R 1337:1337 /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache
   #
-  - export ALTWRAP_LLVM_VERSION=18.0 GCC_VERSION=11
+  - export ALTWRAP_LLVM_VERSION=18.1 GCC_VERSION=11
   - export TARGETARCH=amd64 ARCH="x86_64"
   #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
@@ -145,7 +145,7 @@ shell:
   # Anchored on file content (not line numbers) because cilium/proxy reworked bazel/toolchains/BUILD
   # (two cc_toolchain blocks: aarch64 + x86_64). The aarch64 block also gets these entries, but it is
   # never built (target platform is //bazel:linux_x86_64), so the extra strings are harmless.
-  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-18.0/lib64/clang/18/include",' bazel/toolchains/BUILD
+  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-18.1/lib64/clang/18/include",' bazel/toolchains/BUILD
   - sudo -u cilium sed -i '\#-Wno-deprecated-builtins#a \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
   #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
