@@ -18,12 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"sort"
 	"sync/atomic"
 
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
@@ -41,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type Module struct {
@@ -57,6 +60,7 @@ type Module struct {
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
+	metricStorage     metricsstorage.Storage
 
 	logger *log.Logger
 }
@@ -74,6 +78,7 @@ type Config struct {
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+	MetricStorage     metricsstorage.Storage // Stores Prometheus metrics emitted by hooks
 }
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
@@ -90,6 +95,7 @@ func NewModuleByConfig(cfg *Config, logger *log.Logger) (*Module, error) {
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
+	m.metricStorage = cfg.MetricStorage
 	m.logger = logger
 
 	m.hooks = hooks.NewGlobalStorage()
@@ -258,6 +264,17 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 		bc.Metadata.BindingType = binding
 
 		if err := m.runHook(ctx, hook, []bctx.BindingContext{bc}); err != nil {
+			// Hooks declaring allowFailure for this binding must not abort the
+			// pipeline: log and continue, mirroring addon-operator/shell-operator
+			// semantics for non-blocking hooks.
+			if allowFailureForBinding(hook, binding) {
+				m.logger.Warn("global hook failed but allowFailure is set, continuing",
+					slog.String("hook", hook.GetName()),
+					slog.String("binding", string(binding)),
+					log.Err(err))
+				continue
+			}
+
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
@@ -266,6 +283,29 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 	m.running.Store(true)
 
 	return nil
+}
+
+// allowFailureForBinding reports whether a global hook is configured to tolerate
+// failures for the given binding. Only the bindings executed via
+// RunHooksByBinding (OnStartup/BeforeAll/AfterAll) are considered; Kubernetes/
+// Schedule bindings carry allowFailure per BindingExecutionInfo and are handled
+// by their dedicated tasks.
+func allowFailureForBinding(h hooks.GlobalHook, binding shtypes.BindingType) bool {
+	cfg := h.GetHookConfig()
+	if cfg == nil {
+		return false
+	}
+
+	switch binding {
+	case shtypes.OnStartup:
+		return cfg.OnStartup != nil && cfg.OnStartup.AllowFailure
+	case addontypes.BeforeAll:
+		return cfg.BeforeAll != nil && cfg.BeforeAll.AllowFailure
+	case addontypes.AfterAll:
+		return cfg.AfterAll != nil && cfg.AfterAll.AllowFailure
+	default:
+		return false
+	}
 }
 
 // runHook executes a single hook with the specified binding context.
@@ -290,6 +330,12 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
+
+	// Export hook-emitted Prometheus metrics regardless of the hook outcome:
+	// metrics may have been collected before a later failure. A metrics error
+	// must not mask the hook result, so it is logged rather than returned.
+	m.applyHookMetrics(h, hookResult)
+
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
@@ -315,6 +361,25 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	}
 
 	return nil
+}
+
+// applyHookMetrics applies the batch of Prometheus metric operations a global
+// hook emitted to the shared metric storage, tagging them with the hook and
+// module names. Grouped metrics expire and refresh per group inside the storage.
+// No-op when no metric storage is wired or the hook produced no metrics.
+func (m *Module) applyHookMetrics(h hooks.GlobalHook, hookResult *kind.HookResult) {
+	if m.metricStorage == nil || hookResult == nil || len(hookResult.Metrics) == 0 {
+		return
+	}
+
+	if err := m.metricStorage.ApplyBatchOperations(hookResult.Metrics, map[string]string{
+		pkg.MetricKeyHook: h.GetName(),
+		pkg.LogKeyModule:  m.GetName(),
+	}); err != nil {
+		m.logger.Warn("apply global hook metrics",
+			slog.String("hook", h.GetName()),
+			log.Err(err))
+	}
 }
 
 // SetEnabledModules inject enabledModules to the global values

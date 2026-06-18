@@ -266,6 +266,7 @@ func (r *Runtime) loadModuleConfFromPath(ctx context.Context, path string, embed
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.MetricStorage = r.metricStorage
 	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 
 	return conf, nil
@@ -297,6 +298,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.MetricStorage = r.metricStorage
 	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 
 	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)

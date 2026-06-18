@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"sync/atomic"
@@ -46,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // Module represents a running instance of a package.
@@ -76,6 +78,7 @@ type Module struct {
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
+	metricStorage     metricsstorage.Storage
 
 	globalValuesGetter GlobalValuesGetter
 
@@ -102,6 +105,7 @@ type Config struct {
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+	MetricStorage     metricsstorage.Storage // Stores Prometheus metrics emitted by hooks
 
 	GlobalValuesGetter GlobalValuesGetter
 }
@@ -126,6 +130,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
+	m.metricStorage = cfg.MetricStorage
 	m.globalValuesGetter = cfg.GlobalValuesGetter
 	m.logger = logger
 
@@ -415,6 +420,17 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 		bc.Metadata.BindingType = binding
 
 		if err := m.runHook(ctx, hook, []bctx.BindingContext{bc}); err != nil {
+			// Hooks declaring allowFailure for this binding must not abort the
+			// pipeline: log and continue, mirroring addon-operator/shell-operator
+			// semantics for non-blocking hooks.
+			if allowFailureForBinding(hook, binding) {
+				m.logger.Warn("hook failed but allowFailure is set, continuing",
+					slog.String("hook", hook.GetName()),
+					slog.String("binding", string(binding)),
+					log.Err(err))
+				continue
+			}
+
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
@@ -425,6 +441,31 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 	}
 
 	return nil
+}
+
+// allowFailureForBinding reports whether a hook is configured to tolerate
+// failures for the given binding. Only the bindings executed via
+// RunHooksByBinding (OnStartup/BeforeHelm/AfterHelm/AfterDeleteHelm) are
+// considered; Kubernetes/Schedule bindings carry allowFailure per
+// BindingExecutionInfo and are handled by their dedicated tasks.
+func allowFailureForBinding(h hooks.Hook, binding shtypes.BindingType) bool {
+	cfg := h.GetHookConfig()
+	if cfg == nil {
+		return false
+	}
+
+	switch binding {
+	case shtypes.OnStartup:
+		return cfg.OnStartup != nil && cfg.OnStartup.AllowFailure
+	case addontypes.BeforeHelm:
+		return cfg.BeforeHelm != nil && cfg.BeforeHelm.AllowFailure
+	case addontypes.AfterHelm:
+		return cfg.AfterHelm != nil && cfg.AfterHelm.AllowFailure
+	case addontypes.AfterDeleteHelm:
+		return cfg.AfterDeleteHelm != nil && cfg.AfterDeleteHelm.AllowFailure
+	default:
+		return false
+	}
 }
 
 // RunHookByName executes a specific hook by name with the provided binding context.
@@ -468,6 +509,12 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
+
+	// Export hook-emitted Prometheus metrics regardless of the hook outcome:
+	// metrics may have been collected before a later failure. A metrics error
+	// must not mask the hook result, so it is logged rather than returned.
+	m.applyHookMetrics(h, hookResult)
+
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
@@ -493,4 +540,23 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	return nil
+}
+
+// applyHookMetrics applies the batch of Prometheus metric operations a hook
+// emitted to the shared metric storage, tagging them with the hook and module
+// names. Grouped metrics expire and refresh per group inside the storage. No-op
+// when no metric storage is wired or the hook produced no metrics.
+func (m *Module) applyHookMetrics(h hooks.Hook, hookResult *kind.HookResult) {
+	if m.metricStorage == nil || hookResult == nil || len(hookResult.Metrics) == 0 {
+		return
+	}
+
+	if err := m.metricStorage.ApplyBatchOperations(hookResult.Metrics, map[string]string{
+		pkg.MetricKeyHook: h.GetName(),
+		pkg.LogKeyModule:  m.GetName(),
+	}); err != nil {
+		m.logger.Warn("apply hook metrics",
+			slog.String("hook", h.GetName()),
+			log.Err(err))
+	}
 }

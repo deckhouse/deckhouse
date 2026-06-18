@@ -106,6 +106,7 @@ type Runtime struct {
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
 	crdInstaller      *crd.Installer                      // Applies package-bundled CRDs to the cluster
+	metricStorage     metricsstorage.Storage              // Stores Prometheus metrics emitted by hooks
 
 	global *global.Module
 
@@ -158,7 +159,10 @@ type moduleManagerI interface {
 
 // New creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
+//
+// metricStorage receives Prometheus metrics emitted by global and module hooks;
+// it may be nil, in which case hook metrics are silently dropped.
+func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -169,6 +173,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 
 	// Initialize foundational services
 	r.addonModuleManager = moduleManager
+	r.metricStorage = metricStorage
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
@@ -236,6 +241,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.MetricStorage = r.metricStorage
 
 	r.global, err = global.NewModuleByConfig(conf, r.logger)
 	if err != nil {
@@ -812,9 +818,6 @@ func (r *Runtime) schedulePackage(name string) {
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
-		// Apply package-bundled CRDs before hooks/Helm so that custom resources
-		// referenced by later stages already exist in the cluster.
-		r.queueService.Enqueue(ctx, name, taskensurecrd.NewTask(pkg, r.crdInstaller, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
