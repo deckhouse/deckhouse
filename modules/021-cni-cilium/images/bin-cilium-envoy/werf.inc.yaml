@@ -96,7 +96,7 @@ shell:
   - chown -R 1337:1337 /home/cilium /cilium/proxy /src/envoy
   - chmod -R a+w /tmp
   setup:
-  - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
+  - ln -f -s llvm-18.0 "/usr/lib/llvm-18"
   #
   # cache
 {{- if $buildWithPreparedCacheAndDeps }}
@@ -109,7 +109,7 @@ shell:
 {{- end }}
   - chown -R 1337:1337 /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache
   #
-  - export ALTWRAP_LLVM_VERSION=17.0 GCC_VERSION=11
+  - export ALTWRAP_LLVM_VERSION=18.0 GCC_VERSION=11
   - export TARGETARCH=amd64 ARCH="x86_64"
   #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
@@ -141,11 +141,12 @@ shell:
   - sudo -u cilium sed -i '32i \    path = "/src/envoy",' WORKSPACE
   - sudo -u cilium sed -i '33i )' WORKSPACE
   #
-  - sudo -u cilium sed -i 's/$(SUDO) apt info clang-17 || $(call add_clang_apt_source,$(shell lsb_release -cs))/rpm -q clang17.0/' Makefile
-  - sudo -u cilium sed -i "/\$(SUDO) apt install -y clang-17 llvm-17-dev lld-17 clang-format-17/d" Makefile
-  #
-  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-17.0/lib64/clang/17/include",' bazel/toolchains/BUILD
-  - sudo -u cilium sed -i '134i \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
+  # Inject ALT-specific clang/gcc paths into the bazel cc_toolchain_config.
+  # Anchored on file content (not line numbers) because cilium/proxy reworked bazel/toolchains/BUILD
+  # (two cc_toolchain blocks: aarch64 + x86_64). The aarch64 block also gets these entries, but it is
+  # never built (target platform is //bazel:linux_x86_64), so the extra strings are harmless.
+  - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-18.0/lib64/clang/18/include",' bazel/toolchains/BUILD
+  - sudo -u cilium sed -i '\#-Wno-deprecated-builtins#a \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
   #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
