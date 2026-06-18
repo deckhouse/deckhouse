@@ -7507,5 +7507,5 @@ modules-having-alerts:
     - terraform-manager
     - upmeter
     - user-authn
-    - vertical-pod-autoscaler
     - user-authz
+    - vertical-pod-autoscaler
