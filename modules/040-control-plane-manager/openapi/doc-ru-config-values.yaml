@@ -203,13 +203,13 @@ properties:
     description: |
       Алгоритм асимметричного шифрования, используемый при генерации ключей и сертификатов для следующих компонентов control-plane:
 
-      - `apiserver`
-      - `apiserver-kubelet-client`
-      - `apiserver-etcd-client`
-      - `front-proxy-client`
-      - `etcd-server`
-      - `etcd-peer`
-      - `etcd-healthcheck-client`
+      - `apiserver`;
+      - `apiserver-kubelet-client`;
+      - `apiserver-etcd-client`;
+      - `front-proxy-client`;
+      - `etcd-server`;
+      - `etcd-peer`;
+      - `etcd-healthcheck-client`.
 
       Сертификаты для перечисленных выше компонентов будут перевыпущены с выбранным алгоритмом и длиной ключа.
 
