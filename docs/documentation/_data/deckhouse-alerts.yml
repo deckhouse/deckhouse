@@ -2661,7 +2661,7 @@ alerts:
         Check node-controller logs:
 
         ```bash
-        kubectl -n d8-cloud-instance-manager logs deploy/node-controller
+        kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
         ```
       summary: |
         Node-controller reconcile errors are high for {{ $labels.controller }}.
@@ -2680,7 +2680,7 @@ alerts:
         To inspect node-controller logs:
 
         ```bash
-        kubectl -n d8-cloud-instance-manager logs deploy/node-controller
+        kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
         ```
       summary: |
         Node-controller reconcile p99 is high for {{ $labels.controller }}.
@@ -2699,7 +2699,7 @@ alerts:
         To inspect node-controller logs:
 
         ```bash
-        kubectl -n d8-cloud-instance-manager logs deploy/node-controller
+        kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
         ```
       summary: |
         Node-controller workqueue {{ $labels.name }} has a high backlog.
