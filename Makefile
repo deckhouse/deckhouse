@@ -631,7 +631,7 @@ generate-werf: yq ## Generate changes in werf files.
 .PHONY: dmt-gen
 dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
   ##~ Options: DMT_VERSION=X.Y.Z
-	@sed -i 's/DMT_VERSION=[0-9.]\+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh
+	@sed -i.bak -E 's/DMT_VERSION=[0-9.]+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh && rm -f tools/dmt-lint.sh.bak
 	@echo "Updated DMT_VERSION to $(DMT_VERSION) in tools/dmt-lint.sh"
 
 ## Generate tools documentation
