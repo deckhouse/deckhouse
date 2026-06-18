@@ -24,7 +24,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine-1.25" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -37,8 +37,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
+  - pm install git binutils
   setup:
   - cd /src/kiali/
   - echo {{ $kialiVersion }} > version
