@@ -232,11 +232,35 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
     direct:
       ...
   ```
-3. Проверьте статус переключения. Дождиесь окончания смены параметров.
+3. Проверьте статус переключения. Дождитесь окончания смены параметров.
 
 
-### Восстановление deckhouse пода в Direct режиме (при imgPullbackoff)
+### Восстановление deckhouse пода в Direct режиме (при ImagePullBackOff)
 
-1. Проверьте, что текущий 
-2. ...
-3. ...
+Решение покрывает только кейс, когда deckhouse под находится в `ImagePullBackOff` и не может запуститься из-за протухших `username/password` параметры registry.
+Кейс не покрывает другие режимы и смену других параметров.
+
+1. Сохраните изменяемые параметры кластера:
+   ```bash
+   kubectl get mc/deckhouse -o yaml > mc_deckhouse.yaml
+   kubectl get ms/deckhouse -o yaml > ms_deckhouse.yaml
+   kubectl -n d8-system get secret/deckhouse-registry -o yaml > secret_deckhouse_registry.yaml
+   ```
+2. Подготовьте новое значение `.dockerconfig` для `mc/deckhouse` и `ms/deckhouse`:
+   ```bash
+   export registry_username="new-username"
+   export registry_password="new-password"
+   AUTH=$(echo -n "${registry_username}:${registry_password}" | base64 -w 0)
+
+   echo -n '{"auths":{"registry.d8-system.svc:5001":{"username":"'"${registry_username}"'","password":"'"${registry_password}"'","auth":"'"${AUTH}"'"}}}' | base64 -w 0
+   ```
+3. Измените username и password параметры registry в `mc/deckhouse` на желаемые (установите новый логин и пароль), а также подставьте значение `.dockerconfig`, полученное на шаге 2:
+   ```bash
+   kubectl --as=system:sudouser edit mc/deckhouse
+   ```
+4. Подставьте значение `.dockerconfig`, полученное на шаге 2, в `ms/deckhouse`:
+   ```bash
+   kubectl --as=system:sudouser edit ms/deckhouse
+   ```
+5. Убедитесь, что ошибка `ImagePullBackOff` пропала.
+6. Дождитесь выполнения статуса переключения registry на новые креды.
