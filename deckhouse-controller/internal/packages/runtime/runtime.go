@@ -26,6 +26,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -120,6 +121,20 @@ type Runtime struct {
 	// tears down hooks and the Helm release. Protected by mu.
 	adopted map[string]struct{}
 
+	// moduleVersions maps a module name to the version this runtime has loaded
+	// for it. It feeds the scheduler's dependency version getter from the
+	// runtime's own state instead of addon-operator + the v1alpha1.Module CR.
+	//
+	// It has its own leaf lock (never acquired while holding another runtime
+	// lock besides mu, and never acquiring another lock while held): the
+	// dependency getter is called by the scheduler while it holds the scheduler
+	// lock, so it must not reach for r.mu (adoptModule/loadModule take r.mu and
+	// then the scheduler lock via AddNode — the reverse order).
+	moduleVersions struct {
+		mu sync.RWMutex
+		m  map[string]*semver.Version
+	}
+
 	addonModuleManager moduleManagerI
 
 	logger *log.Logger
@@ -149,6 +164,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.apps = make(map[string]*apps.Application)
 	r.modules = make(map[string]*modules.Module)
 	r.adopted = make(map[string]struct{})
+	r.moduleVersions.m = make(map[string]*semver.Version)
 	r.packages = lifecycle.NewStore()
 
 	// Initialize foundational services
@@ -489,6 +505,69 @@ func (r *Runtime) buildHealthService() error {
 	return nil
 }
 
+// effectiveGlobalValues returns the global values used for scheduler decisions
+// (version constraints, discovery), with the new runtime's own global module
+// taking precedence and addon-operator's global module filling any gaps.
+//
+// This lets version/discovery reads migrate onto r.global incrementally: once
+// r.global's discovery hooks have populated a value it wins; until then the
+// addon-operator value is used as a transitional fallback. Reads do not touch
+// r.mu (both global modules synchronize their own values), so this is safe to
+// call from scheduler callbacks that already hold the scheduler lock.
+func (r *Runtime) effectiveGlobalValues() addonutils.Values {
+	addon := r.addonModuleManager.GetGlobal().GetValues(false)
+
+	if r.global == nil {
+		return addon
+	}
+
+	own := r.global.GetValues()
+	if len(own) == 0 {
+		return addon
+	}
+
+	// Later values win in MergeValues, so own overrides addon while addon fills
+	// keys r.global has not populated yet.
+	return addonutils.MergeValues(addon, own)
+}
+
+// setModuleVersion records the version this runtime loaded for a module so the
+// scheduler's dependency getter can resolve it from runtime state.
+func (r *Runtime) setModuleVersion(name string, version *semver.Version) {
+	r.moduleVersions.mu.Lock()
+	r.moduleVersions.m[name] = version
+	r.moduleVersions.mu.Unlock()
+}
+
+// deleteModuleVersion drops a module's recorded version on removal.
+func (r *Runtime) deleteModuleVersion(name string) {
+	r.moduleVersions.mu.Lock()
+	delete(r.moduleVersions.m, name)
+	r.moduleVersions.mu.Unlock()
+}
+
+// moduleVersion returns the version this runtime loaded for a module, or nil if
+// the runtime does not own it.
+func (r *Runtime) moduleVersion(name string) *semver.Version {
+	r.moduleVersions.mu.RLock()
+	defer r.moduleVersions.mu.RUnlock()
+
+	return r.moduleVersions.m[name]
+}
+
+// globalBool reads a boolean global value by key, returning false when the key
+// is absent or not a bool.
+func globalBool(values addonutils.Values, key string) bool {
+	value, ok := values[key]
+	if !ok {
+		return false
+	}
+
+	b, ok := value.(bool)
+
+	return ok && b
+}
+
 // buildScheduler creates the package scheduler with version checks and lifecycle callbacks.
 //
 // The scheduler controls package enable/disable based on:
@@ -505,7 +584,7 @@ func (r *Runtime) buildHealthService() error {
 // The scheduler starts paused and is resumed after initial package loading completes.
 func (r *Runtime) buildScheduler(cli kclient.Client) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
+		value, ok := r.effectiveGlobalValues()[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -523,7 +602,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	}
 
 	kubernetesVersionGetter := func() (*semver.Version, error) {
-		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		discovery := r.effectiveGlobalValues().GetKeySection("discovery")
 		if len(discovery) == 0 {
 			return nil, fmt.Errorf("discovery section not found in global values")
 		}
@@ -541,23 +620,31 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		return semver.NewVersion(version)
 	}
 
-	// Bootstrap condition checks if cluster initialization is complete
+	// Bootstrap condition checks if cluster initialization is complete.
+	//
+	// The flag is monotonic (once the cluster is bootstrapped it stays so), so we
+	// OR the new runtime's global module with addon-operator's: this lets r.global
+	// drive the flag as it becomes the source of truth while never regressing
+	// below addon-operator during the transition.
 	bootstrapCondition := func() bool {
-		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
-		if !ok {
-			return false
+		if r.global != nil && globalBool(r.global.GetValues(), bootstrappedGlobalValue) {
+			return true
 		}
 
-		bootstrapped, ok := value.(bool)
-		if !ok {
-			return false
-		}
-
-		return bootstrapped
+		return globalBool(r.addonModuleManager.GetGlobal().GetValues(false), bootstrappedGlobalValue)
 	}
 
-	// Dependency getter returns the version of enabled module
+	// Dependency getter returns the version of an enabled module.
+	//
+	// The new runtime's own state wins: if it has loaded the module, its version
+	// is authoritative. Otherwise fall back to addon-operator + the
+	// v1alpha1.Module CR during the transition (e.g. critical modules still owned
+	// by addon-operator, or MPOS-overridden modules).
 	dependencyGetter := func(name string) *semver.Version {
+		if version := r.moduleVersion(name); version != nil {
+			return version
+		}
+
 		if !r.addonModuleManager.IsModuleEnabled(name) {
 			return nil
 		}

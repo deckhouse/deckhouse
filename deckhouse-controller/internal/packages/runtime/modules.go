@@ -219,6 +219,10 @@ func (r *Runtime) adoptModule(ctx context.Context, name string) error {
 	// later RemoveModule must not undeploy/remove the package files.
 	r.adopted[name] = struct{}{}
 
+	// Record the loaded version so the scheduler's dependency getter resolves it
+	// from runtime state instead of addon-operator + the v1alpha1.Module CR.
+	r.setModuleVersion(name, module.GetVersion())
+
 	r.logger.Info("adopted functional module",
 		slog.String("module", name),
 		slog.String("version", version),
@@ -303,6 +307,10 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 		return "", status.NewError("DependencyCycle", err)
 	}
 
+	// Record the loaded version so the scheduler's dependency getter resolves it
+	// from runtime state instead of addon-operator + the v1alpha1.Module CR.
+	r.setModuleVersion(module.GetName(), module.GetVersion())
+
 	return module.GetVersion().String(), nil
 }
 
@@ -337,6 +345,7 @@ func (r *Runtime) RemoveModule(name string) {
 				r.status.DeleteStatus(name)
 				delete(r.modules, name)
 				delete(r.adopted, name)
+				r.deleteModuleVersion(name)
 			}
 		}()
 	})
@@ -357,6 +366,7 @@ func (r *Runtime) RemoveModule(name string) {
 			r.status.DeleteStatus(name)
 			delete(r.modules, name)
 			delete(r.adopted, name)
+			r.deleteModuleVersion(name)
 		}
 		return
 	}
