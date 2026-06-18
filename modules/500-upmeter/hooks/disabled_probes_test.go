@@ -227,6 +227,18 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			It("virtualization probe is disabled without disk storageclass", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic"), 1))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("global.modulesImages.digests.virtualization.upmeterVm", "sha256:abc")
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("virtualization/"))
+			})
+
+			It("virtualization probe is disabled without upmeterVm image", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+defaultStorageClass("fast"), 2))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -238,6 +250,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			It("virtualization probe is enabled with default vmclass and default storageclass", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+defaultStorageClass("fast"), 2))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("global.modulesImages.digests.virtualization.upmeterVm", "sha256:abc")
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -249,6 +262,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			It("virtualization probe is enabled with default vmclass and configured disk storageclass", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+virtualizationModuleConfigWithDiskStorageClass("fast"), 2))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("global.modulesImages.digests.virtualization.upmeterVm", "sha256:abc")
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -728,10 +742,18 @@ func Test_calcDisabledProbes(t *testing.T) {
 		{
 			name: "virtualization on",
 			args: args{
-				presence:       appPresence{defaultVMClass: true, diskStorageClass: true},
+				presence:       appPresence{defaultVMClass: true, diskStorageClass: true, virtualizationVMImage: true},
 				enabledModules: set.New("virtualization"),
 			},
 			expectNotDisabled: set.New("virtualization/"),
+		},
+		{
+			name: "virtualization off without vm image",
+			args: args{
+				presence:       appPresence{defaultVMClass: true, diskStorageClass: true},
+				enabledModules: set.New("virtualization"),
+			},
+			expectDisabled: set.New("virtualization/"),
 		},
 		{
 			name: "virtualization off without default vmclass",

@@ -107,6 +107,7 @@ type appPresence struct {
 	smokeMini                      bool
 	grafanaV10                     bool
 	prometheusLongterm             bool
+	virtualizationVMImage          bool
 	defaultVMClass                 bool
 	diskStorageClass               bool
 }
@@ -132,6 +133,10 @@ func collectDisabledProbes(_ context.Context, input *go_hook.HookInput) error {
 		prometheusLongterm: statefulsets.Has("prometheus-longterm"),
 		defaultVMClass:     len(defaultVMClasses.Slice()) > 0,
 		diskStorageClass:   len(defaultStorageClasses.Slice()) > 0 || len(virtualizationModuleDiskStorageCfg.Slice()) > 0,
+	}
+	virtualizationImages := input.Values.Get("global.modulesImages.digests.virtualization")
+	if virtualizationImages.Exists() {
+		presence.virtualizationVMImage = virtualizationImages.Get("upmeterVm").String() != ""
 	}
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 	manuallyDisabledProbes := set.NewFromValues(input.Values, "upmeter.disabledProbes")
@@ -225,7 +230,7 @@ func disableExtensionsProbes(presence appPresence, enabledModules, disabledProbe
 		disabledProbes.Add("extensions/observability-webhook")
 	}
 
-	if !enabledModules.Has("virtualization") || !presence.defaultVMClass || !presence.diskStorageClass {
+	if !enabledModules.Has("virtualization") || !presence.virtualizationVMImage || !presence.defaultVMClass || !presence.diskStorageClass {
 		disabledProbes.Add("virtualization/")
 	}
 }
