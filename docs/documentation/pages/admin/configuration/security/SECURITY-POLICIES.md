@@ -492,6 +492,7 @@ spec:
 To assign this security policy, add the `enforce: "mypolicy"` label to the target namespace.
 
 ## Security policy exceptions
+
 <span id="securitypolicyexception"></span>
 
 `SecurityPolicyException` is a mechanism for fine-grained exceptions to security policy checks for individual Pods and containers. It allows you to avoid excluding an entire namespace from checks and instead define only the allowances required for a specific Pod or a container inside a Pod.
