@@ -17,7 +17,7 @@ Policies are divided into three categories:
 These policies complement each other. If multiple policies are applied to a single namespace, objects are validated against each of them. If even one policy is violated, the object will not be created.
 {% endalert %}
 
-In addition to policies that prohibit using parameters different from the allowed ones, there are resources that provide fine-grained exceptions to policies — [`security-policy-exceptions`](#security-policy-exceptions). These resources allow overriding checks for specific pods without changing all policies applied to the namespace.
+In addition to policies that prohibit using parameters different from the allowed ones, there are resources that provide fine-grained exceptions to policies — [`security-policy-exceptions`](#securitypolicyexception). These resources allow overriding checks for specific pods without changing all policies applied to the namespace.
 
 ## How validation failure messages are displayed
 
@@ -454,6 +454,7 @@ The following modes are supported:
 - `Dryrun`: Start pods that do not satisfy the policy, do not issue a warning to the user, but record violations in security reports.
 
 ## Security policy exceptions
+<span id="securitypolicyexception"></span>
 
 `SecurityPolicyException` is a mechanism for fine-grained exceptions to security policy checks for individual Pods and containers. It allows you to avoid excluding an entire namespace from checks and instead define only the specific allowances required for a Pod or a container inside a Pod.
 
