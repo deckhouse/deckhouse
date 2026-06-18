@@ -254,13 +254,14 @@ watch kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhous
 
    echo -n '{"auths":{"registry.d8-system.svc:5001":{"username":"'"${registry_username}"'","password":"'"${registry_password}"'","auth":"'"${AUTH}"'"}}}' | base64 -w 0
    ```
-3. Измените username и password параметры registry в `mc/deckhouse` на желаемые (установите новый логин и пароль), а также подставьте значение `.dockerconfig`, полученное на шаге 2:
+3. Измените новые username и password параметры registry в `mc/deckhouse`:
    ```bash
-   kubectl --as=system:sudouser edit mc/deckhouse
+   $ kubectl --as=system:sudouser edit mc/deckhouse
    ```
-4. Подставьте значение `.dockerconfig`, полученное на шаге 2, в `ms/deckhouse`:
+4. Подставьте значение `.dockerconfig`, полученное на шаге 2, в `ms/deckhouse` и в `secret/deckhouse-registry`:
    ```bash
-   kubectl --as=system:sudouser edit ms/deckhouse
+   $ kubectl --as=system:sudouser edit ms/deckhouse
+   $ kubectl --as=system:sudouser -n d8-system edit secret/deckhouse-registry
    ```
 5. Убедитесь, что ошибка `ImagePullBackOff` пропала.
 6. Дождитесь выполнения статуса переключения registry на новые креды.
