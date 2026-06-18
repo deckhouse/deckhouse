@@ -116,12 +116,37 @@ func (r *Runtime) ProcessFunctionalModules(names []string) {
 		slog.Int("count", len(names)),
 		slog.Any("modules", names))
 
+	desired := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		desired[name] = struct{}{}
+	}
+
 	for _, name := range names {
 		if err := r.adoptModule(context.Background(), name); err != nil {
 			r.logger.Error("adopt functional module",
 				slog.String("module", name),
 				slog.Any("error", err))
 		}
+	}
+
+	// The handoff list is authoritative for the set of enabled functional
+	// modules. Any previously adopted module absent from the new list has been
+	// disabled (or removed) in addon-operator, so tear it down here. Collect the
+	// names under a read lock, then call RemoveModule outside it (it takes the
+	// write lock itself).
+	r.mu.RLock()
+	var stale []string
+	for name := range r.adopted {
+		if _, ok := desired[name]; !ok {
+			stale = append(stale, name)
+		}
+	}
+	r.mu.RUnlock()
+
+	for _, name := range stale {
+		r.logger.Info("removing functional module no longer handed off by addon-operator",
+			slog.String("module", name))
+		r.RemoveModule(name)
 	}
 }
 
@@ -189,6 +214,10 @@ func (r *Runtime) adoptModule(ctx context.Context, name string) error {
 		span.SetStatus(codes.Error, err.Error())
 		return status.NewError("DependencyCycle", fmt.Errorf("add node: %w", err))
 	}
+
+	// Mark as adopted: its filesystem content is owned by addon-operator, so a
+	// later RemoveModule must not undeploy/remove the package files.
+	r.adopted[name] = struct{}{}
 
 	r.logger.Info("adopted functional module",
 		slog.String("module", name),
@@ -280,6 +309,11 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 // RemoveModule removes a module and cancels all its running operations.
 // After undeploy, a cleanup goroutine removes the Store entry and stops the queue.
 // See RemoveApp for detailed rationale on the async cleanup pattern.
+//
+// Adopted modules (loaded in place from addon-operator's filesystem layout via
+// adoptModule) do not own their on-disk content, so the undeploy step is
+// skipped for them: only hooks and the Helm release are torn down, and the
+// in-memory bookkeeping is cleared once the disable task completes.
 func (r *Runtime) RemoveModule(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -291,9 +325,7 @@ func (r *Runtime) RemoveModule(name string) {
 		return
 	}
 
-	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.logger))
-	}
+	_, adopted := r.adopted[name]
 
 	cleanup := queue.WithOnDone(func() {
 		go func() {
@@ -304,9 +336,34 @@ func (r *Runtime) RemoveModule(name string) {
 				r.queueService.Remove(name)
 				r.status.DeleteStatus(name)
 				delete(r.modules, name)
+				delete(r.adopted, name)
 			}
 		}()
 	})
+
+	// For adopted modules, disabling is the terminal step: tear down hooks and
+	// the Helm release, then run cleanup. The filesystem content stays in place
+	// (owned by addon-operator), so no undeploy task is enqueued.
+	if adopted {
+		if pkg := r.modules[name]; pkg != nil {
+			r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.logger), cleanup)
+			return
+		}
+
+		// Nothing loaded to disable: drop the bookkeeping directly (we already
+		// hold the lock) so the Store does not get stuck in the removing state.
+		if r.packages.Delete(name) {
+			r.queueService.Remove(name)
+			r.status.DeleteStatus(name)
+			delete(r.modules, name)
+			delete(r.adopted, name)
+		}
+		return
+	}
+
+	if pkg := r.modules[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.logger))
+	}
 
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
 }

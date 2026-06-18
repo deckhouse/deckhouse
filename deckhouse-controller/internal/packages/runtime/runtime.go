@@ -113,6 +113,13 @@ type Runtime struct {
 	apps     map[string]*apps.Application
 	modules  map[string]*modules.Module
 
+	// adopted holds names of modules that were adopted from the filesystem
+	// (loaded in place from addon-operator's layout) rather than deployed by
+	// this runtime. Their on-disk content is owned by addon-operator, so on
+	// removal the runtime must NOT undeploy/remove the package files — it only
+	// tears down hooks and the Helm release. Protected by mu.
+	adopted map[string]struct{}
+
 	addonModuleManager moduleManagerI
 
 	logger *log.Logger
@@ -141,6 +148,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 
 	r.apps = make(map[string]*apps.Application)
 	r.modules = make(map[string]*modules.Module)
+	r.adopted = make(map[string]struct{})
 	r.packages = lifecycle.NewStore()
 
 	// Initialize foundational services

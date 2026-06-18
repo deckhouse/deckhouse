@@ -65,6 +65,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
 	modulev2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
+	modulestatus "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module/status"
 	modulepackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
@@ -395,8 +396,16 @@ func NewDeckhouseController(
 		// Start the runtime event loop (scheduler, global hooks, hook events) so
 		// adopted functional modules are actually scheduled. Guard against a
 		// double start when the package-system flag already started it.
+		//
+		// The status queue has a single consumer, so the module status service
+		// (which reflects runtime status onto v1alpha1.Module) is only started
+		// when the application status service is not already draining the same
+		// queue (i.e. the package-system flag is off).
 		if os.Getenv(envEnablePackageSystem) != "true" {
 			pkgRuntime.Run()
+
+			moduleStatus := modulestatus.NewService(runtimeManager.GetClient(), pkgRuntime.Status().GetStatus, logger)
+			moduleStatus.Start(ctx, pkgRuntime.Status().Queue())
 		}
 
 		// Hand off functional (non-critical) modules from addon-operator to the
