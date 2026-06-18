@@ -270,7 +270,7 @@ spec:
 {% endraw %}
 {% alert level="info" %}
 Splunk destination doesn't support pod labels for indexes. Consider exporting necessary labels with the `extraLabels` option.
-{%-endalert %}
+{% endalert %}
 {% raw %}
 
 ```yaml
@@ -939,7 +939,7 @@ You can use the `DropLabels` transformation to remove specific labels from log r
 
 {% alert level="info" %}
 To apply the `DropLabels` transformation to the `message` field or its nested fields, the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
-{%-endalert %}
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
