@@ -160,7 +160,7 @@
         description: |-
           The `encryptionAlgorithm` field is set to a non-default value in `ClusterConfiguration` but has not been migrated to `ModuleConfig control-plane-manager` yet.
 
-          Until the migration is complete, the value from `ClusterConfiguration` is used to avoid unintended certificate rotation.
+          Until the migration is complete, the value from ClusterConfiguration is used to avoid unintended certificate rotation.
 
           **To resolve this alert, migrate the setting:**
 
