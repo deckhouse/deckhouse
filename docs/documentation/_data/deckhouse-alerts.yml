@@ -1706,6 +1706,36 @@ alerts:
         Prometheus can't scrape metrics of image-availability-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8IstioActiveWaypointsWithAmbientDisabled
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Deckhouse has detected an active waypoint Deployment `{{$labels.deployment}}` in namespace `{{$labels.namespace}}`, created for WaypointInstance `{{$labels.waypoint_instance}}`, while ambient mesh is disabled.
+
+        This usually happens if ambient mesh was enabled, a WaypointInstance was created, and then ambient mesh was disabled. In this state the waypoint-controller is not running, so it cannot reconcile or clean up WaypointInstance resources.
+
+        To inspect affected resources, run:
+
+        ```bash
+        d8 k -n {{$labels.namespace}} get waypointinstance {{$labels.waypoint_instance}} -o yaml
+        d8 k -n {{$labels.namespace}} get deploy,svc,sa,gateway,pdb,hpa,vpa -l istio.deckhouse.io/waypoint-instance={{$labels.waypoint_instance}}
+        ```
+
+        Recommended remediation:
+
+        1. Temporarily enable ambient mesh.
+        2. Wait until waypoint-controller starts.
+        3. Delete the affected WaypointInstance or change configuration as needed.
+        4. Wait until managed waypoint resources are reconciled as needed or removed.
+        5. Disable ambient mesh again.
+
+        If ambient mesh cannot be re-enabled, manually remove the managed waypoint resources and then remove the WaypointInstance finalizer only after verifying that no managed resources remain.
+      summary: |
+        Active Istio waypoint exists while ambient mesh is disabled.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioActualDataPlaneVersionNotEqualDesired
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
@@ -7547,5 +7577,5 @@ modules-having-alerts:
     - terraform-manager
     - upmeter
     - user-authn
-    - vertical-pod-autoscaler
     - user-authz
+    - vertical-pod-autoscaler

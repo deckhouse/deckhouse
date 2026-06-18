@@ -1086,6 +1086,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   stageDependencies:
