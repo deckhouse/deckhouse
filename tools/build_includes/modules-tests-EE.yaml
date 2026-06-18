@@ -939,6 +939,28 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/templates/waypoint-controller
+  to: /deckhouse/modules/110-istio/templates/waypoint-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/ztunnel
+  to: /deckhouse/modules/110-istio/templates/ztunnel
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   excludePaths:
@@ -960,6 +982,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/crds/istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
   stageDependencies:
@@ -967,6 +994,11 @@
         - '**/*'
 - add: /ee/modules/110-istio/crds/istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/istiomulticluster.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/crds/waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/waypointinstance.yaml
   stageDependencies:
     install:
         - '**/*'
