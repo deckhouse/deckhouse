@@ -181,7 +181,7 @@
 
           Once `ModuleConfig` is updated, this alert will be resolved automatically.
 
-          3. Remove `encryptionAlgorithm` from `ClusterConfiguration`:
+          3. Remove `encryptionAlgorithm` from ClusterConfiguration:
 
              ```bash
              d8 system edit cluster-configuration
