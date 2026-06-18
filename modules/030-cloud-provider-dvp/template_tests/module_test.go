@@ -243,6 +243,58 @@ internal:
       name: ceph-pool-r2-csi-rbd
 `
 
+// moduleValuesNoDisabled has no 'disabled' fields in any subsection.
+// This covers the case where a user creates a v2 ModuleConfig without explicit disabled flags.
+const moduleValuesNoDisabled = `
+nodes:
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  parameters: {}
+internal:
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses:
+    - dvpStorageClass: 1test
+      name: 1test
+`
+
+// moduleValuesNoStorageSection has no 'storage' section at all.
+// This covers the case where storage is completely omitted from ModuleConfig.
+const moduleValuesNoStorageSection = `
+nodes:
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+provider:
+  parameters:
+    namespace: cloud-provider01
+internal:
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: DVPCloudDiscoveryData
+    zones:
+      - default
+  storageClasses:
+    - dvpStorageClass: 1test
+      name: 1test
+`
+
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
@@ -764,6 +816,71 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			// cloud-data-discoverer must still be present.
 			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("DVP without disabled fields (all subsystems default-enabled)", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesNoDisabled)
+			f.HelmRender()
+		})
+
+		It("Must render properly with all subsystems enabled by default", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// All subsystems must render when disabled is absent (defaults to false).
+			csiController := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			Expect(csiController.Exists()).To(BeTrue())
+
+			csiNode := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			Expect(csiNode.Exists()).To(BeTrue())
+
+			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.dvp.deckhouse.io")
+			Expect(csiDriver.Exists()).To(BeTrue())
+
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+
+			capdvpDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capdvp-controller-manager")
+			Expect(capdvpDeployment.Exists()).To(BeTrue())
+
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddDeployment.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("DVP without storage section (storage defaults to enabled)", func() {
+		f := SetupHelmConfig(``)
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesNoStorageSection)
+			f.HelmRender()
+		})
+
+		It("Must render properly with storage enabled by default when section is absent", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// CSI must render because storage.disabled defaults to false even when section is absent.
+			csiController := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			Expect(csiController.Exists()).To(BeTrue())
+
+			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.dvp.deckhouse.io")
+			Expect(csiDriver.Exists()).To(BeTrue())
+
+			csiSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
+			Expect(csiSA.Exists()).To(BeTrue())
+
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+
+			capdvpDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capdvp-controller-manager")
+			Expect(capdvpDeployment.Exists()).To(BeTrue())
 		})
 	})
 })
