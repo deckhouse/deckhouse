@@ -4639,9 +4639,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -4859,7 +4859,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -4927,7 +4927,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
