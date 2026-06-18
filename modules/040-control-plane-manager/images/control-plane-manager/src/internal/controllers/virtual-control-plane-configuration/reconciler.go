@@ -98,6 +98,10 @@ func (r *reconciler) reconcileNamespace(ctx context.Context, vcp *controlplanev1
 
 	current, err := r.getNamespace(ctx, target.Name)
 	if apierrors.IsNotFound(err) {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return reconcile.Result{}, err
+		}
+
 		return reconcile.Result{}, r.createNamespace(ctx, target)
 	}
 	if err != nil {
@@ -151,10 +155,6 @@ func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1
 			return nil, reconcile.Result{}, fmt.Errorf("generate PKI Secret data: %w", err)
 		}
 		target.Data = data
-
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return nil, reconcile.Result{}, err
-		}
 
 		if err := r.createSecret(ctx, target); err != nil {
 			return nil, reconcile.Result{}, err
@@ -254,10 +254,6 @@ func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *control
 
 	current, err := r.getService(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return nil, reconcile.Result{}, err
-		}
-
 		if err := r.createService(ctx, target); err != nil {
 			return nil, reconcile.Result{}, err
 		}
@@ -361,10 +357,6 @@ func (r *reconciler) reconcileControlPlaneNodes(
 	targetNames := make(map[string]struct{}, len(targets))
 	for _, target := range targets {
 		targetNames[target.Name] = struct{}{}
-
-		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
 
 		current, err := r.getControlPlaneNode(ctx, target.Namespace, target.Name)
 		if apierrors.IsNotFound(err) {
