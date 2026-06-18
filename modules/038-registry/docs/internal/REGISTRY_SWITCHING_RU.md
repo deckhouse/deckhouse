@@ -73,7 +73,7 @@ registry
 ...
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `RegistryContainsRequiredImages`](RUNBOOK.md#registrycontainsrequiredimages).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `RegistryContainsRequiredImages`](RUNBOOK_RU.md#registrycontainsrequiredimages).
 
 ### Этап 2 — `ContainerdConfigPreflightReady`
 
@@ -82,7 +82,7 @@ registry
 
 Если кастомных конфигов нет — продолжится выполнение следующих шагов.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `ContainerdConfigPreflightReady`](RUNBOOK_RU.md#containerdconfigpreflightready).
 
 ### Этап 3 — `TransitionContainerdConfigReady`
 
@@ -133,7 +133,7 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
       replace = "nexus/internal/registry/path"
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `TransitionContainerdConfigReady`](RUNBOOK_RU.md#transitioncontainerdconfigready).
 
 ### Этап 4 — `InClusterProxyReady`
 
@@ -145,7 +145,7 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 > [!IMPORTANT]
 > Данных этап в Direct режиме должен выполниться после раскатки bashible. Тк для раскатки bashible требудется RPP + старый registry.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `InClusterProxyReady`](RUNBOOK.md#inclusterproxyready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `InClusterProxyReady`](RUNBOOK_RU.md#inclusterproxyready).
 
 ### Этап 5 — `DeckhouseRegistrySwitchReady`
 
@@ -191,7 +191,7 @@ flowchart LR
   class externalRegistry ext;
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `DeckhouseRegistrySwitchReady`](RUNBOOK.md#deckhouseregistryswitchready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `DeckhouseRegistrySwitchReady`](RUNBOOK_RU.md#deckhouseregistryswitchready).
 
 ### Этап 6 — `FinalContainerdConfigReady`
 
@@ -217,7 +217,7 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
       replace = "nexus/internal/registry/path"
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `FinalContainerdConfigReady`](RUNBOOK.md#finalcontainerdconfigready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `FinalContainerdConfigReady`](RUNBOOK_RU.md#finalcontainerdconfigready).
 
 ### Этап 7 — `CleanupNodeServices`
 
@@ -225,7 +225,7 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 
 Daemonset `registry-nodeservices-manager` удаляет static pod-ы `registry-nodeservices-<node>` с master-узлов. После успешного удаления из кластера удаляется сам `registry-nodeservices-manager`.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `CleanupNodeServices`](RUNBOOK.md#cleanupnodeservices).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `CleanupNodeServices`](RUNBOOK_RU.md#cleanupnodeservices).
 
 ## Переключение в режим Unmanaged или смена параметров режима Unmanaged
 
@@ -273,7 +273,7 @@ registry
 ...
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `RegistryContainsRequiredImages`](RUNBOOK.md#registrycontainsrequiredimages).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `RegistryContainsRequiredImages`](RUNBOOK_RU.md#registrycontainsrequiredimages).
 
 ### Этап 2 — `TransitionContainerdConfigReady`
 
@@ -306,7 +306,7 @@ $ cat /etc/containerd/registry.d/some-nexus.io/host.toml
       password = "nexus password"
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `TransitionContainerdConfigReady`](RUNBOOK_RU.md#transitioncontainerdconfigready).
 
 ### Этап 3 — `DeckhouseRegistrySwitchReady`
 
@@ -349,7 +349,7 @@ flowchart LR
   class externalRegistry ext;
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `DeckhouseRegistrySwitchReady`](RUNBOOK.md#deckhouseregistryswitchready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `DeckhouseRegistrySwitchReady`](RUNBOOK_RU.md#deckhouseregistryswitchready).
 
 ### Этап 4 — `FinalContainerdConfigReady`
 
@@ -376,7 +376,7 @@ $ cat /etc/containerd/registry.d/some-nexus.io/host.toml
       password = "nexus password"
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `FinalContainerdConfigReady`](RUNBOOK.md#finalcontainerdconfigready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `FinalContainerdConfigReady`](RUNBOOK_RU.md#finalcontainerdconfigready).
 
 ### Этап 5 — `CleanupNodeServices`
 
@@ -384,13 +384,13 @@ $ cat /etc/containerd/registry.d/some-nexus.io/host.toml
 
 Daemonset `registry-nodeservices-manager` удаляет static pod-ы `registry-nodeservices-<node>` с master-узлов. После успешного удаления из кластера удаляется сам `registry-nodeservices-manager`.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `CleanupNodeServices`](RUNBOOK.md#cleanupnodeservices).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `CleanupNodeServices`](RUNBOOK_RU.md#cleanupnodeservices).
 
 ### Этап 6 — `CleanupInClusterProxy`
 
 На данном этапе компоненты режима Direct уже не используются. `Deployment` `registry-incluster-proxy` удаляется из кластера.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `CleanupInClusterProxy`](RUNBOOK.md#cleanupinclusterproxy).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `CleanupInClusterProxy`](RUNBOOK_RU.md#cleanupinclusterproxy).
 
 ## Переключение в режим Proxy или смена параметров режима Proxy
 
@@ -439,7 +439,7 @@ registry
 ...
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `RegistryContainsRequiredImages`](RUNBOOK.md#registrycontainsrequiredimages).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `RegistryContainsRequiredImages`](RUNBOOK_RU.md#registrycontainsrequiredimages).
 
 ### Этап 2 — `ContainerdConfigPreflightReady`
 
@@ -448,7 +448,7 @@ registry
 
 Если кастомных конфигов нет — продолжится выполнение следующих шагов.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `ContainerdConfigPreflightReady`](RUNBOOK_RU.md#containerdconfigpreflightready).
 
 ### Этап 3 — `NodeServicesReady`
 
@@ -457,7 +457,7 @@ Manager поднимает static pod-ы `registry-nodeservices-<node>` на mas
 
 На данном этапе только поднимаются компоненты. Переключение на их использование пока не выполняется.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `NodeServicesReady`](RUNBOOK.md#nodeservicesready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `NodeServicesReady`](RUNBOOK_RU.md#nodeservicesready).
 
 ### Этап 4 — `TransitionContainerdConfigReady`
 
@@ -510,7 +510,7 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 Также bashible запускает static pod `registry-proxy` на всех узлах кластера.
 Данный static pod используется для балансировки обращений к registry, расположенным на master-узлах.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `TransitionContainerdConfigReady`](RUNBOOK_RU.md#transitioncontainerdconfigready).
 
 ### Этап 5 — `DeckhouseRegistrySwitchReady`
 
@@ -559,7 +559,7 @@ flowchart LR
   class externalRegistry ext;
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `DeckhouseRegistrySwitchReady`](RUNBOOK.md#deckhouseregistryswitchready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `DeckhouseRegistrySwitchReady`](RUNBOOK_RU.md#deckhouseregistryswitchready).
 
 ### Этап 6 — `FinalContainerdConfigReady`
 
@@ -583,13 +583,13 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
       password = "proxy registry password"
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `FinalContainerdConfigReady`](RUNBOOK.md#finalcontainerdconfigready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `FinalContainerdConfigReady`](RUNBOOK_RU.md#finalcontainerdconfigready).
 
 ### Этап 7 — `CleanupInClusterProxy`
 
 На данном этапе компоненты режима Direct уже не используются. `Deployment` `registry-incluster-proxy` удаляется из кластера.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `CleanupInClusterProxy`](RUNBOOK.md#cleanupinclusterproxy).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `CleanupInClusterProxy`](RUNBOOK_RU.md#cleanupinclusterproxy).
 
 ## Переключение в режим Local
 
@@ -629,7 +629,7 @@ flowchart LR
 
 Если кастомных конфигов нет — продолжится выполнение следующих шагов.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `ContainerdConfigPreflightReady`](RUNBOOK.md#containerdconfigpreflightready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `ContainerdConfigPreflightReady`](RUNBOOK_RU.md#containerdconfigpreflightready).
 
 ### Этап 3 — `NodeServicesReady`
 
@@ -638,7 +638,7 @@ Manager поднимает static pod-ы `registry-nodeservices-<node>` на mas
 
 На данном этапе только поднимаются компоненты. Переключение на их использование пока не выполняется.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `NodeServicesReady`](RUNBOOK.md#nodeservicesready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `NodeServicesReady`](RUNBOOK_RU.md#nodeservicesready).
 
 ### Этап 2 — `RegistryContainsRequiredImages`
 
@@ -659,7 +659,7 @@ registry
 > [!IMPORTANT]
 > Этап будет отображать ошибку, пока пользователь не выполнит `d8 mirror push` заранее подготовленного img bundle.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `RegistryContainsRequiredImages`](RUNBOOK.md#registrycontainsrequiredimages).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `RegistryContainsRequiredImages`](RUNBOOK_RU.md#registrycontainsrequiredimages).
 
 ### Этап 4 — `TransitionContainerdConfigReady`
 
@@ -712,7 +712,7 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 Также bashible запускает static pod `registry-proxy` на всех узлах кластера.
 Данный static pod используется для балансировки обращений к registry, расположенным на master-узлах.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `TransitionContainerdConfigReady`](RUNBOOK.md#transitioncontainerdconfigready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `TransitionContainerdConfigReady`](RUNBOOK_RU.md#transitioncontainerdconfigready).
 
 ### Этап 5 — `DeckhouseRegistrySwitchReady`
 
@@ -757,7 +757,7 @@ flowchart LR
   class criAccess,containerd cri;
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `DeckhouseRegistrySwitchReady`](RUNBOOK.md#deckhouseregistryswitchready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `DeckhouseRegistrySwitchReady`](RUNBOOK_RU.md#deckhouseregistryswitchready).
 
 ### Этап 6 — `FinalContainerdConfigReady`
 
@@ -781,10 +781,10 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
       password = "local registry password"
 ```
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `FinalContainerdConfigReady`](RUNBOOK.md#finalcontainerdconfigready).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `FinalContainerdConfigReady`](RUNBOOK_RU.md#finalcontainerdconfigready).
 
 ### Этап 7 — `CleanupInClusterProxy`
 
 На данном этапе компоненты режима Direct уже не используются. `Deployment` `registry-incluster-proxy` удаляется из кластера.
 
-**Что делать, если этап не прошел**: см. [RUNBOOK.md → `CleanupInClusterProxy`](RUNBOOK.md#cleanupinclusterproxy).
+**Что делать, если этап не прошел**: см. [RUNBOOK_RU.md → `CleanupInClusterProxy`](RUNBOOK_RU.md#cleanupinclusterproxy).
