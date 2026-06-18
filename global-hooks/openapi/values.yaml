@@ -67,6 +67,10 @@ properties:
         type: integer
         minimum: 0
         x-examples: [ 1, 3 ]
+      hasEtcdArbiterNode:
+        type: boolean
+        default: false
+        x-examples: [false]
       podSubnet:
         type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'

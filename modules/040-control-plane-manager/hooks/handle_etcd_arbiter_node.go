@@ -56,6 +56,7 @@ func handleCheckEtcdArbiterNode(_ context.Context, input *go_hook.HookInput) err
 	}
 
 	input.Values.Set("controlPlaneManager.internal.hasEtcdArbiterNode", len(etcdArbiterNodes) == 1)
+	input.Values.Set("global.discovery.hasEtcdArbiterNode", len(etcdArbiterNodes) == 1)
 
 	return nil
 }
