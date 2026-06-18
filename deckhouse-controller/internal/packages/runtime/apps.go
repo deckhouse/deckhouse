@@ -141,6 +141,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 
 	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {

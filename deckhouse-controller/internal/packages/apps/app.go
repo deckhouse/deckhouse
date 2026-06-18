@@ -82,6 +82,8 @@ type Application struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
+	globalValuesGetter GlobalValuesGetter
+
 	logger *log.Logger
 }
 
@@ -105,7 +107,13 @@ type Config struct {
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	GlobalValuesGetter GlobalValuesGetter
 }
+
+// GlobalValuesGetter returns the platform global values. When prefix is true the
+// values are wrapped in a "global" key, otherwise the bare global values are returned.
+type GlobalValuesGetter func(prefix bool) addonutils.Values
 
 // NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -133,6 +141,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.patcher = cfg.Patcher
 	a.scheduleManager = cfg.ScheduleManager
 	a.kubeEventsManager = cfg.KubeEventsManager
+	a.globalValuesGetter = cfg.GlobalValuesGetter
 	a.logger = logger
 
 	parsed, err := semver.NewVersion(a.definition.Version)
@@ -190,6 +199,24 @@ type RuntimeValues struct {
 	Settings addonutils.Values `json:"Settings"`
 }
 
+// PlatformValues holds platform-wide runtime values that are not part of schema.
+// These values are passed to helm templates under the .Platform prefix and
+// replace data previously provided by the addon-operator global module
+// (for example, global.enabledModules).
+type PlatformValues struct {
+	// EnabledModules lists the modules currently enabled on the platform.
+	// Mirrors global.enabledModules.
+	EnabledModules []string `json:"EnabledModules"`
+	// Capabilities describes platform capabilities available to packages.
+	Capabilities Capabilities `json:"Capabilities"`
+}
+
+// Capabilities describes platform capabilities available to packages.
+type Capabilities struct {
+	// Has lists enabled platform capabilities. Currently always empty.
+	Has []string `json:"Has"`
+}
+
 // getRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
@@ -215,12 +242,54 @@ func (a *Application) getRuntimeValues() RuntimeValues {
 	}
 }
 
+// getPlatformValues returns platform-wide values exposed under the .Platform prefix.
+// EnabledModules mirrors global.enabledModules; Capabilities.Has is currently empty.
+func (a *Application) getPlatformValues() PlatformValues {
+	return PlatformValues{
+		EnabledModules: a.getEnabledModules(),
+		Capabilities: Capabilities{
+			Has: []string{},
+		},
+	}
+}
+
+// getEnabledModules extracts the enabledModules list from the platform global values.
+// Returns an empty slice when no global values getter is configured or the key is absent.
+func (a *Application) getEnabledModules() []string {
+	if a.globalValuesGetter == nil {
+		return []string{}
+	}
+
+	raw, ok := a.globalValuesGetter(false)["enabledModules"]
+	if !ok {
+		return []string{}
+	}
+
+	switch v := raw.(type) {
+	case []string:
+		return v
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return []string{}
+	}
+}
+
 // GetRuntimeValues returns runtime values in string format
 func (a *Application) GetRuntimeValues() string {
 	runtimeValues := a.getRuntimeValues()
 	marshalled, _ := json.Marshal(runtimeValues)
 
-	return fmt.Sprintf("Application=%s", marshalled)
+	platformValues := a.getPlatformValues()
+	marshalledPlatform, _ := json.Marshal(platformValues)
+
+	return fmt.Sprintf("Application=%s,Platform=%s", marshalled, marshalledPlatform)
 }
 
 // GetName returns the full application identifier in format "namespace.name".
