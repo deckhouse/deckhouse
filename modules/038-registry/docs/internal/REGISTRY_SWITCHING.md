@@ -7,29 +7,29 @@ As long as the current step is not ready (`status: "False"`), the orchestrator d
 
 ## Components and conditions
 
-| Component                  | Description                                                                              | Modes in which it is used    |
-| -------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------- |
-| `registry-incluster-proxy` | `Deployment registry-incluster-proxy` — proxy for in-cluster access to the registry      | `Direct`                     |
-| `registry-nodeservices`    | registry static pod on master nodes (`registry-nodeservices-<node>`)                     | `Proxy`, `Local`             |
-| `registry-proxy`           | proxy on each node, balances requests across `registry-nodeservices-<node>`              | `Proxy`, `Local`             |
-| `service`                  | the `registry.d8-system.svc:5001` service — entry point for in-cluster access to registry | `Direct`, `Proxy`, `Local`   |
-| `ingress`                  | public access to the local registry (`registry.<PUBLIC_DOMAIN>`) for `d8 mirror push`    | `Local`                      |
-| `checker`                  | checks for the presence of the required images in the target registry                    | all modes                    |
+| Component                  | Description                                                                               | Modes in which it is used  |
+| -------------------------- | ----------------------------------------------------------------------------------------- | -------------------------- |
+| `registry-incluster-proxy` | `Deployment registry-incluster-proxy` — proxy for in-cluster access to the registry       | `Direct`                   |
+| `registry-nodeservices`    | registry static pod on master nodes (`registry-nodeservices-<node>`)                      | `Proxy`, `Local`           |
+| `registry-proxy`           | proxy on each node, balances requests across `registry-nodeservices-<node>`               | `Proxy`, `Local`           |
+| `service`                  | the `registry.d8-system.svc:5001` service — entry point for in-cluster access to registry | `Direct`, `Proxy`, `Local` |
+| `ingress`                  | public access to the local registry (`registry.<PUBLIC_DOMAIN>`) for `d8 mirror push`     | `Local`                    |
+| `checker`                  | checks for the presence of the required images in the target registry                     | all modes                  |
 
 
-| Condition                         | Description                                                                                |
-| --------------------------------- | ------------------------------------------------------------------------------------------ |
-| `RegistryContainsRequiredImages`  | checks the registry for the presence of DKP images                                         |
-| `ContainerdConfigPreflightReady`  | preflight check for the presence of custom containerd configs                              |
-| `NodeServicesReady`               | rollout of `registry-nodeservices-manager` and the `registry-nodeservices-<node>` static pods |
-| `InClusterProxyReady`             | rollout of the `registry-incluster-proxy` deployment                                       |
+| Condition                         | Description                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `RegistryContainsRequiredImages`  | checks the registry for the presence of DKP images                                               |
+| `ContainerdConfigPreflightReady`  | preflight check for the presence of custom containerd configs                                    |
+| `NodeServicesReady`               | rollout of `registry-nodeservices-manager` and the `registry-nodeservices-<node>` static pods    |
+| `InClusterProxyReady`             | rollout of the `registry-incluster-proxy` deployment                                             |
 | `TransitionContainerdConfigReady` | bashible (transition) rolled out the **transitional** containerd config (old + new) to the nodes |
-| `DeckhouseRegistrySwitchReady`    | DKP switched to the new registry (`deckhouse-registry` updated)                            |
-| `FinalContainerdConfigReady`      | bashible (finalize) left **only** the new source on the nodes, the old one removed         |
-| `CleanupNodeServices`             | `registry-nodeservices-manager` and the `registry-nodeservices-<node>` static pods removed |
-| `CleanupInClusterProxy`           | `registry-incluster-proxy` deployment removed                                              |
-| `Ready`                           | result, transition complete, `mode == target_mode`                                         |
-| `ErrTransitionNotSupported`       | error, an unsupported transition was requested (e.g. `Proxy` → `Local`)                    |
+| `DeckhouseRegistrySwitchReady`    | DKP switched to the new registry (`deckhouse-registry` updated)                                  |
+| `FinalContainerdConfigReady`      | bashible (finalize) left **only** the new source on the nodes, the old one removed               |
+| `CleanupNodeServices`             | `registry-nodeservices-manager` and the `registry-nodeservices-<node>` static pods removed       |
+| `CleanupInClusterProxy`           | `registry-incluster-proxy` deployment removed                                                    |
+| `Ready`                           | result, transition complete, `mode == target_mode`                                               |
+| `ErrTransitionNotSupported`       | error, an unsupported transition was requested (e.g. `Proxy` → `Local`)                          |
 
 
 ## Switching to Direct mode or changing Direct mode parameters
