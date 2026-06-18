@@ -288,13 +288,6 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 	return result
 }
 
-// componentStateInSync reports whether a component state is in sync with the desired spec/status checksums.
-func componentStateInSync(state componentState) bool {
-	return state.spec.Config == state.status.Config &&
-		(!state.hasPKI || state.spec.PKI == state.status.PKI) &&
-		state.specCA == state.status.CA
-}
-
 // ensureOperationsExist creates operations (CPOs) for components where spec != status.
 func (r *Reconciler) ensureOperationsExist(
 	ctx context.Context,
@@ -860,9 +853,6 @@ func (r *Reconciler) ensureSignatureRenewalExists(
 		if state.component != controlplanev1alpha1.OperationComponentKubeAPIServer {
 			continue
 		}
-		if !componentStateInSync(state) {
-			continue
-		}
 		sigExp, ok := certDatesForComponent(cpn, state.component)[constants.SignatureExpirationKey]
 		if !ok || sigExp.IsZero() || time.Until(sigExp.Time) >= constants.SignatureRenewalThreshold {
 			continue
@@ -922,10 +912,6 @@ func (r *Reconciler) ensureCertRenewalExists(
 ) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
 	for _, state := range states {
 		var err error
-		if !componentStateInSync(state) {
-			continue
-		}
-
 		dates := certDatesForComponent(cpn, state.component)
 		if len(dates) == 0 {
 			continue
