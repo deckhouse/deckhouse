@@ -158,7 +158,7 @@
         plk_grouped_by__d8_obsolete_encryption_algorithm_in_cluster_configuration: "D8ObsoleteEncryptionAlgorithmInClusterConfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Obsolete `encryptionAlgorithm` in ClusterConfiguration needs to be migrated to `control-plane-manager` ModuleConfig.
         description: |-
-          The `encryptionAlgorithm` field is set to a non-default value in `ClusterConfiguration` but has not been migrated to `ModuleConfig control-plane-manager` yet.
+          The `encryptionAlgorithm` field is set to a non-default value in ClusterConfiguration but has not been migrated to ModuleConfig `control-plane-manager` yet.
 
           Until the migration is complete, the value from ClusterConfiguration is used to avoid unintended certificate rotation.
 
