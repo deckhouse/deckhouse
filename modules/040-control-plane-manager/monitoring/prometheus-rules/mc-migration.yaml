@@ -164,7 +164,7 @@
 
           **To resolve this alert, migrate the setting:**
 
-          1. If `moduleconfig control-plane-manager` does not exist, create it first:
+          1. If ModuleConfig `control-plane-manager` does not exist, create it first:
 
              ```bash
              d8 s module enable control-plane-manager
