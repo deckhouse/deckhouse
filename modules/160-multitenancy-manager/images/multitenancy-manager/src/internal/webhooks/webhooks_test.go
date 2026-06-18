@@ -344,6 +344,33 @@ func TestDefaults_Coerce(t *testing.T) {
 	}
 }
 
+func TestDefaults_SystemRequestBypass(t *testing.T) {
+	// Same anti-deadlock guarantee as the validator: /defaults must never act on a system/module
+	// writer's request (the deckhouse-controller applies every module's Helm release), so a slow or
+	// failing handler can't block them. A system writer is passed through untouched (no patch); a
+	// normal user with the same out-of-list value is coerced. Covers both the group- and the
+	// username-based bypass (e.g. the multitenancy-manager controller SA).
+	m := defaults(t, projectNS("proj", map[string]string{"env": "prod"}), lbDef(v1alpha1.AvailabilityNone), lbRef(v1alpha1.DefaultingCoerce), lbGrant())
+	bad := raw(t, map[string]any{"apiVersion": "v1", "kind": "Service", "metadata": map[string]any{"name": "s", "namespace": "proj"},
+		"spec": map[string]any{"type": "LoadBalancer", "loadBalancerClass": "forbidden"}})
+
+	rSys := review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", bad, nil)
+	rSys.Request.UserInfo.Groups = []string{"system:serviceaccounts:d8-system"}
+	if resp := serve(t, m, "/defaults", rSys); len(resp.Patch) != 0 {
+		t.Fatalf("a system (d8-system) writer must not be mutated by /defaults, got patch %s", resp.Patch)
+	}
+
+	rCtrl := review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", bad, nil)
+	rCtrl.Request.UserInfo.Username = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+	if resp := serve(t, m, "/defaults", rCtrl); len(resp.Patch) != 0 {
+		t.Fatalf("the multitenancy-manager controller SA must not be mutated by /defaults, got patch %s", resp.Patch)
+	}
+
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", bad, nil)); len(resp.Patch) == 0 {
+		t.Fatal("a normal user's out-of-list value must still be coerced")
+	}
+}
+
 func TestDefaults_FillEmptyDoesNotCoerce(t *testing.T) {
 	// FillEmpty fills an empty field but never rewrites an explicit out-of-list value.
 	m := defaults(t, projectNS("proj", map[string]string{"env": "prod"}), lbDef(v1alpha1.AvailabilityNone), lbRef(v1alpha1.DefaultingFillEmpty), lbGrant())

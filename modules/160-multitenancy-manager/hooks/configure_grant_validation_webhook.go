@@ -66,6 +66,10 @@ var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 		Expression: `request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"`,
 	},
 	{
+		Name:       "exclude-multitenancy-manager",
+		Expression: `request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"`,
+	},
+	{
 		Name:       "exclude-system-serviceaccounts",
 		Expression: `!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system")`,
 	},
