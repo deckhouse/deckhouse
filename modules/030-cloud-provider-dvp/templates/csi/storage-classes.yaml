@@ -1,4 +1,4 @@
-{{- if not (dig "storage" "disabled" false .Values.cloudProviderDvp) }}
+{{- if not (default false (dig "storage" "disabled" false .Values.cloudProviderDvp)) }}
 {{- range $index, $storageClass := .Values.cloudProviderDvp.internal.storageClasses }}
 ---
 apiVersion: storage.k8s.io/v1

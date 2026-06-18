@@ -32,7 +32,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
       key: namespace
 {{- end -}}
 
-{{- if and (not (dig "nodes" "disabled" false .Values.cloudProviderDvp)) (not (dig "ccm" "disabled" false .Values.cloudProviderDvp)) }}
+{{- if and (not (default false (dig "nodes" "disabled" false .Values.cloudProviderDvp))) (not (default false (dig "ccm" "disabled" false .Values.cloudProviderDvp))) }}
 {{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle" -}}
 
 {{- $ccmConfig := dict -}}
