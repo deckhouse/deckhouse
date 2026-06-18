@@ -78,7 +78,7 @@ index 60a4d16d07..12875911aa 100644
 +		EndpointInterfaceMAC:                option.Config.EndpointInterfaceMAC,
  		GROMaxSize:                          int64(h.bigTCPConfig.GetGROIPv6MaxSize()),
  		GSOMaxSize:                          int64(h.bigTCPConfig.GetGSOIPv6MaxSize()),
- 		GROIPV4MaxSize:                      int64(h.bigTCPConfig.GetGROIPv4MaxSize()),
+ 		GROIPv4MaxSize:                      int64(h.bigTCPConfig.GetGROIPv4MaxSize()),
 diff --git a/pkg/datapath/connector/veth.go b/pkg/datapath/connector/veth.go
 index ec853bf20b..c318b72823 100644
 --- a/pkg/datapath/connector/veth.go

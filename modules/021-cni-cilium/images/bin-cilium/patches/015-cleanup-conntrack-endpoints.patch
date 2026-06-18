@@ -1,13 +1,5 @@
-commit ce3d161e1398c47229b79f7f5f83c1eaf9281986
-Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-Date:   Mon Nov 24 13:44:22 2025 +0300
-
-    new migration cleanup ct logic
-    
-    Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-
 diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
-index 37b0e54781..715cd6b514 100644
+index e937d680..c0249bb9 100644
 --- a/pkg/endpoint/bpf.go
 +++ b/pkg/endpoint/bpf.go
 @@ -9,6 +9,7 @@ import (
@@ -26,7 +18,7 @@ index 37b0e54781..715cd6b514 100644
  	"github.com/cilium/cilium/pkg/maps/policymap"
  	"github.com/cilium/cilium/pkg/option"
  	"github.com/cilium/cilium/pkg/policy"
-@@ -924,12 +926,31 @@ func (e *Endpoint) garbageCollectConntrack(filter ctmap.GCFilter) {
+@@ -952,12 +954,31 @@ func (e *Endpoint) garbageCollectConntrack(filter ctmap.GCFilter) {
  	}
  }
  
@@ -59,10 +51,10 @@ index 37b0e54781..715cd6b514 100644
  }
  
 diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
-index ad69a5379d..7d623acdad 100644
+index b84fe37b..c0704df1 100644
 --- a/pkg/maps/ctmap/ctmap.go
 +++ b/pkg/maps/ctmap/ctmap.go
-@@ -178,6 +178,14 @@ type GCFilter struct {
+@@ -180,6 +180,14 @@ type GCFilter struct {
  	// passes. It has no impact on CT GC, but can be used to iterate over valid
  	// CT entries.
  	EmitCTEntryCB EmitCTEntryCBFunc
@@ -77,7 +69,7 @@ index ad69a5379d..7d623acdad 100644
  }
  
  // EmitCTEntryCBFunc is the type used for the EmitCTEntryCB callback in GCFilter
-@@ -610,9 +618,28 @@ func (f GCFilter) doFiltering(srcIP, dstIP netip.Addr, srcPort, dstPort uint16,
+@@ -649,9 +657,28 @@ func (f GCFilter) doFiltering(srcIP, dstIP netip.Addr, srcPort, dstPort uint16,
  	}
  
  	if f.MatchIPs != nil {
