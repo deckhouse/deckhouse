@@ -196,28 +196,22 @@ provider:
     }    
 masterNodeGroup:
   replicas: 1
+  zones:
+  - ru-central1-a
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
-    externalIPAddresses:
-    - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
-    zones:
-    - ru-central1-a
 nodeGroups:
 - name: worker
   replicas: 1
+  zones:
+  - ru-central1-a
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
     coreFraction: 50
-    externalIPAddresses:
-    - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
-    zones:
-    - ru-central1-a
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
@@ -227,3 +221,13 @@ dhcpOptions:
   - <DNS_SERVER_1>
   - <DNS_SERVER_2>
 ```
+
+{% alert level="info" %}
+In this example, master and worker nodes are created without public IP addresses and without additional external network interfaces. Outbound traffic from the cluster subnets goes through the NAT instance.
+
+The NAT instance is not automatically used by the `dhctl` installer as a bastion host or jump host. To install the cluster, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly or through a bastion host.
+
+If the master node does not have a public IP address or is not directly accessible, run the installation with the `--ssh-bastion-host` and `--ssh-bastion-user` parameters.
+
+If you need to connect to the master node directly using a public IP address, specify the [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) and [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) parameters for it. Keep in mind that the interface from the network specified in `externalSubnetIDs` will be used as the node's default gateway.
+{% endalert %}

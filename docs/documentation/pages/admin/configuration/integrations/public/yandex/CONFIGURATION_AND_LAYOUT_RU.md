@@ -197,28 +197,22 @@ provider:
     }    
 masterNodeGroup:
   replicas: 1
+  zones:
+  - ru-central1-a
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
-    externalIPAddresses:
-    - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
-    zones:
-    - ru-central1-a
 nodeGroups:
 - name: worker
   replicas: 1
+  zones:
+  - ru-central1-a
   instanceClass:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
     coreFraction: 50
-    externalIPAddresses:
-    - "Auto"
-    externalSubnetID: <EXTERNAL_SUBNET_ID>
-    zones:
-    - ru-central1-a
 sshPublicKey: "<SSH_PUBLIC_KEY>"
 nodeNetworkCIDR: 192.168.12.13/24
 existingNetworkID: <EXISTING_NETWORK_ID>
@@ -228,6 +222,16 @@ dhcpOptions:
   - <DNS_SERVER_1>
   - <DNS_SERVER_2>
 ```
+
+{% alert level="info" %}
+В примере master и worker-узлы создаются без публичных IP-адресов и без дополнительных внешних сетевых интерфейсов. Исходящий трафик из подсетей кластера проходит через NAT-инстанс.
+
+NAT-инстанс не используется инсталлятором `dhctl` автоматически в качестве bastion-хоста или jump-хоста. Для установки кластера у master-узла должен быть SSH-доступ с машины, на которой запускается `dhctl`: напрямую или через bastion-хост.
+
+Если master-узел не имеет публичного IP-адреса или недоступен напрямую, запускайте установку с параметрами `--ssh-bastion-host` и `--ssh-bastion-user`.
+
+Если необходимо подключаться к master-узлу напрямую по публичному IP-адресу, укажите для него параметры [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) и [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids). Учитывайте, что интерфейс из сети, указанной в `externalSubnetIDs`, будет использоваться как шлюз по умолчанию для узла.
+{% endalert %}
 
 ## Назначение YandexClusterConfiguration
 
