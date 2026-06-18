@@ -1,16 +1,8 @@
-commit 3236434390cf17ba4471c6d7619e9ec5bf50beb5
-Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-Date:   Thu Jan 15 16:46:30 2026 +0300
-
-    new import/export conntrack http endpoints
-    
-    Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-
 diff --git a/api/v1/client/daemon/daemon_client.go b/api/v1/client/daemon/daemon_client.go
-index 8a5d78313b..1c99877e5f 100644
+index 82c4c7a8..f04ab0e2 100644
 --- a/api/v1/client/daemon/daemon_client.go
 +++ b/api/v1/client/daemon/daemon_client.go
-@@ -58,6 +58,50 @@ type Client struct {
+@@ -55,6 +55,50 @@ type Client struct {
  // ClientOption may be used to customize the behavior of Client methods.
  type ClientOption func(*runtime.ClientOperation)
  
@@ -61,7 +53,7 @@ index 8a5d78313b..1c99877e5f 100644
  // ClientService is the interface for Client methods
  type ClientService interface {
  	GetCgroupDumpMetadata(params *GetCgroupDumpMetadataParams, opts ...ClientOption) (*GetCgroupDumpMetadataOK, error)
-@@ -66,6 +110,8 @@ type ClientService interface {
+@@ -63,6 +107,8 @@ type ClientService interface {
  
  	GetConfig(params *GetConfigParams, opts ...ClientOption) (*GetConfigOK, error)
  
@@ -70,7 +62,7 @@ index 8a5d78313b..1c99877e5f 100644
  	GetDebuginfo(params *GetDebuginfoParams, opts ...ClientOption) (*GetDebuginfoOK, error)
  
  	GetHealthz(params *GetHealthzParams, opts ...ClientOption) (*GetHealthzOK, error)
-@@ -80,6 +126,8 @@ type ClientService interface {
+@@ -77,6 +123,8 @@ type ClientService interface {
  
  	PatchConfig(params *PatchConfigParams, opts ...ClientOption) (*PatchConfigOK, error)
  
@@ -79,7 +71,7 @@ index 8a5d78313b..1c99877e5f 100644
  	SetTransport(transport runtime.ClientTransport)
  }
  
-@@ -199,6 +247,44 @@ func (a *Client) GetConfig(params *GetConfigParams, opts ...ClientOption) (*GetC
+@@ -211,6 +259,44 @@ func (a *Client) GetConfig(params *GetConfigParams, opts ...ClientOption) (*GetC
  	panic(msg)
  }
  
@@ -124,7 +116,7 @@ index 8a5d78313b..1c99877e5f 100644
  /*
  GetDebuginfo retrieves information about the agent and environment for debugging
  */
-@@ -479,6 +565,44 @@ func (a *Client) PatchConfig(params *PatchConfigParams, opts ...ClientOption) (*
+@@ -526,6 +612,44 @@ func (a *Client) PatchConfig(params *PatchConfigParams, opts ...ClientOption) (*
  	panic(msg)
  }
  
@@ -171,7 +163,7 @@ index 8a5d78313b..1c99877e5f 100644
  	a.transport = transport
 diff --git a/api/v1/client/daemon/get_conntrack_export_parameters.go b/api/v1/client/daemon/get_conntrack_export_parameters.go
 new file mode 100644
-index 0000000000..d55975fd8e
+index 00000000..d55975fd
 --- /dev/null
 +++ b/api/v1/client/daemon/get_conntrack_export_parameters.go
 @@ -0,0 +1,159 @@
@@ -336,7 +328,7 @@ index 0000000000..d55975fd8e
 +}
 diff --git a/api/v1/client/daemon/get_conntrack_export_responses.go b/api/v1/client/daemon/get_conntrack_export_responses.go
 new file mode 100644
-index 0000000000..407771ad94
+index 00000000..407771ad
 --- /dev/null
 +++ b/api/v1/client/daemon/get_conntrack_export_responses.go
 @@ -0,0 +1,91 @@
@@ -433,7 +425,7 @@ index 0000000000..407771ad94
 +}
 diff --git a/api/v1/client/daemon/post_conntrack_import_parameters.go b/api/v1/client/daemon/post_conntrack_import_parameters.go
 new file mode 100644
-index 0000000000..c9e17bc4c7
+index 00000000..c9e17bc4
 --- /dev/null
 +++ b/api/v1/client/daemon/post_conntrack_import_parameters.go
 @@ -0,0 +1,154 @@
@@ -593,7 +585,7 @@ index 0000000000..c9e17bc4c7
 +}
 diff --git a/api/v1/client/daemon/post_conntrack_import_responses.go b/api/v1/client/daemon/post_conntrack_import_responses.go
 new file mode 100644
-index 0000000000..da8f80db4b
+index 00000000..da8f80db
 --- /dev/null
 +++ b/api/v1/client/daemon/post_conntrack_import_responses.go
 @@ -0,0 +1,221 @@
@@ -819,7 +811,7 @@ index 0000000000..da8f80db4b
 +	return nil
 +}
 diff --git a/api/v1/openapi.yaml b/api/v1/openapi.yaml
-index e7290116b8..d636d8190d 100644
+index e7290116..d636d819 100644
 --- a/api/v1/openapi.yaml
 +++ b/api/v1/openapi.yaml
 @@ -12,6 +12,49 @@ produces:
@@ -873,7 +865,7 @@ index e7290116b8..d636d8190d 100644
      get:
        summary: Get nodes information stored in the cilium-agent
 diff --git a/api/v1/server/doc.go b/api/v1/server/doc.go
-index afc3a394f2..ade23a609c 100644
+index afc3a394..ade23a60 100644
 --- a/api/v1/server/doc.go
 +++ b/api/v1/server/doc.go
 @@ -12,9 +12,11 @@
@@ -889,10 +881,10 @@ index afc3a394f2..ade23a609c 100644
  //
  // swagger:meta
 diff --git a/api/v1/server/embedded_spec.go b/api/v1/server/embedded_spec.go
-index f199be313b..ddea191443 100644
+index ff9dcd5b..648f5035 100644
 --- a/api/v1/server/embedded_spec.go
 +++ b/api/v1/server/embedded_spec.go
-@@ -258,6 +258,63 @@ func init() {
+@@ -255,6 +255,63 @@ func init() {
          }
        }
      },
@@ -956,7 +948,7 @@ index f199be313b..ddea191443 100644
      "/debuginfo": {
        "get": {
          "tags": [
-@@ -5763,6 +5820,63 @@ func init() {
+@@ -5760,6 +5817,63 @@ func init() {
          }
        }
      },
@@ -1021,10 +1013,10 @@ index f199be313b..ddea191443 100644
        "get": {
          "tags": [
 diff --git a/api/v1/server/restapi/cilium_api_api.go b/api/v1/server/restapi/cilium_api_api.go
-index 7034fbb7f6..a8a883d1d6 100644
+index 58067fb8..0e99ddd4 100644
 --- a/api/v1/server/restapi/cilium_api_api.go
 +++ b/api/v1/server/restapi/cilium_api_api.go
-@@ -50,8 +50,10 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
+@@ -47,8 +47,10 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
  		APIKeyAuthenticator: security.APIKeyAuth,
  		BearerAuthenticator: security.BearerAuth,
  
@@ -1035,27 +1027,29 @@ index 7034fbb7f6..a8a883d1d6 100644
  		JSONProducer: runtime.JSONProducer(),
  
  		EndpointDeleteEndpointHandler: endpoint.DeleteEndpointHandlerFunc(func(params endpoint.DeleteEndpointParams) middleware.Responder {
-@@ -96,6 +98,9 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
- 		DaemonGetConfigHandler: daemon.GetConfigHandlerFunc(func(params daemon.GetConfigParams) middleware.Responder {
+@@ -135,6 +137,10 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
  			return middleware.NotImplemented("operation daemon.GetConfig has not yet been implemented")
  		}),
+ 
 +		DaemonGetConntrackExportHandler: daemon.GetConntrackExportHandlerFunc(func(params daemon.GetConntrackExportParams) middleware.Responder {
 +			return middleware.NotImplemented("operation daemon.GetConntrackExport has not yet been implemented")
 +		}),
++
  		DaemonGetDebuginfoHandler: daemon.GetDebuginfoHandlerFunc(func(params daemon.GetDebuginfoParams) middleware.Responder {
- 			return middleware.NotImplemented("operation daemon.GetDebuginfo has not yet been implemented")
- 		}),
-@@ -195,6 +200,9 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
- 		PrefilterPatchPrefilterHandler: prefilter.PatchPrefilterHandlerFunc(func(params prefilter.PatchPrefilterParams) middleware.Responder {
+ 			_ = params
+ 
+@@ -333,6 +339,10 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
  			return middleware.NotImplemented("operation prefilter.PatchPrefilter has not yet been implemented")
  		}),
+ 
 +		DaemonPostConntrackImportHandler: daemon.PostConntrackImportHandlerFunc(func(params daemon.PostConntrackImportParams) middleware.Responder {
 +			return middleware.NotImplemented("operation daemon.PostConntrackImport has not yet been implemented")
 +		}),
++
  		IpamPostIpamHandler: ipam.PostIpamHandlerFunc(func(params ipam.PostIpamParams) middleware.Responder {
- 			return middleware.NotImplemented("operation ipam.PostIpam has not yet been implemented")
- 		}),
-@@ -241,10 +249,16 @@ type CiliumAPIAPI struct {
+ 			_ = params
+ 
+@@ -396,10 +406,16 @@ type CiliumAPIAPI struct {
  	// It has a default implementation in the security package, however you can replace it for your particular usage.
  	BearerAuthenticator func(string, security.ScopedTokenAuthentication) runtime.Authenticator
  
@@ -1072,7 +1066,7 @@ index 7034fbb7f6..a8a883d1d6 100644
  	// JSONProducer registers a producer for the following mime types:
  	//   - application/json
  	JSONProducer runtime.Producer
-@@ -277,6 +291,8 @@ type CiliumAPIAPI struct {
+@@ -432,6 +448,8 @@ type CiliumAPIAPI struct {
  	DaemonGetClusterNodesHandler daemon.GetClusterNodesHandler
  	// DaemonGetConfigHandler sets the operation handler for the get config operation
  	DaemonGetConfigHandler daemon.GetConfigHandler
@@ -1081,7 +1075,7 @@ index 7034fbb7f6..a8a883d1d6 100644
  	// DaemonGetDebuginfoHandler sets the operation handler for the get debuginfo operation
  	DaemonGetDebuginfoHandler daemon.GetDebuginfoHandler
  	// EndpointGetEndpointHandler sets the operation handler for the get endpoint operation
-@@ -343,6 +359,8 @@ type CiliumAPIAPI struct {
+@@ -498,6 +516,8 @@ type CiliumAPIAPI struct {
  	EndpointPatchEndpointIDLabelsHandler endpoint.PatchEndpointIDLabelsHandler
  	// PrefilterPatchPrefilterHandler sets the operation handler for the patch prefilter operation
  	PrefilterPatchPrefilterHandler prefilter.PatchPrefilterHandler
@@ -1090,7 +1084,7 @@ index 7034fbb7f6..a8a883d1d6 100644
  	// IpamPostIpamHandler sets the operation handler for the post ipam operation
  	IpamPostIpamHandler ipam.PostIpamHandler
  	// IpamPostIpamIPHandler sets the operation handler for the post ipam IP operation
-@@ -424,10 +442,16 @@ func (o *CiliumAPIAPI) RegisterFormat(name string, format strfmt.Format, validat
+@@ -579,10 +599,16 @@ func (o *CiliumAPIAPI) RegisterFormat(name string, format strfmt.Format, validat
  func (o *CiliumAPIAPI) Validate() error {
  	var unregistered []string
  
@@ -1107,7 +1101,7 @@ index 7034fbb7f6..a8a883d1d6 100644
  	if o.JSONProducer == nil {
  		unregistered = append(unregistered, "JSONProducer")
  	}
-@@ -474,6 +498,9 @@ func (o *CiliumAPIAPI) Validate() error {
+@@ -629,6 +655,9 @@ func (o *CiliumAPIAPI) Validate() error {
  	if o.DaemonGetConfigHandler == nil {
  		unregistered = append(unregistered, "daemon.GetConfigHandler")
  	}
@@ -1117,7 +1111,7 @@ index 7034fbb7f6..a8a883d1d6 100644
  	if o.DaemonGetDebuginfoHandler == nil {
  		unregistered = append(unregistered, "daemon.GetDebuginfoHandler")
  	}
-@@ -573,6 +600,9 @@ func (o *CiliumAPIAPI) Validate() error {
+@@ -728,6 +757,9 @@ func (o *CiliumAPIAPI) Validate() error {
  	if o.PrefilterPatchPrefilterHandler == nil {
  		unregistered = append(unregistered, "prefilter.PatchPrefilterHandler")
  	}
@@ -1127,25 +1121,27 @@ index 7034fbb7f6..a8a883d1d6 100644
  	if o.IpamPostIpamHandler == nil {
  		unregistered = append(unregistered, "ipam.PostIpamHandler")
  	}
-@@ -620,6 +650,8 @@ func (o *CiliumAPIAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Cons
+@@ -775,6 +807,9 @@ func (o *CiliumAPIAPI) Authorizer() runtime.Authorizer {
+ func (o *CiliumAPIAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Consumer {
  	result := make(map[string]runtime.Consumer, len(mediaTypes))
  	for _, mt := range mediaTypes {
- 		switch mt {
-+		case "application/octet-stream":
++		if mt == "application/octet-stream" {
 +			result["application/octet-stream"] = o.BinConsumer
- 		case "application/json":
++		}
+ 		if mt == "application/json" {
  			result["application/json"] = o.JSONConsumer
  		}
-@@ -637,6 +669,8 @@ func (o *CiliumAPIAPI) ProducersFor(mediaTypes []string) map[string]runtime.Prod
+@@ -793,6 +828,9 @@ func (o *CiliumAPIAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Cons
+ func (o *CiliumAPIAPI) ProducersFor(mediaTypes []string) map[string]runtime.Producer {
  	result := make(map[string]runtime.Producer, len(mediaTypes))
  	for _, mt := range mediaTypes {
- 		switch mt {
-+		case "application/octet-stream":
++		if mt == "application/octet-stream" {
 +			result["application/octet-stream"] = o.BinProducer
- 		case "application/json":
++		}
+ 		if mt == "application/json" {
  			result["application/json"] = o.JSONProducer
  		}
-@@ -738,6 +772,10 @@ func (o *CiliumAPIAPI) initHandlerCache() {
+@@ -895,6 +933,10 @@ func (o *CiliumAPIAPI) initHandlerCache() {
  	if o.handlers["GET"] == nil {
  		o.handlers["GET"] = make(map[string]http.Handler)
  	}
@@ -1156,7 +1152,7 @@ index 7034fbb7f6..a8a883d1d6 100644
  	o.handlers["GET"]["/debuginfo"] = daemon.NewGetDebuginfo(o.context, o.DaemonGetDebuginfoHandler)
  	if o.handlers["GET"] == nil {
  		o.handlers["GET"] = make(map[string]http.Handler)
-@@ -870,6 +908,10 @@ func (o *CiliumAPIAPI) initHandlerCache() {
+@@ -1027,6 +1069,10 @@ func (o *CiliumAPIAPI) initHandlerCache() {
  	if o.handlers["POST"] == nil {
  		o.handlers["POST"] = make(map[string]http.Handler)
  	}
@@ -1169,7 +1165,7 @@ index 7034fbb7f6..a8a883d1d6 100644
  		o.handlers["POST"] = make(map[string]http.Handler)
 diff --git a/api/v1/server/restapi/daemon/get_conntrack_export.go b/api/v1/server/restapi/daemon/get_conntrack_export.go
 new file mode 100644
-index 0000000000..790f60b478
+index 00000000..790f60b4
 --- /dev/null
 +++ b/api/v1/server/restapi/daemon/get_conntrack_export.go
 @@ -0,0 +1,59 @@
@@ -1234,7 +1230,7 @@ index 0000000000..790f60b478
 +}
 diff --git a/api/v1/server/restapi/daemon/get_conntrack_export_parameters.go b/api/v1/server/restapi/daemon/get_conntrack_export_parameters.go
 new file mode 100644
-index 0000000000..9a9e3d75c9
+index 00000000..9a9e3d75
 --- /dev/null
 +++ b/api/v1/server/restapi/daemon/get_conntrack_export_parameters.go
 @@ -0,0 +1,100 @@
@@ -1340,7 +1336,7 @@ index 0000000000..9a9e3d75c9
 +}
 diff --git a/api/v1/server/restapi/daemon/get_conntrack_export_responses.go b/api/v1/server/restapi/daemon/get_conntrack_export_responses.go
 new file mode 100644
-index 0000000000..30be48bb23
+index 00000000..30be48bb
 --- /dev/null
 +++ b/api/v1/server/restapi/daemon/get_conntrack_export_responses.go
 @@ -0,0 +1,40 @@
@@ -1386,7 +1382,7 @@ index 0000000000..30be48bb23
 +}
 diff --git a/api/v1/server/restapi/daemon/post_conntrack_import.go b/api/v1/server/restapi/daemon/post_conntrack_import.go
 new file mode 100644
-index 0000000000..9abeec4011
+index 00000000..9abeec40
 --- /dev/null
 +++ b/api/v1/server/restapi/daemon/post_conntrack_import.go
 @@ -0,0 +1,59 @@
@@ -1451,7 +1447,7 @@ index 0000000000..9abeec4011
 +}
 diff --git a/api/v1/server/restapi/daemon/post_conntrack_import_parameters.go b/api/v1/server/restapi/daemon/post_conntrack_import_parameters.go
 new file mode 100644
-index 0000000000..a1d2bc126b
+index 00000000..a1d2bc12
 --- /dev/null
 +++ b/api/v1/server/restapi/daemon/post_conntrack_import_parameters.go
 @@ -0,0 +1,80 @@
@@ -1537,7 +1533,7 @@ index 0000000000..a1d2bc126b
 +}
 diff --git a/api/v1/server/restapi/daemon/post_conntrack_import_responses.go b/api/v1/server/restapi/daemon/post_conntrack_import_responses.go
 new file mode 100644
-index 0000000000..e5f1170b85
+index 00000000..e5f1170b
 --- /dev/null
 +++ b/api/v1/server/restapi/daemon/post_conntrack_import_responses.go
 @@ -0,0 +1,94 @@
@@ -1636,7 +1632,7 @@ index 0000000000..e5f1170b85
 +	rw.WriteHeader(500)
 +}
 diff --git a/api/v1/server/server.go b/api/v1/server/server.go
-index 26648da341..a0195ea93b 100644
+index 26648da3..a0195ea9 100644
 --- a/api/v1/server/server.go
 +++ b/api/v1/server/server.go
 @@ -78,6 +78,7 @@ type apiParams struct {
@@ -1672,7 +1668,7 @@ index 26648da341..a0195ea93b 100644
  	api.IpamPostIpamIPHandler = p.IpamPostIpamIPHandler
  	api.EndpointPutEndpointIDHandler = p.EndpointPutEndpointIDHandler
 diff --git a/daemon/cmd/api_handlers.go b/daemon/cmd/api_handlers.go
-index 1f2b41919b..4f26841bae 100644
+index 1f2b4191..4f26841b 100644
 --- a/daemon/cmd/api_handlers.go
 +++ b/daemon/cmd/api_handlers.go
 @@ -21,8 +21,10 @@ import (
@@ -1699,7 +1695,7 @@ index 1f2b41919b..4f26841bae 100644
  	out.EndpointDeleteEndpointHandler = wrapAPIHandler(dp, deleteEndpointHandler)
  	out.EndpointGetEndpointHandler = wrapAPIHandler(dp, getEndpointHandler)
 diff --git a/daemon/cmd/status.go b/daemon/cmd/status.go
-index d42dae075b..13f8d338c4 100644
+index 8b0496ab..bb0cbee3 100644
 --- a/daemon/cmd/status.go
 +++ b/daemon/cmd/status.go
 @@ -4,20 +4,32 @@
@@ -1735,7 +1731,7 @@ index d42dae075b..13f8d338c4 100644
  	"github.com/cilium/cilium/pkg/controller"
  	"github.com/cilium/cilium/pkg/datapath/linux/probes"
  	datapathOption "github.com/cilium/cilium/pkg/datapath/option"
-@@ -29,6 +41,7 @@ import (
+@@ -28,6 +40,7 @@ import (
  	"github.com/cilium/cilium/pkg/kvstore"
  	"github.com/cilium/cilium/pkg/lock"
  	"github.com/cilium/cilium/pkg/logging/logfields"
@@ -2369,10 +2365,10 @@ index d42dae075b..13f8d338c4 100644
  // of the StatusResponse is provided.
  func (d *Daemon) getStatus(brief bool, requireK8sConnectivity bool) models.StatusResponse {
 diff --git a/pkg/bpf/map_linux.go b/pkg/bpf/map_linux.go
-index b89f1bcb8f..da06180ef6 100644
+index 9a30742e..3974e750 100644
 --- a/pkg/bpf/map_linux.go
 +++ b/pkg/bpf/map_linux.go
-@@ -1009,6 +1009,10 @@ func (m *Map) BatchLookup(cursor *ebpf.MapBatchCursor, keysOut, valuesOut interf
+@@ -1021,6 +1021,10 @@ func (m *Map) BatchLookup(cursor *ebpf.MapBatchCursor, keysOut, valuesOut interf
  	return m.m.BatchLookup(cursor, keysOut, valuesOut, opts)
  }
  
@@ -2384,10 +2380,10 @@ index b89f1bcb8f..da06180ef6 100644
  // file exists
  func (m *Map) DumpIfExists(hash map[string][]string) error {
 diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
-index 7d623acdad..cf7eeb5763 100644
+index fb14f915..fbea50cf 100644
 --- a/pkg/maps/ctmap/ctmap.go
 +++ b/pkg/maps/ctmap/ctmap.go
-@@ -821,6 +821,14 @@ func DeleteIfUpgradeNeeded(e CtEndpoint) {
+@@ -815,6 +815,14 @@ func DeleteIfUpgradeNeeded(e CtEndpoint) {
  	}
  }
  
