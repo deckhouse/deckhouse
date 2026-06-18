@@ -374,7 +374,7 @@ properties:
 
       Certificates for the components listed above will be reissued using the selected algorithm and key length.
 
-      If not set, the value from `ClusterConfiguration.encryptionAlgorithm` is used (defaults to `RSA-2048`).
+      If parameter not set, the value from `ClusterConfiguration.encryptionAlgorithm` is used (defaults to `RSA-2048`).
 
       > **Warning.** When reissuing certificates, the root certificate (**CA**) is not rotated. The root certificate is created with the selected algorithm only during the initial cluster bootstrap. 
     enum:
