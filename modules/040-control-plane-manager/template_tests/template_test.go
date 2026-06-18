@@ -1157,6 +1157,66 @@ apiserver:
 		})
 	})
 
+	Context("encryptionAlgorithm in d8-control-plane-manager-config secret", func() {
+		assertEncryptionAlgorithm := func(ff *Config, expectedAlgorithm string) {
+			Expect(ff.RenderError).ShouldNot(HaveOccurred())
+			s := ff.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			Expect(s.Exists()).To(BeTrue())
+			field := s.Field("data.encryption-algorithm")
+			if expectedAlgorithm == "" {
+				Expect(field.Exists()).Should(BeFalse())
+				return
+			}
+			data, err := base64.StdEncoding.DecodeString(field.String())
+			Expect(err).To(BeNil())
+			Expect(string(data)).To(Equal(expectedAlgorithm))
+		}
+
+		Context("when encryptionAlgorithm is set in ModuleConfig only", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.encryptionAlgorithm", "ECDSA-P256")
+				f.HelmRender()
+			})
+
+			It("should set encryption-algorithm from ModuleConfig", func() {
+				assertEncryptionAlgorithm(f, "ECDSA-P256")
+			})
+		})
+
+		Context("when encryptionAlgorithm is set in ClusterConfiguration only", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.clusterConfiguration.encryptionAlgorithm", `"RSA-4096"`)
+				f.HelmRender()
+			})
+
+			It("should fall back to ClusterConfiguration value", func() {
+				assertEncryptionAlgorithm(f, "RSA-4096")
+			})
+		})
+
+		Context("when encryptionAlgorithm is set in both ModuleConfig and ClusterConfiguration", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.encryptionAlgorithm", "ECDSA-P256")
+				f.ValuesSetFromYaml("global.clusterConfiguration.encryptionAlgorithm", `"RSA-4096"`)
+				f.HelmRender()
+			})
+
+			It("should prefer ModuleConfig over ClusterConfiguration", func() {
+				assertEncryptionAlgorithm(f, "ECDSA-P256")
+			})
+		})
+
+		Context("when encryptionAlgorithm is not set anywhere", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should not set encryption-algorithm key in Secret", func() {
+				assertEncryptionAlgorithm(f, "")
+			})
+		})
+	})
+
 	Context("rootKubeconfigSymlink (control-plane-manager module values)", func() {
 		Context("when user-authz is enabled and controlPlaneManager.rootKubeconfigSymlink is false", func() {
 			BeforeEach(func() {
