@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-0a7dee882b0213b53ce1f13791d223657afca21285b99e07e15b935fa0456093",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 7,
+  "version": 10,
   "statements": [
     {
       "vulnerability": {
@@ -132,8 +132,63 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Для эксплуатации уязвимости CVE-2026-39882 в containerd должен быть запущен и настроен экспортер трассировки OpenTelemetry. В поставке Deckhouse по умолчанию не заданы необходимые для этого переменные окружения, а также нет настроек, позволяющих включить данную функциональность, что исключает выполнение уязвимого кода.",
       "timestamp": "2026-04-13T14:49:31.087251Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd/v2"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "Уязвимость CVE-2026-46680 не может быть эксплуатирована в рамках Deckhouse: используемая версия containerd v2.1.8 уже содержит необходимое исправление безопасности, устраняющее данную уязвимость. Уязвимый код, присутствовавший в более ранних версиях, отсутствует в используемой сборке.",
+      "timestamp": "2026-04-13T14:49:31.087251Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41568 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает функцию createIfNotExists в демоне Docker Engine при операции docker cp. Уязвимый код в патчах, привносящих данную зависимость в containerd, не выполняется.",
+      "timestamp": "2026-06-18T12:31:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42306 невозможно эксплуатировать в рамках Deckhouse: уязвимость связана с гонкой состояний между созданием точки монтирования и вызовом mount() в демоне Docker Engine при операции docker cp. Уязвимый код в патчах, привносящих данную зависимость в containerd, не выполняется.",
+      "timestamp": "2026-06-18T12:31:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41567 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает серверный обработчик PUT /containers/{id}/archive в демоне Docker Engine. Уязвимый код в патчах, привносящих данную зависимость в containerd, не выполняется.",
+      "timestamp": "2026-06-18T12:31:00Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:38Z",
-  "last_updated": "2026-04-13T14:49:31Z"
+  "last_updated": "2026-06-18T12:31:00Z"
 }
