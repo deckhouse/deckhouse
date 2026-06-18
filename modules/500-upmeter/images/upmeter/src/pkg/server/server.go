@@ -80,7 +80,7 @@ type DynamicProbesConfig struct {
 }
 
 type VirtualizationProbeConfig struct {
-	VMImage string
+	VirtualImageURL string
 }
 
 func NewConfig() *Config {
@@ -267,7 +267,7 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 		IngressNginxControllers: dynamic.IngressControllers,
 		NodeGroups:              dynamic.NodeGroups,
 		VirtualizationProbe: probe.VirtualizationProbeConfig{
-			VMImage: dynamic.VirtualizationProbe.VMImage,
+			VirtualImageURL: dynamic.VirtualizationProbe.VirtualImageURL,
 		},
 	}
 	dummyDoer := checker.NoopDoer{}

@@ -240,6 +240,14 @@ properties:
 
                   This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
                 default: "false"
+  virtualizationProbe:
+    type: object
+    default: {}
+    properties:
+      virtualImageURL:
+        type: string
+        description: |
+          HTTP URL of the VM image used to create VirtualImage when it does not exist. If omitted, virtualization probes are disabled.
   disabledProbes:
     type: array
     default: []

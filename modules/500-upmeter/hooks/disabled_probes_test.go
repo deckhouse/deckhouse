@@ -216,6 +216,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			It("virtualization probe is disabled without default vmclass", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -227,7 +228,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			It("virtualization probe is disabled without disk storageclass", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic"), 1))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
-				f.ValuesSet("global.modulesImages.digests.virtualization.upmeterVm", "sha256:abc")
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -236,7 +237,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(disabledProbes).To(ContainElement("virtualization/"))
 			})
 
-			It("virtualization probe is disabled without upmeterVm image", func() {
+			It("virtualization probe is disabled without virtual image URL", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+defaultStorageClass("fast"), 2))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
 
@@ -250,7 +251,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			It("virtualization probe is enabled with default vmclass and default storageclass", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+defaultStorageClass("fast"), 2))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
-				f.ValuesSet("global.modulesImages.digests.virtualization.upmeterVm", "sha256:abc")
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -262,7 +263,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 			It("virtualization probe is enabled with default vmclass and configured disk storageclass", func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(defaultVMClass("generic")+virtualizationModuleConfigWithDiskStorageClass("fast"), 2))
 				f.ValuesSet("global.enabledModules", allModules().Slice())
-				f.ValuesSet("global.modulesImages.digests.virtualization.upmeterVm", "sha256:abc")
+				f.ValuesSet("upmeter.virtualizationProbe.virtualImageURL", "https://example.com/alpine.qcow2")
 
 				f.RunHook()
 				Expect(f).To(ExecuteSuccessfully())
@@ -742,13 +743,13 @@ func Test_calcDisabledProbes(t *testing.T) {
 		{
 			name: "virtualization on",
 			args: args{
-				presence:       appPresence{defaultVMClass: true, diskStorageClass: true, virtualizationVMImage: true},
+				presence:       appPresence{virtualImageURL: true, defaultVMClass: true, diskStorageClass: true},
 				enabledModules: set.New("virtualization"),
 			},
 			expectNotDisabled: set.New("virtualization/"),
 		},
 		{
-			name: "virtualization off without vm image",
+			name: "virtualization off without virtual image URL",
 			args: args{
 				presence:       appPresence{defaultVMClass: true, diskStorageClass: true},
 				enabledModules: set.New("virtualization"),
@@ -758,7 +759,7 @@ func Test_calcDisabledProbes(t *testing.T) {
 		{
 			name: "virtualization off without default vmclass",
 			args: args{
-				presence:       appPresence{diskStorageClass: true},
+				presence:       appPresence{virtualImageURL: true, diskStorageClass: true},
 				enabledModules: set.New("virtualization"),
 			},
 			expectDisabled: set.New("virtualization/"),
@@ -766,7 +767,7 @@ func Test_calcDisabledProbes(t *testing.T) {
 		{
 			name: "virtualization off without disk storageclass",
 			args: args{
-				presence:       appPresence{defaultVMClass: true},
+				presence:       appPresence{virtualImageURL: true, defaultVMClass: true},
 				enabledModules: set.New("virtualization"),
 			},
 			expectDisabled: set.New("virtualization/"),

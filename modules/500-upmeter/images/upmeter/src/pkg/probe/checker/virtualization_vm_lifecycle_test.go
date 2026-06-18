@@ -29,7 +29,7 @@ func Test_virtualImageManifest(t *testing.T) {
 		"test-ns",
 		VirtualizationCreationProbeName,
 		"alpine-3-23-bios-base",
-		"registry.example.com/upmeter-vm@sha256:abc",
+		"https://example.com/alpine.qcow2",
 	)
 
 	var obj map[string]interface{}
@@ -45,11 +45,9 @@ func Test_virtualImageManifest(t *testing.T) {
 
 	spec := obj["spec"].(map[string]interface{})
 	dataSource := spec["dataSource"].(map[string]interface{})
-	containerImage := dataSource["containerImage"].(map[string]interface{})
-	imagePullSecret := containerImage["imagePullSecret"].(map[string]interface{})
-	assert.Equal(t, "ContainerImage", dataSource["type"])
-	assert.Equal(t, "registry.example.com/upmeter-vm@sha256:abc", containerImage["image"])
-	assert.Equal(t, registrySecretName, imagePullSecret["name"])
+	http := dataSource["http"].(map[string]interface{})
+	assert.Equal(t, "HTTP", dataSource["type"])
+	assert.Equal(t, "https://example.com/alpine.qcow2", http["url"])
 }
 
 func Test_virtualDiskManifest(t *testing.T) {

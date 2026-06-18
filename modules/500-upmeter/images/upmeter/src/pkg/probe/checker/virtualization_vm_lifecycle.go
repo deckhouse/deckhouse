@@ -46,8 +46,6 @@ const (
 	virtualizationDiskName  = "probe-disk"
 	virtualizationEvictName = "probe-vm-evict"
 
-	virtualizationNamespace    = "d8-virtualization"
-	registrySecretName         = "virtualization-module-registry"
 	virtualizationPhaseReady   = "Ready"
 	virtualizationPhaseRunning = "Running"
 	vmopPhaseCompleted         = "Completed"
@@ -97,7 +95,7 @@ type VirtualMachineLifecycle struct {
 	Namespace                  string
 	ProbeName                  string
 	VirtualImageName           string
-	VirtualImageContainerImage string
+	VirtualImageURL            string
 	VerifyMigration            bool
 
 	RequestTimeout                     time.Duration
@@ -119,7 +117,7 @@ func (c VirtualMachineLifecycle) Checker() check.Checker {
 		namespace:                  c.Namespace,
 		probeName:                  fallbackString(c.ProbeName, VirtualizationCreationProbeName),
 		virtualImageName:           c.VirtualImageName,
-		virtualImageContainerImage: c.VirtualImageContainerImage,
+		virtualImageURL:            c.VirtualImageURL,
 		verifyMigration:            c.VerifyMigration,
 
 		requestTimeout:                     fallbackDuration(c.RequestTimeout, 5*time.Second),
@@ -143,7 +141,7 @@ type virtualMachineLifecycleChecker struct {
 	namespace                  string
 	probeName                  string
 	virtualImageName           string
-	virtualImageContainerImage string
+	virtualImageURL            string
 	verifyMigration            bool
 
 	requestTimeout                     time.Duration
@@ -214,10 +212,6 @@ func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.
 func (c *virtualMachineLifecycleChecker) doVirtualMachineSetup(ctx context.Context) check.Error {
 	if err := c.runStep("creating namespace", func() error { return c.createNamespace(ctx) }); err != nil {
 		return lifecycleStepError("creating namespace", err)
-	}
-
-	if err := c.runStep("ensuring registry secret", func() error { return c.ensureRegistrySecret(ctx) }); err != nil {
-		return lifecycleStepError("ensuring registry secret", err)
 	}
 
 	if err := c.runStep("ensuring VirtualImage", func() error {
@@ -317,43 +311,6 @@ func (c *virtualMachineLifecycleChecker) deleteNamespace(ctx context.Context) er
 	return c.access.Kubernetes().CoreV1().Namespaces().Delete(ctx, c.namespace, metav1.DeleteOptions{})
 }
 
-func (c *virtualMachineLifecycleChecker) ensureRegistrySecret(ctx context.Context) error {
-	source, err := c.access.Kubernetes().CoreV1().Secrets(virtualizationNamespace).Get(ctx, registrySecretName, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("get registry secret %s/%s: %w", virtualizationNamespace, registrySecretName, err)
-	}
-
-	data := make(map[string][]byte, len(source.Data))
-	for key, value := range source.Data {
-		data[key] = append([]byte(nil), value...)
-	}
-
-	secret := &v1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      registrySecretName,
-			Namespace: c.namespace,
-			Labels: map[string]string{
-				"heritage":      "upmeter",
-				agentLabelKey:   c.agentID,
-				"upmeter-group": VirtualizationGroupName,
-				"upmeter-probe": c.probeName,
-			},
-		},
-		Type: source.Type,
-		Data: data,
-	}
-
-	_, err = c.access.Kubernetes().CoreV1().Secrets(c.namespace).Create(ctx, secret, metav1.CreateOptions{})
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return err
-	}
-	return nil
-}
-
 func (c *virtualMachineLifecycleChecker) ensureVirtualImageReady(ctx context.Context) error {
 	if err := c.createVirtualImageIfMissing(ctx); err != nil {
 		return err
@@ -372,11 +329,11 @@ func (c *virtualMachineLifecycleChecker) createVirtualImageIfMissing(ctx context
 	if !apierrors.IsNotFound(err) {
 		return err
 	}
-	if c.virtualImageContainerImage == "" {
-		return fmt.Errorf("VirtualImage %q not found and VM image is not configured", c.virtualImageName)
+	if c.virtualImageURL == "" {
+		return fmt.Errorf("VirtualImage %q not found and virtualImageURL is not configured", c.virtualImageName)
 	}
 
-	manifest := virtualImageManifest(c.agentID, c.namespace, c.probeName, c.virtualImageName, c.virtualImageContainerImage)
+	manifest := virtualImageManifest(c.agentID, c.namespace, c.probeName, c.virtualImageName, c.virtualImageURL)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
 		return err
@@ -895,7 +852,7 @@ func unstructuredConditionStatus(obj map[string]interface{}, conditionType strin
 	return ""
 }
 
-func virtualImageManifest(agentID, namespace, probeName, name, containerImage string) string {
+func virtualImageManifest(agentID, namespace, probeName, name, imageURL string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
@@ -910,12 +867,10 @@ metadata:
 spec:
   storage: ContainerRegistry
   dataSource:
-    type: ContainerImage
-    containerImage:
-      image: %q
-      imagePullSecret:
-        name: %q
-`, agentID, VirtualizationGroupName, probeName, name, namespace, containerImage, registrySecretName)
+    type: HTTP
+    http:
+      url: %q
+`, agentID, VirtualizationGroupName, probeName, name, namespace, imageURL)
 }
 
 func virtualDiskManifest(agentID, namespace, probeName, name, virtualImageName string) string {

@@ -115,17 +115,9 @@ spec:
           - --dynamic-probe-nodegroup={{ $name }}
             {{- end }}
           {{- end }}
-          {{- if (.Values.global.enabledModules | has "virtualization") }}
-          {{- $virtualizationDigests := index .Values.global.modulesImages.digests "virtualization" | default dict }}
-          {{- $upmeterVmImageDigest := index $virtualizationDigests "upmeterVm" }}
-          {{- if $upmeterVmImageDigest }}
-          {{- $virtualizationRegistryBase := join "/" (list (trimAll "/" .Values.global.modulesImages.registry.base) "modules" "virtualization") }}
-          {{- $virtualizationValues := index .Values "virtualization" | default dict }}
-          {{- $virtualizationRegistryBaseOverride := dig "registry" "base" "" $virtualizationValues }}
-          {{- if $virtualizationRegistryBaseOverride }}
-          {{- $virtualizationRegistryBase = join "/" (list (trimAll "/" $virtualizationRegistryBaseOverride) "virtualization") }}
-          {{- end }}
-          - --virtualization-probe-vm-image={{ $virtualizationRegistryBase }}@{{ $upmeterVmImageDigest }}
+          {{- with .Values.upmeter.virtualizationProbe }}
+          {{- if .virtualImageURL }}
+          - --virtualization-probe-virtualimage-url={{ .virtualImageURL }}
           {{- end }}
           {{- end }}
         env:
