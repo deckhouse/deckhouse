@@ -81,7 +81,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: control-plane-proxy
+      app: control-plane-proxy-etcd-arbiter
       heritage: deckhouse
   namespaceSelector:
     matchNames:
