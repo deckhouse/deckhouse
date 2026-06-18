@@ -16,9 +16,11 @@ package runtime
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
@@ -39,6 +41,11 @@ import (
 
 const (
 	modulesNamespace = "d8-system"
+
+	// embeddedModulesDir is the on-disk root of built-in (embedded) modules
+	// shipped inside the deckhouse image. Modules under this path are loaded
+	// with the embedded loader (no version-by-symlink resolution).
+	embeddedModulesDir = "/deckhouse/modules"
 )
 
 // Module represents a module instance as received from the module controller.
@@ -98,35 +105,131 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 // converging in addon-operator and carries the names of the enabled functional
 // (non-critical) modules that the new controller should now own.
 //
-// First iteration: this logs the handoff and reschedules any functional module
-// already loaded into the runtime so the scheduler re-evaluates it. Modules not
-// yet loaded are logged and skipped — wiring the old contracts (module.yaml /
-// ModuleConfig / ModuleSource) into runtime.UpdateModule is a follow-up (stage 3
-// of the module migration plan), at which point those modules will be loaded and
-// this handler will drive them end to end.
+// For each module it runs the adoption flow: the module is already loaded on the
+// filesystem by addon-operator's module loader, so instead of re-downloading it
+// the runtime loads it in place (embedded or downloaded layout), takes its
+// settings from addon-operator's resolved config values, and registers it with
+// the scheduler. The scheduler then drives the regular pipeline
+// (ensureCRD -> configure -> enable -> run).
 func (r *Runtime) ProcessFunctionalModules(names []string) {
 	r.logger.Info("received functional modules handoff from addon-operator",
 		slog.Int("count", len(names)),
 		slog.Any("modules", names))
 
-	// Collect modules already loaded into the runtime under the lock, then
-	// reschedule them outside it: Scheduler.Reschedule emits schedule events
-	// consumed by the Run loop, which itself acquires r.mu via schedulePackage.
-	r.mu.RLock()
-	known := make([]string, 0, len(names))
 	for _, name := range names {
-		if _, ok := r.modules[name]; ok {
-			known = append(known, name)
-		} else {
-			r.logger.Debug("functional module not loaded in runtime yet, skip",
-				slog.String("module", name))
+		if err := r.adoptModule(context.Background(), name); err != nil {
+			r.logger.Error("adopt functional module",
+				slog.String("module", name),
+				slog.Any("error", err))
 		}
 	}
-	r.mu.RUnlock()
+}
 
-	for _, name := range known {
-		r.scheduler.Reschedule(name)
+// adoptModule brings a module that is already present on the filesystem (loaded
+// by addon-operator) into the new runtime without re-downloading it.
+//
+// It resolves the module's on-disk path and settings from the addon-operator
+// module manager, loads the package definition in place (choosing the embedded
+// or downloaded loader by path), registers a Store entry with the settings, adds
+// the module to the scheduler, and lets the scheduler schedule the pipeline.
+//
+// Re-adoption is idempotent: if neither the loaded version nor the settings
+// changed, it is a no-op; a settings-only change triggers a Reschedule.
+func (r *Runtime) adoptModule(ctx context.Context, name string) error {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "adoptModule")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", name))
+
+	basic := r.addonModuleManager.GetModule(name)
+	if basic == nil {
+		return fmt.Errorf("module %q is not known to the module manager", name)
 	}
+
+	path := basic.GetPath()
+	embedded := isEmbeddedPath(path)
+	settings := addonutils.Values(basic.GetConfigValues(false))
+
+	conf, err := r.loadModuleConfFromPath(ctx, path, embedded)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return status.NewError("LoadFailed", fmt.Errorf("load module conf from %q: %w", path, err))
+	}
+
+	module, err := modules.NewModuleByConfig(name, conf, r.logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return status.NewError("LoadFailed", fmt.Errorf("new module: %w", err))
+	}
+
+	version := module.GetVersion().String()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if !r.packages.NeedUpdate(name, version, settings.Checksum()) {
+		return nil
+	}
+
+	rctx := r.packages.Update(name, version, settings)
+	if rctx == nil {
+		// settings-only change: the loaded instance stays, re-run the pipeline
+		// so the new settings are applied through Configure.
+		r.scheduler.Reschedule(name)
+		return nil
+	}
+
+	r.status.NewStatus(name)
+
+	// Optimistically register before AddNode so a successful schedule can
+	// resolve it; roll back on a dependency cycle (mirror loadModule).
+	r.modules[name] = module
+	if err = r.scheduler.AddNode(module); err != nil {
+		delete(r.modules, name)
+		span.SetStatus(codes.Error, err.Error())
+		return status.NewError("DependencyCycle", fmt.Errorf("add node: %w", err))
+	}
+
+	r.logger.Info("adopted functional module",
+		slog.String("module", name),
+		slog.String("version", version),
+		slog.Bool("embedded", embedded),
+		slog.String("path", path))
+
+	return nil
+}
+
+// loadModuleConfFromPath loads a module package config directly from an on-disk
+// path, choosing the embedded loader (no version-by-symlink resolution) or the
+// downloaded loader by path, and wires the shared runtime managers so the
+// module's hooks can patch objects, schedule crons and watch Kubernetes events.
+func (r *Runtime) loadModuleConfFromPath(ctx context.Context, path string, embedded bool) (*modules.Config, error) {
+	var (
+		conf *modules.Config
+		err  error
+	)
+
+	if embedded {
+		conf, err = loader.LoadEmbeddedConf(ctx, path, r.logger)
+	} else {
+		conf, err = loader.LoadModuleConf(ctx, path, r.logger)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	conf.Patcher = r.objectPatcher
+	conf.ScheduleManager = r.scheduleManager
+	conf.KubeEventsManager = r.kubeEventsManager
+	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
+
+	return conf, nil
+}
+
+// isEmbeddedPath reports whether the module path points at a built-in (embedded)
+// module shipped inside the deckhouse image rather than a downloaded one.
+func isEmbeddedPath(path string) bool {
+	return strings.HasPrefix(path, embeddedModulesDir)
 }
 
 // loadModule builds a Module from its package files, stores it in r.modules,

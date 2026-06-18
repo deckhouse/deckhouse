@@ -392,6 +392,13 @@ func NewDeckhouseController(
 	if os.Getenv(envEnableModulePackages) == "true" {
 		logger.Info("Module package controllers are enabled")
 
+		// Start the runtime event loop (scheduler, global hooks, hook events) so
+		// adopted functional modules are actually scheduled. Guard against a
+		// double start when the package-system flag already started it.
+		if os.Getenv(envEnablePackageSystem) != "true" {
+			pkgRuntime.Run()
+		}
+
 		// Hand off functional (non-critical) modules from addon-operator to the
 		// new package runtime. addon-operator processes critical modules and,
 		// once they are done converging, emits the enabled functional module

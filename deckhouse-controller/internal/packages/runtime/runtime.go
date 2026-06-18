@@ -125,10 +125,13 @@ type deployerI interface {
 	Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error
 }
 
-// moduleManagerI provides access to global values for version getters and bootstrap checks.
+// moduleManagerI provides access to global values for version getters and
+// bootstrap checks, and to already-loaded modules (their on-filesystem path and
+// resolved config values) for the functional-modules handoff adoption flow.
 type moduleManagerI interface {
 	GetGlobal() *addonmodules.GlobalModule
 	IsModuleEnabled(name string) bool
+	GetModule(name string) *addonmodules.BasicModule
 }
 
 // New creates and initializes a Runtime with all subsystems wired together.
