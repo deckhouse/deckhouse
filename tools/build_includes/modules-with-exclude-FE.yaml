@@ -15,9 +15,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/002-deckhouse
   to: /deckhouse/modules/002-deckhouse
   excludePaths:
@@ -34,9 +31,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/007-registrypackages
   to: /deckhouse/modules/007-registrypackages
   excludePaths:
@@ -53,9 +47,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/015-admission-policy-engine
   to: /deckhouse/modules/015-admission-policy-engine
   excludePaths:
@@ -72,9 +63,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/021-cni-cilium
   to: /deckhouse/modules/021-cni-cilium
   excludePaths:
@@ -91,9 +79,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/030-cloud-provider-aws
   to: /deckhouse/modules/030-cloud-provider-aws
   excludePaths:
@@ -110,9 +95,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/030-cloud-provider-azure
   to: /deckhouse/modules/030-cloud-provider-azure
   excludePaths:
@@ -129,9 +111,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/030-cloud-provider-dvp
   to: /deckhouse/modules/030-cloud-provider-dvp
   excludePaths:
@@ -148,9 +127,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/030-cloud-provider-gcp
   to: /deckhouse/modules/030-cloud-provider-gcp
   excludePaths:
@@ -167,9 +143,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/030-cloud-provider-yandex
   to: /deckhouse/modules/030-cloud-provider-yandex
   excludePaths:
@@ -186,9 +159,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/031-local-path-provisioner
   to: /deckhouse/modules/031-local-path-provisioner
   excludePaths:
@@ -205,9 +175,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/035-cni-flannel
   to: /deckhouse/modules/035-cni-flannel
   excludePaths:
@@ -224,9 +191,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/035-cni-simple-bridge
   to: /deckhouse/modules/035-cni-simple-bridge
   excludePaths:
@@ -243,9 +207,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/036-kube-proxy
   to: /deckhouse/modules/036-kube-proxy
   excludePaths:
@@ -262,9 +223,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/038-registry
   to: /deckhouse/modules/038-registry
   excludePaths:
@@ -281,9 +239,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/039-registry-packages-proxy
   to: /deckhouse/modules/039-registry-packages-proxy
   excludePaths:
@@ -300,9 +255,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/040-control-plane-manager
   to: /deckhouse/modules/040-control-plane-manager
   excludePaths:
@@ -319,9 +271,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/040-node-manager
   to: /deckhouse/modules/040-node-manager
   excludePaths:
@@ -338,9 +287,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/040-terraform-manager
   to: /deckhouse/modules/040-terraform-manager
   excludePaths:
@@ -357,9 +303,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/042-kube-dns
   to: /deckhouse/modules/042-kube-dns
   excludePaths:
@@ -376,9 +319,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/050-network-policy-engine
   to: /deckhouse/modules/050-network-policy-engine
   excludePaths:
@@ -395,9 +335,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/101-cert-manager
   to: /deckhouse/modules/101-cert-manager
   excludePaths:
@@ -414,9 +351,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/110-istio
   to: /deckhouse/modules/110-istio
   excludePaths:
@@ -433,9 +367,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/140-user-authz
   to: /deckhouse/modules/140-user-authz
   excludePaths:
@@ -452,9 +383,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/150-user-authn
   to: /deckhouse/modules/150-user-authn
   excludePaths:
@@ -471,9 +399,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/160-multitenancy-manager
   to: /deckhouse/modules/160-multitenancy-manager
   excludePaths:
@@ -490,9 +415,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/200-operator-prometheus
   to: /deckhouse/modules/200-operator-prometheus
   excludePaths:
@@ -509,9 +431,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/300-prometheus
   to: /deckhouse/modules/300-prometheus
   excludePaths:
@@ -528,9 +447,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/301-prometheus-metrics-adapter
   to: /deckhouse/modules/301-prometheus-metrics-adapter
   excludePaths:
@@ -547,9 +463,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler
   to: /deckhouse/modules/302-vertical-pod-autoscaler
   excludePaths:
@@ -566,9 +479,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/303-prometheus-pushgateway
   to: /deckhouse/modules/303-prometheus-pushgateway
   excludePaths:
@@ -585,9 +495,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-extended-monitoring
   to: /deckhouse/modules/340-extended-monitoring
   excludePaths:
@@ -604,9 +511,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-monitoring-custom
   to: /deckhouse/modules/340-monitoring-custom
   excludePaths:
@@ -623,9 +527,22 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
+- add: /modules/340-monitoring-deckhouse
+  to: /deckhouse/modules/340-monitoring-deckhouse
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
   excludePaths:
@@ -642,28 +559,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-kubernetes-control-plane
-  to: /deckhouse/modules/340-monitoring-kubernetes-control-plane
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-monitoring-ping
   to: /deckhouse/modules/340-monitoring-ping
   excludePaths:
@@ -680,9 +575,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
   excludePaths:
@@ -699,9 +591,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/402-ingress-nginx
   to: /deckhouse/modules/402-ingress-nginx
   excludePaths:
@@ -718,9 +607,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/460-log-shipper
   to: /deckhouse/modules/460-log-shipper
   excludePaths:
@@ -737,9 +623,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/462-loki
   to: /deckhouse/modules/462-loki
   excludePaths:
@@ -756,9 +639,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/470-chrony
   to: /deckhouse/modules/470-chrony
   excludePaths:
@@ -775,9 +655,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/500-cilium-hubble
   to: /deckhouse/modules/500-cilium-hubble
   excludePaths:
@@ -794,9 +671,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/500-okmeter
   to: /deckhouse/modules/500-okmeter
   excludePaths:
@@ -813,9 +687,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/500-openvpn
   to: /deckhouse/modules/500-openvpn
   excludePaths:
@@ -832,9 +703,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/500-upmeter
   to: /deckhouse/modules/500-upmeter
   excludePaths:
@@ -851,9 +719,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
   excludePaths:
@@ -870,9 +735,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/600-secret-copier
   to: /deckhouse/modules/600-secret-copier
   excludePaths:
@@ -889,9 +751,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/800-deckhouse-tools
   to: /deckhouse/modules/800-deckhouse-tools
   excludePaths:
@@ -908,9 +767,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/810-documentation
   to: /deckhouse/modules/810-documentation
   excludePaths:
@@ -927,9 +783,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
   stageDependencies:
@@ -956,9 +809,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/permission-browser-apiserver
   to: /deckhouse/modules/140-user-authz/templates/permission-browser-apiserver
   excludePaths:
@@ -975,9 +825,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
   excludePaths:
@@ -994,9 +841,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   excludePaths:
@@ -1013,9 +857,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/015-admission-policy-engine/templates/ratify
   to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
   excludePaths:
@@ -1032,9 +873,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/015-admission-policy-engine/crds/ratify
   to: /deckhouse/modules/015-admission-policy-engine/crds/ratify
   excludePaths:
@@ -1051,9 +889,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   stageDependencies:
@@ -1090,9 +925,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-agent
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
   excludePaths:
@@ -1109,9 +941,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-instance
   to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
   excludePaths:
@@ -1128,9 +957,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/templates/egress-policy
   to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
   excludePaths:
@@ -1147,9 +973,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   stageDependencies:
@@ -1171,9 +994,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/030-cloud-provider-zvirt
   to: /deckhouse/modules/030-cloud-provider-zvirt
   excludePaths:
@@ -1190,9 +1010,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/030-csi-vsphere
   to: /deckhouse/modules/030-csi-vsphere
   excludePaths:
@@ -1209,9 +1026,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
   excludePaths:
@@ -1228,9 +1042,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/capi/zvirt
   to: /deckhouse/modules/040-node-manager/capi/zvirt
   excludePaths:
@@ -1247,9 +1058,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   excludePaths:
@@ -1266,9 +1074,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/030-cloud-provider-huaweicloud
   to: /deckhouse/modules/030-cloud-provider-huaweicloud
   excludePaths:
@@ -1285,9 +1090,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   excludePaths:
@@ -1304,9 +1106,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/030-cloud-provider-vcd
   to: /deckhouse/modules/030-cloud-provider-vcd
   excludePaths:
@@ -1323,9 +1122,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-control-plane-manager/openapi/config-values.yaml
   to: /deckhouse/modules/040-control-plane-manager/openapi/config-values.yaml
   stageDependencies:
@@ -1352,9 +1148,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
   excludePaths:
@@ -1371,9 +1164,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-node-manager/capi/huaweicloud
   to: /deckhouse/modules/040-node-manager/capi/huaweicloud
   excludePaths:
@@ -1390,9 +1180,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
   excludePaths:
@@ -1409,9 +1196,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-node-manager/templates/monitoring.yaml
   to: /deckhouse/modules/040-node-manager/templates/monitoring.yaml
   stageDependencies:
@@ -1433,9 +1217,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-node-manager/templates/podmonitor.yaml
   to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
   stageDependencies:
@@ -1457,9 +1238,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/alliance
   to: /deckhouse/modules/110-istio/templates/alliance
   excludePaths:
@@ -1476,9 +1254,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/control-plane-ee
   to: /deckhouse/modules/110-istio/templates/control-plane-ee
   excludePaths:
@@ -1495,9 +1270,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/federation
   to: /deckhouse/modules/110-istio/templates/federation
   excludePaths:
@@ -1514,9 +1286,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/multicluster
   to: /deckhouse/modules/110-istio/templates/multicluster
   excludePaths:
@@ -1533,9 +1302,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/validations.yaml
   to: /deckhouse/modules/110-istio/templates/validations.yaml
   stageDependencies:
@@ -1557,9 +1323,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/ztunnel
   to: /deckhouse/modules/110-istio/templates/ztunnel
   excludePaths:
@@ -1576,9 +1339,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
   stageDependencies:
@@ -1619,11 +1379,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
-  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   stageDependencies:
@@ -1655,9 +1410,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/380-metallb/templates/speaker
   to: /deckhouse/modules/380-metallb/templates/speaker
   excludePaths:
@@ -1674,9 +1426,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
   to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json
   stageDependencies:
@@ -1703,9 +1452,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/450-network-gateway
   to: /deckhouse/modules/450-network-gateway
   excludePaths:
@@ -1722,9 +1468,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/610-service-with-healthchecks
   to: /deckhouse/modules/610-service-with-healthchecks
   excludePaths:
@@ -1741,9 +1484,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
   to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
   stageDependencies:
@@ -1770,9 +1510,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/fe/modules/500-basic-auth
   to: /deckhouse/modules/500-basic-auth
   excludePaths:
@@ -1789,9 +1526,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/fe/modules/500-okmeter/templates/daemonset.yaml
   to: /deckhouse/modules/500-okmeter/templates/daemonset.yaml
   stageDependencies:

@@ -96,7 +96,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет решение д
 
 ## Мониторинг control plane
 
-Мониторинг control plane осуществляется с помощью [модуля `monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/), который организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга следующих компонентов кластера:
+Мониторинг control plane осуществляется модулем [`control-plane-manager`](/modules/control-plane-manager/), который организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга следующих компонентов кластера:
 
 - kube-apiserver;
 - kube-controller-manager;
@@ -118,7 +118,7 @@ DKP безопасно собирает метрики мониторинга и
 - мониторинг случаев продолжительного превышения CPU steal;
 - мониторинг состояния таблицы Conntrack на узлах;
 - мониторинг подов с некорректным состоянием (как возможное следствие проблем с kubelet);
-- мониторинг компонентов control plane (реализуется модулем `monitoring-kubernetes-control-plane`).
+- мониторинг компонентов control plane (реализуется модулем `control-plane-manager`).
 
 ## Режим расширенного мониторинга
 

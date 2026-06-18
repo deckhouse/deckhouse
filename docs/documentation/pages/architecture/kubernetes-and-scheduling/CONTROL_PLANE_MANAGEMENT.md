@@ -109,18 +109,16 @@ The following external components interact with the module:
 
 ## Cluster control plane monitoring
 
-Control plane monitoring is provided by the [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) module, which ensures secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
+Control plane monitoring is provided by the `control-plane-manager` module, which ensures secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
 
 * **kube-apiserver**
 * **kube-controller-manager**
 * **kube-scheduler**
 * **etcd**
 
-For configuration details, refer to the [`monitoring-kubernetes-control-plane` module documentation](/modules/monitoring-kubernetes-control-plane/).
+### Control plane metrics collection components
 
-### Components of the monitoring-kubernetes-control-plane module
-
-The module consists of a single component:
+A single component is responsible for control plane metrics collection:
 
 1. **control-plane-proxy** (DaemonSet): Runs on all master nodes and includes a single container:
 
@@ -140,8 +138,8 @@ Control-plane-proxy interacts with the following components:
 
 **Prometheus-main** interacts with **control-plane-proxy** to collect control plane component metrics.
 
-The interaction between the `monitoring-kubernetes-control-plane` module and the cluster control plane is shown in the architecture diagram of the `control-plane-manager` module above.
+The interaction between the control-plane-proxy component and the cluster control plane is shown in the architecture diagram of the `control-plane-manager` module above.
 
 ### Metrics collection from kube-apiserver
 
-Metrics from **kube-apiserver** are collected directly by **prometheus-main**. The [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) module adds the corresponding metric collection rules to the **prometheus-main** configuration.
+Metrics from **kube-apiserver** are collected directly by **prometheus-main**. The `control-plane-manager` module adds the corresponding metric collection rules to the **prometheus-main** configuration.

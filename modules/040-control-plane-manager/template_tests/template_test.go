@@ -387,6 +387,44 @@ apiserver:
 		})
 	})
 
+	Context("Control plane metrics scrape stack", func() {
+		Context("With ServiceMonitor CRD available", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.discovery.apiVersions", `["monitoring.coreos.com/v1/ServiceMonitor"]`)
+				f.HelmRender()
+			})
+
+			It("should render control-plane-proxy stack, ServiceMonitors and scraper role", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("DaemonSet", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Service", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceAccount", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeTrue())
+
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:control-plane-proxy:rbac-proxy").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("Without ServiceMonitor CRD", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.discovery.apiVersions", `[]`)
+				f.HelmRender()
+			})
+
+			It("should not render the scrape stack", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("DaemonSet", "d8-monitoring", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeFalse())
+			})
+		})
+	})
+
 	Context("Prometheus rules", func() {
 		assertSpecDotGroupsArray := func(rule object_store.KubeObject, length int) {
 			Expect(rule.Exists()).To(BeTrue())

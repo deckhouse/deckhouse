@@ -87,7 +87,6 @@ editions:
   - metallb
   - monitoring-custom
   - monitoring-kubernetes
-  - monitoring-kubernetes-control-plane
   - monitoring-ping
   - multitenancy-manager
   - namespace-configurator

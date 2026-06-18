@@ -3,7 +3,8 @@ cpu: 10m
 memory: 15Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if or (.Values.global.discovery.apiVersions | has "monitoring.coreos.com/v1/ServiceMonitor") (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor") }}
+{{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -91,3 +92,4 @@ spec:
               path: /scheduler/metrics
             - upstream: http://127.0.0.1:2381/metrics
               path: /etcd/metrics
+{{- end }}
