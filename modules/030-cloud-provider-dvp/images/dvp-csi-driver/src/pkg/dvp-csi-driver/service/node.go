@@ -42,6 +42,7 @@ type NodeService struct {
 	csi.UnimplementedNodeServer
 	nodeName    string
 	dvpCloudAPI *dvpapi.DVPCloudAPI
+	volumeLocks *volumeLocks
 }
 
 var NodeCaps = []csi.NodeServiceCapability_RPC_Type{
@@ -57,6 +58,7 @@ func NewNode(
 	return &NodeService{
 		nodeName:    nodeName,
 		dvpCloudAPI: dvpCloudAPI,
+		volumeLocks: newVolumeLocks(),
 	}
 }
 
@@ -118,6 +120,17 @@ func (n *NodeService) NodePublishVolume(
 	}
 	diskName := req.VolumeId
 
+	targetPath := req.GetTargetPath()
+	if targetPath == "" {
+		return nil, status.Error(codes.InvalidArgument, "target path not provided")
+	}
+
+	lockKey := volumeLockKey(diskName, targetPath)
+	if !n.volumeLocks.tryAcquire(lockKey) {
+		return nil, status.Errorf(codes.Aborted, "volume %q operation already in progress for %q", diskName, targetPath)
+	}
+	defer n.volumeLocks.release(lockKey)
+
 	device, err := n.getDevicePath(ctx, diskName)
 	if err != nil {
 		klog.Errorf("Failed to fetch device by for volume %v", diskName)
@@ -128,7 +141,6 @@ func (n *NodeService) NodePublishVolume(
 		return n.publishBlockVolume(req, device)
 	}
 
-	targetPath := req.GetTargetPath()
 	err = os.MkdirAll(targetPath, 0o644)
 	if err != nil {
 		return nil, errors.New(err.Error())
@@ -247,6 +259,12 @@ func (n *NodeService) NodeUnpublishVolume(
 	if target == "" {
 		return nil, status.Error(codes.InvalidArgument, "targetpath not provided")
 	}
+
+	lockKey := volumeLockKey(req.GetVolumeId(), target)
+	if !n.volumeLocks.tryAcquire(lockKey) {
+		return nil, status.Errorf(codes.Aborted, "volume %q operation already in progress for %q", req.GetVolumeId(), target)
+	}
+	defer n.volumeLocks.release(lockKey)
 
 	klog.Infof("NodeUnpublishVolume: unmounting %s", target)
 
