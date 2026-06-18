@@ -659,7 +659,7 @@ annotations:
 | `false` (по умолчанию) | Прежний режим: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в том числе `telemetry.v2.prometheus` для Sail). Модуль всегда создаёт `Telemetry` `d8-main` в `d8-istio` только для access log; без `spec.metrics` / `spec.tracing` и без `defaultProviders.metrics` |
 | `true` | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены; тот же `Telemetry` `d8-main` дополняется `spec.metrics` (и при настроенной трассировке — `spec.tracing` через `deckhouse-tracing` из [`tracing.collector`](configuration.html#parameters-tracing-collector)). Формат журнала — в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) |
 
-### Как включить режим Telemetry API
+### Включение режима Telemetry API
 
 Пример `ModuleConfig`:
 
