@@ -181,23 +181,24 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 ```mermaid
 flowchart LR
   subgraph CLUSTER["Кластер"]
-    INPULL["In-cluster pull<br/>(controller, trivy, ...)"]
-    SVC(["registry service<br/>registry.d8-system.svc:5001"])
-    PROXY["registry-incluster-proxy<br/>(pods на master) ✅"]
-    NODES["Узлы (containerd, mirroring:<br/>только новый источник)"]
+    inClusterAccess["In-cluster access<br/>(controller, trivy, ...)"]
+    registryService(["registry service<br/>registry.d8-system.svc:5001"])
+    registryStaticProxy["registry-incluster-proxy"]
+    criAccess["CRI access"]
+    containerd["containerd"]
   end
 
-  EXT[("Внешний реестр")]
+  externalRegistry[("Внешний реестр")]
 
-  INPULL ==>|"in-cluster pull<br/>registry.d8-system.svc:5001"| SVC ==> PROXY ==> EXT
-  NODES ==>|"CRI pull (mirroring)<br/>registry.d8-system.svc:5001"| EXT
+  inClusterAccess ==> |registry.d8-system.svc:5001| registryService ==> registryStaticProxy ==> externalRegistry
+  criAccess ==> |registry.d8-system.svc:5001| containerd ==>|"mirroring"| externalRegistry
 
   classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
   classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
   classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
-  class PROXY,SVC,INPULL work;
-  class NODES cri;
-  class EXT ext;
+  class registryStaticProxy,registryService,inClusterAccess work;
+  class criAccess,containerd cri;
+  class externalRegistry ext;
 ```
 
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `DeckhouseRegistrySwitchReady`](RUNBOOK.md#deckhouseregistryswitchready).
@@ -391,25 +392,26 @@ $ cat /etc/containerd/registry.d/registry.d8-system.svc:5001/host.toml
 ```mermaid
 flowchart LR
   subgraph CLUSTER["Кластер"]
-    INPULL["In-cluster pull<br/>(controller, trivy, ...)"]
-    NODES["Узлы (containerd, mirroring:<br/>только новый источник)"]
-    SVC(["registry service<br/>registry.d8-system.svc:5001"])
-    PROXY["registry-proxy<br/>(static pod на каждом узле) ✅"]
-    SP["registry-nodeservices-&lt;master-node&gt;<br/>(static pods на master) ✅"]
+    inClusterAccess["In-cluster access<br/>(controller, trivy, ...)"]
+    criAccess["CRI access"]
+    containerd["containerd"]
+    registryService(["registry service<br/>registry.d8-system.svc:5001"])
+    registryStaticProxy["registry-proxy-&lt;master-node&gt;<br/>(static pods)"]
+    registryStaticPod["registry-nodeservices-&lt;master-node&gt;<br/>(static pods)"]
   end
 
-  EXT[("Внешний реестр")]
+  externalRegistry[("Внешний реестр")]
 
-  INPULL ==>|"in-cluster pull<br/>registry.d8-system.svc:5001"| SVC ==> SP
-  NODES ==>|"CRI pull<br/>registry.d8-system.svc:5001"| PROXY ==>|"балансировка"| SP
-  SP ==> EXT
+  inClusterAccess ==>|"registry.d8-system.svc:5001"| registryService ==> registryStaticPod
+  criAccess ==>|"registry.d8-system.svc:5001"| containerd ==> |"mirroring"| registryStaticProxy ==>|"балансировка"| registryStaticPod
+  registryStaticPod ==> externalRegistry
 
   classDef work fill:#cdebc5,stroke:#4c9a3f,color:#16400d;
   classDef cri fill:#ffd9b3,stroke:#d97a2b,color:#5c2e00;
   classDef ext fill:#e2d4f7,stroke:#8b5cc4,color:#2e1052;
-  class PROXY,SVC,INPULL,SP work;
-  class NODES cri;
-  class EXT ext;
+  class registryStaticProxy,registryService,inClusterAccess,registryStaticPod work;
+  class criAccess,containerd cri;
+  class externalRegistry ext;
 ```
 
 **Что делать, если этап не прошел**: см. [RUNBOOK.md → `DeckhouseRegistrySwitchReady`](RUNBOOK.md#deckhouseregistryswitchready).
