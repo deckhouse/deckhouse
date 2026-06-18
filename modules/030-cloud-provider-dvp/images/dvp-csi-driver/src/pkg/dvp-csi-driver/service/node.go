@@ -158,7 +158,7 @@ func (n *NodeService) NodePublishVolume(
 		notMnt = true
 	}
 	if !notMnt {
-		klog.Infof("Target path %s is already mounted, skipping publish", targetPath)
+		klog.Infof("Filesystem target path %s is already mounted, skipping publish", targetPath)
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
@@ -209,7 +209,6 @@ func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (strin
 }
 
 func (n *NodeService) publishBlockVolume(req *csi.NodePublishVolumeRequest, device string) (*csi.NodePublishVolumeResponse, error) {
-	klog.Infof("Publishing block volume, device: %s, req: %+v", device, req)
 	file, err := os.OpenFile(req.TargetPath, os.O_CREATE, os.FileMode(0o644))
 	if err != nil {
 		if !os.IsExist(err) {
@@ -235,9 +234,11 @@ func (n *NodeService) publishBlockVolume(req *csi.NodePublishVolumeRequest, devi
 		notMnt = true
 	}
 	if !notMnt {
-		klog.Infof("Target path %s is already mounted, skipping publish", req.TargetPath)
+		klog.Infof("Block target path %s is already mounted, skipping publish", req.TargetPath)
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
+
+	klog.Infof("Publishing block volume, device: %s, req: %+v", device, req)
 
 	err = mounter.Mount(device, req.TargetPath, "", []string{"bind"})
 	if err != nil {
