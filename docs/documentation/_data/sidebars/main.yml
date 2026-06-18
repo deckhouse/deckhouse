@@ -1311,6 +1311,10 @@ entries:
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
             - title:
+                en: Deckhouse module
+                ru: Модуль Deckhouse
+              url: /architecture/deckhouse/deckhouse.html
+            - title:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
