@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package capimachinedeployment
+package capi
 
 import (
 	"context"
@@ -43,24 +43,16 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-const (
-	cloudProviderSecretName      = "d8-node-manager-cloud-provider"
-	cloudProviderSecretNamespace = "kube-system"
-	clusterConfigSecretName      = "d8-cluster-configuration"
-	clusterConfigSecretNamespace = "kube-system"
-	clusterUUIDConfigMapName     = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS       = "kube-system"
-)
-
 func init() {
-	register.RegisterController("capi-machine-deployment", &deckhousev1.NodeGroup{}, &Reconciler{})
+	register.RegisterController("capi-machine-deployment", &deckhousev1.NodeGroup{}, &MachineDeploymentReconciler{})
 }
 
-type Reconciler struct {
+// MachineDeploymentReconciler creates/updates MachineDeployments from NodeGroups.
+type MachineDeploymentReconciler struct {
 	register.Base
 }
 
-func (r *Reconciler) SetupWatches(w register.Watcher) {
+func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	mcmMD := &unstructured.Unstructured{}
 	mcmMD.SetGroupVersionKind(schema.GroupVersionKind{
 		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeployment",
@@ -77,7 +69,7 @@ func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: ng}}}
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	ng := &deckhousev1.NodeGroup{}
@@ -112,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) reconcileCloudMDs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil || len(ng.Spec.CloudInstances.Zones) == 0 {
@@ -277,7 +269,7 @@ func (r *Reconciler) reconcileCloudMDs(ctx context.Context, ng *deckhousev1.Node
 	return nil
 }
 
-func (r *Reconciler) reconcileStaticMD(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
 	mdName := ng.Name
@@ -365,7 +357,7 @@ func (r *Reconciler) reconcileStaticMD(ctx context.Context, ng *deckhousev1.Node
 	return nil
 }
 
-func (r *Reconciler) reconcileMCMReplicas(ctx context.Context, logger interface{ Info(string, ...any) }, ngName string, minReplicas, maxReplicas int32) error {
+func (r *MachineDeploymentReconciler) reconcileMCMReplicas(ctx context.Context, logger interface{ Info(string, ...any) }, ngName string, minReplicas, maxReplicas int32) error {
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{
 		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeploymentList",
@@ -413,7 +405,7 @@ type cloudProviderConfig struct {
 	capiMachineTemplateAPIVersion string
 }
 
-func (r *Reconciler) readCloudProviderConfig(ctx context.Context) (*cloudProviderConfig, error) {
+func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Context) (*cloudProviderConfig, error) {
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
@@ -435,7 +427,7 @@ func (r *Reconciler) readCloudProviderConfig(ctx context.Context) (*cloudProvide
 	return cfg, nil
 }
 
-func (r *Reconciler) readClusterUUID(ctx context.Context) (string, error) {
+func (r *MachineDeploymentReconciler) readClusterUUID(ctx context.Context) (string, error) {
 	cm := &corev1.ConfigMap{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: clusterUUIDConfigMapName, Namespace: clusterUUIDConfigMapNS,
@@ -445,13 +437,13 @@ func (r *Reconciler) readClusterUUID(ctx context.Context) (string, error) {
 	return cm.Data["cluster-uuid"], nil
 }
 
-type clusterConfiguration struct {
+type mdClusterConfiguration struct {
 	Cloud struct {
 		Prefix string `json:"prefix"`
 	} `json:"cloud"`
 }
 
-func (r *Reconciler) readInstancePrefix(ctx context.Context) (string, error) {
+func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (string, error) {
 	secret := &corev1.Secret{}
 	if err := r.Client.Get(ctx, types.NamespacedName{
 		Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace,
@@ -472,7 +464,7 @@ func (r *Reconciler) readInstancePrefix(ctx context.Context) (string, error) {
 		decoded = raw
 	}
 
-	cfg := &clusterConfiguration{}
+	cfg := &mdClusterConfiguration{}
 	if err := sigsyaml.Unmarshal(decoded, cfg); err != nil {
 		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}

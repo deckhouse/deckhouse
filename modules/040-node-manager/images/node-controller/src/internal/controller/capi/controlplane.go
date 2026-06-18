@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package capicontrolplane
+package capi
 
 import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -30,31 +28,21 @@ import (
 )
 
 func init() {
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "infrastructure.cluster.x-k8s.io",
-		Version: "v1alpha1",
-		Kind:    "DeckhouseControlPlane",
-	})
-	register.RegisterController("capi-control-plane", obj, &Reconciler{})
+	obj := newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane")
+	register.RegisterController("capi-control-plane", obj, &ControlPlaneReconciler{})
 }
 
-type Reconciler struct {
+// ControlPlaneReconciler marks DeckhouseControlPlane as ready/initialized.
+type ControlPlaneReconciler struct {
 	register.Base
 }
 
-func (r *Reconciler) SetupWatches(_ register.Watcher) {}
+func (r *ControlPlaneReconciler) SetupWatches(_ register.Watcher) {}
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "infrastructure.cluster.x-k8s.io",
-		Version: "v1alpha1",
-		Kind:    "DeckhouseControlPlane",
-	})
-
+	obj := newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane")
 	if err := r.Client.Get(ctx, req.NamespacedName, obj); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return ctrl.Result{}, nil
@@ -62,7 +50,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("get DeckhouseControlPlane: %w", err)
 	}
 
-	// Patch status: ready, initialized, externalManagedControlPlane.
 	original := obj.DeepCopy()
 	obj.Object["status"] = map[string]interface{}{
 		"initialized":                 true,
