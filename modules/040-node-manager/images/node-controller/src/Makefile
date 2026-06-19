@@ -60,7 +60,8 @@ test: envtest gotestfmt ## Run unit + envtest in two labeled sections with GitHu
 		eval $$fmt < $(GOTEST_JSON_UNIT); \
 		echo "📊 unit coverage: $$(go tool cover -func=cover-unit.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
 		echo ""; echo "☸️  ENVTEST (INTEGRATION) TESTS"; echo ""; \
-		KUBEBUILDER_ASSETS="$$assets" go test -json -run '$(ENVTEST_RUN_REGEX)' -coverprofile cover-envtest.out ./... > $(GOTEST_JSON_ENVTEST) 2>&1; erc=$$?; \
+		envpkgs="$$(grep -rl 'RunSpecs' internal/controller --include=suite_test.go | xargs -n1 dirname | sort -u | sed 's#^#./#')"; \
+		KUBEBUILDER_ASSETS="$$assets" go test -json -v $$envpkgs -run '$(ENVTEST_RUN_REGEX)' -coverprofile cover-envtest.out -args -ginkgo.v > $(GOTEST_JSON_ENVTEST) 2>&1; erc=$$?; \
 		eval $$fmt < $(GOTEST_JSON_ENVTEST); \
 		echo "📊 envtest coverage: $$(go tool cover -func=cover-envtest.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
 		echo ""; echo "==> [test] go test cache: unit $$(grep -c '(cached)' $(GOTEST_JSON_UNIT) 2>/dev/null || true) pkg, envtest $$(grep -c '(cached)' $(GOTEST_JSON_ENVTEST) 2>/dev/null || true) pkg reused (changing a package's code invalidates only that package + its importers)"; \
