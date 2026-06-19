@@ -274,7 +274,7 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 	{
 		descriptionEN := "Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`)."
-		descriptionRU := "Логировать операции create/update/patch/delete от системных `ServiceAccount` (`kube-system`, `d8-*`)."
+		descriptionRU := "Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`)."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
