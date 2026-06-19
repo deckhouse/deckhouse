@@ -268,8 +268,3 @@ func (a *Auth) Fill(req *http.Request) {
 		req.Header.Set("Authorization", "Bearer "+*a.Token)
 	}
 }
-
-type BlockOnAlerts struct {
-	Enabled  bool `json:"enabled"`
-	Severity int  `json:"severity"`
-}
