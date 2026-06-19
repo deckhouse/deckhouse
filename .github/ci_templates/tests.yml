@@ -127,6 +127,40 @@ steps:
 # </template: tests_before_build_template>
 {!{- end -}!}
 
+{!{ define "tests_node_controller_envtest_template" }!}
+# <template: tests_node_controller_envtest_template>
+{!{- $ctx := index . 0 }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
+  - name: Run node-controller tests
+    env:
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang") | quote }!}
+    run: |
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "⚓️ 📥 [$(date -u)] Pull base golang image..."
+      docker pull ${TESTS_IMAGE_NAME}
+      # Persistent on-runner cache for the kubebuilder assets (etcd, kube-apiserver, kubectl) and
+      # the setup-envtest tool. Create it up front so the bind mount is owned by the runner user
+      # (Docker would otherwise create a missing host path as root, making it unwritable in-container).
+      mkdir -p ~/envtest-assets
+      echo "⚓️ 🏎 [$(date -u)] Run node-controller tests (unit + envtest)..."
+      CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg -v ~/envtest-assets:/envtest-assets ${TESTS_IMAGE_NAME} sleep infinity)
+      docker exec ${CONTAINER_ID} pm install git
+      docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets"
+      docker rm -f ${CONTAINER_ID}
+# </template: tests_node_controller_envtest_template>
+{!{- end -}!}
+
 {!{ define "tests_webhooks_template" }!}
 # <template: tests_webhooks_template>
 {!{- $ctx       := index . 0 }!}

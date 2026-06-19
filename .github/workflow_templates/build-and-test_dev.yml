@@ -165,6 +165,14 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
 
+  tests_node_controller:
+    if: ${{ needs.pull_request_info.outputs.changes_node_controller == 'true' }}
+    name: Tests node-controller (envtest)
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "tests_node_controller_envtest_template" (slice $ctx) | strings.Indent 4 }!}
+
   tests_python_webhooks:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests python webhooks
