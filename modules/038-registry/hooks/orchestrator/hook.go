@@ -240,6 +240,17 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		)
 	}
 
+	// Clear any stale InitParams that may have been persisted in the registry-state
+	// Secret from an earlier bootstrap or mode-switch phase. In steady state (cluster
+	// fully bootstrapped, no init secret present) these frozen params must not shadow
+	// live configuration changes such as an imagesRepo update.
+	if !initSecret.IsExist && helpers.ClusterIsBootstrapped(input) {
+		if values.State.InitParams != nil {
+			input.Logger.Info("Clearing stale InitParams: cluster is bootstrapped and no init secret present")
+			values.State.InitParams = nil
+		}
+	}
+
 	configSecret, err := helpers.SnapshotToSingle[v1core.Secret](input, configSnapName)
 	if err != nil {
 		if errors.Is(err, helpers.ErrNoSnapshot) {
