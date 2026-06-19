@@ -328,7 +328,7 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 	{
 		descriptionEN := "Log all LIST operations in all namespaces."
-		descriptionRU := "Логировать все LIST-запросы во всех пространствах имён."
+		descriptionRU := "Логировать все LIST-запросы во всех неймспейсах."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"list"},
