@@ -154,8 +154,6 @@ spec:
             value: "10"
           - name: UPMETER_EXPORT_TIMEOUT
             value: "15s"
-          - name: UPMETER_EXPORT_BATCH_SLOTS
-            value: "12"
           # https://github.com/flant/addon-operator/blob/main/RUNNING.md#environment-variables
           - name: KUBE_CLIENT_QPS
             value: "5"

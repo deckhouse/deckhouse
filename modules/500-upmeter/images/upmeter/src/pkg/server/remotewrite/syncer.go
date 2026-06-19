@@ -152,7 +152,6 @@ func (s *syncer) export(ctx context.Context) error {
 	}
 
 	// Send to the remote storage
-	pushStart := time.Now()
 	if err = s.exporter.Export(ctx, timeseries); err != nil {
 		switch {
 		case errors.Is(err, ErrNotAcceptedByStorage):
@@ -170,13 +169,9 @@ func (s *syncer) export(ctx context.Context) error {
 			return fmt.Errorf("exporting timeseries (%s): %w", slot.Format("15:04:05"), err)
 		}
 	}
-	pushDur := time.Since(pushStart)
 
-	cleanStart := time.Now()
-	cleanErr := s.clean(slot)
-	s.logger.Infof("exported timeseries to remote storage: slot=%s series=%d pushDur=%s cleanDur=%s",
-		slot.Format("15:04:05"), len(timeseries), pushDur, time.Since(cleanStart))
-	return cleanErr
+	s.logger.Infof("exported timeseries %s", slot.Format("15:04:05"))
+	return s.clean(slot)
 }
 
 func (s *syncer) clean(slot time.Time) error {
@@ -386,15 +381,10 @@ func (sc *syncers) AddEpisodes(origin string, episodes []*check.Episode, slotSiz
 		if syncer.slotSize != slotSize {
 			continue
 		}
-		start := time.Now()
 		err := syncer.Add(origin, episodes)
 		if err != nil {
-			sc.logger.Errorf("remote_write queue failed: syncID=%s origin=%s episodes=%d slotSize=%s queueDur=%s: %v",
-				syncer.syncID, origin, len(episodes), slotSize, time.Since(start), err)
 			return err
 		}
-		sc.logger.Infof("remote_write queued to export table: syncID=%s origin=%s episodes=%d slotSize=%s queueDur=%s",
-			syncer.syncID, origin, len(episodes), slotSize, time.Since(start))
 	}
 
 	return nil

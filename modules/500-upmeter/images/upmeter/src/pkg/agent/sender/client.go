@@ -77,29 +77,21 @@ func (c *Client) Send(reqBody []byte) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", c.UserAgent)
 
-	start := time.Now()
 	resp, err := c.client.Do(req)
 	if err != nil {
-		log.Infof("http POST %s failed after %s: reqBytes=%d err=%v", c.url, time.Since(start), len(reqBody), err)
 		return fmt.Errorf("sending: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
-	rtt := time.Since(start)
 	if err != nil {
-		log.Infof("http POST %s: reqBytes=%d status=%d rtt=%s, but reading response body failed: %v",
-			c.url, len(reqBody), resp.StatusCode, rtt, err)
 		return fmt.Errorf("reading server response body: %v", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Infof("http POST %s: reqBytes=%d status=%d rtt=%s respBytes=%d (unexpected status)",
-			c.url, len(reqBody), resp.StatusCode, rtt, len(body))
 		return fmt.Errorf("unexpected upmeter response: status=%d, body=%q", resp.StatusCode, string(body))
 	}
 
-	log.Infof("http POST %s: reqBytes=%d status=%d rtt=%s respBytes=%d", c.url, len(reqBody), resp.StatusCode, rtt, len(body))
 	return nil
 }
 

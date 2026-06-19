@@ -34,26 +34,16 @@ type Sender struct {
 	storage  *ListStorage
 	interval time.Duration
 
-	// batchSlots limits how many earliest time slots are drained from the WAL and sent in a single
-	// request. It lets the agent quickly catch up after a server downtime instead of sending one
-	// 30s slot per tick. In steady state there is at most one slot pending, so a single slot is sent.
-	batchSlots int
-
 	stop chan struct{}
 	done chan struct{}
 }
 
-func New(client *Client, recv chan []check.Episode, storage *ListStorage, interval time.Duration, batchSlots int) *Sender {
-	if batchSlots < 1 {
-		batchSlots = 1
-	}
-
+func New(client *Client, recv chan []check.Episode, storage *ListStorage, interval time.Duration) *Sender {
 	s := &Sender{
-		client:     client,
-		recv:       recv,
-		storage:    storage,
-		interval:   interval,
-		batchSlots: batchSlots,
+		client:   client,
+		recv:     recv,
+		storage:  storage,
+		interval: interval,
 
 		stop: make(chan struct{}),
 		done: make(chan struct{}),
@@ -123,9 +113,7 @@ func (s *Sender) cleanupLoop() {
 }
 
 func (s *Sender) export() error {
-	listStart := time.Now()
-	episodes, err := s.storage.List(s.batchSlots)
-	listDur := time.Since(listStart)
+	episodes, err := s.storage.List()
 	if err != nil {
 		return err
 	}
@@ -134,70 +122,20 @@ func (s *Sender) export() error {
 		return nil
 	}
 
-	earliest, latest := slotRange(episodes)
-	slots := countSlots(episodes)
-
-	log.Infof("export batch start: episodes=%d slots=%d earliest=%s latest=%s listDur=%s",
-		len(episodes), slots, fmtSlot(earliest), fmtSlot(latest), listDur)
-
-	// The batch may span several slots, so clean up to the latest one sent.
-	sendStart := time.Now()
-	sentBytes, err := s.send(episodes)
-	sendDur := time.Since(sendStart)
+	err = s.send(episodes)
 	if err != nil {
-		log.Errorf("export batch failed: episodes=%d slots=%d earliest=%s latest=%s bytes=%d sendDur=%s: %v",
-			len(episodes), slots, fmtSlot(earliest), fmtSlot(latest), sentBytes, sendDur, err)
 		return err
 	}
 
-	cleanStart := time.Now()
-	err = s.storage.Clean(latest)
-	cleanDur := time.Since(cleanStart)
+	slot := episodes[0].TimeSlot
+	err = s.storage.Clean(slot)
 	if err != nil {
-		return fmt.Errorf("cleaning send storage, slot=%v: %v", latest, err)
+		return fmt.Errorf("cleaning send storage, slot=%v: %v", slot, err)
 	}
-
-	remaining, cntErr := s.storage.CountSlots()
-	if cntErr != nil {
-		log.Errorf("cannot count remaining backlog: %v", cntErr)
-		remaining = -1
-	}
-
-	log.Infof("export batch ok: episodes=%d slots=%d earliest=%s latest=%s bytes=%d backlogSlotsRemaining=%d listDur=%s sendDur=%s cleanDur=%s totalDur=%s",
-		len(episodes), slots, fmtSlot(earliest), fmtSlot(latest), sentBytes, remaining,
-		listDur, sendDur, cleanDur, time.Since(listStart))
 	return nil
 }
 
-// slotRange returns the earliest and the latest time slot found in the batch.
-func slotRange(episodes []check.Episode) (earliest, latest time.Time) {
-	earliest = episodes[0].TimeSlot
-	latest = episodes[0].TimeSlot
-	for _, ep := range episodes[1:] {
-		if ep.TimeSlot.Before(earliest) {
-			earliest = ep.TimeSlot
-		}
-		if ep.TimeSlot.After(latest) {
-			latest = ep.TimeSlot
-		}
-	}
-	return earliest, latest
-}
-
-// countSlots counts how many distinct time slots the batch spans.
-func countSlots(episodes []check.Episode) int {
-	seen := make(map[int64]struct{}, len(episodes))
-	for _, ep := range episodes {
-		seen[ep.TimeSlot.Unix()] = struct{}{}
-	}
-	return len(seen)
-}
-
-func fmtSlot(t time.Time) string {
-	return t.Format("15:04:05")
-}
-
-func (s *Sender) send(episodes []check.Episode) (int, error) {
+func (s *Sender) send(episodes []check.Episode) error {
 	data := api.EpisodesPayload{
 		Origin:   run.ID(),
 		Episodes: episodes,
@@ -205,10 +143,10 @@ func (s *Sender) send(episodes []check.Episode) (int, error) {
 
 	body, err := json.Marshal(data)
 	if err != nil {
-		return 0, fmt.Errorf("marshalling to JSON: %v", err)
+		return fmt.Errorf("marshalling to JSON: %v", err)
 	}
 
-	return len(body), s.client.Send(body)
+	return s.client.Send(body)
 }
 
 func (s *Sender) Stop() {

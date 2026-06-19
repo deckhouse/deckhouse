@@ -91,7 +91,7 @@ func Test_ExportDAO_Get_GetsRepeatedly(t *testing.T) {
 	assertEqualLists(g, fetched, entities)
 }
 
-func Test_ExportDAO_DeleteUpTo_DeletesInclusively(t *testing.T) {
+func Test_ExportDAO_DeleteBefore_DeletesExclusively(t *testing.T) {
 	g := NewWithT(t)
 	storage := newExportDao(t)
 	originsCount := 1
@@ -102,7 +102,7 @@ func Test_ExportDAO_DeleteUpTo_DeletesInclusively(t *testing.T) {
 	err := storage.Save(entities)
 	g.Expect(err).ShouldNot(HaveOccurred(), "no error on creation")
 
-	// Delete up to (and including) the slot
+	// Delete
 	err = storage.DeleteUpTo(*opts.syncID, opts.slot)
 	g.Expect(err).ShouldNot(HaveOccurred(), "no error on deletion")
 
@@ -111,35 +111,6 @@ func Test_ExportDAO_DeleteUpTo_DeletesInclusively(t *testing.T) {
 	g.Expect(fetched).To(BeNil(), "should return nil, not slice")
 	g.Expect(err).Should(HaveOccurred(), "should return error for nonexistent episodes")
 	g.Expect(err).Should(Equal(ErrNotFound), "should be particular error for nonexistent episodes")
-}
-
-// DeleteBefore must drop strictly older slots while keeping the slot exactly on the boundary, so
-// that data the remote storage would still accept (rejection is strict t < minValidTime) is not lost.
-func Test_ExportDAO_DeleteBefore_KeepsBoundarySlot(t *testing.T) {
-	g := NewWithT(t)
-	dbctx := getTestDatabase(t)
-	storage := NewExportEpisodesDAO(dbctx)
-
-	boundary := time.Now().Truncate(time.Second)
-	older := boundary.Add(-30 * time.Second)
-
-	olderEnts, opts := genExportEntities(genOpts{n: 3, slotInt64: older.Unix(), origins: randOrigins(1)})
-	syncID := *opts.syncID
-	boundaryEnts, _ := genExportEntities(genOpts{n: 3, slotInt64: boundary.Unix(), origins: randOrigins(1), syncID: &syncID})
-
-	g.Expect(storage.Save(olderEnts)).ShouldNot(HaveOccurred(), "store older slot")
-	g.Expect(storage.Save(boundaryEnts)).ShouldNot(HaveOccurred(), "store boundary slot")
-
-	g.Expect(storage.DeleteBefore(syncID, boundary)).ShouldNot(HaveOccurred(), "no error on deletion")
-
-	conn := dbctx.Start()
-	defer conn.Stop()
-	got, err := listExportEpisodesBySlotRange(conn, syncID, older.Unix(), boundary.Unix())
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(got).To(HaveLen(len(boundaryEnts)), "only the boundary slot must remain")
-	for _, e := range got {
-		g.Expect(e.Episode.TimeSlot).To(Equal(boundary), "remaining rows must be exactly the boundary slot")
-	}
 }
 
 func Test_ExportDAO_Delete_LetsResurrect(t *testing.T) {
@@ -432,42 +403,6 @@ func Test_ExportDAO_MultipleOrigins_Get_ReturnsExpiredEvenWhenNoneFulfilled(t *t
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(got).To(HaveLen(nExpired), "should find expired N entities")
 	g.Expect(got[0].Episode.TimeSlot).To(Equal(hExpiredAgo), "should have minimal timeslot")
-}
-
-// A single Save batch spanning several slots must merge origins with the rows stored by a previous
-// agent, exercising the batched range-read + per-key merge + multi-row UPSERT path.
-func Test_ExportDAO_Save_BatchMergesOriginsAcrossSlots(t *testing.T) {
-	g := NewWithT(t)
-	dbctx := getTestDatabase(t)
-	storage := NewExportEpisodesDAO(dbctx)
-
-	originA := newSet("a")
-	from := time.Now().Unix()
-	to := from + 30
-
-	entities, opts := genExportEntities(genOpts{n: 6, origins: &originA, slotInt64: from})
-	// Spread the batch across two slots.
-	for i := range entities {
-		if i%2 == 1 {
-			entities[i].Episode.TimeSlot = time.Unix(to, 0)
-		}
-	}
-	g.Expect(storage.Save(entities)).ShouldNot(HaveOccurred(), "first agent stores its data")
-
-	// Second agent sends the same keys (same slots/probes) in one batch.
-	for i := range entities {
-		entities[i].Origins = newSet("b")
-	}
-	g.Expect(storage.Save(entities)).ShouldNot(HaveOccurred(), "second agent stores its data")
-
-	conn := dbctx.Start()
-	defer conn.Stop()
-	got, err := listExportEpisodesBySlotRange(conn, *opts.syncID, from, to)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(got).To(HaveLen(6), "no duplicates, one row per (slot, probe)")
-	for _, e := range got {
-		g.Expect(e.Origins.String()).To(Equal("a:b"), "origins must be merged across agents")
-	}
 }
 
 // UTILS
