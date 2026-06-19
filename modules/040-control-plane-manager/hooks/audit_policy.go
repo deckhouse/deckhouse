@@ -246,8 +246,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		descriptionEN := "Log create and delete operations for `Node` resources with request/response payload."
-		descriptionRU := "Логировать операции create/delete для ресурсов `Node` с телом запроса/ответа."
+		descriptionEN := "Log create and delete operations for Node resources with request/response payload."
+		descriptionRU := "Логировать операции create/delete для ресурсов Node с телом запроса/ответа."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequestResponse,
 			Verbs: []string{"create", "delete"},
