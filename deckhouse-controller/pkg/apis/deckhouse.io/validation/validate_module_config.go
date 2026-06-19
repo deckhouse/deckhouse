@@ -363,7 +363,7 @@ func (v *moduleConfigValidator) validateCELTransition(cfg *v1alpha1.ModuleConfig
 	}
 
 	// Get spec.Schema from addon-operator SchemaStorage.
-	addonSchema := v.getConfigSchema(cfg.GetName())
+	addonSchema := v.ConfigSchema(cfg.GetName())
 	if addonSchema == nil {
 		return nil, nil
 	}
@@ -386,10 +386,10 @@ func (v *moduleConfigValidator) validateCELTransition(cfg *v1alpha1.ModuleConfig
 	return nil, nil
 }
 
-// getConfigSchema returns the spec.Schema for the module's config values.
+// ConfigSchema returns the spec.Schema for the module's config values.
 // Chain: v.moduleStorage.GetModuleByName → GetBasicModule → GetSchemaStorage → Schemas[ConfigValuesSchema]
 // The addon-operator uses the same schema in ValidateConfigValues().
-func (v *moduleConfigValidator) getConfigSchema(moduleName string) *spec.Schema {
+func (v *moduleConfigValidator) ConfigSchema(moduleName string) *spec.Schema {
 	mod, err := v.moduleStorage.GetModuleByName(moduleName)
 	if err != nil {
 		return nil

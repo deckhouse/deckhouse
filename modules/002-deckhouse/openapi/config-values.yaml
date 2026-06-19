@@ -560,5 +560,5 @@ properties:
         message: "registry: when mode is not 'Unmanaged', 'unmanaged' section must be omitted."
 
 x-deckhouse-validations:
-  - expression: "!has(oldSelf.bundle) || (has(self.bundle) && self.bundle == oldSelf.bundle)"
+  - expression: "(has(oldSelf.bundle) ? oldSelf.bundle : 'Default') == (has(self.bundle) ? self.bundle : 'Default')"
     message: "bundle is immutable"
