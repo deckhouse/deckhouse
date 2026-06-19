@@ -138,6 +138,18 @@ type Runtime struct {
 
 	addonModuleManager moduleManagerI
 
+	// servedCRDs tracks, per enabled module, the GVKs of the CRDs that module
+	// serves (applies during EnsureCRDs). The union over all entries is exposed
+	// to helm templates as .Platform.Capabilities.Has. Entries are added when a
+	// module's CRDs are ensured and pruned when the module is no longer enabled,
+	// so the capabilities list contains only CRDs currently served by an enabled
+	// module.
+	servedCRDs struct {
+		mu       sync.Mutex
+		byModule map[string][]string // module name -> sorted served GVKs
+		union    []string            // cached sorted, deduplicated union
+	}
+
 	logger *log.Logger
 }
 
@@ -169,6 +181,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.modules = make(map[string]*modules.Module)
 	r.adopted = make(map[string]struct{})
 	r.moduleVersions.m = make(map[string]*semver.Version)
+	r.servedCRDs.byModule = make(map[string][]string)
 	r.packages = lifecycle.NewStore()
 
 	// Initialize foundational services

@@ -28,6 +28,7 @@ import (
 	"time"
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
+	"github.com/flant/addon-operator/pkg/addon-operator/converge"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
@@ -448,6 +449,28 @@ func NewDeckhouseController(
 					return
 				case names := <-functionalModulesCh:
 					pkgRuntime.ProcessFunctionalModules(names)
+				}
+			}
+		}()
+
+		// Hand off CRD installation from addon-operator to the new package
+		// runtime. At its converge CRD barrier addon-operator emits the set of
+		// modules whose CRDs must exist and blocks until the runtime reports
+		// completion. The runtime installs every module's CRDs and returns the
+		// applied GVKs so addon-operator can refresh global.discovery.apiVersions.
+		ensureCRDsCh := make(chan converge.EnsureCRDsRequest)
+		operator.SetEnsureCRDsChannel(ensureCRDsCh)
+
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case req := <-ensureCRDsCh:
+					gvks, ensureErr := pkgRuntime.EnsureModulesCRDs(ctx, req.Modules, req.EnabledModules)
+					// Done is buffered (size 1) by the producer, so this send
+					// never blocks even if the producer already timed out.
+					req.Done <- converge.EnsureCRDsResult{GVKs: gvks, Err: ensureErr}
 				}
 			}
 		}()

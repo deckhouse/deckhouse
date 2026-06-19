@@ -84,6 +84,7 @@ type Application struct {
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
 	globalValuesGetter GlobalValuesGetter
+	capabilitiesGetter CapabilitiesGetter
 
 	logger *log.Logger
 }
@@ -110,11 +111,16 @@ type Config struct {
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
 
 	GlobalValuesGetter GlobalValuesGetter
+	CapabilitiesGetter CapabilitiesGetter
 }
 
 // GlobalValuesGetter returns the platform global values. When prefix is true the
 // values are wrapped in a "global" key, otherwise the bare global values are returned.
 type GlobalValuesGetter func(prefix bool) addonutils.Values
+
+// CapabilitiesGetter returns the platform capabilities (CRD GVKs served by
+// enabled modules) exposed to helm templates as .Platform.Capabilities.Has.
+type CapabilitiesGetter func() []string
 
 // NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -143,6 +149,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.scheduleManager = cfg.ScheduleManager
 	a.kubeEventsManager = cfg.KubeEventsManager
 	a.globalValuesGetter = cfg.GlobalValuesGetter
+	a.capabilitiesGetter = cfg.CapabilitiesGetter
 	a.logger = logger
 
 	parsed, err := semver.NewVersion(a.definition.Version)
@@ -234,7 +241,12 @@ func (a *Application) getPlatformValues() addonutils.Values {
 		global = a.globalValuesGetter(false)
 	}
 
-	return platform.BuildValues(global)
+	var capabilities []string
+	if a.capabilitiesGetter != nil {
+		capabilities = a.capabilitiesGetter()
+	}
+
+	return platform.BuildValues(global, capabilities)
 }
 
 // GetRuntimeValues returns runtime values in string format

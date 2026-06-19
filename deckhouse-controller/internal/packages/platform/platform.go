@@ -40,8 +40,9 @@ const (
 //
 //   - EnabledModules: the enabled modules list (PascalCase mirror of
 //     global.enabledModules for the new .Platform contract).
-//   - Capabilities.Has: the list of enabled platform capabilities (currently empty).
-func BuildValues(global addonutils.Values) addonutils.Values {
+//   - Capabilities.Has: the CRD GVKs (group/version/kind) currently served by
+//     enabled modules. A nil/empty capabilities slice yields an empty list.
+func BuildValues(global addonutils.Values, capabilities []string) addonutils.Values {
 	platform := make(addonutils.Values, len(global)+2)
 
 	// Mirror the full global values tree as-is (camelCase keys preserved),
@@ -50,9 +51,14 @@ func BuildValues(global addonutils.Values) addonutils.Values {
 		platform[key] = value
 	}
 
+	has := capabilities
+	if has == nil {
+		has = []string{}
+	}
+
 	platform[EnabledModulesKey] = enabledModulesFrom(global)
 	platform[CapabilitiesKey] = addonutils.Values{
-		CapabilitiesHasKey: []string{},
+		CapabilitiesHasKey: has,
 	}
 
 	return platform

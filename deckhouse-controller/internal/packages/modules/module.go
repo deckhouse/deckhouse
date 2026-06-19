@@ -82,6 +82,7 @@ type Module struct {
 
 	globalValuesGetter       GlobalValuesGetter
 	globalConfigValuesGetter GlobalValuesGetter
+	capabilitiesGetter       CapabilitiesGetter
 
 	logger *log.Logger
 }
@@ -110,9 +111,14 @@ type Config struct {
 
 	GlobalValuesGetter       GlobalValuesGetter
 	GlobalConfigValuesGetter GlobalValuesGetter
+	CapabilitiesGetter       CapabilitiesGetter
 }
 
 type GlobalValuesGetter func(prefix bool) addonutils.Values
+
+// CapabilitiesGetter returns the platform capabilities (CRD GVKs served by
+// enabled modules) exposed to helm templates as .Platform.Capabilities.Has.
+type CapabilitiesGetter func() []string
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -135,6 +141,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.metricStorage = cfg.MetricStorage
 	m.globalValuesGetter = cfg.GlobalValuesGetter
 	m.globalConfigValuesGetter = cfg.GlobalConfigValuesGetter
+	m.capabilitiesGetter = cfg.CapabilitiesGetter
 	m.logger = logger
 
 	parsed, err := semver.NewVersion(m.definition.Version)
@@ -217,7 +224,11 @@ func (m *Module) GetRuntimeValues() string {
 
 	// .Platform mirrors the full global values tree (global.<path> -> .Platform.<path>)
 	// plus the structured EnabledModules/Capabilities fields.
-	platformValues := platform.BuildValues(global)
+	var capabilities []string
+	if m.capabilitiesGetter != nil {
+		capabilities = m.capabilitiesGetter()
+	}
+	platformValues := platform.BuildValues(global, capabilities)
 	marshalledPlatform, _ := json.Marshal(platformValues)
 
 	return fmt.Sprintf("Module=%s,Deckhouse=%s,Platform=%s", marshalled, marshalledGlobal, marshalledPlatform)

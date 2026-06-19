@@ -44,9 +44,19 @@ var defaultLabels = map[string]string{
 
 // EnsureCRDs installs or update primary CRDs for deckhouse-controller
 func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
+	_, err := EnsureCRDsReturnGVKs(ctx, client, crdsGlob)
+	return err
+}
+
+// EnsureCRDsReturnGVKs installs or updates the CRDs matched by crdsGlob and
+// returns the GroupVersionKinds of the CRDs that were applied. The list is used
+// by callers that need to surface the freshly available API versions (e.g. to
+// populate global.discovery.apiVersions). Behavior is otherwise identical to
+// EnsureCRDs.
+func EnsureCRDsReturnGVKs(ctx context.Context, client kubeClient, crdsGlob string) ([]string, error) {
 	crds, err := filepath.Glob(crdsGlob)
 	if err != nil {
-		return fmt.Errorf("glob %q: %w", crdsGlob, err)
+		return nil, fmt.Errorf("glob %q: %w", crdsGlob, err)
 	}
 
 	inst := crdinstaller.NewCRDsInstaller(
@@ -71,8 +81,8 @@ func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
 	client.InvalidateDiscoveryCache()
 
 	if err != nil {
-		return fmt.Errorf("run: %w", err)
+		return nil, fmt.Errorf("run: %w", err)
 	}
 
-	return nil
+	return inst.GetAppliedGVKs(), nil
 }

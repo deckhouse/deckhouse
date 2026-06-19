@@ -44,7 +44,17 @@ func NewInstaller(client *klient.Client) *Installer {
 // It looks up <packagePath>/crds/*.yaml; files prefixed with "doc-" are skipped
 // by the underlying installer. A package without a crds/ directory is a no-op.
 func (i *Installer) EnsureCRDs(ctx context.Context, packagePath string) error {
+	_, err := i.EnsureCRDsReturnGVKs(ctx, packagePath)
+	return err
+}
+
+// EnsureCRDsReturnGVKs installs or updates the CRDs bundled in the package at
+// packagePath and returns the GroupVersionKinds of the CRDs that were applied.
+// The GVK list lets callers report the freshly available API versions back to
+// addon-operator (global.discovery.apiVersions). Behavior is otherwise
+// identical to EnsureCRDs.
+func (i *Installer) EnsureCRDsReturnGVKs(ctx context.Context, packagePath string) ([]string, error) {
 	glob := filepath.Join(packagePath, crdsDir, "*.yaml")
 
-	return d8apis.EnsureCRDs(ctx, i.client, glob)
+	return d8apis.EnsureCRDsReturnGVKs(ctx, i.client, glob)
 }

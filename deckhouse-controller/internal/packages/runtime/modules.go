@@ -16,10 +16,12 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -98,6 +100,159 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	for _, task := range tasks {
 		r.queueService.Enqueue(ctx, name, task)
 	}
+}
+
+// EnsureModulesCRDs installs the CRDs bundled with each named module, resolving
+// every module's on-disk path from the addon-operator module manager and
+// applying <path>/crds/*.yaml via the shared CRD installer.
+//
+// This is the consumer side of the CRD-ensure handoff: addon-operator pauses at
+// its CRD barrier, hands off the set of modules whose CRDs must exist, and
+// resumes only once this call returns. The call is therefore synchronous and
+// blocking — the caller (the handoff consumer) reports completion back to
+// addon-operator using the returned error.
+//
+// The returned GVKs are the GroupVersionKinds of every CRD applied across the
+// installed modules (deduplicated). addon-operator merges them into its
+// accumulate-only global.discovery.apiVersions, preserving the behavior it had
+// when it installed CRDs itself.
+//
+// enabledModules is the full set of currently enabled modules. It is used to
+// prune the per-module served-CRD registry that backs
+// .Platform.Capabilities.Has, so a module that has just been disabled drops out
+// of the capabilities view (and any CRD no longer served by any enabled module
+// disappears from it).
+//
+// All requested modules are attempted; per-module failures are aggregated so one
+// broken module does not hide the rest. The error is nil only when every
+// requested module's CRDs were applied successfully, otherwise a joined error
+// describing each failure.
+func (r *Runtime) EnsureModulesCRDs(ctx context.Context, names, enabledModules []string) ([]string, error) {
+	r.logger.Info("ensure CRDs for modules handed off by addon-operator",
+		slog.Int("count", len(names)),
+		slog.Any("modules", names))
+
+	if r.crdInstaller == nil {
+		return nil, errors.New("crd installer is not initialized")
+	}
+
+	var (
+		errs    []error
+		ensured int
+		seen    = make(map[string]struct{})
+		gvks    []string
+		// installed maps each successfully ensured module to the GVKs it serves,
+		// so the served-CRD registry can be refreshed for exactly those modules.
+		installed = make(map[string][]string, len(names))
+	)
+
+	for _, name := range names {
+		basic := r.addonModuleManager.GetModule(name)
+		if basic == nil {
+			errs = append(errs, fmt.Errorf("module %q: not known to the module manager", name))
+			continue
+		}
+
+		path := basic.GetPath()
+		moduleGVKs, err := r.crdInstaller.EnsureCRDsReturnGVKs(ctx, path)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("module %q: ensure CRDs from %q: %w", name, path, err))
+			continue
+		}
+
+		installed[name] = moduleGVKs
+
+		for _, gvk := range moduleGVKs {
+			if _, ok := seen[gvk]; ok {
+				continue
+			}
+			seen[gvk] = struct{}{}
+			gvks = append(gvks, gvk)
+		}
+
+		ensured++
+
+		r.logger.Debug("ensured module CRDs",
+			slog.String("module", name),
+			slog.String("path", path))
+	}
+
+	// Refresh the served-CRD registry: record what the just-ensured modules
+	// serve and drop any module no longer enabled, then recompute the union
+	// exposed as .Platform.Capabilities.Has.
+	r.updateServedCRDs(installed, enabledModules)
+
+	r.logger.Info("processed CRD-ensure handoff",
+		slog.Int("requested", len(names)),
+		slog.Int("ensured", ensured),
+		slog.Int("failed", len(errs)),
+		slog.Int("gvks", len(gvks)),
+		slog.Int("capabilities", len(r.Capabilities())))
+
+	return gvks, errors.Join(errs...)
+}
+
+// updateServedCRDs refreshes the per-module served-CRD registry and recomputes
+// the cached capabilities union.
+//
+// installed carries the GVKs freshly applied for each just-ensured module (its
+// entry is replaced). enabledModules is the authoritative set of currently
+// enabled modules: any registry entry for a module not in this set is removed,
+// which is how a disabled module's CRDs leave .Platform.Capabilities.Has when no
+// other enabled module serves them.
+func (r *Runtime) updateServedCRDs(installed map[string][]string, enabledModules []string) {
+	r.servedCRDs.mu.Lock()
+	defer r.servedCRDs.mu.Unlock()
+
+	// Upsert freshly ensured modules.
+	for name, moduleGVKs := range installed {
+		sorted := make([]string, len(moduleGVKs))
+		copy(sorted, moduleGVKs)
+		sort.Strings(sorted)
+		r.servedCRDs.byModule[name] = sorted
+	}
+
+	// Prune modules that are no longer enabled.
+	enabled := make(map[string]struct{}, len(enabledModules))
+	for _, name := range enabledModules {
+		enabled[name] = struct{}{}
+	}
+
+	for name := range r.servedCRDs.byModule {
+		if _, ok := enabled[name]; !ok {
+			delete(r.servedCRDs.byModule, name)
+		}
+	}
+
+	// Recompute the deduplicated, sorted union.
+	seen := make(map[string]struct{})
+	union := make([]string, 0)
+	for _, moduleGVKs := range r.servedCRDs.byModule {
+		for _, gvk := range moduleGVKs {
+			if _, ok := seen[gvk]; ok {
+				continue
+			}
+			seen[gvk] = struct{}{}
+			union = append(union, gvk)
+		}
+	}
+	sort.Strings(union)
+
+	r.servedCRDs.union = union
+}
+
+// Capabilities returns the platform capabilities exposed to helm templates as
+// .Platform.Capabilities.Has: the sorted, deduplicated set of CRD GVKs
+// (group/version/kind) currently served by enabled modules. The returned slice
+// is a copy and safe for the caller to retain or mutate.
+func (r *Runtime) Capabilities() []string {
+	r.servedCRDs.mu.Lock()
+	defer r.servedCRDs.mu.Unlock()
+
+	out := make([]string, len(r.servedCRDs.union))
+	copy(out, r.servedCRDs.union)
+
+	return out
 }
 
 // ProcessFunctionalModules consumes a functional-modules handoff signal from
@@ -269,6 +424,7 @@ func (r *Runtime) loadModuleConfFromPath(ctx context.Context, path string, embed
 	conf.MetricStorage = r.metricStorage
 	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 	conf.GlobalConfigValuesGetter = r.addonModuleManager.GetGlobal().GetConfigValues
+	conf.CapabilitiesGetter = r.Capabilities
 
 	return conf, nil
 }
@@ -302,6 +458,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	conf.MetricStorage = r.metricStorage
 	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 	conf.GlobalConfigValuesGetter = r.addonModuleManager.GetGlobal().GetConfigValues
+	conf.CapabilitiesGetter = r.Capabilities
 
 	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {
