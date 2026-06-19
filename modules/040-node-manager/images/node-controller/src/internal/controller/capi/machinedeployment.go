@@ -71,6 +71,7 @@ func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
 
 func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+	logger.Info("reconciling NodeGroup", "name", req.Name)
 
 	ng := &deckhousev1.NodeGroup{}
 	if err := r.Client.Get(ctx, req.NamespacedName, ng); err != nil {
