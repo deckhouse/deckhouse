@@ -1213,7 +1213,7 @@ spec:
 
 Горячее подключение памяти позволяет увеличивать объём памяти (`spec.memory.size`) у работающей ВМ без перезагрузки, если изменение можно применить через живую миграцию. Уменьшение размера памяти всегда требует перезагрузки ВМ.
 
-По умолчанию эта функциональность отключена. Чтобы включить, добавьте `HotplugMemoryWithLiveMigration` в массив `.spec.settings.featureGates` в ModuleConfig/virtualization:
+По умолчанию эта функциональность отключена. Чтобы включить, добавьте `HotplugMemoryWithLiveMigration` в массив `.spec.settings.featureGates` в ModuleConfig `virtualization`:
 
 ```yaml
 kind: ModuleConfig

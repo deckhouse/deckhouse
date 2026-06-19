@@ -238,15 +238,15 @@ ubuntu-24-04-pvc  Ready   false   100%       23h
    COPY ubuntu2404.img /disk/ubuntu2404.img
    ```
 
-1. Соберите образ и загрузите его в container registry. В качестве container registry в примере ниже использован docker.io. Для выполнения необходимо иметь учетную запись сервиса и настроенное окружение.
+1. Соберите образ контейнера. В примере ниже в качестве хранилища образов контейнеров использован [docker.com](https://www.docker.com/). Для выполнения необходимо иметь учётную запись сервиса и настроенное окружение:
 
    ```bash
    docker build -t docker.io/<username>/ubuntu2404:latest
    ```
 
-   где `username` — имя пользователя, указанное при регистрации в docker.io.
+   где `username` — имя пользователя, указанное при регистрации в [docker.com](https://www.docker.com/).
 
-1. Загрузите созданный образ в container registry:
+1. Загрузите созданный образ в хранилище образов контейнеров:
 
    ```bash
    docker push docker.io/<username>/ubuntu2204:latest

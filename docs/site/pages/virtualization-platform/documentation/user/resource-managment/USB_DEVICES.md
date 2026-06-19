@@ -4,7 +4,7 @@ permalink: en/virtualization-platform/documentation/user/resource-management/usb
 ---
 
 {% alert level="warning" %}
-USB device passthrough is available only in the **Enterprise Edition (EE)** of the Deckhouse Virtualization Platform.
+USB device passthrough is available only in the Deckhouse Virtualization Platform **Enterprise Edition (EE)**.
 {% endalert %}
 
 DVP supports USB device passthrough to virtual machines using DRA (Dynamic Resource Allocation). This section describes how to use USB devices with virtual machines.
@@ -32,14 +32,14 @@ USB device passthrough follows a defined lifecycle — from device discovery on 
 
 1. After the namespace is assigned, the module controller automatically creates a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource in that namespace.
 
-1. The [USBDevice](/modules/virtualization/cr.html#usbdevice) is attached to a virtual machine by adding it to the `.spec.usbDevices` resource field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
+1. The [USBDevice](/modules/virtualization/cr.html#usbdevice) is attached to a virtual machine by adding it to the `.spec.usbDevices` field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
 ## Quick start
 
 The following steps describe the minimal workflow for attaching a USB device to a virtual machine:
 
 1. Connect the USB device to a cluster node.
-1. Verify that a NodeUSBDevice resource has been created:
+1. Verify that a [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource has been created:
 
    ```bash
    d8 k get nodeusbdevice
@@ -64,7 +64,7 @@ The following steps describe the minimal workflow for attaching a USB device to 
    d8 k get usbdevice -n my-project
    ```
 
-1. Add the device to the `.spec.usbDevices` resource field of a [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
+1. Add the device to the `.spec.usbDevices` field of a [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
    ```bash
    d8 k apply -f - <<EOF
@@ -94,8 +94,8 @@ Example output:
 <!-- markdownlint-disable MD031 -->
 ```console
 NAME                 NODE           READY   ASSIGNED   NAMESPACE   AGE
-usb-flash-drive     node-1         True    False                  10m
-logitech-webcam     node-2         True    True      my-project   15m
+usb-flash-drive      node-1         True    False                  10m
+logitech-webcam      node-2         True    True       my-project  15m
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
@@ -110,13 +110,13 @@ The status of a [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) r
   - `NotFound`: Device is absent on the host.
 
 - **Assigned**: Indicates whether a namespace is assigned to the device.
-  - `Assigned`: Namespace is assigned and USBDevice resource is created.
+  - `Assigned`: Namespace is assigned and [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is created.
   - `Available`: No namespace is assigned for the device.
   - `InProgress`: Device connection to namespace is in progress.
 
 ### Assigning a namespace
 
-Before a USB device can be attached to a virtual machine, it must be exposed to a specific namespace. To make a USB device available in a specific namespace, set the `.spec.assignedNamespace` resource field:
+Before a USB device can be attached to a virtual machine, it must be exposed to a specific namespace. To make a USB device available in a specific namespace, set the `.spec.assignedNamespace` parameter of the [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource::
 
 ```bash
 d8 k apply -f - <<EOF
@@ -133,7 +133,7 @@ After assigning the namespace, a corresponding [USBDevice](/modules/virtualizati
 
 ## USBDevice
 
-When the related [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) has the `.spec.assignedNamespace` resource field set, a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is created in that namespace. It is a namespaced resource that represents a USB device available for attachment to virtual machines within a given namespace.
+When the related [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) has the `.spec.assignedNamespace` field set, a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is created in that namespace. It is a namespaced resource that represents a USB device available for attachment to virtual machines within a given namespace.
 
 Example of viewing USB devices in a namespace:
 
@@ -180,7 +180,7 @@ The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource provides sta
 
 ## Attaching USB device to VM
 
-After the [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is available in a namespace, it can be attached to a virtual machine. To attach a USB device to a virtual machine, add the device to the `.spec.usbDevices` resource field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource specification:
+After the [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is available in a namespace, it can be attached to a virtual machine. To attach a USB device to a virtual machine, add the device to the `.spec.usbDevices` field of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource specification:
 
 ```bash
 d8 k apply -f - <<EOF
@@ -198,7 +198,7 @@ EOF
 After creating or updating the VM, the USB device will be attached to the specified virtual machine.
 
 {% alert level="info" %}
-The virtual machine must be running on the same node where the USB device is physically connected.
+The USB device is automatically forwarded to the node where the virtual machine is running via the network (USBIP). There is no need to manually place the VM on the same node as the device.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -253,7 +253,7 @@ Status:
 
 {% alert level="info" %}
 If a USB device is physically disconnected from the node, the `Attached` condition becomes `False`.  
-Both `USBDevice` and `NodeUSBDevice` resources update their status conditions to indicate that the device is no longer present on the host.
+Both [USBDevice](/modules/virtualization/cr.html#usbdevice) and [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resources update their status conditions to indicate that the device is no longer present on the host.
 {% endalert %}
 
 ## Requirements and limitations

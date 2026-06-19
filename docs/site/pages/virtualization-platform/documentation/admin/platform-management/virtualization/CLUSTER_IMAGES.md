@@ -437,13 +437,13 @@ An image stored in a container registry has a specific format. Let’s consider 
    COPY ubuntu2404.img /disk/ubuntu2404.img
    ```
 
-1. Build the image and push it to a container registry. In this example, [docker.io](https://www.docker.com/) is used. To perform these steps, you need an account on the service and a properly configured environment:
+1. Build the container image. The example below uses [docker.com](https://www.docker.com/) as the container registry. You need an account on the service and a properly configured environment:
 
    ```shell
    docker build -t docker.io/<username>/ubuntu2404:latest
    ```
 
-   where `username` is the username you specified during registration on docker.io.
+   where `username` is the username you specified during registration on [docker.com](https://www.docker.com/).
 
 1. Push the created image to the container registry:
 

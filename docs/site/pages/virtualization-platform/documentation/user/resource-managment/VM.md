@@ -1202,7 +1202,7 @@ Memory hotplug lets you increase `spec.memory.size` for a running VM without res
 
 This functionality is disabled by default.
 
-To enable this functionality, add `HotplugMemoryWithLiveMigration` to `.spec.settings.featureGates` array in the ModuleConfig/virtualization:
+To enable this functionality, add `HotplugMemoryWithLiveMigration` to `.spec.settings.featureGates` array in the ModuleConfig `virtualization`:
 
 ```yaml
 kind: ModuleConfig
