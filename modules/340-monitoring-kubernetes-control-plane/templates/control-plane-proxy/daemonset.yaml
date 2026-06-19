@@ -104,8 +104,8 @@ spec:
               path: /controller-manager/metrics
             - upstream: https://127.0.0.1:10259/metrics
               upstreamInsecureSkipVerify: true
-            {{- end }}
               path: /scheduler/metrics
+            {{- end }}
             - upstream: http://127.0.0.1:2381/metrics
               path: /etcd/metrics
 {{- end }}
