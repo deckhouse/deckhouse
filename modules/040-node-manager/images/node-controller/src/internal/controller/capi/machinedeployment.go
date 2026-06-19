@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -71,18 +72,14 @@ func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
 
 func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
-	logger.Info("reconciling NodeGroup", "name", req.Name)
 
 	ng := &deckhousev1.NodeGroup{}
 	if err := r.Client.Get(ctx, req.NamespacedName, ng); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			logger.Info("NodeGroup not found, skipping")
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("get NodeGroup: %w", err)
 	}
-
-	logger.Info("NodeGroup found", "nodeType", ng.Spec.NodeType, "hasCloudInstances", ng.Spec.CloudInstances != nil, "hasStaticInstances", ng.Spec.StaticInstances != nil)
 
 	switch ng.Spec.NodeType {
 	case deckhousev1.NodeTypeCloudEphemeral:
@@ -112,35 +109,39 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
 	logger := log.FromContext(ctx)
 
-	if ng.Spec.CloudInstances == nil || len(ng.Spec.CloudInstances.Zones) == 0 {
-		logger.Info("skipping: no cloudInstances or zones")
+	if ng.Spec.CloudInstances == nil {
+		logger.Info("skipping: no cloudInstances")
 		return nil
 	}
 
 	cloudConfig, err := r.readCloudProviderConfig(ctx)
 	if err != nil {
-		logger.Info("error reading cloud provider config", "error", err)
 		return err
 	}
-	logger.Info("cloud provider config", "capiClusterName", cloudConfig.capiClusterName, "templateKind", cloudConfig.capiMachineTemplateKind)
 	if cloudConfig.capiClusterName == "" {
 		logger.Info("skipping: capiClusterName is empty")
 		return nil
 	}
 
+	// Zones can be explicitly set on the NodeGroup or discovered from the cloud provider secret.
+	zones := ng.Spec.CloudInstances.Zones
+	if len(zones) == 0 {
+		zones = cloudConfig.zones
+	}
+	if len(zones) == 0 {
+		logger.Info("skipping: no zones in NodeGroup or cloud provider secret")
+		return nil
+	}
+
 	clusterUUID, err := r.readClusterUUID(ctx)
 	if err != nil {
-		logger.Info("error reading cluster UUID", "error", err)
 		return err
 	}
-	logger.Info("cluster UUID", "uuid", clusterUUID)
 
 	instancePrefix, err := r.readInstancePrefix(ctx)
 	if err != nil {
-		logger.Info("error reading instance prefix", "error", err)
 		return err
 	}
-	logger.Info("instance prefix", "prefix", instancePrefix)
 
 	minReplicas := ng.Spec.CloudInstances.MinPerZone
 	maxReplicas := ng.Spec.CloudInstances.MaxPerZone
@@ -157,7 +158,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		infraAPIGroup = infraAPIGroup[:idx]
 	}
 
-	for _, zone := range ng.Spec.CloudInstances.Zones {
+	for _, zone := range zones {
 		hash := sha256Hash(clusterUUID + zone)
 		mdSuffix := fmt.Sprintf("%s-%s", ng.Name, hash)
 		mdName := mdSuffix
@@ -416,6 +417,7 @@ type cloudProviderConfig struct {
 	capiClusterName               string
 	capiMachineTemplateKind       string
 	capiMachineTemplateAPIVersion string
+	zones                         []string
 }
 
 func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Context) (*cloudProviderConfig, error) {
@@ -436,6 +438,9 @@ func (r *MachineDeploymentReconciler) readCloudProviderConfig(ctx context.Contex
 	}
 	if cfg.capiMachineTemplateAPIVersion == "" {
 		cfg.capiMachineTemplateAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
+	}
+	if raw := secret.Data["zones"]; len(raw) > 0 {
+		_ = json.Unmarshal(raw, &cfg.zones)
 	}
 	return cfg, nil
 }
