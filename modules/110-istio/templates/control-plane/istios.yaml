@@ -9,7 +9,6 @@
 
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- if get $versionInfo "supportsOperator" }}
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
@@ -123,6 +122,7 @@ spec:
             {{- end }}
           {{- end }}
         name: main-access-log-format
+{{- include "istioUserExtensionProviders" $ | nindent 6 }}
 
       # The rules below exclude upmeter-related namespaces from istiod's point of view.
       # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
@@ -260,6 +260,5 @@ spec:
       - matchExpressions:
         - key: job-name
           operator: Exists
-  {{- end }}
   {{- end }}
 {{- end }}
