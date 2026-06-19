@@ -37,11 +37,11 @@ search: network policy, network policies, NetworkPolicy, CiliumNetworkPolicy, Ci
 
 Если на уровне инфраструктуры есть требования по ограничению сетевого взаимодействия между серверами, при настройке кластера выполните следующие условия:
 
-- Включите режим туннелирования трафика подов: [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) для CNI Cilium, [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) для CNI Flannel. Дополнительно разрешите взаимодействие между узлами по VXLAN-порту из [списка сетевого взаимодействия компонентов платформы](../../../../reference/network_interaction.html).
+- Включите режим туннелирования трафика подов: [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) для CNI Cilium, [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) для CNI Flannel. Дополнительно разрешите взаимодействие между узлами по VXLAN-порту из [списка сетевого взаимодействия компонентов платформы](/ru/reference/network_interaction.html).
 - Разрешите передачу трафика между подсетями подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)), инкапсулированного в VXLAN, если в сети выполняется инспектирование трафика.
 - Разрешите взаимодействие с внешними системами, с которыми интегрируется кластер (LDAP, SMTP, внешние API).
 - Разрешите локальное сетевое взаимодействие в рамках каждого узла.
-- Разрешите взаимодействие между узлами по портам из [списка сетевого взаимодействия компонентов платформы](../../../../reference/network_interaction.html). Большинство портов входит в диапазон 4200–4299; новым компонентам платформы порты выделяются из этого диапазона при наличии возможности.
+- Разрешите взаимодействие между узлами по портам из [списка сетевого взаимодействия компонентов платформы](/ru/reference/network_interaction.html). Большинство портов входит в диапазон 4200–4299; новым компонентам платформы порты выделяются из этого диапазона при наличии возможности.
 
 ## Разделы
 
