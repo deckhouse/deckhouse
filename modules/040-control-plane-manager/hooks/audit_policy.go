@@ -176,8 +176,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	)
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "", Resources: []string{"configmaps"}, ResourceNames: []string{"cert-manager-cainjector-leader-election", "cert-manager-controller"}},
-		"Do not log cert-manager leader election `ConfigMaps`.",
-		"Не логировать `ConfigMap` cert-manager, используемые для выбора лидера.",
+		"Do not log cert-manager leader election ConfigMaps.",
+		"Не логировать ConfigMap cert-manager, используемые для выбора лидера.",
 	)
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "autoscaling.k8s.io", Resources: []string{"verticalpodautoscalercheckpoints"}},
