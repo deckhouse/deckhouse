@@ -56,9 +56,11 @@ const (
 	virtualizationPhaseRunning = "Running"
 	vmbdaPhaseAttached         = "Attached"
 	vmbdaPhaseFailed           = "Failed"
-	vmopPhaseCompleted         = "Completed"
-	vmopPhaseFailed            = "Failed"
-	vmopTypeEvict              = "Evict"
+
+	virtualizationVMNetworkPolicyName = "probe-vm-http"
+	vmopPhaseCompleted                = "Completed"
+	vmopPhaseFailed                   = "Failed"
+	vmopTypeEvict                     = "Evict"
 
 	virtualizationConditionAgentReady = "AgentReady"
 
@@ -100,6 +102,11 @@ var (
 		Group:    "virtualization.deckhouse.io",
 		Version:  "v1alpha3",
 		Resource: "virtualmachineclasses",
+	}
+	networkPolicyGVR = schema.GroupVersionResource{
+		Group:    "networking.k8s.io",
+		Version:  "v1",
+		Resource: "networkpolicies",
 	}
 )
 
@@ -264,6 +271,12 @@ func (c *virtualMachineLifecycleChecker) doVirtualMachineSetup(ctx context.Conte
 			return check.ErrFail("verification: VirtualDisk did not become Ready")
 		}
 		return lifecycleStepError("waiting for VirtualDisk", err)
+	}
+
+	if err := c.runStep("creating VirtualMachine NetworkPolicy", func() error {
+		return c.createVirtualMachineNetworkPolicy(ctx)
+	}); err != nil {
+		return lifecycleStepError("creating VirtualMachine NetworkPolicy", err)
 	}
 
 	if err := c.runStep("creating VirtualMachine", func() error { return c.createVirtualMachine(ctx) }); err != nil {
@@ -564,6 +577,33 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachineEvictOperation(ctx 
 		Namespace(c.namespace).
 		Create(ctx, obj, metav1.CreateOptions{})
 	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
+func (c *virtualMachineLifecycleChecker) createVirtualMachineNetworkPolicy(ctx context.Context) error {
+	manifest := virtualMachineNetworkPolicyManifest(c.agentID, c.namespace, c.probeName)
+	obj, err := decodeManifestToUnstructured(manifest)
+	if err != nil {
+		return err
+	}
+	_, err = c.access.Kubernetes().Dynamic().
+		Resource(networkPolicyGVR).
+		Namespace(c.namespace).
+		Create(ctx, obj, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
+func (c *virtualMachineLifecycleChecker) deleteVirtualMachineNetworkPolicy(ctx context.Context) error {
+	err := c.access.Kubernetes().Dynamic().
+		Resource(networkPolicyGVR).
+		Namespace(c.namespace).
+		Delete(ctx, virtualizationVMNetworkPolicyName, metav1.DeleteOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	return nil
@@ -1420,6 +1460,11 @@ func (c *virtualMachineLifecycleChecker) hasGarbage(ctx context.Context) (bool, 
 func (c *virtualMachineLifecycleChecker) cleanup(ctx context.Context) error {
 	var errs []error
 
+	if err := c.runStep("cleanup: delete VirtualMachine NetworkPolicy", func() error {
+		return c.deleteVirtualMachineNetworkPolicy(ctx)
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("delete VirtualMachine NetworkPolicy: %w", err))
+	}
 	if err := c.runStep("cleanup: delete VirtualMachineBlockDeviceAttachment", func() error {
 		err := c.deleteVirtualMachineBlockDeviceAttachment(ctx)
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -1742,4 +1787,31 @@ spec:
     name: %q
   virtualMachineName: %q
 `, agentID, VirtualizationGroupName, probeName, name, namespace, diskName, vmName)
+}
+
+func virtualMachineNetworkPolicyManifest(agentID, namespace, probeName string) string {
+	return fmt.Sprintf(`
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    heritage: upmeter
+    upmeter-agent: %q
+    upmeter-group: %q
+    upmeter-probe: %q
+  name: %q
+  namespace: %q
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-upmeter
+      ports:
+        - protocol: TCP
+          port: %d
+`, agentID, VirtualizationGroupName, probeName, virtualizationVMNetworkPolicyName, namespace, virtualizationVMHTTPGuestPort)
 }
