@@ -188,20 +188,6 @@ func Test_virtualMachineBlockDeviceAttachmentManifest(t *testing.T) {
 	assert.Equal(t, "probe-extra-disk", blockDeviceRef["name"])
 }
 
-func Test_virtualMachineService(t *testing.T) {
-	service := virtualMachineService("agent-01", "test-ns", VirtualizationLifecycleProbeName)
-
-	assert.Equal(t, virtualizationVMServiceName, service.Name)
-	assert.Equal(t, "test-ns", service.Namespace)
-	assert.Equal(t, VirtualizationLifecycleProbeName, service.Labels["upmeter-probe"])
-	assert.Equal(t, VirtualizationGroupName, service.Spec.Selector["upmeter-group"])
-	assert.Equal(t, VirtualizationLifecycleProbeName, service.Spec.Selector["upmeter-probe"])
-	assert.Len(t, service.Spec.Ports, 1)
-	assert.Equal(t, virtualizationVMHTTPServicePort, service.Spec.Ports[0].Port)
-	assert.Equal(t, int(virtualizationVMHTTPGuestPort), service.Spec.Ports[0].TargetPort.IntValue())
-	assert.Equal(t, v1.ProtocolTCP, service.Spec.Ports[0].Protocol)
-}
-
 func Test_virtualMachineNetworkPolicy(t *testing.T) {
 	networkPolicy := virtualMachineNetworkPolicy("agent-01", "test-ns", VirtualizationLifecycleProbeName)
 

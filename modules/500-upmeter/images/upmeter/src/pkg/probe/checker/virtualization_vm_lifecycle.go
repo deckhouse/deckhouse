@@ -50,8 +50,6 @@ const (
 	// VirtualizationImageName is the VirtualImage name used by VM lifecycle probes.
 	VirtualizationImageName               = "probe-image"
 	virtualizationVMName                  = "probe-vm"
-	virtualizationVMServiceName           = "probe-vm"
-	virtualizationVMHTTPServicePort       = int32(8080)
 	virtualizationVMHTTPGuestPort         = int32(80)
 	virtualizationVMNetworkPolicyName     = "probe-vm-http"
 	virtualizationDiskName                = "probe-disk"
@@ -560,22 +558,6 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 	return err
 }
 
-func (c *virtualMachineLifecycleChecker) createVirtualMachineService(ctx context.Context) error {
-	_, err := c.access.Kubernetes().CoreV1().
-		Services(c.namespace).
-		Create(ctx, virtualMachineService(c.agentID, c.namespace, c.probeName), metav1.CreateOptions{})
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return err
-	}
-	return nil
-}
-
-func (c *virtualMachineLifecycleChecker) deleteVirtualMachineService(ctx context.Context) error {
-	return c.access.Kubernetes().CoreV1().
-		Services(c.namespace).
-		Delete(ctx, virtualizationVMServiceName, metav1.DeleteOptions{})
-}
-
 func (c *virtualMachineLifecycleChecker) createVirtualMachineNetworkPolicy(ctx context.Context) error {
 	_, err := c.access.Kubernetes().NetworkingV1().
 		NetworkPolicies(c.namespace).
@@ -793,10 +775,20 @@ func (c *virtualMachineLifecycleChecker) waitGuestExtraDiskDetached(ctx context.
 }
 
 func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx context.Context) (guestInventory, error) {
+	ip, err := c.virtualMachineIPAddress(ctx)
+	if err != nil {
+		return guestInventory{}, err
+	}
+	if ip == "" {
+		return guestInventory{}, fmt.Errorf("VirtualMachine %q has empty status.ipAddress", virtualizationVMName)
+	}
+
+	url := fmt.Sprintf("http://%s:%d/json", ip, virtualizationVMHTTPGuestPort)
+
 	requestCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, c.virtualMachineGuestInventoryURL(), nil)
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, url, nil)
 	if err != nil {
 		return guestInventory{}, err
 	}
@@ -814,15 +806,6 @@ func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx contex
 		return guestInventory{}, err
 	}
 	return inventory, nil
-}
-
-func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventoryURL() string {
-	return fmt.Sprintf(
-		"http://%s.%s.svc:%d/json",
-		virtualizationVMServiceName,
-		c.namespace,
-		virtualizationVMHTTPServicePort,
-	)
 }
 
 func (c *virtualMachineLifecycleChecker) waitVirtualMachineMigrationCompleted(ctx context.Context, initialNode string) error {
@@ -883,12 +866,6 @@ func (c *virtualMachineLifecycleChecker) verifyVirtualMachineMigration(ctx conte
 }
 
 func (c *virtualMachineLifecycleChecker) verifyVirtualMachineLifecycle(ctx context.Context) check.Error {
-	if err := c.runStep("creating VirtualMachine Service", func() error {
-		return c.createVirtualMachineService(ctx)
-	}); err != nil {
-		return lifecycleStepError("creating VirtualMachine Service", err)
-	}
-
 	if err := c.runStep("creating VirtualMachine NetworkPolicy", func() error {
 		return c.createVirtualMachineNetworkPolicy(ctx)
 	}); err != nil {
@@ -1062,6 +1039,17 @@ func (c *virtualMachineLifecycleChecker) virtualMachineNodeName(ctx context.Cont
 		return "", err
 	}
 	return unstructuredNestedString(obj.Object, "status", "nodeName"), nil
+}
+
+func (c *virtualMachineLifecycleChecker) virtualMachineIPAddress(ctx context.Context) (string, error) {
+	obj, err := c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineGVR).
+		Namespace(c.namespace).
+		Get(ctx, virtualizationVMName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	return unstructuredNestedString(obj.Object, "status", "ipAddress"), nil
 }
 
 func (c *virtualMachineLifecycleChecker) virtualMachineClassAvailableNodes(ctx context.Context) ([]string, error) {
@@ -1462,15 +1450,6 @@ func (c *virtualMachineLifecycleChecker) cleanup(ctx context.Context) error {
 	}); err != nil {
 		errs = append(errs, fmt.Errorf("delete VirtualMachine NetworkPolicy: %w", err))
 	}
-	if err := c.runStep("cleanup: delete VirtualMachine Service", func() error {
-		err := c.deleteVirtualMachineService(ctx)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}); err != nil {
-		errs = append(errs, fmt.Errorf("delete VirtualMachine Service: %w", err))
-	}
 	if err := c.runStep("cleanup: delete VirtualMachineBlockDeviceAttachment", func() error {
 		err := c.deleteVirtualMachineBlockDeviceAttachment(ctx)
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -1729,40 +1708,6 @@ spec:
   persistentVolumeClaim:
     size: %q
 `, agentID, VirtualizationGroupName, probeName, name, namespace, size)
-}
-
-func virtualMachineService(agentID, namespace, probeName string) *v1.Service {
-	return &v1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      virtualizationVMServiceName,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"heritage":      "upmeter",
-				agentLabelKey:   agentID,
-				"upmeter-group": VirtualizationGroupName,
-				"upmeter-probe": probeName,
-			},
-		},
-		Spec: v1.ServiceSpec{
-			Selector: map[string]string{
-				"heritage":      "upmeter",
-				"upmeter-group": VirtualizationGroupName,
-				"upmeter-probe": probeName,
-			},
-			Ports: []v1.ServicePort{
-				{
-					Name:       "http",
-					Port:       virtualizationVMHTTPServicePort,
-					TargetPort: intstr.FromInt(int(virtualizationVMHTTPGuestPort)),
-					Protocol:   v1.ProtocolTCP,
-				},
-			},
-		},
-	}
 }
 
 func virtualMachineNetworkPolicy(agentID, namespace, probeName string) *netv1.NetworkPolicy {
