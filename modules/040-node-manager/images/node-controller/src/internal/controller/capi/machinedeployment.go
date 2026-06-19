@@ -93,7 +93,6 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			}
 		}
 	default:
-		logger.Info("skipping: unsupported nodeType", "nodeType", ng.Spec.NodeType)
 		return ctrl.Result{}, nil
 	}
 
