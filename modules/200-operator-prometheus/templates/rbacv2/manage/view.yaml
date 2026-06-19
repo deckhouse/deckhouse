@@ -7,6 +7,7 @@ metadata:
     module: operator-prometheus
     rbac.deckhouse.io/aggregate-to-observability-as: viewer
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.operator-prometheus.view"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-operator-prometheus
   name: d8:system-capability:operator-prometheus:view

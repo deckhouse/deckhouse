@@ -11,6 +11,7 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.kubernetes.manage_resources"
     rbac.deckhouse.io/scope: namespace
     rbac.deckhouse.io/aggregate-to-namespace-as: manager
 rules:

@@ -19,12 +19,13 @@
 #
 # Deckhouse places system components (Dex authenticator pods, virtualization VM pods/PVCs/kvvm/kvvmi,
 # managed-service endpoints, etc.) INTO user/project namespaces. Those objects are marked with the
-# annotation `deckhouse.io/system-resource: "true"` (the marking convention defined by this card;
-# adding it to each module's resources is a separate cross-module effort — see the status doc). This
-# hook ENFORCES the marking at admission time:
+# label `deckhouse.io/system-resource: "true"` (the marking convention defined by this card; adding
+# it to each module's resources is a separate cross-module effort — see the status doc). A label
+# (not an annotation) is used so the system-pods snapshot can select marked pods server-side instead
+# of watching every pod. This hook ENFORCES the marking at admission time:
 #
 #   1. system-resource edit protection (binding rbacv2-system-resource-edit.deckhouse.io):
-#      UPDATE/PATCH/DELETE of an object annotated `deckhouse.io/system-resource: "true"` is denied for
+#      UPDATE/PATCH/DELETE of an object labeled `deckhouse.io/system-resource: "true"` is denied for
 #      everyone below superadmin. PATCH arrives as an UPDATE admission operation, so it is covered.
 #
 #   2. ProjectTemplate-owned (heritage) protection: objects labeled `heritage: multitenancy-manager`
@@ -35,9 +36,9 @@
 #
 #   3. exec/attach/port-forward protection (binding rbacv2-system-resource-exec.deckhouse.io):
 #      `create` on the pods/exec, pods/attach, pods/portforward subresources targeting a
-#      system-annotated pod is denied for users below superadmin. The admission object for a CONNECT
-#      request is a PodExecOptions/PodPortForwardOptions, not the Pod, so the target pod's annotation
-#      is resolved through the `system-pods` snapshot (Pods carrying the system-resource annotation).
+#      system-labeled pod is denied for users below superadmin. The admission object for a CONNECT
+#      request is a PodExecOptions/PodPortForwardOptions, not the Pod, so the target pod's marker is
+#      resolved through the `system-pods` snapshot (pods selected by the marker label server-side).
 #
 # Requester level: "superadmin" is determined as membership (directly by username, by ServiceAccount,
 # or by one of the request's groups) in a (Cluster)RoleBinding to one of the built-in superadmin
@@ -53,12 +54,20 @@
 # webhooks cannot enforce — it is an RBAC-layer / EE-authorizer / permission-browser concern. Adding
 # the `deckhouse.io/system-resource` annotation to each module's resources is a cross-module effort.
 
+import json
+import ssl
+import urllib.error
+import urllib.request
 from typing import Optional
 
 from deckhouse import hook
 from dotmap import DotMap
 
-SYSTEM_RESOURCE_ANNOTATION = "deckhouse.io/system-resource"
+# Marker LABEL (a label, not an annotation): a label lets the system-pods snapshot below use a
+# server-side labelSelector — the webhook-handler then watches ONLY marked pods instead of every pod
+# in the cluster (it runs on a tiny 50m/100Mi budget). The edit webhook likewise filters on the label
+# via matchConditions. Modules mark their in-namespace system objects with this label.
+SYSTEM_RESOURCE_LABEL = "deckhouse.io/system-resource"
 SYSTEM_RESOURCE_VALUE = "true"
 
 HERITAGE_LABEL = "heritage"
@@ -93,16 +102,22 @@ BYPASS_GROUPS = {
 BINDING_EDIT = "rbacv2-system-resource-edit.deckhouse.io"
 BINDING_EXEC = "rbacv2-system-resource-exec.deckhouse.io"
 
-SNAP_ROLEBINDINGS = "superadmin-rolebindings"
-SNAP_CLUSTERROLEBINDINGS = "superadmin-clusterrolebindings"
-SNAP_SYSTEM_PODS = "system-pods"
+# Superadmin status and the exec target pod are resolved with on-demand LIVE API reads — no informers
+# and no snapshots. The protected events are rare (a non-superadmin editing a system-labeled object,
+# or exec into a system pod), so a live read per event is cheap, keeps the webhook-handler free of any
+# standing watch (no all-pods / all-(cluster)rolebindings stream), and lets the hook register instantly
+# without waiting for informer synchronization (an unsynced informer previously left the whole handler
+# with an empty hook registry). Reads are scoped: RoleBindings only in the request namespace, the exec
+# target pod by name.
+_API_SERVER = "https://kubernetes.default.svc"
+_SA_DIR = "/var/run/secrets/kubernetes.io/serviceaccount"
+_API_TIMEOUT_SECONDS = 5
 
 CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: {BINDING_EDIT}
   group: main
-  includeSnapshotsFrom: ["{SNAP_ROLEBINDINGS}", "{SNAP_CLUSTERROLEBINDINGS}"]
   matchConditions:
   - name: exclude-kube-apiserver
     expression: '"system:apiserver" != request.userInfo.username'
@@ -122,12 +137,12 @@ kubernetesValidating:
     # ValidatingWebhookConfiguration and crash-loops the webhook-handler (fail-closed → every webhook on
     # the handler stops). `object` is null on DELETE / CONNECT; `oldObject` is null on CREATE — guarded.
     expression: >-
-      (object != null && (
-        (has(object.metadata.annotations) && '{SYSTEM_RESOURCE_ANNOTATION}' in object.metadata.annotations && object.metadata.annotations['{SYSTEM_RESOURCE_ANNOTATION}'] == '{SYSTEM_RESOURCE_VALUE}')
-        || (has(object.metadata.labels) && '{HERITAGE_LABEL}' in object.metadata.labels && object.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
-      )) || (oldObject != null && (
-        (has(oldObject.metadata.annotations) && '{SYSTEM_RESOURCE_ANNOTATION}' in oldObject.metadata.annotations && oldObject.metadata.annotations['{SYSTEM_RESOURCE_ANNOTATION}'] == '{SYSTEM_RESOURCE_VALUE}')
-        || (has(oldObject.metadata.labels) && '{HERITAGE_LABEL}' in oldObject.metadata.labels && oldObject.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
+      (object != null && has(object.metadata.labels) && (
+        ('{SYSTEM_RESOURCE_LABEL}' in object.metadata.labels && object.metadata.labels['{SYSTEM_RESOURCE_LABEL}'] == '{SYSTEM_RESOURCE_VALUE}')
+        || ('{HERITAGE_LABEL}' in object.metadata.labels && object.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
+      )) || (oldObject != null && has(oldObject.metadata.labels) && (
+        ('{SYSTEM_RESOURCE_LABEL}' in oldObject.metadata.labels && oldObject.metadata.labels['{SYSTEM_RESOURCE_LABEL}'] == '{SYSTEM_RESOURCE_VALUE}')
+        || ('{HERITAGE_LABEL}' in oldObject.metadata.labels && oldObject.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
       ))
   rules:
   - apiGroups:   ["*"]
@@ -137,7 +152,6 @@ kubernetesValidating:
     scope:       "Namespaced"
 - name: {BINDING_EXEC}
   group: main
-  includeSnapshotsFrom: ["{SNAP_ROLEBINDINGS}", "{SNAP_CLUSTERROLEBINDINGS}", "{SNAP_SYSTEM_PODS}"]
   matchConditions:
   - name: exclude-kube-apiserver
     expression: '"system:apiserver" != request.userInfo.username'
@@ -149,40 +163,6 @@ kubernetesValidating:
     operations:  ["CONNECT"]
     resources:   ["pods/exec", "pods/attach", "pods/portforward"]
     scope:       "Namespaced"
-kubernetes:
-- name: {SNAP_ROLEBINDINGS}
-  group: main
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: RoleBinding
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-  keepFullObjectsInMemory: false
-  jqFilter: |
-    if (.roleRef.name | test("^d8:(namespace|project|system):superadmin$"))
-    then {{namespace: .metadata.namespace, roleRef: .roleRef.name, subjects: (.subjects // [])}}
-    else null end
-- name: {SNAP_CLUSTERROLEBINDINGS}
-  group: main
-  apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRoleBinding
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-  keepFullObjectsInMemory: false
-  jqFilter: |
-    if (.roleRef.name | test("^d8:(namespace|project|system):superadmin$"))
-    then {{roleRef: .roleRef.name, subjects: (.subjects // [])}}
-    else null end
-- name: {SNAP_SYSTEM_PODS}
-  group: main
-  apiVersion: v1
-  kind: Pod
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-  keepFullObjectsInMemory: false
-  jqFilter: |
-    if ((.metadata.annotations // {{}})["{SYSTEM_RESOURCE_ANNOTATION}"] // "") == "{SYSTEM_RESOURCE_VALUE}"
-    then {{namespace: .metadata.namespace, name: .metadata.name}}
-    else null end
 """
 
 
@@ -217,24 +197,31 @@ def _to_list(value) -> list:
 def _markings(obj: dict) -> tuple[bool, bool]:
     """Return (is_system_resource, is_heritage_managed) for an object dict."""
     meta = obj.get("metadata") or {}
-    annotations = meta.get("annotations") or {}
     labels = meta.get("labels") or {}
-    is_system = annotations.get(SYSTEM_RESOURCE_ANNOTATION) == SYSTEM_RESOURCE_VALUE
+    is_system = labels.get(SYSTEM_RESOURCE_LABEL) == SYSTEM_RESOURCE_VALUE
     is_heritage = labels.get(HERITAGE_LABEL) == HERITAGE_MULTITENANCY
     return is_system, is_heritage
 
 
-def _snapshot(ctx: DotMap, name: str) -> list:
-    snapshots = ctx.snapshots
-    if not snapshots or name not in snapshots:
-        return []
-    results = []
-    for entry in snapshots[name]:
-        filter_result = entry.filterResult if hasattr(entry, "filterResult") else None
-        filter_result = _to_dict(filter_result)
-        if filter_result:
-            results.append(filter_result)
-    return results
+def _api_get(path: str) -> dict:
+    """On-demand authenticated GET against the in-cluster API server. Raises urllib.error.HTTPError on
+    a non-2xx response so the caller can distinguish 404 from a real failure."""
+    with open(f"{_SA_DIR}/token", encoding="utf-8") as f:
+        token = f.read().strip()
+    context = ssl.create_default_context(cafile=f"{_SA_DIR}/ca.crt")
+    req = urllib.request.Request(
+        _API_SERVER + path,
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=_API_TIMEOUT_SECONDS, context=context) as resp:
+        return json.loads(resp.read())
+
+
+def _superadmin_bindings(path: str) -> list:
+    """Live-list the (Cluster)RoleBindings at `path`, keeping only those bound to a built-in
+    superadmin ClusterRole."""
+    items = _api_get(path).get("items") or []
+    return [b for b in items if (b.get("roleRef") or {}).get("name") in SUPERADMIN_ROLES]
 
 
 def _subject_matches(subject: dict, username: str, groups: set) -> bool:
@@ -251,27 +238,41 @@ def _subject_matches(subject: dict, username: str, groups: set) -> bool:
     return False
 
 
-def is_superadmin(ctx: DotMap, username: str, groups: set, namespace: str) -> bool:
-    # Cluster-wide superadmin: a ClusterRoleBinding to a superadmin role grants it everywhere.
-    for fr in _snapshot(ctx, SNAP_CLUSTERROLEBINDINGS):
-        if fr.get("roleRef") in SUPERADMIN_ROLES:
-            for subject in fr.get("subjects") or []:
-                if _subject_matches(subject, username, groups):
-                    return True
-    # Namespace-scoped superadmin: a RoleBinding in the request namespace to a superadmin role.
-    for fr in _snapshot(ctx, SNAP_ROLEBINDINGS):
-        if fr.get("namespace") == namespace and fr.get("roleRef") in SUPERADMIN_ROLES:
-            for subject in fr.get("subjects") or []:
-                if _subject_matches(subject, username, groups):
-                    return True
+def _any_subject_matches(bindings: list, username: str, groups: set) -> bool:
+    for binding in bindings:
+        for subject in binding.get("subjects") or []:
+            if _subject_matches(subject, username, groups):
+                return True
     return False
 
 
-def is_system_pod(ctx: DotMap, namespace: str, name: str) -> bool:
-    for fr in _snapshot(ctx, SNAP_SYSTEM_PODS):
-        if fr.get("namespace") == namespace and fr.get("name") == name:
+def is_superadmin(username: str, groups: set, namespace: str) -> bool:
+    # Cluster-wide superadmin: a ClusterRoleBinding to a superadmin role grants it everywhere.
+    crbs = _superadmin_bindings("/apis/rbac.authorization.k8s.io/v1/clusterrolebindings")
+    if _any_subject_matches(crbs, username, groups):
+        return True
+    # Namespace-scoped superadmin: a RoleBinding to a superadmin role IN THE REQUEST NAMESPACE only
+    # (read just that namespace, never all of them).
+    if namespace:
+        rbs = _superadmin_bindings(
+            f"/apis/rbac.authorization.k8s.io/v1/namespaces/{namespace}/rolebindings"
+        )
+        if _any_subject_matches(rbs, username, groups):
             return True
     return False
+
+
+def is_system_pod(namespace: str, name: str) -> bool:
+    if not namespace or not name:
+        return False
+    try:
+        pod = _api_get(f"/api/v1/namespaces/{namespace}/pods/{name}")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return False  # pod is gone — nothing to protect
+        raise
+    labels = ((pod.get("metadata") or {}).get("labels")) or {}
+    return labels.get(SYSTEM_RESOURCE_LABEL) == SYSTEM_RESOURCE_VALUE
 
 
 def validate(ctx: DotMap) -> Optional[str]:
@@ -285,11 +286,11 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     binding = ctx.binding
     if binding == BINDING_EXEC:
-        return validate_exec(ctx, request, username, groups)
-    return validate_edit(ctx, request, username, groups)
+        return validate_exec(request, username, groups)
+    return validate_edit(request, username, groups)
 
 
-def validate_edit(ctx: DotMap, request: DotMap, username: str, groups: set) -> Optional[str]:
+def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
     new_obj = _to_dict(request.object)
     old_obj = _to_dict(request.oldObject)
 
@@ -320,10 +321,10 @@ def validate_edit(ctx: DotMap, request: DotMap, username: str, groups: set) -> O
         )
 
     # system-resource protection: editable only by superadmin.
-    if is_system and not is_superadmin(ctx, username, groups, namespace):
+    if is_system and not is_superadmin(username, groups, namespace):
         return (
             f'{kind} "{name}" is a Deckhouse system resource '
-            f'(annotation {SYSTEM_RESOURCE_ANNOTATION}={SYSTEM_RESOURCE_VALUE}) placed in this '
+            f'(label {SYSTEM_RESOURCE_LABEL}={SYSTEM_RESOURCE_VALUE}) placed in this '
             "namespace. It can be modified or deleted only by a superadmin "
             "(d8:namespace:superadmin / d8:project:superadmin)."
         )
@@ -331,21 +332,21 @@ def validate_edit(ctx: DotMap, request: DotMap, username: str, groups: set) -> O
     return None
 
 
-def validate_exec(ctx: DotMap, request: DotMap, username: str, groups: set) -> Optional[str]:
+def validate_exec(request: DotMap, username: str, groups: set) -> Optional[str]:
     namespace = request.namespace or ""
     pod_name = request.name or ""
     subresource = request.subResource or ""
 
-    if not is_system_pod(ctx, namespace, pod_name):
+    if not is_system_pod(namespace, pod_name):
         return None
 
-    if is_superadmin(ctx, username, groups, namespace):
+    if is_superadmin(username, groups, namespace):
         return None
 
     action = subresource or "exec"
     return (
         f'Pod "{pod_name}" is a Deckhouse system resource '
-        f'(annotation {SYSTEM_RESOURCE_ANNOTATION}={SYSTEM_RESOURCE_VALUE}); '
+        f'(label {SYSTEM_RESOURCE_LABEL}={SYSTEM_RESOURCE_VALUE}); '
         f'{action} into it is allowed only for a superadmin '
         "(d8:namespace:superadmin / d8:project:superadmin)."
     )

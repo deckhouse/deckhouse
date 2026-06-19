@@ -7,6 +7,7 @@ metadata:
     module: multitenancy-manager
     rbac.deckhouse.io/aggregate-to-namespace-as: viewer
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.multitenancy-manager.view"
     rbac.deckhouse.io/scope: namespace
   name: d8:namespace-capability:multitenancy-manager:view
   annotations:

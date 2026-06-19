@@ -7,6 +7,7 @@ metadata:
     module: cert-manager
     rbac.deckhouse.io/aggregate-to-security-as: manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cert-manager.edit"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cert-manager
   name: d8:system-capability:cert-manager:edit

@@ -7,6 +7,7 @@ metadata:
     module: local-path-provisioner
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.local-path-provisioner.edit"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-local-path-provisioner
   name: d8:system-capability:local-path-provisioner:edit

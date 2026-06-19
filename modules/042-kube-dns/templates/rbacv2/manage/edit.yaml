@@ -8,6 +8,7 @@ metadata:
     rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
     rbac.deckhouse.io/aggregate-to-networking-as: manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.kube-dns.edit"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: kube-system
   name: d8:system-capability:kube-dns:edit

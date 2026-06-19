@@ -7,6 +7,7 @@ metadata:
     module: log-shipper
     rbac.deckhouse.io/aggregate-to-observability-as: manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.log-shipper.edit"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-log-shipper
   name: d8:system-capability:log-shipper:edit

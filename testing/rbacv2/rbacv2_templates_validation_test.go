@@ -51,6 +51,10 @@ var (
 
 	aggregateLabelRe = regexp.MustCompile(`^rbac\.deckhouse\.io/aggregate-to-([a-z0-9-]+)-as$`)
 
+	// labelValueRe is the Kubernetes label-value grammar; the per-capability
+	// rbac.deckhouse.io/capability marker must satisfy it (and be <= 63 chars).
+	labelValueRe = regexp.MustCompile(`^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$`)
+
 	roleNameRe = map[string]*regexp.Regexp{
 		"system":    regexp.MustCompile(`^d8:system:([a-z]+)$`),
 		"subsystem": regexp.MustCompile(`^d8:subsystem:([a-z0-9-]+):([a-z]+)$`),
@@ -100,14 +104,28 @@ func TestRBACv2TemplatesValidation(t *testing.T) {
 	}
 
 	var errs []string
+	// capValues tracks the rbac.deckhouse.io/capability marker across every
+	// capability so the constructor in console can aggregate a single capability
+	// by a globally unique label.
+	capValues := map[string][]string{}
 	for _, path := range files {
 		obj, err := parseFile(path)
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("%s: %v", rel(root, path), err))
 			continue
 		}
+		if obj.labels[labelPrefix+"kind"] == "capability" {
+			if v := obj.labels[labelPrefix+"capability"]; v != "" {
+				capValues[v] = append(capValues[v], rel(root, path))
+			}
+		}
 		for _, problem := range validate(obj) {
 			errs = append(errs, fmt.Sprintf("%s: %s", rel(root, path), problem))
+		}
+	}
+	for value, paths := range capValues {
+		if len(paths) > 1 {
+			errs = append(errs, fmt.Sprintf("rbac.deckhouse.io/capability value %q is not unique, used by: %s", value, strings.Join(paths, ", ")))
 		}
 	}
 
@@ -331,6 +349,16 @@ func validateCapability(obj *clusterRoleFile, scope string) []string {
 	}
 	if len(filterAggregationLabels(obj.labels)) == 0 {
 		fail("capability %q does not aggregate into any role (no aggregate-to-*-as labels)", obj.name)
+	}
+	// Each capability must carry a unique rbac.deckhouse.io/capability marker so
+	// a custom role can selectively aggregate exactly this capability (k8s
+	// aggregation matches on labels, and the other labels are shared by tier).
+	marker := obj.labels[labelPrefix+"capability"]
+	switch {
+	case marker == "":
+		fail("capability %q must carry the %scapability label", obj.name, labelPrefix)
+	case len(marker) > 63 || !labelValueRe.MatchString(marker):
+		fail("capability %q has invalid %scapability label value %q", obj.name, labelPrefix, marker)
 	}
 	return errs
 }

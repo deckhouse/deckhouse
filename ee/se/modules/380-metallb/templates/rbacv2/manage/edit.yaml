@@ -7,6 +7,7 @@ metadata:
     module: metallb
     rbac.deckhouse.io/aggregate-to-networking-as: manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.metallb.edit"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-metallb
   name: d8:system-capability:metallb:edit

@@ -7,6 +7,7 @@ metadata:
     module: prometheus
     rbac.deckhouse.io/aggregate-to-observability-as: viewer
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.prometheus.view"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-monitoring
   name: d8:system-capability:prometheus:view

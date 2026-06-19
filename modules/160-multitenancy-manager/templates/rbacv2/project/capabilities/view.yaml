@@ -11,6 +11,7 @@ metadata:
     heritage: deckhouse
     module: multitenancy-manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "project-capability.multitenancy-manager.view"
     rbac.deckhouse.io/scope: project
     rbac.deckhouse.io/aggregate-to-project-as: viewer
 rules:

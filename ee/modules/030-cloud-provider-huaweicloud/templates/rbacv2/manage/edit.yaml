@@ -7,6 +7,7 @@ metadata:
     module: cloud-provider-huaweicloud
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cloud-provider-huaweicloud.edit"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-huaweicloud
   name: d8:system-capability:cloud-provider-huaweicloud:edit

@@ -7,6 +7,7 @@ metadata:
     module: user-authz
     rbac.deckhouse.io/aggregate-to-namespace-as: manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.user-authz.edit"
     rbac.deckhouse.io/scope: namespace
   name: d8:namespace-capability:user-authz:edit
   annotations:

@@ -11,6 +11,7 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "subsystem-capability.kubernetes.manage_resources"
     rbac.deckhouse.io/scope: subsystem
     rbac.deckhouse.io/subsystem: kubernetes
     rbac.deckhouse.io/aggregate-to-kubernetes-as: manager

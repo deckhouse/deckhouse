@@ -7,6 +7,7 @@ metadata:
     module: terraform-manager
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.terraform-manager.edit"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-system
   name: d8:system-capability:terraform-manager:edit

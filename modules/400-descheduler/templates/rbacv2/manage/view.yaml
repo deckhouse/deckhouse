@@ -7,6 +7,7 @@ metadata:
     module: descheduler
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.descheduler.view"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-descheduler
   name: d8:system-capability:descheduler:view

@@ -8,6 +8,7 @@ metadata:
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
     rbac.deckhouse.io/aggregate-to-networking-as: viewer
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.istio.view"
     rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-istio
   name: d8:system-capability:istio:view

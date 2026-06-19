@@ -7,6 +7,7 @@ metadata:
     module: user-authz
     rbac.deckhouse.io/aggregate-to-security-as: viewer
     rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.user-authz.view"
     rbac.deckhouse.io/scope: system
   name: d8:system-capability:user-authz:view
   annotations:
