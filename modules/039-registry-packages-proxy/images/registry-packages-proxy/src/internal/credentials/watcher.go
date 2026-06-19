@@ -150,12 +150,24 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 		w.Lock()
 		w.logger.Info("added registry config for main repo")
 		w.registryClientConfigs[registry.DefaultRepository] = registryConfig
+		w.registryClientConfigs[registryConfig.Repository] = registryConfig
 		w.Unlock()
 
 	case watch.Deleted:
+
+		var input registrySecretData
+
+		input.FromSecretData(secret.Data)
+
+		registryConfig, err := input.toClientConfig()
+		if err != nil {
+			return err
+		}
+
 		w.Lock()
 		w.logger.Info("deleted registry config for main repo")
 		delete(w.registryClientConfigs, registry.DefaultRepository)
+		delete(w.registryClientConfigs, registryConfig.Repository)
 		w.Unlock()
 	}
 
