@@ -56,12 +56,15 @@ func handleComputeEtcdDefrag(_ context.Context, input *go_hook.HookInput) error 
 	}
 
 	cronSchedule := input.Values.Get(etcdDefragScheduleConfigPath).String()
+	input.Logger.Info("etcd defrag schedule from values", "cronSchedule", cronSchedule, "isEmpty", cronSchedule == "")
 	if cronSchedule == "" {
 		cronSchedule = etcdDefragDefaultCronSchedule
+		input.Logger.Info("etcd defrag schedule fallback to constant", "cronSchedule", cronSchedule)
 	}
 
 	input.Values.Set(etcdDefragEnabledInternalPath, enabled)
 	input.Values.Set(etcdDefragScheduleInternalPath, cronSchedule)
+	input.Logger.Info("etcd defrag config computed", "enabled", enabled, "cronSchedule", cronSchedule)
 
 	return nil
 }
