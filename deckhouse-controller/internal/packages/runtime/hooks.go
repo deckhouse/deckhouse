@@ -76,6 +76,14 @@ func (r *Runtime) appendKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kub
 	for _, hook := range pkg.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 		hookCtrl := hook.GetHookController()
 
+		// A hook only gets a controller once the package has gone through Enable.
+		// Kube events can arrive earlier (e.g. while the package is still being
+		// scheduled), so skip hooks that are not initialized yet instead of
+		// dereferencing a nil controller.
+		if hookCtrl == nil {
+			continue
+		}
+
 		// Check if this hook's binding criteria match the incoming event
 		// (e.g., resource type, namespace, labels, event type)
 		if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
@@ -168,6 +176,13 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 func (r *Runtime) appendScheduleTasks(ctx context.Context, crontab string, pkg hookablePackage, res map[string][]queue.Task) {
 	for _, hook := range pkg.GetHooksByBinding(shtypes.Schedule) {
 		hookCtrl := hook.GetHookController()
+
+		// A hook only gets a controller once the package has gone through Enable.
+		// Schedule events can arrive earlier, so skip hooks that are not
+		// initialized yet instead of dereferencing a nil controller.
+		if hookCtrl == nil {
+			continue
+		}
 
 		// Check if this hook's cron schedule matches the triggered event
 		if !hookCtrl.CanHandleScheduleEvent(crontab) {
