@@ -1,4 +1,4 @@
-2675
+2676
 1GB
 2GB
 5XX
@@ -851,6 +851,7 @@ VirtualImage
 VirtualMachine
 VirtualMachineClass
 VirtualMachineIPAddress
+VirtualMachineOperation
 VirtualMachines
 VirtualService
 Virtualization
