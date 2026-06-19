@@ -28,13 +28,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
@@ -51,7 +49,6 @@ const (
 	VirtualizationImageName               = "probe-image"
 	virtualizationVMName                  = "probe-vm"
 	virtualizationVMHTTPGuestPort         = int32(80)
-	virtualizationVMNetworkPolicyName     = "probe-vm-http"
 	virtualizationDiskName                = "probe-disk"
 	virtualizationExtraDiskName           = "probe-extra-disk"
 	virtualizationExtraDiskAttachmentName = "probe-extra-disk-attachment"
@@ -558,22 +555,6 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 	return err
 }
 
-func (c *virtualMachineLifecycleChecker) createVirtualMachineNetworkPolicy(ctx context.Context) error {
-	_, err := c.access.Kubernetes().NetworkingV1().
-		NetworkPolicies(c.namespace).
-		Create(ctx, virtualMachineNetworkPolicy(c.agentID, c.namespace, c.probeName), metav1.CreateOptions{})
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return err
-	}
-	return nil
-}
-
-func (c *virtualMachineLifecycleChecker) deleteVirtualMachineNetworkPolicy(ctx context.Context) error {
-	return c.access.Kubernetes().NetworkingV1().
-		NetworkPolicies(c.namespace).
-		Delete(ctx, virtualizationVMNetworkPolicyName, metav1.DeleteOptions{})
-}
-
 func (c *virtualMachineLifecycleChecker) createVirtualMachineEvictOperation(ctx context.Context) error {
 	manifest := virtualMachineOperationManifest(c.agentID, c.namespace, c.probeName, virtualizationEvictName, virtualizationVMName)
 	obj, err := decodeManifestToUnstructured(manifest)
@@ -775,16 +756,12 @@ func (c *virtualMachineLifecycleChecker) waitGuestExtraDiskDetached(ctx context.
 }
 
 func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx context.Context) (guestInventory, error) {
-	start := time.Now()
 	ip, err := c.virtualMachineIPAddress(ctx)
 	if err != nil {
-		c.logGuestAttempt("ip-resolve-error", "", 0, time.Since(start), err)
 		return guestInventory{}, err
 	}
 	if ip == "" {
-		err = fmt.Errorf("VirtualMachine %q has empty status.ipAddress", virtualizationVMName)
-		c.logGuestAttempt("empty-ip", "", 0, time.Since(start), err)
-		return guestInventory{}, err
+		return guestInventory{}, fmt.Errorf("VirtualMachine %q has empty status.ipAddress", virtualizationVMName)
 	}
 
 	url := fmt.Sprintf("http://%s:%d/json", ip, virtualizationVMHTTPGuestPort)
@@ -794,7 +771,6 @@ func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx contex
 
 	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, url, nil)
 	if err != nil {
-		c.logGuestAttempt("request-build-error", ip, 0, time.Since(start), err)
 		return guestInventory{}, err
 	}
 	// TODO: revisit whether keep-alive can be re-enabled once the DVP/Cilium
@@ -805,42 +781,18 @@ func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx contex
 	req.Close = true
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		c.logGuestAttempt("http-error", ip, 0, time.Since(start), err)
 		return guestInventory{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf("guest inventory returned status %s", resp.Status)
-		c.logGuestAttempt("bad-status", ip, resp.StatusCode, time.Since(start), err)
-		return guestInventory{}, err
+		return guestInventory{}, fmt.Errorf("guest inventory returned status %s", resp.Status)
 	}
 	var inventory guestInventory
 	if err := json.NewDecoder(resp.Body).Decode(&inventory); err != nil {
-		c.logGuestAttempt("decode-error", ip, resp.StatusCode, time.Since(start), err)
 		return guestInventory{}, err
 	}
-	c.logGuestAttempt("ok", ip, resp.StatusCode, time.Since(start), nil)
 	return inventory, nil
-}
-
-// logGuestAttempt logs each guest HTTP attempt for debugging intermittent
-// failures (especially after live migration). Kept lightweight: one line per
-// attempt with IP, HTTP status, elapsed and error.
-func (c *virtualMachineLifecycleChecker) logGuestAttempt(outcome, ip string, statusCode int, elapsed time.Duration, err error) {
-	if c.logger == nil {
-		return
-	}
-	fields := logrus.Fields{
-		"outcome":     outcome,
-		"ip":          ip,
-		"status_code": statusCode,
-		"elapsed_ms":  elapsed.Milliseconds(),
-	}
-	if err != nil {
-		fields["error"] = err.Error()
-	}
-	c.logger.WithFields(fields).Info("guest inventory attempt")
 }
 
 func (c *virtualMachineLifecycleChecker) waitVirtualMachineMigrationCompleted(ctx context.Context, initialNode string) error {
@@ -901,12 +853,6 @@ func (c *virtualMachineLifecycleChecker) verifyVirtualMachineMigration(ctx conte
 }
 
 func (c *virtualMachineLifecycleChecker) verifyVirtualMachineLifecycle(ctx context.Context) check.Error {
-	if err := c.runStep("creating VirtualMachine NetworkPolicy", func() error {
-		return c.createVirtualMachineNetworkPolicy(ctx)
-	}); err != nil {
-		return lifecycleStepError("creating VirtualMachine NetworkPolicy", err)
-	}
-
 	var baselineGuestInventory guestInventory
 	if err := c.runStep("waiting for VirtualMachine guest HTTP", func() error {
 		var err error
@@ -1476,15 +1422,6 @@ func (c *virtualMachineLifecycleChecker) hasGarbage(ctx context.Context) (bool, 
 func (c *virtualMachineLifecycleChecker) cleanup(ctx context.Context) error {
 	var errs []error
 
-	if err := c.runStep("cleanup: delete VirtualMachine NetworkPolicy", func() error {
-		err := c.deleteVirtualMachineNetworkPolicy(ctx)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}); err != nil {
-		errs = append(errs, fmt.Errorf("delete VirtualMachine NetworkPolicy: %w", err))
-	}
 	if err := c.runStep("cleanup: delete VirtualMachineBlockDeviceAttachment", func() error {
 		err := c.deleteVirtualMachineBlockDeviceAttachment(ctx)
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -1681,10 +1618,6 @@ func guestExtraDisk(inventory, baseline guestInventory) (guestDisk, bool) {
 	return guestDisk{}, false
 }
 
-func ptrTo[T any](value T) *T {
-	return &value
-}
-
 func virtualImageManifest(agentID, namespace, probeName, name, imageURL string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -1743,50 +1676,6 @@ spec:
   persistentVolumeClaim:
     size: %q
 `, agentID, VirtualizationGroupName, probeName, name, namespace, size)
-}
-
-func virtualMachineNetworkPolicy(agentID, namespace, probeName string) *netv1.NetworkPolicy {
-	return &netv1.NetworkPolicy{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "NetworkPolicy",
-			APIVersion: "networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      virtualizationVMNetworkPolicyName,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"heritage":      "upmeter",
-				agentLabelKey:   agentID,
-				"upmeter-group": VirtualizationGroupName,
-				"upmeter-probe": probeName,
-			},
-		},
-		Spec: netv1.NetworkPolicySpec{
-			PodSelector: metav1.LabelSelector{},
-			PolicyTypes: []netv1.PolicyType{
-				netv1.PolicyTypeIngress,
-			},
-			Ingress: []netv1.NetworkPolicyIngressRule{
-				{
-					From: []netv1.NetworkPolicyPeer{
-						{
-							NamespaceSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"kubernetes.io/metadata.name": "d8-upmeter",
-								},
-							},
-						},
-					},
-					Ports: []netv1.NetworkPolicyPort{
-						{
-							Protocol: ptrTo(v1.ProtocolTCP),
-							Port:     ptrTo(intstr.FromInt(int(virtualizationVMHTTPGuestPort))),
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 func virtualMachineManifest(agentID, namespace, probeName, name, diskName, virtualMachineClassName string, cores int, coreFraction, memorySize string) string {

@@ -188,23 +188,6 @@ func Test_virtualMachineBlockDeviceAttachmentManifest(t *testing.T) {
 	assert.Equal(t, "probe-extra-disk", blockDeviceRef["name"])
 }
 
-func Test_virtualMachineNetworkPolicy(t *testing.T) {
-	networkPolicy := virtualMachineNetworkPolicy("agent-01", "test-ns", VirtualizationLifecycleProbeName)
-
-	assert.Equal(t, virtualizationVMNetworkPolicyName, networkPolicy.Name)
-	assert.Equal(t, "test-ns", networkPolicy.Namespace)
-	assert.Equal(t, VirtualizationLifecycleProbeName, networkPolicy.Labels["upmeter-probe"])
-	assert.Len(t, networkPolicy.Spec.PolicyTypes, 1)
-	assert.Len(t, networkPolicy.Spec.Ingress, 1)
-
-	rule := networkPolicy.Spec.Ingress[0]
-	assert.Len(t, rule.From, 1)
-	assert.Equal(t, "d8-upmeter", rule.From[0].NamespaceSelector.MatchLabels["kubernetes.io/metadata.name"])
-	assert.Len(t, rule.Ports, 1)
-	assert.Equal(t, v1.ProtocolTCP, *rule.Ports[0].Protocol)
-	assert.Equal(t, int(virtualizationVMHTTPGuestPort), rule.Ports[0].Port.IntValue())
-}
-
 func Test_unstructuredNestedString(t *testing.T) {
 	obj := map[string]interface{}{
 		"status": map[string]interface{}{
