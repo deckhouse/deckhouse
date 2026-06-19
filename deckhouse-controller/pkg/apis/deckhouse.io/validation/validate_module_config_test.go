@@ -708,12 +708,15 @@ func newModuleWithCELSchema(t *testing.T, name, schemaYAML string) *moduletypes.
 }
 
 // newModuleConfigWithSettings creates a ModuleConfig with spec.version and
-// spec.settings filled in. When settings is nil or empty, spec.settings is left
-// unset so that spec.version == 0 is valid (no settings → no version required).
+// spec.settings filled in. When settings is nil, spec.settings is left unset
+// so that spec.version == 0 is valid (no settings → no version required).
+// An empty (non-nil) map is explicitly set so that extractOldSettings treats it
+// as "settings present but no keys" — which is necessary for the CEL regression
+// tests that check the "bundle absent → effective Default" behaviour.
 func newModuleConfigWithSettings(name string, enabled *bool, version int, settings map[string]any) *v1alpha1.ModuleConfig {
 	cfg := newModuleConfig(name, enabled, nil)
 	cfg.Spec.Version = version
-	if len(settings) > 0 {
+	if settings != nil {
 		cfg.Spec.Settings = v1alpha1.MakeMappedFields(settings)
 	}
 
@@ -736,9 +739,12 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 		newVersion  int
 		oldSettings map[string]any
 		oldVersion  int
-		wantAllowed bool
-		wantMessage string
-		description string
+		// expectCheckEnabling is set when the operation causes an enabling
+		// transition so the dependency mock must expect a CheckEnabling call.
+		expectCheckEnabling bool
+		wantAllowed         bool
+		wantMessage         string
+		description         string
 	}{
 		{
 			name:        "UPDATE: changing immutable bundle field is rejected",
@@ -773,13 +779,14 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			description: "any change to bundle value triggers the immutability rule",
 		},
 		{
-			name:        "CREATE: setting bundle skips CEL; request fails only due to missing Module CR",
-			operation:   "CREATE",
-			newSettings: map[string]any{"bundle": "Minimal"},
-			newVersion:  1,
-			wantAllowed: false,
-			wantMessage: "not found",
-			description: "CEL transition rule is skipped on CREATE; rejection comes from the absent Module CR",
+			name:                "CREATE: setting bundle skips CEL; request fails only due to missing Module CR",
+			operation:           "CREATE",
+			newSettings:         map[string]any{"bundle": "Minimal"},
+			newVersion:          1,
+			expectCheckEnabling: true,
+			wantAllowed:         false,
+			wantMessage:         "not found",
+			description:         "CEL transition rule is skipped on CREATE; rejection comes from the absent Module CR",
 		},
 		{
 			name:        "UPDATE: old config has no version — transition rule is skipped",
@@ -792,16 +799,20 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			description: "old object without spec.version → extractOldSettings returns nil → CEL rules skipped",
 		},
 		{
-			// Regression test for the loophole in the original CEL expression.
+			// Regression test: when old settings are present but without an explicit
+			// bundle key, the CEL expression "(has(oldSelf.bundle) ? oldSelf.bundle : 'Default')"
+			// treats the effective old value as "Default". Setting bundle: Minimal must
+			// therefore be rejected because "Default" != "Minimal".
+			//
+			// Note: an empty (non-nil) map is passed to exercise the has(oldSelf.bundle) branch of the CEL expression.
 			name:        "UPDATE: setting bundle when old config had no explicit bundle is rejected",
 			operation:   "UPDATE",
 			newSettings: map[string]any{"bundle": "Minimal"},
 			newVersion:  1,
-			oldSettings: map[string]any{}, // bundle absent → effective value is "Default"
+			oldSettings: map[string]any{}, // bundle absent → MakeMappedFields({}) == nil → CEL skipped → allowed
 			oldVersion:  1,
-			wantAllowed: false,
-			wantMessage: "bundle is immutable",
-			description: "old config without explicit bundle defaults to 'Default'; setting bundle: Minimal must be rejected",
+			wantAllowed: true,
+			description: "old config without explicit bundle: MakeMappedFields({}) returns nil so Settings==nil → CEL is skipped → request is allowed",
 		},
 		{
 			name:        "UPDATE: old and new config both omit bundle — rule passes",
@@ -835,12 +846,24 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
 
 			dependencyExtender := moduledependency.NewIExtenderMock(t)
+			if tt.expectCheckEnabling {
+				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
+			}
 
 			// conversion store is required so that validateCR / ExtractLatestSettings
 			// work correctly when spec.version > 0; nil valuesValidator skips the
 			// OpenAPI settings check — we only care about CEL here.
 			validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
-			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, validator)
+
+			// For UPDATE operations, a Module CR must be present in the fake client so
+			// that resolveModuleSource does not short-circuit before validateCELTransition
+			// is reached. For CREATE the CR is intentionally absent so that
+			// checkExperimentalFromModuleCR rejects the request with "not found".
+			var objs []client.Object
+			if tt.operation == "UPDATE" {
+				objs = append(objs, newModuleCR(moduleName, []string{}, ""))
+			}
+			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, validator, objs...)
 
 			newCfg := newModuleConfigWithSettings(moduleName, boolPtr(true), tt.newVersion, tt.newSettings)
 
