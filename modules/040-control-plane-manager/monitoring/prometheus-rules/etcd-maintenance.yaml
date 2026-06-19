@@ -1,3 +1,37 @@
+- name: d8.etcd-maintenance.defrag-config
+  rules:
+    - alert: D8InvalidEtcdDefragCronSchedule
+      for: 5m
+      expr: |
+        d8_invalid_etcd_defrag_cron_schedule == 1
+      labels:
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_invalid_etcd_defrag_cron_schedule: "D8InvalidEtcdDefragCronSchedule,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_invalid_etcd_defrag_cron_schedule: "D8InvalidEtcdDefragCronSchedule,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Invalid etcd defragmentation cron schedule in ModuleConfig.
+        description: |-
+          The `controlPlaneManager.etcd.defrag.cronSchedule` value `{{ $labels.cron_schedule }}` is not a valid cron expression.
+
+          Deckhouse has fallen back to the default schedule (`0 1 * * *`) to keep defragmentation running.
+
+          **To fix this, set a valid 5-field cron expression:**
+
+          ```bash
+          d8 k patch moduleconfig control-plane-manager --type merge \
+            -p '{"spec":{"settings":{"etcd":{"defrag":{"cronSchedule":"0 1 * * *"}}}}}'
+          ```
+
+          Valid examples:
+          - `0 1 * * *` — daily at 01:00 UTC
+          - `0 */6 * * *` — every 6 hours
+          - `30 2 * * 0` — weekly on Sunday at 02:30 UTC
+
 - name: d8.etcd-maintenance.quota-backend-bytes
   rules:
     - record: etcd_latency:etcd_request_duration_seconds:p99

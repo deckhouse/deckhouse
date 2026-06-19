@@ -18,8 +18,10 @@ package hooks
 
 import (
 	"context"
+	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 )
 
@@ -32,8 +34,12 @@ const (
 	mastersNodeInternalPath        = "controlPlaneManager.internal.mastersNode"
 	hasEtcdArbiterNodeInternalPath = "controlPlaneManager.internal.hasEtcdArbiterNode"
 
-	etcdDefragDefaultCronSchedule = "*/3 * * * *"
+	etcdDefragDefaultCronSchedule       = "*/3 * * * *"
+	etcdDefragInvalidCronScheduleGroup  = "D8InvalidEtcdDefragCronSchedule"
+	etcdDefragInvalidCronScheduleMetric = "d8_invalid_etcd_defrag_cron_schedule"
 )
+
+var cronScheduleRe = regexp.MustCompile(`^(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)\s+(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)\s+(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)\s+(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)\s+(\*(\/[0-9]+)?|[0-9]+(-[0-9]+)?(\/[0-9]+)?(,[0-9]+(-[0-9]+)?(\/[0-9]+)?)*)$`)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        moduleQueue,
@@ -55,11 +61,23 @@ func handleComputeEtcdDefrag(_ context.Context, input *go_hook.HookInput) error 
 		enabled = input.ConfigValues.Get(etcdDefragEnabledConfigPath).Bool()
 	}
 
+	input.MetricsCollector.Expire(etcdDefragInvalidCronScheduleGroup)
+
 	cronSchedule := input.Values.Get(etcdDefragScheduleConfigPath).String()
 	input.Logger.Info("etcd defrag schedule from values", "cronSchedule", cronSchedule, "isEmpty", cronSchedule == "")
-	if cronSchedule == "" {
+
+	switch {
+	case cronSchedule == "":
 		cronSchedule = etcdDefragDefaultCronSchedule
 		input.Logger.Info("etcd defrag schedule fallback to constant", "cronSchedule", cronSchedule)
+	case !cronScheduleRe.MatchString(cronSchedule):
+		input.Logger.Warn("etcd defrag cronSchedule is invalid, falling back to default", "cronSchedule", cronSchedule)
+		input.MetricsCollector.Set(
+			etcdDefragInvalidCronScheduleMetric, 1,
+			map[string]string{"cron_schedule": cronSchedule},
+			metrics.WithGroup(etcdDefragInvalidCronScheduleGroup),
+		)
+		cronSchedule = etcdDefragDefaultCronSchedule
 	}
 
 	input.Values.Set(etcdDefragEnabledInternalPath, enabled)
