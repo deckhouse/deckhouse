@@ -137,7 +137,6 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 
 	switch secretEvent.Type {
 	case watch.Added, watch.Modified:
-
 		var input registrySecretData
 
 		input.FromSecretData(secret.Data)
@@ -147,14 +146,20 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 			return err
 		}
 
+		repoHost := strings.Split(registryConfig.Repository, "/")[0]
+
 		w.Lock()
-		w.logger.Info("added registry config for main repo")
+		w.logger.Info(
+			"added registry config for main repo",
+			slog.String("repo", registryConfig.Repository),
+			slog.String("repo_host", repoHost),
+		)
 		w.registryClientConfigs[registry.DefaultRepository] = registryConfig
 		w.registryClientConfigs[registryConfig.Repository] = registryConfig
+		w.registryClientConfigs[repoHost] = registryConfig
 		w.Unlock()
 
 	case watch.Deleted:
-
 		var input registrySecretData
 
 		input.FromSecretData(secret.Data)
@@ -164,10 +169,17 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 			return err
 		}
 
+		repoHost := strings.Split(registryConfig.Repository, "/")[0]
+
 		w.Lock()
-		w.logger.Info("deleted registry config for main repo")
+		w.logger.Info(
+			"deleted registry config for main repo",
+			slog.String("repo", registryConfig.Repository),
+			slog.String("repo_host", repoHost),
+		)
 		delete(w.registryClientConfigs, registry.DefaultRepository)
 		delete(w.registryClientConfigs, registryConfig.Repository)
+		delete(w.registryClientConfigs, repoHost)
 		w.Unlock()
 	}
 
