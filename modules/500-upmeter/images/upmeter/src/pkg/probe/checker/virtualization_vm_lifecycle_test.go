@@ -81,7 +81,7 @@ func Test_virtualDiskManifest(t *testing.T) {
 }
 
 func Test_virtualMachineManifest(t *testing.T) {
-	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk", "")
+	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk", "", baselineVMCores, baselineVMCoreFraction, baselineVMMemory)
 
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(manifest), &obj)
@@ -98,10 +98,11 @@ func Test_virtualMachineManifest(t *testing.T) {
 	assert.Equal(t, "AlwaysOn", spec["runPolicy"])
 
 	cpu := spec["cpu"].(map[string]interface{})
-	assert.EqualValues(t, 1, cpu["cores"])
+	assert.EqualValues(t, baselineVMCores, cpu["cores"])
+	assert.Equal(t, baselineVMCoreFraction, cpu["coreFraction"])
 
 	memory := spec["memory"].(map[string]interface{})
-	assert.Equal(t, "256Mi", memory["size"])
+	assert.Equal(t, baselineVMMemory, memory["size"])
 
 	blockDeviceRefs := spec["blockDeviceRefs"].([]interface{})
 	assert.Len(t, blockDeviceRefs, 1)
@@ -111,7 +112,7 @@ func Test_virtualMachineManifest(t *testing.T) {
 }
 
 func Test_virtualMachineManifest_withVirtualMachineClassName(t *testing.T) {
-	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk", "fast")
+	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk", "fast", 2, "10%", "512Mi")
 
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(manifest), &obj)
@@ -447,4 +448,158 @@ func createDynamicObject(
 		Namespace(namespace).
 		Create(context.Background(), &unstructured.Unstructured{Object: object}, metav1.CreateOptions{})
 	assert.NoError(t, err)
+}
+
+func Test_pickMinimalSizingPolicy_baseline(t *testing.T) {
+	// nil/empty policies -> nil (caller falls back to baseline)
+	assert.Nil(t, pickMinimalSizingPolicy(nil))
+	assert.Nil(t, pickMinimalSizingPolicy([]interface{}{}))
+}
+
+func Test_pickMinimalSizingPolicy_prefersRangeAdmittingOneCore(t *testing.T) {
+	policies := []interface{}{
+		map[string]interface{}{"cores": map[string]interface{}{"min": int64(5), "max": int64(8)}},
+		map[string]interface{}{"cores": map[string]interface{}{"min": int64(1), "max": int64(4)}},
+		map[string]interface{}{"cores": map[string]interface{}{"min": int64(2), "max": int64(4)}},
+	}
+	picked := pickMinimalSizingPolicy(policies)
+	assert.NotNil(t, picked)
+	assert.Equal(t, int64(1), unstructuredNestedInt64(picked, "cores", "min"))
+}
+
+func Test_pickMinimalSizingPolicy_fallsBackToSmallestMin(t *testing.T) {
+	policies := []interface{}{
+		map[string]interface{}{"cores": map[string]interface{}{"min": int64(5), "max": int64(8)}},
+		map[string]interface{}{"cores": map[string]interface{}{"min": int64(3), "max": int64(4)}},
+	}
+	picked := pickMinimalSizingPolicy(policies)
+	assert.NotNil(t, picked)
+	assert.Equal(t, int64(3), unstructuredNestedInt64(picked, "cores", "min"))
+}
+
+func Test_resolvePolicyCores(t *testing.T) {
+	cases := []struct {
+		name   string
+		policy map[string]interface{}
+		want   int
+	}{
+		{
+			name:   "range admits 1",
+			policy: map[string]interface{}{"cores": map[string]interface{}{"min": int64(1), "max": int64(4)}},
+			want:   1,
+		},
+		{
+			name:   "range min 2",
+			policy: map[string]interface{}{"cores": map[string]interface{}{"min": int64(2), "max": int64(8)}},
+			want:   2,
+		},
+		{
+			name:   "invalid range -> baseline",
+			policy: map[string]interface{}{"cores": map[string]interface{}{"min": int64(0), "max": int64(0)}},
+			want:   baselineVMCores,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, resolvePolicyCores(tc.policy))
+		})
+	}
+}
+
+func Test_resolvePolicyCoreFraction(t *testing.T) {
+	cases := []struct {
+		name   string
+		policy map[string]interface{}
+		want   string
+	}{
+		{
+			name:   "no fractions -> baseline",
+			policy: map[string]interface{}{},
+			want:   baselineVMCoreFraction,
+		},
+		{
+			name:   "picks smallest >= baseline",
+			policy: map[string]interface{}{"coreFractions": []interface{}{"100%", "5%", "50%", "10%"}},
+			want:   "5%",
+		},
+		{
+			name:   "skips below baseline, uses default",
+			policy: map[string]interface{}{"coreFractions": []interface{}{"50%", "100%"}, "defaultCoreFraction": "50%"},
+			want:   "50%",
+		},
+		{
+			name:   "only below-baseline fractions with no default -> baseline",
+			policy: map[string]interface{}{"coreFractions": []interface{}{"1%"}},
+			want:   baselineVMCoreFraction,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, resolvePolicyCoreFraction(tc.policy))
+		})
+	}
+}
+
+func Test_resolvePolicyMemory(t *testing.T) {
+	cases := []struct {
+		name   string
+		policy map[string]interface{}
+		cores  int
+		want   string
+	}{
+		{
+			name:   "no memory block -> baseline",
+			policy: map[string]interface{}{},
+			cores:  1,
+			want:   baselineVMMemory,
+		},
+		{
+			name: "min above baseline",
+			policy: map[string]interface{}{
+				"memory": map[string]interface{}{"min": "256Mi", "max": "1Gi"},
+			},
+			cores: 1,
+			want:  "256Mi",
+		},
+		{
+			name: "min below baseline stays baseline",
+			policy: map[string]interface{}{
+				"memory": map[string]interface{}{"min": "32Mi", "max": "1Gi"},
+			},
+			cores: 1,
+			want:  baselineVMMemory,
+		},
+		{
+			name: "step rounding",
+			policy: map[string]interface{}{
+				"memory": map[string]interface{}{"min": "128Mi", "max": "1Gi", "step": "128Mi"},
+			},
+			cores: 1,
+			want:  "128Mi",
+		},
+		{
+			name: "per-core floor dominates",
+			policy: map[string]interface{}{
+				"memory": map[string]interface{}{
+					"min":     "256Mi",
+					"max":     "4Gi",
+					"perCore": map[string]interface{}{"min": "512Mi", "max": "2Gi"},
+				},
+			},
+			cores: 2,
+			want:  "1Gi",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, resolvePolicyMemory(tc.policy, tc.cores))
+		})
+	}
+}
+
+func Test_parseFractionPercent(t *testing.T) {
+	assert.Equal(t, 5, parseFractionPercent("5%"))
+	assert.Equal(t, 50, parseFractionPercent("50%"))
+	assert.Equal(t, 0, parseFractionPercent("abc"))
+	assert.Equal(t, 100, parseFractionPercent("100%"))
 }

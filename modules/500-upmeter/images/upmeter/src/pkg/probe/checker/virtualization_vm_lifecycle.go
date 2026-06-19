@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -68,6 +70,11 @@ const (
 	virtualizationConditionAgentReady = "AgentReady"
 
 	defaultVMClassAnnotation = "virtualmachineclass.virtualization.deckhouse.io/is-default-class"
+
+	// Baseline minimum VM sizing for the probe: functional floor regardless of VMClass policy.
+	baselineVMCores        = 1
+	baselineVMCoreFraction = "5%"
+	baselineVMMemory       = "128Mi"
 )
 
 var (
@@ -526,6 +533,11 @@ func (c *virtualMachineLifecycleChecker) waitVirtualImageAbsent(ctx context.Cont
 }
 
 func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Context) error {
+	cores, coreFraction, memorySize, err := c.resolveVMSizing(ctx)
+	if err != nil {
+		return err
+	}
+
 	manifest := virtualMachineManifest(
 		c.agentID,
 		c.namespace,
@@ -533,6 +545,9 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 		virtualizationVMName,
 		virtualizationDiskName,
 		c.configuredVirtualMachineClassName,
+		cores,
+		coreFraction,
+		memorySize,
 	)
 	obj, err := decodeManifestToUnstructured(manifest)
 	if err != nil {
@@ -1107,6 +1122,189 @@ func (c *virtualMachineLifecycleChecker) defaultVirtualMachineClass(ctx context.
 	return "", nil
 }
 
+// resolveVMSizing computes the minimal VM cpu/memory sizing that satisfies the
+// VMClass sizing policy (if any), never dropping below the probe's functional
+// baseline (1 core, 5%, 128Mi).
+//
+// If the VMClass has no sizing policies, or no class is resolvable, the baseline
+// is returned as-is.
+func (c *virtualMachineLifecycleChecker) resolveVMSizing(ctx context.Context) (int, string, string, error) {
+	cores, coreFraction, memorySize := baselineVMCores, baselineVMCoreFraction, baselineVMMemory
+
+	vmClassName, err := c.virtualMachineClassName(ctx)
+	if err != nil {
+		// No resolvable class: keep baseline. The VM will fail later if a class is
+		// actually required, but the probe must not block on sizing resolution here.
+		return cores, coreFraction, memorySize, nil
+	}
+
+	vmClass, err := c.access.Kubernetes().Dynamic().
+		Resource(virtualMachineClassGVR).
+		Get(ctx, vmClassName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return cores, coreFraction, memorySize, nil
+		}
+		return 0, "", "", err
+	}
+
+	policies, found, err := unstructured.NestedSlice(vmClass.Object, "spec", "sizingPolicies")
+	if err != nil || !found || len(policies) == 0 {
+		return cores, coreFraction, memorySize, nil
+	}
+
+	policy := pickMinimalSizingPolicy(policies)
+	if policy == nil {
+		return cores, coreFraction, memorySize, nil
+	}
+
+	cores = resolvePolicyCores(policy)
+	coreFraction = resolvePolicyCoreFraction(policy)
+	memorySize = resolvePolicyMemory(policy, cores)
+	return cores, coreFraction, memorySize, nil
+}
+
+// pickMinimalSizingPolicy selects the sizing policy that admits the smallest VM:
+// prefer a policy whose range includes 1 core; otherwise pick the one with the
+// smallest cores.min.
+func pickMinimalSizingPolicy(policies []interface{}) map[string]interface{} {
+	var fallback map[string]interface{}
+	var fallbackMin int
+	for _, p := range policies {
+		policy, ok := p.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		min := int(unstructuredNestedInt64(policy, "cores", "min"))
+		max := int(unstructuredNestedInt64(policy, "cores", "max"))
+		if min < 1 {
+			min = 1
+		}
+		if min <= 1 && 1 <= max {
+			return policy
+		}
+		if fallback == nil || min < fallbackMin {
+			fallback = policy
+			fallbackMin = min
+		}
+	}
+	return fallback
+}
+
+func resolvePolicyCores(policy map[string]interface{}) int {
+	min := int(unstructuredNestedInt64(policy, "cores", "min"))
+	max := int(unstructuredNestedInt64(policy, "cores", "max"))
+	if min < 1 {
+		min = 1
+	}
+	// Prefer 1 core if the range admits it, otherwise the policy minimum.
+	if 1 >= min && 1 <= max {
+		return 1
+	}
+	if min >= 1 && min <= max {
+		return min
+	}
+	return baselineVMCores
+}
+
+// resolvePolicyCoreFraction picks the smallest allowed core fraction not below
+// the 5% baseline. Fraction values in v1alpha3 are percentage strings ("5%").
+func resolvePolicyCoreFraction(policy map[string]interface{}) string {
+	fractions, _, _ := unstructured.NestedStringSlice(policy, "coreFractions")
+	const baseline = 5
+	best := 0
+	for _, raw := range fractions {
+		v := parseFractionPercent(raw)
+		if v <= 0 {
+			continue
+		}
+		if v < baseline {
+			continue
+		}
+		if best == 0 || v < best {
+			best = v
+		}
+	}
+	if best > 0 {
+		return fmt.Sprintf("%d%%", best)
+	}
+	// No allowed fraction >= baseline: fall back to the policy default if any.
+	if def := unstructuredNestedString(policy, "defaultCoreFraction"); def != "" {
+		return def
+	}
+	return baselineVMCoreFraction
+}
+
+// resolvePolicyMemory computes the smallest memory size that satisfies the
+// policy (min, step quantization, per-core floor) and is not below the baseline.
+func resolvePolicyMemory(policy map[string]interface{}, cores int) string {
+	baseline := resource.MustParse(baselineVMMemory)
+
+	mem, _, _ := unstructured.NestedMap(policy, "memory")
+	if mem == nil {
+		return baselineVMMemory
+	}
+
+	var minVal resource.Quantity
+	if minStr := unstructuredNestedString(mem, "min"); minStr != "" {
+		if q, err := resource.ParseQuantity(minStr); err == nil {
+			minVal = q
+		}
+	}
+
+	// If per-core bounds are set, the effective floor is perCore.min * cores.
+	if perCore, _, _ := unstructured.NestedMap(mem, "perCore"); perCore != nil {
+		if pcMinStr := unstructuredNestedString(perCore, "min"); pcMinStr != "" {
+			if pcMin, err := resource.ParseQuantity(pcMinStr); err == nil {
+				perCoreFloor := pcMin.DeepCopy()
+				for i := 1; i < cores; i++ {
+					perCoreFloor.Add(pcMin)
+				}
+				if perCoreFloor.Cmp(minVal) == 1 {
+					minVal = perCoreFloor
+				}
+			}
+		}
+	}
+
+	chosen := baseline
+	if !minVal.IsZero() && minVal.Cmp(baseline) == 1 {
+		chosen = minVal
+	}
+
+	// Round up to the step grid starting from min.
+	if stepStr := unstructuredNestedString(mem, "step"); stepStr != "" {
+		if step, err := resource.ParseQuantity(stepStr); err == nil && !step.IsZero() {
+			start := minVal
+			if start.IsZero() {
+				start = baseline
+			}
+			for start.Cmp(chosen) == -1 {
+				start.Add(step)
+			}
+			chosen = start
+		}
+	}
+
+	// Clamp to max if present.
+	if maxStr := unstructuredNestedString(mem, "max"); maxStr != "" {
+		if maxQ, err := resource.ParseQuantity(maxStr); err == nil && chosen.Cmp(maxQ) == 1 {
+			chosen = maxQ
+		}
+	}
+
+	return chosen.String()
+}
+
+func parseFractionPercent(s string) int {
+	s = strings.TrimSuffix(s, "%")
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
 func (c *virtualMachineLifecycleChecker) waitResourcePhase(
 	ctx context.Context,
 	gvr schema.GroupVersionResource,
@@ -1375,6 +1573,14 @@ func unstructuredNestedString(obj map[string]interface{}, fields ...string) stri
 	return value
 }
 
+func unstructuredNestedInt64(obj map[string]interface{}, fields ...string) int64 {
+	value, found, err := unstructured.NestedInt64(obj, fields...)
+	if err != nil || !found {
+		return 0
+	}
+	return value
+}
+
 func unstructuredNestedStringSlice(obj map[string]interface{}, fields ...string) []string {
 	values, found, err := unstructured.NestedStringSlice(obj, fields...)
 	if err != nil || !found {
@@ -1603,7 +1809,7 @@ func virtualMachineNetworkPolicy(agentID, namespace, probeName string) *netv1.Ne
 	}
 }
 
-func virtualMachineManifest(agentID, namespace, probeName, name, diskName, virtualMachineClassName string) string {
+func virtualMachineManifest(agentID, namespace, probeName, name, diskName, virtualMachineClassName string, cores int, coreFraction, memorySize string) string {
 	virtualMachineClassSpec := ""
 	if virtualMachineClassName != "" {
 		virtualMachineClassSpec = fmt.Sprintf("  virtualMachineClassName: %q\n", virtualMachineClassName)
@@ -1623,14 +1829,14 @@ metadata:
 spec:
   runPolicy: AlwaysOn
 %s  cpu:
-    cores: 1
-    coreFraction: 5%%
+    cores: %d
+    coreFraction: %s
   memory:
-    size: 256Mi
+    size: %s
   blockDeviceRefs:
     - kind: VirtualDisk
       name: %q
-`, agentID, VirtualizationGroupName, probeName, name, namespace, virtualMachineClassSpec, diskName)
+`, agentID, VirtualizationGroupName, probeName, name, namespace, virtualMachineClassSpec, cores, coreFraction, memorySize, diskName)
 }
 
 func virtualMachineOperationManifest(agentID, namespace, probeName, name, vmName string) string {
