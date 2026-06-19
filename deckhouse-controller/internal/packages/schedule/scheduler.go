@@ -42,6 +42,11 @@ const (
 	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
 	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
 	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
+
+	// reasonDisabled is the status reason recorded when a node is explicitly
+	// disabled by an operator via [Scheduler.Disable], as opposed to losing
+	// eligibility through a failed checker.
+	reasonDisabled = "PackageDisabled"
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -276,6 +281,43 @@ func (s *Scheduler) Complete(completed string) {
 	s.schedule()
 }
 
+// Disable explicitly turns the named package off, forcing it disabled on every
+// subsequent scheduling pass regardless of its checker chain. A scheduling pass
+// runs immediately, cascade-disabling the node (and emitting an [EventDisable]
+// if it was previously enabled). It is a no-op if the package does not exist or
+// is already disabled.
+func (s *Scheduler) Disable(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	n, ok := s.nodes[name]
+	if !ok || n.disabled {
+		return
+	}
+
+	n.disabled = true
+
+	s.schedule()
+}
+
+// Enable clears an explicit disable set by [Scheduler.Disable], allowing the
+// node's checker chain to govern eligibility again. A scheduling pass runs
+// immediately, re-scheduling the node if its checkers now pass. It is a no-op
+// if the package does not exist or is not explicitly disabled.
+func (s *Scheduler) Enable(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	n, ok := s.nodes[name]
+	if !ok || !n.disabled {
+		return
+	}
+
+	n.disabled = false
+
+	s.schedule()
+}
+
 // Reschedule reverts the named package to idle and runs a full scheduling
 // pass, causing it (and potentially its dependents) to be rescheduled.
 // It is a no-op if the package does not exist.
@@ -336,6 +378,12 @@ func (s *Scheduler) compute() []*node {
 	for _, n := range sorted {
 		current := n.status.Enabled
 		n.status = checker.Check(n.checkers...)
+		// An explicit operator disable is the final gate: it forces the node
+		// off even when every checker passes, but defers to the checker chain's
+		// more specific reason when that already disabled the node.
+		if n.disabled && n.status.Enabled {
+			n.status = checker.Result{Reason: reasonDisabled, Message: "package is explicitly disabled"}
+		}
 		if current == n.status.Enabled {
 			continue
 		}
