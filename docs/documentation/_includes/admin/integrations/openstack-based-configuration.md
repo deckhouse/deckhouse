@@ -681,7 +681,7 @@ The resulting disk type depends on the combination of the following parameters:
 
 |                              | flavor disk size = 0                 | flavor disk size > 0                              |
 | ---------------------------- | ------------------------------------ | ------------------------------------------------- |
-| **`rootDiskSize` not set** | ❗️*Disk size must be specified*. VM creation will fail without it. | Local disk with size from the flavor.               |
+| **`rootDiskSize` not set** | ❗*Disk size must be specified*. VM creation will fail without it. | Local disk with size from the flavor.               |
 | **`rootDiskSize` set**    | Network-attached disk with size that equals `rootDiskSize`. | ❗ Both network-attached (`rootDiskSize`) and local (from flavor). Avoid this setup, as the cloud provider may charge for both. |
 
 {% if page.cloud_type != 'selectel' %}
