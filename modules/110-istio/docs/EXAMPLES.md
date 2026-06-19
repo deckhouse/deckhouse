@@ -687,7 +687,17 @@ d8 k exec -n my-namespace "${istio_proxy_pod}" -c istio-proxy -- \
   /usr/local/bin/pilot-agent request GET stats/prometheus | head
 ```
 
-You should see series such as `istio_requests_total` if metrics are wired correctly.
+Example of successful output:
+
+```text
+# TYPE istio_requests_total counter
+istio_requests_total{...} 12
+istio_request_duration_milliseconds_bucket{...} 12
+istio_request_bytes_bucket{...} 12
+istio_response_bytes_bucket{...} 12
+```
+
+If you see series such as `istio_requests_total`, metrics are wired correctly.
 
 ### Prometheus scraping and Grafana
 

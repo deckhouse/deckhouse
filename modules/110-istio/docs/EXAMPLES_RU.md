@@ -656,7 +656,7 @@ annotations:
 
 | Режим | Поведение |
 |-------|-----------|
-| `false` (по умолчанию) | Прежний режим: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в том числе `telemetry.v2.prometheus` для Sail). Модуль всегда создаёт `Telemetry` `d8-main` в `d8-istio` только для access log; без `spec.metrics` / `spec.tracing` и без `defaultProviders.metrics` |
+| `false` (по умолчанию) | Прежний режим (без Telemetry API): полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в том числе `telemetry.v2.prometheus` для Sail). Модуль всегда создаёт `Telemetry` `d8-main` в `d8-istio` только для access log; без `spec.metrics` / `spec.tracing` и без `defaultProviders.metrics` |
 | `true` | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены; тот же `Telemetry` `d8-main` дополняется `spec.metrics` (и при настроенной трассировке — `spec.tracing` через `deckhouse-tracing` из [`tracing.collector`](configuration.html#parameters-tracing-collector)). Формат журнала — [в `dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) |
 
 ### Включение режима Telemetry API
@@ -691,7 +691,17 @@ d8 k exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
   /usr/local/bin/pilot-agent request GET stats/prometheus | head
 ```
 
-В выводе должны присутствовать метрики вроде `istio_requests_total`, если сбор настроен корректно.
+Пример успешного вывода:
+
+```text
+# TYPE istio_requests_total counter
+istio_requests_total{...} 12
+istio_request_duration_milliseconds_bucket{...} 12
+istio_request_bytes_bucket{...} 12
+istio_response_bytes_bucket{...} 12
+```
+
+Если в выводе присутствуют метрики вида `istio_requests_total`, сбор настроен корректно.
 
 ### Prometheus и Grafana
 
@@ -784,7 +794,7 @@ spec:
           port: 4317
 ```
 
-Для HTTP OTLP задайте `collector.opentelemetry.http.path` (и при необходимости `timeout`) — см. [`tracing.collector.opentelemetry.http`](configuration.html#parameters-tracing-collector-opentelemetry).
+Для HTTP OTLP задайте `collector.opentelemetry.http.path` (и при необходимости `timeout`) в параметре [`tracing.collector.opentelemetry.http`](configuration.html#parameters-tracing-collector-opentelemetry).
 
 Точечные настройки по workload — `Telemetry` с `selector` в неймспейсе приложения, ссылаясь на `deckhouse-tracing`. В `d8-istio` не создавайте второй `Telemetry` без селектора ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)).
 

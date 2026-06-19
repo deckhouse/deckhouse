@@ -242,7 +242,7 @@ Istio uses traffic analysis as follows:
 - TCP traffic — decisions are based only on the destination IP address and port number.
 
 {% alert level="warning" %}
-`cluster.local` is an unmodified alias for the local cluster domain. Using `cluster.local` as a principal in `AuthorizationPolicy` always refers to the local cluster, even if another cluster in the mesh has [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly set to `cluster.local` (see [Istio trust domain migration best practices](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+`cluster.local` is an unmodified alias for the local cluster domain. Using `cluster.local` as a principal in `AuthorizationPolicy` always refers to the local cluster, even if another cluster in the mesh has [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly set to `cluster.local` ([Istio trust domain migration best practices](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 {% endalert %}
 
 {% alert level="info" %}
@@ -296,7 +296,7 @@ Istio uses traffic analysis as follows:
 - TCP traffic — decisions are based only on the destination IP address and port number.
 
 {% alert level="warning" %}
-If service or pod IP addresses overlap between clusters, requests from pods in other clusters may unintentionally match Istio's routing, allow, or deny rules. Overlapping service and pod subnets is not recommended (see [Istio network models](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
+If service or pod IP addresses overlap between clusters, requests from pods in other clusters may unintentionally match Istio's routing, allow, or deny rules. Overlapping service and pod subnets is not recommended ([Istio network models](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
 {% endalert %}
 
 {% alert level="info" %}
@@ -322,7 +322,7 @@ Enabling the multicluster (via the `istio.multicluster.enabled = true` module pa
   - Istio root certificate (accessible without authentication).
   - The public API server address (available only for authenticated requests from neighboring clusters).
   - List of public addresses of the `ingressgateway` service (available only for authenticated requests from neighboring clusters).
-  - Server public keys to authenticate requests to API server and to private metadata (see above).
+  - Server public keys to authenticate requests to API server and to private metadata.
 
 #### Managing the multicluster
 
@@ -345,7 +345,7 @@ cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21
 
 ## Authentication
 
-By default, the [user-authn](/modules/user-authn/) module provides authentication for Kiali. External authentication can also be configured via `externalAuthentication`.
+By default, the [`user-authn`](/modules/user-authn/) module provides authentication for Kiali. External authentication can also be configured via `externalAuthentication`.
 If both are disabled, the module uses basic auth with an auto-generated password.
 
 To view the generated password:
