@@ -25,28 +25,7 @@ Changes:
 
 ### 003-go-mod.patch
 
-Files:
-
-- go.mod
-- go.sum
-
-Changes:
-
-- Update dependencies
-
-### 004-capi-v1.12.3-update-dependencies.patch
-
-Files:
-
-- go.mod
-- go.sum
-
-Changes:
-
-- Update CAPI from v1.7.4 to v1.12.3
-- Update controller-runtime from v0.17.3 to v0.22.5
-- Update kubernetes dependencies from v0.29.3 to v0.34.3
-- Update all transitive dependencies to compatible versions
+Bump go.mod dependencies to fix known CVEs.
 
 ### 005-capi-v1.12.3-update-imports.patch
 
@@ -145,7 +124,7 @@ Files:
 Changes:
 
 - Add TemplateOrg field to VCDMachineSpec
-- Update AddNewVM call to use TemplateOrg parameter and add guestCustScript parameter
+- Update AddNewVM call to restore the guestCustScript parameter
 - Note: This patch also restores changes from patch 001 that were inadvertently removed by patch 006
 - The patch includes all changes from 001-our-machinery.patch that are needed for proper VM creation
 
