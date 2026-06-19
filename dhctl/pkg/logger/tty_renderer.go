@@ -147,6 +147,14 @@ func (h *ttyRenderer) Handle(_ context.Context, r slog.Record) error {
 		// Separator line after a closed block: keep the vertical guides of any enclosing
 		// process so nested boxes stay visually connected (matches the legacy logger).
 		h.scroll(strings.TrimRight(h.prefix(len(h.stack)), " "))
+		if ev == string(processFail) {
+			// The framed box above is ephemeral detail (sink.Log → the live Block's logbox ring),
+			// which is wiped when the Block leaves the alt screen on teardown. A failed process is
+			// the primary failure signal and must outlive that: also emit a persistent FAILED
+			// milestone, which summarizeLocked keeps on the main screen in compact mode. The plain
+			// backend prints both lines — harmless redundancy on the rare failure path.
+			h.sink.Milestone(milestoneStatus(badgeFailed), f.name)
+		}
 		return nil
 	}
 

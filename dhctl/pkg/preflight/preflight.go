@@ -78,13 +78,11 @@ func (p *Preflight) Run(ctx context.Context, phase Phase) error {
 		return err
 	}
 
-	phaseLabel := fmt.Sprintf("(%s)", phase)
-
 	runFunc := func(ctx context.Context) error {
 		return p.runChecks(ctx, checks)
 	}
 
-	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), phaseLabel, runFunc)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), phase.FormatString(), runFunc)
 }
 
 func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {

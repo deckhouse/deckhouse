@@ -314,3 +314,18 @@ func TestBlockRestoreSurfacesErrors(t *testing.T) {
 		t.Fatalf("Restore must surface buffered errors/warns on exit: %q", buf.String())
 	}
 }
+
+// A Warn/Error logged AFTER the block has summarized (e.g. the top-level error reason printed once a
+// failed operation unwinds to main, after RunProgress's deferred finish() already closed the block)
+// must print straight to the now-main-screen writer instead of vanishing into the dumped ring.
+func TestBlockWarnAfterSummaryPrintsDirectly(t *testing.T) {
+	var buf bytes.Buffer
+	b := New(&buf, testOpts())
+	b.Start("P")
+	b.Finish() // closes the live UI and prints the summary
+	buf.Reset()
+	b.Warn(`preflight check "always-fail" failed`)
+	if !strings.Contains(buf.String(), `preflight check "always-fail" failed`) {
+		t.Fatalf("post-summary Warn must print directly to the main screen: %q", buf.String())
+	}
+}

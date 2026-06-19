@@ -281,10 +281,21 @@ func (b *Block) Warn(line string) {
 		b.passthroughLocked(line)
 		return
 	}
+	if b.summarized {
+		b.writeLineLocked(line)
+		return
+	}
 	b.warnsAll = append(b.warnsAll, line)
 	if b.active {
 		b.repaintLocked()
 	}
+}
+
+func (b *Block) writeLineLocked(line string) {
+	if !strings.HasSuffix(line, "\n") {
+		line += "\n"
+	}
+	_, _ = io.WriteString(b.w, line)
 }
 
 func (b *Block) Log(line string) {

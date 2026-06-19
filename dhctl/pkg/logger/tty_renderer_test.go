@@ -99,6 +99,12 @@ func procEndRec(name string) slog.Record {
 		slog.String(attrKeyProcessName, name))
 }
 
+func procFailRec(name string) slog.Record {
+	return newRecord(slog.LevelError, "Failed: "+name,
+		slog.String(attrKeyProcessEvent, string(processFail)),
+		slog.String(attrKeyProcessName, name))
+}
+
 // --- progress bar lifecycle ---
 
 func TestRendererStartOpensBar(t *testing.T) {
@@ -159,6 +165,26 @@ func TestRendererProcessClosesBoxWithDuration(t *testing.T) {
 	}
 	if len(rdr.stack) != 0 {
 		t.Fatalf("process not popped: %d", len(rdr.stack))
+	}
+}
+
+// A failed process must emit a persistent FAILED milestone in addition to the ephemeral box-close
+// line: in the live Block backend the framed box goes through the logbox ring (wiped on alt-screen
+// teardown), so without the milestone the failure would vanish from the compact summary.
+func TestRendererProcessFailEmitsPersistentMilestone(t *testing.T) {
+	ui := &fakeProgressUI{}
+	rdr := newTTYRenderer(rendererConfig{out: &bytes.Buffer{}, sink: ui, bar: ui, level: slog.LevelDebug})
+	_ = rdr.Handle(context.Background(), procStartRec("(pre-infra)"))
+	_ = rdr.Handle(context.Background(), procFailRec("(pre-infra)"))
+	if !ui.has("Milestone") {
+		t.Fatalf("process fail must emit a Milestone (persists past compact teardown): calls=%v", ui.calls)
+	}
+	if !strings.Contains(ui.writtenLine, "FAILED (pre-infra)") {
+		t.Fatalf("FAILED milestone for the process not rendered: %q", ui.writtenLine)
+	}
+	// The ephemeral framed close line is still emitted for the live view.
+	if !strings.Contains(ui.writtenLine, boxClose+" (pre-infra)") {
+		t.Fatalf("box-close line still expected: %q", ui.writtenLine)
 	}
 }
 
