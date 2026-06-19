@@ -1,4 +1,8 @@
 linters-settings:
+  no-cyrillic:
+    exclude-rules:
+      files:
+        - hooks/audit_policy.go # Contain Russian descriptions of audit rules
   openapi:
     exclude-rules:
       enum:
