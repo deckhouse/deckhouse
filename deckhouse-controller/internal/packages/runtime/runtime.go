@@ -743,14 +743,26 @@ func (r *Runtime) startGlobal(ctx context.Context) error {
 
 	// Enable cron schedules for global schedule hooks.
 	for _, hook := range r.global.GetHooksByBinding(shtypes.Schedule) {
-		hook.GetHookController().EnableScheduleBindings()
+		hookCtrl := hook.GetHookController()
+		if hookCtrl == nil {
+			r.logger.Warn("global schedule hook has no controller, skipping", slog.String("hook", hook.GetName()))
+			continue
+		}
+
+		hookCtrl.EnableScheduleBindings()
 	}
 
 	// Enable Kubernetes monitors and collect the initial synchronization snapshot.
 	syncInfos := make(map[string][]hookcontroller.BindingExecutionInfo)
 	for _, hook := range r.global.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 		hookName := hook.GetName()
-		err := hook.GetHookController().HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
+		hookCtrl := hook.GetHookController()
+		if hookCtrl == nil {
+			r.logger.Warn("global kube hook has no controller, skipping", slog.String("hook", hookName))
+			continue
+		}
+
+		err := hookCtrl.HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
 			syncInfos[hookName] = append(syncInfos[hookName], info)
 		})
 		if err != nil {

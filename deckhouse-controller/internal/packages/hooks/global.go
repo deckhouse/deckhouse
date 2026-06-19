@@ -65,31 +65,64 @@ func NewGlobalStorage() *GlobalStorage {
 }
 
 // Initialized reports whether the hook storage has been fully initialized.
-// It checks if any stored hook has a controller attached — the controller is set
-// during initialization, so its presence indicates that loading is complete.
-// Returns true if the storage is empty (no hooks to initialize) or if hooks
-// have their controllers set.
+// It checks that every stored hook has a controller attached — the controller is
+// set during initialization, so its presence indicates that loading is complete.
+// Returns true if the storage is empty (no hooks to initialize) or if every hook
+// has its controller set. If any hook is missing a controller the storage is
+// considered not initialized, so InitializeHooks runs and attaches controllers to
+// all hooks (a partial state would otherwise leave some hooks without one and
+// panic when their controller is dereferenced).
 func (s *GlobalStorage) Initialized() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	for _, hook := range s.byName {
-		// if controller set - hooks storage already initialized
-		return hook.GetHookController() != nil
+		if hook.GetHookController() == nil {
+			return false
+		}
 	}
 
 	return true
 }
 
-// Add adds a global hook to storage, indexing it by name.
-// If a hook with the same name exists, it will be replaced.
+// Add adds a global hook to storage, indexing it by name and all its bindings.
+// If a hook with the same name exists, it will be replaced in every index.
+//
+// Replacing by name removes the previous instance from the per-binding index
+// first, so byBinding never accumulates stale duplicates of the same name and
+// stays consistent with byName.
 func (s *GlobalStorage) Add(hook GlobalHook) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.byName[hook.GetName()] = hook
+	name := hook.GetName()
+	if _, exists := s.byName[name]; exists {
+		s.removeFromBindings(name)
+	}
+
+	s.byName[name] = hook
 	for _, binding := range hook.GetHookConfig().Bindings() {
 		s.byBinding[binding] = append(s.byBinding[binding], hook)
+	}
+}
+
+// removeFromBindings drops every occurrence of the named hook from the
+// per-binding index. Callers must hold s.mu.
+func (s *GlobalStorage) removeFromBindings(name string) {
+	for binding, stored := range s.byBinding {
+		filtered := stored[:0]
+		for _, hook := range stored {
+			if hook.GetName() != name {
+				filtered = append(filtered, hook)
+			}
+		}
+
+		if len(filtered) == 0 {
+			delete(s.byBinding, binding)
+			continue
+		}
+
+		s.byBinding[binding] = filtered
 	}
 }
 
@@ -141,4 +174,5 @@ func (s *GlobalStorage) Clear() {
 	defer s.mu.Unlock()
 
 	s.byName = make(map[string]GlobalHook)
+	s.byBinding = make(map[shtypes.BindingType][]GlobalHook)
 }

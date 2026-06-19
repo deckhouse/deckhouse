@@ -172,8 +172,16 @@ func (t *task) initializeHooks(ctx context.Context) (map[string][]hookcontroller
 
 	schHooks := t.pkg.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range schHooks {
+		hookCtrl := hook.GetHookController()
+		if hookCtrl == nil {
+			// InitializeHooks attaches a controller to every hook, so a nil here
+			// means the hook index is inconsistent. Skip it instead of panicking.
+			t.logger.Warn("schedule hook has no controller, skipping", slog.String("hook", hook.GetName()))
+			continue
+		}
+
 		t.logger.Debug("enable schedule hook", slog.String("hook", hook.GetName()))
-		hook.GetHookController().EnableScheduleBindings()
+		hookCtrl.EnableScheduleBindings()
 	}
 
 	t.logger.Debug("enable kubernetes hooks")
@@ -184,8 +192,15 @@ func (t *task) initializeHooks(ctx context.Context) (map[string][]hookcontroller
 	// BindingExecutionInfo for each resource that needs to be processed during sync.
 	res := make(map[string][]hookcontroller.BindingExecutionInfo)
 	for _, hook := range t.pkg.GetHooksByBinding(shtypes.OnKubernetesEvent) {
-		t.logger.Debug("enable kube hook", slog.String("hook", hook.GetName()))
 		hookCtrl := hook.GetHookController()
+		if hookCtrl == nil {
+			// InitializeHooks attaches a controller to every hook, so a nil here
+			// means the hook index is inconsistent. Skip it instead of panicking.
+			t.logger.Warn("kube hook has no controller, skipping", slog.String("hook", hook.GetName()))
+			continue
+		}
+
+		t.logger.Debug("enable kube hook", slog.String("hook", hook.GetName()))
 		// HandleEnableKubernetesBindings starts watching resources and calls the callback
 		// for each existing resource that matches the watch criteria (initial synchronization).
 		err := hookCtrl.HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
