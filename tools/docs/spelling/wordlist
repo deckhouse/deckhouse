@@ -1128,8 +1128,8 @@ eg
 egressgateway
 elasticsearch
 emptyDir
-enablement
 enableMultiTenancy
+enablement
 endofftopic
 entrypoint
 enum
