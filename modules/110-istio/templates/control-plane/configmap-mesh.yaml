@@ -45,6 +45,7 @@ data:
           {{- end }}
         {{- end }}
       name: main-access-log-format
+{{- include "istioUserExtensionProviders" $ | nindent 4 }}
     discoverySelectors:
     - matchExpressions:
       - {key: "heritage", operator: NotIn, values: [upmeter]}
