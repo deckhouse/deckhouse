@@ -60,6 +60,10 @@ candi:
       pull_request: https://github.com/deckhouse/deckhouse/pull/19179
     - summary: fix cve node-manager and opentofu.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19940
+    - summary: >-
+        fix static node cleanup to wipe data on externally mounted volumes before unmounting, preventing
+        stale data from causing re-bootstrap failures
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20758
 cert-manager:
   features:
     - summary: Bumped version to v1.20.0.
@@ -790,6 +794,10 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20603
     - summary: Fix URL links to diagrams
       pull_request: https://github.com/deckhouse/deckhouse/pull/20629
+    - summary: Refactor CSI-driver architecture sections
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20754
+    - summary: Add prometheus module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20756
   fixes:
     - summary: Changing module descriptions
       pull_request: https://github.com/deckhouse/deckhouse/pull/18148

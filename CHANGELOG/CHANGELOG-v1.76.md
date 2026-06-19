@@ -168,6 +168,7 @@
  - **[candi]** Fixed internal node IP discovery for static nodes in DVP clusters. [#18441](https://github.com/deckhouse/deckhouse/pull/18441)
  - **[candi]** fix cve node-manager and opentofu. [#19940](https://github.com/deckhouse/deckhouse/pull/19940)
  - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#18133](https://github.com/deckhouse/deckhouse/pull/18133)
+ - **[candi]** fix static node cleanup to wipe data on externally mounted volumes before unmounting, preventing stale data from causing re-bootstrap failures [#20758](https://github.com/deckhouse/deckhouse/pull/20758)
  - **[cert-manager]** Disable SecurityPolicyExceptions for cert-manager namespace [#19184](https://github.com/deckhouse/deckhouse/pull/19184)
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0 [#20250](https://github.com/deckhouse/deckhouse/pull/20250)
  - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18657](https://github.com/deckhouse/deckhouse/pull/18657)
