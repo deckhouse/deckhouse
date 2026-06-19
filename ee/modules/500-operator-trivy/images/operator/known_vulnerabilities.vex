@@ -211,6 +211,21 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Prior to version 29.3.1, a security vulnerability has been detected that allows plugins privilege validation to be bypassed during docker plugin install. Due to an error in the daemon's privilege comparison logic, the daemon may incorrectly accept a privilege set that differs from the one approved by the user. Plugins that request exactly one privilege are also affected, because no comparison is performed at all. This issue has been patched in version 29.3.1. Deckhouse Kubernetes Platform is not affeceted by this since it does not ship or use Docker daemon or it's plugins in any way.",
       "timestamp": "2026-05-16T12:31:20Z"
+    },
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-41567",
+        "description": "Docker: PUT /containers/{id}/archive executes container binary on the host",
+        "name": "CVE-2026-41567"
+      },
+      "products": [
+        { "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible" },
+        { "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The vulnerability affects Docker daemon archive extraction behavior. Deckhouse Kubernetes Platform is not affected because it does not ship or use Docker daemon API endpoints in this execution path for operator-trivy and trivy binaries.",
+      "timestamp": "2026-06-19T14:09:00Z"
     }
 
   ],
