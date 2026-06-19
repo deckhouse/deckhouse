@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,12 +39,6 @@ func CacheOptions() (cache.Options, client.Options) {
 			MachineNamespace: {},
 		},
 	}
-
-	kubeSystemSecrets, _ := labels.NewRequirement("name", selection.In, []string{
-		"d8-node-manager-cloud-provider",
-		"d8-cluster-configuration",
-		"d8-provider-cluster-configuration",
-	})
 
 	capiCRDSelector := labels.SelectorFromSet(labels.Set{
 		"cluster.x-k8s.io/provider": "cluster-api",
@@ -67,9 +60,7 @@ func CacheOptions() (cache.Options, client.Options) {
 							"metadata.name": ConfigurationChecksumsSecretName,
 						}),
 					},
-					"kube-system": {
-						LabelSelector: labels.NewSelector().Add(*kubeSystemSecrets),
-					},
+					"kube-system": {},
 				},
 			},
 			&mcmv1alpha1.Machine{}: machineNS,
