@@ -106,24 +106,23 @@ import:
   to: /sysext/opt/deckhouse/bin
   includePaths:
   - containerd
-  - .containerd_fallback
   - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
   - install
   - uninstall
   - containerd.service
-  before: setup
+  before: install
 {{- if and (eq $.Env "CSE") $is_v2 }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
   add: /pidumount
   to: /sysext/opt/deckhouse/bin/pidumount
-  before: setup
+  before: install
 {{- end }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
   add: /out/runc
   to: /sysext/opt/deckhouse/bin/runc
-  before: setup
+  before: install
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /scripts
@@ -152,7 +151,6 @@ import:
   to: /
   includePaths:
   - containerd
-  - .containerd_fallback
   - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
@@ -185,7 +183,7 @@ import:
   add: /out
   to: /
   includePaths:
-  - **/*
+  - '**/*'
   before: setup
 imageSpec:
   config:
