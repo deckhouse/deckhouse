@@ -207,6 +207,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/340-monitoring-kubernetes-control-plane/hooks
+  to: /deckhouse/modules/340-monitoring-kubernetes-control-plane/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/340-monitoring-ping/hooks
   to: /deckhouse/modules/340-monitoring-ping/hooks
   excludePaths:
