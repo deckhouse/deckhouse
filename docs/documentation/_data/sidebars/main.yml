@@ -1575,6 +1575,10 @@ entries:
                 ru: Мониторинг
               url: /architecture/observability/monitoring.html
             - title:
+                en: Prometheus module
+                ru: Модуль prometheus
+              url: /architecture/observability/prometheus.html
+            - title:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging.html
