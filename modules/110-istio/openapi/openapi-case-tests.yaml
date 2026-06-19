@@ -38,6 +38,12 @@ positive:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.d8-istio.svc.cluster.local
+            port: 10003
   values:
     - {}
 negative:
@@ -58,3 +64,9 @@ negative:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: InitContainer
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.istio-system.svc.cluster.local
+            port: "10003"

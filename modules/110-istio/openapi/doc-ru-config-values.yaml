@@ -327,6 +327,30 @@ properties:
             description: Тестовый формат access-логов sidecar-контейнера. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
           jsonLabels:
             description: JSON формат access-логов sidecar-контейнера. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+      extensionProviders:
+        description: |
+          Дополнительные Istio extension providers, которые будут зарегистрированы в mesh configuration.
+
+          Имя provider'а `main-access-log-format` зарезервировано Deckhouse.
+        items:
+          properties:
+            name:
+              description: Уникальное имя extension provider'а.
+            envoyExtAuthzGrpc:
+              description: Внешний сервис авторизации, который реализует Envoy ext_authz gRPC API.
+              properties:
+                service:
+                  description: Сервис, который реализует Envoy ext_authz gRPC API. Формат значения — `[<namespace>/]<hostname>`.
+                port:
+                  description: Порт сервиса.
+                failOpen:
+                  description: Разрешать запросы, если сервис авторизации недоступен или вернул ошибку 5xx.
+                timeout:
+                  description: Максимальное время ожидания ответа от сервиса авторизации.
+                statusOnError:
+                  description: HTTP-статус, который будет возвращён клиенту при ошибке взаимодействия с сервисом авторизации.
+                clearRouteCache:
+                  description: Очищать route cache, чтобы внешний сервис авторизации мог влиять на маршрутизацию.
       trafficRedirectionSetupMode:
         description: |
           Управление режимом перенаправления прикладного трафика для передачи под управление Istio в сетевом пространстве имён пода.

@@ -90,6 +90,7 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 						CABundle: []byte(caBundle),
 					},
 					NamespaceSelector:       projectNamespaceSelector,
+					MatchConditions:         systemWriterMatchConditions,
 					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 					AdmissionReviewVersions: []string{"v1"},
 					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
@@ -103,8 +104,10 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 	}
 
 	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile selector/timeout on existing configurations too (e.g. upgrades).
+	// Reconcile selector/match-conditions/timeout on existing configurations too (e.g. upgrades), so a
+	// cluster that already has the webhook without the system-writer exclusion is healed in place.
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
+	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})
