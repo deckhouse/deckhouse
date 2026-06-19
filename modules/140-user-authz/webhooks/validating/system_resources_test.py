@@ -14,9 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 import unittest
-import urllib.error
 from unittest import mock
 
 import system_resources
@@ -27,10 +25,6 @@ NS = "team-a"
 USER = "alice@example.com"
 SYSTEM_LABEL = {system_resources.SYSTEM_RESOURCE_LABEL: system_resources.SYSTEM_RESOURCE_VALUE}
 HERITAGE_LABELS = {system_resources.HERITAGE_LABEL: system_resources.HERITAGE_MULTITENANCY}
-
-_CRB_PATH = "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings"
-_RB_PATH_RE = re.compile(r"^/apis/rbac\.authorization\.k8s\.io/v1/namespaces/([^/]+)/rolebindings$")
-_POD_PATH_RE = re.compile(r"^/api/v1/namespaces/([^/]+)/pods/([^/]+)$")
 
 
 # ---- API object builders (shape returned by the live kube API, mocked below) -------------------
@@ -55,12 +49,12 @@ def superadmin_rb(namespace=NS, user=USER, role="d8:namespace:superadmin"):
 
 
 class FakeAPI:
-    """Routes system_resources._api_get(path) to canned responses so the hook's live reads run
-    against fixtures instead of a real cluster.
+    """Routes system_resources._kubectl_get(resource, name, namespace) to canned responses so the
+    hook's live reads run against fixtures instead of a real cluster.
 
       rolebindings_by_ns: {namespace: [rolebinding, ...]}
       clusterrolebindings: [clusterrolebinding, ...]
-      pods: {(namespace, name): labels_dict}  — a missing key yields a 404 (pod not found)
+      pods: {(namespace, name): labels_dict}  — a missing key yields None (pod NotFound)
     """
 
     def __init__(self, *, rolebindings_by_ns=None, clusterrolebindings=None, pods=None):
@@ -68,19 +62,17 @@ class FakeAPI:
         self.clusterrolebindings = clusterrolebindings or []
         self.pods = pods or {}
 
-    def get(self, path):
-        if path == _CRB_PATH:
+    def get(self, resource, name="", namespace=""):
+        if resource == "clusterrolebindings":
             return {"items": self.clusterrolebindings}
-        m = _RB_PATH_RE.match(path)
-        if m:
-            return {"items": self.rolebindings_by_ns.get(m.group(1), [])}
-        m = _POD_PATH_RE.match(path)
-        if m:
-            key = (m.group(1), m.group(2))
+        if resource == "rolebindings":
+            return {"items": self.rolebindings_by_ns.get(namespace, [])}
+        if resource == "pods":
+            key = (namespace, name)
             if key not in self.pods:
-                raise urllib.error.HTTPError(path, 404, "Not Found", None, None)
+                return None  # NotFound
             return {"metadata": {"labels": self.pods[key]}}
-        raise AssertionError(f"unexpected API path: {path}")
+        raise AssertionError(f"unexpected kubectl resource: {resource}")
 
 
 def edit_context(kind, name, *, labels=None, namespace=NS, username=USER, groups=None,
@@ -128,7 +120,7 @@ def exec_context(pod_name, *, namespace=NS, username=USER, groups=None, subresou
 
 
 def _run(ctx, api=None):
-    with mock.patch.object(system_resources, "_api_get", (api or FakeAPI()).get):
+    with mock.patch.object(system_resources, "_kubectl_get", (api or FakeAPI()).get):
         return hook.testrun(system_resources.main, [ctx])
 
 

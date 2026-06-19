@@ -55,9 +55,7 @@
 # the `deckhouse.io/system-resource` annotation to each module's resources is a cross-module effort.
 
 import json
-import ssl
-import urllib.error
-import urllib.request
+import subprocess
 from typing import Optional
 
 from deckhouse import hook
@@ -102,16 +100,25 @@ BYPASS_GROUPS = {
 BINDING_EDIT = "rbacv2-system-resource-edit.deckhouse.io"
 BINDING_EXEC = "rbacv2-system-resource-exec.deckhouse.io"
 
-# Superadmin status and the exec target pod are resolved with on-demand LIVE API reads — no informers
-# and no snapshots. The protected events are rare (a non-superadmin editing a system-labeled object,
-# or exec into a system pod), so a live read per event is cheap, keeps the webhook-handler free of any
+# Superadmin status and the exec target pod are resolved with on-demand LIVE reads — no informers and
+# no snapshots. The protected events are rare (a non-superadmin editing a system-labeled object, or
+# exec into a system pod), so a live read per event is cheap, keeps the webhook-handler free of any
 # standing watch (no all-pods / all-(cluster)rolebindings stream), and lets the hook register instantly
 # without waiting for informer synchronization (an unsynced informer previously left the whole handler
 # with an empty hook registry). Reads are scoped: RoleBindings only in the request namespace, the exec
 # target pod by name.
-_API_SERVER = "https://kubernetes.default.svc"
-_SA_DIR = "/var/run/secrets/kubernetes.io/serviceaccount"
-_API_TIMEOUT_SECONDS = 5
+#
+# Reads go through the `kubectl` binary that ships in the webhook-handler image (it is what the bash
+# webhooks in this same image already use for live reads). This deliberately avoids Python's `ssl`
+# module: the image's CPython links `_ssl` against libssl.so.3/libcrypto.so.3, which are NOT present
+# in the final image, so a top-level `import ssl` (needed by urllib for HTTPS to the API server)
+# raises ImportError at hook-config time. Because the handler is fail-closed, that single import
+# error previously crashed config loading and took down EVERY webhook on the handler. kubectl reads
+# the in-cluster service-account credentials itself, so no urllib/ssl is needed here. Scoping and RBAC
+# requirements are unchanged: the webhook-handler ServiceAccount still needs list on
+# (cluster)rolebindings and get on pods.
+_KUBECTL = "kubectl"
+_API_TIMEOUT_SECONDS = 10
 
 CONFIG = f"""
 configVersion: v1
@@ -203,24 +210,31 @@ def _markings(obj: dict) -> tuple[bool, bool]:
     return is_system, is_heritage
 
 
-def _api_get(path: str) -> dict:
-    """On-demand authenticated GET against the in-cluster API server. Raises urllib.error.HTTPError on
-    a non-2xx response so the caller can distinguish 404 from a real failure."""
-    with open(f"{_SA_DIR}/token", encoding="utf-8") as f:
-        token = f.read().strip()
-    context = ssl.create_default_context(cafile=f"{_SA_DIR}/ca.crt")
-    req = urllib.request.Request(
-        _API_SERVER + path,
-        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+def _kubectl_get(resource: str, name: str = "", namespace: str = "") -> Optional[dict]:
+    """On-demand live read via the in-cluster `kubectl ... -o json`. Returns the parsed JSON (a List
+    object for a collection read, a single object for a named read), or None when a named resource is
+    NotFound so the caller can distinguish "gone" from a real failure. Raises on any other failure."""
+    cmd = [_KUBECTL, "get", resource]
+    if name:
+        cmd.append(name)
+    if namespace:
+        cmd += ["--namespace", namespace]
+    cmd += ["--output", "json"]
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=_API_TIMEOUT_SECONDS, check=False
     )
-    with urllib.request.urlopen(req, timeout=_API_TIMEOUT_SECONDS, context=context) as resp:
-        return json.loads(resp.read())
+    if proc.returncode != 0:
+        stderr = (proc.stderr or "").strip()
+        if "NotFound" in stderr or "not found" in stderr.lower():
+            return None
+        raise RuntimeError(f"kubectl get {' '.join(cmd[2:])} failed: {stderr}")
+    return json.loads(proc.stdout)
 
 
-def _superadmin_bindings(path: str) -> list:
-    """Live-list the (Cluster)RoleBindings at `path`, keeping only those bound to a built-in
+def _superadmin_bindings(resource: str, namespace: str = "") -> list:
+    """Live-list the (Cluster)RoleBindings of `resource`, keeping only those bound to a built-in
     superadmin ClusterRole."""
-    items = _api_get(path).get("items") or []
+    items = (_kubectl_get(resource, namespace=namespace) or {}).get("items") or []
     return [b for b in items if (b.get("roleRef") or {}).get("name") in SUPERADMIN_ROLES]
 
 
@@ -248,15 +262,13 @@ def _any_subject_matches(bindings: list, username: str, groups: set) -> bool:
 
 def is_superadmin(username: str, groups: set, namespace: str) -> bool:
     # Cluster-wide superadmin: a ClusterRoleBinding to a superadmin role grants it everywhere.
-    crbs = _superadmin_bindings("/apis/rbac.authorization.k8s.io/v1/clusterrolebindings")
+    crbs = _superadmin_bindings("clusterrolebindings")
     if _any_subject_matches(crbs, username, groups):
         return True
     # Namespace-scoped superadmin: a RoleBinding to a superadmin role IN THE REQUEST NAMESPACE only
     # (read just that namespace, never all of them).
     if namespace:
-        rbs = _superadmin_bindings(
-            f"/apis/rbac.authorization.k8s.io/v1/namespaces/{namespace}/rolebindings"
-        )
+        rbs = _superadmin_bindings("rolebindings", namespace=namespace)
         if _any_subject_matches(rbs, username, groups):
             return True
     return False
@@ -265,12 +277,9 @@ def is_superadmin(username: str, groups: set, namespace: str) -> bool:
 def is_system_pod(namespace: str, name: str) -> bool:
     if not namespace or not name:
         return False
-    try:
-        pod = _api_get(f"/api/v1/namespaces/{namespace}/pods/{name}")
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return False  # pod is gone — nothing to protect
-        raise
+    pod = _kubectl_get("pods", name=name, namespace=namespace)
+    if pod is None:
+        return False  # pod is gone — nothing to protect
     labels = ((pod.get("metadata") or {}).get("labels")) or {}
     return labels.get(SYSTEM_RESOURCE_LABEL) == SYSTEM_RESOURCE_VALUE
 
