@@ -23,20 +23,20 @@ This policy implements the following rules:
 <!-- File content located in tools/audit_policy/templates/short_block_en.gotmpl -->
 - Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.
 - Do not log leader election operations on `Lease` resources.
-- Do not log cert-manager leader election `ConfigMaps`.
-- Do not log `VerticalPodAutoscalerCheckpoints` resources.
+- Do not log cert-manager leader election ConfigMaps.
+- Do not log VerticalPodAutoscalerCheckpoints resources.
 - Do not log PATCH operations on `VerticalPodAutoscaler` from recommender.
-- Do not log `UpmeterHookProbes` resources.
+- Do not log UpmeterHookProbes resources.
 - Do not log any operations in `d8-upmeter` namespace.
-- Do not log ingress-nginx leader election updates in `ConfigMaps`.
+- Do not log ingress-nginx leader election updates in ConfigMaps.
 - Do not log dex health-check create/delete operations on `AuthRequest` resources.
-- Log create and delete operations for `Node` resources with request/response payload.
+- Log create and delete operations for Node resources with request/response payload.
 - Log kubectl logs requests (pods/log) at Metadata level.
 - Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`).
-- Log create/update/patch/delete operations for `Pod` resources.
+- Log create/update/patch/delete operations for Pod resources.
 - Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).
 - Log all LIST operations in all namespaces.
-- Log create and delete operations for `ServiceAccount` resources.
+- Log create and delete operations for ServiceAccount resources.
 - Log create/update/delete/patch operations for Role and ClusterRole resources.
 - Log create/update/delete operations for ClusterRoleBinding resources.
 - Log attach and ephemeral container related pod subresource operations.

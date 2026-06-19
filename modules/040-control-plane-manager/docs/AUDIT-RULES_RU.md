@@ -75,20 +75,20 @@ rules:                       # Набор правил для аудита
 В этой политике реализованы следующие правила:
 - [Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.](#rule-1)
 - [Не логировать операции выбора лидера на ресурсах `Lease`.](#rule-2)
-- [Не логировать `ConfigMap` cert-manager, используемые для выбора лидера.](#rule-3)
-- [Не логировать ресурсы `VerticalPodAutoscalerCheckpoints`.](#rule-4)
+- [Не логировать ConfigMap cert-manager, используемые для выбора лидера.](#rule-3)
+- [Не логировать ресурсы VerticalPodAutoscalerCheckpoints.](#rule-4)
 - [Не логировать PATCH-операции `VerticalPodAutoscaler` от recommender.](#rule-5)
-- [Не логировать ресурсы `UpmeterHookProbes`.](#rule-6)
-- [Не логировать любые операции в пространстве имён `d8-upmeter`.](#rule-7)
-- [Не логировать обновления `ConfigMap` ingress-nginx для выборов лидера.](#rule-8)
+- [Не логировать ресурсы UpmeterHookProbes.](#rule-6)
+- [Не логировать любые операции в неймспейсе `d8-upmeter`.](#rule-7)
+- [Не логировать обновления ConfigMap ingress-nginx для выборов лидера.](#rule-8)
 - [Не логировать операции create/delete `AuthRequest` от health-check dex.](#rule-9)
-- [Логировать операции create/delete для ресурсов `Node` с телом запроса/ответа.](#rule-10)
+- [Логировать операции create/delete для ресурсов Node с телом запроса/ответа.](#rule-10)
 - [Логировать запросы kubectl logs (pods/log) на уровне Metadata.](#rule-11)
-- [Логировать операции create/update/patch/delete от системных `ServiceAccount` (`kube-system`, `d8-*`).](#rule-12)
-- [Логировать операции create/update/patch/delete для ресурсов `Pod`.](#rule-13)
-- [Логировать операции create/update/patch/delete в системных пространствах имён (`kube-system`, `d8-*`).](#rule-14)
-- [Логировать все LIST-запросы во всех пространствах имён.](#rule-15)
-- [Логировать операции create/delete для ресурсов `ServiceAccount`.](#rule-16)
+- [Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).](#rule-12)
+- [Логировать операции create/update/patch/delete для ресурсов Pod.](#rule-13)
+- [Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).](#rule-14)
+- [Логировать все LIST-запросы во всех неймспейсах.](#rule-15)
+- [Логировать операции create/delete для ресурсов ServiceAccount.](#rule-16)
 - [Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.](#rule-17)
 - [Логировать операции create/update/delete для ресурсов ClusterRoleBinding.](#rule-18)
 - [Логировать операции с pod subresource для attach и ephemeral-контейнеров.](#rule-19)
@@ -128,7 +128,7 @@ resources:
 ```
 
 <a id="rule-3"></a>
-3\. Не логировать `ConfigMap` cert-manager, используемые для выбора лидера.
+3\. Не логировать ConfigMap cert-manager, используемые для выбора лидера.
 
 ```yaml
 level: None
@@ -141,7 +141,7 @@ resources:
 ```
 
 <a id="rule-4"></a>
-4\. Не логировать ресурсы `VerticalPodAutoscalerCheckpoints`.
+4\. Не логировать ресурсы VerticalPodAutoscalerCheckpoints.
 
 ```yaml
 level: None
@@ -167,7 +167,7 @@ resources:
 ```
 
 <a id="rule-6"></a>
-6\. Не логировать ресурсы `UpmeterHookProbes`.
+6\. Не логировать ресурсы UpmeterHookProbes.
 
 ```yaml
 level: None
@@ -178,7 +178,7 @@ resources:
 ```
 
 <a id="rule-7"></a>
-7\. Не логировать любые операции в пространстве имён `d8-upmeter`.
+7\. Не логировать любые операции в неймспейсе `d8-upmeter`.
 
 ```yaml
 level: None
@@ -187,7 +187,7 @@ namespaces:
 ```
 
 <a id="rule-8"></a>
-8\. Не логировать обновления `ConfigMap` ingress-nginx для выборов лидера.
+8\. Не логировать обновления ConfigMap ingress-nginx для выборов лидера.
 
 ```yaml
 level: None
@@ -221,7 +221,7 @@ namespaces:
 ```
 
 <a id="rule-10"></a>
-10\. Логировать операции create/delete для ресурсов `Node` с телом запроса/ответа.
+10\. Логировать операции create/delete для ресурсов Node с телом запроса/ответа.
 
 ```yaml
 level: RequestResponse
@@ -244,7 +244,7 @@ resources:
 ```
 
 <a id="rule-12"></a>
-12\. Логировать операции create/update/patch/delete от системных `ServiceAccount` (`kube-system`, `d8-*`).
+12\. Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).
 
 ```yaml
 level: Metadata
@@ -389,7 +389,7 @@ omitStages:
 ```
 
 <a id="rule-13"></a>
-13\. Логировать операции create/update/patch/delete для ресурсов `Pod`.
+13\. Логировать операции create/update/patch/delete для ресурсов Pod.
 
 ```yaml
 level: Request
@@ -406,7 +406,7 @@ omitStages:
 ```
 
 <a id="rule-14"></a>
-14\. Логировать операции create/update/patch/delete в системных пространствах имён (`kube-system`, `d8-*`).
+14\. Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
 
 ```yaml
 level: Metadata
@@ -459,7 +459,7 @@ omitStages:
 ```
 
 <a id="rule-15"></a>
-15\. Логировать все LIST-запросы во всех пространствах имён.
+15\. Логировать все LIST-запросы во всех неймспейсах.
 
 ```yaml
 level: Metadata
@@ -468,7 +468,7 @@ verbs:
 ```
 
 <a id="rule-16"></a>
-16\. Логировать операции create/delete для ресурсов `ServiceAccount`.
+16\. Логировать операции create/delete для ресурсов ServiceAccount.
 
 ```yaml
 level: Metadata
@@ -669,7 +669,7 @@ rules:
         resources:
           - leases
 
-  # 3: Не логировать `ConfigMap` cert-manager, используемые для выбора лидера.
+  # 3: Не логировать ConfigMap cert-manager, используемые для выбора лидера.
   - level: None
     resources:
       - resources:
@@ -678,7 +678,7 @@ rules:
           - cert-manager-cainjector-leader-election
           - cert-manager-controller
 
-  # 4: Не логировать ресурсы `VerticalPodAutoscalerCheckpoints`.
+  # 4: Не логировать ресурсы VerticalPodAutoscalerCheckpoints.
   - level: None
     resources:
       - group: autoscaling.k8s.io
@@ -696,19 +696,19 @@ rules:
         resources:
           - verticalpodautoscalers
 
-  # 6: Не логировать ресурсы `UpmeterHookProbes`.
+  # 6: Не логировать ресурсы UpmeterHookProbes.
   - level: None
     resources:
       - group: deckhouse.io
         resources:
           - upmeterhookprobes
 
-  # 7: Не логировать любые операции в пространстве имён `d8-upmeter`.
+  # 7: Не логировать любые операции в неймспейсе `d8-upmeter`.
   - level: None
     namespaces:
       - d8-upmeter
 
-  # 8: Не логировать обновления `ConfigMap` ingress-nginx для выборов лидера.
+  # 8: Не логировать обновления ConfigMap ingress-nginx для выборов лидера.
   - level: None
     users:
       - system:serviceaccount:d8-ingress-nginx:ingress-nginx
@@ -734,7 +734,7 @@ rules:
     namespaces:
       - d8-user-authn
 
-  # 10: Логировать операции create/delete для ресурсов `Node` с телом запроса/ответа.
+  # 10: Логировать операции create/delete для ресурсов Node с телом запроса/ответа.
   - level: RequestResponse
     verbs:
       - create
@@ -749,7 +749,7 @@ rules:
       - resources:
           - pods/log
 
-  # 12: Логировать операции create/update/patch/delete от системных `ServiceAccount` (`kube-system`, `d8-*`).
+  # 12: Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).
   - level: Metadata
     users:
       - system:serviceaccount:d8-cert-manager:cainjector
@@ -890,7 +890,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 13: Логировать операции create/update/patch/delete для ресурсов `Pod`.
+  # 13: Логировать операции create/update/patch/delete для ресурсов Pod.
   - level: Request
     verbs:
       - create
@@ -903,7 +903,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 14: Логировать операции create/update/patch/delete в системных пространствах имён (`kube-system`, `d8-*`).
+  # 14: Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
   - level: Metadata
     verbs:
       - create
@@ -952,12 +952,12 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 15: Логировать все LIST-запросы во всех пространствах имён.
+  # 15: Логировать все LIST-запросы во всех неймспейсах.
   - level: Metadata
     verbs:
       - list
 
-  # 16: Логировать операции create/delete для ресурсов `ServiceAccount`.
+  # 16: Логировать операции create/delete для ресурсов ServiceAccount.
   - level: Metadata
     verbs:
       - create

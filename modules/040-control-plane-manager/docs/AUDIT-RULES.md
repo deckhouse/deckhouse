@@ -75,20 +75,20 @@ If a request comes from a user who belongs to at least one group listed in `user
 Deckhouse Kubernetes Platform uses the following audit rules, which can be extended by users:
 - [Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.](#rule-1)
 - [Do not log leader election operations on `Lease` resources.](#rule-2)
-- [Do not log cert-manager leader election `ConfigMaps`.](#rule-3)
-- [Do not log `VerticalPodAutoscalerCheckpoints` resources.](#rule-4)
+- [Do not log cert-manager leader election ConfigMaps.](#rule-3)
+- [Do not log VerticalPodAutoscalerCheckpoints resources.](#rule-4)
 - [Do not log PATCH operations on `VerticalPodAutoscaler` from recommender.](#rule-5)
-- [Do not log `UpmeterHookProbes` resources.](#rule-6)
+- [Do not log UpmeterHookProbes resources.](#rule-6)
 - [Do not log any operations in `d8-upmeter` namespace.](#rule-7)
-- [Do not log ingress-nginx leader election updates in `ConfigMaps`.](#rule-8)
+- [Do not log ingress-nginx leader election updates in ConfigMaps.](#rule-8)
 - [Do not log dex health-check create/delete operations on `AuthRequest` resources.](#rule-9)
-- [Log create and delete operations for `Node` resources with request/response payload.](#rule-10)
+- [Log create and delete operations for Node resources with request/response payload.](#rule-10)
 - [Log kubectl logs requests (pods/log) at Metadata level.](#rule-11)
 - [Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`).](#rule-12)
-- [Log create/update/patch/delete operations for `Pod` resources.](#rule-13)
+- [Log create/update/patch/delete operations for Pod resources.](#rule-13)
 - [Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).](#rule-14)
 - [Log all LIST operations in all namespaces.](#rule-15)
-- [Log create and delete operations for `ServiceAccount` resources.](#rule-16)
+- [Log create and delete operations for ServiceAccount resources.](#rule-16)
 - [Log create/update/delete/patch operations for Role and ClusterRole resources.](#rule-17)
 - [Log create/update/delete operations for ClusterRoleBinding resources.](#rule-18)
 - [Log attach and ephemeral container related pod subresource operations.](#rule-19)
@@ -128,7 +128,7 @@ resources:
 ```
 
 <a id="rule-3"></a>
-3\. Do not log cert-manager leader election `ConfigMaps`.
+3\. Do not log cert-manager leader election ConfigMaps.
 
 ```yaml
 level: None
@@ -141,7 +141,7 @@ resources:
 ```
 
 <a id="rule-4"></a>
-4\. Do not log `VerticalPodAutoscalerCheckpoints` resources.
+4\. Do not log VerticalPodAutoscalerCheckpoints resources.
 
 ```yaml
 level: None
@@ -167,7 +167,7 @@ resources:
 ```
 
 <a id="rule-6"></a>
-6\. Do not log `UpmeterHookProbes` resources.
+6\. Do not log UpmeterHookProbes resources.
 
 ```yaml
 level: None
@@ -187,7 +187,7 @@ namespaces:
 ```
 
 <a id="rule-8"></a>
-8\. Do not log ingress-nginx leader election updates in `ConfigMaps`.
+8\. Do not log ingress-nginx leader election updates in ConfigMaps.
 
 ```yaml
 level: None
@@ -221,7 +221,7 @@ namespaces:
 ```
 
 <a id="rule-10"></a>
-10\. Log create and delete operations for `Node` resources with request/response payload.
+10\. Log create and delete operations for Node resources with request/response payload.
 
 ```yaml
 level: RequestResponse
@@ -389,7 +389,7 @@ omitStages:
 ```
 
 <a id="rule-13"></a>
-13\. Log create/update/patch/delete operations for `Pod` resources.
+13\. Log create/update/patch/delete operations for Pod resources.
 
 ```yaml
 level: Request
@@ -468,7 +468,7 @@ verbs:
 ```
 
 <a id="rule-16"></a>
-16\. Log create and delete operations for `ServiceAccount` resources.
+16\. Log create and delete operations for ServiceAccount resources.
 
 ```yaml
 level: Metadata
@@ -669,7 +669,7 @@ rules:
         resources:
           - leases
 
-  # 3: Do not log cert-manager leader election `ConfigMaps`.
+  # 3: Do not log cert-manager leader election ConfigMaps.
   - level: None
     resources:
       - resources:
@@ -678,7 +678,7 @@ rules:
           - cert-manager-cainjector-leader-election
           - cert-manager-controller
 
-  # 4: Do not log `VerticalPodAutoscalerCheckpoints` resources.
+  # 4: Do not log VerticalPodAutoscalerCheckpoints resources.
   - level: None
     resources:
       - group: autoscaling.k8s.io
@@ -696,7 +696,7 @@ rules:
         resources:
           - verticalpodautoscalers
 
-  # 6: Do not log `UpmeterHookProbes` resources.
+  # 6: Do not log UpmeterHookProbes resources.
   - level: None
     resources:
       - group: deckhouse.io
@@ -708,7 +708,7 @@ rules:
     namespaces:
       - d8-upmeter
 
-  # 8: Do not log ingress-nginx leader election updates in `ConfigMaps`.
+  # 8: Do not log ingress-nginx leader election updates in ConfigMaps.
   - level: None
     users:
       - system:serviceaccount:d8-ingress-nginx:ingress-nginx
@@ -734,7 +734,7 @@ rules:
     namespaces:
       - d8-user-authn
 
-  # 10: Log create and delete operations for `Node` resources with request/response payload.
+  # 10: Log create and delete operations for Node resources with request/response payload.
   - level: RequestResponse
     verbs:
       - create
@@ -890,7 +890,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 13: Log create/update/patch/delete operations for `Pod` resources.
+  # 13: Log create/update/patch/delete operations for Pod resources.
   - level: Request
     verbs:
       - create
@@ -957,7 +957,7 @@ rules:
     verbs:
       - list
 
-  # 16: Log create and delete operations for `ServiceAccount` resources.
+  # 16: Log create and delete operations for ServiceAccount resources.
   - level: Metadata
     verbs:
       - create
