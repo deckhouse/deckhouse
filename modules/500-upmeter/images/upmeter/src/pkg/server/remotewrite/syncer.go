@@ -196,9 +196,6 @@ func (s *syncer) getTimeseries() ([]*prompb.TimeSeries, time.Time, error) {
 
 	slot = episodes[0].TimeSlot
 
-	// Drop stale tail in bulk: if the earliest slot is older than the remote storage's
-	// acceptance window, there is no point hammering the backend with guaranteed-400 requests
-	// one slot at a time. DeleteUpTo wipes the whole stale prefix in a single SQL statement.
 	if s.maxSampleAge > 0 {
 		ageDeadline := time.Now().Add(-s.maxSampleAge)
 		if slot.Before(ageDeadline) {
