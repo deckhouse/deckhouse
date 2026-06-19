@@ -4,7 +4,7 @@ memory: 15Mi
 {{- end }}
 
 {{- $profiles := list "main" }}
-{{- if .Values.global.discovery.hasEtcdArbiterNode }}
+{{- if .Values.monitoringKubernetesControlPlane.internal.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
 {{- end }}
 

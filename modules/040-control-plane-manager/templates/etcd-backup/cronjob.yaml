@@ -18,7 +18,7 @@ memory: 40Mi
     {{- if hasKey .Values.controlPlaneManager.internal "mastersNode" }}
       {{- $nodes := list }}
       {{- $nodes = concat $nodes .Values.controlPlaneManager.internal.mastersNode }}
-      {{- if $.Values.global.discovery.hasEtcdArbiterNode }}
+      {{- if $.Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
         {{- $nodes = append $nodes "etcd-arbiter" }}
       {{- end }}
       {{- range $node := $nodes }}
