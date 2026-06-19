@@ -208,7 +208,7 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 	{
 		descriptionEN := "Do not log any operations in `d8-upmeter` namespace."
-		descriptionRU := "Не логировать любые операции в пространстве имён `d8-upmeter`."
+		descriptionRU := "Не логировать любые операции в неймспейсе `d8-upmeter`."
 		rule := audit.PolicyRule{Level: audit.LevelNone, Namespaces: []string{"d8-upmeter"}}
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
