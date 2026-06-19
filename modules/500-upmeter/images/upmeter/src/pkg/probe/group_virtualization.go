@@ -45,12 +45,12 @@ func initVirtualization(access kubernetes.Access, preflight checker.Doer, virtPr
 			virtualMachineLifecycleTimeouts{
 				period:                      10 * time.Minute,
 				waitVirtualImage:            25 * time.Second,
-				waitVirtualDisk:             50 * time.Second,
+				waitVirtualDisk:             30 * time.Second,
 				waitVirtualMachine:          30 * time.Second,
-				waitVirtualMachineMigration: 40 * time.Second,
-				waitDeletion:                30 * time.Second,
-				waitNamespaceDeleted:        30 * time.Second,
-				total:                       8 * time.Minute,
+				waitVirtualMachineMigration: 30 * time.Second,
+				waitDeletion:                25 * time.Second,
+				waitNamespaceDeleted:        25 * time.Second,
+				total:                       6 * time.Minute,
 			},
 		),
 	}
