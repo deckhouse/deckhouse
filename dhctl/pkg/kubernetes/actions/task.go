@@ -43,13 +43,13 @@ func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
 	err := task.CreateFunc(ctx, manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("create resource: %v", err)
+			return fmt.Errorf("create resource %q: %v", task.Name, err)
 		}
 		log.InfoF("%s already exists. Trying to update ... ", task.Name)
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
 			log.ErrorLn("ERROR!")
-			return fmt.Errorf("update resource: %v", err)
+			return fmt.Errorf("update resource %q: %v", task.Name, err)
 		}
 		log.InfoLn("OK!")
 	}
@@ -63,13 +63,13 @@ func (task *ManifestTask) CreateOrUpdateSilent(ctx context.Context) error {
 	err := task.CreateFunc(ctx, manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("create resource: %v", err)
+			return fmt.Errorf("create resource %q: %v", task.Name, err)
 		}
 		log.DebugF("%s already exists. Trying to update ... ", task.Name)
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
 			log.ErrorLn("ERROR!")
-			return fmt.Errorf("update resource: %v", err)
+			return fmt.Errorf("update resource %q: %v", task.Name, err)
 		}
 		log.DebugLn("OK!")
 	}
