@@ -51,7 +51,7 @@ spec:
         - name: PILOT_HTTP10
           value: "1"
   {{- end }}
-  {{- range $name, $value := $.Values.istio.controlPlane.env }}
+  {{- range $name, $value := $.Values.istio.controlPlane.extraEnvs }}
         - name: {{ $name }}
           value: {{ $value | quote }}
   {{- end }}

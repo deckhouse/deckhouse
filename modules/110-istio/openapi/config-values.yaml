@@ -438,7 +438,7 @@ properties:
               format: int64
             value:
               type: string
-      env:
+      extraEnvs:
         type: object
         additionalProperties:
           type: string

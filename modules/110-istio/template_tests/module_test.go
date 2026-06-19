@@ -1050,13 +1050,13 @@ updatePolicy:
 		})
 	})
 
-	Context("istiod with custom controlPlane.env", func() {
+	Context("istiod with custom controlPlane.extraEnvs", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
-			f.ValuesSetFromYaml("istio.controlPlane.env", `
+			f.ValuesSetFromYaml("istio.controlPlane.extraEnvs", `
 GODEBUG: "gctrace=1"
 MY_VAR: "myvalue"
 `)
