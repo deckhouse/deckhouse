@@ -60,13 +60,14 @@ spec:
       - key: cni.istio.io/not-ready
         operator: Exists
       {{- if $.Values.istio.controlPlane.tolerations }}
-{{ $.Values.istio.controlPlane.tolerations | toYaml | nindent 6 }}
+      {{- $.Values.istio.controlPlane.tolerations | toYaml | nindent 6 }}
       {{- else }}
-      {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
+      {{- include "_helm_lib_any_node_tolerations" $ | nindent 6 }}
+      {{- include "_helm_lib_additional_tolerations_storage_problems" $ | nindent 6 }}
       {{- end }}
       {{- if $.Values.istio.controlPlane.nodeSelector }}
       nodeSelector:
-{{ $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
+      {{- $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
       {{- else }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
       {{- end }}
@@ -159,7 +160,7 @@ spec:
               resource: limits.cpu
               divisor: "1"
         resources:
-{{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 10 }}
+        {{- include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 10 }}
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true

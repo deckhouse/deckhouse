@@ -1500,6 +1500,10 @@ MY_VAR: "myvalue"
 			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("grpc-xds"))
 			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("https-webhook"))
 
+			ds := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27")
+			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("cni.istio.io/not-ready"))
+			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("node-role.kubernetes.io/master"))
+
 			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
 			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
 		})
