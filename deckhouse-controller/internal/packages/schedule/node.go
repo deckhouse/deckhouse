@@ -92,6 +92,8 @@ type node struct {
 	state nodeState // Lifecycle phase: idle → scheduled → active.
 	order Order     // Scheduling priority; lower values run before higher ones.
 
+	disabled bool // Explicit operator-driven disable; overrides a passing checker chain.
+
 	status checker.Result // Last computed enabled/disabled result from the checker chain.
 
 	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and checker inputs.
