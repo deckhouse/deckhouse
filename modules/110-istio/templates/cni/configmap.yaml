@@ -1,6 +1,7 @@
 {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 {{- $version := $.Values.istio.internal.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $fullVersion := get $versionInfo "fullVersion" }}
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 ---
 apiVersion: v1
@@ -30,6 +31,21 @@ data:
       }
     }
   AMBIENT_ENABLED: {{ ternary "true" "false" (and $supportsAmbient $.Values.istio.ambient.enabled) | quote }}
+  {{- if semverCompare "> 1.27.0" $fullVersion }}
+  AMBIENT_ENABLEMENT_SELECTOR: |
+    - podSelector:
+        matchLabels:
+          istio.io/dataplane-mode: ambient
+    - namespaceSelector:
+        matchLabels:
+          istio.io/dataplane-mode: ambient
+      podSelector:
+        matchExpressions:
+        - key: istio.io/dataplane-mode
+          operator: NotIn
+          values:
+          - none
+  {{- end }}
   AMBIENT_DNS_CAPTURE: "true"
   AMBIENT_IPV6: "true"
   AMBIENT_RECONCILE_POD_RULES_ON_STARTUP: "false"
@@ -44,4 +60,8 @@ data:
   REPAIR_INIT_CONTAINER_NAME: "istio-validation"
   REPAIR_BROKEN_POD_LABEL_KEY: "cni.istio.io/uninitialized"
   REPAIR_BROKEN_POD_LABEL_VALUE: "true"
+  {{- if semverCompare ">= 1.27.0" $fullVersion }}
+  ISTIO_OWNED_CNI_CONFIG: "false"
+  NATIVE_NFTABLES: "false"
+  {{- end }}
 {{- end }}

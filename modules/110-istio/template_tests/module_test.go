@@ -1506,6 +1506,11 @@ MY_VAR: "myvalue"
 
 			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
 			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
+
+			cniConfig := f.KubernetesResource("ConfigMap", "d8-istio", "cni-config")
+			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
+			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
 		})
 	})
 
