@@ -510,12 +510,12 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 
-			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.0.name").String()).To(Equal(`main-access-log-format`))
+			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.0.name").String()).To(Equal(`d8-main`))
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.name").String()).To(Equal(`authservice-grpc`))
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.service").String()).To(Equal(`authservice.d8-istio.svc.cluster.local`))
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.port").Int()).To(Equal(int64(10003)))
 
-			Expect(iopV21.Field("spec.meshConfig.extensionProviders.0.name").String()).To(Equal(`main-access-log-format`))
+			Expect(iopV21.Field("spec.meshConfig.extensionProviders.0.name").String()).To(Equal(`d8-main`))
 			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.name").String()).To(Equal(`authservice-grpc`))
 			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.service").String()).To(Equal(`authservice.d8-istio.svc.cluster.local`))
 			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.port").Int()).To(Equal(int64(10003)))

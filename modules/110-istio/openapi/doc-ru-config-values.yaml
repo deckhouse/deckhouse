@@ -383,7 +383,7 @@ properties:
         description: |
           Дополнительные Istio extension providers, которые будут зарегистрированы в mesh configuration.
 
-          Имя provider'а `main-access-log-format` зарезервировано Deckhouse.
+          Имя provider'а `d8-main` зарезервировано Deckhouse.
         items:
           properties:
             name:

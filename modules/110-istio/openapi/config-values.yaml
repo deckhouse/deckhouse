@@ -826,7 +826,7 @@ properties:
         description: |
           Additional Istio extension providers to register in the mesh configuration.
 
-          The provider name `main-access-log-format` is reserved by Deckhouse.
+          The provider name `d8-main` is reserved by Deckhouse.
         default: []
         x-examples:
         - - name: authservice-grpc
