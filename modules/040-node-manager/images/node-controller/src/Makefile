@@ -53,7 +53,7 @@ test: envtest gotestfmt ## Run unit + envtest with GitHub-friendly output (CI: G
 	@echo "==> [test] running go test -json | gotestfmt (unit + envtest)..."
 	@KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
 		go test -json -coverprofile cover.out ./... > $(GOTEST_JSON) 2>&1; rc=$$?; \
-		$(GOTESTFMT) $(if $(GOTESTFMT_CI),-ci $(GOTESTFMT_CI),) -hide empty-packages,successful-downloads < $(GOTEST_JSON); \
+		$(GOTESTFMT) $(if $(GOTESTFMT_CI),-ci $(GOTESTFMT_CI),) -hide empty-packages,successful-downloads,successful-tests < $(GOTEST_JSON); \
 		echo "==> [test] go test result cache: $$(grep -c '(cached)' $(GOTEST_JSON) 2>/dev/null || true) package(s) reused, the rest re-ran (changing a package's code invalidates only that package + its importers)"; \
 		echo "==> [test] total coverage:"; go tool cover -func=cover.out 2>/dev/null | tail -1; \
 		rm -f $(GOTEST_JSON); \
