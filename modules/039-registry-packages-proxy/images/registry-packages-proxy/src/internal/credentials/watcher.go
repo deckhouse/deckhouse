@@ -106,7 +106,7 @@ func (w *Watcher) watchSecret(ctx context.Context) {
 		})
 	}
 
-	secretWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	secretWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch secrets: %v", err)
 		return
@@ -180,7 +180,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{})
 	}
 
-	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
+	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch module sources: %v", err)
 		return
@@ -214,7 +214,7 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
 
-	w.logger.Info("event from module source received", slog.String("event", string(moduleSourceEvent.Type)), slog.String("module source", moduleSource.Name))
+	w.logger.Info("event from module source received", slog.String("event", string(moduleSourceEvent.Type)), slog.String("module_source", moduleSource.Name))
 
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:
