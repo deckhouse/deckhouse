@@ -13,9 +13,12 @@ GOTESTFMT ?= $(LOCALBIN)/gotestfmt
 GOTESTFMT_VERSION ?= v2.5.0
 # CI sets GOTESTFMT_CI=github to emit ::group:: collapsible output; empty locally for plain output.
 GOTESTFMT_CI ?=
-# Raw go test -json log, captured to a file so the go test exit code survives (gotestfmt is only a
+# Raw go test -json logs, captured to files so the go test exit code survives (gotestfmt is only a
 # formatter; piping into it would otherwise mask a test failure behind gotestfmt's exit code).
-GOTEST_JSON ?= /tmp/node-controller-gotest.json
+GOTEST_JSON_UNIT ?= /tmp/node-controller-unit.json
+GOTEST_JSON_ENVTEST ?= /tmp/node-controller-envtest.json
+# envtest integration suites are named Test<Name>ControllerEnvtest; this regex splits them from units.
+ENVTEST_RUN_REGEX ?= ControllerEnvtest$$
 
 # Go tools
 CONTROLLER_GEN = $(GOBIN)/controller-gen
@@ -49,15 +52,20 @@ lint: ## Run golangci-lint against code.
 	golangci-lint run ./...
 
 .PHONY: test
-test: envtest gotestfmt ## Run unit + envtest with GitHub-friendly output (CI: GOTESTFMT_CI=github).
-	@echo "==> [test] running go test -json | gotestfmt (unit + envtest)..."
-	@KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-		go test -json -coverprofile cover.out ./... > $(GOTEST_JSON) 2>&1; rc=$$?; \
-		$(GOTESTFMT) $(if $(GOTESTFMT_CI),-ci $(GOTESTFMT_CI),) -hide successful-downloads < $(GOTEST_JSON); \
-		echo "==> [test] go test result cache: $$(grep -c '(cached)' $(GOTEST_JSON) 2>/dev/null || true) package(s) reused, the rest re-ran (changing a package's code invalidates only that package + its importers)"; \
-		echo "==> [test] total coverage:"; go tool cover -func=cover.out 2>/dev/null | tail -1; \
-		rm -f $(GOTEST_JSON); \
-		exit $$rc
+test: envtest gotestfmt ## Run unit + envtest in two labeled sections with GitHub-friendly output (CI: GOTESTFMT_CI=github).
+	@assets="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"; \
+		fmt='$(GOTESTFMT) $(if $(GOTESTFMT_CI),-ci $(GOTESTFMT_CI),) -hide successful-downloads'; \
+		echo ""; echo "════════════════════ UNIT TESTS ════════════════════"; \
+		KUBEBUILDER_ASSETS="$$assets" go test -json -skip '$(ENVTEST_RUN_REGEX)' -coverprofile cover-unit.out ./... > $(GOTEST_JSON_UNIT) 2>&1; urc=$$?; \
+		eval $$fmt < $(GOTEST_JSON_UNIT); \
+		echo "──> unit coverage: $$(go tool cover -func=cover-unit.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
+		echo ""; echo "════════════════ ENVTEST (INTEGRATION) ════════════════"; \
+		KUBEBUILDER_ASSETS="$$assets" go test -json -run '$(ENVTEST_RUN_REGEX)' -coverprofile cover-envtest.out ./... > $(GOTEST_JSON_ENVTEST) 2>&1; erc=$$?; \
+		eval $$fmt < $(GOTEST_JSON_ENVTEST); \
+		echo "──> envtest coverage: $$(go tool cover -func=cover-envtest.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
+		echo ""; echo "==> [test] go test cache: unit $$(grep -c '(cached)' $(GOTEST_JSON_UNIT) 2>/dev/null || true) pkg, envtest $$(grep -c '(cached)' $(GOTEST_JSON_ENVTEST) 2>/dev/null || true) pkg reused (changing a package's code invalidates only that package + its importers)"; \
+		rm -f $(GOTEST_JSON_UNIT) $(GOTEST_JSON_ENVTEST); \
+		test $$urc -eq 0 && test $$erc -eq 0
 
 .PHONY: test-envtest
 test-envtest: envtest ## Run every controller's envtest suite (ENVTEST_DEBUG=1 dumps state before/after each spec; ENVTEST_LOGS=1 adds controller logs).
