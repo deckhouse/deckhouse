@@ -167,7 +167,7 @@ jobs:
 
   tests_node_controller:
     if: ${{ needs.pull_request_info.outputs.changes_node_controller == 'true' }}
-    name: Tests node-controller (envtest)
+    name: Tests node-controller
     needs:
       - git_info
       - pull_request_info

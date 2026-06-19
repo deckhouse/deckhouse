@@ -149,14 +149,26 @@ steps:
       echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
       echo "⚓️ 📥 [$(date -u)] Pull base golang image..."
       docker pull ${TESTS_IMAGE_NAME}
-      # Persistent on-runner cache for the kubebuilder assets (etcd, kube-apiserver, kubectl) and
-      # the setup-envtest tool. Create it up front so the bind mount is owned by the runner user
-      # (Docker would otherwise create a missing host path as root, making it unwritable in-container).
-      mkdir -p ~/envtest-assets
+      # Persistent on-runner caches, created up front so the bind mounts are owned by the runner
+      # user (Docker would otherwise create a missing host path as root, making it unwritable
+      # in-container):
+      #   envtest-assets                 - kubebuilder assets (etcd, kube-apiserver, kubectl) + setup-envtest
+      #   go-build-cache-node-controller - GOCACHE, so test binaries are not recompiled from scratch every run
+      mkdir -p ~/envtest-assets ~/go-build-cache-node-controller
+      # On-runner cache status — MISS means this run will download/recompile (debugging aid;
+      # emitted as GitHub annotations so a cold runner is easy to spot).
+      for entry in "envtest-assets|$HOME/envtest-assets/k8s" "setup-envtest|$HOME/envtest-assets/setup-envtest" "gotestsum|$HOME/envtest-assets/gotestsum" "go-build|$HOME/go-build-cache-node-controller"; do
+        name="${entry%%|*}"; path="${entry#*|}";
+        if [ -e "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ]; then
+          echo "::notice::cache HIT  ${name}";
+        else
+          echo "::warning::cache MISS ${name} — will download/recompile";
+        fi;
+      done
       echo "⚓️ 🏎 [$(date -u)] Run node-controller tests (unit + envtest)..."
-      CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg -v ~/envtest-assets:/envtest-assets ${TESTS_IMAGE_NAME} sleep infinity)
+      CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOCACHE=/go-build-cache -v ~/go-pkg-cache:/go/pkg -v ~/envtest-assets:/envtest-assets -v ~/go-build-cache-node-controller:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
       docker exec ${CONTAINER_ID} pm install git
-      docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets"
+      docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets GOTESTSUM_FORMAT=github-actions"
       docker rm -f ${CONTAINER_ID}
 # </template: tests_node_controller_envtest_template>
 {!{- end -}!}

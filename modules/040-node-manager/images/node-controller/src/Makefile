@@ -8,6 +8,11 @@ LOCALBIN ?= $(shell pwd)/bin
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 # Kubebuilder assets version for the envtest integration suite.
 ENVTEST_K8S_VERSION ?= 1.34.1
+# gotestsum renders go test -json into readable output. Pinned to match the repo-root Makefile.
+GOTESTSUM ?= $(LOCALBIN)/gotestsum
+GOTESTSUM_VERSION ?= v1.13.0
+# Output format: pkgname locally; CI sets GOTESTSUM_FORMAT=github-actions for collapsible groups.
+GOTESTSUM_FORMAT ?= pkgname
 
 # Go tools
 CONTROLLER_GEN = $(GOBIN)/controller-gen
@@ -41,9 +46,10 @@ lint: ## Run golangci-lint against code.
 	golangci-lint run ./...
 
 .PHONY: test
-test: envtest ## Run the whole unit + envtest suite (verbose) with coverage.
-	@echo "==> [test] running go test -v (unit + envtest)..."
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -v -coverprofile cover.out
+test: envtest gotestsum ## Run the whole unit + envtest suite with coverage (CI: GOTESTSUM_FORMAT=github-actions).
+	@echo "==> [test] running gotestsum --format $(GOTESTSUM_FORMAT) (unit + envtest)..."
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+		$(GOTESTSUM) --format $(GOTESTSUM_FORMAT) -- ./... -coverprofile cover.out
 	@echo "==> [test] total coverage:"
 	@go tool cover -func=cover.out | tail -1
 
@@ -118,6 +124,15 @@ $(ENVTEST): $(LOCALBIN)
 	@test -s $(ENVTEST) || { \
 		echo "==> [envtest] installing setup-envtest..."; \
 		GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest; \
+	}
+
+.PHONY: gotestsum
+gotestsum: $(GOTESTSUM) ## Install gotestsum locally if necessary.
+
+$(GOTESTSUM): $(LOCALBIN)
+	@test -s $(GOTESTSUM) || { \
+		echo "==> [gotestsum] installing gotestsum $(GOTESTSUM_VERSION)..."; \
+		GOBIN=$(LOCALBIN) go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION); \
 	}
 
 ##@ Deployment
