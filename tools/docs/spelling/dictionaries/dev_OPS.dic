@@ -1,4 +1,4 @@
-2676
+2678
 1GB
 2GB
 5XX
@@ -807,6 +807,7 @@ UUIDs
 Ubuntu
 Unlabel
 UpmeterHookProbe
+UpmeterHookProbes
 UpmeterRemoteWrite
 UsePAM
 UserOperation
@@ -840,6 +841,7 @@ ValidationWebhook
 Venafi
 VersionItems
 VerticalPodAutoscaler
+VerticalPodAutoscalerCheckpoints
 VictorOps
 VictorOpsConfig
 VictoriaMetrics

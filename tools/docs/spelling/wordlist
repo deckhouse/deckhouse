@@ -806,6 +806,7 @@ UUIDs
 Ubuntu
 Unlabel
 UpmeterHookProbe
+UpmeterHookProbes
 UpmeterRemoteWrite
 UsePAM
 UserOperation
@@ -839,6 +840,7 @@ ValidationWebhook
 Venafi
 VersionItems
 VerticalPodAutoscaler
+VerticalPodAutoscalerCheckpoints
 VictorOps
 VictorOpsConfig
 VictoriaMetrics
