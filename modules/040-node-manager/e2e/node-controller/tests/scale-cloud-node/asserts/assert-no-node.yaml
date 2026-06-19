@@ -1,5 +1,0 @@
-apiVersion: v1
-kind: Node
-metadata:
-  labels:
-    app: e2e-ephemeral-node-test
