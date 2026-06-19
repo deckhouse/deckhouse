@@ -425,6 +425,7 @@ func (r *Runtime) loadModuleConfFromPath(ctx context.Context, path string, embed
 	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 	conf.GlobalConfigValuesGetter = r.addonModuleManager.GetGlobal().GetConfigValues
 	conf.CapabilitiesGetter = r.Capabilities
+	conf.Embedded = embedded
 
 	return conf, nil
 }

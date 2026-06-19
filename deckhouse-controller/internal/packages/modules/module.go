@@ -71,6 +71,14 @@ type Module struct {
 	digests    map[string]string // Package digests
 	repository registry.Remote   // Module repository
 
+	// embedded marks a module shipped inside the deckhouse image (loaded from
+	// addon-operator's on-disk layout) rather than a downloaded package. Embedded
+	// module images live in the single deckhouse registry repo addressed by
+	// digest (global.modulesImages.registry.base@digest), not under a
+	// per-package path. Such modules therefore must NOT expose .Module.Package so
+	// their charts fall back to the legacy global.modulesImages image helpers.
+	embedded bool
+
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
@@ -96,6 +104,12 @@ type Config struct {
 
 	Digests    map[string]string // Package images digests(images_digests.json)
 	Repository registry.Remote   // Package repository options
+
+	// Embedded marks a module shipped inside the deckhouse image (see
+	// Module.embedded). Embedded modules render images through the legacy
+	// global.modulesImages helpers, so .Module.Package is intentionally omitted
+	// for them.
+	Embedded bool
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -134,6 +148,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.definition = cfg.Definition
 	m.digests = cfg.Digests
 	m.repository = cfg.Repository
+	m.embedded = cfg.Embedded
 	m.settingsCheck = cfg.SettingsCheck
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
@@ -200,7 +215,18 @@ type RuntimeValues struct {
 // getRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
+//
+// Embedded modules deliberately omit Package: their images live in the single
+// deckhouse registry repo addressed purely by digest, which the new
+// .Module.Package contract (registry.repository/packageName@digest) cannot
+// express. Leaving Package unset makes their charts use the legacy
+// global.modulesImages image helpers (base@digest), matching how addon-operator
+// renders them.
 func (m *Module) getRuntimeValues() RuntimeValues {
+	if m.embedded {
+		return RuntimeValues{}
+	}
+
 	return RuntimeValues{
 		Package: addonutils.Values{
 			"Name":     m.definition.Name,

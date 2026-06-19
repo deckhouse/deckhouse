@@ -359,6 +359,14 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseNa
 	// Check if manifests changed by comparing checksums
 	recordedChecksum, err := s.client.GetChecksum(ctx, namespace, releaseName)
 	if err != nil {
+		// A deployed release without the packageChecksum label was created by
+		// addon-operator (legacy), not by this runtime. Treat it as needing an
+		// upgrade so the runtime adopts the release and stamps the checksum
+		// label on the next install, instead of failing the whole pipeline.
+		if errors.Is(err, nelm.ErrLabelNotFound) {
+			return true, nil
+		}
+
 		return false, err
 	}
 
