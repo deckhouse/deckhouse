@@ -1187,6 +1187,25 @@ alerts:
         Module configuration failed for module {{ $labels.module }}.
       severity: "5"
       markupFormat: markdown
+    - name: D8DeckhouseObsoleteMonitoringDeckhouseModuleConfig
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |-
+        The `monitoring-deckhouse` module was merged into the `deckhouse` module, but its ModuleConfig still exists in the cluster and is no longer used.
+
+        Remove it manually:
+
+        ```bash
+        d8 k delete moduleconfig monitoring-deckhouse
+        ```
+
+        If ModuleConfigs are managed via GitOps (e.g. Argo CD or Deckhouse Commander), remove the `monitoring-deckhouse` ModuleConfig from the source repository so it is not re-created.
+      summary: |
+        Obsolete monitoring-deckhouse ModuleConfig should be removed.
+      severity: "9"
+      markupFormat: markdown
     - name: D8DeckhousePodIsNotReady
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 002-deckhouse
