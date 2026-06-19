@@ -43,7 +43,7 @@ The module consists of the following components:
 
 1. **CSI driver (rbd/cephfs)**: An implementation of the CSI driver for the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` provisioner. The CSI driver is selected by setting the storage class type in the CephStorageClass custom resource.
 
-   The `csi-cephfs` CSI driver follows [the standard CSI driver architecture used in DKP](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+   The `csi-cephfs` CSI driver follows [the standard CSI driver architecture used in DKP](../csi-drivers/csi-driver.html).
 
    The `csi-rbd` CSI driver uses [an architecture that differs from the standard CSI driver architecture](../../storage/csi-drivers/csi-driver-ceph-rbd.html).
 

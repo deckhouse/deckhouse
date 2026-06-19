@@ -1409,15 +1409,7 @@ entries:
                 - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
-                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
-                - title:
-                    en: CSI driver
-                    ru: CSI-драйвер
-                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
-                - title:
-                    en: CSI driver (VMware vSphere)
-                    ru: CSI-драйвер (VMware vSphere)
-                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
+                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html                
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1551,6 +1543,10 @@ entries:
                     ru: Модуль csi-scsi-generic
                   url: /architecture/storage/external/csi-scsi-generic.html
                 - title:
+                    en: Csi-vsphere module
+                    ru: Модуль csi-vsphere
+                  url: /architecture/storage/external/csi-vsphere.html
+                - title:
                     en: Csi-yadro-tatlin-unified module
                     ru: Модуль csi-yadro-tatlin-unified
                   url: /architecture/storage/external/csi-yadro-tatlin-unified.html
@@ -1558,6 +1554,10 @@ entries:
                 en: CSI drivers
                 ru: CSI-драйверы
               folders:
+                - title:
+                    en: Standard CSI driver
+                    ru: CSI-драйвер (типовой)
+                  url: /architecture/storage/csi-drivers/csi-driver.html
                 - title:
                     en: Ceph RBD CSI driver
                     ru: CSI-драйвер Ceph RBD
@@ -1578,6 +1578,10 @@ entries:
                     en: SCSI Generic CSI driver
                     ru: CSI-драйвер SCSI Generic
                   url: /architecture/storage/csi-drivers/csi-driver-scsi-generic.html
+                - title:
+                    en: VMware vSphere CSI driver
+                    ru: CSI-драйвер VMware vSphere
+                  url: /architecture/storage/csi-drivers/csi-driver-vsphere.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
