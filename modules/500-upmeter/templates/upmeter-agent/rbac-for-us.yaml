@@ -35,6 +35,13 @@ rules:
     resources: ["services"]
     verbs: ["get"]
     resourceNames: ["deckhouse-leader"]
+  # Virtualization check: expose VM guest HTTP endpoint.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "delete", "get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["create", "delete", "get", "list", "watch"]
   # Deckhouse hooks checked via the CR change sync, and nodegroup probes
   - apiGroups: ["deckhouse.io"]
     resources: ["upmeterhookprobes" , "nodegroups"]

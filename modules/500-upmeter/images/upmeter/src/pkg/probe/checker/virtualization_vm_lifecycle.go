@@ -18,17 +18,21 @@ package checker
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
@@ -44,6 +48,10 @@ const (
 	// VirtualizationImageName is the VirtualImage name used by VM lifecycle probes.
 	VirtualizationImageName               = "probe-image"
 	virtualizationVMName                  = "probe-vm"
+	virtualizationVMServiceName           = "probe-vm"
+	virtualizationVMHTTPServicePort       = int32(8080)
+	virtualizationVMHTTPGuestPort         = int32(80)
+	virtualizationVMNetworkPolicyName     = "probe-vm-http"
 	virtualizationDiskName                = "probe-disk"
 	virtualizationExtraDiskName           = "probe-extra-disk"
 	virtualizationExtraDiskAttachmentName = "probe-extra-disk-attachment"
@@ -164,6 +172,23 @@ type virtualMachineLifecycleChecker struct {
 	waitVirtualMachineMigrationTimeout time.Duration
 	waitDeletionTimeout                time.Duration
 	waitNamespaceDeletedTimeout        time.Duration
+}
+
+type guestInventory struct {
+	Disks      []guestDisk      `json:"disks"`
+	NetDevices []guestNetDevice `json:"net_devices"`
+}
+
+type guestDisk struct {
+	Device     string `json:"device"`
+	Name       string `json:"name"`
+	TotalBytes uint64 `json:"total_bytes"`
+	SizeBytes  uint64 `json:"size_bytes"`
+}
+
+type guestNetDevice struct {
+	Name      string   `json:"name"`
+	Addresses []string `json:"addresses"`
 }
 
 func (c *virtualMachineLifecycleChecker) Check() check.Error {
@@ -520,6 +545,38 @@ func (c *virtualMachineLifecycleChecker) createVirtualMachine(ctx context.Contex
 	return err
 }
 
+func (c *virtualMachineLifecycleChecker) createVirtualMachineService(ctx context.Context) error {
+	_, err := c.access.Kubernetes().CoreV1().
+		Services(c.namespace).
+		Create(ctx, virtualMachineService(c.agentID, c.namespace, c.probeName), metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
+func (c *virtualMachineLifecycleChecker) deleteVirtualMachineService(ctx context.Context) error {
+	return c.access.Kubernetes().CoreV1().
+		Services(c.namespace).
+		Delete(ctx, virtualizationVMServiceName, metav1.DeleteOptions{})
+}
+
+func (c *virtualMachineLifecycleChecker) createVirtualMachineNetworkPolicy(ctx context.Context) error {
+	_, err := c.access.Kubernetes().NetworkingV1().
+		NetworkPolicies(c.namespace).
+		Create(ctx, virtualMachineNetworkPolicy(c.agentID, c.namespace, c.probeName), metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
+}
+
+func (c *virtualMachineLifecycleChecker) deleteVirtualMachineNetworkPolicy(ctx context.Context) error {
+	return c.access.Kubernetes().NetworkingV1().
+		NetworkPolicies(c.namespace).
+		Delete(ctx, virtualizationVMNetworkPolicyName, metav1.DeleteOptions{})
+}
+
 func (c *virtualMachineLifecycleChecker) createVirtualMachineEvictOperation(ctx context.Context) error {
 	manifest := virtualMachineOperationManifest(c.agentID, c.namespace, c.probeName, virtualizationEvictName, virtualizationVMName)
 	obj, err := decodeManifestToUnstructured(manifest)
@@ -650,6 +707,109 @@ func (c *virtualMachineLifecycleChecker) waitVirtualDiskAttachedToVirtualMachine
 	)
 }
 
+func (c *virtualMachineLifecycleChecker) waitVirtualMachineGuestReady(ctx context.Context) (guestInventory, error) {
+	var inventory guestInventory
+	err := waitForCondition(
+		c.waitVirtualMachineTimeout,
+		pollingInterval(c.waitVirtualMachineTimeout),
+		func() (bool, error) {
+			current, err := c.virtualMachineGuestInventory(ctx)
+			if err != nil {
+				return false, nil
+			}
+			if len(current.NetDevices) == 0 {
+				return false, nil
+			}
+			inventory = current
+			return true, nil
+		},
+	)
+	return inventory, err
+}
+
+func (c *virtualMachineLifecycleChecker) waitGuestExtraDiskAttached(ctx context.Context, baseline guestInventory) error {
+	return waitForCondition(
+		c.waitVirtualMachineTimeout,
+		pollingInterval(c.waitVirtualMachineTimeout),
+		func() (bool, error) {
+			inventory, err := c.virtualMachineGuestInventory(ctx)
+			if err != nil {
+				return false, nil
+			}
+			_, found := guestExtraDisk(inventory, baseline)
+			return found, nil
+		},
+	)
+}
+
+func (c *virtualMachineLifecycleChecker) waitGuestExtraDiskSize(ctx context.Context, baseline guestInventory, expectedSize string) error {
+	expected, err := resource.ParseQuantity(expectedSize)
+	if err != nil {
+		return err
+	}
+
+	return waitForCondition(
+		c.waitVirtualMachineTimeout,
+		pollingInterval(c.waitVirtualMachineTimeout),
+		func() (bool, error) {
+			inventory, err := c.virtualMachineGuestInventory(ctx)
+			if err != nil {
+				return false, nil
+			}
+			disk, found := guestExtraDisk(inventory, baseline)
+			return found && int64(disk.Bytes()) >= expected.Value(), nil
+		},
+	)
+}
+
+func (c *virtualMachineLifecycleChecker) waitGuestExtraDiskDetached(ctx context.Context, baseline guestInventory) error {
+	return waitForCondition(
+		c.waitDeletionTimeout,
+		pollingInterval(c.waitDeletionTimeout),
+		func() (bool, error) {
+			inventory, err := c.virtualMachineGuestInventory(ctx)
+			if err != nil {
+				return false, nil
+			}
+			_, found := guestExtraDisk(inventory, baseline)
+			return !found, nil
+		},
+	)
+}
+
+func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx context.Context) (guestInventory, error) {
+	requestCtx, cancel := context.WithTimeout(ctx, c.requestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, c.virtualMachineGuestInventoryURL(), nil)
+	if err != nil {
+		return guestInventory{}, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return guestInventory{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return guestInventory{}, fmt.Errorf("guest inventory returned status %s", resp.Status)
+	}
+	var inventory guestInventory
+	if err := json.NewDecoder(resp.Body).Decode(&inventory); err != nil {
+		return guestInventory{}, err
+	}
+	return inventory, nil
+}
+
+func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventoryURL() string {
+	return fmt.Sprintf(
+		"http://%s.%s.svc:%d/json",
+		virtualizationVMServiceName,
+		c.namespace,
+		virtualizationVMHTTPServicePort,
+	)
+}
+
 func (c *virtualMachineLifecycleChecker) waitVirtualMachineMigrationCompleted(ctx context.Context, initialNode string) error {
 	return waitForCondition(
 		c.waitVirtualMachineMigrationTimeout,
@@ -708,6 +868,30 @@ func (c *virtualMachineLifecycleChecker) verifyVirtualMachineMigration(ctx conte
 }
 
 func (c *virtualMachineLifecycleChecker) verifyVirtualMachineLifecycle(ctx context.Context) check.Error {
+	if err := c.runStep("creating VirtualMachine Service", func() error {
+		return c.createVirtualMachineService(ctx)
+	}); err != nil {
+		return lifecycleStepError("creating VirtualMachine Service", err)
+	}
+
+	if err := c.runStep("creating VirtualMachine NetworkPolicy", func() error {
+		return c.createVirtualMachineNetworkPolicy(ctx)
+	}); err != nil {
+		return lifecycleStepError("creating VirtualMachine NetworkPolicy", err)
+	}
+
+	var baselineGuestInventory guestInventory
+	if err := c.runStep("waiting for VirtualMachine guest HTTP", func() error {
+		var err error
+		baselineGuestInventory, err = c.waitVirtualMachineGuestReady(ctx)
+		return err
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: VirtualMachine guest HTTP endpoint did not become ready")
+		}
+		return lifecycleStepError("waiting for VirtualMachine guest HTTP", err)
+	}
+
 	if err := c.runStep("checking VirtualMachine migration", func() error {
 		return c.verifyVirtualMachineMigration(ctx)
 	}); err != nil {
@@ -715,6 +899,16 @@ func (c *virtualMachineLifecycleChecker) verifyVirtualMachineLifecycle(ctx conte
 			return check.ErrFail("verification: VirtualMachine migration did not complete")
 		}
 		return lifecycleStepError("checking VirtualMachine migration", err)
+	}
+
+	if err := c.runStep("checking VirtualMachine guest HTTP after migration", func() error {
+		_, err := c.waitVirtualMachineGuestReady(ctx)
+		return err
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: VirtualMachine guest HTTP endpoint did not recover after migration")
+		}
+		return lifecycleStepError("checking VirtualMachine guest HTTP after migration", err)
 	}
 
 	if err := c.runStep("creating extra VirtualDisk", func() error {
@@ -756,6 +950,15 @@ func (c *virtualMachineLifecycleChecker) verifyVirtualMachineLifecycle(ctx conte
 		return lifecycleStepError("checking extra VirtualDisk in VM status", err)
 	}
 
+	if err := c.runStep("checking extra VirtualDisk in guest", func() error {
+		return c.waitGuestExtraDiskAttached(ctx, baselineGuestInventory)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk did not appear in guest inventory")
+		}
+		return lifecycleStepError("checking extra VirtualDisk in guest", err)
+	}
+
 	if err := c.runStep("resizing extra VirtualDisk", func() error {
 		return c.resizeVirtualDisk(ctx, virtualizationExtraDiskName, "100Mi")
 	}); err != nil {
@@ -769,6 +972,15 @@ func (c *virtualMachineLifecycleChecker) verifyVirtualMachineLifecycle(ctx conte
 			return check.ErrFail("verification: extra VirtualDisk capacity did not become 100Mi")
 		}
 		return lifecycleStepError("waiting for extra VirtualDisk resize", err)
+	}
+
+	if err := c.runStep("checking extra VirtualDisk resize in guest", func() error {
+		return c.waitGuestExtraDiskSize(ctx, baselineGuestInventory, "100Mi")
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk capacity did not become 100Mi in guest inventory")
+		}
+		return lifecycleStepError("checking extra VirtualDisk resize in guest", err)
 	}
 
 	if err := c.runStep("checking VirtualMachine after extra VirtualDisk resize", func() error {
@@ -808,6 +1020,15 @@ func (c *virtualMachineLifecycleChecker) verifyVirtualMachineLifecycle(ctx conte
 			return check.ErrFail("verification: extra VirtualDisk still appears attached in VirtualMachine status")
 		}
 		return lifecycleStepError("checking extra VirtualDisk detached from VM status", err)
+	}
+
+	if err := c.runStep("checking extra VirtualDisk detached from guest", func() error {
+		return c.waitGuestExtraDiskDetached(ctx, baselineGuestInventory)
+	}); err != nil {
+		if errors.Is(err, errConditionTimeout) {
+			return check.ErrFail("verification: extra VirtualDisk still appears in guest inventory")
+		}
+		return lifecycleStepError("checking extra VirtualDisk detached from guest", err)
 	}
 
 	return nil
@@ -1034,6 +1255,24 @@ func (c *virtualMachineLifecycleChecker) hasGarbage(ctx context.Context) (bool, 
 func (c *virtualMachineLifecycleChecker) cleanup(ctx context.Context) error {
 	var errs []error
 
+	if err := c.runStep("cleanup: delete VirtualMachine NetworkPolicy", func() error {
+		err := c.deleteVirtualMachineNetworkPolicy(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("delete VirtualMachine NetworkPolicy: %w", err))
+	}
+	if err := c.runStep("cleanup: delete VirtualMachine Service", func() error {
+		err := c.deleteVirtualMachineService(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
+		errs = append(errs, fmt.Errorf("delete VirtualMachine Service: %w", err))
+	}
 	if err := c.runStep("cleanup: delete VirtualMachineBlockDeviceAttachment", func() error {
 		err := c.deleteVirtualMachineBlockDeviceAttachment(ctx)
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -1188,6 +1427,44 @@ func virtualMachineHasAttachedDisk(obj map[string]interface{}, diskName string) 
 	return false
 }
 
+func (d guestDisk) ID() string {
+	if d.Device != "" {
+		return d.Device
+	}
+	return d.Name
+}
+
+func (d guestDisk) Bytes() uint64 {
+	if d.SizeBytes != 0 {
+		return d.SizeBytes
+	}
+	return d.TotalBytes
+}
+
+func guestExtraDisk(inventory, baseline guestInventory) (guestDisk, bool) {
+	baselineDisks := make(map[string]struct{}, len(baseline.Disks))
+	for _, disk := range baseline.Disks {
+		if id := disk.ID(); id != "" {
+			baselineDisks[id] = struct{}{}
+		}
+	}
+
+	for _, disk := range inventory.Disks {
+		id := disk.ID()
+		if id == "" {
+			continue
+		}
+		if _, ok := baselineDisks[id]; !ok {
+			return disk, true
+		}
+	}
+	return guestDisk{}, false
+}
+
+func ptrTo[T any](value T) *T {
+	return &value
+}
+
 func virtualImageManifest(agentID, namespace, probeName, name, imageURL string) string {
 	return fmt.Sprintf(`
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -1246,6 +1523,84 @@ spec:
   persistentVolumeClaim:
     size: %q
 `, agentID, VirtualizationGroupName, probeName, name, namespace, size)
+}
+
+func virtualMachineService(agentID, namespace, probeName string) *v1.Service {
+	return &v1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      virtualizationVMServiceName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"heritage":      "upmeter",
+				agentLabelKey:   agentID,
+				"upmeter-group": VirtualizationGroupName,
+				"upmeter-probe": probeName,
+			},
+		},
+		Spec: v1.ServiceSpec{
+			Selector: map[string]string{
+				"heritage":      "upmeter",
+				"upmeter-group": VirtualizationGroupName,
+				"upmeter-probe": probeName,
+			},
+			Ports: []v1.ServicePort{
+				{
+					Name:       "http",
+					Port:       virtualizationVMHTTPServicePort,
+					TargetPort: intstr.FromInt(int(virtualizationVMHTTPGuestPort)),
+					Protocol:   v1.ProtocolTCP,
+				},
+			},
+		},
+	}
+}
+
+func virtualMachineNetworkPolicy(agentID, namespace, probeName string) *netv1.NetworkPolicy {
+	return &netv1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "NetworkPolicy",
+			APIVersion: "networking.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      virtualizationVMNetworkPolicyName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"heritage":      "upmeter",
+				agentLabelKey:   agentID,
+				"upmeter-group": VirtualizationGroupName,
+				"upmeter-probe": probeName,
+			},
+		},
+		Spec: netv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{},
+			PolicyTypes: []netv1.PolicyType{
+				netv1.PolicyTypeIngress,
+			},
+			Ingress: []netv1.NetworkPolicyIngressRule{
+				{
+					From: []netv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"kubernetes.io/metadata.name": "d8-upmeter",
+								},
+							},
+						},
+					},
+					Ports: []netv1.NetworkPolicyPort{
+						{
+							Protocol: ptrTo(v1.ProtocolTCP),
+							Port:     ptrTo(intstr.FromInt(int(virtualizationVMHTTPGuestPort))),
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func virtualMachineManifest(agentID, namespace, probeName, name, diskName, virtualMachineClassName string) string {

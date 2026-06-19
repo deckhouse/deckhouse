@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -60,6 +62,56 @@ func Test_cleanGarbageDeletesVirtualMachineBlockDeviceAttachment(t *testing.T) {
 		Namespace("upmeter-vm-lifecycle-agent").
 		Get(ctx, "probe-extra-disk-attachment", metav1.GetOptions{})
 	assert.True(t, apierrors.IsNotFound(err), "VirtualMachineBlockDeviceAttachment should be deleted")
+}
+
+func Test_cleanGarbageDeletesVirtualMachineService(t *testing.T) {
+	ctx := context.Background()
+	client := fakeK8sClient{
+		Interface: kubernetesfake.NewSimpleClientset(&v1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "probe-vm",
+				Namespace:         "upmeter-vm-lifecycle-agent",
+				CreationTimestamp: metav1.NewTime(time.Now().Add(-10 * time.Minute)),
+				Labels: map[string]string{
+					"heritage": "upmeter",
+				},
+			},
+		}),
+		dynamic: dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
+	}
+
+	err := cleanGarbage(ctx, &serviceRepo{k: client})
+	assert.NoError(t, err)
+
+	_, err = client.CoreV1().
+		Services("upmeter-vm-lifecycle-agent").
+		Get(ctx, "probe-vm", metav1.GetOptions{})
+	assert.True(t, apierrors.IsNotFound(err), "Service should be deleted")
+}
+
+func Test_cleanGarbageDeletesVirtualMachineNetworkPolicy(t *testing.T) {
+	ctx := context.Background()
+	client := fakeK8sClient{
+		Interface: kubernetesfake.NewSimpleClientset(&netv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "probe-vm-http",
+				Namespace:         "upmeter-vm-lifecycle-agent",
+				CreationTimestamp: metav1.NewTime(time.Now().Add(-10 * time.Minute)),
+				Labels: map[string]string{
+					"heritage": "upmeter",
+				},
+			},
+		}),
+		dynamic: dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
+	}
+
+	err := cleanGarbage(ctx, &networkPolicyRepo{k: client})
+	assert.NoError(t, err)
+
+	_, err = client.NetworkingV1().
+		NetworkPolicies("upmeter-vm-lifecycle-agent").
+		Get(ctx, "probe-vm-http", metav1.GetOptions{})
+	assert.True(t, apierrors.IsNotFound(err), "NetworkPolicy should be deleted")
 }
 
 type fakeK8sClient struct {

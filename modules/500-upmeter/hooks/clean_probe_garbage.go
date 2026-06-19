@@ -56,6 +56,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			&deployRepo{k},
 			&podRepo{k},
 			&namespaceRepo{k},
+			&serviceRepo{k},
+			&networkPolicyRepo{k},
 			&virtualMachineRepo{k},
 			&virtualMachineBlockDeviceAttachmentRepo{k},
 			&virtualDiskRepo{k},
@@ -210,6 +212,62 @@ func (r *namespaceRepo) List(ctx context.Context) ([]metav1.Object, error) {
 
 func (r *namespaceRepo) Delete(ctx context.Context, name string) error {
 	return r.k.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type serviceRepo struct {
+	k k8s.Client
+}
+
+func (r *serviceRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.CoreV1().
+		Services(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		return nil, err
+	}
+	objects := make([]metav1.Object, 0, len(list.Items))
+	for i := range list.Items {
+		service := list.Items[i].DeepCopy()
+		service.SetName(service.GetNamespace() + "/" + service.GetName())
+		objects = append(objects, service.GetObjectMeta())
+	}
+	return objects, nil
+}
+
+func (r *serviceRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+type networkPolicyRepo struct {
+	k k8s.Client
+}
+
+func (r *networkPolicyRepo) List(ctx context.Context) ([]metav1.Object, error) {
+	list, err := r.k.NetworkingV1().
+		NetworkPolicies(metav1.NamespaceAll).
+		List(ctx, metav1.ListOptions{LabelSelector: "heritage=upmeter"})
+	if err != nil {
+		return nil, err
+	}
+	objects := make([]metav1.Object, 0, len(list.Items))
+	for i := range list.Items {
+		networkPolicy := list.Items[i].DeepCopy()
+		networkPolicy.SetName(networkPolicy.GetNamespace() + "/" + networkPolicy.GetName())
+		objects = append(objects, networkPolicy.GetObjectMeta())
+	}
+	return objects, nil
+}
+
+func (r *networkPolicyRepo) Delete(ctx context.Context, qualifiedName string) error {
+	namespace, name, err := splitQualifiedName(qualifiedName)
+	if err != nil {
+		return err
+	}
+	return r.k.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 var virtualMachineGVR = schema.GroupVersionResource{
