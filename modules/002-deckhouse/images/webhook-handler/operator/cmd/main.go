@@ -27,6 +27,8 @@ import (
 	"sync"
 	"time"
 
+	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
+	"deckhouse.io/webhook/internal/controller"
 	sh_pkg "github.com/flant/shell-operator/pkg"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	hook_types "github.com/flant/shell-operator/pkg/hook/types"
@@ -49,9 +51,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
-	"deckhouse.io/webhook/internal/controller"
 )
 
 var (
@@ -135,6 +134,36 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		shOp.ConversionWebhookManager.ClientConfigs = make(map[string]*conversion.CrdClientConfig)
 	}
 
+	// Enable admission bindings on every newly loaded hook so that
+	// AdmissionLinks are populated and CanHandleEvent works.
+	admissionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesValidating)
+	if err != nil {
+		return fmt.Errorf("get validating hooks: %w", err)
+	}
+	mutatingHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesMutating)
+	if err != nil {
+		return fmt.Errorf("get mutating hooks: %w", err)
+	}
+	for _, name := range append(admissionHookNames, mutatingHookNames...) {
+		h := shOp.HookManager.GetHook(name)
+		if h != nil {
+			h.HookController.EnableAdmissionBindings()
+		}
+	}
+
+	// Enable conversion bindings on every newly loaded hook so that
+	// CanHandleConversionEvent works.
+	conversionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesConversion)
+	if err != nil {
+		return fmt.Errorf("get conversion hooks: %w", err)
+	}
+	for _, name := range conversionHookNames {
+		h := shOp.HookManager.GetHook(name)
+		if h != nil {
+			h.HookController.EnableConversionBindings()
+		}
+	}
+
 	// Re-enable kubernetes bindings on every newly loaded hook so that the
 	// monitors that maintain object caches (snapshots) are recreated and
 	// wired to the freshly rebuilt HookController.
@@ -164,36 +193,6 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		}
 		// Allow the monitors to emit events now that their caches are filled.
 		h.HookController.UnlockKubernetesEvents()
-	}
-
-	// Enable admission bindings on every newly loaded hook so that
-	// AdmissionLinks are populated and CanHandleEvent works.
-	admissionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesValidating)
-	if err != nil {
-		return fmt.Errorf("get validating hooks: %w", err)
-	}
-	mutatingHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesMutating)
-	if err != nil {
-		return fmt.Errorf("get mutating hooks: %w", err)
-	}
-	for _, name := range append(admissionHookNames, mutatingHookNames...) {
-		h := shOp.HookManager.GetHook(name)
-		if h != nil {
-			h.HookController.EnableAdmissionBindings()
-		}
-	}
-
-	// Enable conversion bindings on every newly loaded hook so that
-	// CanHandleConversionEvent works.
-	conversionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesConversion)
-	if err != nil {
-		return fmt.Errorf("get conversion hooks: %w", err)
-	}
-	for _, name := range conversionHookNames {
-		h := shOp.HookManager.GetHook(name)
-		if h != nil {
-			h.HookController.EnableConversionBindings()
-		}
 	}
 
 	if err := syncAdmissionWebhookConfigurations(ctx, shOp, oldValidatingResources, oldMutatingResources); err != nil {
