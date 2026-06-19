@@ -1137,6 +1137,54 @@ updatePolicy:
 		})
 	})
 
+	Context("istiod with custom controlPlane.extraEnvs", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.controlPlane.extraEnvs", `
+GODEBUG: "gctrace=1"
+MY_VAR: "myvalue"
+`)
+			f.HelmRender()
+		})
+
+		It("should add custom env vars to istiod in both IOP and sailoperator Istio CR", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+			Expect(istioV25.Exists()).To(BeTrue())
+			Expect(iopV21.Exists()).To(BeTrue())
+
+			// istioV25 (sailoperator): spec.values.pilot.env is a map
+			By("istios.yaml: custom env vars are present in spec.values.pilot.env")
+			Expect(istioV25.Field("spec.values.pilot.env.GODEBUG").String()).To(Equal("gctrace=1"))
+			Expect(istioV25.Field("spec.values.pilot.env.MY_VAR").String()).To(Equal("myvalue"))
+
+			By("istios.yaml: reserved env vars are still present")
+			Expect(istioV25.Field("spec.values.pilot.env.ISTIO_MULTIROOT_MESH").String()).To(Equal("true"))
+			Expect(istioV25.Field("spec.values.pilot.env.ENABLE_ENHANCED_RESOURCE_SCOPING").String()).To(Equal("true"))
+
+			// iopV21 (IstioOperator): spec.components.pilot.k8s.env is a list of {name, value}
+			By("iop.yaml: custom env vars are present in spec.components.pilot.k8s.env")
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.2.name").String()).To(Equal("GODEBUG"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.2.value").String()).To(Equal("gctrace=1"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.3.name").String()).To(Equal("MY_VAR"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.3.value").String()).To(Equal("myvalue"))
+
+			By("iop.yaml: reserved env vars are still present")
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.0.name").String()).To(Equal("ISTIO_MULTIROOT_MESH"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.0.value").String()).To(Equal("true"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.1.name").String()).To(Equal("ENABLE_ENHANCED_RESOURCE_SCOPING"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.1.value").String()).To(Equal("true"))
+
+			By("iop.yaml: custom env vars are placed after the reserved ones, total count is 4")
+			Expect(iopV21.Field("spec.components.pilot.k8s.env").Array()).To(HaveLen(4))
+		})
+	})
+
 	Context("ingress gateway controller with inlet NodePort is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)

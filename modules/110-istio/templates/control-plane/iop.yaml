@@ -51,6 +51,10 @@ spec:
         - name: PILOT_HTTP10
           value: "1"
   {{- end }}
+  {{- range $name, $value := $.Values.istio.controlPlane.extraEnvs }}
+        - name: {{ $name }}
+          value: {{ $value | quote }}
+  {{- end }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 8 }}
 
     ingressGateways:
