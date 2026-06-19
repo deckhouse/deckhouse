@@ -1499,6 +1499,46 @@ MY_VAR: "myvalue"
 			svc := f.KubernetesResource("Service", "d8-istio", "istiod-v1x27")
 			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("grpc-xds"))
 			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("https-webhook"))
+
+			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
+			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
+		})
+	})
+
+	Context("operator-free sidecar with custom static resourcesManagement configuration", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSetFromYaml("istio.sidecar.resourcesManagement", `
+mode: Static
+static:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    memory: 2Gi
+`)
+			f.HelmRender()
+		})
+
+		It("renders sidecar injector values with static proxy resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
+			Expect(injectorValues).To(ContainSubstring(`"cpu":"200m"`))
+			Expect(injectorValues).To(ContainSubstring(`"memory":"256Mi"`))
+			Expect(injectorValues).To(ContainSubstring(`"memory":"2Gi"`))
 		})
 	})
 })
