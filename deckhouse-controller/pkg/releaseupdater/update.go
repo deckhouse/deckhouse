@@ -23,7 +23,6 @@ import (
 
 type Settings struct {
 	NotificationConfig     NotificationConfig
-	BlockOnAlerts          BlockOnAlerts
 	DisruptionApprovalMode string
 	Mode                   v1alpha2.UpdateMode
 	Windows                update.Windows
