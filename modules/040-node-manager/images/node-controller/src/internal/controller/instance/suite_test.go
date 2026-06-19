@@ -46,6 +46,10 @@ var (
 	suiteCancel context.CancelFunc
 )
 
+// User story: As a user, I want every node represented by an Instance object that always reflects its
+// real machine and bashible bootstrap state (and is garbage-collected once the node/machine is gone),
+// so that I can observe node provisioning and bootstrap progress from a single resource.
+//
 // TestInstanceControllerEnvtest runs the envtest-backed integration suite. It is the
 // complement to the fast fake-client unit tests in controller_test.go: here the real
 // instance controller runs inside a manager against a real kube-apiserver, so Server-Side

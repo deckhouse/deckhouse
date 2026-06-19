@@ -161,6 +161,9 @@ func cleanupAll() {
 	}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 }
 
+// User story: As a cluster operator, I want a node marked for draining to be cordoned and have its
+// non-DaemonSet pods evicted (honoring the NodeGroup's drain timeout) so that I can update or remove
+// the node without disrupting my workloads.
 var _ = Describe("Draining a node on the draining annotation", func() {
 	It("cordons, evicts non-DaemonSet pods, and flips draining->drained", func() {
 		name := testenv.UniqueName("drain")

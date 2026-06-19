@@ -98,6 +98,9 @@ var _ = AfterEach(func() {
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 })
 
+// User story: As a platform user, I want the labels, annotations and taints I declare in a NodeGroup
+// template to be applied automatically to that group's nodes (and the "uninitialized" taint cleared),
+// so that every node in the group is configured consistently without manual labeling.
 var _ = Describe("NodeTemplate controller applies the NodeGroup template to its nodes", func() {
 	It("applies template labels/annotations/taints, system labels and removes the uninitialized taint", func() {
 		ngName := testenv.UniqueName("worker")

@@ -175,6 +175,9 @@ func processedDeckhouse(name string) (synced, processedCheckSum string) {
 	return synced, processedCheckSum
 }
 
+// User story: As a platform user, I want my NodeGroup's status to accurately report node/ready/
+// up-to-date counters, cloud desired/min/max, machine failures and an overall readiness summary, so
+// that I can monitor the health and scaling of my node pool at a glance.
 var _ = Describe("NodeGroup status controller", func() {
 	Context("Static NodeGroup", func() {
 		It("reports zero counters and a Ready summary when there are no nodes", func() {

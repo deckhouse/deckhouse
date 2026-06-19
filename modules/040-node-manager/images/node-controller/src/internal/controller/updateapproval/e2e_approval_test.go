@@ -24,6 +24,9 @@ import (
 	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
 )
 
+// User story: As a cluster operator, I want node updates rolled out under controlled approval —
+// automatically or manually, at most maxConcurrent nodes at once, draining disruptive nodes first —
+// so that an update never takes down more of my capacity than I allow.
 var _ = Describe("Update approval", func() {
 	It("approves a node waiting for approval", func() {
 		ng := uniqueName("approve")

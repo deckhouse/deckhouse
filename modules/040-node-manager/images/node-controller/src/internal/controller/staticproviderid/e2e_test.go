@@ -62,6 +62,9 @@ var _ = AfterEach(func() {
 	}
 })
 
+// User story: As a user running static (bare-metal/VM) nodes, I want each initialized Static node to
+// receive a `static://` providerID, so that Kubernetes and Deckhouse treat it as a properly
+// provisioned node.
 var _ = Describe("StaticProviderID controller", func() {
 	It("sets providerID=static:// on a Static node without one", func() {
 		name := testenv.UniqueName("static")

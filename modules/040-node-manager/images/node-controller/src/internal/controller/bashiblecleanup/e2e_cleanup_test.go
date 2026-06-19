@@ -51,6 +51,9 @@ func hasTaintKey(node *corev1.Node, key string) bool {
 	return false
 }
 
+// User story: As a cluster user, I want a node to become schedulable as soon as bashible finishes
+// its first run — its bootstrap-finished label and the "uninitialized" taint removed — so that my
+// workloads can land on freshly bootstrapped nodes without manual intervention.
 var _ = Describe("Bashible cleanup (Node watch-triggered)", func() {
 	It("removes the bashible-first-run-finished label and the bashible-uninitialized taint", func() {
 		name := testenv.UniqueName("cleanup")
