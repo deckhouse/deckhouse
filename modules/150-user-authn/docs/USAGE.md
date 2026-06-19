@@ -31,7 +31,7 @@ spec:
 
 ### Checking provider connectivity
 
-The Console provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the hook to write the result to its status.
+The web UI  provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the hook to write the result to its status.
 
 The check verifies that:
 
