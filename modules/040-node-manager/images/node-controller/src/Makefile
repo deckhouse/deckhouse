@@ -11,7 +11,7 @@ ENVTEST_K8S_VERSION ?= 1.34.1
 # gotestsum renders go test -json into readable output. Pinned to match the repo-root Makefile.
 GOTESTSUM ?= $(LOCALBIN)/gotestsum
 GOTESTSUM_VERSION ?= v1.13.0
-# Output format: pkgname locally; CI sets GOTESTSUM_FORMAT=github-actions for collapsible groups.
+# Output format: pkgname = one line per package (clean); override e.g. GOTESTSUM_FORMAT=standard-verbose to debug.
 GOTESTSUM_FORMAT ?= pkgname
 
 # Go tools
@@ -49,7 +49,7 @@ lint: ## Run golangci-lint against code.
 test: envtest gotestsum ## Run the whole unit + envtest suite with coverage (CI: GOTESTSUM_FORMAT=github-actions).
 	@echo "==> [test] running gotestsum --format $(GOTESTSUM_FORMAT) (unit + envtest)..."
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-		$(GOTESTSUM) --format $(GOTESTSUM_FORMAT) -- ./... -coverprofile cover.out
+		$(GOTESTSUM) --format $(GOTESTSUM_FORMAT) --format-hide-empty-pkg -- ./... -coverprofile cover.out
 	@echo "==> [test] total coverage:"
 	@go tool cover -func=cover.out | tail -1
 

@@ -169,7 +169,7 @@ steps:
       # GOFLAGS=-buildvcs=false: the tests don't need a git stamp, so go won't shell out to git —
       # this lets us skip installing git into the image (saves ~30s/run) and the safe.directory dance.
       CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-pkg-cache:/go/pkg -v ~/envtest-assets:/envtest-assets -v ~/go-build-cache-node-controller:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
-      docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets GOTESTSUM_FORMAT=github-actions"
+      docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets"
       docker rm -f ${CONTAINER_ID}
 # </template: tests_node_controller_envtest_template>
 {!{- end -}!}
