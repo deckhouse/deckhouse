@@ -229,7 +229,16 @@ func NewDeckhouseController(
 
 	deckhouseConfigCh := make(chan utils.Values, 1)
 
-	configHandler := confighandler.New(runtimeManager.GetClient(), conversionsStore, deckhouseConfigCh)
+	// globalConfigCh mirrors the `global` ModuleConfig settings onto the new
+	// package runtime's global module. It is only wired under the module package
+	// flow; left nil otherwise so the config handler does not block on a send
+	// without a consumer.
+	var globalConfigCh chan utils.Values
+	if os.Getenv(envEnableModulePackages) == "true" {
+		globalConfigCh = make(chan utils.Values, 1)
+	}
+
+	configHandler := confighandler.New(runtimeManager.GetClient(), conversionsStore, deckhouseConfigCh, globalConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
 	// setup module manager
@@ -392,6 +401,23 @@ func NewDeckhouseController(
 	// Module package controllers (feature flag)
 	if os.Getenv(envEnableModulePackages) == "true" {
 		logger.Info("Module package controllers are enabled")
+
+		// Mirror the global ModuleConfig onto the runtime's global module so
+		// r.global holds the same user-configured global.* values addon-operator
+		// does. Start this before pkgRuntime.Run() so the initial config is
+		// applied before the global startup hooks run where possible.
+		if globalConfigCh != nil {
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case values := <-globalConfigCh:
+						pkgRuntime.ProcessGlobalConfig(values)
+					}
+				}
+			}()
+		}
 
 		// Start the runtime event loop (scheduler, global hooks, hook events) so
 		// adopted functional modules are actually scheduled. Guard against a

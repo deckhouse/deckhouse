@@ -788,6 +788,48 @@ func (r *Runtime) startGlobal(ctx context.Context) error {
 	return nil
 }
 
+// ProcessGlobalConfig mirrors the resolved `global` ModuleConfig settings onto
+// the runtime's own global module so r.global holds the same user-configured
+// global.* values addon-operator does (publicDomainTemplate, https mode,
+// storageClass, ...). The kube-config handler delivers these settings whenever
+// the global ModuleConfig is (re)loaded or changed.
+//
+// This is a prerequisite for eventually making r.global the single source of
+// global values: it does NOT switch module/.Platform reads off addon-operator
+// (GlobalValuesGetter still points there and effectiveGlobalValues keeps the
+// fallback). Its purpose is to keep r.global complete so the cutover can be
+// validated (e.g. via /packages/global/dump) and so the version/bootstrap
+// getters that already prefer r.global see the configured values.
+func (r *Runtime) ProcessGlobalConfig(values addonutils.Values) {
+	if r.global == nil {
+		return
+	}
+
+	if len(values) == 0 {
+		values = make(addonutils.Values)
+	}
+
+	// Skip redundant work when the settings have not changed.
+	if r.global.GetSettingsChecksum() == values.Checksum() {
+		return
+	}
+
+	// ApplySettings validates against the global config OpenAPI schema before
+	// persisting and recomputing the merged values.
+	if err := r.global.ApplySettings(values); err != nil {
+		r.logger.Error("apply global config to runtime global module", log.Err(err))
+		return
+	}
+
+	r.logger.Info("applied global config to runtime global module",
+		slog.String("checksum", values.Checksum()))
+
+	// Global values changed: re-evaluate module enable decisions. This is a
+	// harmless no-op for live behavior while addon-operator stays authoritative,
+	// and becomes correct once r.global takes over as the source of truth.
+	r.scheduler.Schedule()
+}
+
 // schedulePackage handles scheduler enable events by enqueueing
 // Configure → Startup → Run tasks for the named package.
 //

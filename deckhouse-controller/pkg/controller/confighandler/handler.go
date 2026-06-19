@@ -40,16 +40,21 @@ type Handler struct {
 	client            client.Client
 	conversionsStore  *conversion.ConversionsStore
 	deckhouseConfigCh chan<- utils.Values
+	// globalConfigCh, when non-nil, receives the resolved settings of the
+	// `global` ModuleConfig so the new package runtime can mirror them onto its
+	// own global module. It may be nil when the module package flow is disabled.
+	globalConfigCh chan<- utils.Values
 
 	l             sync.Mutex
 	configEventCh chan<- config.Event
 }
 
-func New(client client.Client, conversionsStore *conversion.ConversionsStore, deckhouseConfigCh chan<- utils.Values) *Handler {
+func New(client client.Client, conversionsStore *conversion.ConversionsStore, deckhouseConfigCh, globalConfigCh chan<- utils.Values) *Handler {
 	return &Handler{
 		client:            client,
 		conversionsStore:  conversionsStore,
 		deckhouseConfigCh: deckhouseConfigCh,
+		globalConfigCh:    globalConfigCh,
 	}
 }
 
@@ -73,6 +78,11 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 		kubeConfig.Global = &config.GlobalKubeConfig{
 			Values:   values,
 			Checksum: values.Checksum(),
+		}
+
+		// Mirror the global config onto the new runtime's global module.
+		if h.globalConfigCh != nil {
+			h.globalConfigCh <- values
 		}
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
@@ -124,6 +134,11 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 			kubeConfig.Global = &config.GlobalKubeConfig{
 				Values:   values,
 				Checksum: values.Checksum(),
+			}
+
+			// Mirror the global config onto the new runtime's global module.
+			if h.globalConfigCh != nil {
+				h.globalConfigCh <- values
 			}
 			continue
 		}
