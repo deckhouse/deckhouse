@@ -86,7 +86,7 @@ func (c *StateCache) populateSecret(ctx context.Context) (*v1.Secret, error) {
 	var secret *v1.Secret
 	var lastError error
 
-	err := retry.NewSilentLoop("get cache secret", 3, 2*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("get cache secret", 6, 1*time.Second).Run(func() error {
 		var err error
 
 		secret, err = c.secretsAPI.Get(ctx, c.secretName, metav1.GetOptions{})
@@ -122,7 +122,7 @@ func (c *StateCache) populateSecret(ctx context.Context) (*v1.Secret, error) {
 		preparedLabels[k] = v
 	}
 
-	err = retry.NewSilentLoop("save cache secret", 3, 2*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("save cache secret", 6, 1*time.Second).Run(func() error {
 		var err error
 
 		secretToCreate := &v1.Secret{

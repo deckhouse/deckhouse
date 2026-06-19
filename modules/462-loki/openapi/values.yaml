@@ -24,12 +24,15 @@ properties:
           cert:
             type: string
             default: ""
+            x-dmt-default: "-"
           key:
             type: string
             default: ""
+            x-dmt-default: "-"
           ca: 
             type: string
             default: ""
+            x-dmt-default: "-"
       pvcSize:
         type: integer
         format: int64

@@ -15,15 +15,12 @@
 package release
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -44,6 +41,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -66,23 +64,15 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/testing/controller/controllersuite"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
 
-var (
-	mDelimiter = regexp.MustCompile("(?m)^---$")
-
-	embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
-		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-			Mode:    v1alpha2.UpdateModeAuto.String(),
-			Windows: make(update.Windows, 0),
-		},
-		ReleaseChannel: "Stable",
-	}
-	golden bool
-)
-
-func init() {
-	flag.BoolVar(&golden, "golden", false, "generate golden files")
+var embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
+	Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+		Mode:    v1alpha2.UpdateModeAuto.String(),
+		Windows: make(update.Windows, 0),
+	},
+	ReleaseChannel: "Stable",
 }
 
 func TestReleaseControllerTestSuite(t *testing.T) {
@@ -123,21 +113,7 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 	}
 
 	goldenFile := filepath.Join("./testdata/releases", "golden", suite.testDataFileName)
-	gotB := suite.fetchResults()
-
-	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0o666)
-		require.NoError(suite.T(), err)
-	} else {
-		got := normalizeManifests(singleDocToManifests(gotB))
-		expB, err := os.ReadFile(goldenFile)
-		require.NoError(suite.T(), err)
-		exp := normalizeManifests(singleDocToManifests(expB))
-		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
-		for i := range got {
-			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
-		}
-	}
+	reconcilertest.CompareOrUpdate(suite.T(), goldenFile, suite.fetchResults(), reconcilertest.PerDocument)
 }
 
 func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
@@ -1042,36 +1018,23 @@ func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1
 }
 
 func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
-	result := bytes.NewBuffer(nil)
+	got, err := reconcilertest.Snapshot(suite.Context(), suite.client, suite.client.Scheme(), reconcilertest.SnapshotSpec{
+		Kinds: []schema.GroupVersionKind{
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
+			v1alpha1.SchemeGroupVersion.WithKind("Module"),
+		},
+		ObjectNormalizers: []reconcilertest.ObjectNormalizer{stripDeletionTimestamp},
+	})
+	require.NoError(suite.T(), err)
 
-	sources := new(v1alpha1.ModuleSourceList)
-	require.NoError(suite.T(), suite.client.List(suite.Context(), sources))
+	return got
+}
 
-	for _, source := range sources.Items {
-		got, _ := yaml.Marshal(source)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	releases := new(v1alpha1.ModuleReleaseList)
-	require.NoError(suite.T(), suite.client.List(context.TODO(), releases))
-
-	for _, release := range releases.Items {
-		got, _ := yaml.Marshal(release)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	modules := new(v1alpha1.ModuleList)
-	require.NoError(suite.T(), suite.client.List(context.TODO(), modules))
-
-	for _, module := range modules.Items {
-		got, _ := yaml.Marshal(module)
-		result.WriteString("---\n")
-		result.Write(got)
-	}
-
-	return result.Bytes()
+// stripDeletionTimestamp clears the non-deterministic deletionTimestamp field
+// so golden snapshots stay stable.
+func stripDeletionTimestamp(obj client.Object) {
+	obj.SetDeletionTimestamp(nil)
 }
 
 type stubModulesManager struct {
@@ -1105,48 +1068,6 @@ func (s stubModulesManager) IsModuleEnabled(_ string) bool {
 
 func (s stubModulesManager) PushRunModuleTask(_ string, _ bool) error {
 	return nil
-}
-
-func singleDocToManifests(doc []byte) []string {
-	split := mDelimiter.Split(string(doc), -1)
-
-	result := make([]string, 0, len(split))
-	for i := range split {
-		if split[i] != "" {
-			result = append(result, split[i])
-		}
-	}
-
-	return result
-}
-
-// normalizeManifests strips non-deterministic fields before comparison
-func normalizeManifests(docs []string) []string {
-	result := make([]string, 0, len(docs))
-	for _, d := range docs {
-		result = append(result, stripDeletionTimestamp(d))
-	}
-
-	return result
-}
-
-func stripDeletionTimestamp(y string) string {
-	// Best-effort: if unmarshal fails, return as-is
-	var obj map[string]any
-	if err := yaml.Unmarshal([]byte(y), &obj); err != nil {
-		return y
-	}
-
-	if meta, ok := obj["metadata"].(map[string]any); ok {
-		delete(meta, "deletionTimestamp")
-	}
-
-	b, err := yaml.Marshal(obj)
-	if err != nil {
-		return y
-	}
-
-	return string(b)
 }
 
 func TestValidateModule(t *testing.T) {
@@ -1651,6 +1572,15 @@ spec:
     dockerCfg: ""
     scheme: HTTPS
 ---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-policy
+spec:
+  releaseChannel: Stable
+  update:
+    mode: Auto
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
@@ -1658,6 +1588,7 @@ metadata:
   labels:
     source: deckhouse
     module: parca
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: parca
   version: 1.26.2
@@ -1673,6 +1604,7 @@ metadata:
   labels:
     source: deckhouse
     module: commander
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: commander
   version: 1.0.3
@@ -1688,6 +1620,7 @@ metadata:
   labels:
     source: deckhouse
     module: upmeter
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: upmeter
   version: 1.70.0

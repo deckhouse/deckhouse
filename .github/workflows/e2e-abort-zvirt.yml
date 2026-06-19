@@ -40,10 +40,8 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.69.0"
+  WERF_VERSION: "v2.72.1"
   WERF_ENV: "FE"
-  WERF_TELEMETRY: "1"
-  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   REGISTRY_PATH: "sys/deckhouse-oss"
@@ -84,7 +82,7 @@ jobs:
   # <template: check_e2e_labels_job>
   check_e2e_labels:
     name: Check e2e labels
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     permissions:
       contents: read
       issues: write
@@ -123,7 +121,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'zvirt';
-            const kubernetesDefaultVersion = '1.33';
+            const kubernetesDefaultVersion = '1.34';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -206,9 +204,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -300,11 +298,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -352,7 +345,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -532,9 +525,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -626,11 +619,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -678,7 +666,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -858,9 +846,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -952,11 +940,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -1004,7 +987,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1184,9 +1167,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -1278,11 +1261,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -1330,7 +1308,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1510,9 +1488,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -1604,11 +1582,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -1656,7 +1629,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -1836,9 +1809,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -1930,11 +1903,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -1982,7 +1950,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2162,9 +2130,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -2256,11 +2224,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -2308,7 +2271,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2488,9 +2451,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -2582,11 +2545,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -2634,7 +2592,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -2814,9 +2772,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -2908,11 +2866,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -2960,7 +2913,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3140,9 +3093,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -3234,11 +3187,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -3286,7 +3234,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3466,9 +3414,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -3560,11 +3508,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -3612,7 +3555,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -3792,9 +3735,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -3886,11 +3829,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -3938,7 +3876,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -4118,9 +4056,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -4212,11 +4150,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -4264,7 +4197,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
@@ -4444,9 +4377,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zvirt-max password | LAYOUT_ZVIRT_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -4538,11 +4471,6 @@ jobs:
             mkdir -p "${TMP_DIR_PATH}"
           fi
 
-          if [[ "$INSTALL_IMAGE_PATH" =~ release-[0-9]+\.[0-9]+ ]]; then
-            # Use stage-registry for release branches.
-            DECKHOUSE_REGISTRY_HOST=${DECKHOUSE_REGISTRY_STAGE_HOST}
-          fi
-
           INSTALL_IMAGE_NAME="${DECKHOUSE_REGISTRY_HOST:-}${INSTALL_IMAGE_PATH}"
 
           SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
@@ -4590,7 +4518,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          TEMPLATE_ID: "1a360242-6c54-430b-8762-91a7d3416b07"
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}

@@ -20,4 +20,4 @@ The child mode then:
 
 `/validation-chroot` is prepared in controller images as a hardlinked copy of `/chroot`. 
 
-`SANDBOX_DEBUG=true` enables sandbox tracing, and `SANDBOX_DEBUG_CRASH_ON_DENY=true` additionally converts any deny into immediate sandbox termination.
+`SANDBOX_DEBUG=true` enables verbose syscall tracing. For unknown syscalls (for example `getpgid`), debug mode **soft-bans** the call (returns `EACCES` to the traced process) and logs `deny syscall="…" (soft-ban)`. Without debug, the same policy **kills** the traced process and logs `deny syscall="…" (kill)`, which surfaces as `Disallowed Syscall`. Use `SANDBOX_DEBUG_CRASH_ON_DENY=true` to force kill on any file/syscall deny while debugging.

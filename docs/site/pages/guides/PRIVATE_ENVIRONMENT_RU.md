@@ -601,6 +601,7 @@ docker ps
 
 {% offtopic title="Пример вывода команды..." %}
 
+<!-- markdownlint-disable MD031 -->
 ```console
 CONTAINER ID   IMAGE                                 COMMAND                  CREATED         STATUS                   PORTS                                                                                NAMES
 df1636bd1295   goharbor/nginx-photon:v2.14.1         "nginx -g 'daemon of…"   3 minutes ago   Up 3 minutes (healthy)   0.0.0.0:80->8080/tcp, [::]:80->8080/tcp, 0.0.0.0:443->8443/tcp, [::]:443->8443/tcp   nginx
@@ -613,6 +614,8 @@ a78d9a1a5b0b   goharbor/harbor-db:v2.14.1            "/docker-entrypoint.…"   
 ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   3 minutes ago   Up 3 minutes (healthy)                                                                                        redis
 9330bcce48be   goharbor/harbor-log:v2.14.1           "/bin/sh -c /usr/loc…"   3 minutes ago   Up 3 minutes (healthy)   127.0.0.1:1514->10514/tcp                                                            harbor-log
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endofftopic %}
 
@@ -772,6 +775,7 @@ d8 mirror pull \
 
 Пример вывода успешной загрузки всех компонентов платформы:
 
+<!-- markdownlint-disable MD031 -->
 ```text
 Feb 26 17:49:04.520 INFO  ║║ [822 / 824] Pulling registry.deckhouse.ru/deckhouse/ee@sha256:4e5c17098d2a884cc971676fa9a7980f0d784a787d21e113d28a72da96ea8b2b 
 Feb 26 17:49:05.099 INFO  ║║ [823 / 824] Pulling registry.deckhouse.ru/deckhouse/ee@sha256:d229564f423a1ca7a59e0be28a71218e362cc8f07d979ce63a15bb505c6ccb40 
@@ -779,6 +783,8 @@ Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.ru/deckh
 Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
 
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Пример вывода успешной загрузки модулей:
 
@@ -834,47 +840,47 @@ Feb 26 18:31:17.510 INFO  ╚ Pull Modules succeeded in 40m8.735435676s
 ```console
 $ ls -lh
 итого 51G
--rw-rw-r-- 1 zhbert zhbert  4,8K фев 26 17:19 deckhousereleases.yaml
--rw-rw-r-- 1 zhbert zhbert  4,9G фев 26 18:30 module-code.tar
--rw-rw-r-- 1 zhbert zhbert   17M фев 26 18:30 module-commander-agent.tar
--rw-rw-r-- 1 zhbert zhbert 1008M фев 26 18:30 module-commander.tar
--rw-rw-r-- 1 zhbert zhbert  172M фев 26 18:30 module-console.tar
--rw-rw-r-- 1 zhbert zhbert  225M фев 26 18:31 module-csi-ceph.tar
--rw-rw-r-- 1 zhbert zhbert  1,1G фев 26 18:30 module-csi-hpe.tar
--rw-rw-r-- 1 zhbert zhbert  1,1G фев 26 18:30 module-csi-huawei.tar
--rw-rw-r-- 1 zhbert zhbert  170M фев 26 18:30 module-csi-netapp.tar
--rw-rw-r-- 1 zhbert zhbert  188M фев 26 18:30 module-csi-nfs.tar
--rw-rw-r-- 1 zhbert zhbert  555M фев 26 18:30 module-csi-s3.tar
--rw-rw-r-- 1 zhbert zhbert  544M фев 26 18:31 module-csi-scsi-generic.tar
--rw-rw-r-- 1 zhbert zhbert  207M фев 26 18:30 module-csi-yadro-tatlin-unified.tar
--rw-rw-r-- 1 zhbert zhbert   85M фев 26 18:31 module-development-platform.tar
--rw-rw-r-- 1 zhbert zhbert  146M фев 26 18:30 module-managed-memcached.tar
--rw-rw-r-- 1 zhbert zhbert  835M фев 26 18:31 module-managed-postgres.tar
--rw-rw-r-- 1 zhbert zhbert  113M фев 26 18:31 module-managed-valkey.tar
--rw-rw-r-- 1 zhbert zhbert  1,1G фев 26 18:31 module-neuvector.tar
--rw-rw-r-- 1 zhbert zhbert  3,4G фев 26 18:31 module-observability-platform.tar
--rw-rw-r-- 1 zhbert zhbert  600M фев 26 18:31 module-observability.tar
--rw-rw-r-- 1 zhbert zhbert  194M фев 26 18:30 module-operator-argo.tar
--rw-rw-r-- 1 zhbert zhbert  418M фев 26 18:30 module-operator-ceph.tar
--rw-rw-r-- 1 zhbert zhbert  705M фев 26 18:30 module-operator-postgres.tar
--rw-rw-r-- 1 zhbert zhbert  156M фев 26 18:30 module-operator-trivy.tar
--rw-rw-r-- 1 zhbert zhbert   60M фев 26 18:30 module-payload-registry.tar
--rw-rw-r-- 1 zhbert zhbert   15M фев 26 18:30 module-pod-reloader.tar
--rw-rw-r-- 1 zhbert zhbert  183M фев 26 18:30 module-prompp.tar
--rw-rw-r-- 1 zhbert zhbert 1022M фев 26 18:30 module-runtime-audit-engine.tar
--rw-rw-r-- 1 zhbert zhbert   78M фев 26 18:31 module-sdn.tar
--rw-rw-r-- 1 zhbert zhbert  179M фев 26 18:31 module-sds-local-volume.tar
--rw-rw-r-- 1 zhbert zhbert  157M фев 26 18:30 module-sds-node-configurator.tar
--rw-rw-r-- 1 zhbert zhbert  2,8G фев 26 18:30 module-sds-replicated-volume.tar
--rw-rw-r-- 1 zhbert zhbert  157M фев 26 18:30 module-secrets-store-integration.tar
--rw-rw-r-- 1 zhbert zhbert   51M фев 26 18:30 module-snapshot-controller.tar
--rw-rw-r-- 1 zhbert zhbert   37M фев 26 18:31 module-state-snapshotter.tar
--rw-rw-r-- 1 zhbert zhbert   24M фев 26 18:31 module-static-routing-manager.tar
--rw-rw-r-- 1 zhbert zhbert   41M фев 26 18:30 module-storage-volume-data-manager.tar
--rw-rw-r-- 1 zhbert zhbert  177M фев 26 18:31 module-stronghold.tar
--rw-rw-r-- 1 zhbert zhbert  1,5G фев 26 18:30 module-virtualization.tar
--rw-rw-r-- 1 zhbert zhbert   26G фев 26 17:50 platform.tar
--rw-rw-r-- 1 zhbert zhbert  1,3G фев 26 17:51 security.tar
+-rw-rw-r-- 1 ubuntu ubuntu  4,8K фев 26 17:19 deckhousereleases.yaml
+-rw-rw-r-- 1 ubuntu ubuntu  4,9G фев 26 18:30 module-code.tar
+-rw-rw-r-- 1 ubuntu ubuntu   17M фев 26 18:30 module-commander-agent.tar
+-rw-rw-r-- 1 ubuntu ubuntu 1008M фев 26 18:30 module-commander.tar
+-rw-rw-r-- 1 ubuntu ubuntu  172M фев 26 18:30 module-console.tar
+-rw-rw-r-- 1 ubuntu ubuntu  225M фев 26 18:31 module-csi-ceph.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,1G фев 26 18:30 module-csi-hpe.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,1G фев 26 18:30 module-csi-huawei.tar
+-rw-rw-r-- 1 ubuntu ubuntu  170M фев 26 18:30 module-csi-netapp.tar
+-rw-rw-r-- 1 ubuntu ubuntu  188M фев 26 18:30 module-csi-nfs.tar
+-rw-rw-r-- 1 ubuntu ubuntu  555M фев 26 18:30 module-csi-s3.tar
+-rw-rw-r-- 1 ubuntu ubuntu  544M фев 26 18:31 module-csi-scsi-generic.tar
+-rw-rw-r-- 1 ubuntu ubuntu  207M фев 26 18:30 module-csi-yadro-tatlin-unified.tar
+-rw-rw-r-- 1 ubuntu ubuntu   85M фев 26 18:31 module-development-platform.tar
+-rw-rw-r-- 1 ubuntu ubuntu  146M фев 26 18:30 module-managed-memcached.tar
+-rw-rw-r-- 1 ubuntu ubuntu  835M фев 26 18:31 module-managed-postgres.tar
+-rw-rw-r-- 1 ubuntu ubuntu  113M фев 26 18:31 module-managed-valkey.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,1G фев 26 18:31 module-neuvector.tar
+-rw-rw-r-- 1 ubuntu ubuntu  3,4G фев 26 18:31 module-observability-platform.tar
+-rw-rw-r-- 1 ubuntu ubuntu  600M фев 26 18:31 module-observability.tar
+-rw-rw-r-- 1 ubuntu ubuntu  194M фев 26 18:30 module-operator-argo.tar
+-rw-rw-r-- 1 ubuntu ubuntu  418M фев 26 18:30 module-operator-ceph.tar
+-rw-rw-r-- 1 ubuntu ubuntu  705M фев 26 18:30 module-operator-postgres.tar
+-rw-rw-r-- 1 ubuntu ubuntu  156M фев 26 18:30 module-operator-trivy.tar
+-rw-rw-r-- 1 ubuntu ubuntu   60M фев 26 18:30 module-payload-registry.tar
+-rw-rw-r-- 1 ubuntu ubuntu   15M фев 26 18:30 module-pod-reloader.tar
+-rw-rw-r-- 1 ubuntu ubuntu  183M фев 26 18:30 module-prompp.tar
+-rw-rw-r-- 1 ubuntu ubuntu 1022M фев 26 18:30 module-runtime-audit-engine.tar
+-rw-rw-r-- 1 ubuntu ubuntu   78M фев 26 18:31 module-sdn.tar
+-rw-rw-r-- 1 ubuntu ubuntu  179M фев 26 18:31 module-sds-local-volume.tar
+-rw-rw-r-- 1 ubuntu ubuntu  157M фев 26 18:30 module-sds-node-configurator.tar
+-rw-rw-r-- 1 ubuntu ubuntu  2,8G фев 26 18:30 module-sds-replicated-volume.tar
+-rw-rw-r-- 1 ubuntu ubuntu  157M фев 26 18:30 module-secrets-store-integration.tar
+-rw-rw-r-- 1 ubuntu ubuntu   51M фев 26 18:30 module-snapshot-controller.tar
+-rw-rw-r-- 1 ubuntu ubuntu   37M фев 26 18:31 module-state-snapshotter.tar
+-rw-rw-r-- 1 ubuntu ubuntu   24M фев 26 18:31 module-static-routing-manager.tar
+-rw-rw-r-- 1 ubuntu ubuntu   41M фев 26 18:30 module-storage-volume-data-manager.tar
+-rw-rw-r-- 1 ubuntu ubuntu  177M фев 26 18:31 module-stronghold.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,5G фев 26 18:30 module-virtualization.tar
+-rw-rw-r-- 1 ubuntu ubuntu   26G фев 26 17:50 platform.tar
+-rw-rw-r-- 1 ubuntu ubuntu  1,3G фев 26 17:51 security.tar
 ```
 
 Загрузите скачанные образы в приватный registry. В команде подставьте редакцию DKP и учётные данные robot-аккаунта Harbor:
@@ -1207,7 +1213,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
         clusterIssuerName: selfsigned
   ```
 
-  Параметр `settings.modules.https` в ModuleConfig/global поддерживает несколько [режимов](../documentation/v1/reference/api/global.html): `CertManager` — заказ сертификата у указанного `ClusterIssuer` (не обязательно `selfsigned`, можно задать свой издатель — корпоративный CA, HashiCorp Vault, Venafi и т. д., см. [обзор в документации по сертификатам](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` — готовая пара «сертификат + ключ» в Secret формата `kubernetes.io/tls` в пространстве имён `d8-system`, при внешнем TLS-терминаторе возможен режим `OnlyInURI`. Сочетание `selfsigned` и отключение Let's Encrypt в блоке выше показывает простой пример использования HTTPS в изолированном контуре без ACME/Let's Encrypt.
+  Параметр `settings.modules.https` в ModuleConfig/global поддерживает несколько [режимов](../documentation/v1/reference/api/global.html): `CertManager` — заказ сертификата у указанного `ClusterIssuer` (не обязательно `selfsigned`, можно задать свой издатель — корпоративный CA, HashiCorp Vault, Venafi и т. д., см. [обзор в документации по сертификатам](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` — готовая пара «сертификат + ключ» в Secret формата `kubernetes.io/tls` в неймспейсе `d8-system`, при внешнем TLS-терминаторе возможен режим `OnlyInURI`. Сочетание `selfsigned` и отключение Let's Encrypt в блоке выше показывает простой пример использования HTTPS в изолированном контуре без ACME/Let's Encrypt.
 
 * В ModuleConfig `user-authn` измените значение параметра [`dexCAMode`](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) на `FromIngressSecret`:
 
@@ -1263,23 +1269,6 @@ proxy:
   httpsProxy: https://proxy.local:3128
   noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
-# Настройки первичной инициализации кластера Deckhouse.
-# https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  # Адрес Docker registry с образами Deckhouse.
-  imagesRepo: harbor.example/deckhouse/ee
-  # Строка с ключом для доступа к Docker registry.
-  registryDockerCfg: <DOCKER_CFG_BASE64>
-  # Протокол доступа к registry (HTTP или HTTPS).
-  registryScheme: HTTPS
-  # Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
-  registryCA: |
-    -----BEGIN CERTIFICATE-----
-    ...
-    -----END CERTIFICATE-----
----
 # Настройки модуля deckhouse.
 # https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
@@ -1293,6 +1282,22 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
+    # Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Адрес хранилища образов контейнеров с образами Deckhouse.
+        imagesRepo: <IMAGES_REPO_URI>
+        # Имя пользователя для аутентификации в хранилище образов контейнеров.
+        username: <USERNAME>
+        # Пароль для аутентификации в хранилище образов контейнеров.
+        password: <PASSWORD>
+        scheme: HTTPS
+        # Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
 ---
 # Глобальные настройки Deckhouse.
 # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
@@ -1512,12 +1517,15 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Убедитесь, что все узлы кластера находятся в статусе `Ready`:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ sudo -i d8 k get no
   NAME               STATUS   ROLES                  AGE    VERSION
   d8cluster          Ready    control-plane,master   30m   v1.23.17
   d8cluster-worker   Ready    worker                 10m   v1.23.17
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
   Запуск всех компонентов DKP после завершения установки может занять некоторое время.
 
@@ -1568,11 +1576,14 @@ sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 
 Запуск Ingress-контроллера после завершения установки DKP может занять некоторое время. Прежде чем продолжить, убедитесь, что Ingress-контроллер запустился (выполните на master-узле):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Создание пользователя для доступа в веб-интерфейсы кластера
 

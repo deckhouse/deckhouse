@@ -70,6 +70,12 @@ const istioValues = `
       applicationNamespaces: []
       globalVersion: "1.21.6"
       versionMap:
+        "1.27.9":
+          revision: "v1x27x9"
+          fullVersion: "1.27.9"
+          imageSuffix: "V1x27x9"
+          supportsAmbient: true
+          supportsOperator: false
         "1.25.2":
           revision: "v1x25x2"
           fullVersion: "1.25.2"
@@ -150,7 +156,22 @@ const istioValues = `
               min: "64Mi"
     ambient:
       enabled: false
+      waypointController:
+        resourcesManagement:
+          mode: VPA
+          vpa:
+            mode: InPlaceOrRecreate
+            cpu:
+              max: "1"
+              min: "25m"
+            memory:
+              max: "1Gi"
+              min: "64Mi"
 `
+
+const jwksResolverAdditionalRootCA = `-----BEGIN CERTIFICATE-----
+MIIDXTCCAkWgAwIBAgIJAN...
+-----END CERTIFICATE-----`
 
 func getSubdirs(dir string) ([]string, error) {
 	var subdirs []string
@@ -467,6 +488,67 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
+	Context("There are user extension providers", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.dataPlane.extensionProviders", `
+- name: authservice-grpc
+  envoyExtAuthzGrpc:
+    service: authservice.d8-istio.svc.cluster.local
+    port: 10003
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+
+			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.0.name").String()).To(Equal(`main-access-log-format`))
+			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.name").String()).To(Equal(`authservice-grpc`))
+			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.service").String()).To(Equal(`authservice.d8-istio.svc.cluster.local`))
+			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.port").Int()).To(Equal(int64(10003)))
+
+			Expect(iopV21.Field("spec.meshConfig.extensionProviders.0.name").String()).To(Equal(`main-access-log-format`))
+			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.name").String()).To(Equal(`authservice-grpc`))
+			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.service").String()).To(Equal(`authservice.d8-istio.svc.cluster.local`))
+			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.port").Int()).To(Equal(int64(10003)))
+		})
+	})
+
+	Context("JWKS resolver extra root CA is configured", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.25.2","1.27.9"]`)
+			f.ValuesSet("istio.jwksResolverAdditionalRootCA", jwksResolverAdditionalRootCA)
+			f.HelmRender()
+		})
+
+		It("passes the certificate to pilot configuration for supported Istio versions", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			jwksExtraRootCAV27 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x27x9")
+
+			Expect(iopV21.Exists()).To(BeTrue())
+			Expect(istioV25.Exists()).To(BeTrue())
+			Expect(jwksExtraRootCAV27.Exists()).To(BeTrue())
+
+			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
+		})
+	})
+
 	Context("There is one federation", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
@@ -504,6 +586,9 @@ neighbour-0:
   clusterUUID: r-e-m-o-t-e
   rootCA: ---ROOT CA---
 `)
+			f.ValuesSetFromYaml("istio.alliance.ingressGateway.gatewayPodAnnotations", `
+test.deckhouse.io/annotation: test-value
+`)
 			f.HelmRender()
 		})
 
@@ -536,7 +621,9 @@ neighbour-0:
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:alliance:metadata-exporter").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:alliance:metadata-exporter").Exists()).To(BeTrue())
 
-			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
+			ingressgatewayDaemonSet := f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway")
+			Expect(ingressgatewayDaemonSet.Exists()).To(BeTrue())
+			Expect(ingressgatewayDaemonSet.Field("spec.template.metadata.annotations.test\\.deckhouse\\.io/annotation").String()).To(Equal("test-value"))
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Gateway", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
@@ -1180,6 +1267,54 @@ resourcePolicy:
 updatePolicy:
   updateMode: Initial
 `))
+		})
+	})
+
+	Context("istiod with custom controlPlane.extraEnvs", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.controlPlane.extraEnvs", `
+GODEBUG: "gctrace=1"
+MY_VAR: "myvalue"
+`)
+			f.HelmRender()
+		})
+
+		It("should add custom env vars to istiod in both IOP and sailoperator Istio CR", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+			Expect(istioV25.Exists()).To(BeTrue())
+			Expect(iopV21.Exists()).To(BeTrue())
+
+			// istioV25 (sailoperator): spec.values.pilot.env is a map
+			By("istios.yaml: custom env vars are present in spec.values.pilot.env")
+			Expect(istioV25.Field("spec.values.pilot.env.GODEBUG").String()).To(Equal("gctrace=1"))
+			Expect(istioV25.Field("spec.values.pilot.env.MY_VAR").String()).To(Equal("myvalue"))
+
+			By("istios.yaml: reserved env vars are still present")
+			Expect(istioV25.Field("spec.values.pilot.env.ISTIO_MULTIROOT_MESH").String()).To(Equal("true"))
+			Expect(istioV25.Field("spec.values.pilot.env.ENABLE_ENHANCED_RESOURCE_SCOPING").String()).To(Equal("true"))
+
+			// iopV21 (IstioOperator): spec.components.pilot.k8s.env is a list of {name, value}
+			By("iop.yaml: custom env vars are present in spec.components.pilot.k8s.env")
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.2.name").String()).To(Equal("GODEBUG"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.2.value").String()).To(Equal("gctrace=1"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.3.name").String()).To(Equal("MY_VAR"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.3.value").String()).To(Equal("myvalue"))
+
+			By("iop.yaml: reserved env vars are still present")
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.0.name").String()).To(Equal("ISTIO_MULTIROOT_MESH"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.0.value").String()).To(Equal("true"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.1.name").String()).To(Equal("ENABLE_ENHANCED_RESOURCE_SCOPING"))
+			Expect(iopV21.Field("spec.components.pilot.k8s.env.1.value").String()).To(Equal("true"))
+
+			By("iop.yaml: custom env vars are placed after the reserved ones, total count is 4")
+			Expect(iopV21.Field("spec.components.pilot.k8s.env").Array()).To(HaveLen(4))
 		})
 	})
 

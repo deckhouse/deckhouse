@@ -54,11 +54,14 @@ example     2       16s    Ready
 
 If there are synchronization errors, the `MSG` column will contain a general description of the error, e.g.:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s    Some errors occurred. Inspect status for details
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Detailed error information can be found in the `pullError` field in the status of the ModuleSource resource.
 
@@ -95,12 +98,15 @@ d8 k get module
 
 Example of getting a list of modules:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get module
 NAME       STAGE    SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
 module-two                   Available   False     False                      
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To get additional information about the module, use the following command:
 
@@ -250,19 +256,25 @@ In the Module, you can see the current installed version of the module, its size
 
 In case of any errors, the module will enter the `Error` phase:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE  ENABLED  READY
 module-one           example  Error  True     Error
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 If the enabled module has several available sources, and a source for the module is not explicitly selected in its ModuleConfig, the module will enter the `Conflict` phase:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  False    False
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To resolve the conflict, specify the source of the module (ModuleSource name) explicitly in ModuleConfig.
 
@@ -276,6 +288,7 @@ d8 k get mr
 
 An example of retrieving the list of module releases:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get mr
 NAME                       PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
@@ -287,6 +300,8 @@ module-two-v1.2.3          Deployed     deckhouse       48d
 module-two-v1.2.4          Superseded   deckhouse       44d              
 module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 If the module release is in the `Superseded` status, it means that the module release is outdated, and there is a newer release that has replaced it.
 
@@ -360,6 +375,7 @@ The module must be in the list.
 
 Below is an example of the output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get module
 NAME       STAGE    SOURCE   PHASE       ENABLED   READY
@@ -368,6 +384,8 @@ module-one                   Available   False     False
 module-two                   Available   False     False     
 ...
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 It shows that the `module-one` module can be enabled.
 
@@ -415,21 +433,27 @@ If there were errors while enabling a module in the cluster, you can learn about
 
   Here is an example of the error message for `module-one`:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-one  true                7s    Ignored: unknown module name
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 - View the ModuleSource object.
 
   Example output if the module source has problems with downloading the module:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get ms
   NAME        COUNT   SYNC   MSG
   example     2       16s    Some errors occurred. Inspect status for details
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 Similar to [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
 
@@ -439,11 +463,14 @@ d8 k get mr
 
 Output example:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The example output above illustrates ModuleRelease message when the update mode ([update.mode](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec) of the ModuleUpdatePolicy is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the ModuleRelease:
 
@@ -510,16 +537,9 @@ For GitLab projects, ready-to-use templates are available and can be included in
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Build.gitlab-ci.yml
     ```
 
-   Example of template inclusion:  
-   [GitLab `.gitlab-ci.yml`, line 2](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L2)
-
 1. After adding the templates, in the same `.gitlab-ci.yml` configuration, add a step to perform the check:
 
     ```yaml
     Lint:
       extends: .lint
     ```
-
-   For an example of how to add a check step, see [GitLab `.gitlab-ci.yml`, line 48](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L48).
-
-> If your project is hosted in the [https://fox.flant.com/deckhouse](https://fox.flant.com/deckhouse) group, the metrics variables are already configured. No additional setup is required.

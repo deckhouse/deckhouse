@@ -438,7 +438,7 @@ spec:
         merge:
           metadata:
             labels:
-              security.deckhouse.io/security-policy-exception/nginx: allow-custom-selinux-options
+              security.deckhouse.io/security-policy-exception.container.nginx: allow-custom-selinux-options
             name: allowed-by-exception-custom-selinux-options-container
           spec:
             containers:
@@ -563,7 +563,7 @@ spec:
         merge:
           metadata:
             labels:
-              security.deckhouse.io/security-policy-exception/nginx: allow-spc-t
+              security.deckhouse.io/security-policy-exception.container.nginx: allow-spc-t
             name: disallowed-by-exception-multiple-containers-one-mismatch
           spec:
             containers:

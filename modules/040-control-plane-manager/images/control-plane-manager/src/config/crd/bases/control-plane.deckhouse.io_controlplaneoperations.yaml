@@ -14,7 +14,7 @@ spec:
     shortNames:
     - cpo
     singular: controlplaneoperation
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - description: Target component
@@ -138,6 +138,7 @@ spec:
                   - JoinEtcdCluster
                   - WaitPodReady
                   - CertObserve
+                  - RenewSignature
                   type: string
                 minItems: 1
                 type: array
@@ -156,9 +157,10 @@ spec:
                   Conditions reflects the operation progress.
 
                   The primary condition is "Completed". Its "reason" field is shown in the Phase column of `kubectl get cpo`:
-                    - InProgress — the operation is running. The current step name is shown in the CurrentStep column.
-                    - Succeeded  — the operation finished successfully.
-                    - Failed     — the operation finished with an error; details are in "message".
+                    - OperationInProgress — the operation is running. The current step name is shown in the CurrentStep column.
+                    - OperationCompleted  — the operation finished successfully.
+                    - OperationFailed     — the operation finished with an error; details are in "message".
+                    - OperationAbandoned  — desired checksums became stale before the operation finished.
 
                   In addition to "Completed", a separate condition is created for each executed step,
                   where "type" equals the step name (for example RenewPKICerts, SyncManifests).
@@ -225,12 +227,12 @@ spec:
                   ObservedState contains the component state collected by the CertObserve step.
                   Populated only for static pod components (etcd, kube-apiserver, kube-controller-manager, kube-scheduler).
                 properties:
-                  certificatesExpirationDate:
+                  certificatesExpirationTime:
                     additionalProperties:
                       format: date-time
                       type: string
                     description: |-
-                      CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+                      CertificatesExpirationTime maps each component certificate file name to its NotAfter timestamp.
                       Used by the module to renew certificates in time and to drive related alerts.
                     type: object
                 type: object

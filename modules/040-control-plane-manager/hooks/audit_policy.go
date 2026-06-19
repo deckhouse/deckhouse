@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -116,9 +117,9 @@ func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal configmaps_with_extra_audit_policy snapshot: %w", err)
 		}
-		appendBasicPolicyRules(&policy, extraData)
+		appendBasicPolicyRules(&policy, extraData, nil)
 		// Add policies for virtualization module.
-		appendVirtualizationPolicyRules(&policy)
+		appendVirtualizationPolicyRules(&policy, nil)
 	}
 
 	// Append custom policies if secret is present.
@@ -136,7 +137,7 @@ func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 	// Unauthenticated requests are taken by directing all Metadata level requests with `UserGroups` with `system:authenticated` to None and then taking all remaining Metadata level logs
 	// There should always be a last rule
 	if input.Values.Get("controlPlaneManager.apiserver.basicAuditPolicyEnabled").Bool() {
-		appendUnauthenticatedRules(&policy)
+		appendUnauthenticatedRules(&policy, nil)
 	}
 
 	if len(policy.Rules) == 0 {
@@ -152,116 +153,128 @@ func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 	return nil
 }
 
-func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo) {
-	appendDropResourcesRule := func(resource audit.GroupResources) {
+func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, docs *[]AuditPolicyRuleWithDescription) {
+	appendDropResourcesRule := func(resource audit.GroupResources, descriptionEN, descriptionRU string) {
 		rule := audit.PolicyRule{
 			Level: audit.LevelNone,
 			Resources: []audit.GroupResources{
 				resource,
 			},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 
-	// Drop events on endpoints, endpointslices and events resources.
-	appendDropResourcesRule(audit.GroupResources{
-		Group:     "",
-		Resources: []string{"endpoints", "endpointslices", "events"},
-	})
-	// Drop leader elections based on leases resource.
-	appendDropResourcesRule(audit.GroupResources{
-		Group:     "coordination.k8s.io",
-		Resources: []string{"leases"},
-	})
-	// Drop cert-manager's leader elections based on configmap resources.
-	appendDropResourcesRule(audit.GroupResources{
-		Group:         "",
-		Resources:     []string{"configmaps"},
-		ResourceNames: []string{"cert-manager-cainjector-leader-election", "cert-manager-controller"},
-	})
-	// Drop verticalpodautoscalercheckpoints.
-	appendDropResourcesRule(audit.GroupResources{
-		Group:     "autoscaling.k8s.io",
-		Resources: []string{"verticalpodautoscalercheckpoints"},
-	})
-	// Drop patches of verticalpodautoscalers by recommender.
+	appendDropResourcesRule(
+		audit.GroupResources{Group: "", Resources: []string{"endpoints", "endpointslices", "events"}},
+		"Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.",
+		"Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.",
+	)
+	appendDropResourcesRule(
+		audit.GroupResources{Group: "coordination.k8s.io", Resources: []string{"leases"}},
+		"Do not log leader election operations on `Lease` resources.",
+		"Не логировать операции выбора лидера на ресурсах `Lease`.",
+	)
+	appendDropResourcesRule(
+		audit.GroupResources{Group: "", Resources: []string{"configmaps"}, ResourceNames: []string{"cert-manager-cainjector-leader-election", "cert-manager-controller"}},
+		"Do not log cert-manager leader election ConfigMaps.",
+		"Не логировать ConfigMap cert-manager, используемые для выбора лидера.",
+	)
+	appendDropResourcesRule(
+		audit.GroupResources{Group: "autoscaling.k8s.io", Resources: []string{"verticalpodautoscalercheckpoints"}},
+		"Do not log VerticalPodAutoscalerCheckpoints resources.",
+		"Не логировать ресурсы VerticalPodAutoscalerCheckpoints.",
+	)
+
 	{
+		descriptionEN := "Do not log PATCH operations on `VerticalPodAutoscaler` from recommender."
+		descriptionRU := "Не логировать PATCH-операции `VerticalPodAutoscaler` от recommender."
 		rule := audit.PolicyRule{
 			Level: audit.LevelNone,
 			Verbs: []string{"patch"},
 			Users: []string{"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-recommender"},
-			Resources: []audit.GroupResources{
-				{
-					Group:     "autoscaling.k8s.io",
-					Resources: []string{"verticalpodautoscalers"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Group:     "autoscaling.k8s.io",
+				Resources: []string{"verticalpodautoscalers"},
+			}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
-	// Drop upmeterhookprobes.
-	appendDropResourcesRule(audit.GroupResources{
-		Group:     "deckhouse.io",
-		Resources: []string{"upmeterhookprobes"},
-	})
-	// Drop everything related to d8-upmeter namespace.
+
+	appendDropResourcesRule(
+		audit.GroupResources{Group: "deckhouse.io", Resources: []string{"upmeterhookprobes"}},
+		"Do not log UpmeterHookProbes resources.",
+		"Не логировать ресурсы UpmeterHookProbes.",
+	)
+
 	{
-		rule := audit.PolicyRule{
-			Level:      audit.LevelNone,
-			Namespaces: []string{"d8-upmeter"},
-		}
-		policy.Rules = append(policy.Rules, rule)
+		descriptionEN := "Do not log any operations in `d8-upmeter` namespace."
+		descriptionRU := "Не логировать любые операции в неймспейсе `d8-upmeter`."
+		rule := audit.PolicyRule{Level: audit.LevelNone, Namespaces: []string{"d8-upmeter"}}
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
-	// Drop ingress nginx leader elections based on configmaps.
+
 	{
+		descriptionEN := "Do not log ingress-nginx leader election updates in ConfigMaps."
+		descriptionRU := "Не логировать обновления ConfigMap ingress-nginx для выборов лидера."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelNone,
 			Verbs:      []string{"update"},
 			Users:      []string{"system:serviceaccount:d8-ingress-nginx:ingress-nginx"},
 			Namespaces: []string{"d8-ingress-nginx"},
-			Resources: []audit.GroupResources{
-				{
-					Group:     "",
-					Resources: []string{"configmaps"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Group:     "",
+				Resources: []string{"configmaps"},
+			}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
-	// Drop authrequests created by dex health-check probe.
+
 	{
+		descriptionEN := "Do not log dex health-check create/delete operations on `AuthRequest` resources."
+		descriptionRU := "Не логировать операции create/delete `AuthRequest` от health-check dex."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelNone,
 			Verbs:      []string{"create", "delete"},
 			Users:      []string{"system:serviceaccount:d8-user-authn:dex"},
 			Namespaces: []string{"d8-user-authn"},
-			Resources: []audit.GroupResources{
-				{
-					Group:     "dex.coreos.com",
-					Resources: []string{"authrequests"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Group:     "dex.coreos.com",
+				Resources: []string{"authrequests"},
+			}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 
-	// A rule collecting logs about create and delete events of node resources.
 	{
+		descriptionEN := "Log create and delete operations for Node resources with request/response payload."
+		descriptionRU := "Логировать операции create/delete для ресурсов Node с телом запроса/ответа."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequestResponse,
 			Verbs: []string{"create", "delete"},
-			Resources: []audit.GroupResources{
-				{
-					Group:     "",
-					Resources: []string{"nodes"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Group:     "",
+				Resources: []string{"nodes"},
+			}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 
-	// A rule collecting logs about actions of service accounts from system namespaces.
 	{
+		descriptionEN := "Log kubectl logs requests (pods/log) at Metadata level."
+		descriptionRU := "Логировать запросы kubectl logs (pods/log) на уровне Metadata."
+		rule := audit.PolicyRule{
+			Level: audit.LevelMetadata,
+			Resources: []audit.GroupResources{{
+				Group:     "",
+				Resources: []string{"pods/log"},
+			}},
+		}
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
+	}
+
+	{
+		descriptionEN := "Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`)."
+		descriptionRU := "Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`)."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
@@ -272,7 +285,6 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo) {
 			},
 		}
 
-		// Append sa from extra ConfigMaps
 		if len(extraData) > 0 {
 			users := rule.Users
 			for _, configMap := range extraData {
@@ -281,29 +293,28 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo) {
 			rule.Users = users
 		}
 
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
-	// fstec
-	// - K8s Pod created
-	// - K8s Pod deleted
-	// - Container tag is not @sha256
+
 	{
+		descriptionEN := "Log create/update/patch/delete operations for Pod resources."
+		descriptionRU := "Логировать операции create/update/patch/delete для ресурсов Pod."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
-			Resources: []audit.GroupResources{
-				{
-					Resources: []string{"pods"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Resources: []string{"pods"},
+			}},
 			Verbs: []string{"create", "delete", "patch", "update"},
 			OmitStages: []audit.Stage{
 				audit.StageRequestReceived,
 			},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
-	// A rule collecting logs about actions taken on the resources in system namespaces.
+
 	{
+		descriptionEN := "Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`)."
+		descriptionRU := "Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`)."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
@@ -312,109 +323,92 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo) {
 				audit.StageRequestReceived,
 			},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
-	// Collect all LIST operations for all namespaces since they consume a lot of
-	// apiserver memory sometimes and are a mean to debug OOMs.
+
 	{
+		descriptionEN := "Log all LIST operations in all namespaces."
+		descriptionRU := "Логировать все LIST-запросы во всех неймспейсах."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"list"},
-			Namespaces: []string{}, // every namespace
-			// no stage omitted, since apiserver might crash with OOM before it responds, and we want to catch it
+			Namespaces: []string{},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 
-	// fstec
-	// - K8s ServiceAccount created
-	// - K8s ServiceAccount deleted
-	// - ServiceAccount created in a system namespace
 	{
+		descriptionEN := "Log create and delete operations for ServiceAccount resources."
+		descriptionRU := "Логировать операции create/delete для ресурсов ServiceAccount."
 		rule := audit.PolicyRule{
 			Level: audit.LevelMetadata,
-			Resources: []audit.GroupResources{
-				{
-					Group:     "",
-					Resources: []string{"serviceaccounts"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Group:     "",
+				Resources: []string{"serviceaccounts"},
+			}},
 			Verbs: []string{"create", "delete"},
 			OmitStages: []audit.Stage{
 				audit.StageRequestReceived,
 			},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 
-	// fstec
-	// - ClusterRole with wildcard created
-	// - ClusterRole with write privileges created
-	// - System ClusterRole modified/deleted
-	// - K8s Role/ClusterRole created
-	// - K8s Role/ClusterRole deleted
 	{
+		descriptionEN := "Log create/update/delete/patch operations for Role and ClusterRole resources."
+		descriptionRU := "Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
-			Resources: []audit.GroupResources{
-				{
-					Group:     "rbac.authorization.k8s.io",
-					Resources: []string{"roles", "clusterroles"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Group:     "rbac.authorization.k8s.io",
+				Resources: []string{"roles", "clusterroles"},
+			}},
 			Verbs: []string{"create", "update", "delete", "patch"},
 			OmitStages: []audit.Stage{
 				audit.StageRequestReceived,
 			},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 
-	// fstec
-	// - Attach to cluster-admin Role
-	// - K8s Role/ClusterRole binding created
-	// - K8s Role/ClusterRole binding deleted
 	{
+		descriptionEN := "Log create/update/delete operations for ClusterRoleBinding resources."
+		descriptionRU := "Логировать операции create/update/delete для ресурсов ClusterRoleBinding."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
-			Resources: []audit.GroupResources{
-				{
-					Group:     "rbac.authorization.k8s.io",
-					Resources: []string{"clusterrolebindings"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Group:     "rbac.authorization.k8s.io",
+				Resources: []string{"clusterrolebindings"},
+			}},
 			Verbs: []string{"create", "update", "delete"},
 			OmitStages: []audit.Stage{
 				audit.StageRequestReceived,
 			},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 
-	// fstec
-	// - Attach/Exec Pod fstec
-	// - EphemeralContainers created
 	{
+		descriptionEN := "Log attach and ephemeral container related pod subresource operations."
+		descriptionRU := "Логировать операции с pod subresource для attach и ephemeral-контейнеров."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
-			Resources: []audit.GroupResources{
-				{
-					Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"},
-				},
-			},
+			Resources: []audit.GroupResources{{
+				Resources: []string{"pods/attach", "pods/ephemeralcontainers"},
+			}},
 			Verbs: []string{"get", "patch", "create"},
 			OmitStages: []audit.Stage{
 				audit.StageRequestReceived,
 			},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 }
 
-func appendVirtualizationPolicyRules(policy *audit.Policy) {
-	// fstec: virtualization.deckhouse.io
-	// VMOPs creation(reboot, shutdown, etc) should be logged
+func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRuleWithDescription) {
 	{
+		descriptionEN := "Log creation of VirtualMachineOperation resources with request/response payload."
+		descriptionRU := "Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequestResponse,
 			Verbs: []string{"create"},
@@ -423,21 +417,21 @@ func appendVirtualizationPolicyRules(policy *audit.Policy) {
 				Resources: []string{"virtualmachineoperations"},
 			}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, descriptionEN, descriptionRU, rule)
 	}
-	// fstec: virtualization.deckhouse.io
-	// Virtualization resources should be logged
 	{
+		descriptionEN := "Log create/update/patch/delete operations for virtualization.deckhouse.io resources."
+		descriptionRU := "Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io."
 		rule := audit.PolicyRule{
 			Level:     audit.LevelMetadata,
 			Verbs:     []string{"create", "update", "patch", "delete"},
 			Resources: []audit.GroupResources{{Group: "virtualization.deckhouse.io"}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, descriptionEN, descriptionRU, rule)
 	}
-	// fstec: virtualization.deckhouse.io
-	// Virtualization subresources should be logged
 	{
+		descriptionEN := "Log update/patch operations for internal virtualization subresources."
+		descriptionRU := "Логировать операции update/patch для внутренних virtualization subresources."
 		rule := audit.PolicyRule{
 			Level: audit.LevelMetadata,
 			Verbs: []string{"update", "patch"},
@@ -446,65 +440,70 @@ func appendVirtualizationPolicyRules(policy *audit.Policy) {
 				Resources: []string{"internalvirtualizationvirtualmachineinstances"},
 			}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, descriptionEN, descriptionRU, rule)
 	}
-	// fstec: virtualization.deckhouse.io
-	// Virtualization ignore the list subresources verb
 	{
+		descriptionEN := "Log GET operations for subresources.virtualization.deckhouse.io API group."
+		descriptionRU := "Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io."
 		rule := audit.PolicyRule{
 			Level:     audit.LevelMetadata,
 			Verbs:     []string{"get"},
 			Resources: []audit.GroupResources{{Group: "subresources.virtualization.deckhouse.io"}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, descriptionEN, descriptionRU, rule)
 	}
-	// fstec: virtualization.deckhouse.io
-	// Get all events from virt-launcher pods
 	{
+		descriptionEN := "Log create/update/patch/delete operations for `Pod` resources."
+		descriptionRU := "Логировать операции create/update/patch/delete для ресурсов `Pod`."
 		rule := audit.PolicyRule{
 			Level:     audit.LevelMetadata,
 			Verbs:     []string{"create", "update", "patch", "delete"},
 			Resources: []audit.GroupResources{{Group: "", Resources: []string{"pods"}}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, descriptionEN, descriptionRU, rule)
 	}
-	// fstec: virtualization.deckhouse.io
-	// Get all events from d8-virtualization namespace
 	{
+		descriptionEN := "Log create/update/patch/delete operations in `d8-virtualization` namespace."
+		descriptionRU := "Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
 			Namespaces: []string{"d8-virtualization"},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, descriptionEN, descriptionRU, rule)
 	}
-	// fstec: virtualization.deckhouse.io
-	// Get all events from moduleconfigs
 	{
+		descriptionEN := "Log create/update/patch/delete operations for ModuleConfig resources."
+		descriptionRU := "Логировать операции create/update/patch/delete для ресурсов ModuleConfig."
 		rule := audit.PolicyRule{
-			Level:     audit.LevelMetadata,
-			Verbs:     []string{"create", "update", "patch", "delete"},
-			Resources: []audit.GroupResources{{Group: "deckhouse.io", Resources: []string{"moduleconfigs"}}},
+			Level: audit.LevelMetadata,
+			Verbs: []string{"create", "update", "patch", "delete"},
+			Resources: []audit.GroupResources{{
+				Group:     "deckhouse.io",
+				Resources: []string{"moduleconfigs"},
+			}},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, descriptionEN, descriptionRU, rule)
 	}
 }
 
-func appendUnauthenticatedRules(policy *audit.Policy) {
-	// A rule dropping all logs from authenticated users
+func appendUnauthenticatedRules(policy *audit.Policy, docs *[]AuditPolicyRuleWithDescription) {
 	{
+		descriptionEN := "Do not log requests from authenticated users."
+		descriptionRU := "Не логировать запросы аутентифицированных пользователей."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelNone,
 			UserGroups: []string{"system:authenticated"},
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionUnauthenticated, descriptionEN, descriptionRU, rule)
 	}
-	//  A rule collecting all remaining logs (only from unauthenticated users)
 	{
+		descriptionEN := "Log all remaining (unauthenticated) requests at Metadata level."
+		descriptionRU := "Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata."
 		rule := audit.PolicyRule{
 			Level: audit.LevelMetadata,
 		}
-		policy.Rules = append(policy.Rules, rule)
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionUnauthenticated, descriptionEN, descriptionRU, rule)
 	}
 }
 
@@ -547,6 +546,57 @@ func serializePolicy(policy *audit.Policy) (string, error) {
 
 	data := strings.Replace(buf.String(), "metadata:\n  creationTimestamp: null\n", "", 1)
 	return base64.StdEncoding.EncodeToString([]byte(data)), nil
+}
+
+const (
+	AuditPolicySectionBasic           = "basic"
+	AuditPolicySectionVirtualization  = "virtualization"
+	AuditPolicySectionUnauthenticated = "unauthenticated"
+)
+
+type AuditRuleDescription struct {
+	EN string
+	RU string
+}
+
+type AuditPolicyRuleWithDescription struct {
+	Rule        audit.PolicyRule
+	Section     string
+	Description AuditRuleDescription
+}
+
+func BuiltInAuditPolicyRulesForDocumentation() ([]AuditPolicyRuleWithDescription, error) {
+	policy := &audit.Policy{}
+	result := make([]AuditPolicyRuleWithDescription, 0)
+
+	appendBasicPolicyRules(policy, nil, &result)
+	appendVirtualizationPolicyRules(policy, &result)
+	appendUnauthenticatedRules(policy, &result)
+
+	if len(result) == 0 {
+		return nil, errors.New("no built-in audit policy rules generated")
+	}
+	if len(policy.Rules) != len(result) {
+		return nil, fmt.Errorf("mismatch between built-in rules and documented rules: %d vs %d", len(policy.Rules), len(result))
+	}
+
+	return result, nil
+}
+
+func appendPolicyRuleWithDescription(policy *audit.Policy, docs *[]AuditPolicyRuleWithDescription, section, descriptionEN, descriptionRU string, rule audit.PolicyRule) {
+	policy.Rules = append(policy.Rules, rule)
+	if docs == nil {
+		return
+	}
+
+	*docs = append(*docs, AuditPolicyRuleWithDescription{
+		Rule:    rule,
+		Section: section,
+		Description: AuditRuleDescription{
+			EN: descriptionEN,
+			RU: descriptionRU,
+		},
+	})
 }
 
 type ConfigMapInfo struct {

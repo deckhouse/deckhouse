@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ObjectKeeper
 metadata:
-  creationTimestamp: null
   name: follow-obj
   resourceVersion: "1000"
 spec:

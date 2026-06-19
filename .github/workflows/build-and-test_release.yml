@@ -44,10 +44,8 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.69.0"
+  WERF_VERSION: "v2.72.1"
   WERF_ENV: "FE"
-  WERF_TELEMETRY: "1"
-  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   REGISTRY_PATH: "sys/deckhouse-oss"
@@ -78,7 +76,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -153,7 +151,7 @@ jobs:
   # </template: git_info_job>
   detect_editions:
     name: Detect editions
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     outputs:
       BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
       BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}
@@ -184,7 +182,7 @@ jobs:
 
   check_branch_name:
     name: Check branch name
-    runs-on: ubuntu-slim
+    runs-on: self-slim
     steps:
 
     # <template: checkout_step>
@@ -218,7 +216,7 @@ jobs:
   # <template: check_changelog_template>
   check_changelog:
     name: Check changelog
-    runs-on: "ubuntu-slim"
+    runs-on: "self-slim"
     steps:
 
       # <template: checkout_step>
@@ -407,6 +405,9 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -726,6 +727,9 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1046,6 +1050,9 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1366,6 +1373,9 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1686,6 +1696,9 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -2006,6 +2019,9 @@ jobs:
         id: build
         env:
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}

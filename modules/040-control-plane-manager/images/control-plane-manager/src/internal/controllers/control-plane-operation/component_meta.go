@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki/signature"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
@@ -30,6 +31,7 @@ import (
 type componentDependencies struct {
 	CertTree            map[pki.RootCertName][]pki.LeafCertName
 	CAFiles             []string
+	SignatureFiles      []string
 	KubeconfigFiles     []kubeconfig.File
 	ExtraFileKeys       []string
 	NeedsRootKubeconfig bool
@@ -69,6 +71,10 @@ var componentDepsRegistry = map[controlplanev1alpha1.OperationComponent]componen
 			string(pki.FrontProxyCACertName) + ".key",
 			"sa.pub",
 			"sa.key",
+		},
+		SignatureFiles: []string{
+			signature.SignaturePrivateJWK,
+			signature.SignaturePublicJWKS,
 		},
 		ExtraFileKeys:       checksum.ExtraFileKeysForPodComponent(controlplanev1alpha1.OperationComponentKubeAPIServer.PodComponentName()),
 		KubeconfigFiles:     []kubeconfig.File{kubeconfig.Admin, kubeconfig.SuperAdmin},

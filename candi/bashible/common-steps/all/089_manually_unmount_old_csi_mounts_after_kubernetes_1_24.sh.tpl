@@ -34,7 +34,6 @@ return 0
 mount_output="$(mount)"
 
 if ! grep -q '/var/lib/kubelet/plugins/kubernetes.io/csi/pv/' <<< "$mount_output"; then
-  echo 'No mounts of form "/var/lib/kubelet/plugins/kubernetes.io/csi/pv/" present. No-op...'
   disable_systemd_units
   exit 0
 fi

@@ -1,0 +1,7 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс модуля multitenancy-manager: путь валидации/дефолтинга ссылки на грантуемый кластерный ресурс.

@@ -1,0 +1,381 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Security Scan Src
+
+# Source-code scans that do not require built images. Triggers on every PR
+# event the same way the umbrella security workflow used to — image-based
+# scans now live in `Security Scan Images` and are dispatched from the build.
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+# Cancel in-progress src scans for the same PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
+    runs-on: "self-slim"
+    outputs:
+      ref: ${{ steps.pr_props.outputs.ref }}
+      ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
+      pr_title: ${{ steps.pr_props.outputs.pr_title }}
+      pr_description: ${{ steps.pr_props.outputs.pr_description }}
+      diff_url: ${{ steps.pr_props.outputs.diff_url }}
+      labels: ${{ steps.pr_props.outputs.labels }}
+      changes_docs: ${{ steps.changes.outputs.docs }}
+      changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+
+      build_CE: ${{ steps.pr_props.outputs.build_CE }}
+      build_EE: ${{ steps.pr_props.outputs.build_EE }}
+      build_BE: ${{ steps.pr_props.outputs.build_BE }}
+      build_SE: ${{ steps.pr_props.outputs.build_SE }}
+      build_SE-plus: ${{ steps.pr_props.outputs.build_SE-plus }}
+      build_CSE: ${{ steps.pr_props.outputs.build_CSE }}
+
+    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
+    steps:
+      - name: Get PR info for push trigger
+        id: push_info
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            // Support for 'push' trigger: find PR by commit SHA and pass response to pr_props step.
+            const { GITHUB_REF_NAME } = process.env
+            core.startGroup(`Fetching PR info for commit ${context.sha} in ${context.repo.name}:${GITHUB_REF_NAME} ...`)
+            try {
+              const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: context.sha
+              });
+              if (response.status !== 200 || !response.data || response.data.length === 0) {
+                return core.setFailed(`Bad response on listing PRs for commit ${context.sha}: ${JSON.stringify(response)}`);
+              }
+              // Get first associated pr.
+              let pr = response.data[0];
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.notice(`Found PR#{pr.number} for commit ${context.sha}`);
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Error listing pull requests for commit ${context.sha}: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Get PR info for pull_request trigger
+        id: pr_info
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            // Support for 'pull_request' and 'pull_request_target' triggers:
+            // find PR by its number to get current labels.
+            // Why? Workflow rerun of 'opened' pull request contains outdated labels.
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            core.startGroup(`Fetching info for PR#${prNumber} ...`);
+            try {
+              const response = await github.rest.pulls.get({owner, repo, pull_number: prNumber})
+              if (response.status != 200 || !response.data) {
+                return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
+              }
+              // Only labels are needed.
+              let pr = response.data;
+              core.info(`Labels from context: ${JSON.stringify(context.payload.pull_request.labels)}`);
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Fetch PR#${prNumber} error: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Check PR properties
+        id: pr_props
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_INFO: ${{ steps.push_info.outputs.pr_info || steps.pr_info.outputs.pr_info }}
+        with:
+          script: |
+            if (process.env.PR_INFO == '') {
+                return core.setFailed(`No pull request info: event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+            }
+            // Parse Pr info from environment variable.
+            const pr = JSON.parse(process.env.PR_INFO);
+
+            core.startGroup(`Detect PR properties`)
+            const pr_repo = pr.head.repo.full_name;
+            const target_repo = context.payload.repository.full_name;
+            const isInternal = pr_repo === target_repo;
+            const isDependabot = (context.actor === 'dependabot[bot]');
+            const isChangelog = pr.head.ref.startsWith('changelog/v');
+            const okToTest = pr.labels.some((l) => l.name === 'status/ok-to-test');
+            core.info(`PR head repo          ${pr_repo}`)
+            core.info(`PR commit SHA         ${pr.head.sha}`)
+            core.info(`PR head label         ${pr.head.label}`)
+            core.info(`Target repo           ${target_repo}`)
+            core.info(`PR internal?          ${isInternal}`)
+            core.info(`PR from dependabot?   ${isDependabot}`)
+            core.info(`PR changelog?         ${isChangelog}`)
+            core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+            core.endGroup()
+
+            // Detect if PR can be ignored or should be checked for dangerous changes.
+            let shouldCheckFiles = false;
+            if (isInternal && !isDependabot) {
+              // Ignore changelog pull requests.
+              if (isChangelog) {
+                return core.setFailed(`PR#${pr.number} for changelog is ignored.`);
+              }
+            } else {
+              // External and dependabot pull requests should be labeled with 'status/ok-to-test'.
+              if (!okToTest) {
+                core.notice(`PR#${pr.number} requires label 'status/ok-to-test' to run tests and validations`)
+                return core.setFailed(`PR#${pr.number} without label 'status/ok-to-test' is ignored.`);
+              }
+              shouldCheckFiles = true;
+            }
+            if (shouldCheckFiles) {
+              core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
+            }
+
+            // Set editions from current labels to build_ce, build_ee and so on.
+            const build_editions = pr.labels.map(l => l.name).filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
+
+            // Construct head commit ref using pr number.
+            const ref = `refs/pull/${ pr.number }/head`;
+            core.notice(`Use ref: '${ref}'`)
+
+            // Pass pr.diff_url to download diff via regular request.
+            // Pass pr.url to get diff via API request.
+            let diff_url = pr.diff_url;
+            if (!!context.payload.repository.private) {
+              core.notice(`Detect private repo. Pass PR url to download diff via Github API.`);
+              diff_url = pr.url;
+            }
+
+            // Set outputs.
+            core.setCommandEcho(true)
+            core.setOutput('should_check', shouldCheckFiles.toString());
+            core.setOutput('ref', ref);
+            core.setOutput('ref_slug', `pr${pr.number}`);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_description', pr.body);
+            core.setOutput('diff_url', diff_url);
+            core.setOutput('labels', JSON.stringify(pr.labels));
+            core.startGroup('Set build editions based on pr labels')
+            for (build_edition of build_editions) {
+              core.setOutput(`${build_edition}`, 'true');
+              core.info(`${build_edition}`)
+            }
+            core.endGroup()
+            core.setCommandEcho(false);
+
+      # Checkhout the head commit of the PR branch.
+      - name: Checkout PR head commit
+        if: steps.pr_props.outputs.should_check == 'true'
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ steps.pr_props.outputs.ref }}
+
+      # Get info about other changes.
+      - name: Get info about PR changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          # dangerous - detect if changes not allowed to test for external PRs
+          # docs - detect changes in files that belong to the documentation scope
+          # not_markdown - detect changes not in markdown files
+          filters: |
+            dangerous:
+              - './.github/**'
+              - './tools/**'
+              - './testing/**'
+              - './docs/**/js/**'
+              - './docs/**/css/**'
+              - './docs/**/images/**'
+              - './docs/**/assets/**'
+            docs:
+              - './**/*.md'
+              - './docs/**'
+              - './**/crds/*'
+              - './**/openapi/*config-values.yaml'
+              - './candi/**/openapi/*'
+              - './ee/candi/**/openapi/*'
+            not_markdown:
+              - '!./**/*.md'
+
+      # Stop workflow if external PR contains dangerous changes.
+      - name: Fail workflow on dangerous changes
+        if: ${{ steps.pr_props.outputs.should_check == 'true' && steps.changes.outputs.dangerous == 'true' }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            core.setFailed('External PR contains dangerous changes.')
+
+  # </template: pull_request_info>
+
+  # ============================================================================
+  # Gitleaks — secret scanning on PR diff.
+  # ============================================================================
+  gitleaks_scan:
+    name: Gitleaks scan
+    runs-on: self-slim
+    needs: pull_request_info
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
+      # The action checks out refs/pull/<num>/merge itself,
+      # so the PR branch is scanned (not the base branch).
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@v15
+        with:
+          scan_mode: diff
+          gitleaks_version: v8.28.0
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>
+
+  set_security_gitleaks_requirement_status:
+    name: Set commit status after gitleaks scan run
+    runs-on: "self-slim"
+    needs: gitleaks_scan
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        uses: deckhouse/modules-actions/gh@v15
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.gitleaks_scan.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/failed" --remove-label "security/gitleaks/success"
+          fi
+
+  # ============================================================================
+  # Aggregator — single required check for branch protection.
+  # Fails if the src scan did not finish with success.
+  # ============================================================================
+  security_scan_src_required:
+    name: Security scan src required
+    runs-on: self-slim
+    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    needs:
+      - pull_request_info
+      - gitleaks_scan
+    steps:
+      - name: Aggregate scan results
+        run: |
+          declare -A results=(
+            [gitleaks]="${{ needs.gitleaks_scan.result }}"
+          )
+          failed=0
+          for name in "${!results[@]}"; do
+            r="${results[$name]}"
+            if [[ "$r" == "success" ]]; then
+              echo "✅ $name: $r"
+              continue
+            fi
+            echo "::error::Scan '$name' result: $r"
+            failed=1
+          done
+          exit $failed

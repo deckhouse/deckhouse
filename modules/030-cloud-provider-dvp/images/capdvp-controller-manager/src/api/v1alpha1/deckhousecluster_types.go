@@ -21,6 +21,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
+const ClusterFinalizer = "deckhousecluster.infrastructure.cluster.x-k8s.io"
+
 // DeckhouseClusterSpec defines the desired state of DeckhouseCluster.
 type DeckhouseClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster

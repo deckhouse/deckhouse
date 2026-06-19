@@ -15,8 +15,8 @@
 package bootstrap
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -59,7 +59,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
@@ -98,7 +98,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
@@ -139,7 +139,7 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
@@ -179,7 +179,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
@@ -239,7 +239,7 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
@@ -278,7 +278,7 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}

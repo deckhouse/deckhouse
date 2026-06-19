@@ -143,7 +143,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	logger.Info("Reconcile started for ControlPlaneNode")
 
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
-	if err := r.client.Get(ctx, client.ObjectKey{Name: nodeName}, cpn); err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Name: nodeName, Namespace: constants.KubeSystemNamespace}, cpn); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.metrics.deleteMaintenanceModeMetrics(nodeName)
 			logger.Info("ControlPlaneNode not found, skipping")
@@ -154,9 +154,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	defer r.metrics.syncMaintenanceModeMetrics(cpn)
 
 	ops := &controlplanev1alpha1.ControlPlaneOperationList{}
-	if err := r.client.List(ctx, ops, client.MatchingLabels{
-		constants.ControlPlaneNodeNameLabelKey: nodeName,
-	}); err != nil {
+	if err := r.client.List(ctx, ops,
+		client.InNamespace(constants.KubeSystemNamespace),
+		client.MatchingLabels{
+			constants.ControlPlaneNodeNameLabelKey: nodeName,
+		},
+	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("list operations for node %s: %w", nodeName, err)
 	}
 	// Use only operations owned by the current CPN object (UID) for prevents status reconstruction from stale operations after CPN recreation.
@@ -184,6 +187,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	currentOps, err = r.ensureCertRenewalExists(ctx, cpn, states, currentOps, logger)
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+	if constants.SignatureEnabled() {
+		currentOps, err = r.ensureSignatureRenewalExists(ctx, cpn, states, currentOps, logger)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	if err := r.ensureObserveOperations(ctx, cpn, currentOps, logger); err != nil {
@@ -279,13 +288,6 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 	return result
 }
 
-// componentStateInSync reports whether a component state is in sync with the desired spec/status checksums.
-func componentStateInSync(state componentState) bool {
-	return state.spec.Config == state.status.Config &&
-		(!state.hasPKI || state.spec.PKI == state.status.PKI) &&
-		state.specCA == state.status.CA
-}
-
 // ensureOperationsExist creates operations (CPOs) for components where spec != status.
 func (r *Reconciler) ensureOperationsExist(
 	ctx context.Context,
@@ -378,7 +380,7 @@ func (r *Reconciler) rotateComponentOperations(
 	for i := 0; i < excess; i++ {
 		op := terminalOps[i]
 		if err := r.client.Delete(ctx, &controlplanev1alpha1.ControlPlaneOperation{
-			ObjectMeta: metav1.ObjectMeta{Name: op.Name},
+			ObjectMeta: metav1.ObjectMeta{Name: op.Name, Namespace: constants.KubeSystemNamespace},
 		}); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -457,6 +459,10 @@ func determineSteps(state componentState, pkiChanged, caChanged bool) []controlp
 				controlplanev1alpha1.StepRenewKubeconfigs,
 			)
 		}
+		// CSE only, first deploy/join (status.Config still empty)
+		if constants.SignatureEnabled() && state.status.Config == "" {
+			steps = append(steps, controlplanev1alpha1.StepRenewSignature)
+		}
 		steps = append(steps,
 			controlplanev1alpha1.StepSyncManifests,
 			controlplanev1alpha1.StepWaitPodReady,
@@ -511,6 +517,7 @@ func operationBase(
 	return &controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", strings.ToLower(string(component))),
+			Namespace:    constants.KubeSystemNamespace,
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
 				constants.ControlPlaneComponentLabelKey: component.LabelValue(),
@@ -811,14 +818,71 @@ func (r *Reconciler) ensureObserveOperations(ctx context.Context, cpn *controlpl
 	return nil
 }
 
+// createRenewalOperation builds, creates a renewal CPO for a component.
+func (r *Reconciler) createRenewalOperation(
+	ctx context.Context,
+	cpn *controlplanev1alpha1.ControlPlaneNode,
+	state componentState,
+	steps []controlplanev1alpha1.StepName,
+	ops []controlplanev1alpha1.ControlPlaneOperation,
+	reason string,
+	logger *log.Logger,
+) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
+	op := operationBase(cpn, state.component, steps)
+	op.ObjectMeta.GenerateName = operationGenerateNamePrefix(state)
+	op.Spec.DesiredConfigChecksum = state.spec.Config
+	op.Spec.DesiredPKIChecksum = state.spec.PKI
+	op.Spec.DesiredCAChecksum = state.specCA
+	if err := r.client.Create(ctx, op); err != nil {
+		return nil, fmt.Errorf("create %s for %s: %w", reason, state.component, err)
+	}
+	logger.Info(reason+" created", slog.String("operation", op.Name))
+	return append(ops, *op), nil
+}
+
+// ensureSignatureRenewalExists creates a kube-apiserver signature-rotation CPO when the active signature key expires within SignatureRenewalThreshold.
+func (r *Reconciler) ensureSignatureRenewalExists(
+	ctx context.Context,
+	cpn *controlplanev1alpha1.ControlPlaneNode,
+	states []componentState,
+	ops []controlplanev1alpha1.ControlPlaneOperation,
+	logger *log.Logger,
+) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
+	for _, state := range states {
+		var err error
+		if state.component != controlplanev1alpha1.OperationComponentKubeAPIServer {
+			continue
+		}
+		sigExp, ok := certDatesForComponent(cpn, state.component)[constants.SignatureExpirationKey]
+		if !ok || sigExp.IsZero() || time.Until(sigExp.Time) >= constants.SignatureRenewalThreshold {
+			continue
+		}
+
+		if existing := findActiveOperation(ops, func(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+			return op.Spec.Component == state.component && op.HasStep(controlplanev1alpha1.StepRenewSignature)
+		}); existing != nil {
+			logger.Debug("active signature renewal operation exists for component, skip signature renewal operation creation",
+				slog.String("operation", existing.Name),
+				slog.String("component", string(state.component)))
+			continue
+		}
+
+		ops, err = r.createRenewalOperation(ctx, cpn, state, signatureRenewalSteps(), ops, "signature renewal", logger)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ops, nil
+}
+
 // applyCertDatesAndTimestamp copies certificate expiration dates from ObservedState into CPN status and updates per-component LastCertObserveTime.
 func applyCertDatesAndTimestamp(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, observed controlplanev1alpha1.ObservedComponentState, observedAt metav1.Time) {
 	compStatus := cpn.Status.Components.Component(component)
 	if compStatus == nil {
 		return
 	}
-	if len(observed.CertificatesExpirationDate) > 0 {
-		compStatus.CertificatesExpirationDate = observed.CertificatesExpirationDate
+	if len(observed.CertificatesExpirationTime) > 0 {
+		compStatus.CertificatesExpirationTime = observed.CertificatesExpirationTime
 	}
 	if compStatus.LastCertObserveTime.IsZero() || observedAt.Time.After(compStatus.LastCertObserveTime.Time) {
 		compStatus.LastCertObserveTime = observedAt
@@ -847,43 +911,30 @@ func (r *Reconciler) ensureCertRenewalExists(
 	logger *log.Logger,
 ) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
 	for _, state := range states {
-		if !componentStateInSync(state) {
-			continue
-		}
-
+		var err error
 		dates := certDatesForComponent(cpn, state.component)
 		if len(dates) == 0 {
 			continue
 		}
 
-		minExpiry := minExpirationDate(dates)
+		minExpiry := minExpirationDateExcluding(dates, constants.SignatureExpirationKey)
 		if minExpiry.IsZero() || time.Until(minExpiry) >= constants.CertRenewalThreshold {
 			continue
 		}
 
 		if existing := findActiveOperation(ops, func(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-			return op.Spec.Component == state.component
+			return op.Spec.Component == state.component && op.HasStep(controlplanev1alpha1.StepRenewPKICerts)
 		}); existing != nil {
-			logger.Debug("active operation exists for component, skip cert renewal creation",
+			logger.Debug("active cert renewal operation exists for component, skip cert renewal creation",
 				slog.String("operation", existing.Name),
 				slog.String("component", string(state.component)))
 			continue
 		}
 
-		op := operationBase(cpn, state.component, certRenewalSteps(state.component))
-		op.ObjectMeta.GenerateName = operationGenerateNamePrefix(state)
-		op.Spec.DesiredConfigChecksum = state.spec.Config
-		op.Spec.DesiredPKIChecksum = state.spec.PKI
-		op.Spec.DesiredCAChecksum = state.specCA
-
-		if err := r.client.Create(ctx, op); err != nil {
-			return nil, fmt.Errorf("create cert renewal for %s: %w", state.component, err)
+		ops, err = r.createRenewalOperation(ctx, cpn, state, certRenewalSteps(state.component), ops, "cert renewal", logger)
+		if err != nil {
+			return nil, err
 		}
-		ops = append(ops, *op)
-		logger.Info("cert renewal created",
-			slog.String("operation", op.Name),
-			slog.String("component", string(state.component)),
-			slog.String("minExpiry", minExpiry.Format(time.RFC3339)))
 	}
 
 	return ops, nil
@@ -914,19 +965,48 @@ func certRenewalSteps(component controlplanev1alpha1.OperationComponent) []contr
 	}
 }
 
+// signatureRenewalSteps is the pipeline for a kube-apiserver signature-key rotation.
+func signatureRenewalSteps() []controlplanev1alpha1.StepName {
+	return []controlplanev1alpha1.StepName{
+		controlplanev1alpha1.StepBackup,
+		controlplanev1alpha1.StepRenewSignature,
+		controlplanev1alpha1.StepSyncManifests,
+		controlplanev1alpha1.StepWaitPodReady,
+		controlplanev1alpha1.StepCertObserve,
+	}
+}
+
 // certDatesForComponent returns cert expiration dates from CPN status for a given component.
 func certDatesForComponent(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent) map[string]metav1.Time {
 	compStatus := cpn.Status.Components.Component(component)
 	if compStatus == nil {
 		return nil
 	}
-	return compStatus.CertificatesExpirationDate
+	return compStatus.CertificatesExpirationTime
 }
 
 // minExpirationDate returns the earliest expiration time from the given dates map.
 func minExpirationDate(dates map[string]metav1.Time) time.Time {
 	var min time.Time
 	for _, t := range dates {
+		if min.IsZero() || t.Time.Before(min) {
+			min = t.Time
+		}
+	}
+	return min
+}
+
+// minExpirationDateExcluding returns the earliest expiration, ignoring the given keys.
+func minExpirationDateExcluding(dates map[string]metav1.Time, exclude ...string) time.Time {
+	skip := make(map[string]struct{}, len(exclude))
+	for _, k := range exclude {
+		skip[k] = struct{}{}
+	}
+	var min time.Time
+	for k, t := range dates {
+		if _, ok := skip[k]; ok {
+			continue
+		}
 		if min.IsZero() || t.Time.Before(min) {
 			min = t.Time
 		}

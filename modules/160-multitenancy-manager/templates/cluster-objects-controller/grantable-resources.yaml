@@ -1,0 +1,172 @@
+{{- /*
+  Example, module-shipped grant registrations so the feature works out of the box. A
+  GrantableClusterResourceDefinition declares governance + baseline availability; each
+  GrantableClusterResourceReference declares one validation/defaulting path. All use
+  defaultAvailability: All, so nothing is restricted until a cluster admin creates a
+  ClusterResourceGrantPolicy to narrow availability.
+*/}}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: storageclasses
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiGroup: storage.k8s.io
+    kind: StorageClass
+  enforcement: Managed
+  defaultAvailability: All
+  # The built-in DefaultStorageClass admission injects the cluster-default StorageClass into PVCs that
+  # omit spec.storageClassName before our webhook runs; defaultFrom marks that cluster default.
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: storageclasses-pvc
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: storageclasses
+  rule:
+    apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    resources:
+    - persistentvolumeclaims
+  fieldPaths:
+  # Coerce: the cluster default the built-in admission pre-fills is rewritten to the project default
+  # when it is not available to the project, instead of being rejected.
+  - path: $.spec.storageClassName
+    defaulting: Coerce
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: loadbalancerclasses
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  # value-backed: no grantedResource — the names are values of spec.loadBalancerClass, not objects.
+  enforcement: Managed
+  defaultAvailability: All
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: loadbalancerclasses-service
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: loadbalancerclasses
+  rule:
+    apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    resources:
+    - services
+  fieldPaths:
+  - path: $.spec.loadBalancerClass
+    match:
+      fieldPath: $.spec.type
+      equals: LoadBalancer
+    defaulting: FillEmpty
+{{- if .Values.global.enabledModules | has "cert-manager" }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: clusterissuers
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiGroup: cert-manager.io
+    kind: ClusterIssuer
+  enforcement: Managed
+  defaultAvailability: All
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: clusterissuers-certificate
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: clusterissuers
+  rule:
+    apiGroups:
+    - cert-manager.io
+    apiVersions:
+    - v1
+    resources:
+    - certificates
+  fieldPaths:
+  # Certificates reference a ClusterIssuer by name (guarded: issuerRef.kind == ClusterIssuer).
+  - path: $.spec.issuerRef.name
+    match:
+      fieldPath: $.spec.issuerRef.kind
+      equals: ClusterIssuer
+    defaulting: FillEmpty
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: clusterissuers-ingress
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: clusterissuers
+  rule:
+    apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - "*"
+    resources:
+    - ingresses
+  fieldPaths:
+  # The cert-manager.io/cluster-issuer annotation is a toggle — its absence means "no cert-manager",
+  # so it is validated but never defaulted.
+  - path: $.metadata.annotations['cert-manager.io/cluster-issuer']
+    defaulting: None
+{{- end }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: clusterroles
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+  enforcement: Managed
+  # Available by default, but only the cluster roles marked delegatable with the
+  # rbac.deckhouse.io/delegatable label (the namespace-level access roles: d8:use:role:* and
+  # user-authz:{user,privileged-user,editor,admin}). Everything else lacks the label and is excluded.
+  defaultAvailability: All
+  excluded:
+  - matchExpressions:
+    - key: rbac.deckhouse.io/delegatable
+      operator: DoesNotExist
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: clusterroles-rolebinding
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantableClusterResourceName: clusterroles
+  rule:
+    apiGroups:
+    - rbac.authorization.k8s.io
+    apiVersions:
+    - v1
+    resources:
+    - rolebindings
+  fieldPaths:
+  # Allow-list only: a RoleBinding's roleRef.name (guarded: roleRef.kind == ClusterRole). Never
+  # defaulted — auto-filling a ClusterRole into a RoleBinding makes no sense.
+  - path: $.roleRef.name
+    match:
+      fieldPath: $.roleRef.kind
+      equals: ClusterRole
+    defaulting: None

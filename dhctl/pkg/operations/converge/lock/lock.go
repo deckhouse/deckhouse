@@ -90,13 +90,13 @@ func (r *InLockRunner) Run(ctx context.Context, action func() error) error {
 	}
 
 	defer func() {
-		log.DebugLn("Start unlock converge from Run")
+		log.DebugLn("Starting converge unlock from Run")
 		if r.unlockConverge != nil {
 			r.unlockConverge(true)
 			return
 		}
 
-		log.DebugLn("unlockConverge is nil. Skip")
+		log.DebugLn("unlockConverge is nil. Skipping")
 	}()
 
 	log.DebugLn("lock for Run method was set. Start action")
@@ -168,7 +168,7 @@ func GetLockLeaseConfig(identity, sshUser string) *lease.LeaseLockConfig {
 		RetryWaitDuration:    3 * time.Second,
 		AdditionalUserInfo:   additionalInfo,
 		OnRenewError: func(renewErr error) {
-			log.WarnF("Lease renew was failed. Send SIGINT and shutdown: %v\n", renewErr)
+			log.WarnF("Lease renewal failed. Sending SIGINT and shutting down: %v\n", renewErr)
 			p, err := os.FindProcess(os.Getpid())
 			if err != nil {
 				log.ErrorF("Cannot find pid: %v", err)
@@ -210,11 +210,11 @@ func lockLease(
 	config *lease.LeaseLockConfig,
 	forceLock bool,
 ) (func(fullUnlock bool), error) {
-	log.DebugLn("Create converge lock and mutex")
+	log.DebugLn("Creating converge lock and mutex")
 	mutex := &sync.Mutex{}
 	leaseLock := lease.NewLeaseLock(getter, *config)
 
-	log.DebugLn("Try to lock converge")
+	log.DebugLn("Trying to lock converge")
 	err := leaseLock.Lock(ctx, forceLock)
 	if err != nil {
 		return nil, err
@@ -225,18 +225,18 @@ func lockLease(
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		log.DebugLn("Try to release converge lock. Is it %v", leaseLock == nil)
+		log.DebugLn("Trying to release converge lock. Is it nil:", leaseLock == nil)
 
 		if leaseLock == nil {
-			log.DebugLn("Lock was released. Skip")
+			log.DebugLn("Lock was already released. Skipping")
 			return
 		}
 
 		if fullUnlock {
-			log.DebugLn("Try to full release...")
+			log.DebugLn("Trying to fully release...")
 			leaseLock.Unlock(ctx)
 		} else {
-			log.DebugLn("Try to stop autorenew only...")
+			log.DebugLn("Trying to stop auto-renew only...")
 			leaseLock.StopAutoRenew()
 		}
 
@@ -244,6 +244,6 @@ func lockLease(
 		log.DebugLn("Lock was released")
 	}
 
-	log.DebugLn("Lock converge successful")
+	log.DebugLn("Converge locked successfully")
 	return unlockConverge, nil
 }

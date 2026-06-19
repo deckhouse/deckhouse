@@ -1,47 +1,18 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "builder/distroless" }}
+git:
+- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/rootfs
+  to: /
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
-  before: setup
-- from: {{ index $.Images "base/python-3.12" }}
-  add: /
-  to: /
-  includePaths:
-  - lib/ld-musl-x86_64*
-  - usr/bin/python3*
-  - usr/lib/python3*
-  - usr/lib/lib*.so*
-  excludePaths:
-  - usr/lib/python*/site-packages/pip-25.3*
-  - usr/lib/python*/test
-  before: install
-- image: registrypackages/d8-curl-artifact-8-9-1
-  add: /d8-curl
-  to: /usr/bin/curl
-  before: setup
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
 {{- include "image mount points" . }}
+shell:
+  beforeInstall:
+    - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl
+  install:
+    # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
+    - unlink /sbin
 imageSpec:
   config:
     entrypoint: ["/sbin/iptables-wrapper"]
----
-{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /bin/bash /bin/grep /usr/sbin/ip /usr/sbin/bridge" }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-final: false
-fromImage: common/relocate-artifact
-git:
-- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/rootfs
-  to: /relocate
-  stageDependencies:
-    install:
-    - '**/*'
-shell:
-  install:
-  - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
+

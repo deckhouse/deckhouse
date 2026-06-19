@@ -32,6 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -56,7 +58,7 @@ var commandList = []Command{
 	},
 	{
 		Name:       "bootstrap",
-		Help:       "Bootstrap cluster.",
+		Help:       "Bootstrap a cluster.",
 		DefineFunc: bootstrap.DefineBootstrapCommand,
 	},
 	{
@@ -65,13 +67,13 @@ var commandList = []Command{
 	},
 	{
 		Name:       "execute-bashible-bundle",
-		Help:       "Prepare Master node and install Kubernetes.",
+		Help:       "Prepare the master node and install Kubernetes.",
 		DefineFunc: bootstrap.DefineBootstrapExecuteBashibleCommand,
 		Parent:     "bootstrap-phase",
 	},
 	{
 		Name:       "create-resources",
-		Help:       "Create resources in Kubernetes cluster.",
+		Help:       "Create resources in a Kubernetes cluster.",
 		DefineFunc: bootstrap.DefineCreateResourcesCommand,
 		Parent:     "bootstrap-phase",
 	},
@@ -83,35 +85,35 @@ var commandList = []Command{
 	},
 	{
 		Name:       "abort",
-		Help:       "Delete every node, which was created during bootstrap process.",
+		Help:       "Delete every node created during the bootstrap process.",
 		DefineFunc: bootstrap.DefineBootstrapAbortCommand,
 		Parent:     "bootstrap-phase",
 	},
 	{
 		Name:       "base-infra",
-		Help:       "Create base infrastructure for Cloud Kubernetes cluster.",
+		Help:       "Create base infrastructure for a cloud Kubernetes cluster.",
 		DefineFunc: bootstrap.DefineBaseInfrastructureCommand,
 		Parent:     "bootstrap-phase",
 	},
 	{
 		Name:       "exec-post-bootstrap",
-		Help:       "Test scp upload and ssh run uploaded script.",
+		Help:       "Test scp upload and ssh execution of the uploaded script.",
 		DefineFunc: bootstrap.DefineExecPostBootstrapScript,
 		Parent:     "bootstrap-phase",
 	},
 	{
 		Name:       "converge",
-		Help:       "Converge kubernetes cluster.",
+		Help:       "Converge a Kubernetes cluster.",
 		DefineFunc: commands.DefineConvergeCommand,
 	},
 	{
 		Name:       autoConvergeCmd,
-		Help:       "Start service for periodical run converge.",
+		Help:       "Start a service that runs converge periodically.",
 		DefineFunc: commands.DefineAutoConvergeCommand,
 	},
 	{
 		Name:       "converge-migration",
-		Help:       "Migrate state from terraform to opentofu. Starting converge if cluster has not infrastructure changes.",
+		Help:       "Migrate state from terraform to opentofu. Start converge if the cluster has no infrastructure changes.",
 		DefineFunc: commands.DefineConvergeMigrationCommand,
 	},
 	{
@@ -120,7 +122,7 @@ var commandList = []Command{
 	},
 	{
 		Name:       "release",
-		Help:       "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful",
+		Help:       "Release the converge lock completely. This removes the converge lease lock from the cluster regardless of owner. Be careful.",
 		DefineFunc: commands.DefineReleaseConvergeLockCommand,
 		Parent:     "lock",
 	},
@@ -184,7 +186,7 @@ var commandList = []Command{
 	},
 	{
 		Name:       "control-plane-manifests",
-		Help:       "Render control-plane manifests and pki.",
+		Help:       "Render control-plane manifests and PKI.",
 		DefineFunc: commands.DefineRenderControlPlaneAndPKI,
 		Parent:     "render",
 	},
@@ -209,13 +211,13 @@ var commandList = []Command{
 	},
 	{
 		Name:       "ssh-connection",
-		Help:       "Test connection via ssh.",
+		Help:       "Test connection via SSH.",
 		DefineFunc: commands.DefineTestSSHConnectionCommand,
 		Parent:     "test",
 	},
 	{
 		Name:       "kubernetes-api-connection",
-		Help:       "Test connection to kubernetes api via ssh or directly.",
+		Help:       "Test connection to the Kubernetes API via SSH or directly.",
 		DefineFunc: commands.DefineTestKubernetesAPIConnectionCommand,
 		Parent:     "test",
 	},
@@ -227,7 +229,7 @@ var commandList = []Command{
 	},
 	{
 		Name:       "upload-exec",
-		Help:       "Test scp upload and ssh run uploaded script.",
+		Help:       "Test scp upload and ssh execution of the uploaded script.",
 		DefineFunc: commands.DefineTestUploadExecCommand,
 		Parent:     "test",
 	},
@@ -244,13 +246,13 @@ var commandList = []Command{
 	},
 	{
 		Name:       "manager",
-		Help:       "Test control plane manager is ready.",
+		Help:       "Test that the control plane manager is ready.",
 		DefineFunc: commands.DefineTestControlPlaneManagerReadyCommand,
 		Parent:     "control-plane",
 	},
 	{
 		Name:       "node",
-		Help:       "Test control plane node is ready.",
+		Help:       "Test that the control plane node is ready.",
 		DefineFunc: commands.DefineTestControlPlaneNodeReadyCommand,
 		Parent:     "control-plane",
 	},
@@ -261,7 +263,7 @@ var commandList = []Command{
 	},
 	{
 		Name:       "create-deployment",
-		Help:       "Install deckhouse after infrastructure is applied successful.",
+		Help:       "Install deckhouse after the infrastructure is applied successfully.",
 		DefineFunc: commands.DefineDeckhouseCreateDeployment,
 		Parent:     "deckhouse",
 	},
@@ -273,7 +275,7 @@ var commandList = []Command{
 	},
 	{
 		Name:       "deployment-ready",
-		Help:       "Wait while deployment is ready.",
+		Help:       "Wait until the deployment is ready.",
 		DefineFunc: commands.DefineWaitDeploymentReadyCommand,
 		Parent:     "deckhouse",
 	},
@@ -302,7 +304,7 @@ func main() {
 		disableCleanupOnInterrupted,
 	})
 
-	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
+	kpApp := kingpin.New(app.AppName, "A tool to create a Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
 	app.GlobalFlags(kpApp, &opts.Global)
 
@@ -358,6 +360,9 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 			}
 
 			log.ErrorLn(msg)
+			if input.IsTerminal() && !opts.Global.ShowProgress {
+				progressbar.ErrorF("%s\n", msg)
+			}
 			errorCode = 1
 		}
 		kptelemetry.EndCommand(err, errorCode)

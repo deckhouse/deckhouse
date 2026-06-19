@@ -61,3 +61,7 @@
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
+{{- $baseName := strings.ToUpper .File.TranslationBaseName -}}
+{{- if or (eq $baseName "CR") (eq $baseName "CRD") }}
+<meta name="page:anchors-skip-props" content="true">
+{{- end }}

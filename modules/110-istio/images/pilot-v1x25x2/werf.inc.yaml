@@ -26,7 +26,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -39,8 +39,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
+  - pm install git binutils
   setup:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
@@ -51,3 +50,5 @@ shell:
   - strip /src/istio/out/pilot-discovery
   - chmod 0700 /src/istio/out/pilot-discovery
   - chown 1337:1337 /src/istio/out/pilot-discovery
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

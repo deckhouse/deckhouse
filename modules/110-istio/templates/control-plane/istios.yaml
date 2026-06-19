@@ -9,7 +9,6 @@
 
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-  {{- if get $versionInfo "supportsOperator" }}
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
@@ -132,6 +131,7 @@ spec:
       {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
       {{- include "istioTracingProvider" $ | nindent 6 }}
       {{- end }}
+{{- include "istioUserExtensionProviders" $ | nindent 6 }}
 
       # The rules below exclude upmeter-related namespaces from istiod's point of view.
       # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
@@ -186,6 +186,10 @@ spec:
       cni:
         enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
       enabled: true
+  {{- with $.Values.istio.jwksResolverAdditionalRootCA }}
+      jwksResolverExtraRootCA: |-
+{{ . | indent 8 }}
+  {{- end }}
       env:
         ISTIO_MULTIROOT_MESH: "true"
         ENABLE_ENHANCED_RESOURCE_SCOPING: "true"
@@ -194,6 +198,9 @@ spec:
   {{- end }}
   {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
         PILOT_ENABLE_AMBIENT: "true"
+  {{- end }}
+  {{- range $name, $value := $.Values.istio.controlPlane.extraEnvs }}
+        {{ $name }}: {{ $value | quote }}
   {{- end }}
       autoscaleEnabled: false
       taint:
@@ -279,6 +286,5 @@ spec:
       - matchExpressions:
         - key: job-name
           operator: Exists
-  {{- end }}
   {{- end }}
 {{- end }}

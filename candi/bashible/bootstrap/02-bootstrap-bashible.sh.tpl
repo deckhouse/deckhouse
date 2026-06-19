@@ -68,7 +68,7 @@ function get_bundle() {
       then
        return 0
       else
-        >&2 echo "failed to get $resource $name with curl https://$server..."
+        >&2 echo "Failed to get $resource $name from $server"
       fi
     done
     sleep 10
@@ -88,7 +88,7 @@ while [ "$patch_pending" = true ] ; do
   for server in {{ .clusterMasterKubeAPIEndpoints | join " " }} ; do
     server_addr=$(echo $server | cut -f1 -d":")
     until node_ip="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
-      echo "The network is not ready for connecting to apiserver yet, waiting..."
+      echo "Network is not ready for connecting to $server_addr, waiting"
       sleep 1
     done
 
@@ -98,6 +98,7 @@ while [ "$patch_pending" = true ] ; do
     fi
 
     if d8-curl -sS --fail -x "" \
+      -o /dev/null \
       --max-time 10 \
       -XPATCH \
       -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
@@ -107,7 +108,7 @@ while [ "$patch_pending" = true ] ; do
       --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use curl -N 'http://${node_ip}:${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"http://${node_ip}:${output_log_port}\"} }]" \
       "https://$server/apis/deckhouse.io/v1alpha2/instances/${machine_name}/status" ; then
 
-      echo "Successfully patched instance ${machine_name} status."
+      echo "Patched instance ${machine_name} status via $server"
       patch_pending=false
 
       break
@@ -115,12 +116,12 @@ while [ "$patch_pending" = true ] ; do
       failure_count=$((failure_count + 1))
 
       if [[ $failure_count -eq $failure_limit ]]; then
-        >&2 echo "Failed to patch instance ${machine_name} status. Number of attempts exceeded. Status patch will be skipped."
+        >&2 echo "Failed to patch instance ${machine_name} status, retry limit reached, skipping status patch"
         patch_pending=false
         break
       fi
 
-      >&2 echo "Failed to patch instance ${machine_name} status. ${failure_count} of ${failure_limit} attempts..."
+      >&2 echo "Failed to patch instance ${machine_name} status (attempt ${failure_count} of ${failure_limit})"
       sleep 10
       continue
     fi
@@ -134,6 +135,6 @@ chmod +x $BOOTSTRAP_DIR/bashible.sh
 
 # Bashible first run
 until bash --noprofile --norc -c /var/lib/bashible/bashible.sh; do
-  echo "Error running bashible script. Retry in 10 seconds."
+  echo "bashible script failed, retrying in 10 seconds"
   sleep 10
 done

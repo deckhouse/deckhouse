@@ -40,11 +40,11 @@ get_field(obj, path, _default) := out if {
 
 # Backwards-compatible exception label lookup (uses input.review)
 get_exception_label(container) := label if {
-  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+  key := sprintf("security.deckhouse.io/security-policy-exception.container.%v", [container.name])
   label := input.review.object.metadata.labels[key]
   label != ""
 } else := label if {
-  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+  key := sprintf("security.deckhouse.io/security-policy-exception.container.%v", [container.name])
   object.get(input.review.object.metadata.labels, key, "") == ""
   label := object.get(input.review.object.metadata.labels, "security.deckhouse.io/security-policy-exception", "")
   label != ""
@@ -54,11 +54,11 @@ get_exception_label(container) := label if {
 
 # Parameterized exception label lookup (uses labels map)
 get_exception_label_from_labels(container, labels) := label if {
-  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+  key := sprintf("security.deckhouse.io/security-policy-exception.container.%v", [container.name])
   label := object.get(labels, key, "")
   label != ""
 } else := label if {
-  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+  key := sprintf("security.deckhouse.io/security-policy-exception.container.%v", [container.name])
   object.get(labels, key, "") == ""
   label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
   label != ""

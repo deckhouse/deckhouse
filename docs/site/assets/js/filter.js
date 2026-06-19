@@ -138,6 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
 
+      article.querySelectorAll('.button-tile__stage[data-stage]').forEach(el => {
+        const stage = el.dataset.stage;
+        if (stage) {
+          availableStages.add(stage);
+        }
+      });
+
       const editions = (article.dataset.editions || '').trim().toLowerCase();
       if (editions) {
         editions.split(',').forEach(edition => {
@@ -474,7 +481,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if(selectedStages.length > 0) {
         const hasAnyStage = selectedStages.some(stage => {
-          return article.querySelector(`.button-tile__stage-${stage}`) !== null;
+          return article.querySelector(`.button-tile__stage-${stage}`) !== null
+            || article.querySelector(`.button-tile__stage[data-stage="${stage}"]`) !== null;
         });
         if(!hasAnyStage) {
           return false;
@@ -587,6 +595,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initTooltip('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img', 'Experimental', texts.experimental);
   initTooltip('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img', 'Preview', texts.preview);
-  initTooltip('.filter__container label[for="generalAvailability"] > img, .button-tile__stage-generalAvailability > img', 'General Availability (GA)', texts.generalAvailability);
+  initTooltip('.filter__container label[for="generalAvailability"], .button-tile__stage[data-stage="generalAvailability"]', 'General Availability (GA)', texts.generalAvailability);
   initTooltip('.filter__container label[for="deprecated"] > img, .button-tile__stage-deprecated > img', 'Deprecated', texts.deprecated);
 })

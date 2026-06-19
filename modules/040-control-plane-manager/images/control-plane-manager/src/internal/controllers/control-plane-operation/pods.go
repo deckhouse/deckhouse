@@ -87,10 +87,13 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 	}
 
 	ops := &controlplanev1alpha1.ControlPlaneOperationList{}
-	if err := r.client.List(ctx, ops, client.MatchingLabels{
-		constants.ControlPlaneNodeNameLabelKey:  r.node.Name,
-		constants.ControlPlaneComponentLabelKey: opComponent.LabelValue(),
-	}); err != nil {
+	if err := r.client.List(ctx, ops,
+		client.InNamespace(constants.KubeSystemNamespace),
+		client.MatchingLabels{
+			constants.ControlPlaneNodeNameLabelKey:  r.node.Name,
+			constants.ControlPlaneComponentLabelKey: opComponent.LabelValue(),
+		},
+	); err != nil {
 		return nil
 	}
 
@@ -98,7 +101,7 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 	for i := range ops.Items {
 		if ops.Items[i].Spec.Approved && !ops.Items[i].IsTerminal() {
 			reqs = append(reqs, reconcile.Request{
-				NamespacedName: types.NamespacedName{Name: ops.Items[i].Name},
+				NamespacedName: types.NamespacedName{Name: ops.Items[i].Name, Namespace: constants.KubeSystemNamespace},
 			})
 		}
 	}

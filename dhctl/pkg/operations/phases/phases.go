@@ -62,11 +62,14 @@ type ClusterConfig struct {
 // Define common operations phases for such operations as bootstrap, converge and destroy.
 // Notice that each operation could define own phases (like attach operation do).
 const (
+	// metaphase for all
+	PreparationPhase OperationPhase = "Preparation"
 	// bootstrap and converge both
 	BaseInfraPhase OperationPhase = "BaseInfra"
 	// bootstrap only
-	RegistryPackagesProxyPhase             OperationPhase = "RegistryPackagesProxyBundle"
-	ExecuteBashibleBundlePhase             OperationPhase = "ExecuteBashibleBundle"
+	PreInfraPreflightsPhase                OperationPhase = "PreInfraPreflights"
+	PostInfraPreflightsPhase               OperationPhase = "PostInfraPreflights"
+	InstallKubernetesPhase                 OperationPhase = "InstallKubernetes"
 	InstallDeckhousePhase                  OperationPhase = "InstallDeckhouse"
 	CreateResourcesPhase                   OperationPhase = "CreateResources"
 	InstallAdditionalMastersAndStaticNodes OperationPhase = "InstallAdditionalMastersAndStaticNodes"
@@ -113,11 +116,66 @@ const (
 	InstallDeckhouseSubPhaseWait    OperationSubPhase = "WaitForFirstMasterReady"
 )
 
+// preparation sub phases
+const (
+	PreparationSubPhaseImagesDownload   OperationSubPhase = "ImagesDownload"
+	PreparationSubPhaseConfigValidation OperationSubPhase = "ConfigValidation"
+	PreparationSubPhaseCachePreparation OperationSubPhase = "CachePreparation"
+	PreparationSubPhaseStatePreparation OperationSubPhase = "StatePreparation"
+)
+
+// base infra sub phases
+const (
+	BaseInfraSubPhaseBaseInfra   OperationSubPhase = "BaseInfra"
+	BaseInfraSubPhaseFirstMaster OperationSubPhase = "FirstMaster"
+)
+
+// install kubernetes sub phases
+const (
+	InstallKubernetesSubPhaseBundlePreparation     OperationSubPhase = "BashibleBundlePrepartion"
+	InstallKubernetesSubPhaseRegistryPackagesProxy OperationSubPhase = "RegistryPackagesProxy"
+	InstallKubernetesSubPhaseNodePreparation       OperationSubPhase = "NodePreparation"
+	InstallKubernetesSubPhaseExecuteBashibleBundle OperationSubPhase = "ExecuteBashibleBundle"
+)
+
+// InstallAdditionalMastersAndStaticNodes sub phases
+const (
+	InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters OperationSubPhase = "AdditionalMasters"
+	InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes        OperationSubPhase = "StaticNodes"
+	InstallAdditionalMastersAndStaticNodesSubPhaseWait              OperationSubPhase = "WaitForControlPlaneManagerReadiness"
+)
+
 func BootstrapPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
-		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
-		{Phase: RegistryPackagesProxyPhase},
-		{Phase: ExecuteBashibleBundlePhase},
+		// PreparationPhase is not implemented yet
+		// {
+		// 	Phase: PreparationPhase,
+		// 	SubPhases: []OperationSubPhase{
+		// 		PreparationSubPhaseImagesDownload,
+		// 		PreparationSubPhaseConfigValidation,
+		// 		PreparationSubPhaseCachePreparation,
+		// 		PreparationSubPhaseStatePreparation,
+		// 	},
+		// },
+		{Phase: PreInfraPreflightsPhase},
+		{
+			Phase:     BaseInfraPhase,
+			includeIf: ifNotStatic,
+			SubPhases: []OperationSubPhase{
+				BaseInfraSubPhaseBaseInfra,
+				BaseInfraSubPhaseFirstMaster,
+			},
+		},
+		{Phase: PostInfraPreflightsPhase},
+		{
+			Phase: InstallKubernetesPhase,
+			SubPhases: []OperationSubPhase{
+				InstallKubernetesSubPhaseBundlePreparation,
+				InstallKubernetesSubPhaseRegistryPackagesProxy,
+				InstallKubernetesSubPhaseNodePreparation,
+				InstallKubernetesSubPhaseExecuteBashibleBundle,
+			},
+		},
 		{
 			Phase: InstallDeckhousePhase,
 			SubPhases: []OperationSubPhase{
@@ -126,7 +184,14 @@ func BootstrapPhases() []PhaseWithSubPhases {
 				InstallDeckhouseSubPhaseWait,
 			},
 		},
-		{Phase: InstallAdditionalMastersAndStaticNodes},
+		{
+			Phase: InstallAdditionalMastersAndStaticNodes,
+			SubPhases: []OperationSubPhase{
+				InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters,
+				InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes,
+				InstallAdditionalMastersAndStaticNodesSubPhaseWait,
+			},
+		},
 		{Phase: CreateResourcesPhase},
 		{Phase: ExecPostBootstrapPhase},
 		{Phase: FinalizationPhase},

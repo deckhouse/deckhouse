@@ -611,17 +611,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/040-control-plane-manager/monitoring/prometheus-rules
-  to: /deckhouse/modules/040-control-plane-manager/monitoring/prometheus-rules
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   excludePaths:
@@ -736,6 +725,28 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/templates/waypoint-controller
+  to: /deckhouse/modules/110-istio/templates/waypoint-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/ztunnel
+  to: /deckhouse/modules/110-istio/templates/ztunnel
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   excludePaths:
@@ -757,6 +768,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/crds/istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
   stageDependencies:
@@ -764,6 +780,16 @@
         - '**/*'
 - add: /ee/modules/110-istio/crds/istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/istiomulticluster.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/crds/waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/waypointinstance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
   stageDependencies:
     install:
         - '**/*'
@@ -814,11 +840,6 @@
         - '**/*'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/_helper.tpl
-  to: /deckhouse/modules/380-metallb/templates/_helper.tpl
   stageDependencies:
     install:
         - '**/*'
@@ -884,6 +905,17 @@
   to: /deckhouse/modules/040-control-plane-manager/openapi/config-values.yaml
   stageDependencies:
     install:
+        - '**/*'
+- add: /ee/cse/modules/040-control-plane-manager/monitoring/prometheus-rules
+  to: /deckhouse/modules/040-control-plane-manager/monitoring/prometheus-rules
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
         - '**/*'
 - add: /ee/cse/modules/040-node-manager/crds/mcm.yaml
   to: /deckhouse/modules/040-node-manager/crds/mcm.yaml

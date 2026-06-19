@@ -42,6 +42,7 @@ shell:
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
+  - sed -i '\#crypto/tls/fipsonly#d' pkg/syncer/admissionhandler/cnscsi_admissionhandler.go
   - rm -rf vendor
   - rm -rf .git
 ---

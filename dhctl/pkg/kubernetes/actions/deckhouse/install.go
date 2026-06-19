@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ func prepareDeckhouseDeploymentForUpdate(
 	manifestForUpdate *appsv1.Deployment,
 ) (*appsv1.Deployment, error) {
 	resDeployment := manifestForUpdate
-	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get deployment", 30, 1*time.Second).RunContext(ctx, func() error {
 		currentManifestInCluster, err := kubeCl.AppsV1().
 			Deployments(manifestForUpdate.GetNamespace()).
 			Get(ctx, manifestForUpdate.GetName(), metav1.GetOptions{})
@@ -107,7 +107,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 ) (*actions.ManifestTask, error) {
 	deckhouseDeploymentPresent := false
 
-	err := retry.NewLoop("Get deckhouse manifest", 10, 5*time.Second).RunContext(ctx, func() error {
+	err := retry.NewLoop("Get deckhouse manifest", 50, 1*time.Second).RunContext(ctx, func() error {
 		_, err := kubeCl.AppsV1().Deployments("d8-system").Get(ctx, "deckhouse", metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -159,7 +159,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 }
 
 func UnlockDeckhouseQueueAfterCreatingModuleConfigs(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Unlock Deckhouse controller queue", 15, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Unlock Deckhouse controller queue", 75, 1*time.Second).RunContext(ctx, func() error {
 		err := kubeCl.CoreV1().ConfigMaps("d8-system").
 			Delete(ctx, "deckhouse-bootstrap-lock", metav1.DeleteOptions{})
 
@@ -682,7 +682,7 @@ func CreateDeckhouseManifests(
 		// per task) but the loop reacts to the CRD appearing in ~1s instead of
 		// dead-waiting 5s.
 		runTask := func(task actions.ManifestTask) error {
-			return retry.NewSilentLoop(task.Name, 60, 1*time.Second).RunContext(
+			return retry.NewSilentLoop(task.Name, 600, 1*time.Second).RunContext(
 				ctx,
 				func() error {
 					return task.CreateOrUpdate(ctx)
@@ -762,7 +762,7 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 					return nil
 				}
 
-				time.Sleep(5 * time.Second)
+				time.Sleep(1 * time.Second)
 			}
 		}
 	})
@@ -791,7 +791,7 @@ func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.D
 }
 
 func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 45, 5*time.Second).
+	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 225, 1*time.Second).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.Discovery().ServerVersion()
 			if err == nil {

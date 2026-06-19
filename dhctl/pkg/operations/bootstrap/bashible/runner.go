@@ -22,12 +22,16 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/relay"
 )
 
 const (
@@ -35,10 +39,10 @@ const (
 )
 
 var (
-	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(10, 10*time.Second)
-	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(10, 3*time.Second)
+	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(300, 1*time.Second)
+	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(300, 1*time.Second)
+	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(100, 1*time.Second)
+	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(30, 1*time.Second)
 )
 
 type LoopsParams struct {
@@ -91,7 +95,7 @@ func (r *Runner) Prepare(ctx context.Context) error {
 func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.AlreadyRun, alreadyRunDefaultOpts...).
 		Clone(
-			retry.WithName("Checking bashible already ran"),
+			retry.WithName("Checking whether Bashible already ran"),
 			retry.WithLogger(r.loggerProvider()),
 		)
 
@@ -156,6 +160,7 @@ func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
 type ExecuteBundleParams struct {
 	BundleDir     string
 	CommanderMode bool
+	GlobalOpts    *options.GlobalOptions
 }
 
 func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
@@ -168,26 +173,62 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 			retry.WithLogger(r.loggerProvider()),
 		)
 
+	var relaySpanUpdater = func(trace.Span) {}
+
+	if telemetry.IsEnabled() {
+		stopRelay, updateRelaySpan, err := relay.InitRelay(ctx, relay.RelayParams{
+			TracerName: "bashible",
+			Span:       span,
+			Node:       r.nodeInterface,
+			Logger:     r.loggerProvider(),
+			GlobalOpts: params.GlobalOpts,
+		})
+		if err != nil {
+			return fmt.Errorf("init OTel relay: %w", err)
+		}
+		defer stopRelay()
+		relaySpanUpdater = updateRelaySpan
+
+		telemetryEnvs := fmt.Sprintf(
+			"DHCTL_TELEMETRY_ENABLED=%t\nOTEL_RELAY_ADDRESS=%s\n",
+			telemetry.IsEnabled(),
+			fmt.Sprintf("http://%s:%s", relay.RelayAddress, relay.RelayPort),
+		)
+		writeTelemetryCmd := r.nodeInterface.Command(fmt.Sprintf("echo -e %q > /var/lib/bashible/telemetry.env", telemetryEnvs))
+		writeTelemetryCmd.Sudo(ctx)
+
+		if err := writeTelemetryCmd.Run(ctx); err != nil {
+			r.loggerProvider().ErrorF("failed to write telemetry.env: %v", err)
+		}
+	}
+
 	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 			logger := r.loggerProvider()
 
-			logger.DebugF("Stop bashible if need")
+			logger.DebugF("Stopping Bashible if needed")
 
 			if err := r.cleanupPreviousBashibleIfNeed(ctx); err != nil {
 				return err
 			}
 
-			logger.DebugF("Start execute bashible bundle routine")
+			logger.DebugF("Starting Bashible bundle execution routine")
 
-			return r.attemptExecuteBundle(ctx, params)
+			return r.attemptExecuteBundle(ctx, params, relaySpanUpdater)
 		})
 }
 
-func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
+func (r *Runner) attemptExecuteBundle(
+	ctx context.Context,
+	params ExecuteBundleParams,
+	spanUpdater func(trace.Span),
+) error {
 	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.attemptExecuteBundle")
 	defer span.End()
+
+	// we need this, due to not create relay in every attempt, but we need to correct hook data from bashible
+	spanUpdater(span)
 
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
@@ -199,10 +240,10 @@ func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleP
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
-			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
+			return fmt.Errorf("bundle '%s' error: %w\nstderr: %s", bundleDir, err, string(ee.Stderr))
 		}
 
-		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 	}
 	return nil
 }
@@ -210,16 +251,16 @@ func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleP
 func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
 	logger := r.loggerProvider()
 
-	return logger.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
-		logger.DebugF("Gettting bashible pids")
+	return logger.Process("bootstrap", "Clean up previous Bashible run if needed", func() error {
+		logger.DebugF("Getting Bashible PIDs")
 		pids, err := r.getBashiblePIDs(ctx)
 		if err != nil {
 			return err
 		}
 
-		logger.DebugLn("Got bashible pids: %v", pids)
+		logger.DebugLn("Got Bashible PIDs: %v", pids)
 		if len(pids) == 0 {
-			logger.InfoF("Bashible instance not found. Start it!")
+			logger.InfoF("Bashible instance not found. Starting it!")
 			return nil
 		}
 
@@ -252,7 +293,7 @@ func (r *Runner) getBashiblePIDs(ctx context.Context) ([]string, error) {
 
 		parts := strings.SplitN(l, "|", 2)
 		if len(parts) < 2 {
-			logger.DebugLn("Skip ps string without pid")
+			logger.DebugLn("Skipping ps line without PID")
 			continue
 		}
 

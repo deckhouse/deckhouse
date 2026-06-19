@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "1"
 spec:
@@ -12,13 +11,12 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
+  lastNewVersions: 0
   partialScanAvailable: false
-  syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1234567890
@@ -40,7 +38,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1234567891

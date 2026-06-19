@@ -90,7 +90,10 @@ Manage-роль определяет права на доступ:
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-Подсистема роли ограничивает её действие всеми системными (начинающимися с `d8-` или `kube-`) пространствами имён кластера (подсистема `all`) или теми пространствами имён, в которых работают модули подсистемы (см. таблицу состава подсистем).
+Область действия роли зависит от того, к какой подсистеме она принадлежит:
+
+- Область действия ролей из подсистемы `all` — все системные (начинающиеся с `d8-` или `kube-`) неймспейсы кластера.
+- Область действия ролей из других подсистем — неймспейсы, в которых работают модули подсистемы (подробнее — в таблице состава подсистем), а также все cluster-wide объекты модулей подсистемы.
 
 Таблица состава подсистем ролевой модели.
 
@@ -151,6 +154,7 @@ Manage-роль определяет права на доступ:
 
 ```text
 read:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -164,7 +168,6 @@ read:
     - batch/jobs
     - cert-manager.io/certificaterequests
     - cert-manager.io/certificates
-    - cert-manager.io/challenges
     - cert-manager.io/clusterissuers
     - cert-manager.io/issuers
     - cilium.io/ciliumclusterwidenetworkpolicies
@@ -198,6 +201,7 @@ read:
     - deckhouse.io/ingressmetrics
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
+    - deckhouse.io/localpathprovisioners
     - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
@@ -263,6 +267,7 @@ read:
     - limitranges
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
+    - multitenancy.deckhouse.io/availableclusterresources
     - mutations.gatekeeper.sh/assign
     - mutations.gatekeeper.sh/assignimage
     - mutations.gatekeeper.sh/assignmetadata
@@ -270,7 +275,10 @@ read:
     - namespaces
     - network.deckhouse.io/egressgatewaypolicies
     - network.deckhouse.io/egressgateways
+    - network.deckhouse.io/metalloadbalancerbgppeers
     - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/metalloadbalancerconfigurations
+    - network.deckhouse.io/metalloadbalancerpools
     - network.deckhouse.io/servicewithhealthchecks
     - networking.istio.io/destinationrules
     - networking.istio.io/gateways
@@ -392,10 +400,10 @@ write:
 create,patch,update:
     - pods
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apps/replicasets
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
     - extensions/replicasets
 read:
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -427,9 +435,9 @@ write:
 
 ```text
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
 patch,update:
     - nodes
 read:
@@ -439,6 +447,8 @@ read:
     - deckhouse.io/istiomulticlusters
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
     - install.istio.io/istiooperators
+    - multitenancy.deckhouse.io/grantableclusterresourcedefinitions
+    - multitenancy.deckhouse.io/grantableclusterresourcereferences
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - sailoperator.io/istiocnis
@@ -453,6 +463,7 @@ read-write:
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
     - deckhouse.io/upmeterremotewrites
+    - multitenancy.deckhouse.io/clusterresourcegrantpolicies
 write:
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -585,6 +596,7 @@ write:
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
+    - deckhouse.io/localpathprovisioners
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projects
@@ -603,7 +615,10 @@ write:
     - mutations.gatekeeper.sh/assignmetadata
     - mutations.gatekeeper.sh/modifyset
     - namespaces
+    - network.deckhouse.io/metalloadbalancerbgppeers
     - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/metalloadbalancerconfigurations
+    - network.deckhouse.io/metalloadbalancerpools
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - resourcequotas

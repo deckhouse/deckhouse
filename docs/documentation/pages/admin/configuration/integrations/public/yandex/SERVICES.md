@@ -98,12 +98,15 @@ To set up the integration:
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Check the SecretStore status as well:
 
@@ -113,10 +116,13 @@ To set up the integration:
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Create a [secret](https://yandex.cloud/en/docs/lockbox/operations/secret-create) in Yandex Lockbox with the following parameters:
 

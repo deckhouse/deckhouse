@@ -42,11 +42,7 @@ const globalValues = `
   modulesImages:
     digests:
       controlPlaneManager:
-        controlPlaneManager131: sha256:abcdefgh
-        controlPlaneManager132: sha256:abcdefgh
-        controlPlaneManager133: sha256:abcdefgh
-        controlPlaneManager134: sha256:abcdefgh
-        controlPlaneManager135: sha256:abcdefgh
+        controlPlaneManager: sha256:abcdefgh
         etcd: sha256:abcdefgh
         etcdBackup: sha256:abcdefgh
         kubeApiserver131: sha256:abcdefgh
@@ -65,11 +61,6 @@ const globalValues = `
         kubeScheduler134: sha256:abcdefgh
         kubeScheduler135: sha256:abcdefgh
         updateObserver: sha256:abcdefgh
-  internal:
-    modules:
-      resourcesRequests:
-        milliCpuControlPlane: 1024
-        memoryControlPlane: 536870912
   modules:
     placement: {}
   discovery:
@@ -111,6 +102,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.key", "testCA")
 		hec.ValuesSetFromYaml("controlPlaneManager.apiserver", publishAPIValues)
+		hec.ValuesSet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane", 1024)
+		hec.ValuesSet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane", 536870912)
 	})
 
 	Context("By default", func() {

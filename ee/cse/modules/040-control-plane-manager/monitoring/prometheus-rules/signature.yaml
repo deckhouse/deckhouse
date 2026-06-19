@@ -1,0 +1,66 @@
+# WARNING! 
+# if you change this file please evaluate to change file
+# ../../../../cse/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
+# unfortunately our build system cannot support symbol links now
+- name: d8.control-plane-manager.signature
+  rules:
+  - alert: D8SignatureErrorsDetected
+    for: 30m
+    expr: |
+      increase(apiserver_storage_signature_errors_total{mode="enforce"}[5m]) > 0
+    labels:
+      severity_level: "2"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_signature_errors: "D8SignatureErrors,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_signature_errors: "D8SignatureErrors,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Signature verification errors detected.
+      description: |-
+        Errors occurred while reading or writing signed data in etcd.
+        
+        Possible causes:
+
+        - **Invalid digital signature**: The signature failed to verify the authenticity of the data.
+        - **Unauthorized modification**: Data has been altered after signing, compromising its integrity.
+        - **Data corruption**: Files or data are corrupted, impeding correct reading.
+        - **Incorrect data format or type**: Data is in an incorrect format or type, preventing proper processing.
+
+        To investigate which records are generating alerts, follow the instructions below.
+        
+        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
+
+        ```bash
+        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+        ```
+  - alert: D8SignatureErrorsDetected
+    for: 30m
+    expr: |
+      increase(apiserver_storage_signature_errors_total{mode=~"rollback|migrate"}[5m]) > 0
+    labels:
+      severity_level: "7"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_signature_errors: "D8SignatureErrors,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_signature_errors: "D8SignatureErrors,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Signature verification errors detected.
+      description: |-
+        Errors occurred while reading or writing signed data in etcd.
+        
+        Possible causes:
+
+        - **Incorrect data format or type**: Data is in an incorrect format or type, preventing proper processing.
+        - **Invalid digital signature**: The signature failed to verify the authenticity of the data.
+        - **Data corruption**: Files or data are corrupted, impeding correct reading.
+        - **Unauthorized modification**: Data has been altered after signing, compromising its integrity.
+
+        To investigate which records are generating alerts, follow the instructions below.
+        
+        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
+
+        ```bash
+        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+        ```

@@ -21,6 +21,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/workqueue"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 )
@@ -45,6 +46,9 @@ const (
 
 	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
 	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
+
+	// queueName labels the notification workqueue for metrics.
+	queueName = "package-status"
 )
 
 // Error wraps an error with associated status conditions
@@ -76,7 +80,17 @@ type Service struct {
 	mu       sync.Mutex
 	statuses map[string]*Status // keyed by "namespace.name"
 
-	ch chan string // notification channel for status changes
+	// pendingHealth buffers a health event that arrived before its package
+	// was registered via ClearStatus. The next ClearStatus for the same
+	// name drains the entry, so a startup-race event is not lost.
+	pendingHealth map[string]health.Event
+
+	// queue carries names of packages whose status changed. It coalesces
+	// repeated notifications for the same package into a single item, so a
+	// flood of updates (e.g. nelm progress) cannot outgrow the number of
+	// packages. Notifications are enqueued outside s.mu, so a slow consumer
+	// can never block a producer that holds the lock.
+	queue workqueue.TypedRateLimitingInterface[string]
 }
 
 // Status represents the current state of a package
@@ -103,14 +117,24 @@ type Condition struct {
 
 func NewService() *Service {
 	return &Service{
-		ch:       make(chan string, 10000),
-		statuses: make(map[string]*Status),
+		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
+			workqueue.DefaultTypedControllerRateLimiter[string](),
+			workqueue.TypedRateLimitingQueueConfig[string]{Name: queueName},
+		),
+		statuses:      make(map[string]*Status),
+		pendingHealth: make(map[string]health.Event),
 	}
 }
 
-// GetCh returns a read-only channel that receives package names when their status changes
-func (s *Service) GetCh() <-chan string {
-	return s.ch
+// Queue returns the notification queue. Consumers pull changed package names
+// via Get/Done and requeue transient failures via AddRateLimited.
+func (s *Service) Queue() workqueue.TypedRateLimitingInterface[string] {
+	return s.queue
+}
+
+// Shutdown stops the notification queue; the consumer loop exits on the next Get.
+func (s *Service) Shutdown() {
+	s.queue.ShutDown()
 }
 
 // GetStatus retrieves a copy of the current status for a package by name ("namespace.name")
@@ -143,77 +167,82 @@ func (s *Service) DeleteStatus(name string) {
 	defer s.mu.Unlock()
 
 	delete(s.statuses, name)
+	delete(s.pendingHealth, name)
 }
 
 // SetConditionTrue marks a condition as successful and notifies listeners if changed
 func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, ok := s.statuses[name]; !ok {
+	status, ok := s.statuses[name]
+	if !ok {
+		s.mu.Unlock()
 		return
 	}
 
 	// Notify only if the condition actually changed
-	if s.statuses[name].setCondition(Condition{Type: condition, Status: metav1.ConditionTrue}) {
-		s.ch <- name
+	notify := status.setCondition(Condition{Type: condition, Status: metav1.ConditionTrue})
+	s.mu.Unlock()
+
+	if notify {
+		s.queue.Add(name)
 	}
 }
 
 // SetConditionFalse marks a condition as successful and notifies listeners if changed
 func (s *Service) SetConditionFalse(name string, condition ConditionType, reason, message string) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, ok := s.statuses[name]; !ok {
+	status, ok := s.statuses[name]
+	if !ok {
+		s.mu.Unlock()
 		return
 	}
 
 	// Notify only if the condition actually changed
-	notify := s.statuses[name].setCondition(Condition{
+	notify := status.setCondition(Condition{
 		Type:    condition,
 		Status:  metav1.ConditionFalse,
 		Reason:  ConditionReason(reason),
 		Message: message,
 	})
+	s.mu.Unlock()
 
 	if notify {
-		s.ch <- name
+		s.queue.Add(name)
 	}
 }
 
 // UpdateVersion sets the current version of package
 func (s *Service) UpdateVersion(name string, version string) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	status, ok := s.statuses[name]
 	if !ok {
+		s.mu.Unlock()
 		return
 	}
 
 	status.Version = version
 	status.setCondition(Condition{Type: ConditionLoaded, Status: metav1.ConditionTrue})
 	status.setCondition(Condition{Type: ConditionPending, Status: metav1.ConditionTrue, Message: "waiting for processing"})
+	s.mu.Unlock()
 
-	s.ch <- name
+	s.queue.Add(name)
 }
 
 // UpdateTracking updates the nelm progress report for a package and notifies listeners.
 // If the package is not tracked by the service, the update is silently ignored.
 func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	status, ok := s.statuses[name]
 	if !ok {
+		s.mu.Unlock()
 		return
 	}
 
-	s.statuses[name].setCondition(Condition{
+	status.setCondition(Condition{
 		Type:   ConditionManifestsApplied,
 		Status: metav1.ConditionFalse,
-		Reason: ConditionReasonApplyingManifests})
+		Reason: ConditionReasonApplyingManifests,
+	})
 
 	for i := len(report.StageReports) - 1; i >= 0; i-- {
 		r := report.StageReports[i]
@@ -234,8 +263,9 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		status.Tracking = Tracking{Completed: completed, Remaining: remaining, Report: r}
 		break
 	}
+	s.mu.Unlock()
 
-	s.ch <- name
+	s.queue.Add(name)
 }
 
 // UpdateSettings stores the effective settings of a package.
@@ -260,16 +290,31 @@ func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 //	StateReconciling, StateDegraded      → False,   Reason=State, Message=workload detail
 //	StateUnknown                         → Unknown, Reason="" (no workloads to observe)
 //
-// If the package is not tracked by the service, the update is silently ignored.
+// If the package is not yet tracked by the service, the event is buffered
+// and applied by the next ClearStatus call for the same name. This closes
+// the startup race in which the health monitor observes workloads before
+// the package is registered.
 func (s *Service) UpdateHealth(name string, event health.Event) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	status, ok := s.statuses[name]
 	if !ok {
+		s.pendingHealth[name] = event
+		s.mu.Unlock()
 		return
 	}
 
+	notify := applyHealthEventLocked(status, event)
+	s.mu.Unlock()
+
+	if notify {
+		s.queue.Add(name)
+	}
+}
+
+// applyHealthEventLocked translates a health event into a ConditionScaled
+// update on the given status and reports whether the condition changed.
+// The caller must hold s.mu.
+func applyHealthEventLocked(status *Status, event health.Event) bool {
 	cond := Condition{Type: ConditionScaled}
 	switch event.Health.State {
 	case health.StateScaled:
@@ -282,36 +327,34 @@ func (s *Service) UpdateHealth(name string, event health.Event) {
 		cond.Reason = ConditionReason(event.Health.State)
 		cond.Message = event.Health.Message
 	}
-
-	if status.setCondition(cond) {
-		s.ch <- name
-	}
+	return status.setCondition(cond)
 }
 
 // HandleError processes an error and extracts status conditions from it
 // Notifies listeners if any conditions changed
 func (s *Service) HandleError(name string, cond ConditionType, err error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	statusErr := new(Error)
 	if !errors.As(err, &statusErr) {
 		return
 	}
 
-	if _, ok := s.statuses[name]; !ok {
+	s.mu.Lock()
+	status, ok := s.statuses[name]
+	if !ok {
+		s.mu.Unlock()
 		return
 	}
 
-	notify := s.statuses[name].setCondition(Condition{
+	notify := status.setCondition(Condition{
 		Type:    cond,
 		Status:  metav1.ConditionFalse,
 		Reason:  statusErr.reason,
 		Message: statusErr.message,
 	})
+	s.mu.Unlock()
 
 	if notify {
-		s.ch <- name
+		s.queue.Add(name)
 	}
 }
 
@@ -354,10 +397,21 @@ func (s *Status) setCondition(condition Condition) bool {
 	return notify
 }
 
-// ClearStatus creates a new status or resets conditions
-func (s *Service) ClearStatus(name string) {
+// IsConditionTrue returns true if the condition status is True
+func (s *Status) IsConditionTrue(condType ConditionType) bool {
+	for _, cond := range s.Conditions {
+		if cond.Type == condType && cond.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// NewStatus creates a new status or resets conditions. If a health event
+// was buffered by UpdateHealth before this name was registered, it is
+// applied here and the buffer entry is dropped.
+func (s *Service) NewStatus(name string) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	s.statuses[name] = &Status{
 		Conditions: []Condition{
@@ -370,5 +424,19 @@ func (s *Service) ClearStatus(name string) {
 			{Type: ConditionConfigured, Status: metav1.ConditionUnknown},
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
 		},
+	}
+
+	event, ok := s.pendingHealth[name]
+	if !ok {
+		s.mu.Unlock()
+		return
+	}
+	delete(s.pendingHealth, name)
+
+	notify := applyHealthEventLocked(s.statuses[name], event)
+	s.mu.Unlock()
+
+	if notify {
+		s.queue.Add(name)
 	}
 }

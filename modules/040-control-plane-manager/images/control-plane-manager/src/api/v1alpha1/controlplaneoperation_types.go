@@ -32,7 +32,7 @@ import (
 //   - WaitPodReady     — waits for the component static pod to become Ready after restart.
 //   - CertObserve      — collects current certificate expiration dates for the component and publishes them to status.observedState.
 //
-// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;CertObserve
+// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;CertObserve;RenewSignature
 type StepName string
 
 const (
@@ -44,6 +44,7 @@ const (
 	StepJoinEtcdCluster  StepName = "JoinEtcdCluster"
 	StepWaitPodReady     StepName = "WaitPodReady"
 	StepCertObserve      StepName = "CertObserve"
+	StepRenewSignature   StepName = "RenewSignature"
 )
 
 // OperationComponent identifies the control plane component the operation targets.
@@ -165,10 +166,10 @@ type ControlPlaneOperationSpec struct {
 
 // ObservedComponentState holds the certificate state of a component collected by CertObserve.
 type ObservedComponentState struct {
-	// CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+	// CertificatesExpirationTime maps each component certificate file name to its NotAfter timestamp.
 	// Used by the module to renew certificates in time and to drive related alerts.
 	// +optional
-	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
+	CertificatesExpirationTime map[string]metav1.Time `json:"certificatesExpirationTime,omitempty"`
 }
 
 // ControlPlaneOperationStatus describes the observed state of an operation.
@@ -198,7 +199,7 @@ type ControlPlaneOperationStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName=cpo
+// +kubebuilder:resource:scope=Namespaced,shortName=cpo
 // +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component",priority=1
 // +kubebuilder:printcolumn:name="Node",type="string",JSONPath=".spec.nodeName",description="Target node"
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=`.status.conditions[?(@.type=="Completed")].reason`,description="Operation phase"
