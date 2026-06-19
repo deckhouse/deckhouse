@@ -117,7 +117,7 @@ rules:
   - update
   - patch
   - delete
-# CAPI infrastructure resources (DeckhouseControlPlane)
+# CAPI infrastructure resources (DeckhouseControlPlane, provider machine templates)
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
@@ -128,6 +128,13 @@ rules:
   - list
   - watch
   - patch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - "*"
+  verbs:
+  - get
+  - list
 # MCM Machine
 - apiGroups:
   - machine.sapcloud.io
