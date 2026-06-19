@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 378947d..683ec98 100644
+index 378947d..af468b0 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -21,9 +21,9 @@ require (
@@ -24,7 +24,7 @@ index 378947d..683ec98 100644
  	k8s.io/mount-utils v0.34.1
  	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
  	software.sslmate.com/src/go-pkcs12 v0.6.0
-@@ -44,17 +44,18 @@ require (
+@@ -44,17 +44,21 @@ require (
  
  // the below fixes the "go list -m all" execution
  replace (
@@ -36,11 +36,14 @@ index 378947d..683ec98 100644
 -	k8s.io/kube-proxy => k8s.io/kube-proxy v0.34.1
 -	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.34.1
 +	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.34.2
++	k8s.io/cri-client => k8s.io/cri-client v0.34.2
++	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.34.2
 +	k8s.io/endpointslice => k8s.io/endpointslice v0.34.2
 +	k8s.io/externaljwt => k8s.io/externaljwt v0.34.2
 +	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.34.2
 +	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.34.2
 +	k8s.io/kube-proxy => k8s.io/kube-proxy v0.34.2
++	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.34.2
 +	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.34.2
  )
  
@@ -51,7 +54,7 @@ index 378947d..683ec98 100644
  	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
  	github.com/Masterminds/semver/v3 v3.4.0 // indirect
  	github.com/MichaelTJones/walk v0.0.0-20161122175330-4748e29d5718 // indirect
-@@ -66,6 +67,7 @@ require (
+@@ -66,6 +70,7 @@ require (
  	github.com/cespare/xxhash/v2 v2.3.0 // indirect
  	github.com/coreos/go-semver v0.3.1 // indirect
  	github.com/coreos/go-systemd/v22 v22.6.0 // indirect
@@ -59,7 +62,7 @@ index 378947d..683ec98 100644
  	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
  	github.com/distribution/reference v0.6.0 // indirect
  	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
-@@ -113,7 +115,7 @@ require (
+@@ -113,7 +118,7 @@ require (
  	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
  	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
  	github.com/opencontainers/go-digest v1.0.0 // indirect
@@ -68,7 +71,7 @@ index 378947d..683ec98 100644
  	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
  	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
  	github.com/prometheus/client_golang v1.23.2 // indirect
-@@ -133,28 +135,28 @@ require (
+@@ -133,28 +138,28 @@ require (
  	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
  	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0 // indirect
  	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 // indirect

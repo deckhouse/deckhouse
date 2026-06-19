@@ -2,6 +2,6 @@
 
 This patch is for our case when we want to have a static Nodes in the cluster, managed by openstack cloud provider.
 
-## 002-fix-cve.patch
+## 002-go-mod.patch
 
-Bump some go.mod deps to fix known CVEs
+Bump go.mod dependencies to fix known CVEs.
