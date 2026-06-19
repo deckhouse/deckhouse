@@ -104,7 +104,7 @@ func (b builder) buildRuntimeManager(opts controllerruntime.Options) (manager.Ma
 	}
 
 	if err := b.configurator.configureRuntimeManager(runtimeManager); err != nil {
-		return nil, fmt.Errorf("configurate controller runtime manager: %w", err)
+		return nil, fmt.Errorf("configure controller runtime manager: %w", err)
 	}
 
 	return runtimeManager, nil

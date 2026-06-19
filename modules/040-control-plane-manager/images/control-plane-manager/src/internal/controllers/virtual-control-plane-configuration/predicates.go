@@ -24,6 +24,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -44,6 +45,7 @@ func secretPredicate() predicate.Predicate {
 func (r *reconciler) mapConfigSecretToVirtualControlPlanes(ctx context.Context, _ client.Object) []reconcile.Request {
 	vcpList := &controlplanev1alpha1.VirtualControlPlaneList{}
 	if err := r.client.List(ctx, vcpList); err != nil {
+		log.FromContext(ctx).Error(err, "list VirtualControlPlanes")
 		return nil
 	}
 
