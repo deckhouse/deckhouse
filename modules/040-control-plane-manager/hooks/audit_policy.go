@@ -202,8 +202,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "deckhouse.io", Resources: []string{"upmeterhookprobes"}},
-		"Do not log `UpmeterHookProbes` resources.",
-		"Не логировать ресурсы `UpmeterHookProbes`.",
+		"Do not log UpmeterHookProbes resources.",
+		"Не логировать ресурсы UpmeterHookProbes.",
 	)
 
 	{
