@@ -19,6 +19,7 @@ package manager
 import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	virtualcontrolplanenode "control-plane-manager/internal/controllers/virtual-control-plane-node"
 	virtualcontrolplaneconfiguration "control-plane-manager/internal/controllers/virtual-control-plane-configuration"
 	"fmt"
 
@@ -62,6 +63,11 @@ func (c *virtualConfigurator) configureOptions(opts *controllerruntime.Options) 
 					constants.ControlPlaneTypeLabelKey: string(constants.ControlPlaneTypeVirtual),
 				}),
 			},
+			&controlplanev1alpha1.ControlPlaneOperation{}: {
+				Label: labels.SelectorFromSet(labels.Set{
+					constants.ControlPlaneTypeLabelKey: string(constants.ControlPlaneTypeVirtual),
+				}),
+			},
 		},
 	}
 }
@@ -69,6 +75,10 @@ func (c *virtualConfigurator) configureOptions(opts *controllerruntime.Options) 
 func (c *virtualConfigurator) configureRuntimeManager(runtimeManager runtimemanager.Manager) error {
 	if err := virtualcontrolplaneconfiguration.BuildController(runtimeManager); err != nil {
 		return fmt.Errorf("build virtual-control-plane-configuration controller: %w", err)
+	}
+
+	if err := virtualcontrolplanenode.BuildController(runtimeManager); err != nil {
+		return fmt.Errorf("build virtual-control-plane-node controller: %w", err)
 	}
 
 	return nil
