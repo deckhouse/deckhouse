@@ -314,7 +314,7 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 	{
 		descriptionEN := "Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`)."
-		descriptionRU := "Логировать операции create/update/patch/delete в системных пространствах имён (`kube-system`, `d8-*`)."
+		descriptionRU := "Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`)."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
