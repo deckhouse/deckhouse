@@ -3,8 +3,8 @@ cpu: 10m
 memory: 15Mi
 {{- end }}
 
-{{- if or (.Values.global.discovery.apiVersions | has "monitoring.coreos.com/v1/ServiceMonitor") (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor") }}
-{{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if (.Values.global.enabledModules | has "prometheus") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler

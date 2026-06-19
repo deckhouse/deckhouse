@@ -388,9 +388,9 @@ apiserver:
 	})
 
 	Context("Control plane metrics scrape stack", func() {
-		Context("With ServiceMonitor CRD available", func() {
+		Context("With prometheus module enabled", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.discovery.apiVersions", `["monitoring.coreos.com/v1/ServiceMonitor"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
 				f.HelmRender()
 			})
 
@@ -409,9 +409,9 @@ apiserver:
 			})
 		})
 
-		Context("Without ServiceMonitor CRD", func() {
+		Context("Prometheus module disabled", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.discovery.apiVersions", `[]`)
+				f.ValuesSetFromYaml("global.enabledModules", `[]`)
 				f.HelmRender()
 			})
 
