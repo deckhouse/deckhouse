@@ -1524,7 +1524,7 @@ After creation, `VirtualMachineBlockDeviceAttachment` can be in the following st
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block
 
-Check the state of your resource::
+Check the state of your resource:
 
 ```bash
 d8 k get vmbda attach-blank-disk

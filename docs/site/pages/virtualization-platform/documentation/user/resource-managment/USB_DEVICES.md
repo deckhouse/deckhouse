@@ -116,7 +116,7 @@ The status of a [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) r
 
 ### Assigning a namespace
 
-Before a USB device can be attached to a virtual machine, it must be exposed to a specific namespace. To make a USB device available in a specific namespace, set the `.spec.assignedNamespace` parameter of the [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource::
+Before a USB device can be attached to a virtual machine, it must be exposed to a specific namespace. To make a USB device available in a specific namespace, set the `.spec.assignedNamespace` parameter of the [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource:
 
 ```bash
 d8 k apply -f - <<EOF
