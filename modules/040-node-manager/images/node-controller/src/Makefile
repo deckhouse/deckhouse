@@ -13,6 +13,9 @@ GOTESTFMT ?= $(LOCALBIN)/gotestfmt
 GOTESTFMT_VERSION ?= v2.5.0
 # CI sets GOTESTFMT_CI=github to emit ::group:: collapsible output; empty locally for plain output.
 GOTESTFMT_CI ?=
+# Custom gotestfmt templates (per-package groups) live under .github so they're treated as CI config,
+# not module source. Path is relative to this Makefile's dir (the module's fixed position in the repo).
+GOTESTFMT_TEMPLATE_DIR ?= ../../../../../.github/gotestfmt/node-controller
 # Raw go test -json logs, captured to files so the go test exit code survives (gotestfmt is only a
 # formatter; piping into it would otherwise mask a test failure behind gotestfmt's exit code).
 GOTEST_JSON_UNIT ?= /tmp/node-controller-unit.json
@@ -54,7 +57,7 @@ lint: ## Run golangci-lint against code.
 .PHONY: test
 test: envtest gotestfmt ## Run unit + envtest in two labeled sections with GitHub-friendly output (CI: GOTESTFMT_CI=github).
 	@assets="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"; \
-		fmt='$(GOTESTFMT) $(if $(GOTESTFMT_CI),-ci $(GOTESTFMT_CI),) -hide successful-downloads'; \
+		fmt='$(GOTESTFMT) $(if $(GOTESTFMT_CI),-template-dir $(GOTESTFMT_TEMPLATE_DIR) -ci $(GOTESTFMT_CI),) -hide successful-downloads'; \
 		echo ""; echo "🧪 UNIT TESTS"; echo ""; \
 		KUBEBUILDER_ASSETS="$$assets" go test -json -skip '$(ENVTEST_RUN_REGEX)' -coverprofile cover-unit.out ./... > $(GOTEST_JSON_UNIT) 2>&1; urc=$$?; \
 		eval $$fmt < $(GOTEST_JSON_UNIT); \
