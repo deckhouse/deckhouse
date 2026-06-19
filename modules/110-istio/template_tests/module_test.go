@@ -1545,4 +1545,38 @@ static:
 			Expect(injectorValues).To(ContainSubstring(`"memory":"2Gi"`))
 		})
 	})
+
+	Context("operator-free istiod with custom controlPlane.extraEnvs", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSetFromYaml("istio.controlPlane.extraEnvs", `
+GODEBUG: "gctrace=1"
+MY_VAR: "myvalue"
+`)
+			f.HelmRender()
+		})
+
+		It("adds custom env vars to istiod deployment after all module env vars", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ds := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27")
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==GODEBUG).value").String()).To(Equal("gctrace=1"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==MY_VAR).value").String()).To(Equal("myvalue"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ISTIO_MULTIROOT_MESH).value").String()).To(Equal("true"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ENABLE_ENHANCED_RESOURCE_SCOPING).value").String()).To(Equal("true"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==GOMAXPROCS)").Exists()).To(BeTrue())
+		})
+	})
 })

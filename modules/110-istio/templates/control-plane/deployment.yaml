@@ -159,6 +159,10 @@ spec:
             resourceFieldRef:
               resource: limits.cpu
               divisor: "1"
+        {{- range $name, $value := $.Values.istio.controlPlane.extraEnvs }}
+        - name: {{ $name }}
+          value: {{ $value | quote }}
+        {{- end }}
         resources:
         {{- include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 10 }}
         securityContext:
