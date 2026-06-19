@@ -202,6 +202,24 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			"node-group": ng.Name,
 		}
 
+		// Calculate desired replicas: on first creation use minReplicas,
+		// on update clamp existing replicas to [min, max].
+		var desired int32
+		existing := &unstructured.Unstructured{}
+		existing.SetGroupVersionKind(schema.GroupVersionKind{
+			Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeployment",
+		})
+		err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return fmt.Errorf("get MachineDeployment %s: %w", mdName, err)
+			}
+			desired = minReplicas
+		} else {
+			replicas, _, _ := unstructured.NestedInt64(existing.Object, "spec", "replicas")
+			desired = calculateReplicas(int32(replicas), minReplicas, maxReplicas)
+		}
+
 		md := &unstructured.Unstructured{Object: map[string]interface{}{
 			"apiVersion": "cluster.x-k8s.io/v1beta2",
 			"kind":       "MachineDeployment",
@@ -213,7 +231,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			},
 			"spec": map[string]interface{}{
 				"clusterName": cloudConfig.capiClusterName,
-				"selector":    map[string]interface{}{},
+				"replicas":    int64(desired),
 				"template": map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"labels": commonLabels,
@@ -247,50 +265,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			},
 		}}
 
-		existing := &unstructured.Unstructured{}
-		existing.SetGroupVersionKind(schema.GroupVersionKind{
-			Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeployment",
-		})
-		err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				return fmt.Errorf("get MachineDeployment %s: %w", mdName, err)
-			}
-			if err := unstructured.SetNestedField(md.Object, int64(minReplicas), "spec", "replicas"); err != nil {
-				return fmt.Errorf("set replicas: %w", err)
-			}
-			if err := r.Client.Create(ctx, md); err != nil {
-				return fmt.Errorf("create MachineDeployment %s: %w", mdName, err)
-			}
-			logger.Info("created cloud MachineDeployment", "name", mdName, "zone", zone)
-			continue
+		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
+			return fmt.Errorf("apply MachineDeployment %s: %w", mdName, err)
 		}
-
-		replicas, _, _ := unstructured.NestedInt64(existing.Object, "spec", "replicas")
-		desired := calculateReplicas(int32(replicas), minReplicas, maxReplicas)
-		if err := unstructured.SetNestedField(md.Object, int64(desired), "spec", "replicas"); err != nil {
-			return fmt.Errorf("set replicas: %w", err)
-		}
-
-		// Preserve existing annotations we don't manage.
-		existingAnnotations := existing.GetAnnotations()
-		if existingAnnotations != nil {
-			mdAnnotations, _, _ := unstructured.NestedStringMap(md.Object, "metadata", "annotations")
-			for k, v := range existingAnnotations {
-				if _, exists := mdAnnotations[k]; !exists {
-					mdAnnotations[k] = v
-				}
-			}
-			if err := unstructured.SetNestedStringMap(md.Object, mdAnnotations, "metadata", "annotations"); err != nil {
-				return fmt.Errorf("set annotations: %w", err)
-			}
-		}
-
-		md.SetResourceVersion(existing.GetResourceVersion())
-		if err := r.Client.Update(ctx, md); err != nil {
-			return fmt.Errorf("update MachineDeployment %s: %w", mdName, err)
-		}
-		logger.V(1).Info("updated cloud MachineDeployment", "name", mdName)
+		logger.V(1).Info("applied cloud MachineDeployment", "name", mdName, "zone", zone)
 	}
 
 	return nil
@@ -360,27 +338,10 @@ func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng 
 		},
 	}}
 
-	existing := &unstructured.Unstructured{}
-	existing.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeployment",
-	})
-	err := r.Client.Get(ctx, types.NamespacedName{Name: mdName, Namespace: common.MachineNamespace}, existing)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return fmt.Errorf("get static MachineDeployment %s: %w", mdName, err)
-		}
-		if err := r.Client.Create(ctx, md); err != nil {
-			return fmt.Errorf("create static MachineDeployment %s: %w", mdName, err)
-		}
-		logger.Info("created static MachineDeployment", "name", mdName)
-		return nil
+	if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
+		return fmt.Errorf("apply static MachineDeployment %s: %w", mdName, err)
 	}
-
-	md.SetResourceVersion(existing.GetResourceVersion())
-	if err := r.Client.Update(ctx, md); err != nil {
-		return fmt.Errorf("update static MachineDeployment %s: %w", mdName, err)
-	}
-	logger.V(1).Info("updated static MachineDeployment", "name", mdName)
+	logger.V(1).Info("applied static MachineDeployment", "name", mdName)
 	return nil
 }
 
