@@ -374,12 +374,12 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0"
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v0.44.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "DoS через неограниченное чтение тела HTTP-ответа OTLP-экспортёра достижим только от вредоносного коллектора; коллектор задаётся администратором (доверенный), подача вредоносного ответа нарушителем исключена.",
+      "impact_statement": "DoS через неограниченное чтение тела HTTP-ответа OTLP-метрик-экспортёра (otlpmetrichttp v0.44.0) достижим только от вредоносного коллектора; коллектор задаётся администратором (доверенный), подача вредоносного ответа нарушителем исключена.",
       "timestamp": "2026-06-15T12:00:00Z"
     }
   ],
