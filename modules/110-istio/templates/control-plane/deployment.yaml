@@ -190,6 +190,10 @@ spec:
         - name: istio-csr-ca-configmap
           mountPath: /var/run/secrets/istiod/ca
           readOnly: true
+        {{- if $.Values.istio.jwksResolverAdditionalRootCA }}
+        - name: extracacerts
+          mountPath: /cacerts
+        {{- end }}
       volumes:
       - name: local-certs
         emptyDir:
@@ -218,5 +222,10 @@ spec:
           name: istio-ca-root-cert
           defaultMode: 420
           optional: true
+      {{- if $.Values.istio.jwksResolverAdditionalRootCA }}
+      - name: extracacerts
+        configMap:
+          name: pilot-jwks-extra-cacerts-{{ $revision }}
+      {{- end }}
   {{- end }}
 {{- end }}
