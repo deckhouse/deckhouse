@@ -76,10 +76,13 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	ng := &deckhousev1.NodeGroup{}
 	if err := r.Client.Get(ctx, req.NamespacedName, ng); err != nil {
 		if client.IgnoreNotFound(err) == nil {
+			logger.Info("NodeGroup not found, skipping")
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("get NodeGroup: %w", err)
 	}
+
+	logger.Info("NodeGroup found", "nodeType", ng.Spec.NodeType, "hasCloudInstances", ng.Spec.CloudInstances != nil, "hasStaticInstances", ng.Spec.StaticInstances != nil)
 
 	switch ng.Spec.NodeType {
 	case deckhousev1.NodeTypeCloudEphemeral:
@@ -93,6 +96,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			}
 		}
 	default:
+		logger.Info("skipping: unsupported nodeType", "nodeType", ng.Spec.NodeType)
 		return ctrl.Result{}, nil
 	}
 
@@ -109,26 +113,34 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil || len(ng.Spec.CloudInstances.Zones) == 0 {
+		logger.Info("skipping: no cloudInstances or zones")
 		return nil
 	}
 
 	cloudConfig, err := r.readCloudProviderConfig(ctx)
 	if err != nil {
+		logger.Info("error reading cloud provider config", "error", err)
 		return err
 	}
+	logger.Info("cloud provider config", "capiClusterName", cloudConfig.capiClusterName, "templateKind", cloudConfig.capiMachineTemplateKind)
 	if cloudConfig.capiClusterName == "" {
+		logger.Info("skipping: capiClusterName is empty")
 		return nil
 	}
 
 	clusterUUID, err := r.readClusterUUID(ctx)
 	if err != nil {
+		logger.Info("error reading cluster UUID", "error", err)
 		return err
 	}
+	logger.Info("cluster UUID", "uuid", clusterUUID)
 
 	instancePrefix, err := r.readInstancePrefix(ctx)
 	if err != nil {
+		logger.Info("error reading instance prefix", "error", err)
 		return err
 	}
+	logger.Info("instance prefix", "prefix", instancePrefix)
 
 	minReplicas := ng.Spec.CloudInstances.MinPerZone
 	maxReplicas := ng.Spec.CloudInstances.MaxPerZone
