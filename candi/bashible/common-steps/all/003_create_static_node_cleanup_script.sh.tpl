@@ -19,7 +19,6 @@ MOTD_FILE="/etc/motd"
 MARKER="D8_CLEANUP_STATIC_NODE"
 CLEANUP_FAILED=0
 SCRIPT_PATH="/var/lib/bashible/cleanup_static_node.sh"
-SCRIPT_BACKUP="/tmp/cleanup_static_node.sh.bak"
 
 PATHS_TO_REMOVE=(
   /var/cache/registrypackages
@@ -99,7 +98,8 @@ BLOCK
 }
 
 stop_services() {
-  log_info "systemctl stop $@"
+  log_info "systemctl disable + stop $@"
+  systemctl disable $@ 2>/dev/null || true
   systemctl stop $@ 2>/dev/null || true
 }
 
@@ -130,18 +130,33 @@ kill_and_wait() {
 remove_path() {
   local path="$1"
 
-  # if it does not exist
   [ ! -e "$path" ] && return 0
 
   for i in {1..5}; do
     if [ -d "$path" ]; then
-      mount | grep -F "$path" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
+      # Detach nested mounts (e.g. pod/CSI/PVC volumes), deepest first, so the rm below
+      # cannot recurse into them and delete data we do not own. Their data is never touched.
+      mount | grep -F "$path" | awk '{print $3}' | grep -vxF "$path" | sort -r | xargs -r -n1 umount -l 2>/dev/null
+
+      # If the path itself is a separate mount, wipe its data so the device comes up empty
+      # on next bootstrap, then unmount it. -xdev keeps find on this device. The empty
+      # directory is kept as a mountpoint so an fstab entry can remount the device on reboot.
+      # If the wipe fails (read-only fs, busy entries, I/O error) retry, and let the loop
+      # report failure rather than rebooting with stale data still on the device.
+      if mountpoint -q "$path"; then
+        log_info "Clearing data on volume at $path"
+        if find "$path" -xdev -mindepth 1 -delete 2>/dev/null; then
+          umount -l "$path" 2>/dev/null || true
+          return 0
+        fi
+        sleep 1
+        continue
+      fi
     fi
     rm -rf "$path" 2>/dev/null && return 0
     sleep 1
   done
 
-  # if it exists after attempting to delete
   if [ -e "$path" ]; then
     log_err "ERROR: failed to remove $path"
     return 1
@@ -150,10 +165,6 @@ remove_path() {
 
 # --- Main ---
 log_info "Starting static node cleanup"
-
-# Backup current script for potential rerun
-cp -f "$0" "$SCRIPT_BACKUP" 2>/dev/null || log_err "Failed to backup cleanup script to $SCRIPT_BACKUP"
-chmod +x "$SCRIPT_BACKUP" 2>/dev/null || true
 
 if [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ]; then
   log_err "Needed flag isn't passed, exit without any action (--yes-i-am-sane-and-i-understand-what-i-am-doing)"
@@ -171,13 +182,9 @@ done
 
 # Kill Processes
 kill_and_wait "bash /var/lib/bashible/bashible"
+# Remove the bashible entrypoint right away so it cannot be re-launched while we clean up.
+remove_path /var/lib/bashible/bashible.sh
 kill_and_wait "containerd-shim"
-
-# Unmount
-log_info "Unmounting kubelet/containerd mounts"
-for dir in /var/lib/kubelet /var/lib/containerd; do
-  mount | grep "$dir" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
-done
 
 # Remove immutable bit
 if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
@@ -216,20 +223,51 @@ EOF_CRON
   (cat /root/old_crontab; echo "@reboot /root/d8-user-cleanup.sh") | crontab -
 fi
 
-remove_path /var/lib/bashible/ || CLEANUP_FAILED=1
-
 if [ "$CLEANUP_FAILED" -ne 0 ]; then
-  if [ ! -f "$SCRIPT_PATH" ]; then
-    mkdir -p /var/lib/bashible/
-    cp -f "$SCRIPT_BACKUP" "$SCRIPT_PATH"
-    chmod +x "$SCRIPT_PATH"
-  fi
   log_err "Cleanup finished with errors. Reboot the server and run as root user $SCRIPT_PATH --yes-i-am-sane-and-i-understand-what-i-am-doing again, or fix the issues above manually"
   exit 2
 fi
 
-log_info "Cleanup completed successfully, restoring MOTD and rebooting"
+# Recreate mountpoint dirs for fstab entries we wiped above, so devices nested
+# under cleaned paths (e.g. a user-managed /var/lib/containerd/logs) can be
+# remounted on next boot.
+if [ -r /etc/fstab ]; then
+  while read -r src mp _; do
+    case "$src" in ''|\#*) continue ;; esac
+    case "$mp" in /*) ;; *) continue ;; esac
+    [ -d "$mp" ] || mkdir -p "$mp" 2>/dev/null || log_err "Failed to recreate mountpoint dir $mp"
+  done < /etc/fstab
+fi
+
+# Inform which cleaned paths are still present in /etc/fstab — their devices will be
+# remounted (empty, since we wiped them) on next boot. This is informational only.
+FSTAB_HITS=()
+for p in "${PATHS_TO_REMOVE[@]}" /var/lib/bashible; do
+  while IFS= read -r hit; do
+    FSTAB_HITS+=("$hit")
+  done < <(grep -sF "$p" /etc/fstab 2>/dev/null | grep -v '^\s*#')
+done
+
+if [ "${#FSTAB_HITS[@]}" -gt 0 ]; then
+  echo ""
+  echo "################################################################################"
+  echo "# NOTE: the following paths are present in /etc/fstab and will be remounted on"
+  echo "# next boot:"
+  for p in "${FSTAB_HITS[@]}"; do
+    echo "#   $p"
+  done
+  echo "################################################################################"
+  echo ""
+fi
+
+log_info "Cleanup completed successfully, restoring MOTD"
 restore_motd_message
+
+# Remove the script (and the rest of /var/lib/bashible) last, only once we are
+# committed to rebooting — every earlier exit path keeps it on disk for a rerun.
+remove_path /var/lib/bashible/
+
+log_info "Rebooting"
 shutdown -r -t 5
 EOF
 {{- end }}
