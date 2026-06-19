@@ -797,6 +797,12 @@ func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx contex
 		c.logGuestAttempt("request-build-error", ip, 0, time.Since(start), err)
 		return guestInventory{}, err
 	}
+	// TODO: revisit whether keep-alive can be re-enabled once the DVP/Cilium
+	// behavior for VM pod IP reuse at migration is documented. Until then,
+	// keep each guest inventory request on its own TCP connection: the VM pod
+	// IP is reused across live migration, so a shared keep-alive connection
+	// can outlive the pod it was opened to.
+	req.Close = true
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		c.logGuestAttempt("http-error", ip, 0, time.Since(start), err)
