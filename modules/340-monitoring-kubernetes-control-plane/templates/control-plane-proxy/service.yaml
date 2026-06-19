@@ -1,29 +1,20 @@
+{{- $profiles := list "main" }}
+{{- if .Values.global.discovery.hasEtcdArbiterNode }}
+  {{- $profiles = append $profiles "etcd-arbiter" }}
+{{- end }}
+
+{{- range $profile := $profiles }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: control-plane-proxy
+  name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy")) | nindent 2 }}
+  {{- $appLabel := print "control-plane-proxy" (if ne $profile "main" (printf "-%s" $profile) "") }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
 spec:
   selector:
-    app: control-plane-proxy
-  ports:
-  - name: https-metrics
-    port: 8080
-    protocol: TCP
-    targetPort: https-metrics
-{{- if $.Values.global.discovery.hasEtcdArbiterNode }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: control-plane-proxy-etcd-arbiter
-  namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy-etcd-arbiter")) | nindent 2 }}
-spec:
-  selector:
-    app: control-plane-proxy-etcd-arbiter
+    app: {{ $appLabel }}
   ports:
   - name: https-metrics
     port: 8080
