@@ -294,6 +294,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-vcd:infra-controller-manager
   - system:serviceaccount:d8-cloud-provider-vsphere:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-vsphere:cloud-data-discoverer
+  - system:serviceaccount:d8-cloud-provider-yandex:capy-controller-manager
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter
@@ -316,6 +317,7 @@ users:
   - system:serviceaccount:d8-ingress-nginx:kruise
   - system:serviceaccount:d8-ingress-nginx:validator
   - system:serviceaccount:d8-ingress-nginx:validator-full
+  - system:serviceaccount:d8-istio:alliance-healthcheck
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
   - system:serviceaccount:d8-istio:cni
@@ -323,6 +325,7 @@ users:
   - system:serviceaccount:d8-istio:kiali
   - system:serviceaccount:d8-istio:multicluster-api-proxy
   - system:serviceaccount:d8-istio:multicluster-metrics-exporter
+  - system:serviceaccount:d8-istio:waypoint-controller
   - system:serviceaccount:d8-istio:ztunnel
   - system:serviceaccount:d8-local-path-provisioner:local-path-provisioner
   - system:serviceaccount:d8-log-shipper:log-shipper
@@ -794,6 +797,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-vcd:infra-controller-manager
       - system:serviceaccount:d8-cloud-provider-vsphere:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-vsphere:cloud-data-discoverer
+      - system:serviceaccount:d8-cloud-provider-yandex:capy-controller-manager
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter
@@ -816,6 +820,7 @@ rules:
       - system:serviceaccount:d8-ingress-nginx:kruise
       - system:serviceaccount:d8-ingress-nginx:validator
       - system:serviceaccount:d8-ingress-nginx:validator-full
+      - system:serviceaccount:d8-istio:alliance-healthcheck
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter
       - system:serviceaccount:d8-istio:cni
@@ -823,6 +828,7 @@ rules:
       - system:serviceaccount:d8-istio:kiali
       - system:serviceaccount:d8-istio:multicluster-api-proxy
       - system:serviceaccount:d8-istio:multicluster-metrics-exporter
+      - system:serviceaccount:d8-istio:waypoint-controller
       - system:serviceaccount:d8-istio:ztunnel
       - system:serviceaccount:d8-local-path-provisioner:local-path-provisioner
       - system:serviceaccount:d8-log-shipper:log-shipper
