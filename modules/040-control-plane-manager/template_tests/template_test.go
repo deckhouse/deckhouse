@@ -399,7 +399,7 @@ apiserver:
 
 				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "d8-control-plane-manager-control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeTrue())
 

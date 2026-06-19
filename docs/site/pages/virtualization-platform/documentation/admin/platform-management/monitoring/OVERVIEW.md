@@ -55,7 +55,7 @@ Detailed description is in the [Ingress monitoring](../../../admin/network/alb-n
 
 ## Control plane monitoring
 
-Control plane monitoring is performed by the `control-plane-manager` module, which organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
+Control plane monitoring is a built-in capability of the `control-plane-manager` module. It organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
 - `kube-apiserver`: API server monitoring and health checks.
 - `kube-controller-manager`: Controller manager operation monitoring.
 - `kube-scheduler`: Scheduler performance and health monitoring.

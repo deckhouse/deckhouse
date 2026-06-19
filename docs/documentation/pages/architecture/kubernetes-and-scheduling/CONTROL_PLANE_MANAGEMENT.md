@@ -109,7 +109,7 @@ The following external components interact with the module:
 
 ## Cluster control plane monitoring
 
-Control plane monitoring is provided by the `control-plane-manager` module, which ensures secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
+Control plane monitoring is provided by this module, which ensures secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
 
 * **kube-apiserver**
 * **kube-controller-manager**
@@ -138,8 +138,8 @@ Control-plane-proxy interacts with the following components:
 
 **Prometheus-main** interacts with **control-plane-proxy** to collect control plane component metrics.
 
-The interaction between the control-plane-proxy component and the cluster control plane is shown in the architecture diagram of the `control-plane-manager` module above.
+The interaction between the control-plane-proxy component and the cluster control plane is shown in the module's architecture diagram above.
 
 ### Metrics collection from kube-apiserver
 
-Metrics from **kube-apiserver** are collected directly by **prometheus-main**. The `control-plane-manager` module adds the corresponding metric collection rules to the **prometheus-main** configuration.
+Metrics from **kube-apiserver** are collected directly by **prometheus-main**. This module adds the corresponding metric collection rules to the **prometheus-main** configuration.

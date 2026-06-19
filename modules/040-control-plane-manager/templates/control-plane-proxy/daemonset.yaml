@@ -44,7 +44,7 @@ spec:
       labels:
         app: control-plane-proxy
     spec:
-      serviceAccountName: control-plane-proxy
+      serviceAccountName: d8-control-plane-manager-control-plane-proxy
       automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

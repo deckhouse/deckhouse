@@ -896,6 +896,25 @@ alerts:
         The parameters specified in ModuleConfig of {{ $labels.cni }} do not match the ones that are actually being used in the cluster.
       severity: "5"
       markupFormat: markdown
+    - name: D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `monitoring-kubernetes-control-plane` module was merged into the `control-plane-manager` module, but its ModuleConfig still exists in the cluster and is no longer used.
+
+        Remove it manually:
+
+        ```bash
+        d8 k delete moduleconfig monitoring-kubernetes-control-plane
+        ```
+
+        If ModuleConfigs are managed via GitOps (e.g. Argo CD or Deckhouse Commander), remove the `monitoring-kubernetes-control-plane` ModuleConfig from the source repository so it is not re-created.
+      summary: |
+        Obsolete monitoring-kubernetes-control-plane ModuleConfig should be removed.
+      severity: "9"
+      markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager

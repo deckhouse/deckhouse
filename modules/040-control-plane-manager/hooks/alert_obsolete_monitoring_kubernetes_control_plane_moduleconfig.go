@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 	"fmt"
-
 	"slices"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
