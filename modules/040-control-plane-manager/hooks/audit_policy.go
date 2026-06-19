@@ -214,8 +214,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		descriptionEN := "Do not log ingress-nginx leader election updates in `ConfigMaps`."
-		descriptionRU := "Не логировать обновления `ConfigMap` ingress-nginx для выборов лидера."
+		descriptionEN := "Do not log ingress-nginx leader election updates in ConfigMaps."
+		descriptionRU := "Не логировать обновления ConfigMap ingress-nginx для выборов лидера."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelNone,
 			Verbs:      []string{"update"},
