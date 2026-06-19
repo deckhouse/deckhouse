@@ -41,6 +41,24 @@
 
     {
       "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-41567",
+        "description": "PUT /containers/{id}/archive can execute a container-provided decompression binary on the host",
+        "name": "CVE-2026-41567",
+        "aliases": [ "GHSA-x86f-5xw2-fm2r" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Moby is an open source container framework. In vulnerable versions, when a compressed archive is uploaded via PUT /containers/{id}/archive (or piped through docker cp -), the daemon may resolve decompression binaries from the container filesystem and execute attacker-controlled binaries with daemon privileges. Deckhouse Kubernetes Platform is not affected because admissionPolicyEngine trivyProvider is a Go binary and does not run, embed, or expose Docker daemon archive APIs.",
+      "timestamp": "2026-06-17T15:25:00Z"
+    },
+
+    {
+      "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33747",
         "description": "Malicious frontend can cause file escape outside of storage root",
         "name": "CVE-2026-33747",
