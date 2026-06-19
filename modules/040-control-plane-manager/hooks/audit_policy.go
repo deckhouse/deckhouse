@@ -338,8 +338,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		descriptionEN := "Log create and delete operations for `ServiceAccount` resources."
-		descriptionRU := "Логировать операции create/delete для ресурсов `ServiceAccount`."
+		descriptionEN := "Log create and delete operations for ServiceAccount resources."
+		descriptionRU := "Логировать операции create/delete для ресурсов ServiceAccount."
 		rule := audit.PolicyRule{
 			Level: audit.LevelMetadata,
 			Resources: []audit.GroupResources{{
