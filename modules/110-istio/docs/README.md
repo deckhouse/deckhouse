@@ -190,11 +190,7 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
 
 It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
 
-{% alert level="warning" %}
-Istio-proxy, running as a sidecar container, consumes resources and adds overhead.
-{% endalert %}
-
-Overhead added by Istio-proxy:
+Istio-proxy, running as a sidecar container, consumes resources and adds the following overhead:
 
 - Any incoming DNAT request is forcibly intercepted by the Envoy proxy. Envoy analyzes the request and forwards it by establishing a new connection. On the receiver side, the process is identical: traffic first reaches the "receiving" Envoy and only then is passed to the application itself.
 - Each Envoy instance stores information about all services in the cluster; therefore, scaling the cluster leads to a linear increase in Envoy's RAM consumption due to storing the full service map. Using the [Sidecar](istio-cr.html#sidecar) CustomResource, the configuration is filtered, and only the necessary minimum of data is delivered to Envoy.
