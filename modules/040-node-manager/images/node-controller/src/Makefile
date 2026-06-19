@@ -55,14 +55,14 @@ lint: ## Run golangci-lint against code.
 test: envtest gotestfmt ## Run unit + envtest in two labeled sections with GitHub-friendly output (CI: GOTESTFMT_CI=github).
 	@assets="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)"; \
 		fmt='$(GOTESTFMT) $(if $(GOTESTFMT_CI),-ci $(GOTESTFMT_CI),) -hide successful-downloads'; \
-		echo ""; echo "════════════════════ UNIT TESTS ════════════════════"; \
+		echo ""; echo "🧪 UNIT TESTS"; echo ""; \
 		KUBEBUILDER_ASSETS="$$assets" go test -json -skip '$(ENVTEST_RUN_REGEX)' -coverprofile cover-unit.out ./... > $(GOTEST_JSON_UNIT) 2>&1; urc=$$?; \
 		eval $$fmt < $(GOTEST_JSON_UNIT); \
-		echo "──> unit coverage: $$(go tool cover -func=cover-unit.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
-		echo ""; echo "════════════════ ENVTEST (INTEGRATION) ════════════════"; \
+		echo "📊 unit coverage: $$(go tool cover -func=cover-unit.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
+		echo ""; echo "☸️  ENVTEST (INTEGRATION) TESTS"; echo ""; \
 		KUBEBUILDER_ASSETS="$$assets" go test -json -run '$(ENVTEST_RUN_REGEX)' -coverprofile cover-envtest.out ./... > $(GOTEST_JSON_ENVTEST) 2>&1; erc=$$?; \
 		eval $$fmt < $(GOTEST_JSON_ENVTEST); \
-		echo "──> envtest coverage: $$(go tool cover -func=cover-envtest.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
+		echo "📊 envtest coverage: $$(go tool cover -func=cover-envtest.out 2>/dev/null | tail -1 | awk '{print $$NF}')"; \
 		echo ""; echo "==> [test] go test cache: unit $$(grep -c '(cached)' $(GOTEST_JSON_UNIT) 2>/dev/null || true) pkg, envtest $$(grep -c '(cached)' $(GOTEST_JSON_ENVTEST) 2>/dev/null || true) pkg reused (changing a package's code invalidates only that package + its importers)"; \
 		rm -f $(GOTEST_JSON_UNIT) $(GOTEST_JSON_ENVTEST); \
 		test $$urc -eq 0 && test $$erc -eq 0
