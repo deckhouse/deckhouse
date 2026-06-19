@@ -19,6 +19,10 @@ package capi
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 const (
@@ -30,6 +34,18 @@ const (
 	clusterUUIDConfigMapName     = "d8-cluster-uuid"
 	clusterUUIDConfigMapNS       = "kube-system"
 )
+
+// BaseWithReader embeds register.Base and adds an uncached APIReader
+// for reading kube-system secrets that are not in the cache.
+type BaseWithReader struct {
+	register.Base
+	APIReader client.Reader
+}
+
+func (b *BaseWithReader) Setup(mgr ctrl.Manager) error {
+	b.APIReader = mgr.GetAPIReader()
+	return nil
+}
 
 func newUnstructured(group, version, kind string) *unstructured.Unstructured {
 	u := &unstructured.Unstructured{}

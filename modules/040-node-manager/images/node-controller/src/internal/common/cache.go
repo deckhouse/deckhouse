@@ -60,7 +60,11 @@ func CacheOptions() (cache.Options, client.Options) {
 							"metadata.name": ConfigurationChecksumsSecretName,
 						}),
 					},
-					"kube-system": {},
+					"kube-system": {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"metadata.name": "d8-node-manager-cloud-provider",
+						}),
+					},
 				},
 			},
 			&mcmv1alpha1.Machine{}: machineNS,

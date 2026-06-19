@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	sigsyaml "sigs.k8s.io/yaml"
 
@@ -44,10 +45,13 @@ func init() {
 // ClusterReconciler creates/ensures CAPI Cluster and MachineHealthCheck resources
 // for both cloud and static node groups.
 type ClusterReconciler struct {
-	register.Base
+	BaseWithReader
 }
 
 func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
+	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() == cloudProviderSecretNamespace && obj.GetName() == cloudProviderSecretName
+	}))
 	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
 		func(_ context.Context, _ client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: types.NamespacedName{
@@ -83,7 +87,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 	logger := log.FromContext(ctx)
 
 	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
+	if err := r.APIReader.Get(ctx, types.NamespacedName{
 		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
 	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {
@@ -174,7 +178,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 		return fmt.Errorf("create MachineHealthCheck: %w", err)
 	}
 
-	logger.Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
+	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
 	return nil
 }
 
@@ -262,7 +266,7 @@ func (r *ClusterReconciler) ensureStaticCluster(ctx context.Context, clusterConf
 		return fmt.Errorf("create static MachineHealthCheck: %w", err)
 	}
 
-	logger.Info("ensured static CAPI cluster resources")
+	logger.V(1).Info("ensured static CAPI cluster resources")
 	return nil
 }
 
@@ -282,7 +286,7 @@ type clusterConfiguration struct {
 
 func (r *ClusterReconciler) readClusterConfiguration(ctx context.Context) (*clusterConfiguration, error) {
 	secret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{
+	if err := r.APIReader.Get(ctx, types.NamespacedName{
 		Name:      clusterConfigSecretName,
 		Namespace: clusterConfigSecretNamespace,
 	}, secret); err != nil {
