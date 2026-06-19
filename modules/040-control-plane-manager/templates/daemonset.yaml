@@ -10,7 +10,7 @@ memory: 10Mi
 
 
 {{- $profiles := list "main" }}
-{{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
+{{- if .Values.global.discovery.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
 {{- end }}
 
