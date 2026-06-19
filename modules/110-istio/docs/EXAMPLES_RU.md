@@ -657,7 +657,7 @@ annotations:
 | Режим | Поведение |
 |-------|-----------|
 | `false` (по умолчанию) | Прежний режим: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в том числе `telemetry.v2.prometheus` для Sail). Модуль всегда создаёт `Telemetry` `d8-main` в `d8-istio` только для access log; без `spec.metrics` / `spec.tracing` и без `defaultProviders.metrics` |
-| `true` | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены; тот же `Telemetry` `d8-main` дополняется `spec.metrics` (и при настроенной трассировке — `spec.tracing` через `deckhouse-tracing` из [`tracing.collector`](configuration.html#parameters-tracing-collector)). Формат журнала — в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) |
+| `true` | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены; тот же `Telemetry` `d8-main` дополняется `spec.metrics` (и при настроенной трассировке — `spec.tracing` через `deckhouse-tracing` из [`tracing.collector`](configuration.html#parameters-tracing-collector)). Формат журнала — [в `dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) |
 
 ### Включение режима Telemetry API
 
@@ -697,7 +697,7 @@ d8 k exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
 
 При включённом модуле [`operator-prometheus`](/modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](/modules/prometheus/). Набор пространств имён под мониторинг вычисляется автоматически по членству в mesh (инъекция Istio); чтобы исключить пространство имён из сборщика метрик, на объект `Namespace` можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
 
-Если в Grafana пустые панели «workload», а control plane в порядке, проверьте:
+Если в Grafana пустые панели «workload», а control plane в порядке, необходимо определить причину отсутствия workload-метрик. Для этого проверьте:
 
 - у подов есть сайдкар и лейбл `service.istio.io/canonical-name`;
 - на пространстве имён приложения нет `istio.deckhouse.io/discard-metrics: "true"`.
@@ -720,7 +720,7 @@ spec:
     - name: prometheus
 ```
 
-Тонкая настройка тегов и отключение отдельных метрик описана в [документации Istio](https://istio.io/latest/docs/tasks/observability/metrics/telemetry-api/).
+Тонкая настройка тегов и отключение отдельных метрик описана [в документации Istio](https://istio.io/latest/docs/tasks/observability/metrics/telemetry-api/).
 
 ### Трассировка через Telemetry API
 
