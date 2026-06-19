@@ -257,12 +257,12 @@ func Test_virtualMachineHasAttachedDisk(t *testing.T) {
 func Test_guestExtraDisk(t *testing.T) {
 	baseline := guestInventory{
 		Disks: []guestDisk{
-			{Device: "/dev/vda", TotalBytes: 1024},
+			{Device: "/dev/vda", SizeBytes: 1024},
 		},
 	}
 	inventory := guestInventory{
 		Disks: []guestDisk{
-			{Device: "/dev/vda", TotalBytes: 1024},
+			{Device: "/dev/vda", SizeBytes: 1024},
 			{Device: "/dev/vdb", SizeBytes: 100 * 1024 * 1024},
 		},
 	}
