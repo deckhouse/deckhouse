@@ -333,7 +333,7 @@ apiVersions:
         description: |
           One or more pre-existing subnets mapped to respective zone.
 
-          > **Warning!** Deckhouse will create a route table that must be manually attached to these subnets. You can only associate one routing table with a given subnet. This means you cannot run multiple clusters using `cni-simple-bridge` in the same subnets. To run multiple clusters in the same network ranges, use `cni-cilium` instead.
+          **Warning.** When using `cni-simple-bridge`, DKP creates a route table that must be manually associated with the specified subnets. Only one route table can be associated with a subnet, so multiple clusters using `cni-simple-bridge` cannot be deployed in the same subnets. Starting with DKP 1.76, new clusters in Yandex Cloud use `cni-cilium` in `VXLAN` mode by default. In this mode, pod traffic routing does not depend on Yandex Cloud route tables.
         x-examples:
           - ru-central1-a: e2lu8r1tbbtryhdpa9ro
             ru-central1-b: e2lu8r1tbbtryhdpa9ro
