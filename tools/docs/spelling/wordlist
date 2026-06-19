@@ -850,6 +850,7 @@ VirtualImage
 VirtualMachine
 VirtualMachineClass
 VirtualMachineIPAddress
+VirtualMachineOperation
 VirtualMachines
 VirtualService
 Virtualization
