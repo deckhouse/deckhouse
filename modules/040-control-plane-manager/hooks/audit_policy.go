@@ -181,8 +181,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	)
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "autoscaling.k8s.io", Resources: []string{"verticalpodautoscalercheckpoints"}},
-		"Do not log `VerticalPodAutoscalerCheckpoints` resources.",
-		"Не логировать ресурсы `VerticalPodAutoscalerCheckpoints`.",
+		"Do not log VerticalPodAutoscalerCheckpoints resources.",
+		"Не логировать ресурсы VerticalPodAutoscalerCheckpoints.",
 	)
 
 	{
