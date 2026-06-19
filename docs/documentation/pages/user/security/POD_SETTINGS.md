@@ -32,6 +32,7 @@ On this page we will look at the basic parameters that are used most often:
 And let’s look at each parameter: what it is responsible for, how to choose the right value for it, and how it works in practice.
 
 ## `runAsUser`
+
 The `runAsUser` (run as user) parameter specifies a specific digital user ID (`UID`) under which all processes within the container will run.
 
 It directly controls the access rights of processes in the Linux operating system. Using this option, you can forcefully remove superuser (root) rights from the application at the kernel level, even if the Docker image itself was not built correctly in the first place.
@@ -55,7 +56,7 @@ Why this is important for security: Running processes with a non-root UID (any n
 Important caveats: if you specify a random UID (for example, 2000), this user inside the container may not have rights to read the files of the application itself if they were copied into the image with root:root rights. Developers need to prepare Docker images in advance (by CHOWNing working directories) so that the application can successfully run under a non-root user.
 {% endalert %}
 
-###Parameter location
+### Parameter location
 
 The parameter can be set for the entire Pod at once (the settings will be inherited by all containers), or individually for a specific container (has a higher priority):
 
@@ -63,6 +64,7 @@ The parameter can be set for the entire Pod at once (the settings will be inheri
 * `spec.containers[].securityContext.runAsUser` (for a specific container)
 
 ### Available parameter values
+
 The parameter accepts a positive integer (`integer`), which is a UID in Linux.
 The following options are available:
 
@@ -70,6 +72,7 @@ The following options are available:
 * `1000` and higher (up to `65535` or `4294967295` depending on the architecture) - run as a regular user (it is recommended to select random high IDs, for example 10001, to avoid matches with system UIDs on the host).
 
 ### Examples
+
 Force the container to run as a non-root user with UID 10001:
 
 ```yaml
@@ -105,7 +108,7 @@ Why is this important for security: this parameter serves as a “safety cushion
 Important nuances: some Docker images use text usernames instead of digital UIDs (for example, USER nginx). If the image does not have a name/ID mapping table (/etc/passwd) configured, kubelet will not be able to determine the numeric UID during provisioning and will lock the container even if that user is not root. To avoid this problem, the best practice is to use `runAsNonRoot: true` and an explicit digital ID through `runAsUser` together.
 {% endalert %}
 
-###Parameter location
+### Parameter location
 
 The parameter can be set at the level of the entire Pod (applies to all containers) or overridden for each container individually:
 
@@ -121,6 +124,7 @@ The following values ​​are available:
 * `true` - running as root is strictly prohibited (recommended for all application applications).
 
 ### Examples
+
 A robust configuration that disables running as root and forces a secure UID:
 
 ```yaml
@@ -153,13 +157,15 @@ Why this is important for security: Fixing a non-root `GID` (other than 0) preve
 Important nuances: just as in the case of `runAsUser`, specifying a random GID can lead to `Permission denied` errors at startup if the application binaries inside the Docker image are owned exclusively by the root group and are not readable by others. The image must be designed taking into account that the application will run under a non-standard group.
 {% endalert %}
 
-###Parameter location
+### Parameter location
+
 The parameter can be set globally for the entire Pod or individually for each container in the manifest:
 
 * `spec.securityContext.runAsGroup` (for the entire Pod)
 * `spec.containers[].securityContext.runAsGroup` (for a specific container)
 
 ### Available parameter values
+
 The parameter accepts a positive integer (`integer`), which is `GID` on Linux.
 The following options are available:
 
@@ -167,6 +173,7 @@ The following options are available:
 * `1000` and higher (up to `4294967295`) - assigning a non-root group (it is recommended to select high values, for example `10002`, consistent with your rights delimitation policy).
 
 ### Examples
+
 Setting up a Pod where processes are guaranteed to run under a non-root user and are part of a dedicated safe group:
 
 ```yaml
@@ -201,12 +208,14 @@ Why this is important for security: This option implements the concept of immuta
 Important nuances: most modern applications (as well as system libraries inside the image) cannot start if they are completely prohibited from writing temporary data (for example, PID files, caches or logs). To prevent the application from crashing with an error at startup, all paths necessary for recording (such as `/tmp`, `/var/run`, `/cache`) must be point-mounted as temporary RAM disks using the `emptyDir` mechanisms directly in the Kubernetes manifest.
 {% endalert %}
 
-###Parameter location
+### Parameter location
+
 The parameter is set exclusively at the level of a specific container:
 
 - `spec.containers[].securityContext.readOnlyRootFilesystem`
 
 ### Available parameter values
+
 The parameter is of boolean type.
 The following values ​​are available:
 
@@ -233,6 +242,7 @@ spec:
 ```
 
 ## `fsGroup`
+
 The `fsGroup` (file system group) parameter defines a special numeric identifier of the Linux group (`GID`) to which all permanent volumes mounted to the Pod will be forced to belong.
 It manages access rights to external drives at the host and container file system level. With it, Kubernetes automatically resolves the permissions compatibility issue by allowing non-root processes to seamlessly read and write data to mounted storage without the need for excessive administrative rights.
 
@@ -256,7 +266,7 @@ Why this is important for security: This option eliminates the need to run conta
 Important nuances: by default, every time the Kubernetes Pod is restarted, it recursively traverses all files on the mounted disk to check and change their `GID`. If there are millions of small files stored on the database disk, this process can take tens of minutes, causing the Pod to hang in the `ContainerCreating` status. To correct this behavior, `fsGroup` must be used in conjunction with the `fsGroupChangePolicy: OnRootMismatch` option.
 {% endalert %}
 
-###Parameter location
+### Parameter location
 
 The setting is set exclusively at the level of the entire Pod, since volumes are mounted to the Pod as a whole:
 - `spec.securityContext.fsGroup`
@@ -270,6 +280,7 @@ The following options are available:
 * `1000` and higher (up to `4294967295`) - dedicated group identifier for disk sharing (recommended).
 
 ### Examples
+
 Setting up a Pod where a non-root container gets automatic secure access to a mounted persistent volume:
 
 ```yaml
@@ -288,6 +299,7 @@ spec:
     persistentVolumeClaim:
       claimName: db-pvc
 ```
+
 ## `supplementalGroups`
 
 The `supplementalGroups` parameter specifies a list of additional Linux numeric group IDs (`GID`) that will be forced to be added to the container process in addition to its main group.
@@ -301,12 +313,14 @@ Additional groups (GID): `[40001, 40002]` (from `supplementalGroups`)
 
 If there are files on a mounted disk or inside a container that belong to the `40001` group, a process with this configuration will be able to read or modify them without difficulty (depending on standard UNIX file permissions) because it is a legitimate member of that group.
 
-###Parameter location
+### Parameter location
+
 The setting is set exclusively at the level of the entire Pod, since the list of additional groups applies to all containers (including init containers) within the Pod:
 
 * `spec.securityContext.supplementalGroups`
 
 ### Available parameter values
+
 The parameter accepts a list of positive integers (array of integer) representing the Linux system `GID`.
 The following options are available:
 
@@ -323,6 +337,7 @@ Important details:
 {% endalert %}
 
 ### Example
+
 A pod whose process runs as a non-root user and accesses two different shared stores through additional groups 40001 and 40002:
 
 ```yaml
@@ -349,8 +364,8 @@ spec:
         claimName: shared-logs-pvc
 ```
 
-
 ## `fsGroupChangePolicy`
+
 The `fsGroupChangePolicy` (Volume Group Change Policy) setting determines how Kubernetes will check and change the ownership (`GID`) of files on mounted disks when the Pod starts.
 It directly controls the behavior of the kubelet agent during the initialization phase of stores. Using this parameter, you can optimize the startup time of applications that work with large amounts of data, preventing long cluster downtimes.
 
@@ -372,12 +387,14 @@ Why this is important for security and stability: This option addresses the crit
 Important nuances: the `OnRootMismatch` policy is not supported by all types of storage (although it works perfectly with standard `PersistentVolumeClaims` based on block and network devices, such as AWS EBS, Ceph RBD or local disks). Additionally, if files within a volume were manually created by a third-party process with different GIDs, smart checking against the root folder may not notice hidden discrepancies in the permissions of deeper subdirectories.
 {% endalert %}
 
-###Parameter location
+### Parameter location
+
 The setting is set exclusively at the level of the entire Pod, since volumes are mounted to the Pod as a whole:
 
 * `spec.securityContext.fsGroupChangePolicy`
 
 ### Available parameter values
+
 The parameter is of string type.
 The following values ​​are available:
 
@@ -385,6 +402,7 @@ The following values ​​are available:
 * `OnRootMismatch` - change rights recursively only if the rights of the volume root directory do not match the `fsGroup` parameter (recommended for databases and large storages).
 
 ### Examples
+
 Optimized configuration for quick launch of a Pod with a database and a terabyte disk:
 
 ```yaml
@@ -414,6 +432,7 @@ It controls the behavior of the AppArmor system security module running on the c
 The list of allowed actions is generated by creating a special file - the `AppArmor` profile on the host node in the `/etc/apparmor.d` directory.
 A profile is a text structure that specifies detailed rules for access to the file system, network, and system calls.
 Example:
+
 ```shell
 profile k8s-apparmor-example-deny-write flags=(attach_disconnected) {
   include <abstractions/base>
@@ -426,6 +445,7 @@ profile k8s-apparmor-example-deny-write flags=(attach_disconnected) {
   audit deny /etc/** w,
 }
 ```
+
 There are three types of profiles:
 
 1. Built-in runtime profile - `RuntimeDefault`. Contains a basic set of containerization restrictions that are optimal for most tasks.
@@ -434,7 +454,7 @@ There are three types of profiles:
 
 Why it's important for security: `AppArmor` provides a powerful additional layer of isolation and protection against zero-day vulnerabilities. If an attacker has obtained code execution in a container and even elevated his rights to root, a hard `AppArmor` profile will prevent him from changing application configuration files, reading host secrets, or executing dangerous system utilities.
 
-###Parameter location
+### Parameter location
 
 The parameter is set:
 
@@ -442,6 +462,7 @@ The parameter is set:
 * at the container level: `spec.containers[].securityContext.appArmorProfile`
 
 ### Available parameter values
+
 Basic values ​​of type:
 
 * `RuntimeDefault` — default container runtime profile (usually the recommended option);
@@ -462,7 +483,6 @@ The syntax required constructing a composite key containing the exact name of th
 Critical flaw in the legacy format: The API server did not validate typos in the container name inside the annotation. If the name was misspelled, Kubernetes would silently launch the container without any AppArmor protection at all. When updating clusters to versions 1.30+, this format must be forced to be rewritten to the new `securityContext.appArmorProfile`.
 {% endalert %}
 
-
 ### Example
 
 A pod using a custom AppArmor profile named k8s-apparmor-example-deny-write, which was pre-loaded into the OS on the cluster nodes:
@@ -481,7 +501,6 @@ spec:
           type: Localhost
           localhostProfile: k8s-apparmor-example-deny-write # Exact profile name loaded in the node OS kernel
 ```
-
 
 ## `seccompProfile`
 
@@ -523,7 +542,7 @@ There are three types of profiles:
 
 Why this is important for security: The fewer syscalls allowed, the smaller the attack surface. Even if an attacker has obtained code execution in the container, disabling critical syscalls can limit the development of the attack.
 
-###Parameter location
+### Parameter location
 
 The parameter is set:
 
@@ -569,6 +588,7 @@ The SELinux security context is a colon-separated string that consists of four m
 
 In Kubernetes, these components are passed to the container runtime through a special parameter structure.
 Example component structure:
+
 ```shell
 User:   system_u     # SELinux system user
 Role:   system_r     # SELinux system role for processes
@@ -580,7 +600,8 @@ In most cases, container runtimes (`containerd`, `CRI-O`) automatically generate
 
 Why this is important for security: SELinux provides strong isolation at the host file system level and interprocess communication. If an attacker compromises an application inside a container, SELinux will block any attempts to read foreign files on the host (for example, in the `/var/lib/kubelet/pods/` directory), access host sockets, or access devices in `/dev`, preventing escape from the container (`Container Escape`).
 
-###Parameter location
+### Parameter location
+
 The parameter is set:
 
 * at Pod level: `spec.securityContext.seLinuxOptions`
@@ -600,6 +621,7 @@ Important nuances: by default, Kubernetes automatically labels (executes `relabe
 {% endalert %}
 
 ### Example
+
 A pod launched with a strictly fixed SELinux context for working with a specialized data type and shared directory:
 
 ```yaml
@@ -633,7 +655,7 @@ Here are the most common of them:
 
 Why this is important for security: Capabilities implement the principle of least privilege. With its help, you can give the user one specific kernel privilege without giving full root access, or take away some privileges from the root user.
 
-###Parameter location
+### Parameter location
 
 The parameter consists of two parts:
 - `Drop` - list of privileges that will be denied to the container;
@@ -745,7 +767,7 @@ Why this is important for security: Even if the container is running as user `ro
 Important nuances: if you make the container's file system read-only (`readOnlyRootFilesystem: true`), this indirectly prevents an attacker from creating his own SUID file, but does not protect against the use of utilities already existing in the image.
 {% endalert %}
 
-###Parameter location
+### Parameter location
 
 The parameter is set at the container level:
 
@@ -792,19 +814,19 @@ Why this is important for security: The `privileged: true` flag is the biggest s
 Important nuances: this flag is strictly contraindicated for ordinary business applications. It is required exclusively for cluster system components: network plugins (`CNI`), storage drivers (`CSI`) or low-level monitoring agents.
 {% endalert %}
 
-###Parameter location
+### Parameter location
 
 The parameter is set at the container level:
 
 - `spec.containers[].securityContext.privileged`
 
 ### Available parameter values
+
 The parameter is of boolean type.
 The following values ​​are available:
 
 - `false` — privileged mode disabled (default value, recommended for security);
 - `true` — privileged mode is enabled.
-
 
 ### Examples
 
@@ -824,7 +846,6 @@ spec:
 The `procMount` (mount type `/proc`) parameter determines how subdirectories of the `/proc` system file system will be mounted inside the container.
 It directly controls the system information isolation level of the Linux kernel. This option allows you to disable standard Kubernetes protection masks that hide critical and potentially dangerous host system paths from container processes.
 
-
 How /proc masking works in Linux.
 
 The `/proc` file system in Linux is a window into the kernel - through it you can not only read system metrics, but also change OS configuration parameters on the fly. By default, container runtimes (`containerd`, `CRI-O`) use protection masks (`MaskedPaths`) that hide or make read-only critical paths (for example, `/proc/sys`, `/proc/sysrq-trigger`, `/proc/scsi`).
@@ -843,7 +864,8 @@ Why this is important for security: Setting the value to `Unmasked` allows direc
 Important nuances: the use of the `Unmasked` type is required extremely rarely. Its main use case is running specialized tools inside containers, such as image collectors (`Knative`, `Tekton`) or nested containers (`Nested Containerization`), which require full, unmodified access to `/proc` subsystems for process emulation.
 {% endalert %}
 
-###Parameter location
+### Parameter location
+
 The parameter is set at the container level:
 
 * `spec.containers[].securityContext.procMount`
@@ -857,6 +879,7 @@ The following values ​​are available:
 * `Unmasked` - disables protective masks and provides full access to /proc.
 
 ### Examples
+
 Disabling /proc protections for a custom collector container:
 
 ```yaml
@@ -878,7 +901,7 @@ It directly controls the behavior of the network stack, memory, and virtual file
 On the Linux operating system, the `sysctl` utility allows you to change the kernel configuration while the system is running through the `/proc/sys/` interface. Kernel settings are divided into isolated (at the container namespace level) and global (affecting the entire physical node).
 Example: By default, the maximum number of pending connections in the queue (`somaxconn`) is limited to a small system value. A heavily loaded `Nginx` traffic balancer may not have enough of this, causing it to start dropping packets. Using `sysctls`, a container can be individually allocated an increased queue size.
 
-*What happens when sysctls is configured*
+### What happens when sysctls is configured
 
 Kubernetes divides all parameters into two categories that require different levels of trust. In this case:
 
@@ -893,7 +916,8 @@ Why this is important for security: Uncontrolled use of insecure `sysctls` can r
 Important nuances: there are only a few secure kernel parameters in Kubernetes (mainly `kernel.shm_rmid_forced` and part of the network parameters `net.ipv4.*` for the container’s local network). If you need to use an Unsafe setting, the best practice is to move such applications to separate, isolated groups of nodes (`Dedicated Node Pools`) using taints and tolerations to minimize the risk to the rest of the cluster.
 {% endalert %}
 
-###Parameter location
+### Parameter location
+
 Unlike previous options, this parameter is set exclusively at the level of the entire PodSpec, and not a specific container:
 
 * `spec.securityContext.sysctls`
