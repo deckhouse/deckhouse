@@ -4,7 +4,7 @@ Prevent sending empty shared bandwidth identifier in HTTP requests to create EIP
 
 ## 001-go-mod.patch
 
-Update dependencies
+Bump go.mod dependencies to fix known CVEs.
 
 ### 002-fix-cluster-name-handling.patch
 
@@ -21,3 +21,7 @@ Fix providerID format and exclude 127.0.0.0/8 in node IP selections
 ### 005-default-lb-class-and-algorithm.patch
 
 Add default values for `elb.class` (`shared`) and `lb-algorithm` (`ROUND_ROBIN`) so that LoadBalancer services work without requiring these annotations to be set explicitly.
+
+### 006-use-leases-resource-lock.patch
+
+Use `LeasesResourceLock`, which is supported by the patched Kubernetes client libraries.
