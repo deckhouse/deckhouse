@@ -51,6 +51,10 @@ spec:
         - name: PILOT_HTTP10
           value: "1"
   {{- end }}
+  {{- range $name, $value := $.Values.istio.controlPlane.extraEnvs }}
+        - name: {{ $name }}
+          value: {{ $value | quote }}
+  {{- end }}
 {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 8 }}
 
     ingressGateways:
@@ -89,6 +93,7 @@ spec:
           {{- end }}
         {{- end }}
       name: main-access-log-format
+{{- include "istioUserExtensionProviders" $ | nindent 4 }}
 
     # The rules below exclude upmeter-related namespaces from istiod's point of view.
     # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
@@ -203,6 +208,10 @@ spec:
 
     pilot:
       autoscaleEnabled: false
+  {{- with $.Values.istio.jwksResolverAdditionalRootCA }}
+      jwksResolverExtraRootCA: |-
+{{ . | indent 8 }}
+  {{- end }}
       env:
         PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER: false
         PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER: false
