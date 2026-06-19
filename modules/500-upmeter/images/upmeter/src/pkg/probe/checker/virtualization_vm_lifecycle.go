@@ -775,12 +775,16 @@ func (c *virtualMachineLifecycleChecker) waitGuestExtraDiskDetached(ctx context.
 }
 
 func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx context.Context) (guestInventory, error) {
+	start := time.Now()
 	ip, err := c.virtualMachineIPAddress(ctx)
 	if err != nil {
+		c.logGuestAttempt("ip-resolve-error", "", 0, time.Since(start), err)
 		return guestInventory{}, err
 	}
 	if ip == "" {
-		return guestInventory{}, fmt.Errorf("VirtualMachine %q has empty status.ipAddress", virtualizationVMName)
+		err = fmt.Errorf("VirtualMachine %q has empty status.ipAddress", virtualizationVMName)
+		c.logGuestAttempt("empty-ip", "", 0, time.Since(start), err)
+		return guestInventory{}, err
 	}
 
 	url := fmt.Sprintf("http://%s:%d/json", ip, virtualizationVMHTTPGuestPort)
@@ -790,22 +794,47 @@ func (c *virtualMachineLifecycleChecker) virtualMachineGuestInventory(ctx contex
 
 	req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, url, nil)
 	if err != nil {
+		c.logGuestAttempt("request-build-error", ip, 0, time.Since(start), err)
 		return guestInventory{}, err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		c.logGuestAttempt("http-error", ip, 0, time.Since(start), err)
 		return guestInventory{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return guestInventory{}, fmt.Errorf("guest inventory returned status %s", resp.Status)
+		err = fmt.Errorf("guest inventory returned status %s", resp.Status)
+		c.logGuestAttempt("bad-status", ip, resp.StatusCode, time.Since(start), err)
+		return guestInventory{}, err
 	}
 	var inventory guestInventory
 	if err := json.NewDecoder(resp.Body).Decode(&inventory); err != nil {
+		c.logGuestAttempt("decode-error", ip, resp.StatusCode, time.Since(start), err)
 		return guestInventory{}, err
 	}
+	c.logGuestAttempt("ok", ip, resp.StatusCode, time.Since(start), nil)
 	return inventory, nil
+}
+
+// logGuestAttempt logs each guest HTTP attempt for debugging intermittent
+// failures (especially after live migration). Kept lightweight: one line per
+// attempt with IP, HTTP status, elapsed and error.
+func (c *virtualMachineLifecycleChecker) logGuestAttempt(outcome, ip string, statusCode int, elapsed time.Duration, err error) {
+	if c.logger == nil {
+		return
+	}
+	fields := logrus.Fields{
+		"outcome":     outcome,
+		"ip":          ip,
+		"status_code": statusCode,
+		"elapsed_ms":  elapsed.Milliseconds(),
+	}
+	if err != nil {
+		fields["error"] = err.Error()
+	}
+	c.logger.WithFields(fields).Info("guest inventory attempt")
 }
 
 func (c *virtualMachineLifecycleChecker) waitVirtualMachineMigrationCompleted(ctx context.Context, initialNode string) error {
