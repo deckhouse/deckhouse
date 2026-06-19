@@ -8,11 +8,14 @@ LOCALBIN ?= $(shell pwd)/bin
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 # Kubebuilder assets version for the envtest integration suite.
 ENVTEST_K8S_VERSION ?= 1.34.1
-# gotestsum renders go test -json into readable output. Pinned to match the repo-root Makefile.
-GOTESTSUM ?= $(LOCALBIN)/gotestsum
-GOTESTSUM_VERSION ?= v1.13.0
-# Output format: pkgname = one line per package (clean); override e.g. GOTESTSUM_FORMAT=standard-verbose to debug.
-GOTESTSUM_FORMAT ?= pkgname
+# gotestfmt (GoTestTools) renders go test -json into GitHub Actions collapsible groups.
+GOTESTFMT ?= $(LOCALBIN)/gotestfmt
+GOTESTFMT_VERSION ?= v2.5.0
+# CI sets GOTESTFMT_CI=github to emit ::group:: collapsible output; empty locally for plain output.
+GOTESTFMT_CI ?=
+# Raw go test -json log, captured to a file so the go test exit code survives (gotestfmt is only a
+# formatter; piping into it would otherwise mask a test failure behind gotestfmt's exit code).
+GOTEST_JSON ?= /tmp/node-controller-gotest.json
 
 # Go tools
 CONTROLLER_GEN = $(GOBIN)/controller-gen
@@ -46,12 +49,15 @@ lint: ## Run golangci-lint against code.
 	golangci-lint run ./...
 
 .PHONY: test
-test: envtest gotestsum ## Run the whole unit + envtest suite with coverage (CI: GOTESTSUM_FORMAT=github-actions).
-	@echo "==> [test] running gotestsum --format $(GOTESTSUM_FORMAT) (unit + envtest)..."
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-		$(GOTESTSUM) --format $(GOTESTSUM_FORMAT) --format-hide-empty-pkg -- ./... -coverprofile cover.out
-	@echo "==> [test] total coverage:"
-	@go tool cover -func=cover.out | tail -1
+test: envtest gotestfmt ## Run unit + envtest with GitHub-friendly output (CI: GOTESTFMT_CI=github).
+	@echo "==> [test] running go test -json | gotestfmt (unit + envtest)..."
+	@KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+		go test -json -coverprofile cover.out ./... > $(GOTEST_JSON) 2>&1; rc=$$?; \
+		$(GOTESTFMT) $(if $(GOTESTFMT_CI),-ci $(GOTESTFMT_CI),) -hide empty-packages,successful-downloads < $(GOTEST_JSON); \
+		echo "==> [test] go test result cache: $$(grep -c '(cached)' $(GOTEST_JSON) 2>/dev/null || true) package(s) reused, the rest re-ran (changing a package's code invalidates only that package + its importers)"; \
+		echo "==> [test] total coverage:"; go tool cover -func=cover.out 2>/dev/null | tail -1; \
+		rm -f $(GOTEST_JSON); \
+		exit $$rc
 
 .PHONY: test-envtest
 test-envtest: envtest ## Run every controller's envtest suite (ENVTEST_DEBUG=1 dumps state before/after each spec; ENVTEST_LOGS=1 adds controller logs).
@@ -126,13 +132,13 @@ $(ENVTEST): $(LOCALBIN)
 		GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest; \
 	}
 
-.PHONY: gotestsum
-gotestsum: $(GOTESTSUM) ## Install gotestsum locally if necessary.
+.PHONY: gotestfmt
+gotestfmt: $(GOTESTFMT) ## Install gotestfmt locally if necessary.
 
-$(GOTESTSUM): $(LOCALBIN)
-	@test -s $(GOTESTSUM) || { \
-		echo "==> [gotestsum] installing gotestsum $(GOTESTSUM_VERSION)..."; \
-		GOBIN=$(LOCALBIN) go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION); \
+$(GOTESTFMT): $(LOCALBIN)
+	@test -s $(GOTESTFMT) || { \
+		echo "==> [gotestfmt] installing gotestfmt $(GOTESTFMT_VERSION)..."; \
+		GOBIN=$(LOCALBIN) go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@$(GOTESTFMT_VERSION); \
 	}
 
 ##@ Deployment

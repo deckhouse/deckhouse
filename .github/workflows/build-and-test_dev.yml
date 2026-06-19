@@ -3165,7 +3165,7 @@ jobs:
           mkdir -p ~/envtest-assets ~/go-build-cache-node-controller
           # On-runner cache status — MISS means this run will download/recompile (debugging aid;
           # emitted as GitHub annotations so a cold runner is easy to spot).
-          for entry in "envtest-assets|$HOME/envtest-assets/k8s" "setup-envtest|$HOME/envtest-assets/setup-envtest" "gotestsum|$HOME/envtest-assets/gotestsum" "go-build|$HOME/go-build-cache-node-controller"; do
+          for entry in "envtest-assets|$HOME/envtest-assets/k8s" "setup-envtest|$HOME/envtest-assets/setup-envtest" "gotestfmt|$HOME/envtest-assets/gotestfmt" "go-build|$HOME/go-build-cache-node-controller"; do
             name="${entry%%|*}"; path="${entry#*|}";
             if [ -e "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ]; then
               echo "::notice::cache HIT  ${name}";
@@ -3177,7 +3177,7 @@ jobs:
           # GOFLAGS=-buildvcs=false: the tests don't need a git stamp, so go won't shell out to git —
           # this lets us skip installing git into the image (saves ~30s/run) and the safe.directory dance.
           CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-pkg-cache:/go/pkg -v ~/envtest-assets:/envtest-assets -v ~/go-build-cache-node-controller:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
-          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets"
+          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets GOTESTFMT_CI=github"
           docker rm -f ${CONTAINER_ID}
     # </template: tests_node_controller_envtest_template>
 
