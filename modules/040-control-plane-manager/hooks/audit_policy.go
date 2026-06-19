@@ -297,8 +297,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		descriptionEN := "Log create/update/patch/delete operations for `Pod` resources."
-		descriptionRU := "Логировать операции create/update/patch/delete для ресурсов `Pod`."
+		descriptionEN := "Log create/update/patch/delete operations for Pod resources."
+		descriptionRU := "Логировать операции create/update/patch/delete для ресурсов Pod."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{{
