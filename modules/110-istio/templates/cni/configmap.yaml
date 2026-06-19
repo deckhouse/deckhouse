@@ -61,6 +61,7 @@ data:
   REPAIR_BROKEN_POD_LABEL_KEY: "cni.istio.io/uninitialized"
   REPAIR_BROKEN_POD_LABEL_VALUE: "true"
   {{- if semverCompare ">= 1.27.0" $fullVersion }}
+  # upstream defaults (not implemented yet)
   ISTIO_OWNED_CNI_CONFIG: "false"
   NATIVE_NFTABLES: "false"
   {{- end }}
