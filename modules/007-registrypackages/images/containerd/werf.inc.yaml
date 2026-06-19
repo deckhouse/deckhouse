@@ -131,7 +131,7 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  - pm install erofs-utils coreutils dm-verity
+  - pm install erofs-utils coreutils cryptsetup
   - mkdir -p /out
   install:
   - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
