@@ -133,6 +133,19 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		return nil
 	}
 
+	// The hash for template/MD names includes the instance class checksum so that
+	// changing InstanceClass triggers a rolling update (new template + new MD name).
+	// Helm creates the infra template and stamps the checksum as an annotation.
+	// We read it back to stay consistent.
+	instanceClassChecksum, err := r.readInstanceClassChecksum(ctx, cloudConfig, ng.Name)
+	if err != nil {
+		return err
+	}
+	if instanceClassChecksum == "" {
+		logger.Info("skipping: infrastructure template not found yet, waiting for helm")
+		return nil
+	}
+
 	clusterUUID, err := r.readClusterUUID(ctx)
 	if err != nil {
 		return err
@@ -159,7 +172,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 	}
 
 	for _, zone := range zones {
-		hash := sha256Hash(clusterUUID + zone)
+		hash := sha256Hash(clusterUUID + zone + instanceClassChecksum)
 		mdSuffix := fmt.Sprintf("%s-%s", ng.Name, hash)
 		mdName := mdSuffix
 		if instancePrefix != "" {
@@ -487,6 +500,33 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
 	return cfg.Cloud.Prefix, nil
+}
+
+// readInstanceClassChecksum finds the infrastructure template created by Helm for the given
+// NodeGroup and returns its "checksum/instance-class" annotation. All templates for the same
+// NodeGroup share the same checksum (it depends only on InstanceClass spec, not on zone).
+func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, cloudConfig *cloudProviderConfig, ngName string) (string, error) {
+	templateList := &unstructured.UnstructuredList{}
+	templateList.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   strings.Split(cloudConfig.capiMachineTemplateAPIVersion, "/")[0],
+		Version: strings.Split(cloudConfig.capiMachineTemplateAPIVersion, "/")[1],
+		Kind:    cloudConfig.capiMachineTemplateKind + "List",
+	})
+
+	if err := r.APIReader.List(ctx, templateList,
+		client.InNamespace(common.MachineNamespace),
+		client.MatchingLabels{"node-group": ngName},
+	); err != nil {
+		return "", fmt.Errorf("list infrastructure templates for %s: %w", ngName, err)
+	}
+
+	for i := range templateList.Items {
+		annotations := templateList.Items[i].GetAnnotations()
+		if v, ok := annotations["checksum/instance-class"]; ok && v != "" {
+			return v, nil
+		}
+	}
+	return "", nil
 }
 
 func getMinMax(ng *deckhousev1.NodeGroup) (min, max int32) {
