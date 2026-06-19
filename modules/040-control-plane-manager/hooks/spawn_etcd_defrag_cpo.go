@@ -145,11 +145,6 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	}
 
 	cronSpec := input.Values.Get(etcdDefragScheduleInternalPath).String()
-	if cronSpec == "" {
-		input.Logger.Warn("etcd defrag cronSchedule is empty, skipping")
-		return nil
-	}
-
 	sched, err := cron.Parse("TZ=UTC " + cronSpec)
 	if err != nil {
 		return fmt.Errorf("parse etcd defrag cron schedule %q: %w", cronSpec, err)
