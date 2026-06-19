@@ -63,7 +63,6 @@ func Test_newProbeLister(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
-		{Group: "virtualization", Probe: "vm-creation"},
 		{Group: "virtualization", Probe: "vm-lifecycle"},
 	}
 
@@ -128,7 +127,6 @@ func Test_newProbeLister_with_dynamic(t *testing.T) {
 		{Group: "synthetic", Probe: "dns"},
 		{Group: "synthetic", Probe: "neighbor"},
 		{Group: "synthetic", Probe: "neighbor-via-service"},
-		{Group: "virtualization", Probe: "vm-creation"},
 		{Group: "virtualization", Probe: "vm-lifecycle"},
 	}
 

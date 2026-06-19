@@ -38,26 +38,18 @@ func Test_initVirtualizationTimeouts(t *testing.T) {
 		logrus.New(),
 	)
 
-	assert.Len(t, configs, 2)
+	assert.Len(t, configs, 1)
 
-	creation := configs[0]
-	assert.Equal(t, checker.VirtualizationCreationProbeName, creation.probe)
-	assert.Equal(t, 5*time.Minute, creation.period)
-	creationConfig := creation.config.(checker.VirtualMachineLifecycle)
-	assert.False(t, creationConfig.VerifyLifecycle)
-	assert.Equal(t, "custom", creationConfig.VirtualMachineClassName)
-	assert.Equal(t, 4*time.Minute+30*time.Second, creationConfig.Timeout)
-	assert.Equal(t, 60*time.Second, creationConfig.WaitVirtualDiskTimeout)
-	assert.Equal(t, 30*time.Second, creationConfig.WaitVirtualMachineTimeout)
-
-	lifecycle := configs[1]
+	lifecycle := configs[0]
 	assert.Equal(t, checker.VirtualizationLifecycleProbeName, lifecycle.probe)
-	assert.Equal(t, 15*time.Minute, lifecycle.period)
+	assert.Equal(t, 10*time.Minute, lifecycle.period)
 	lifecycleConfig := lifecycle.config.(checker.VirtualMachineLifecycle)
 	assert.True(t, lifecycleConfig.VerifyLifecycle)
 	assert.Equal(t, "custom", lifecycleConfig.VirtualMachineClassName)
-	assert.Equal(t, 10*time.Minute, lifecycleConfig.Timeout)
-	assert.Equal(t, 2*time.Minute, lifecycleConfig.WaitVirtualDiskTimeout)
-	assert.Equal(t, time.Minute, lifecycleConfig.WaitVirtualMachineTimeout)
-	assert.Equal(t, 2*time.Minute, lifecycleConfig.WaitVirtualMachineMigrationTimeout)
+	assert.Equal(t, 8*time.Minute, lifecycleConfig.Timeout)
+	assert.Equal(t, 50*time.Second, lifecycleConfig.WaitVirtualDiskTimeout)
+	assert.Equal(t, 30*time.Second, lifecycleConfig.WaitVirtualMachineTimeout)
+	assert.Equal(t, 40*time.Second, lifecycleConfig.WaitVirtualMachineMigrationTimeout)
+	assert.Equal(t, 30*time.Second, lifecycleConfig.WaitDeletionTimeout)
+	assert.Equal(t, 30*time.Second, lifecycleConfig.WaitNamespaceDeletedTimeout)
 }

@@ -36,7 +36,7 @@ func Test_virtualImageManifest(t *testing.T) {
 	manifest := virtualImageManifest(
 		"agent-01",
 		"test-ns",
-		VirtualizationCreationProbeName,
+		VirtualizationLifecycleProbeName,
 		"alpine-3-23-bios-base",
 		"https://example.com/alpine.qcow2",
 	)
@@ -50,7 +50,7 @@ func Test_virtualImageManifest(t *testing.T) {
 	assert.Equal(t, "test-ns", metadata["namespace"])
 	labels := metadata["labels"].(map[string]interface{})
 	assert.Equal(t, VirtualizationGroupName, labels["upmeter-group"])
-	assert.Equal(t, VirtualizationCreationProbeName, labels["upmeter-probe"])
+	assert.Equal(t, VirtualizationLifecycleProbeName, labels["upmeter-probe"])
 
 	spec := obj["spec"].(map[string]interface{})
 	dataSource := spec["dataSource"].(map[string]interface{})
@@ -60,7 +60,7 @@ func Test_virtualImageManifest(t *testing.T) {
 }
 
 func Test_virtualDiskManifest(t *testing.T) {
-	manifest := virtualDiskManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-disk", "upmeter-probe")
+	manifest := virtualDiskManifest("agent-01", "test-ns", VirtualizationLifecycleProbeName, "probe-disk", "upmeter-probe")
 
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(manifest), &obj)
@@ -71,7 +71,7 @@ func Test_virtualDiskManifest(t *testing.T) {
 	assert.Equal(t, "test-ns", metadata["namespace"])
 	labels := metadata["labels"].(map[string]interface{})
 	assert.Equal(t, VirtualizationGroupName, labels["upmeter-group"])
-	assert.Equal(t, VirtualizationCreationProbeName, labels["upmeter-probe"])
+	assert.Equal(t, VirtualizationLifecycleProbeName, labels["upmeter-probe"])
 
 	spec := obj["spec"].(map[string]interface{})
 	dataSource := spec["dataSource"].(map[string]interface{})
@@ -81,7 +81,7 @@ func Test_virtualDiskManifest(t *testing.T) {
 }
 
 func Test_virtualMachineManifest(t *testing.T) {
-	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk", "", baselineVMCores, baselineVMCoreFraction, baselineVMMemory)
+	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationLifecycleProbeName, "probe-vm", "probe-disk", "", baselineVMCores, baselineVMCoreFraction, baselineVMMemory)
 
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(manifest), &obj)
@@ -91,7 +91,7 @@ func Test_virtualMachineManifest(t *testing.T) {
 	assert.Equal(t, "probe-vm", metadata["name"])
 	labels := metadata["labels"].(map[string]interface{})
 	assert.Equal(t, VirtualizationGroupName, labels["upmeter-group"])
-	assert.Equal(t, VirtualizationCreationProbeName, labels["upmeter-probe"])
+	assert.Equal(t, VirtualizationLifecycleProbeName, labels["upmeter-probe"])
 
 	spec := obj["spec"].(map[string]interface{})
 	assert.NotContains(t, spec, "virtualMachineClassName")
@@ -112,7 +112,7 @@ func Test_virtualMachineManifest(t *testing.T) {
 }
 
 func Test_virtualMachineManifest_withVirtualMachineClassName(t *testing.T) {
-	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationCreationProbeName, "probe-vm", "probe-disk", "fast", 2, "10%", "512Mi")
+	manifest := virtualMachineManifest("agent-01", "test-ns", VirtualizationLifecycleProbeName, "probe-vm", "probe-disk", "fast", 2, "10%", "512Mi")
 
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(manifest), &obj)

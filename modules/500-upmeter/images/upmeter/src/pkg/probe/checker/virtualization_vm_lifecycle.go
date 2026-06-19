@@ -41,8 +41,6 @@ import (
 const (
 	// VirtualizationGroupName is the upmeter group name for virtualization probes.
 	VirtualizationGroupName = "virtualization"
-	// VirtualizationCreationProbeName is the probe name for VM creation lifecycle.
-	VirtualizationCreationProbeName = "vm-creation"
 	// VirtualizationLifecycleProbeName is the probe name for VM lifecycle operations.
 	VirtualizationLifecycleProbeName = "vm-lifecycle"
 	// VirtualizationImageName is the VirtualImage name used by VM lifecycle probes.
@@ -136,7 +134,7 @@ func (c VirtualMachineLifecycle) Checker() check.Checker {
 		logger:                            c.Logger,
 		agentID:                           fallbackString(c.AgentID, "unknown"),
 		namespace:                         c.Namespace,
-		probeName:                         fallbackString(c.ProbeName, VirtualizationCreationProbeName),
+		probeName:                         fallbackString(c.ProbeName, VirtualizationLifecycleProbeName),
 		virtualImageName:                  c.VirtualImageName,
 		virtualImageURL:                   c.VirtualImageURL,
 		configuredVirtualMachineClassName: c.VirtualMachineClassName,

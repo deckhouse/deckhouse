@@ -412,15 +412,6 @@ const langPack: LangPack = {
       },
     },
     virtualization: {
-      "vm-creation": {
-        title: "VM creation",
-        description: "Creates VirtualImage, VirtualDisk and VirtualMachine, waits for the VM and guest agent, then cleans up.",
-        reasonUp: "VirtualImage, VirtualDisk and VirtualMachine were created successfully and the VM guest agent became ready",
-        reasonDown: "VirtualImage, VirtualDisk or VirtualMachine creation failed, or the VM guest agent did not become ready",
-        reasonUnknown:
-          "error occurred during VM lifecycle check, kube-apiserver is not available, or previous probe run has not finished",
-        reasonNodata: REASON_AGENTS_STOPPED,
-      },
       "vm-lifecycle": {
         title: "VM lifecycle",
         description: "Creates a temporary VM, verifies migration, attaches an extra disk, resizes it, detaches it, then cleans up.",
