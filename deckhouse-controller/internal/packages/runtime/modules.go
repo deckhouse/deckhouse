@@ -268,6 +268,7 @@ func (r *Runtime) loadModuleConfFromPath(ctx context.Context, path string, embed
 	conf.KubeEventsManager = r.kubeEventsManager
 	conf.MetricStorage = r.metricStorage
 	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
+	conf.GlobalConfigValuesGetter = r.addonModuleManager.GetGlobal().GetConfigValues
 
 	return conf, nil
 }
@@ -300,6 +301,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	conf.KubeEventsManager = r.kubeEventsManager
 	conf.MetricStorage = r.metricStorage
 	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
+	conf.GlobalConfigValuesGetter = r.addonModuleManager.GetGlobal().GetConfigValues
 
 	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {

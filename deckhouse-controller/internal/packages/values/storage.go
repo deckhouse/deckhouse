@@ -17,9 +17,12 @@ package values
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+
+	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 )
@@ -194,6 +197,54 @@ func (s *Storage) ApplyValuesPatch(patch addonutils.ValuesPatch) error {
 
 	s.valuesPatches = addonutils.AppendValuesPatch(s.valuesPatches, patch)
 	return s.calculateResultValues()
+}
+
+// ApplyHookValuesPatch rewrites a hook-produced values patch from the
+// addon-operator hook layout into this storage's flat layout, then applies it.
+//
+// Hooks written for addon-operator receive values nested under a single
+// top-level key (the module's camelCase values key, or "global") and emit patch
+// operations with paths like "/<key>/internal/x". This storage keeps the
+// package's own values flat, so the "/<key>" prefix is stripped before applying.
+// Operations targeting a different subtree (e.g. a module hook patching
+// "/global/...") are ignored because that subtree is owned by another storage.
+func (s *Storage) ApplyHookValuesPatch(patch addonutils.ValuesPatch, key string) error {
+	jsonPrefix := "/" + key
+
+	rewritten := addonutils.ValuesPatch{
+		Operations: make([]*sdkutils.ValuesPatchOperation, 0, len(patch.Operations)),
+	}
+
+	for _, op := range patch.Operations {
+		if op == nil {
+			continue
+		}
+
+		switch {
+		case op.Path == jsonPrefix:
+			// Operation targets the package root itself; map it to the document root.
+			rewritten.Operations = append(rewritten.Operations, &sdkutils.ValuesPatchOperation{
+				Op:    op.Op,
+				Path:  "",
+				Value: op.Value,
+			})
+		case strings.HasPrefix(op.Path, jsonPrefix+"/"):
+			rewritten.Operations = append(rewritten.Operations, &sdkutils.ValuesPatchOperation{
+				Op:    op.Op,
+				Path:  strings.TrimPrefix(op.Path, jsonPrefix),
+				Value: op.Value,
+			})
+		default:
+			// Outside the package's subtree (e.g. global.* from a module hook).
+			continue
+		}
+	}
+
+	if len(rewritten.Operations) == 0 {
+		return nil
+	}
+
+	return s.ApplyValuesPatch(rewritten)
 }
 
 // calculateResultValues merges all value layers and applies patches.

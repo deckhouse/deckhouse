@@ -333,8 +333,16 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	span.SetAttributes(attribute.String("hook", h.GetName()))
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
-	hookConfigValues := m.values.GetSettings()
-	hookValues := m.values.GetValues()
+	// Global hooks are written for the addon-operator layout: they read and patch
+	// values nested under the "global" key (e.g. global.discovery.*). The values
+	// storage keeps global values flat, so we nest them here and strip the prefix
+	// back off the returned patch before applying it.
+	hookConfigValues := addonutils.Values{
+		addonutils.GlobalValuesKey: m.values.GetSettings(),
+	}
+	hookValues := addonutils.Values{
+		addonutils.GlobalValuesKey: m.values.GetValues(),
+	}
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
@@ -363,7 +371,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = m.values.ApplyValuesPatch(*valuesPatch); err != nil {
+		if err = m.values.ApplyHookValuesPatch(*valuesPatch, addonutils.GlobalValuesKey); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}

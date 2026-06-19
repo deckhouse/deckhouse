@@ -80,7 +80,8 @@ type Module struct {
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 	metricStorage     metricsstorage.Storage
 
-	globalValuesGetter GlobalValuesGetter
+	globalValuesGetter       GlobalValuesGetter
+	globalConfigValuesGetter GlobalValuesGetter
 
 	logger *log.Logger
 }
@@ -107,7 +108,8 @@ type Config struct {
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
 	MetricStorage     metricsstorage.Storage // Stores Prometheus metrics emitted by hooks
 
-	GlobalValuesGetter GlobalValuesGetter
+	GlobalValuesGetter       GlobalValuesGetter
+	GlobalConfigValuesGetter GlobalValuesGetter
 }
 
 type GlobalValuesGetter func(prefix bool) addonutils.Values
@@ -132,6 +134,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.kubeEventsManager = cfg.KubeEventsManager
 	m.metricStorage = cfg.MetricStorage
 	m.globalValuesGetter = cfg.GlobalValuesGetter
+	m.globalConfigValuesGetter = cfg.GlobalConfigValuesGetter
 	m.logger = logger
 
 	parsed, err := semver.NewVersion(m.definition.Version)
@@ -313,7 +316,7 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 func (m *Module) GetValues() addonutils.Values {
 	moduleValues := m.values.GetValues()
 	return addonutils.MergeValues(
-		addonutils.Values{"global": m.globalValuesGetter(false)},
+		addonutils.Values{addonutils.GlobalValuesKey: m.globalValues()},
 		moduleValues,
 		addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): moduleValues},
 	)
@@ -510,8 +513,21 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	span.SetAttributes(attribute.String("hook", h.GetName()))
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
-	hookConfigValues := m.values.GetSettings()
-	hookValues := m.values.GetValues()
+	// Module hooks are written for the addon-operator layout: they read values
+	// nested under "global" and the module's own camelCase values key (e.g.
+	// global.modules.https.mode, monitoringPing.https.mode) and emit patches with
+	// the same "/<moduleKey>/..." paths. The values storage keeps the module's
+	// values flat, so we nest them here and strip the prefix back off the patch.
+	moduleKey := addonutils.ModuleNameToValuesKey(m.name)
+
+	hookConfigValues := addonutils.Values{
+		addonutils.GlobalValuesKey: m.globalConfigValues(),
+		moduleKey:                  m.values.GetSettings(),
+	}
+	hookValues := addonutils.Values{
+		addonutils.GlobalValuesKey: m.globalValues(),
+		moduleKey:                  m.values.GetValues(),
+	}
 	hookVersion := h.GetConfigVersion()
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
@@ -540,12 +556,32 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = m.values.ApplyValuesPatch(*valuesPatch); err != nil {
+		if err = m.values.ApplyHookValuesPatch(*valuesPatch, moduleKey); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}
 
 	return nil
+}
+
+// globalValues returns the current global values (without the "global" prefix
+// key), or an empty set when no getter is wired.
+func (m *Module) globalValues() addonutils.Values {
+	if m.globalValuesGetter == nil {
+		return addonutils.Values{}
+	}
+
+	return m.globalValuesGetter(false)
+}
+
+// globalConfigValues returns the current global config values (without the
+// "global" prefix key), or an empty set when no getter is wired.
+func (m *Module) globalConfigValues() addonutils.Values {
+	if m.globalConfigValuesGetter == nil {
+		return addonutils.Values{}
+	}
+
+	return m.globalConfigValuesGetter(false)
 }
 
 // applyHookMetrics applies the batch of Prometheus metric operations a hook
