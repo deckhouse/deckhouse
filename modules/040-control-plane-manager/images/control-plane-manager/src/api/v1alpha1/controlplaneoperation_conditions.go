@@ -33,6 +33,7 @@ const (
 	CPOConditionEtcdClusterJoined    = "EtcdClusterJoined"
 	CPOConditionPodReady             = "PodReady"
 	CPOConditionCertificatesObserved = "CertificatesObserved"
+	CPOConditionSignatureRenewed     = "SignatureRenewed"
 )
 
 const (
@@ -79,6 +80,8 @@ func StepConditionType(step StepName) string {
 		return CPOConditionPodReady
 	case StepCertObserve:
 		return CPOConditionCertificatesObserved
+	case StepRenewSignature:
+		return CPOConditionSignatureRenewed
 	default:
 		return string(step)
 	}

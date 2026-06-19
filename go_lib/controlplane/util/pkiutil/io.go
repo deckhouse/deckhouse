@@ -22,6 +22,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	certutil "k8s.io/client-go/util/cert"
@@ -66,6 +67,46 @@ func loadCert(path string) (*x509.Certificate, error) {
 	// Safely pick the first one because the sender's certificate must come first in the list.
 	// For details, see: https://www.rfc-editor.org/rfc/rfc4346#section-7.4.2
 	return certs[0], nil
+}
+
+// WriteFileAtomically writes data to dst atomically using a write-fsync-rename sequence:
+//  1. A temp file is created in the same directory as dst (same filesystem, so rename is atomic).
+//  2. Data is written and fsynced to ensure it reaches disk before the rename.
+//  3. The temp file is renamed to dst, which is an atomic operation on POSIX systems.
+//
+// This guarantees that dst is never left in a partially written state,
+// even if the process crashes mid-write.
+func WriteFileAtomically(dst string, data []byte, perm os.FileMode) error {
+	dstDir := filepath.Dir(dst)
+	base := filepath.Base(dst)
+
+	tmpFile, err := os.CreateTemp(dstDir, "."+base+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("couldn't create temp file in %q: %w", dstDir, err)
+	}
+
+	tmpPath := tmpFile.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		_ = tmpFile.Close()
+		return fmt.Errorf("couldn't write to temp file: %w", err)
+	}
+
+	if err := tmpFile.Sync(); err != nil {
+		_ = tmpFile.Close()
+		return fmt.Errorf("couldn't sync temp file: %w", err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("couldn't close temp file: %w", err)
+	}
+
+	if err := os.Chmod(tmpPath, perm); err != nil {
+		return fmt.Errorf("couldn't chmod temp file: %w", err)
+	}
+
+	return os.Rename(tmpPath, dst)
 }
 
 func loadKey(path string) (crypto.Signer, error) {

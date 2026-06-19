@@ -101,6 +101,10 @@ func backupFilesForComponent(component controlplanev1alpha1.OperationComponent, 
 		files = append(files, filepath.Join(constants.KubernetesPkiPath, relPath))
 	}
 
+	for _, name := range deps.SignatureFiles {
+		files = append(files, filepath.Join(constants.KubernetesPkiPath, name))
+	}
+
 	for _, kf := range deps.KubeconfigFiles {
 		files = append(files, filepath.Join(kubeconfigDir, string(kf)))
 	}

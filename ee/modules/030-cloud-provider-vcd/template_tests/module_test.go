@@ -24,7 +24,6 @@ const providerID = "vcd"
 const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
 const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
 const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
-const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 // fake *-crd modules are required for backward compatibility with lib_helm library
 // TODO: remove fake crd modules
@@ -934,6 +933,49 @@ node-role.deckhouse.io/control-plane: ""`))
 			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
 			Expect(icmDeployment.Exists()).To(BeTrue())
 			Expect(icmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+		})
+	})
+
+	Context("VCD :: infra-controller-manager HA pod anti-affinity", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesA)
+			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", true)
+			f.HelmRender()
+		})
+
+		It("must set required pod anti-affinity on HA clusters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
+			Expect(icmDeployment.Exists()).To(BeTrue())
+			Expect(icmDeployment.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
+podAntiAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+  - labelSelector:
+      matchLabels:
+        app: infra-controller-manager
+    topologyKey: kubernetes.io/hostname
+`))
+		})
+	})
+
+	Context("VCD :: infra-controller-manager non-HA affinity", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesA)
+			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", false)
+			f.HelmRender()
+		})
+
+		It("must not set pod anti-affinity on single-master clusters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
+			Expect(icmDeployment.Exists()).To(BeTrue())
+			Expect(icmDeployment.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 		})
 	})
 })

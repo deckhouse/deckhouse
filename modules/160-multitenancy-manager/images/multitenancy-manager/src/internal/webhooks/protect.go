@@ -56,12 +56,18 @@ func (p *ProtectValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	writeReview(w, review)
 }
 
-// systemBypassGroups mirror the exemptions Deckhouse uses to protect its own
-// heritage objects (see modules/002-deckhouse validation): cluster components and
-// system controllers must never be blocked by the catalog protection. Without this,
-// the kube-system namespace-controller and garbage-collector cannot delete the
-// controller-owned AvailableClusterResource objects during namespace teardown, which
-// deadlocks namespace deletion.
+// systemBypassUsernames / systemBypassGroups mirror the exemptions Deckhouse uses to protect its own
+// heritage objects (see modules/002-deckhouse validation): cluster components and system/module
+// controllers must never be blocked by these webhooks. They MUST stay in sync with the apiserver-level
+// matchConditions on the webhook configurations (see hooks/configure_grant_*_webhook.go and
+// templates/admission/validation.yaml) so the handler-level backstop and the CEL pre-filter agree —
+// the CEL conditions match by username AND by group, so this check does too.
+var systemBypassUsernames = []string{
+	"system:apiserver",
+	"system:serviceaccount:d8-system:deckhouse",
+	"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager",
+}
+
 var systemBypassGroups = []string{
 	"system:nodes",
 	"system:masters",
@@ -69,9 +75,15 @@ var systemBypassGroups = []string{
 	"system:serviceaccounts:d8-system",
 }
 
-// isSystemRequest reports whether the request comes from a cluster component or
-// system controller that must bypass catalog protection.
+// isSystemRequest reports whether the request comes from a cluster component or system/module
+// controller that must bypass these webhooks. Checks both the username and the groups to match the
+// apiserver-level matchConditions exactly.
 func isSystemRequest(req *admissionv1.AdmissionRequest) bool {
+	for _, u := range systemBypassUsernames {
+		if req.UserInfo.Username == u {
+			return true
+		}
+	}
 	for _, g := range req.UserInfo.Groups {
 		for _, b := range systemBypassGroups {
 			if g == b {
