@@ -419,16 +419,16 @@ shell:
   # build nginx
   - cd "$BUILD_PATH/nginx-$NGINX_VERSION"
 
-  # apply nginx patches
-  - |
-    for PATCH in `ls /patches`;do
-      echo "Patch: $PATCH"
-      if [[ "$PATCH" == *.txt ]]; then
-        patch -p0 < /patches/$PATCH
-      else
-        patch -p1 < /patches/$PATCH
-      fi
-    done
+  # apply nginx patches - patches are already applied in the ingress-nginx-deps
+  #- |
+  #  for PATCH in `ls /patches`;do
+  #    echo "Patch: $PATCH"
+  #    if [[ "$PATCH" == *.txt ]]; then
+  #      patch -p0 < /patches/$PATCH
+  #    else
+  #      patch -p1 < /patches/$PATCH
+  #    fi
+  #  done
 
   - WITH_FLAGS="--with-debug
     --with-compat
