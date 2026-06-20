@@ -1,6 +1,6 @@
 ---
 title: Registry module
-permalink: en/architecture/storage/registry.html
+permalink: en/architecture/deckhouse/registry.html
 search: registry, container registry, direct mode, proxy mode, local mode, unmanaged mode
 description: Architecture of the registry module in Deckhouse Kubernetes Platform.
 ---

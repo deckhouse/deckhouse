@@ -1,6 +1,6 @@
 ---
 title: Модуль registry
-permalink: ru/architecture/storage/registry.html
+permalink: ru/architecture/deckhouse/registry.html
 lang: ru
 search: registry, container registry, хранилище образов, direct mode, proxy mode, local mode, unmanaged mode, режим direct, режим proxy, режим local, режим unmanaged
 description: Архитектура модуля registry в Deckhouse Kubernetes Platform.
