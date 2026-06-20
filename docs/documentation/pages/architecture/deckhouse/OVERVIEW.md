@@ -17,4 +17,3 @@ The Deckhouse subsystem includes the following modules:
 * [`documentation`](/modules/documentation/): Provides a web interface with documentation corresponding to the running DKP version.
 * [`registry`](/modules/registry/): Manages the configuration of DKP components
   responsible for working with the container registry and provides an internal image storage.
-

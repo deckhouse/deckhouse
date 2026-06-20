@@ -17,4 +17,3 @@ extractedLinksMax: 0
 * [`deckhouse-tools`](/modules/deckhouse-tools/) — создает веб-интерфейс для скачивания CLI-утилиты [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/);
 * [`documentation`](/modules/documentation/) — создает веб-интерфейс с документацией, соответствующей запущенной версии DKP;
 * [`registry`](/modules/registry/) — управляет конфигурацией компонентов DKP, отвечающих за работу с хранилищем образов контейнеров, и предоставляет внутреннее хранилище образов.
-
