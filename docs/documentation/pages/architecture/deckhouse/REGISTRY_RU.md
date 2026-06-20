@@ -82,7 +82,7 @@ description: Архитектура модуля registry в Deckhouse Kubernete
 
    * **registry-proxy** — контейнер, собранный на базе стандартного образа [NGINX](https://github.com/nginx/nginx). В контейнере также запускается процесс registry-proxy-reloader, который перезагружает процессы nginx балансировщика при изменении его конфигурации.
 
-1. **Registry-nodeservices-manager** (режимы `Proxy` или `Local`) — контроллер, управляющий жизненным циклом компонентов registry-nodeservices. Registry-nodeservices-manager выполняет следущие операции:
+1. **Registry-nodeservices-manager** (режимы `Proxy` или `Local`) — контроллер, управляющий жизненным циклом компонентов registry-nodeservices. Registry-nodeservices-manager выполняет следующие операции:
 
    * рендерит манифест статического пода registry-nodeservices из шаблонов и сохраняет его в каталоге `/etc/kubernetes` на control plane (master) узлах. [Kubelet](../kubernetes-and-scheduling/kubelet.html) обнаруживает созданные манифесты и запускает статический под registry-nodeservices;
    * сохраняет в каталоге `/etc/kubernetes/registry` на control plane (master) узлах файлы конфигурации, необходимые для работы компонентов registry-nodeservices;
