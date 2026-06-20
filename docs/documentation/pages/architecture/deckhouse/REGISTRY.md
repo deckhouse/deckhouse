@@ -96,7 +96,7 @@ The module consists of the following components:
      * **image-holder-distribution**
      * **image-holder-mirrorer**
 
-### Module interactions
+## Module interactions
 
 The module interacts with the following components:
 
