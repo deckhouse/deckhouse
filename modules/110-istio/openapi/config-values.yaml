@@ -396,6 +396,15 @@ properties:
       root:
         type: string
         description: The root certificate in PEM format if `cert` is an intermediate certificate.
+  jwksResolverAdditionalRootCA:
+    type: string
+    description: |
+      An additional root certificate in PEM format. It is used by istiod when resolving JWKS URIs over HTTPS.
+    x-examples:
+    - |
+      -----BEGIN CERTIFICATE-----
+      MIIDXTCCAkWgAwIBAgIJAN...
+      -----END CERTIFICATE-----
   controlPlane:
     type: object
     description: istiod specific settings.
@@ -448,6 +457,32 @@ properties:
               format: int64
             value:
               type: string
+      extraEnvs:
+        type: object
+        additionalProperties:
+          type: string
+        default: {}
+        description: |
+          Additional environment variables for the istiod (pilot) container.
+
+          Keys reserved by the module cannot be overridden:
+
+          - `ISTIO_MULTIROOT_MESH`
+          - `ENABLE_ENHANCED_RESOURCE_SCOPING`
+          - `PILOT_HTTP10`
+          - `PILOT_ENABLE_AMBIENT`
+          - `PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER`
+          - `PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER`
+        x-examples:
+        - GODEBUG: "gctrace=1"
+        not:
+          anyOf:
+          - required: ["ISTIO_MULTIROOT_MESH"]
+          - required: ["ENABLE_ENHANCED_RESOURCE_SCOPING"]
+          - required: ["PILOT_HTTP10"]
+          - required: ["PILOT_ENABLE_AMBIENT"]
+          - required: ["PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER"]
+          - required: ["PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER"]
       replicasManagement:
         description: |
           Replication management settings and scaling of istiod.
@@ -730,6 +765,53 @@ properties:
               user_agent: "%REQ(USER-AGENT)%"
               authority: "%REQ(:AUTHORITY)%"
               upstream_host: "%UPSTREAM_HOST%"
+      extensionProviders:
+        type: array
+        description: |
+          Additional Istio extension providers to register in the mesh configuration.
+
+          The provider name `main-access-log-format` is reserved by Deckhouse.
+        default: []
+        x-examples:
+        - - name: authservice-grpc
+            envoyExtAuthzGrpc:
+              service: authservice.example.svc.cluster.local
+              port: 10003
+        items:
+          type: object
+          additionalProperties: false
+          required: ["name", "envoyExtAuthzGrpc"]
+          properties:
+            name:
+              type: string
+              description: Unique extension provider name.
+              pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+            envoyExtAuthzGrpc:
+              type: object
+              additionalProperties: false
+              description: External authorization provider that implements Envoy ext_authz gRPC API.
+              required: ["service", "port"]
+              properties:
+                service:
+                  type: string
+                  description: Service that implements Envoy ext_authz gRPC API. The format is `[<namespace>/]<hostname>`.
+                port:
+                  type: integer
+                  description: Service port.
+                  minimum: 1
+                  maximum: 65535
+                failOpen:
+                  type: boolean
+                  description: Allow requests when the authorization service is unavailable or returns a 5xx error.
+                timeout:
+                  type: string
+                  description: Maximum duration the proxy waits for the authorization service response.
+                statusOnError:
+                  type: string
+                  description: HTTP status returned to the client when communication with the authorization service fails.
+                clearRouteCache:
+                  type: boolean
+                  description: Clear route cache to let the external authorization service affect routing decisions.
       trafficRedirectionSetupMode:
         type: string
         description: |

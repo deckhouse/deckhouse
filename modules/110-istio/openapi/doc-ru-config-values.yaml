@@ -180,6 +180,9 @@ properties:
         description: Цепочка сертификатов в формате PEM на случай, если `cert` — промежуточный сертификат.
       root:
         description: Корневой сертификат в формате PEM на случай, если `cert` — промежуточный сертификат.
+  jwksResolverAdditionalRootCA:
+    description: |
+      Дополнительный корневой сертификат в формате PEM. Используется компонентом istiod при получении JWKS URI по HTTPS.
   controlPlane:
     description: Настройки для компонента istiod.
     properties:
@@ -195,6 +198,18 @@ properties:
           Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
           Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      extraEnvs:
+        description: |
+          Дополнительные переменные окружения для контейнера istiod (pilot).
+
+          Зарезервированные модулем ключи нельзя переопределить:
+
+          - `ISTIO_MULTIROOT_MESH`
+          - `ENABLE_ENHANCED_RESOURCE_SCOPING`
+          - `PILOT_HTTP10`
+          - `PILOT_ENABLE_AMBIENT`
+          - `PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER`
+          - `PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER`
       replicasManagement:
         description: |
           Настройки управления репликами и горизонтальным масштабированием istiod.
@@ -327,6 +342,30 @@ properties:
             description: Тестовый формат access-логов sidecar-контейнера. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
           jsonLabels:
             description: JSON формат access-логов sidecar-контейнера. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+      extensionProviders:
+        description: |
+          Дополнительные Istio extension providers, которые будут зарегистрированы в mesh configuration.
+
+          Имя provider'а `main-access-log-format` зарезервировано Deckhouse.
+        items:
+          properties:
+            name:
+              description: Уникальное имя extension provider'а.
+            envoyExtAuthzGrpc:
+              description: Внешний сервис авторизации, который реализует Envoy ext_authz gRPC API.
+              properties:
+                service:
+                  description: Сервис, который реализует Envoy ext_authz gRPC API. Формат значения — `[<namespace>/]<hostname>`.
+                port:
+                  description: Порт сервиса.
+                failOpen:
+                  description: Разрешать запросы, если сервис авторизации недоступен или вернул ошибку 5xx.
+                timeout:
+                  description: Максимальное время ожидания ответа от сервиса авторизации.
+                statusOnError:
+                  description: HTTP-статус, который будет возвращён клиенту при ошибке взаимодействия с сервисом авторизации.
+                clearRouteCache:
+                  description: Очищать route cache, чтобы внешний сервис авторизации мог влиять на маршрутизацию.
       trafficRedirectionSetupMode:
         description: |
           Управление режимом перенаправления прикладного трафика для передачи под управление Istio в сетевом пространстве имён пода.

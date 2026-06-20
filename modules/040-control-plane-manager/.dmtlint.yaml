@@ -1,10 +1,16 @@
 linters-settings:
+  no-cyrillic:
+    exclude-rules:
+      files:
+        - hooks/audit_policy.go # Contain Russian descriptions of audit rules
   openapi:
     exclude-rules:
       enum:
         # Real Kubernetes ClusterRole names (lowercase by RBAC conventions),
         # set by reconcile_kubeadm_cluster_admins_binding hook; cannot be capitalized.
         - "properties.internal.properties.kubeadmClusterAdminsTargetRoleName"
+        # Cryptographic algorithm names use technical format (RSA-2048, ECDSA-P256), not CamelCase.
+        - "properties.encryptionAlgorithm"
   container:
     exclude-rules:
       resources:
