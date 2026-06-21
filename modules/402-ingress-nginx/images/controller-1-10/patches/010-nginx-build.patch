@@ -1,5 +1,5 @@
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
-index f60a260f9..c035b7e49 100755
+index f60a260f9..c434a00b0 100755
 --- a/images/nginx-1.25/rootfs/build.sh
 +++ b/images/nginx-1.25/rootfs/build.sh
 @@ -14,11 +14,14 @@
@@ -246,6 +246,31 @@ index f60a260f9..c035b7e49 100755
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
  
+@@ -423,15 +275,15 @@ Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTE
+ # build nginx
+ cd "$BUILD_PATH/nginx-$NGINX_VERSION"
+ 
+-# apply nginx patches
+-for PATCH in `ls /patches`;do
+-  echo "Patch: $PATCH"
+-  if [[ "$PATCH" == *.txt ]]; then
+-    patch -p0 < /patches/$PATCH
+-  else
+-    patch -p1 < /patches/$PATCH
+-  fi
+-done
++# apply nginx patches - patches are already applied in the nginx-ingress-deps
++#for PATCH in `ls /patches`;do
++#  echo "Patch: $PATCH"
++#  if [[ "$PATCH" == *.txt ]]; then
++#    patch -p0 < /patches/$PATCH
++#  else
++#    patch -p1 < /patches/$PATCH
++#  fi
++#done
+ 
+ WITH_FLAGS="--with-debug \
+   --with-compat \
 @@ -510,8 +362,8 @@ WITH_MODULES=" \
    --without-http_scgi_module \
    --with-cc-opt="${CC_OPT}" \
