@@ -1,6 +1,6 @@
 {{ $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-14" $ ) }}
 {{ $controllerBranch := printf "controller-v%s" $controllerVersion }}
-{{ $nginxVersion := "1.30.2" }}
+{{ $nginxVersion := "1.30.3" }}
 {{ $modsecurityDepsVersion := "1.0.4" }}
 {{ $nginxDepsBranch := (printf "controller-v%s-nginx-v%s-modsecurity-v%s" $controllerVersion $nginxVersion $modsecurityDepsVersion) }}
 {{ $nlohmannJsonBranch := printf "v%s" (include "get_oss_version_by_id" (list "nlohmannjson" $ )) }}
@@ -419,16 +419,16 @@ shell:
   # build nginx
   - cd "$BUILD_PATH/nginx-$NGINX_VERSION"
 
-  # apply nginx patches
-  - |
-    for PATCH in `ls /patches`;do
-      echo "Patch: $PATCH"
-      if [[ "$PATCH" == *.txt ]]; then
-        patch -p0 < /patches/$PATCH
-      else
-        patch -p1 < /patches/$PATCH
-      fi
-    done
+  # apply nginx patches - patches are already applied in the ingress-nginx-deps
+  #- |
+  #  for PATCH in `ls /patches`;do
+  #    echo "Patch: $PATCH"
+  #    if [[ "$PATCH" == *.txt ]]; then
+  #      patch -p0 < /patches/$PATCH
+  #    else
+  #      patch -p1 < /patches/$PATCH
+  #    fi
+  #  done
 
   - WITH_FLAGS="--with-debug
     --with-compat
