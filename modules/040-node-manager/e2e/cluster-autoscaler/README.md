@@ -1,265 +1,239 @@
-## Общая инфраструктура
+# Cluster Autoscaler E2E Tests
 
-Корневой Taskfile.yaml подключает четыре набора тестов как отдельные Task-инклюды. Общая конфигурация Chainsaw в chainsaw-config.yaml:
-длинные таймауты на assert (15m), failFast: true, параллельность 1, поиск тестов в chainsaw-test.yaml.
+End-to-end tests for **Cluster Autoscaler** behavior in the `node-manager` module, using [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/).
 
-Каждый сценарий в своей папке tests/<name>/ запускается через Task (run, run:quiet, dry-run, run:debug) и вызывает chainsaw test с JUnit-отчётом в ./reports/.
+## Overview
 
-Общая нагрузка — tests/common/manifests/deployment.yaml: три реплики pause, nodeSelector: app=e2e-autoscaler-test, жёсткий pod anti-affinity по ноде,
-tolerations под taints dedicated=worker-100 и dedicated=worker-50 — чтобы поды могли сесть только на тестовые группы с соответствующими taints.
+These tests validate scale-from-zero, Priority Expander selection and fallback, safe-to-evict scale-down, and node label selector matching on DVP (Cluster API) and Yandex Cloud (MCM) clusters.
 
-## 1. ca-scale-from-zero-dvp
+The root `Taskfile.yaml` includes each scenario as a separate Task include. Shared workload manifests live in `tests/common/manifests/deployment.yaml`: three `pause` replicas with `nodeSelector: app=e2e-autoscaler-test`, strict pod anti-affinity per node, and tolerations for `dedicated=worker-100` and `dedicated=worker-50` taints so pods land only on the intended test NodeGroups.
 
-Платформа: кластер DVP / Cluster API.
+Each scenario lives in `tests/<name>/` and is executed via Task wrappers that call `chainsaw test` with JUnit reports in `./reports/`.
 
-Цель: проверить scale-from-zero и Priority Expander: при двух NodeGroup с разными приоритетами CA выбирает группу с большим приоритетом.
+## Chainsaw
 
-Ключевые шаги:
+[Chainsaw](https://kyverno.github.io/chainsaw/) is a declarative e2e testing tool for Kubernetes. Tests are defined in YAML as a sequence of steps with `try`/`catch`/`finally` blocks. Chainsaw creates a temporary namespace per test, applies resources, runs assertions and scripts, and cleans up automatically.
 
-Убедиться, что deployment cluster-autoscaler в d8-cloud-instance-manager готов.
-В аргументах контейнера CA есть провайдер clusterapi.
-Есть эталонный DVPInstanceClass worker.
-Очистка хвостов (e2e-worker-100/50, e2e-worker-small).
-Клон worker → e2e-worker-small с уменьшенными ресурсами (jq).
-kubectl rollout restart CA, пауза 15s.
-Применение NodeGroup e2e-worker-100 (приоритет 100) и e2e-worker-50 (приоритет 50), обе с minPerZone: 0.
-Деплой e2e-nginx.
-По логам CA ждётся строка вида e2e-worker-100.*chosen as the highest available; при ошибке масштабирования — быстрый fail по failed to increase node group size.*e2e-worker.
-Проверка: 3 ready пода; все на нодах с node.deckhouse.io/group=e2e-worker-100; нет нод у группы e2e-worker-50 (error-assert).
-Отличие от Yandex: порядок «создать instance class → restart CA» и чтение логов только из контейнера cluster-autoscaler (без --all-containers).
+**Key concepts:**
 
-## 2. ca-scale-from-zero-yandex
+- `try` — main operations; the step fails if any operation fails
+- `catch` — runs only on failure (diagnostics collection)
+- `cleanup` — runs after the step completes (resource deletion)
+- `$NAMESPACE` — auto-generated test namespace; the `e2e-nginx` Deployment is applied there
 
-Платформа: Yandex Cloud.
+Shared Chainsaw settings are in `chainsaw-config.yaml` at the suite root (`failFast: true`, `parallel: 1`, test discovery via `chainsaw-test.yaml`).
 
-Цель: то же, что у DVP: scale-from-zero + приоритет, побеждает высокоприоритетная группа e2e-worker-100.
+## Prerequisites
 
-Отличия от DVP:
+### Tools
 
-Проверка аргументов CA на mcm (Machine Controller Manager), не clusterapi.
-YandexInstanceClass: клон worker → e2e-worker-small (cores/memory/disk).
-Restart CA до создания e2e-worker-small (другой порядок шагов).
-Логи CA: --all-containers --since=10m.
-Нет раннего assert на DVPInstanceClass; вместо этого assert на YandexInstanceClass worker.
-Итоговые проверки те же: логи про выбор e2e-worker-100, поды только на этой группе, нод группы e2e-worker-50 нет.
+| Tool                                            | Purpose                                                  |
+| ----------------------------------------------- | -------------------------------------------------------- |
+| `kubectl`                                       | Cluster access; context must be set before running tests |
+| [Chainsaw](https://kyverno.github.io/chainsaw/) | `chainsaw test`, `chainsaw lint`                         |
+| [Task](https://taskfile.dev/)                   | Wrapper commands in `Taskfile.yml`                       |
+| `jq`                                            | Clone `*InstanceClass` resources in test scripts         |
 
-## 3. ca-priority-fallback-dvp
+**Install Chainsaw**
 
-Платформа: DVP / CAPI.
+Homebrew (macOS/Linux):
 
-Цель: не «успешный высокий приоритет», а fallback Priority Expander: высокоприоритетная группа сломана, после backoff CA должен перейти на рабочую низкоприоритетную.
-
-Механика поломки:
-
-e2e-worker-small — как в scale-from-zero.
-Дополнительно e2e-worker-broken: клон worker с несуществующим virtualMachineClassName (DOES-NOT-EXIST).
-e2e-worker-100 ссылается на broken IC (nodegroup-100-broken.yaml), e2e-worker-50 — на рабочий e2e-worker-small.
-Сценарий проверок:
-
-Сначала в логах ожидается, что приоритетно «выбран»/рассматривается e2e-worker-100 (chosen as the highest available — CA всё равно идёт по приоритету).
-Долгий этап (до 30 минут): в логах одновременно e2e-worker-100.*not ready for scaleup и e2e-worker-50.*chosen as the highest available.
-Три ready пода; все поды на нодах e2e-worker-50, не на 100.
-
-## 4. ca-priority-fallback-yandex
-
-Платформа: Yandex Cloud.
-
-Цель: тот же fallback, что и у DVP.
-
-Механика поломки:
-
-e2e-worker-broken: клон с невалидным imageID (fd8INVALID000000000).
-Дальше тот же каркас: mcm, restart CA, nodegroup-100-broken + nodegroup-50, деплой, сначала логи про выбор 100, затем ожидание backoff 100 и выбора 50.
-
-Отличия от DVP по таймингам: ожидание fallback до 60 минут (цикл длиннее), логи с --since=90m — под более медленные ошибки провайдера Yandex.
-
-| Сценарий                      | Провайдер CA | Суть проверки                                | Успешный итог по нодам                   |
-| ----------------------------- | ------------ | -------------------------------------------- | ---------------------------------------- |
-| `ca-scale-from-zero-dvp`      | clusterapi   | Приоритет при scale-from-zero                | Все поды на `e2e-worker-100`, 50 без нод |
-| `ca-scale-from-zero-yandex`   | mcm          | То же для Yandex                             | То же                                    |
-| `ca-priority-fallback-dvp`    | clusterapi   | Fallback после нерабочей top-пriority группы | Все поды на `e2e-worker-50`              |
-| `ca-priority-fallback-yandex` | mcm          | То же с битым image                          | Все поды на `e2e-worker-50`              |
-
-Во всех сценариях cleanup удаляет тестовые NodeGroup, instance class и Deployment;
-при удалении деплоя дополнительно опрашиваются ноды с лейблом app=e2e-autoscaler-test до исчезновения (с предупреждением по таймауту, не fail теста).
-
-## Что нужно на машине
-
-| Инструмент    | Зачем                                          |
-| ------------- | ---------------------------------------------- |
-| kubectl       | Доступ к кластеру, контекст выбран заранее     |
-| Chainsaw      | `chainsaw test`, `chainsaw lint`               |
-| Task (`task`) | Обёртки в `Taskfile.yml`                       |
-| jq            | Скрипты клонирования `*InstanceClass` в тестах |
-
-Установка Chainsaw (пример):
-
+```bash
+brew tap kyverno/chainsaw https://github.com/kyverno/chainsaw
+brew install kyverno/chainsaw/chainsaw
 ```
+
+Go install:
+
+```bash
 go install github.com/kyverno/chainsaw@latest
 ```
 
-```
-или бинарь с https://github.com/kyverno/chainsaw/releases
-```
+Or download a binary from [Chainsaw releases](https://github.com/kyverno/chainsaw/releases).
 
-Проверка:
+**Verify:**
 
-```
+```bash
 chainsaw version
-
 task --version
-
 kubectl cluster-info
 ```
 
-## Требования к кластеру
+### Cluster requirements
 
-### Общее
+**General (all scenarios):**
 
-1. Deckhouse с модулем node-manager и облачными нодами (`CloudEphemeral`).
-2. Cluster Autoscaler уже развёрнут и в статусе Ready:
+1. Deckhouse with the `node-manager` module and cloud nodes (`CloudEphemeral` NodeGroups).
+2. Cluster Autoscaler deployed and Ready:
+   - Deployment `cluster-autoscaler` in namespace `d8-cloud-instance-manager`
+   - CA is enabled when at least one `NodeGroup` has `nodeType: CloudEphemeral` and `minPerZone < maxPerZone` (see `cluster_autoscaler_enabled` in `templates/_helpers.yaml`)
+3. Priority Expander configured: `--expander=priority,least-waste` in CA args (module default).
+4. NodeGroup priorities published to ConfigMap `cluster-autoscaler-priority-expander` via the `set_ng_priorities` hook from `spec.cloudInstances.priority`.
+5. RBAC to create/delete `NodeGroup`, `DVPInstanceClass` / `YandexInstanceClass`, and `Deployment`; restart CA; read logs and events.
 
-- Deployment `cluster-autoscaler` в namespace `d8-cloud-instance-manager`.
-- CA включается, если есть хотя бы одна `NodeGroup` с `nodeType: CloudEphemeral` и `minPerZone < maxPerZone` (см.`cluster_autoscaler_enabled` в `templates/_helpers.yaml`).
+**DVP scenarios (`*-dvp`):**
 
-3. Priority Expander — в CA задано `--expander=priority,least-waste` (так в шаблоне модуля).
-4. Приоритеты групп попадают в ConfigMap `cluster-autoscaler-priority-expander` через hook `set_ng_priorities` по полю `spec.cloudInstances.priority` `NodeGroup`.
-5. Права в кластере: создавать/удалять `NodeGroup`, `DVPInstanceClass`/`YandexInstanceClass`,`Deployment`; делать `rollout restart` CA; читать логи и события.
+- DVP provider (or another provider with `cloud-provider=clusterapi` in CA args)
+- Existing `DVPInstanceClass` named `worker` (template for cloning)
+- CA container args contain `clusterapi`
 
-### Для DVP-сценариев (`*-dvp`)
+**Yandex scenarios (`*-yandex`):**
 
-- Провайдер DVP (или другой с `cloud-provider=clusterapi` в args CA).
-- Существует `DVPInstanceClass` с именем `worker` (эталон для клонирования).
-- В args deployment CA есть подстрока `clusterapi`.
+- Yandex Cloud with MCM
+- Existing `YandexInstanceClass` named `worker`
+- CA container args contain `mcm`
 
-### Для Yandex-сценариев (`*-yandex`)
+**Resources and cost:**
 
-- Облако Yandex Cloud, MCM.
-- Существует `YandexInstanceClass` с именем `worker`.
-- В args CA есть `mcm`.
+- Tests create NodeGroups `e2e-worker-100`, `e2e-worker-50`, and/or other `e2e-*` groups, clone instance classes, and deploy `e2e-nginx` (3 replicas with anti-affinity → up to 3 new VMs).
+- Tests restart `cluster-autoscaler`.
+- Scale-from-zero scenarios typically take tens of minutes; fallback scenarios up to 30–60 minutes (Yandex longer).
+- Cleanup removes test resources; nodes labeled `app=e2e-autoscaler-test` are polled for up to ~10 minutes (timeout logs a warning, does not fail the test).
 
-### Ресурсы и риски
+## Directory Structure
 
-- Тесты создают группы `e2e-worker-100`, `e2e-worker-50`, уменьшенные instance class, деплой `e2e-nginx` (3 реплики с anti-affinity → до 3 новых ВМ).
-- Делают restart `cluster-autoscaler`.
-- Стоимость облака и время: scale-from-zero обычно десятки минут; fallback — до 30–60 мин (Yandex дольше).
-- После теста cleanup удаляет ресурсы; ноды с лейблом `app=e2e-autoscaler-test` ждутся до ~10 мин (при таймауте — warning, не обязательно fail).
-
-## Запуск
-
-### 1. Lint без кластера (проверка YAML)
-
-Из каталога нужного сценария:
-
+```text
+cluster-autoscaler/
+├── Taskfile.yaml              # includes all scenarios
+├── chainsaw-config.yaml       # shared timeouts and execution settings
+└── tests/
+    ├── common/manifests/      # shared e2e-nginx Deployment
+    ├── ca-scale-from-zero-*/
+    ├── ca-priority-fallback-*/
+    ├── ca-safe-to-evict-*/
+    └── ca-scale-from-zero-node-label-dvp/
 ```
+
+Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/<name>.md`.
+
+## Available Tests
+
+| Task command                                 | Provider   | Description                                                            | Expected node group                                       |
+| -------------------------------------------- | ---------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
+| `task ca-scale-from-zero-dvp:run`            | clusterapi | Priority Expander selects high-priority group on scale-from-zero       | All pods on `e2e-worker-100`; no nodes in `e2e-worker-50` |
+| `task ca-scale-from-zero-yandex:run`         | mcm        | Same as DVP for Yandex Cloud                                           | All pods on `e2e-worker-100`; no nodes in `e2e-worker-50` |
+| `task ca-priority-fallback-dvp:run`          | clusterapi | Fallback to lower-priority group when top-priority group is broken     | All pods on `e2e-worker-50`                               |
+| `task ca-priority-fallback-yandex:run`       | mcm        | Same fallback with invalid Yandex image                                | All pods on `e2e-worker-50`                               |
+| `task ca-safe-to-evict-dvp:run`              | clusterapi | Scale-down with `safe-to-evict: "true"` annotation on a standalone pod | Node removed after Deployment deleted                     |
+| `task ca-safe-to-evict-yandex:run`           | mcm        | Same safe-to-evict scale-down for Yandex                               | Node removed after Deployment deleted                     |
+| `task ca-scale-from-zero-node-label-dvp:run` | clusterapi | Scale-from-zero with `nodeSelector` on `node.deckhouse.io/group`       | CA matches system labels in capacity annotation           |
+
+**DVP vs Yandex differences (scale-from-zero / fallback):**
+
+- DVP: create instance class → restart CA; read logs from `cluster-autoscaler` container only
+- Yandex: restart CA before creating cloned instance class; read logs with `--all-containers --since=10m` (fallback: `--since=90m`, up to 60 min wait)
+
+## Running Tests
+
+### Validate without a cluster
+
+From a scenario directory:
+
+```bash
 cd modules/040-node-manager/e2e/cluster-autoscaler/tests/ca-scale-from-zero-dvp
 task dry-run
 ```
 
-### 2. Полный прогон
+From the suite root (all scenarios):
 
-Вариант A: из каталога сценария:
-
+```bash
+cd modules/040-node-manager/e2e/cluster-autoscaler
+task dry-run
 ```
+
+### Run a single scenario
+
+From a scenario directory:
+
+```bash
 cd modules/040-node-manager/e2e/cluster-autoscaler/tests/ca-scale-from-zero-yandex
 
-task run # полный вывод + JUnit в ./reports/
-
-task run:quiet # только ошибки и итог
-
-task run:debug # pause-on-failure + fail-fast
-
+task run          # full output + JUnit in ./reports/
+task run:quiet    # errors and summary only
+task run:debug    # pause on failure + fail-fast
 ```
 
-Вариант B: из корня e2e через includes:
+From the suite root via includes:
 
-```
+```bash
 cd modules/040-node-manager/e2e/cluster-autoscaler
 
 task ca-scale-from-zero-dvp:run
-
 task ca-scale-from-zero-yandex:run
-
 task ca-priority-fallback-dvp:run
-
 task ca-priority-fallback-yandex:run
-
+task ca-safe-to-evict-dvp:run
+task ca-safe-to-evict-yandex:run
+task ca-scale-from-zero-node-label-dvp:run
 ```
 
-### 3. Напрямую через chainsaw
+### Run all scenarios
 
+```bash
+cd modules/040-node-manager/e2e/cluster-autoscaler
+task run
 ```
+
+Run only scenarios matching your cloud provider (DVP or Yandex).
+
+### Direct Chainsaw invocation
+
+```bash
 cd modules/040-node-manager/e2e/cluster-autoscaler/tests/ca-scale-from-zero-dvp
 
 mkdir -p reports
-
 chainsaw test --test-dir . \
-
---config ../../chainsaw-config.yaml \
-
---parallel 1 \
-
---report-format JUNIT-STEP \
-
---report-path ./reports/
-
+  --config ../../chainsaw-config.yaml \
+  --parallel 1 \
+  --report-format JUNIT-STEP \
+  --report-path ./reports/
 ```
 
-### Контекст kubectl
+### kubectl context
 
-Chainsaw использует текущий контекст `kubectl`. Перед запуском:
+Chainsaw uses the current `kubectl` context. Before running:
 
-```
+```bash
 kubectl config current-context
 kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager
-kubectl get dvpinstanceclass worker   # для DVP
-# или
-kubectl get yandexinstanceclass worker   # для Yandex
+kubectl get dvpinstanceclass worker      # DVP scenarios
+# or
+kubectl get yandexinstanceclass worker   # Yandex scenarios
 ```
 
-Переменная `$NAMESPACE` в скриптах — namespace, который Chainsaw создаёт для теста (деплой `e2e-nginx` попадает туда).
+## Timeouts
 
-## Таймауты (из `chainsaw-config.yaml`)
+From `chainsaw-config.yaml`:
 
-- assert: 15m
-- apply: 60s
-- delete/cleanup: 5–10m
-- Отдельные шаги: опрос логов CA до 5–30 мин; fallback Yandex — до 60 мин
+| Timeout | Value |
+| ------- | ----- |
+| apply   | 60s   |
+| assert  | 15m   |
+| error   | 15m   |
+| delete  | 5m    |
+| cleanup | 20m   |
+| exec    | 5m    |
 
-Планируйте 30–90 мин на один полный прогон в зависимости от сценария и облака.
+Individual steps poll CA logs for 5–30 minutes; Yandex fallback scenarios allow up to 60 minutes. Plan 30–90 minutes per full run depending on scenario and cloud provider.
 
-## Отчёты и отладка
+## Reports and Debugging
 
-- JUnit: `tests/<scenario>/reports/chainsaw-report.xml` (каталог `reports/` в `.gitignore`).
-- При падении тесты собирают events и `podLogs` CA из `d8-cloud-instance-manager`.
-- Полезно вручную:
+- JUnit reports: `tests/<scenario>/reports/chainsaw-report.xml` (`reports/` is gitignored)
+- On failure, tests collect events and CA pod logs from `d8-cloud-instance-manager`
+- Useful manual checks:
 
-```
+```bash
 kubectl logs -n d8-cloud-instance-manager -l app=cluster-autoscaler -c cluster-autoscaler --tail=200
-
 kubectl get nodegroup e2e-worker-100 e2e-worker-50
-
 kubectl get nodes -l app=e2e-autoscaler-test
 ```
 
-## Быстрая диагностика «почему не стартуют»
+## Troubleshooting
 
-| Симптом                               | Вероятная причина                          |
-| ------------------------------------- | ------------------------------------------ |
-| Нет deployment CA                     | Нет CloudEphemeral NG с `min < max`        |
-| Assert на `worker` InstanceClass      | Нет базовой группы/класса `worker`         |
-| `grep clusterapi `/` grep mcm` failed | Запущен не тот сценарий для вашего облака  |
-| Timeout на логах priority             | Медленное облако, квоты, ошибки MCM/CAPI   |
-| Fallback timeout                      | Долгий backoff; для Yandex заложено до 1 ч |
-
-## Структура каталога (для правок тестов)
-
-```
-cluster-autoscaler/
-├── Taskfile.yaml              # includes всех сценариев
-├── chainsaw-config.yaml       # общие таймауты
-└── tests/
-    ├── common/manifests/      # общий deployment e2e-nginx
-    ├── ca-scale-from-zero-*/  # chainsaw-test.yaml, manifests, asserts, Taskfile.yml
-    └── ca-priority-fallback-*/
-```
+| Symptom                                | Likely cause                                                 |
+| -------------------------------------- | ------------------------------------------------------------ |
+| CA deployment missing                  | No `CloudEphemeral` NodeGroup with `minPerZone < maxPerZone` |
+| Assert on `worker` InstanceClass fails | Base `worker` NodeGroup or instance class does not exist     |
+| `grep clusterapi` / `grep mcm` fails   | Wrong scenario for your cloud provider                       |
+| Timeout waiting for priority logs      | Slow cloud, quotas, or MCM/CAPI errors                       |
+| Fallback timeout                       | Long backoff; Yandex scenarios allow up to 1 hour            |
