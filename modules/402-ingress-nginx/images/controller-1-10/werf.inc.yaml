@@ -49,7 +49,7 @@ shell:
   - patch -p1 < /patches/006-metrics-SetSSLExpireTime.patch
   - patch -p1 < /patches/008-util.patch
   - patch -p1 < /patches/009-fix-cleanup.patch
-  - patch -p1 < /patches/010-nginx-build.patch
+  - patch -p1 < /patches/010-nginx-build-01.patch
   - patch -p1 < /patches/011-add-http3.patch
   - patch -p1 < /patches/012-new-metrics.patch
   - patch -p1 < /patches/013-default-backend-fix.patch
