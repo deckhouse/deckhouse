@@ -39,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -62,6 +61,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 const (
@@ -1058,7 +1058,7 @@ func isCloudProviderCredentialSecret(resource *template.Resource) bool {
 		return false
 	}
 	secretType, _, _ := unstructured.NestedString(resource.Object.Object, "type")
-	return secretType == providerdata.CloudProviderCredentialsSecretType
+	return secretType == proto.CredentialsSecretType
 }
 
 // prependMissingNamespaces inserts a minimal Namespace stub for every distinct

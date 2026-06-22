@@ -27,14 +27,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 type DhctlOperation = string
 
 const (
-	DhctlOperationBootstrap DhctlOperation = providerdata.OperationBootstrap
-	DhctlOperationConverge  DhctlOperation = providerdata.OperationConverge
-	DhctlOperationDestroy   DhctlOperation = providerdata.OperationDestroy
+	DhctlOperationBootstrap DhctlOperation = proto.OperationBootstrap
+	DhctlOperationConverge  DhctlOperation = proto.OperationConverge
+	DhctlOperationDestroy   DhctlOperation = proto.OperationDestroy
 )
 
 type PreparatorProviderParams struct {
@@ -115,6 +116,6 @@ func (p *missingExternalValidatorPreparator) Validate(_ context.Context, _ confi
 	return p.err()
 }
 
-func (p *missingExternalValidatorPreparator) Prepare(_ context.Context, _ config.ProviderInput) (providerdata.PrepareResult, error) {
-	return providerdata.PrepareResult{}, p.err()
+func (p *missingExternalValidatorPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
+	return proto.PrepareResult{}, p.err()
 }

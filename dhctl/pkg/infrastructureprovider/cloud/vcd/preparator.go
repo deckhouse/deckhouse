@@ -24,8 +24,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 type clientProvider func(pcc map[string]json.RawMessage, l log.Logger) (cloudClient, error)
@@ -72,18 +72,18 @@ func (p MetaConfigPreparator) Validate(_ context.Context, input config.ProviderI
 	return nil
 }
 
-func (p MetaConfigPreparator) Prepare(ctx context.Context, input config.ProviderInput) (providerdata.PrepareResult, error) {
+func (p MetaConfigPreparator) Prepare(ctx context.Context, input config.ProviderInput) (proto.PrepareResult, error) {
 	client, err := p.clientProvider(input.ProviderClusterConfig, p.logger)
 	if err != nil {
-		return providerdata.PrepareResult{}, fmt.Errorf("Cannot get cloud client: %w", err)
+		return proto.PrepareResult{}, fmt.Errorf("Cannot get cloud client: %w", err)
 	}
 
 	apiVersion, err := client.GetVersion(ctx)
 	if err != nil {
-		return providerdata.PrepareResult{}, err
+		return proto.PrepareResult{}, err
 	}
 
-	var result providerdata.PrepareResult
+	var result proto.PrepareResult
 	if err := versionConstraintAction(apiVersion, p.logger, func(legacy bool) error {
 		if !legacy {
 			return nil
@@ -94,7 +94,7 @@ func (p MetaConfigPreparator) Prepare(ctx context.Context, input config.Provider
 		result.ProviderClusterConfig = map[string]interface{}{"legacyMode": true}
 		return nil
 	}); err != nil {
-		return providerdata.PrepareResult{}, err
+		return proto.PrepareResult{}, err
 	}
 
 	return result, nil

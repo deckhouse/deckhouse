@@ -28,9 +28,9 @@ import (
 	otattribute "go.opentelemetry.io/otel/attribute"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 type Preparator struct {
@@ -50,7 +50,7 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 	// A conformant binary always emits a JSON object ("{}\n" on success).
 	// Empty stdout means a broken binary — fail closed instead of silently
 	// treating it as validated (matches Prepare).
-	var resp providerdata.ValidateResponse
+	var resp proto.ValidateResponse
 	if err := json.Unmarshal(stdout, &resp); err != nil {
 		return fmt.Errorf("parse validate response: %w", err)
 	}
@@ -60,23 +60,23 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 	return nil
 }
 
-func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (providerdata.PrepareResult, error) {
+func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (proto.PrepareResult, error) {
 	stdout, err := p.call(ctx, "prepare", input)
 	if err != nil {
-		return providerdata.PrepareResult{}, err
+		return proto.PrepareResult{}, err
 	}
 
-	var resp providerdata.PrepareResponse
+	var resp proto.PrepareResponse
 	if err := json.Unmarshal(stdout, &resp); err != nil {
-		return providerdata.PrepareResult{}, fmt.Errorf("parse prepare response: %w", err)
+		return proto.PrepareResult{}, fmt.Errorf("parse prepare response: %w", err)
 	}
 	if resp.Error != "" {
-		return providerdata.PrepareResult{}, errors.New(resp.Error)
+		return proto.PrepareResult{}, errors.New(resp.Error)
 	}
 	if resp.Result != nil {
 		return *resp.Result, nil
 	}
-	return providerdata.PrepareResult{}, nil
+	return proto.PrepareResult{}, nil
 }
 
 // call encodes input, runs the binary subcommand and returns its stdout.
@@ -96,7 +96,7 @@ func (p *Preparator) call(ctx context.Context, subcommand string, input config.P
 	if err != nil {
 		return nil, fmt.Errorf("build %s request: %w", subcommand, err)
 	}
-	payload, err := json.Marshal(providerdata.PrepareRequest{Input: wireInput})
+	payload, err := json.Marshal(proto.PrepareRequest{Input: wireInput})
 	if err != nil {
 		return nil, fmt.Errorf("marshal %s request: %w", subcommand, err)
 	}
@@ -116,17 +116,17 @@ func (p *Preparator) call(ctx context.Context, subcommand string, input config.P
 
 // toWireInput converts ProviderInput to the wire format; ProviderClusterConfig
 // goes from json.RawMessage to plain values.
-func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) {
+func toWireInput(input config.ProviderInput) (proto.PrepareInput, error) {
 	pcc := make(map[string]interface{}, len(input.ProviderClusterConfig))
 	for k, v := range input.ProviderClusterConfig {
 		var val interface{}
 		if err := json.Unmarshal(v, &val); err != nil {
-			return providerdata.PrepareInput{}, fmt.Errorf("unmarshal provider cluster config key %q: %w", k, err)
+			return proto.PrepareInput{}, fmt.Errorf("unmarshal provider cluster config key %q: %w", k, err)
 		}
 		pcc[k] = val
 	}
 
-	return providerdata.PrepareInput{
+	return proto.PrepareInput{
 		ProviderName:          input.ProviderName,
 		ClusterPrefix:         input.ClusterPrefix,
 		Layout:                input.Layout,

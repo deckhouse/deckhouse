@@ -30,11 +30,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
-type CloudProviderVars = providerdata.CloudProviderVars
+type CloudProviderVars = proto.CloudProviderVars
 
-const CloudProviderCredentialsSecretType = corev1.SecretType(providerdata.CloudProviderCredentialsSecretType)
+const CloudProviderCredentialsSecretType = corev1.SecretType(proto.CredentialsSecretType)
 
 var nodeGroupGVR = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 
@@ -47,7 +48,7 @@ func cloudProviderNamespace(providerName string) string {
 // CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and
 // credential Secrets from the cluster. Settings stays empty here and is filled
 // later by applyCloudProviderModuleSettings from the provider ModuleConfig.
-func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (*providerdata.CloudProviderVars, error) {
+func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (*proto.CloudProviderVars, error) {
 	ctx, span := telemetry.StartSpan(ctx, "CloudProviderVarsFromCluster")
 	defer span.End()
 
@@ -74,7 +75,7 @@ func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.Kubernetes
 		otattribute.Int("provider.secretsCount", len(secrets)),
 	)
 
-	return &providerdata.CloudProviderVars{
+	return &proto.CloudProviderVars{
 		NodeGroups:      nodeGroups,
 		InstanceClasses: instanceClasses,
 		Secrets:         secrets,

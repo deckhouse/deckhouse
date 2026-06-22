@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 func fixtureValidator(t *testing.T, script string) string {
@@ -55,7 +55,7 @@ func TestValidate_ErrorResponsePropagates(t *testing.T) {
 }
 
 func TestToWireInput_VarsTravelStructurally(t *testing.T) {
-	cv := &providerdata.CloudProviderVars{
+	cv := &proto.CloudProviderVars{
 		Settings: map[string]interface{}{"zone": "a"},
 		NodeGroups: map[string]map[string]interface{}{
 			"worker": {"apiVersion": "deckhouse.io/v1", "kind": "NodeGroup", "metadata": map[string]interface{}{"name": "worker"}},

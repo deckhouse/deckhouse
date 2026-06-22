@@ -23,6 +23,8 @@ import (
 
 	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
+
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 const (
@@ -54,8 +56,8 @@ func IsCloudPermanentNodeGroup(obj map[string]interface{}) bool {
 
 // ParseResourcesYAML extracts CloudPermanent NodeGroups, instance classes and
 // credential Secrets from a multi-document YAML string.
-func ParseResourcesYAML(resourcesYAML string) (*CloudProviderVars, error) {
-	cv := &CloudProviderVars{}
+func ParseResourcesYAML(resourcesYAML string) (*proto.CloudProviderVars, error) {
+	cv := &proto.CloudProviderVars{}
 	if strings.TrimSpace(resourcesYAML) == "" {
 		return cv, nil
 	}

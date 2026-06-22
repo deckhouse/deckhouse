@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
@@ -471,14 +471,14 @@ func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
 }
 
 type stubPreparator struct {
-	result providerdata.PrepareResult
+	result proto.PrepareResult
 }
 
 func (s stubPreparator) Validate(_ context.Context, _ ProviderInput) error {
 	return nil
 }
 
-func (s stubPreparator) Prepare(_ context.Context, _ ProviderInput) (providerdata.PrepareResult, error) {
+func (s stubPreparator) Prepare(_ context.Context, _ ProviderInput) (proto.PrepareResult, error) {
 	return s.result, nil
 }
 
@@ -492,7 +492,7 @@ func TestValidateAndPrepareMetaConfig_NilProviderClusterConfig_NoPanic(t *testin
 		ProviderName:          "dvp",
 		ProviderClusterConfig: nil,
 	}
-	prep := stubPreparator{result: providerdata.PrepareResult{
+	prep := stubPreparator{result: proto.PrepareResult{
 		ProviderClusterConfig: map[string]interface{}{"layout": "Standard"},
 	}}
 
