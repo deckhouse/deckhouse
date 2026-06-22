@@ -5,7 +5,7 @@ memory: 30Mi
 
 {{- $rppGetBootstrapPort := 4282 }}
 
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -105,7 +105,7 @@ spec:
         resources:
           requests:
             ephemeral-storage: 1Gi
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+          {{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
             {{- include "registry_packages_proxy_resources" . | nindent 12 }}
           {{- end }}
         volumeMounts:
@@ -198,7 +198,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+          {{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
         volumeMounts:

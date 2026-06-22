@@ -4,7 +4,7 @@ memory: 100Mi
 {{- end }}
 
 {{- if (.Values.terraformManager.autoConvergerEnabled) }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -124,7 +124,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
             {{- include "converger_resources" . | nindent 12 }}
   {{- end }}
       - name: kube-rbac-proxy
@@ -172,7 +172,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if not (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
   {{- end }}
       volumes:
