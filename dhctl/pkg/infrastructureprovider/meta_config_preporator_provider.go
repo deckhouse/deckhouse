@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
@@ -77,7 +77,7 @@ func selectPreparator(provider, downloadRootDir string, logger log.Logger) confi
 		}
 		searched := ""
 		if downloadRootDir != "" {
-			searched = providerdata.ValidatorPath(downloadRootDir, provider)
+			searched = providerdir.ValidatorPath(downloadRootDir, provider)
 		}
 		logger.LogErrorF("external validator for provider %q not found at %q\n", provider, searched)
 		return &missingExternalValidatorPreparator{provider: provider, searchedPath: searched}
@@ -88,7 +88,7 @@ func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	if pluginsDir == "" {
 		return ""
 	}
-	path := providerdata.ValidatorPath(pluginsDir, providerName)
+	path := providerdir.ValidatorPath(pluginsDir, providerName)
 	info, err := os.Stat(path)
 	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
 		// A non-executable file is not a usable validator; treat it as missing

@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -638,7 +638,7 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 	if _, err := os.Stat(systemPath); err == nil {
 		schemaPresent = true
 	}
-	downloadPath := filepath.Join(providerdata.ProviderDir(globalOptions.DownloadDir, provider), "openapi", "cluster_configuration.yaml")
+	downloadPath := filepath.Join(providerdir.ProviderDir(globalOptions.DownloadDir, provider), "openapi", "cluster_configuration.yaml")
 	if _, err := os.Stat(downloadPath); err == nil {
 		schemaPresent = true
 	}
@@ -649,7 +649,7 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 
 	// The validator binary ships in the same image as the schemas, so its
 	// presence alone marks the bundle as delivered.
-	validatorPath := providerdata.ValidatorPath(globalOptions.DownloadDir, provider)
+	validatorPath := providerdir.ValidatorPath(globalOptions.DownloadDir, provider)
 	if _, err := os.Stat(validatorPath); err == nil {
 		return true
 	}
@@ -670,7 +670,7 @@ func loadDeliveredProviderSchemas(provider string, globalOptions *options.Global
 	if store.HasProviderSchemas(provider) {
 		return nil
 	}
-	dir := providerdata.ProviderDir(globalOptions.DownloadDir, provider)
+	dir := providerdir.ProviderDir(globalOptions.DownloadDir, provider)
 	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
 		dir = resolved
 	}
@@ -845,7 +845,7 @@ func providerBundleReady(provider, digest string, globalOptions *options.GlobalO
 	if !NewSchemaStore(globalOptions).ProviderSchemasLoaded(provider, digest) {
 		return false
 	}
-	_, err := os.Stat(providerdata.ProviderDir(globalOptions.DownloadDir, provider))
+	_, err := os.Stat(providerdir.ProviderDir(globalOptions.DownloadDir, provider))
 	return err == nil
 }
 
@@ -859,14 +859,14 @@ func ensureProviderBundle(ctx context.Context, provider, digest string, conf *im
 		}
 		// Load from the real digest dir: filepath.Walk does not follow the
 		// <provider> symlink root.
-		digestDir := providerdata.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
+		digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
 		return nil, NewSchemaStore(globalOptions).LoadProviderDir(provider, digest, digestDir)
 	})
 	return err
 }
 
 func unpackProviderBundle(ctx context.Context, provider, digest string, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {
-	digestDir := providerdata.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
+	digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
 	if _, err := os.Stat(digestDir); err != nil {
 		imgName := conf.GetRegistry() + "@" + digest
 		log.DebugF("Downloading provider bundle for %s\n", provider)
@@ -874,7 +874,7 @@ func unpackProviderBundle(ctx context.Context, provider, digest string, conf *im
 			return fmt.Errorf("download provider bundle %s: %w", imgName, err)
 		}
 	}
-	return switchProviderSymlink(providerdata.ProviderDir(globalOptions.DownloadDir, provider), digestDir)
+	return switchProviderSymlink(providerdir.ProviderDir(globalOptions.DownloadDir, provider), digestDir)
 }
 
 // switchProviderSymlink atomically points linkPath at target. A pre-symlink
