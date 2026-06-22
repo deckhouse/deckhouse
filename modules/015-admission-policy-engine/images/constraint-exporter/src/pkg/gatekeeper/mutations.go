@@ -19,19 +19,26 @@ package gatekeeper
 import (
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	mutationsGroup        = "mutations.gatekeeper.sh"
-	mutationsGroupVersion = "v1"
-	mutationsGV           = mutationsGroup + "/" + mutationsGroupVersion
+	mutationsGroup               = "mutations.gatekeeper.sh"
+	mutationsGroupVersionV1      = "v1"
+	mutationsGroupVersionV1Alpha = "v1alpha1"
 )
+
+var mutationsGVs = []string{
+	mutationsGroup + "/" + mutationsGroupVersionV1,
+	mutationsGroup + "/" + mutationsGroupVersionV1Alpha,
+}
 
 type MutationMeta struct {
 	Kind string
@@ -51,41 +58,58 @@ func (m Mutation) GetMatchKinds() []MatchKind {
 	return m.Spec.Match.Kinds
 }
 
-func GetMutations(cClient controllerClient.Client, client *kubernetes.Clientset) ([]Mutation, error) {
-	c, err := client.ServerResourcesForGroupVersion(mutationsGV)
-	if err != nil {
-		return nil, err
-	}
+type listClient interface {
+	List(ctx context.Context, list controllerClient.ObjectList, opts ...controllerClient.ListOption) error
+}
 
-	var mutations []Mutation
-	for _, r := range c.APIResources {
-		canList := false
-		for _, verb := range r.Verbs {
-			if verb == "list" {
-				canList = true
-				break
-			}
-		}
+func GetMutations(cClient controllerClient.Client, client kubernetes.Interface) ([]Mutation, error) {
+	return getMutations(cClient, client.Discovery(), mutationsGVs)
+}
 
-		if !canList {
+func getMutations(cClient listClient, discoveryClient discovery.DiscoveryInterface, groupVersions []string) ([]Mutation, error) {
+	var (
+		mutations []Mutation
+		lastErr   error
+	)
+
+	seen := make(map[string]struct{})
+
+	for _, mutationsGV := range groupVersions {
+		c, err := discoveryClient.ServerResourcesForGroupVersion(mutationsGV)
+		if err != nil {
+			lastErr = err
 			continue
 		}
-		actual := &unstructured.UnstructuredList{}
-		actual.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   mutationsGroup,
-			Kind:    r.Kind,
-			Version: mutationsGroupVersion,
-		})
 
-		err = cClient.List(context.TODO(), actual)
+		gv, err := schema.ParseGroupVersion(c.GroupVersion)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(actual.Items) > 0 {
-			for _, item := range actual.Items {
-				var mutation Mutation
+		for _, r := range c.APIResources {
+			if !canListResource(r) {
+				continue
+			}
 
+			actual := &unstructured.UnstructuredList{}
+			actual.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   mutationsGroup,
+				Kind:    r.Kind,
+				Version: gv.Version,
+			})
+
+			err = cClient.List(context.TODO(), actual)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, item := range actual.Items {
+				uniqKey := item.GetKind() + "/" + item.GetName()
+				if _, ok := seen[uniqKey]; ok {
+					continue
+				}
+
+				var mutation Mutation
 				err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.UnstructuredContent(), &mutation)
 				if err != nil {
 					klog.Error(err)
@@ -94,10 +118,25 @@ func GetMutations(cClient controllerClient.Client, client *kubernetes.Clientset)
 
 				mutation.Meta.Kind = item.GetKind()
 				mutation.Meta.Name = item.GetName()
-
 				mutations = append(mutations, mutation)
+				seen[uniqKey] = struct{}{}
 			}
 		}
 	}
+
+	if len(mutations) == 0 && lastErr != nil {
+		return nil, lastErr
+	}
+
 	return mutations, nil
+}
+
+func canListResource(resource metav1.APIResource) bool {
+	for _, verb := range resource.Verbs {
+		if verb == "list" {
+			return true
+		}
+	}
+
+	return false
 }
