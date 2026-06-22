@@ -83,7 +83,7 @@ func LoadConfigFromFile(
 
 	// Resolved before ParseConfig: the external preparator binary lives under
 	// <DownloadRootDir>/<provider>/.
-	downloadRootDir := resolveDownloadRootDir(globalOptions)
+	downloadRootDir := withDownloadDir(globalOptions).DownloadDir
 	downloadCacheDir := globalOptions.DownloadCacheDir
 	if downloadCacheDir == "" {
 		downloadCacheDir = filepath.Join(downloadRootDir, "cache")
@@ -215,10 +215,9 @@ func ParseConfigInCluster(
 func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, globalOptions *options.GlobalOptions, operation string) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{Operation: operation}
 
-	// panic mitigation
-	if globalOptions == nil {
-		globalOptions = &options.GlobalOptions{}
-	}
+	// panic mitigation + ensure the provider-bundle download dir and the
+	// preparator agree on one location even when DownloadDir was left empty.
+	globalOptions = withDownloadDir(globalOptions)
 
 	clusterConfig, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
 	if err != nil {
@@ -559,23 +558,33 @@ func ParseConfigFromDataEnsureProvider(
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
+	globalOptions = withDownloadDir(globalOptions)
+
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(input.CombineYAMLs(configData, registryConfig)), -1)
 	if err := EnsureProviderBundle(ctx, "", docs, globalOptions); err != nil {
 		return nil, err
 	}
 
-	opts = append(opts, ValidateOptionDownloadRootDir(resolveDownloadRootDir(globalOptions)))
+	opts = append(opts, ValidateOptionDownloadRootDir(globalOptions.DownloadDir))
 
 	return ParseConfigFromData(ctx, configData, preparatorProvider, globalOptions, opts...)
 }
 
-// resolveDownloadRootDir returns the root dir for downloaded provider bundles:
-// globalOptions.DownloadDir, falling back to a default tmp dir.
-func resolveDownloadRootDir(globalOptions *options.GlobalOptions) string {
-	if globalOptions.DownloadDir != "" {
-		return globalOptions.DownloadDir
+// withDownloadDir returns globalOptions guaranteed non-nil and with a non-empty
+// DownloadDir (falling back to the default tmp dir). It copies when it must
+// change so the shared server GlobalOptions is never mutated. Both the
+// provider-bundle download and the preparator read DownloadDir, so normalizing
+// it in one place keeps them pointed at the same location.
+func withDownloadDir(globalOptions *options.GlobalOptions) *options.GlobalOptions {
+	if globalOptions == nil {
+		return &options.GlobalOptions{DownloadDir: options.DefaultTmpDir()}
 	}
-	return options.DefaultTmpDir()
+	if globalOptions.DownloadDir != "" {
+		return globalOptions
+	}
+	cp := *globalOptions
+	cp.DownloadDir = options.DefaultTmpDir()
+	return &cp
 }
 
 func FetchDocuments(paths []string) ([]string, error) {
@@ -768,9 +777,7 @@ var (
 // provider is extracted from docs; docs also supply registry access (default
 // public registry otherwise). Concurrent same-provider calls share one download.
 func EnsureProviderBundle(ctx context.Context, provider string, docs []string, globalOptions *options.GlobalOptions) error {
-	if globalOptions == nil {
-		globalOptions = &options.GlobalOptions{}
-	}
+	globalOptions = withDownloadDir(globalOptions)
 
 	if provider == "" {
 		fetched, err := fetchCloudProvider(docs)
