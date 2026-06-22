@@ -17,10 +17,6 @@ limitations under the License.
 package manager
 
 import (
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
-	virtualcontrolplanenode "control-plane-manager/internal/controllers/virtual-control-plane-node"
-	virtualcontrolplaneconfiguration "control-plane-manager/internal/controllers/virtual-control-plane-configuration"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +26,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimemanager "sigs.k8s.io/controller-runtime/pkg/manager"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
+	virtualcontrolplaneconfiguration "control-plane-manager/internal/controllers/virtual-control-plane-configuration"
+	virtualcontrolplanenode "control-plane-manager/internal/controllers/virtual-control-plane-node"
 )
 
 type virtualConfigurator struct{}
