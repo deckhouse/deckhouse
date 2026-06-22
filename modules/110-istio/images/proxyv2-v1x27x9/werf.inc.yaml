@@ -274,6 +274,7 @@ shell:
   - ninja install
   - ln -s -f /usr/lib/llvm-17/bin/clang /usr/bin/clang
   - ln -s -f /usr/lib/llvm-17/bin/clang++ /usr/bin/clang++
+  - cd /
   - rm -rf /src/llvm
 {{- if $buildWithPreparedLlvmCache }}
   - rm -rf /tmp/ccache-dir
