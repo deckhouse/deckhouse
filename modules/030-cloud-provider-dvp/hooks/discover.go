@@ -99,6 +99,12 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
+	// Skip if module not yet configured (e.g. fresh install without ModuleConfig).
+	if _, ok := input.Values.GetOk("cloudProviderDvp.provider"); !ok {
+		input.Logger.Warn("cloudProviderDvp.provider is not set, skipping storage class discovery")
+		return nil
+	}
+
 	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 

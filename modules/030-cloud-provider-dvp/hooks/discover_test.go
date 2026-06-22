@@ -172,6 +172,19 @@ volumeBindingMode: WaitForFirstConsumer
 		})
 	})
 
+	Context("When StorageClasses exist on OperatorStartup but no ModuleConfig (no nodes/provider)", func() {
+		f := HookExecutionConfigInit(initValues, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateOnStartupContext(), f.KubeStateSet(storageClassesOnly))
+			f.RunHook()
+		})
+
+		It("Should succeed without requiring nodes/provider in values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderDvp.internal.storageClasses").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("When only managed StorageClass snapshots are present", func() {
 		f := HookExecutionConfigInit(initValues, `{}`)
 		BeforeEach(func() {
