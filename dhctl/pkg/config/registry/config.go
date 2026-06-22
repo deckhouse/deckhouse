@@ -22,13 +22,6 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 )
 
-func errDuplicateConfig() error {
-	return fmt.Errorf("duplicate registry configuration detected: " +
-		"registry is configured in both 'initConfiguration.deckhouse' " +
-		"and 'moduleConfig/deckhouse.spec.settings.registry'. " +
-		"Please specify registry settings in only one location.")
-}
-
 func errUnsupportedCRI(cri constant.CRIType) error {
 	return fmt.Errorf(
 		"registry module cannot be started with defaultCRI '%s'. "+
@@ -66,11 +59,10 @@ type ConfigProvider struct {
 
 // IsLocal returns true when the bootstrap registry mode is Local.
 // It is used only for preliminary registry information retrieval.
+// When both initConfig and deckhouseSettings are provided, deckhouse
+// ModuleConfig takes precedence over initConfiguration.
 func (p *ConfigProvider) IsLocal() (bool, error) {
 	switch {
-	case p.initConfig != nil && p.deckhouseSettings != nil:
-		return false, errDuplicateConfig()
-
 	case p.deckhouseSettings != nil:
 		return p.deckhouseSettings.Mode == constant.ModeLocal, nil
 	}
@@ -83,9 +75,6 @@ func (p *ConfigProvider) RemoteData() (Data, error) {
 	var config Config
 
 	switch {
-	case p.initConfig != nil && p.deckhouseSettings != nil:
-		return Data{}, errDuplicateConfig()
-
 	case p.deckhouseSettings != nil:
 		if err := config.useDeckhouseSettings(*p.deckhouseSettings); err != nil {
 			return Data{}, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
@@ -112,9 +101,6 @@ func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic bool) (Con
 	criSupported := constant.IsCRISupported(defaultCRI)
 
 	switch {
-	case p.initConfig != nil && p.deckhouseSettings != nil:
-		return Config{}, errDuplicateConfig()
-
 	case p.deckhouseSettings != nil:
 		if !criSupported {
 			return Config{}, errUnsupportedCRI(defaultCRI)

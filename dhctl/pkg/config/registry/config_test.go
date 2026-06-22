@@ -419,14 +419,13 @@ func TestConfigProvider_IsLocal(t *testing.T) {
 		output output
 	}{
 		{
-			name: "both configs -> error",
+			name: "both configs -> MC precedence (Direct -> false)",
 			input: input{
 				initConfig:        &initCfg,
 				deckhouseSettings: &directSettings,
 			},
 			output: output{
-				err:    true,
-				errMsg: "duplicate registry configuration detected",
+				isLocal: false,
 			},
 		},
 		{
@@ -511,14 +510,13 @@ func TestConfigProvider_RemoteData(t *testing.T) {
 		output output
 	}{
 		{
-			name: "both configs -> error",
+			name: "both configs -> MC precedence",
 			input: input{
 				initConfig:        &initCfg,
 				deckhouseSettings: &directSettings,
 			},
 			output: output{
-				err:    true,
-				errMsg: "duplicate registry configuration detected",
+				imagesRepo: "registry.example.com",
 			},
 		},
 		{
@@ -609,7 +607,7 @@ func TestConfigProvider_Config(t *testing.T) {
 		output output
 	}{
 		{
-			name: "both configs -> error",
+			name: "both configs -> MC precedence (direct mode)",
 			input: input{
 				initConfig:        &initCfg,
 				deckhouseSettings: &directSettings,
@@ -617,8 +615,8 @@ func TestConfigProvider_Config(t *testing.T) {
 				isStatic:          true,
 			},
 			output: output{
-				err:    true,
-				errMsg: "duplicate registry configuration detected",
+				mode:       constant.ModeDirect,
+				legacyMode: false,
 			},
 		},
 		{
