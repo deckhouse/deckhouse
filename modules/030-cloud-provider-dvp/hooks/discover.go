@@ -33,6 +33,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -74,6 +75,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"module":   dvpModuleName,
 				},
 			},
+			// ExecuteHookOnSynchronization=false: skip OperatorStartup informer sync.
+			// Values lack required fields on fresh install; safe to run on OnBeforeHelm only.
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 	},
 }, handleCloudProviderDiscoveryDataSecret)
@@ -99,12 +103,6 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
-	// Skip if module not yet configured (e.g. fresh install without ModuleConfig).
-	if _, ok := input.Values.GetOk("cloudProviderDvp.provider"); !ok {
-		input.Logger.Warn("cloudProviderDvp.provider is not set, skipping storage class discovery")
-		return nil
-	}
-
 	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
