@@ -1,4 +1,4 @@
-2669
+2680
 1GB
 2GB
 5XX
@@ -1524,6 +1524,7 @@ unschedulable
 uploadproxy
 upmeter
 UpmeterHookProbe
+UpmeterHookProbes
 UpmeterRemoteWrite
 uptick
 UPTODATE
@@ -1561,6 +1562,7 @@ versioned
 versioning
 VersionItems
 VerticalPodAutoscaler
+VerticalPodAutoscalerCheckpoints
 vg
 vhost
 VictoriaMetrics
@@ -1577,6 +1579,7 @@ Virtualization
 VirtualMachine
 VirtualMachineClass
 VirtualMachineIPAddress
+VirtualMachineOperation
 VirtualMachines
 VirtualService
 Vitastor
@@ -1740,6 +1743,7 @@ ZvirtInstanceClass
 аутентификационные
 аутентифицировались
 аутентифицированному
+аутентифицированные
 аутентифицированных
 аутентифицировать
 аутентифицироваться
@@ -1760,6 +1764,7 @@ ZvirtInstanceClass
 балансировщиков
 балансировщиком
 балансировщику
+бандами
 бандл
 бандла
 бандлами
@@ -1847,6 +1852,7 @@ ZvirtInstanceClass
 высокоуровневых
 г
 гайде
+гайду
 Гб
 Гбит
 геораспределенном
@@ -2056,6 +2062,9 @@ ZvirtInstanceClass
 логгеру
 логирование
 логирования
+логировать
+Логировать
+логируемого
 логируются
 ложноположительных
 м
@@ -2124,6 +2133,7 @@ ZvirtInstanceClass
 нативно
 неавторизованного
 неавторизованный
+неаутентифицированные
 невалидным
 недеструктивные
 недеструктивных
@@ -2230,6 +2240,7 @@ ZvirtInstanceClass
 патчи
 патчится
 патчить
+переадресация
 Перебалансировке
 перебалансировки
 Перевыкат
