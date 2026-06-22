@@ -65,6 +65,16 @@ func main() {
 	log.Info("Setup signal handler")
 	ctx := setupSignalHandler()
 
+	if cfg.Once {
+		log.Info("Starting one-shot mirror")
+		if err = worker.RunOnce(ctx); err != nil {
+			log.Error("one-shot mirror failed", "error", err)
+			os.Exit(3)
+		}
+		log.Info("Bye!")
+		return
+	}
+
 	log.Info("Starting mirrorer")
 	if err = worker.Run(ctx); err != nil {
 		log.Error("Mirrorer error", "error", err)

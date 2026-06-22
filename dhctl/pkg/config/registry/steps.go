@@ -17,12 +17,10 @@ package registry
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -31,11 +29,8 @@ import (
 
 const (
 	secretsNamespace            = "d8-system"
-	stateSecretName             = "registry-state"
 	initSecretName              = "registry-init"
 	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
-
-	conditionTypeReady = "Ready"
 )
 
 // WaitForRegistryInitialization waits for the registry to become fully initialized and ready.
@@ -66,20 +61,14 @@ func WaitForRegistryInitialization(ctx context.Context, kubeClient client.KubeCl
 //   - err: error from the operation
 func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClient, config Config) error {
 	if !config.LegacyMode {
+		// New-arch readiness: require only that registry-init was applied (the PKI
+		// hook persisted the CA into registry-module-pki and set the is-applied
+		// annotation). Cache + agent readiness and the seed->cache fill are
+		// verified earlier in the dhctl finalize sequence
+		// (WaitForCacheAndAgentReady, FillCacheFromSeed, VerifyCacheNonEmpty);
+		// the legacy registry-state Ready condition is no longer consulted.
 		if err := checkInit(ctx, kubeClient); err != nil {
 			log.DebugF("Error while checking registry init: %v\n", err)
-			return ErrIsNotReady
-		}
-
-		msg, err := checkReady(ctx, kubeClient)
-		if err != nil {
-			if msg != "" {
-				err := fmt.Errorf("%s\n%s", ErrIsNotReady.Error(), msg)
-				log.DebugF("Error while checking registry ready: %v\n", err)
-				return err
-			}
-
-			log.DebugF("Error while checking registry ready: %v\n", err)
 			return ErrIsNotReady
 		}
 	}
@@ -109,87 +98,6 @@ func checkInit(ctx context.Context, kubeClient client.KubeClient) error {
 		return ErrNotInitialized
 	}
 	return nil
-}
-
-// checkReady verifies if the registry is ready.
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//
-// Returns:
-//   - string: readiness status messages
-//   - err: error from the operation
-func checkReady(ctx context.Context, kubeClient client.KubeClient) (string, error) {
-	conditions, err := getStateSecret(ctx, kubeClient)
-	if err != nil {
-		return "", err
-	}
-
-	if len(conditions) == 0 {
-		return "", ErrIsNotReady
-	}
-
-	var (
-		msg   strings.Builder
-		ready bool
-	)
-
-	for _, condition := range conditions {
-		if condition.Type == conditionTypeReady {
-			ready = condition.Status == metav1.ConditionTrue
-			continue
-		}
-
-		if condition.Status == metav1.ConditionTrue {
-			continue
-		}
-
-		if msg.Len() > 0 {
-			msg.WriteString("\n")
-		}
-
-		fmt.Fprintf(&msg, "* %s: %s",
-			condition.Type,
-			strings.TrimSpace(strings.ReplaceAll(condition.Message, "\n", " ")),
-		)
-	}
-
-	if ready {
-		return "", nil
-	}
-
-	return msg.String(), ErrIsNotReady
-}
-
-// getStateSecret retrieves and parses the registry state conditions.
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//
-// Returns:
-//   - []metav1.Condition: registry state conditions
-//   - err: error from the operation
-func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1.Condition, error) {
-	secret, err := kubeClient.
-		CoreV1().
-		Secrets(secretsNamespace).
-		Get(ctx, stateSecretName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
-	}
-
-	var conditions []metav1.Condition
-
-	conditionRaw, exists := secret.Data["conditions"]
-	if !exists {
-		return conditions, nil
-	}
-
-	if err := yaml.Unmarshal(conditionRaw, &conditions); err != nil {
-		return nil, fmt.Errorf("unmarshal secret data: %w", err)
-	}
-
-	return conditions, nil
 }
 
 // getInitSecretStatus checks the status of the init secret.

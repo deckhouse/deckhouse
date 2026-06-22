@@ -3,8 +3,44 @@ positive:
     - {}
   configValues:
     - {}
+    - upstream:
+        host: registry.example.com
+        path: /deckhouse/ee
+        scheme: HTTPS
+        credentials:
+          username: u
+          password: p
+        mirrors:
+          - host: mirror.example.com
+            scheme: HTTPS
+      cache:
+        enabled: true
+        ttl: 24h
+      additionalRegistries:
+        - host: docker.io
+          upstream:
+            host: registry-1.docker.io
+            scheme: HTTPS
+      auth:
+        users:
+          - name: ro-user
+            role: ReadOnly
 negative:
   values:
     - somethingInConfig: yes
   configValues:
     - somethingInConfig: yes
+    - upstream:
+        host: registry.example.com
+        scheme: FTP
+    - auth:
+        users:
+          - name: bad
+            role: admin
+    - upstream:
+        host: registry.example.com
+        bogus: x
+    - additionalRegistries:
+        - host: docker.io
+          upstreams:
+            host: registry-1.docker.io

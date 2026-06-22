@@ -73,6 +73,7 @@ func (c ContextBootstrapProxy) ToMap() map[string]any {
 type ContextBootstrap struct {
 	Init  initsecret.Config      `json:"init" yaml:"init"`
 	Proxy *ContextBootstrapProxy `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Seed  bool                   `json:"seed,omitempty" yaml:"seed,omitempty"`
 }
 
 func (c ContextBootstrap) Validate() error {
@@ -86,6 +87,7 @@ func (c ContextBootstrap) ToMap() map[string]any {
 	m := make(map[string]any)
 
 	m["init"] = c.Init.ToMap()
+	m["seed"] = c.Seed
 
 	if c.Proxy != nil {
 		m["proxy"] = c.Proxy.ToMap()

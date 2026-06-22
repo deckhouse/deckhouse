@@ -32,6 +32,7 @@ type Config struct {
 	RemoteAddresses []string `json:"remote"`
 	SleepInterval   int      `json:"sleep,omitempty"`
 	Parallelizm     int      `json:"parallelizm,omitempty"`
+	Once            bool     `json:"once,omitempty"`
 }
 
 func (config *Config) Validate() error {

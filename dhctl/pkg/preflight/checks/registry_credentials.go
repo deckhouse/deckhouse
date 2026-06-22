@@ -58,7 +58,7 @@ func (c RegistryCredentialsCheck) Run(ctx context.Context) error {
 		return err
 	}
 
-	authData := c.MetaConfig.Registry.Settings.RemoteData.AuthBase64()
+	authData := c.MetaConfig.Registry.RemoteData().AuthBase64()
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 

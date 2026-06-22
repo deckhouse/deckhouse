@@ -121,3 +121,42 @@ func ParseYAMLDeckhouseMC(rawYAML []byte) (*module_config.DeckhouseSettings, err
 	}
 	return v.Spec.Settings.Registry, nil
 }
+
+// registryMC represents the relevant subset of moduleConfig name=registry:
+//
+//	apiVersion: deckhouse.io/v1alpha1
+//	kind: ModuleConfig
+//	metadata: {name: registry}
+//	spec:
+//	  enabled: true
+//	  settings: {cache: {...}, upstream: {...}}
+type registryMC struct {
+	Spec struct {
+		Enabled  *bool                       `json:"enabled" yaml:"enabled"`
+		Settings module_config.CleanSettings `json:"settings" yaml:"settings"`
+	} `json:"spec" yaml:"spec"`
+}
+
+// ParseJSONRegistryMC parses moduleConfig/registry from JSON. Returns nil if empty.
+func ParseJSONRegistryMC(rawJSON []byte) (*module_config.RegistryModuleConfig, error) {
+	if len(rawJSON) == 0 {
+		return nil, nil
+	}
+	var v registryMC
+	if err := json.Unmarshal(rawJSON, &v); err != nil {
+		return nil, err
+	}
+	return &module_config.RegistryModuleConfig{Enabled: v.Spec.Enabled, Settings: v.Spec.Settings}, nil
+}
+
+// ParseYAMLRegistryMC parses moduleConfig/registry from YAML. Returns nil if empty.
+func ParseYAMLRegistryMC(rawYAML []byte) (*module_config.RegistryModuleConfig, error) {
+	if len(rawYAML) == 0 {
+		return nil, nil
+	}
+	var v registryMC
+	if err := yaml.Unmarshal(rawYAML, &v); err != nil {
+		return nil, err
+	}
+	return &module_config.RegistryModuleConfig{Enabled: v.Spec.Enabled, Settings: v.Spec.Settings}, nil
+}

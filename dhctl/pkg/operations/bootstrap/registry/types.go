@@ -26,8 +26,10 @@ type (
 	BundlePathProvider func() (string, error)
 
 	// ConfigProvider abstracts registry configuration, allowing callers to query
-	// whether the cluster uses a local (bundle-based) registry.
+	// whether the cluster uses a local (bundle-based) registry or requires the
+	// on-node seed bootstrap (clean air-gap or legacy Local).
 	ConfigProvider interface {
 		IsLocal() (bool, error)
+		NeedsSeed() (bool, error)
 	}
 )

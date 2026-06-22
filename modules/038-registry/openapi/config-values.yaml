@@ -1,5 +1,53 @@
 type: object
 properties:
+  migrate:
+    type: boolean
+    default: false
+    description: |-
+      Opt-in trigger for the takeover from the legacy registry architecture to the
+      new agent-based architecture. On a cluster still running the legacy arch,
+      setting this to `true` advances the takeover (Legacy -> TakingOver -> New).
+      Setting it back to `false` before the flip completes rolls the takeover back.
+      Has no effect on a fresh install (already New) or once the new arch is in
+      control.
+
+      The takeover auto-translates the legacy upstream/credentials, but the
+      on-master cache is an explicit choice: if the legacy registry used a cache
+      (Proxy mode) or was air-gapped (Local mode), you MUST also set
+      `cache.enabled: true` (and the relevant `cache` settings) alongside
+      `migrate: true`. Omitting it leaves no cache for the new agents to use, so
+      the readiness gate never passes and the takeover auto-rolls-back to Legacy
+      after `migrateTimeout`. A connected Direct-mode legacy needs no cache.
+
+      Automatic takeover completes for legacy Direct, Proxy, and Local clusters.
+      For Proxy/Local, the per-node legacy registry on the host port yields to the
+      agent during the takeover and the on-master cache serves images across each
+      node's brief swap — so `cache.enabled: true` is required for those modes (as
+      above). A connected Direct legacy migrates with `migrate: true` alone.
+
+      Air-gap Local runbook: set `cache.enabled: true` while still on the legacy
+      arch — the new on-master cache starts and an in-cluster job copies the legacy
+      registry into it. Wait until the copy completes (the takeover will not
+      advance to the new arch until the cache is populated; for air-gap there is no
+      upstream to fall back on), then set `migrate: true`. If `migrate` is set
+      before the copy finishes, the flip waits and auto-rolls-back after
+      `migrateTimeout` if it cannot complete.
+  migrateTimeout:
+    type: string
+    default: "30m"
+    pattern: '^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$'
+    description: |-
+      Maximum time the takeover may stay in the TakingOver phase before it
+      auto-rolls-back to Legacy if the new stack (agents + cache) has not become
+      ready. A Go duration string (for example "30m", "1h").
+  cleanupAfter:
+    type: string
+    default: "168h"
+    pattern: '^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$'
+    description: |-
+      How long the cluster must remain in the New phase before the takeover
+      auto-advances to CleanupPending and the legacy registry resources are
+      removed. A Go duration string (default 7 days).
   whitelistSourceRanges:
     type: array
     items:
@@ -68,3 +116,186 @@ properties:
               The name of the secret in the `d8-system` namespace to use with the registry ingress.
 
               This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+  upstream:
+    type: object
+    additionalProperties: false
+    description: |
+      The real upstream registry for DKP images (the main registry, intercepted on nodes as `registry.d8-system.svc:5001`).
+
+      Omit for air-gap: in that case images are served only from the on-master cache, populated by `d8 mirror push`.
+    required: [host]
+    properties:
+      host:
+        type: string
+        x-examples: ["registry.deckhouse.io"]
+        description: Upstream registry host.
+      path:
+        type: string
+        x-examples: ["/deckhouse/ee"]
+        description: Repository path prefix in the upstream registry.
+      scheme:
+        type: string
+        enum: ["HTTP", "HTTPS"]
+        default: "HTTPS"
+        description: Scheme used to reach the upstream registry.
+      ca:
+        type: string
+        description: Custom CA certificate (PEM) of the upstream registry.
+      credentials:
+        type: object
+        additionalProperties: false
+        description: Credentials for the upstream registry.
+        properties:
+          username:
+            type: string
+          password:
+            type: string
+          dockerCfg:
+            type: string
+            description: Base64-encoded docker config; alternative to username/password.
+      mirrors:
+        type: array
+        description: HA mirrors of the upstream registry.
+        items:
+          type: object
+          additionalProperties: false
+          required: [host]
+          properties:
+            host:
+              type: string
+            scheme:
+              type: string
+              enum: ["HTTP", "HTTPS"]
+              default: "HTTPS"
+            ca:
+              type: string
+            credentials:
+              type: object
+              additionalProperties: false
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                dockerCfg:
+                  type: string
+  cache:
+    type: object
+    additionalProperties: false
+    default: {}
+    description: Caching parameters for the main registry.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: Enable the on-master caching proxy. When false, the agent forwards directly to the upstream.
+      ttl:
+        type: string
+        description: Pull-through cache TTL (connected mode).
+      storageSize:
+        type: string
+        description: Persistent store size for the cache.
+      storageClass:
+        type: string
+        description: |-
+          StorageClass for the cache's per-replica PersistentVolumeClaims (ReadWriteOnce; each
+          master replica gets its own volume — the replicas synchronize via the cache agent).
+          If unset, the global `settings.modules.storageClass` is used; if that is also unset,
+          the cluster default StorageClass applies.
+      publish:
+        type: boolean
+        default: false
+        description: |-
+          Expose the cache over an Ingress so images can be pushed to it with `d8 mirror push`
+          (air-gap updates). Writes are routed to the elected leader replica. Requires
+          `global.modules.publicDomainTemplate` and the `cert-manager` module.
+  additionalRegistries:
+    type: array
+    description: Additional registries to route/cache through the agent (for example docker.io, an internal registry).
+    items:
+      type: object
+      additionalProperties: false
+      required: [host]
+      properties:
+        host:
+          type: string
+          description: Virtual address intercepted on nodes.
+        upstream:
+          type: object
+          additionalProperties: false
+          required: [host]
+          properties:
+            host:
+              type: string
+            path:
+              type: string
+            scheme:
+              type: string
+              enum: ["HTTP", "HTTPS"]
+              default: "HTTPS"
+            ca:
+              type: string
+            credentials:
+              type: object
+              additionalProperties: false
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                dockerCfg:
+                  type: string
+            mirrors:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [host]
+                properties:
+                  host:
+                    type: string
+                  scheme:
+                    type: string
+                    enum: ["HTTP", "HTTPS"]
+                    default: "HTTPS"
+                  ca:
+                    type: string
+                  credentials:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      username:
+                        type: string
+                      password:
+                        type: string
+                      dockerCfg:
+                        type: string
+        cache:
+          type: object
+          additionalProperties: false
+          properties:
+            enabled:
+              type: boolean
+              default: false
+            ttl:
+              type: string
+            storageSize:
+              type: string
+  auth:
+    type: object
+    additionalProperties: false
+    default: {}
+    description: Local auth presented by the agent/cache to in-cluster clients and containerd. Mostly generated; these are optional overrides.
+    properties:
+      users:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, role]
+          properties:
+            name:
+              type: string
+            role:
+              type: string
+              enum: ["ReadOnly", "ReadWrite"]

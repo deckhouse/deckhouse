@@ -36,10 +36,13 @@ import (
 type Syncer struct {
 	log *slog.Logger
 
-	src, dst  name.Registry
-	srcPuller *remote.Puller
-	dstPuller *remote.Puller
-	pusher    *remote.Pusher
+	cfg config.Config
+
+	src, dst         name.Registry
+	srcPuller        *remote.Puller
+	dstPuller        *remote.Puller
+	pusher           *remote.Pusher
+	dstRemoteOptions []remote.Option
 }
 
 func New(logger *slog.Logger, cfg config.Config) (*Syncer, error) {
@@ -69,12 +72,14 @@ func New(logger *slog.Logger, cfg config.Config) (*Syncer, error) {
 	}
 
 	return &Syncer{
-		log:       logger,
-		src:       srcRegistry,
-		dst:       dstRegistry,
-		srcPuller: srcPuller,
-		dstPuller: dstPuller,
-		pusher:    pusher,
+		log:              logger,
+		cfg:              cfg,
+		src:              srcRegistry,
+		dst:              dstRegistry,
+		srcPuller:        srcPuller,
+		dstPuller:        dstPuller,
+		pusher:           pusher,
+		dstRemoteOptions: dstOpts,
 	}, nil
 }
 
@@ -132,7 +137,91 @@ func (rs *Syncer) Run(ctx context.Context) error {
 			return fmt.Errorf("process tag: %w", err)
 		}
 	}
+
+	if rs.cfg.Prune {
+		if err := rs.pruneDest(ctx); err != nil {
+			return fmt.Errorf("prune destination: %w", err)
+		}
+	}
 	return nil
+}
+
+// pruneDest deletes tags present in the destination but absent in the source,
+// so the destination becomes an exact mirror of the source (enables deletion
+// propagation across HA cache replicas).
+//
+// Safety guard: if the source returns zero tags (transient leader restart /
+// catalog hiccup in air-gap), pruning is skipped entirely to avoid wiping the
+// follower's store.
+func (rs *Syncer) pruneDest(ctx context.Context) error {
+	srcTags, err := rs.discoverTags(ctx)
+	if err != nil {
+		return fmt.Errorf("discover source tags: %w", err)
+	}
+	if len(srcTags) == 0 {
+		rs.log.Warn("source returned zero tags — skipping prune to protect destination store")
+		return nil
+	}
+	want := make(map[string]struct{}, len(srcTags))
+	for _, t := range srcTags {
+		want[t.Repository.RepositoryStr()+":"+t.TagStr()] = struct{}{}
+	}
+
+	dstTags, err := rs.discoverDestTags(ctx)
+	if err != nil {
+		return fmt.Errorf("discover destination tags: %w", err)
+	}
+	for _, dt := range dstTags {
+		key := dt.Repository.RepositoryStr() + ":" + dt.TagStr()
+		if _, keep := want[key]; keep {
+			continue
+		}
+		rs.log.Info("pruning stale tag", "tag", dt.String())
+		if err := remote.Delete(dt, rs.dstRemoteOptions...); err != nil {
+			return fmt.Errorf("delete %s: %w", dt.String(), err)
+		}
+	}
+	return nil
+}
+
+// discoverDestTags lists all tags present in the destination registry,
+// mirroring the logic of discoverTags but operating over the destination.
+func (rs *Syncer) discoverDestTags(ctx context.Context) ([]name.Tag, error) {
+	catalogger, err := rs.dstPuller.Catalogger(ctx, rs.dst)
+	if err != nil {
+		return nil, fmt.Errorf("create dst catalogger: %w", err)
+	}
+
+	var tags []name.Tag
+
+	for catalogger.HasNext() {
+		repos, err := catalogger.Next(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("get next dst repo: %w", err)
+		}
+
+		for _, repo := range repos.Repos {
+			repoName := rs.dst.Repo(repo)
+
+			lister, err := rs.dstPuller.Lister(ctx, repoName)
+			if err != nil {
+				return nil, fmt.Errorf("create dst repo %q lister: %w", repoName.String(), err)
+			}
+
+			for lister.HasNext() {
+				page, err := lister.Next(ctx)
+				if err != nil {
+					return nil, fmt.Errorf("get next dst repo %q tags: %w", repoName.String(), err)
+				}
+
+				for _, tag := range page.Tags {
+					tags = append(tags, repoName.Tag(tag))
+				}
+			}
+		}
+	}
+
+	return tags, nil
 }
 
 func (rs *Syncer) discoverTags(ctx context.Context) ([]name.Tag, error) {

@@ -12,100 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if has (.registry).mode (list "Proxy" "Local") }}
+{{- /*
+  New-arch on-node bootstrap seed (air-gap Local install only).
+  Stands up a raw-process docker-distribution + docker-auth serving an
+  authoritative store on dedicated LOOPBACK ports (distribution 127.0.0.1:5010,
+  auth 127.0.0.1:5061) so it never collides with the agent's :5001 or the cache's
+  auth :5051. Fills the store ONCE over the SSH reverse tunnel
+  (registry-syncer 127.0.0.1:5511 -> 127.0.0.1:5010), then creates the
+  registry-bootstrap secret. Ephemeral: no static-pod promotion; dhctl tears it
+  down at finalize.
 
-pod_kill_and_wait() {
-  local pod_prefix="${1}"
-  local sleep_interval=1
-  local max_attempts=10
-
-  echo "Removing pod: ${pod_prefix}"
-
-  if [ -z "${pod_prefix}" ]; then
-    echo "Empty pod prefix, skipping"
-    return 0
-  fi
-
-  if ! command -v crictl > /dev/null 2>&1; then
-    echo "crictl is not installed, skipping pod cleanup"
-    return 0
-  fi
-
-  if ! crictl info > /dev/null 2>&1; then
-    echo "containerd is not ready, skipping pod cleanup"
-    return 0
-  fi
-
-  local pods=$(crictl pods -o json 2>/dev/null | jq -r --arg PREFIX "${pod_prefix}" '
-    .items[]? |
-    select(.metadata.name | startswith($PREFIX)) |
-    .id
-  ' 2>/dev/null)
-
-  if [ -z "${pods}" ]; then
-    echo "${pod_prefix}: no matching pods, nothing to remove"
-    return 0
-  fi
-
-  for pod in ${pods}; do
-    crictl stopp "${pod}" > /dev/null 2>&1 || true
-    crictl rmp "${pod}" > /dev/null 2>&1 || true
-  done
-
-  echo "${pod_prefix}: waiting for pods to be removed"
-  for ((i=1; i<=max_attempts; i++)); do
-    echo "${pod_prefix}: waiting for removal, attempt ${i} of ${max_attempts}"
-    sleep ${sleep_interval}
-
-    local remaining_pods=$(crictl pods -o json 2>/dev/null | jq -r --arg PREFIX "${pod_prefix}" '
-      .items[]? |
-      select(.metadata.name | startswith($PREFIX)) |
-      .id
-    ' 2>/dev/null)
-
-    if [ -z "${remaining_pods}" ]; then
-      echo "${pod_prefix}: removed"
-      return 0
-    fi
-  done
-
-  echo "${pod_prefix}: failed to remove pods within ${sleep_interval}s x ${max_attempts}"
-  exit 1
-}
+  Gate: new-model installs needing an on-node seed — registry module enabled AND
+  bootstrap.seed (air-gap: cache enabled, no upstream). Connected installs pull
+  from upstream during bring-up and skip the seed.
+*/ -}}
+{{- if and (.registry).registryModuleEnable (.registry.bootstrap).seed }}
 
 bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" \
                    "module-registry-distribution:{{ .images.registry.dockerDistribution }}" \
                    "module-registry-syncer:{{ .images.registry.syncer }}" \
                    "cfssl:{{ .images.registrypackages.cfssl165 }}"
 
-# Prepare proxy envs
 bb-set-proxy
 
-# Prepare vars
-discovered_node_ip="$(bb-d8-node-ip)"
-
-base_path="${REGISTRY_MODULE_IGNITER_DIR}"
+base_path="/opt/deckhouse/registry/bootstrap-seed"
 pki_path="${base_path}/pki"
 auth_path="${base_path}/auth"
 distribution_path="${base_path}/distribution"
 log_path="${base_path}/logs"
-data_path="/opt/deckhouse/registry/local_data"
+data_path="/opt/deckhouse/registry/bootstrap-data"
 
-igniter_stop_sh="${base_path}/stop_registry_igniter.sh"
-igniter_start_sh="${base_path}/start_registry_igniter.sh"
+seed_stop_sh="${base_path}/stop_registry_seed.sh"
+seed_start_sh="${base_path}/start_registry_seed.sh"
 
-static_pod_file="/etc/kubernetes/manifests/registry-nodeservices.yaml"
-static_pod_name="registry-nodeservices"
+mkdir -p "${base_path}" "${pki_path}" "${auth_path}" "${distribution_path}" "${log_path}" "${data_path}"
 
-# Create the directories
-mkdir -p "${base_path}" \
-         "${pki_path}" \
-         "${auth_path}" \
-         "${distribution_path}" \
-         "${log_path}" \
-         "${data_path}"
-
-# Generate certs
+# --- PKI from the new-arch registry-init CA -------------------------------------
 bb-sync-file "${pki_path}/ca.crt" - << EOF
 {{ .registry.bootstrap.init.ca.cert }}
 EOF
@@ -113,12 +55,6 @@ EOF
 bb-sync-file "${pki_path}/ca.key" - << EOF
 {{ .registry.bootstrap.init.ca.key }}
 EOF
-
-{{- with ((.registry.bootstrap).proxy).ca }}
-bb-sync-file "${pki_path}/upstream-registry-ca.crt" - << EOF
-{{ . }}
-EOF
-{{- end }}
 
 bb-sync-file "${pki_path}/profiles.json" - << EOF
 {
@@ -154,7 +90,7 @@ EOF
 
 client_server_csr_json=$(cat << EOF
 {
-  "hosts": ["127.0.0.1", "localhost", "registry.d8-system.svc", "${discovered_node_ip}"],
+  "hosts": ["127.0.0.1", "localhost", "registry.d8-system.svc"],
   "key": {"algo": "rsa", "size": 2048}
 }
 EOF
@@ -167,7 +103,6 @@ auth_token_csr_json=$(cat << EOF
 EOF
 )
 
-# Auth certs
 echo "${client_server_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth" \
   -ca="${pki_path}/ca.crt" \
@@ -177,7 +112,6 @@ echo "${client_server_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
 mv "${pki_path}/auth.pem" "${pki_path}/auth.crt"
 mv "${pki_path}/auth-key.pem" "${pki_path}/auth.key"
 
-# Distribution certs
 echo "${client_server_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-distribution" \
   -ca="${pki_path}/ca.crt" \
@@ -187,7 +121,6 @@ echo "${client_server_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
 mv "${pki_path}/distribution.pem" "${pki_path}/distribution.crt"
 mv "${pki_path}/distribution-key.pem" "${pki_path}/distribution.key"
 
-# Auth token certs
 echo "${auth_token_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth-token" \
   -ca="${pki_path}/ca.crt" \
@@ -197,17 +130,16 @@ echo "${auth_token_csr_json}" | /opt/deckhouse/bin/cfssl gencert \
 mv "${pki_path}/token.pem" "${pki_path}/token.crt"
 mv "${pki_path}/token-key.pem" "${pki_path}/token.key"
 
-# Cleanup
 rm -f "${pki_path}/auth.csr" \
       "${pki_path}/distribution.csr" \
       "${pki_path}/token.csr" \
       "${pki_path}/profiles.json" \
       "${pki_path}/ca.key"
 
-# Prepare auth manifest
+# --- docker-auth config (loopback :5061) ----------------------------------------
 bb-sync-file "${auth_path}/config.yaml" - << EOF
 server:
-  addr: "127.0.0.1:5051"
+  addr: "127.0.0.1:5061"
   real_ip_header: "X-Forwarded-For"
   certificate: "${pki_path}/auth.crt"
   key: "${pki_path}/auth.key"
@@ -220,24 +152,19 @@ token:
 users:
   {{ .registry.bootstrap.init.ro_user.name | quote }}:
     password: {{ .registry.bootstrap.init.ro_user.password_hash | quote | replace "$" "\\$" }}
-
-  {{- if eq .registry.mode "Local" }}
   {{ .registry.bootstrap.init.rw_user.name | quote }}:
     password: {{ .registry.bootstrap.init.rw_user.password_hash | quote | replace "$" "\\$" }}
-  {{- end }}
 
 acl:
   - match: { account: {{ .registry.bootstrap.init.ro_user.name | quote }} }
     actions: ["pull"]
     comment: "has readonly access"
-  {{- if eq .registry.mode "Local" }}
   - match: { account: {{ .registry.bootstrap.init.rw_user.name | quote }} }
     actions: [ "*" ]
     comment: "has full access"
-  {{- end }}
 EOF
 
-# Prepare distribution manifest
+# --- docker-distribution config (loopback :5010, authoritative store, no proxy) --
 bb-sync-file "${distribution_path}/config.yaml" - << EOF
 version: 0.1
 log:
@@ -252,11 +179,11 @@ storage:
     disable: true
 
 http:
-  addr: "${discovered_node_ip}:5001"
+  addr: "127.0.0.1:5010"
   prefix: /
   secret: asecretforbootstrap
   debug:
-    addr: "127.0.0.1:5002"
+    addr: "127.0.0.1:5012"
     prometheus:
       enabled: true
       path: /metrics
@@ -264,43 +191,22 @@ http:
     certificate: "${pki_path}/distribution.crt"
     key: "${pki_path}/distribution.key"
 
-{{- with .registry.bootstrap.proxy }}
-proxy:
-  remoteurl: "{{ .scheme }}://{{ .host }}"
-  {{- if .username }}
-  username: {{ .username | quote }}
-  password: {{ .password | quote }}
-  {{- end }}
-  remotepathonly: {{ .path | quote }}
-  localpathalias: "/system/deckhouse"
-  {{- with .ca }}
-  ca: "${pki_path}/upstream-registry-ca.crt"
-  {{- end }}
-  {{- with .ttl }}
-  ttl: {{ . | quote }}
-  {{- end }}
-{{- end }}
-
 auth:
   token:
-    realm: https://${discovered_node_ip}:5051/auth
+    realm: https://127.0.0.1:5061/auth
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "${pki_path}/token.crt"
     autoredirect: true
     proxy:
-      url: https://127.0.0.1:5051/auth
+      url: https://127.0.0.1:5061/auth
       ca: "${pki_path}/ca.crt"
 EOF
 
-# Prepare start script
-bb-sync-file "${igniter_start_sh}" - << EOF
-#!/bin/bash
-
-# Unset all registry env
-for var in \$(compgen -e REGISTRY); do
-    unset "\${var}"
-done
+# --- start / stop helpers -------------------------------------------------------
+bb-sync-file "${seed_start_sh}" - << EOF
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
 start_and_wait() {
     local log_path=\${1}
@@ -339,7 +245,7 @@ liveness_probe() {
     local ca_path=\${2}
 
     local sleep_interval=1
-    local max_attempts=20
+    local max_attempts=30
 
     echo "Probing liveness of \${address}"
 
@@ -360,104 +266,89 @@ liveness_probe() {
     return 1
 }
 
-echo "Starting registry auth"
+echo "Starting bootstrap-seed auth"
 if ! start_and_wait "${log_path}/auth.log" /opt/deckhouse/bin/ign-auth -logtostderr "${auth_path}/config.yaml"; then
-    echo "ERROR: registry auth failed to start, see ${log_path}/auth.log"
+    echo "ERROR: bootstrap-seed auth failed to start, see ${log_path}/auth.log"
     exit 1
 fi
-if ! liveness_probe "https://127.0.0.1:5051" "${pki_path}/ca.crt"; then
-    echo "ERROR: registry auth liveness probe failed, see ${log_path}/auth.log"
+if ! liveness_probe "https://127.0.0.1:5061" "${pki_path}/ca.crt"; then
+    echo "ERROR: bootstrap-seed auth liveness probe failed, see ${log_path}/auth.log"
     exit 1
 fi
 
-echo "Starting registry distribution"
+echo "Starting bootstrap-seed distribution"
 if ! start_and_wait "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"; then
-    echo "ERROR: registry distribution failed to start, see ${log_path}/distribution.log"
+    echo "ERROR: bootstrap-seed distribution failed to start, see ${log_path}/distribution.log"
     exit 1
 fi
-if ! liveness_probe "https://${discovered_node_ip}:5001" "${pki_path}/ca.crt"; then
-    echo "ERROR: registry distribution liveness probe failed, see ${log_path}/distribution.log"
+if ! liveness_probe "https://127.0.0.1:5010" "${pki_path}/ca.crt"; then
+    echo "ERROR: bootstrap-seed distribution liveness probe failed, see ${log_path}/distribution.log"
     exit 1
 fi
 
-echo "Registry services started, logs are in ${log_path}"
+echo "bootstrap-seed started"
+EOF
+chmod +x "${seed_start_sh}"
+
+bb-sync-file "${seed_stop_sh}" - << "EOF"
+#!/usr/bin/env bash
+pkill -f '/opt/deckhouse/bin/ign-registry' || true
+pkill -f '/opt/deckhouse/bin/ign-auth' || true
+sleep 2
+pkill -9 -f '/opt/deckhouse/bin/ign-registry' || true
+pkill -9 -f '/opt/deckhouse/bin/ign-auth' || true
+EOF
+chmod +x "${seed_stop_sh}"
+
+bash "${seed_stop_sh}"
+bash "${seed_start_sh}"
+
+# --- fill the seed ONCE over the SSH reverse tunnel (retriable; only tunnel use) -
+syncer_config_path="$(bb-tmp-file)"
+bb-sync-file $syncer_config_path - << EOF
+source:
+  address: 127.0.0.1:5511
+destination:
+  address: "127.0.0.1:5010"
+  ca: |
+    {{ .registry.bootstrap.init.ca.cert | nindent 4 }}
+  user:
+    name: {{ .registry.bootstrap.init.rw_user.name | quote }}
+    password: {{ .registry.bootstrap.init.rw_user.password | quote }}
 EOF
 
-# Prepare stop script
-bb-sync-file "${igniter_stop_sh}" - << EOF
-#!/bin/bash
+registry-syncer $syncer_config_path | bb-log-stream-dhctl
 
-kill_and_wait() {
-    local bin_path=\${1}
-
-    echo "Stopping background process: \${bin_path}"
-
-    pkill -f "\${bin_path}" 2>/dev/null || true
-
-    local sleep_interval=1
-    local max_attempts=10
-    for ((i=1; i<=max_attempts; i++)); do
-        if [[ \${i} -ne 1 ]]; then
-            echo "\${bin_path}: waiting for process to exit, attempt \${i} of \${max_attempts}"
-            sleep \${sleep_interval}
-        fi
-
-        if ! pgrep -f "\${bin_path}" > /dev/null 2>&1; then
-            echo "\${bin_path}: stopped"
-            return 0
-        fi
-    done
-
-    echo "\${bin_path}: timeout, sending SIGKILL"
-    pkill -9 -f "\${bin_path}" 2>/dev/null || true
-
-    local sleep_interval=1
-    local max_attempts=5
-    for ((i=1; i<=max_attempts; i++)); do
-        if [[ \${i} -ne 1 ]]; then
-            echo "\${bin_path}: waiting for process to exit after SIGKILL, attempt \${i} of \${max_attempts}"
-            sleep \${sleep_interval}
-        fi
-
-        if ! pgrep -f "\${bin_path}" > /dev/null 2>&1; then
-            echo "\${bin_path}: stopped after SIGKILL"
-            return 0
-        fi
-    done
-
-    echo "\${bin_path}: still running after SIGKILL"
-    return 1
-}
-
-echo "Stopping registry distribution"
-if ! kill_and_wait "/opt/deckhouse/bin/ign-registry"; then
-    echo "ERROR: Failed to stop registry distribution, see ${log_path}/distribution.log"
-    exit 1
-fi
-
-echo "Stopping registry auth"
-if ! kill_and_wait "/opt/deckhouse/bin/ign-auth"; then
-    echo "ERROR: Failed to stop registry auth, see ${log_path}/auth.log"
-    exit 1
-fi
-
-echo "Registry services stopped"
+# --- create the registry-bootstrap secret (agent fallback signal) ---------------
+seed_secret_path="$(bb-tmp-file)"
+bb-sync-file $seed_secret_path - << EOF
+host: 127.0.0.1:5010
+scheme: https
+ca: |
+{{ .registry.bootstrap.init.ca.cert | nindent 2 }}
 EOF
 
-chmod a+x "${igniter_stop_sh}"
-chmod a+x "${igniter_start_sh}"
+export BB_KUBE_AUTH_TYPE="admin-cert"
+export BB_KUBE_APISERVER_URL=""
+bb-curl-helper-extract-admin-certs
 
-# Switching static pod to igniter
+bb-curl-kube "/api/v1/namespaces/d8-system" >/dev/null 2>&1 || \
+  bb-curl-kube "/api/v1/namespaces" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    --data '{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"d8-system"}}' >/dev/null
 
-# Stop static pod
-rm -f "${static_pod_file}"
-pod_kill_and_wait "${static_pod_name}"
+bb-curl-kube "/api/v1/namespaces/d8-system/secrets/registry-bootstrap" -X DELETE >/dev/null 2>&1 || true
 
-# Start igniter
-bash "${igniter_stop_sh}"
-bash "${igniter_start_sh}"
+bb-curl-kube "/api/v1/namespaces/d8-system/secrets" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  --data "$(jq -nc \
+    --arg seed "$(base64 -w0 < "$seed_secret_path")" \
+    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"registry-bootstrap","namespace":"d8-system","labels":{"app":"registry"},"annotations":{"helm.sh/resource-policy":"keep"}},"type":"Opaque","data":{"bootstrap-seed.yaml":$seed}}')" >/dev/null
 
-# Unset proxy envs
+rm -f "$syncer_config_path" "$seed_secret_path"
+
 bb-unset-proxy
 
 {{- end }}

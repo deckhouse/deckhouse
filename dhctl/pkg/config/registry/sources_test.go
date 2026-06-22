@@ -305,6 +305,20 @@ func TestParseJSONDeckhouseMC(t *testing.T) {
 	}
 }
 
+func TestParseJSONRegistryMC(t *testing.T) {
+	in := []byte(`{"metadata":{"name":"registry"},"spec":{"enabled":true,"settings":{"cache":{"enabled":true,"storageSize":"20Gi"},"upstream":{"host":"r.io","path":"/d/ee","scheme":"HTTPS"}}}}`)
+	mc, err := ParseJSONRegistryMC(in)
+	if err != nil || mc == nil {
+		t.Fatalf("parse: mc=%v err=%v", mc, err)
+	}
+	if mc.Enabled == nil || !*mc.Enabled {
+		t.Fatal("enabled should be true")
+	}
+	if !mc.Settings.Cache.Enabled || mc.Settings.Upstream == nil || mc.Settings.Upstream.Host != "r.io" {
+		t.Fatalf("settings parsed wrong: %+v", mc.Settings)
+	}
+}
+
 func TestParseYAMLDeckhouseMC(t *testing.T) {
 	type output struct {
 		settings *module_config.DeckhouseSettings

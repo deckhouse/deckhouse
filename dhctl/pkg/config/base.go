@@ -567,7 +567,7 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 			deckhouseSettings = ret
 		}
 	}
-	return registry.NewConfigProvider(initConfig, deckhouseSettings), nil
+	return registry.NewConfigProvider(initConfig, deckhouseSettings, nil), nil
 }
 
 func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {

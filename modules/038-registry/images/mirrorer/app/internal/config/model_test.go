@@ -53,3 +53,33 @@ remote:
 
 	t.Logf("Loaded: %#v\n", cfg)
 }
+
+func TestConfigOnceField(t *testing.T) {
+	configText :=
+		`
+users:
+  puller:
+    name: puller-user
+    password: puller-password
+  pusher:
+    name: pusher-user
+    password: pusher_password
+
+local: "localhost:5001"
+remote:
+  - "test:5001"
+once: true
+`
+
+	cfg, err := parse(strings.NewReader(configText))
+	if err != nil {
+		t.Errorf("cannot parse config: %v", err)
+		return
+	}
+
+	if !cfg.Once {
+		t.Errorf("expected Once == true, got false")
+	}
+
+	t.Logf("Loaded: %#v\n", cfg)
+}

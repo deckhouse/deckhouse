@@ -57,34 +57,6 @@ func createInitSecret(ctx context.Context, kubeClient client.KubeClient, applied
 	return createOrUpdateSecret(ctx, kubeClient, secret)
 }
 
-func createStatusSecret(ctx context.Context, kubeClient client.KubeClient, ready bool) error {
-	conditions := make([]metav1.Condition, 0)
-
-	if ready {
-		conditions = append(conditions, metav1.Condition{
-			Type:   conditionTypeReady,
-			Status: metav1.ConditionTrue,
-		})
-	}
-
-	conditionsYaml, err := yaml.Marshal(conditions)
-	if err != nil {
-		return err
-	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      stateSecretName,
-			Namespace: secretsNamespace,
-		},
-		Data: map[string][]byte{
-			"conditions": conditionsYaml,
-		},
-	}
-
-	return createOrUpdateSecret(ctx, kubeClient, secret)
-}
-
 func createOrUpdateSecret(ctx context.Context, kubeClient client.KubeClient, secret *corev1.Secret) error {
 	_, err := kubeClient.
 		CoreV1().
@@ -98,6 +70,22 @@ func createOrUpdateSecret(ctx context.Context, kubeClient client.KubeClient, sec
 			Update(ctx, secret, metav1.UpdateOptions{})
 	}
 	return err
+}
+
+func TestCheckRegistryInitializationNonLegacyNoStateSecret(t *testing.T) {
+	// registry-init applied, registry-state ABSENT: new-arch readiness no longer
+	// needs registry-state (cache/agent readiness is checked earlier by dhctl).
+	ctx := t.Context()
+	kubeClient := client.NewFakeKubernetesClient()
+
+	require.NoError(t, createInitSecret(ctx, kubeClient, true))
+
+	cfg := ConfigBuilder()
+
+	err := checkRegistryInitialization(ctx, kubeClient, cfg)
+	if err != nil {
+		t.Fatalf("non-legacy readiness with applied init + no state must pass, got %v", err)
+	}
 }
 
 func TestCheckRegistryInitialization(t *testing.T) {
@@ -137,44 +125,34 @@ func TestCheckRegistryInitialization(t *testing.T) {
 		require.False(t, isExist, "Init secret should remain deleted")
 	})
 
-	t.Run("not legacy - should delete init secret after ready", func(t *testing.T) {
+	t.Run("not legacy - should delete init secret once applied", func(t *testing.T) {
 		ctx := t.Context()
 		kubeClient := client.NewFakeKubernetesClient()
 		config := ConfigBuilder()
 
-		// Setup initial state with applied init secret
-		err := createInitSecret(ctx, kubeClient, true)
+		// Setup initial state with a non-applied init secret
+		err := createInitSecret(ctx, kubeClient, false)
 		require.NoError(t, err)
 
 		isExist, isApplied, err := getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
 
 		require.True(t, isExist, "Init secret should exist initially")
-		require.True(t, isApplied, "Init secret should be applied initially")
+		require.False(t, isApplied, "Init secret should not be applied initially")
 
-		// First run: preserve secret when module status is unknown
+		// First run: preserve secret while not yet applied by the PKI hook.
 		err = checkRegistryInitialization(ctx, kubeClient, config)
 		require.EqualError(t, err, ErrIsNotReady.Error())
 
 		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
 
-		require.True(t, isExist, "Init secret should be preserved when module status is unknown")
+		require.True(t, isExist, "Init secret should be preserved while not applied")
 
-		// Second run: preserve secret with unready status
-		err = createStatusSecret(ctx, kubeClient, false)
-		require.NoError(t, err)
-
-		err = checkRegistryInitialization(ctx, kubeClient, config)
-		require.EqualError(t, err, ErrIsNotReady.Error())
-
-		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
-		require.NoError(t, err)
-
-		require.True(t, isExist, "Init secret should remain preserved with unready status")
-
-		// Third run: delete secret when status becomes ready
-		err = createStatusSecret(ctx, kubeClient, true)
+		// Second run: once the PKI hook marks the secret applied, the new-arch
+		// readiness no longer consults registry-state — applied init alone is
+		// sufficient to remove the secret.
+		err = createInitSecret(ctx, kubeClient, true)
 		require.NoError(t, err)
 
 		err = checkRegistryInitialization(ctx, kubeClient, config)
@@ -182,6 +160,6 @@ func TestCheckRegistryInitialization(t *testing.T) {
 
 		isExist, _, err = getInitSecretStatus(ctx, kubeClient)
 		require.NoError(t, err)
-		require.False(t, isExist, "Init secret should be deleted when module becomes ready")
+		require.False(t, isExist, "Init secret should be deleted once applied")
 	})
 }

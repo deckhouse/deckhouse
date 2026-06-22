@@ -36,40 +36,66 @@ discovery:
     system: 1
     master: 1
 `
+
 const customCertificateModeIngressEnable = `
 https:
   mode: CustomCertificate
+cache:
+  enabled: true
+  publish: true
 internal:
-  orchestrator:
-    hash: "123"
-    state:
-      ingress_enabled: true
-      conditions: []
-      mode: "Local"
-      target_mode: "Local"
+  cache:
+    enabled: true
+    upstream: { scheme: HTTPS, host: registry.example.com }
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY
+  pki:
+    httpSecret: HS
+    ca: {cert: CA, key: CAK}
+    token: {cert: TC, key: TK}
+    agent: {cert: AGC, key: AGK}
+    distribution: {cert: DC, key: DK}
+    auth: {cert: AC, key: AK}
+    users:
+      - {name: ro, password: rp, passwordHash: rh, role: ReadOnly}
+      - {name: rw, password: wp, passwordHash: wh, role: ReadWrite}
 `
 
 const customCertificateModeIngressDisable = `
 https:
   mode: CustomCertificate
+cache:
+  enabled: true
+  publish: false
 internal:
-  orchestrator: {}
+  cache:
+    enabled: true
+    upstream: { scheme: HTTPS, host: registry.example.com }
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY
+  pki:
+    httpSecret: HS
+    ca: {cert: CA, key: CAK}
+    token: {cert: TC, key: TK}
+    agent: {cert: AGC, key: AGK}
+    distribution: {cert: DC, key: DK}
+    auth: {cert: AC, key: AK}
+    users:
+      - {name: ro, password: rp, passwordHash: rh, role: ReadOnly}
+      - {name: rw, password: wp, passwordHash: wh, role: ReadWrite}
 `
 
 var _ = Describe("Module :: registry :: helm template :: custom-certificate", func() {
 	f := SetupHelmConfig(``)
 
-	Context("Ingress enable", func() {
+	Context("Ingress enable (new arch, phase=New)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", cacheIngressGlobal)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("registry", customCertificateModeIngressEnable)
+			f.ValuesSet("registry.internal.takeover.phase", "New")
 			f.HelmRender()
 		})
 
@@ -82,11 +108,12 @@ var _ = Describe("Module :: registry :: helm template :: custom-certificate", fu
 
 	})
 
-	Context("Ingress disable", func() {
+	Context("Ingress disable (new arch, phase=New)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global", cacheIngressGlobal)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("registry", customCertificateModeIngressDisable)
+			f.ValuesSet("registry.internal.takeover.phase", "New")
 			f.HelmRender()
 		})
 
@@ -96,6 +123,64 @@ var _ = Describe("Module :: registry :: helm template :: custom-certificate", fu
 			Expect(createdSecret.Exists()).To(BeFalse())
 		})
 
+	})
+
+	Context("Legacy phase — custom-certificate renders via legacy gate", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", cacheIngressGlobal)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("registry", `
+https:
+  mode: CustomCertificate
+cache:
+  enabled: false
+internal:
+  orchestrator:
+    hash: "testhash"
+    state:
+      mode: Local
+      target_mode: Local
+      ingress_enabled: true
+      registry_service: node-services
+      node_services:
+        run: false
+  customCertificateData:
+    tls.crt: CRTCRTCRT
+    tls.key: KEYKEYKEY
+  pki:
+    httpSecret: HS
+    ca: {cert: CA, key: CAK}
+    token: {cert: TC, key: TK}
+    agent: {cert: AGC, key: AGK}
+    distribution: {cert: DC, key: DK}
+    auth: {cert: AC, key: AK}
+    users:
+      - {name: ro, password: rp, passwordHash: rh, role: ReadOnly}
+      - {name: rw, password: wp, passwordHash: wh, role: ReadWrite}
+`)
+			f.ValuesSet("registry.internal.takeover.phase", "Legacy")
+			f.HelmRender()
+		})
+
+		It("renders the legacy custom-certificate secret when ingress_enabled is true in Legacy phase", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			createdSecret := f.KubernetesResource("Secret", "d8-system", "registry-ingress-tls-customcertificate")
+			Expect(createdSecret.Exists()).To(BeTrue())
+			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
+		})
+
+		It("renders the legacy registry-push Service when ingress_enabled is true in Legacy phase", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			svc := f.KubernetesResource("Service", "d8-system", "registry-push")
+			Expect(svc.Exists()).To(BeTrue())
+		})
+
+		It("renders the legacy Ingress backed by registry-push in Legacy phase", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ing := f.KubernetesResource("Ingress", "d8-system", "registry")
+			Expect(ing.Exists()).To(BeTrue())
+			Expect(ing.Field("spec.rules.0.http.paths.0.backend.service.name").String()).To(Equal("registry-push"))
+		})
 	})
 
 })

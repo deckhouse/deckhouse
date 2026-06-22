@@ -15,6 +15,37 @@
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 {{- $exist_registry_host_list := list }}
 
+{{- /* The agent owns registry.d iff the desired config is the new-arch seed,
+       identified by its fixed imagesBase. The 127.0.0.1:5001 mirror is NOT a
+       reliable signal — legacy Proxy/Local configs use it too (it is
+       registry_const.ProxyHost, the on-node nginx listener). */ -}}
+{{- $agentManaged := eq (.registry.imagesBase | default "") "registry.d8-system.svc:5001/system/deckhouse" }}
+
+# Defer to the registry agent when it owns registry.d AND the desired config is
+# agent-flavored (imagesBase == "registry.d8-system.svc:5001/system/deckhouse").
+# The agent writes this marker after a successful reconcile; bashible must not
+# touch registry.d while the agent manages it.
+#
+# On takeover rollback (phase → Legacy) the agent stack is removed but the
+# marker persists (the agent never removes it on shutdown, by design — flap-
+# safety). When the rendered config is no longer agent-flavored (imagesBase no
+# longer the new-arch constant) we drop the stale marker here and fall through
+# to rewrite registry.d from the legacy hosts below.
+#
+# `return 0 2>/dev/null || exit 0`: bashible sources each step
+# (bashible.sh.tpl: `source $step`), so `return` exits the sourced file; the
+# `|| exit 0` fallback covers the case of being run un-sourced.
+if [[ -f /etc/containerd/registry.d/.managed-by-agent ]]; then
+{{- if $agentManaged }}
+  # Config is agent-flavored (imagesBase == new-arch constant) — defer.
+  return 0 2>/dev/null || exit 0
+{{- else }}
+  # Rollback / legacy path: desired config is no longer agent-flavored but a
+  # stale ownership marker remains. Drop the marker and reclaim registry.d.
+  rm -f /etc/containerd/registry.d/.managed-by-agent
+{{- end }}
+fi
+
 # PR: https://github.com/deckhouse/deckhouse/pull/11939
 #
 # Enabled by settings in /etc/containerd/config.toml:

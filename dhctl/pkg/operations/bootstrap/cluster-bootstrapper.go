@@ -33,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	configregistry "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -299,6 +300,10 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	}
 
 	log.DebugLn("MetaConfig was loaded")
+
+	if configregistry.FourModeConfigured(&metaConfig.Registry.DeckhouseSettings) && metaConfig.Registry.Clean == nil {
+		return fmt.Errorf("fresh install: configure the registry via moduleConfig/registry (settings.cache / settings.upstream); the four-mode moduleConfig/deckhouse.settings.registry is supported only for migrating existing clusters")
+	}
 
 	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
@@ -707,6 +712,19 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 
 	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseConnect)
 
+	// The air-gap (NeedsSeed) registry finalize execs commands on the first master
+	// over SSH (cache-ready wait, seed->cache fill, seed teardown). Obtain the node
+	// interface only when SSH hosts are configured; NeedsSeed always has them. For
+	// static/non-SSH installs (no seed path) leave Node nil — the finalize is
+	// guarded on config.Registry.NeedsSeed() and is skipped there.
+	var nodeInterface libcon.Interface
+	if b.SSHProviderInitializer.CheckHosts() {
+		nodeInterface, err = helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+		if err != nil {
+			return fmt.Errorf("get NodeInterface for registry finalize: %w", err)
+		}
+	}
+
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
 			return createResources(
@@ -720,6 +738,7 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 		},
 		State:            bctx.bootstrapState,
 		DeckhouseTimeout: b.Options.Bootstrap.DeckhouseTimeout,
+		Node:             nodeInterface,
 	}
 
 	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, bctx.deckhouseInstallConfig, installParams)

@@ -41,7 +41,7 @@ type InitParams struct {
 func noCleanup() {}
 
 func Init(ctx context.Context, params InitParams, opts ...InitOpt) (Cleanup, error) {
-	configGetter := NewClientConfigGetter(params.MetaConfig.Registry.Settings.RemoteData)
+	configGetter := NewClientConfigGetter(params.MetaConfig.Registry.RemoteData())
 
 	clusterDomain := params.MetaConfig.GetClusterDomain()
 

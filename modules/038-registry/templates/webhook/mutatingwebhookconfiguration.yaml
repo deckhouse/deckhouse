@@ -1,0 +1,41 @@
+{{- with .Values.registry.internal.webhook }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: registry-modulesource.deckhouse.io
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-webhook")) | nindent 2 }}
+webhooks:
+- name: registry-modulesource.deckhouse.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .ca | b64enc | quote }}
+    service:
+      name: registry-webhook
+      namespace: d8-system
+      path: /mutate
+      port: 443
+  failurePolicy: Ignore
+  matchPolicy: Equivalent
+  objectSelector:
+    matchExpressions:
+    - key: heritage
+      operator: NotIn
+      values:
+      - deckhouse
+  reinvocationPolicy: IfNeeded
+  rules:
+  - apiGroups:
+    - deckhouse.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - modulesources
+    scope: Cluster
+  sideEffects: None
+  timeoutSeconds: 5
+{{- end }}

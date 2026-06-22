@@ -1,0 +1,54 @@
+{{ $appRelPath := printf "/%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
+{{ $appAbsPath := printf "/deckhouse/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+fromImage: common/src-artifact
+final: false
+git:
+  - add: {{ $appRelPath }}
+    to:  /src{{ $appAbsPath }}
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /{{ $.ModulePath }}/go_lib/registry
+    to: /src/deckhouse/go_lib/registry
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+  - cd /src
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/deckhouse
+    to: /deckhouse
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: "{{ $.GOPROXY }}"
+shell:
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - cd {{ $appAbsPath }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /agent ./cmd/agent
+    - chown 64535:64535 /agent
+    - chmod 0755 /agent
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+fromImage: common/distroless
+import:
+- image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  add: /agent
+  to: /agent
+  before: setup
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/agent"]

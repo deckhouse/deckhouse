@@ -6,11 +6,17 @@
           using the hook "https/copy_custom_certificate.go"
         - creates a similar secret named "registry-ingress-tls-customcertificate" in the "d8-system" namespace
 */ -}}
+{{- if (include "registry.isLegacy" .) }}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
 {{- if (($orchestrator).state).ingress_enabled -}}
 {{- if .Values.global.enabledModules | has "cert-manager" -}}
 
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-ingress-tls") -}}
 
+{{- end }}
+{{- end }}
+{{- else }}
+{{- if (include "registry.cache.ingressEnabled" .) -}}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-ingress-tls") -}}
 {{- end }}
 {{- end }}

@@ -8,6 +8,7 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
+{{- if (include "registry.isPureLegacy" .) }}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
 {{- if $orchestrator -}}
 {{- $hash := $orchestrator.hash -}}
@@ -172,5 +173,6 @@ spec:
       - name: tmp
         emptyDir: {}
 
+{{- end }}
 {{- end }}
 {{- end }}

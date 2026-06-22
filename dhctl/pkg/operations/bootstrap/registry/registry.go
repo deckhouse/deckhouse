@@ -49,9 +49,9 @@ func (params Params) Validate() error {
 	return nil
 }
 
-// Init starts a local registry when the registry mode is Local.
-// Returns a Stop function to gracefully shut down the registry,
-// or a no-op function if the registry was not started.
+// Init starts a local registry when the registry mode requires a seed (clean
+// air-gap or legacy Local). Returns a Stop function to gracefully shut down the
+// registry, or a no-op function if the registry was not started.
 func Init(ctx context.Context, params Params) (Stop, error) {
 	nop := func() {}
 
@@ -59,11 +59,11 @@ func Init(ctx context.Context, params Params) (Stop, error) {
 		return nop, err
 	}
 
-	isLocal, err := params.ConfigProvider.IsLocal()
+	needsSeed, err := params.ConfigProvider.NeedsSeed()
 	if err != nil {
 		return nop, err
 	}
-	if !isLocal {
+	if !needsSeed {
 		return nop, nil
 	}
 

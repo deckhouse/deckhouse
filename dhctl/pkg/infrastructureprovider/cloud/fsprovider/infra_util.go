@@ -96,8 +96,9 @@ func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section s
 		regConfig, err = image.RegistryConfigFromDockerConfig(dc, scheme, conf.DeckhouseConfig.ImagesRepo)
 		imageName = conf.DeckhouseConfig.ImagesRepo + "@"
 	} else {
-		regConfig, err = image.NewRegistryConfig(string(conf.Registry.Settings.RemoteData.Scheme), conf.Registry.Settings.RemoteData.ImagesRepo, conf.Registry.Settings.RemoteData.Username, conf.Registry.Settings.RemoteData.Password, conf.Registry.Settings.RemoteData.CA)
-		imageName = conf.Registry.Settings.RemoteData.ImagesRepo + "@"
+		rd := conf.Registry.RemoteData()
+		regConfig, err = image.NewRegistryConfig(string(rd.Scheme), rd.ImagesRepo, rd.Username, rd.Password, rd.CA)
+		imageName = rd.ImagesRepo + "@"
 	}
 
 	if govalue.IsNil(conf.ShowProgress) {
