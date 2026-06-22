@@ -48,7 +48,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 30},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cloud_provider_discovery_data",
@@ -101,19 +101,20 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
+	// On fresh install without a ModuleConfig, nodes/provider are absent; any Values.Set
+	// triggers full-object schema validation which rejects the patch. Defer to OnBeforeHelm
+	// where dvp_cluster_configuration.go (Order 20) has already populated required fields.
+	if _, ok := input.Values.GetOk("cloudProviderDvp.provider"); !ok {
+		input.Logger.Warn("cloudProviderDvp.provider not set, skipping discovery (will run on OnBeforeHelm)")
+		return nil
+	}
+
 	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
 		if len(input.Snapshots.Get("storage_classes")) == 0 {
 			input.Logger.Warn("failed to find storage classes for dvp provisioner")
 
-			return nil
-		}
-
-		// StorageClasses from the parent DVP host cluster may already be present in the
-		// snapshot on fresh install, but values schema requires nodes/provider to be set.
-		if _, ok := input.Values.GetOk("cloudProviderDvp.provider"); !ok {
-			input.Logger.Warn("cloudProviderDvp.provider not set, deferring storage class discovery to OnBeforeHelm")
 			return nil
 		}
 
