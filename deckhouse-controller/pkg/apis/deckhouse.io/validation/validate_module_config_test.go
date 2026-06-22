@@ -728,7 +728,7 @@ func newModuleConfigWithSettings(name string, enabled *bool, version int, settin
 // (those referencing oldSelf) during UPDATE operations.
 //
 // This is the end-to-end test for the
-// extractOldSettings → validateCELTransition → ConfigSchema → cel.ValidateTransition
+// extractOldSettings → validateCELTransition → configSchema → cel.ValidateTransition
 func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 	const moduleName = "deckhouse"
 
@@ -804,35 +804,37 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			// treats the effective old value as "Default". Setting bundle: Minimal must
 			// therefore be rejected because "Default" != "Minimal".
 			//
-			// Note: an empty (non-nil) map is passed to exercise the has(oldSelf.bundle) branch of the CEL expression.
+			// Note: a non-empty map without "bundle" is used so that MakeMappedFields produces
+			// non-nil Settings — otherwise extractOldSettings returns nil and CEL is skipped entirely.
 			name:        "UPDATE: setting bundle when old config had no explicit bundle is rejected",
 			operation:   "UPDATE",
 			newSettings: map[string]any{"bundle": "Minimal"},
 			newVersion:  1,
-			oldSettings: map[string]any{}, // bundle absent → MakeMappedFields({}) == nil → CEL skipped → allowed
+			oldSettings: map[string]any{"logLevel": "Info"}, // non-empty, no bundle → Settings != nil → CEL runs → effective old bundle is "Default"
 			oldVersion:  1,
-			wantAllowed: true,
-			description: "old config without explicit bundle: MakeMappedFields({}) returns nil so Settings==nil → CEL is skipped → request is allowed",
+			wantAllowed: false,
+			wantMessage: "bundle is immutable",
+			description: "old config without explicit bundle defaults to 'Default' via CEL expression; adding bundle: Minimal must be rejected",
 		},
 		{
 			name:        "UPDATE: old and new config both omit bundle — rule passes",
 			operation:   "UPDATE",
-			newSettings: map[string]any{}, // bundle absent → effective value is "Default"
+			newSettings: map[string]any{"logLevel": "Info"}, // non-empty, no bundle → CEL runs → effective "Default"
 			newVersion:  1,
-			oldSettings: map[string]any{}, // bundle absent → effective value is "Default"
+			oldSettings: map[string]any{"logLevel": "Info"}, // non-empty, no bundle → CEL runs → effective "Default"
 			oldVersion:  1,
 			wantAllowed: true,
-			description: "both sides default to 'Default' — no effective change, transition rule passes",
+			description: "both sides default to 'Default' via CEL expression — no effective change, rule passes",
 		},
 		{
 			name:        "UPDATE: removing explicit bundle when it was Default is allowed",
 			operation:   "UPDATE",
-			newSettings: map[string]any{}, // bundle absent → effective "Default"
+			newSettings: map[string]any{"logLevel": "Info"}, // non-empty, no bundle → CEL runs → effective "Default"
 			newVersion:  1,
 			oldSettings: map[string]any{"bundle": "Default"}, // explicit Default
 			oldVersion:  1,
 			wantAllowed: true,
-			description: "removing an explicit bundle: Default is a no-op in effective value — allowed",
+			description: "removing an explicit bundle Default is a no-op in effective value — allowed",
 		},
 	}
 
@@ -922,12 +924,12 @@ func TestExtractOldSettings_SkipsWhenNoVersion(t *testing.T) {
 }
 
 // TestConfigSchema_ReturnsNilForUnknownModule verifies that when the module is
-// absent from moduleStorage (ConfigSchema returns nil), validateCELTransition
+// absent from moduleStorage (configSchema returns nil), validateCELTransition
 // gracefully skips CEL rules instead of returning an error.
 func TestConfigSchema_ReturnsNilForUnknownModule(t *testing.T) {
 	const moduleName = "unknown-cel-module"
 
-	// storage is empty — ConfigSchema will return nil
+	// storage is empty — configSchema will return nil
 	storage := &fakeModuleStorage{modules: map[string]*moduletypes.Module{}}
 	manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
 	dependencyExtender := moduledependency.NewIExtenderMock(t)
@@ -943,7 +945,7 @@ func TestConfigSchema_ReturnsNilForUnknownModule(t *testing.T) {
 
 	// allowed: no schema found in storage, so CEL transition validation is skipped
 	assert.True(t, resp.Allowed,
-		"when ConfigSchema returns nil for unknown module, CEL must be skipped and request allowed")
+		"when configSchema returns nil for unknown module, CEL must be skipped and request allowed")
 }
 
 // TestModuleConfigValidationHandler_DeletePullOverride covers the DELETE guard
