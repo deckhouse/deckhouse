@@ -545,17 +545,21 @@ deckhouse: {}
 // ensures the external provider bundle is downloaded and unpacked (so the
 // provider validator binary is available) and points the preparator at the
 // download dir. Use it on cold server pods (check/converge/destroy/detach)
-// where the bundle is not pre-baked in the install image. Registry access is
-// resolved from the registry_config / InitConfiguration / deckhouse ModuleConfig
-// documents present in configData.
+// where the bundle is not pre-baked in the install image.
+//
+// registryConfig carries registry access only (an InitConfiguration and/or a
+// deckhouse ModuleConfig document). It feeds bundle resolution together with
+// configData but is NOT parsed/validated as part of the cluster config, so a
+// registry-only ModuleConfig (without spec.enabled) does not fail validation.
 func ParseConfigFromDataEnsureProvider(
 	ctx context.Context,
 	configData string,
+	registryConfig string,
 	preparatorProvider MetaConfigPreparatorProvider,
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
-	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
+	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(input.CombineYAMLs(configData, registryConfig)), -1)
 	if err := EnsureProviderBundle(ctx, "", docs, globalOptions); err != nil {
 		return nil, err
 	}
