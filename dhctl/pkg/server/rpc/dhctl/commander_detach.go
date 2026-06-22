@@ -266,6 +266,7 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
+			[]byte(p.request.RegistryConfig),
 		),
 		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor).
 			WithUseTfCache(opts.Cache.UseTfCache).

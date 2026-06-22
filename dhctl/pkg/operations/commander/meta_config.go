@@ -40,9 +40,10 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
 
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
-	metaConfig, err := config.ParseConfigFromData(
+	metaConfig, err := config.ParseConfigFromDataEnsureProvider(
 		ctx,
 		configData,
+		string(params.RegistryConfigurationData),
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		nil,
 		config.ValidateOptionCommanderMode(true),
