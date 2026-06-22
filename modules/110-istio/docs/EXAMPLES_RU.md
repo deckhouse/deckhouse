@@ -888,6 +888,28 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 Для автоматизации обновления istio-сайдкаров установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
 
+Автоматическое обновление срабатывает, когда у пода с istio-сайдкаром текущая версия data plane отличается от желаемой. Добавление версии в параметр [additionalVersions](configuration.html#parameters-additionalversions) само по себе не перезапускает прикладные поды. Обычно расхождение появляется в следующих случаях:
+
+* изменился параметр [globalVersion](configuration.html#parameters-globalversion) для namespace, где используется глобальная версия Istio (`istio-injection=enabled` или `istio.io/rev=default`);
+* изменился лейбл `istio.io/rev` на `Namespace` или на поде;
+* обновилась patch-версия установленного control plane.
+
+Перед перезапуском workload модуль проверяет, что соответствующий control plane установлен и готов к работе. Затем модуль добавляет или обновляет аннотацию `istio.deckhouse.io/full-version` в `spec.template.metadata.annotations`, а Kubernetes выполняет штатный rollout. В одном namespace модуль не начинает обновлять следующий workload, пока предыдущий обновляемый workload не готов.
+
+Лейбл `istio.deckhouse.io/auto-upgrade="true"` должен быть установлен на той же сущности, которая определяет использование Istio для workload:
+
+* Если injection включён на уровне namespace с помощью `istio-injection=enabled`, `istio.io/rev=<REVISION>` или `istio.io/rev=default`, лейбл `istio.deckhouse.io/auto-upgrade="true"` можно установить на этот же `Namespace`.
+* Если sidecar включён на уровне workload или pod template, например с помощью `sidecar.istio.io/inject="true"`, установите `istio.deckhouse.io/auto-upgrade="true"` на соответствующий `Deployment`, `DaemonSet` или `StatefulSet`.
+* Namespace с одним только лейблом `istio.deckhouse.io/auto-upgrade="true"` не включает автоматическое обновление workload, если injection настроен только на уровне workload или pod template.
+
+Автоматическое обновление поддерживается только для ресурсов `Deployment`, `DaemonSet` и `StatefulSet`. Ресурсы `Job`, `CronJob`, отдельные `Pod` и кастомные контроллеры, в том числе Kruise `AdvancedDaemonSet`, не обрабатываются. Если ingress controller управляется через `AdvancedDaemonSet`, лейбл `istio.deckhouse.io/auto-upgrade="true"` на таком ресурсе будет проигнорирован. Такие ingress controllers нужно обновлять вручную по регламенту эксплуатации ingress.
+
+Для обнаружения подов, у которых текущая версия data plane отличается от желаемой, используйте алерты `D8IstioActualDataPlaneVersionNotEqualDesired` и `D8IstioDataPlaneVersionMismatch`.
+
+{% alert level="warning" %}
+Не удаляйте старый control plane Istio вручную во время обновления. Старый `istiod` и связанные с ним ресурсы удаляются автоматически после того, как в кластере не останется sidecar'ов, подключённых к старой ревизии. Ручное удаление может нарушить штатную автоматику обновления.
+{% endalert %}
+
 ## Настройка ресурсов istio-proxy sidecar
 
 Для переопределения глобальных ограничений ресурсов для сайдкара istio-proxy в отдельных рабочих нагрузках используются аннотации. Поддерживаются следующие аннотации:

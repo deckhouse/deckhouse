@@ -886,6 +886,28 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
 
+Automatic upgrading is triggered when the current data-plane version of a Pod with an istio-sidecar differs from the desired version. Adding a version to the [additionalVersions](configuration.html#parameters-additionalversions) parameter does not restart application Pods by itself. A mismatch usually appears in the following cases:
+
+* The [globalVersion](configuration.html#parameters-globalversion) parameter changed for a namespace that uses the global Istio version (`istio-injection=enabled` or `istio.io/rev=default`).
+* The `istio.io/rev` label changed on a `Namespace` or on a Pod.
+* The patch version of the installed control plane was updated.
+
+Before restarting a workload, the module checks that the corresponding control plane is installed and ready. Then the module adds or updates the `istio.deckhouse.io/full-version` annotation in `spec.template.metadata.annotations`, and Kubernetes performs a regular rollout. Within the same namespace, the module does not start upgrading the next workload until the previously upgraded workload is ready.
+
+The `istio.deckhouse.io/auto-upgrade="true"` label must be set on the same entity that defines Istio usage for the workload:
+
+* If injection is enabled at the namespace level with `istio-injection=enabled`, `istio.io/rev=<REVISION>`, or `istio.io/rev=default`, you can set `istio.deckhouse.io/auto-upgrade="true"` on the same `Namespace`.
+* If sidecar injection is enabled at the workload or pod template level, for example with `sidecar.istio.io/inject="true"`, set `istio.deckhouse.io/auto-upgrade="true"` on the corresponding `Deployment`, `DaemonSet`, or `StatefulSet`.
+* A namespace with only the `istio.deckhouse.io/auto-upgrade="true"` label does not enable automatic upgrading for a workload if injection is configured only at the workload or pod template level.
+
+Automatic upgrading is supported only for `Deployment`, `DaemonSet`, and `StatefulSet` resources. `Job`, `CronJob`, standalone `Pod`, and custom controllers, including Kruise `AdvancedDaemonSet`, are not handled. If an ingress controller is managed by an `AdvancedDaemonSet`, the `istio.deckhouse.io/auto-upgrade="true"` label on that resource is ignored. Such ingress controllers must be upgraded manually according to the ingress operation procedure.
+
+Use the `D8IstioActualDataPlaneVersionNotEqualDesired` and `D8IstioDataPlaneVersionMismatch` alerts to detect Pods whose current data-plane version differs from the desired version.
+
+{% alert level="warning" %}
+Do not delete the old Istio control plane manually during an upgrade. The old `istiod` and related resources are removed automatically after there are no sidecars connected to the old revision left in the cluster. Manual deletion can break the regular upgrade automation.
+{% endalert %}
+
 ## Customizing istio-proxy sidecar resource management
 
 You can override the global istio-proxy sidecar resource limits for specific workloads by adding annotations to your application Pods.
