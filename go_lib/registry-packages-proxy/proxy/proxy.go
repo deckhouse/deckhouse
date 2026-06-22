@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -651,14 +652,22 @@ func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, image
 
 	clientIP := getRequestIP(r)
 	logger := h.proxy.logger
-	logger.Infof("CLI pull image %q tag %q from client %s", imagePath, tag, clientIP)
+
+	platform, err := parsePlatformQuery(r)
+	if err != nil {
+		logger.Errorf("CLI pull image %q tag %q from client %s: invalid platform: %v", imagePath, tag, clientIP, err)
+		http.Error(w, "invalid platform", http.StatusBadRequest)
+		return
+	}
+
+	logger.Infof("CLI pull image %q tag %q platform %q from client %s", imagePath, tag, platformString(platform), clientIP)
 
 	cfg, ok := h.cliClientConfig(w, logger)
 	if !ok {
 		return
 	}
 
-	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, tag)
+	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, tag, platform)
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "tag not found", http.StatusNotFound)
@@ -713,6 +722,28 @@ func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, image
 	if _, err := io.Copy(w, reader); err != nil {
 		logger.Errorf("stream package for %q@%s: %v", imagePath, manifestDigest, err)
 	}
+}
+
+// parsePlatformQuery reads the optional ?platform=os/arch[/variant] selector a CLI
+// client attaches to a pull. Absent -> nil, which keeps the legacy single-manifest
+// behavior (the registry default platform). A malformed value is an error so the
+// handler answers 400 instead of silently serving the wrong architecture.
+func parsePlatformQuery(r *http.Request) (*v1.Platform, error) {
+	raw := r.URL.Query().Get("platform")
+	if raw == "" {
+		return nil, nil
+	}
+
+	return v1.ParsePlatform(raw)
+}
+
+// platformString renders a platform for logs ("any" when none was requested).
+func platformString(p *v1.Platform) string {
+	if p == nil {
+		return "any"
+	}
+
+	return p.String()
 }
 
 // parseCLIPath splits an HTTP path of the form
@@ -950,7 +981,7 @@ func (p *Proxy) resolveLatestVersion(w http.ResponseWriter, r *http.Request, cfg
 }
 
 func (p *Proxy) resolveManifestDigest(w http.ResponseWriter, r *http.Request, cfg *registry.ClientConfig, imagePath, version string) (string, bool) {
-	manifestDigest, err := p.registryClient.ResolveTag(r.Context(), p.logger, cfg, imagePath, version)
+	manifestDigest, err := p.registryClient.ResolveTag(r.Context(), p.logger, cfg, imagePath, version, nil)
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "tag not found", http.StatusNotFound)

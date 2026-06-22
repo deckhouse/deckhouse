@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -110,8 +111,10 @@ type fakeCLIRegistryClient struct {
 	mu                  sync.Mutex
 	tags                map[string][]string
 	tagToManifestDigest map[string]string
-	packageBody         []byte
-	layerDigest         string
+	platformDigests map[string]string
+	lastPlatform    string
+	packageBody     []byte
+	layerDigest     string
 
 	getPackageCalls int32
 	listTagsCalls   int32
@@ -136,13 +139,19 @@ func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *
 	return tags, nil
 }
 
-func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, tag string) (string, error) {
+func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, tag string, platform *v1.Platform) (string, error) {
 	atomic.AddInt32(&f.resolveTagCalls, 1)
 	if f.resolveTagErr != nil {
 		return "", f.resolveTagErr
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if platform != nil {
+		f.lastPlatform = platform.String()
+		if d, ok := f.platformDigests[path+":"+tag+":"+platform.String()]; ok {
+			return d, nil
+		}
+	}
 	d, ok := f.tagToManifestDigest[path+":"+tag]
 	if !ok {
 		return "", registry.ErrPackageNotFound
@@ -407,4 +416,71 @@ func TestCLIHandler_PullTag_BadGatewayOnRegistryError(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+}
+
+func TestCLIHandler_PullTag_PlatformSelectsChildDigest(t *testing.T) {
+	const payload = "platform-specific binary"
+	fake := &fakeCLIRegistryClient{
+		platformDigests: map[string]string{
+			"deckhouse-cli:v1.0.1:linux/amd64": "sha256:aaaaamd64",
+			"deckhouse-cli:v1.0.1:linux/arm64": "sha256:bbbbarm64",
+		},
+		packageBody: []byte(payload),
+		layerDigest: "layer123",
+	}
+	cache := newCLIMemCache()
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, cache)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	// arm64: the proxy resolves the arm64 child digest and stamps it as the ETag.
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/tags/v1.0.1?platform=linux/arm64")
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, `"sha256:bbbbarm64"`, resp.Header.Get("ETag"))
+	assert.Equal(t, "linux/arm64", fake.lastPlatform)
+
+	// amd64: a different child digest.
+	resp, err = http.Get(srv.URL + "/v1/images/deckhouse-cli/tags/v1.0.1?platform=linux/amd64")
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, `"sha256:aaaaamd64"`, resp.Header.Get("ETag"))
+
+	// Different platforms resolved to different digests, so the cache holds two
+	// distinct entries - one platform can never serve another's bytes.
+	require.Eventually(t, func() bool {
+		_, r1, e1 := cache.Get("sha256:aaaaamd64")
+		_, r2, e2 := cache.Get("sha256:bbbbarm64")
+		if e1 == nil && e2 == nil {
+			_ = r1.Close()
+			_ = r2.Close()
+			return true
+		}
+		return false
+	}, cliEventuallyTimeout, cliEventuallyInterval)
+}
+
+func TestCLIHandler_PullTag_InvalidPlatform(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		tagToManifestDigest: map[string]string{"deckhouse-cli:v1.0.1": "sha256:deadbeef"},
+	}
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	// Too many slashes: v1.ParsePlatform rejects it, the handler answers 400 and
+	// never consults the registry.
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/tags/v1.0.1?platform=linux/amd64/v8/oops")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.resolveTagCalls))
 }
