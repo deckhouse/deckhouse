@@ -2219,12 +2219,12 @@ ul .resources__prop_name.deprecated {
       @include breakpoints.min-w(m) {
         width: 80% !important;
         max-width: 80%;
+        height: 100% !important;
       }
 
       @include breakpoints.min-w(l) {
         width: 70% !important;
         max-width: 70%;
-        height: 100% !important;
       }
     }
 
