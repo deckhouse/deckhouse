@@ -27,8 +27,6 @@ import (
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -98,7 +96,7 @@ func (p *Preparator) call(ctx context.Context, subcommand string, input config.P
 	if err != nil {
 		return nil, fmt.Errorf("build %s request: %w", subcommand, err)
 	}
-	payload, err := json.Marshal(providerdata.PrepareRequest{Version: proto.ProtocolVersion, Input: wireInput})
+	payload, err := json.Marshal(providerdata.PrepareRequest{Input: wireInput})
 	if err != nil {
 		return nil, fmt.Errorf("marshal %s request: %w", subcommand, err)
 	}
