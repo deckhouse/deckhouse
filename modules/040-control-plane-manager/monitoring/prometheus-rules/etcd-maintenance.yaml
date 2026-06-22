@@ -12,8 +12,8 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_invalid_etcd_defrag_cron_schedule: "D8InvalidEtcdDefragCronSchedule,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__d8_invalid_etcd_defrag_cron_schedule: "D8InvalidEtcdDefragCronSchedule,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_create_group_if_not_exists__d8_invalid_etcd_defrag_cron_schedule: "D8EtcdDefragMisconfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_invalid_etcd_defrag_cron_schedule: "D8EtcdDefragMisconfiguration,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Invalid etcd defragmentation cron schedule in ModuleConfig.
         description: |-
           The `controlPlaneManager.etcd.defrag.cronSchedule` value `{{ $labels.cron_schedule }}` is not a valid cron expression.
