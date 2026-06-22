@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
@@ -475,7 +474,7 @@ func saveCandiCloudProviderDiscoveryData(ctx context.Context, kubeCl *client.Kub
 	if providerName == "" {
 		return nil
 	}
-	namespace := providerdata.CloudProviderNamespace(providerName)
+	namespace := config.CloudProviderNamespace(providerName)
 
 	if err := ensureNamespace(ctx, kubeCl, namespace); err != nil {
 		return err

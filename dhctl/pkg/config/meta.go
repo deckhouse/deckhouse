@@ -38,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -261,7 +260,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	if m.CloudProviderVars == nil && m.ResourcesYAML != "" {
-		cv, err := providerdata.ParseResourcesYAML(m.ResourcesYAML)
+		cv, err := ParseResourcesYAML(m.ResourcesYAML)
 		if err != nil {
 			return nil, fmt.Errorf("parse cloud provider resources: %w", err)
 		}
@@ -443,7 +442,7 @@ type cloudProviderModuleSettings struct {
 // "enabled: true" entry plus a v2 overlay with the actual settings). We pick
 // the *last* entry that carries non-empty Spec.Settings so that overlays win.
 func (m *MetaConfig) applyCloudProviderModuleSettings() error {
-	name := providerdata.CloudProviderModuleName(m.ProviderName)
+	name := CloudProviderModuleName(m.ProviderName)
 	var picked *ModuleConfig
 	for _, mc := range m.ModuleConfigs {
 		if mc.GetName() == name && len(mc.Spec.Settings) > 0 {
@@ -622,7 +621,7 @@ func (m *MetaConfig) FindProviderModuleConfig() *ModuleConfig {
 	if m == nil || m.ProviderName == "" {
 		return nil
 	}
-	return m.FindModuleConfig(providerdata.CloudProviderModuleName(m.ProviderName))
+	return m.FindModuleConfig(CloudProviderModuleName(m.ProviderName))
 }
 
 // HasProviderModuleConfig reports whether the cluster carries a

@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
@@ -78,7 +77,7 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 	if mc == nil && pcc == nil {
 		return nil, fmt.Errorf(
 			"cluster has neither ModuleConfig %q nor Secret %q in namespace %q",
-			providerdata.CloudProviderModuleName(metaConfig.ProviderName),
+			CloudProviderModuleName(metaConfig.ProviderName),
 			legacyProviderClusterConfigSecretName,
 			global.ConfigsNS,
 		)
@@ -88,7 +87,7 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 }
 
 func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, schemaStore *SchemaStore) (*ModuleConfig, error) {
-	name := providerdata.CloudProviderModuleName(providerName)
+	name := CloudProviderModuleName(providerName)
 	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
 		return nil, nil

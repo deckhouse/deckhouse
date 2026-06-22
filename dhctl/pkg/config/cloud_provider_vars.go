@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
@@ -42,7 +41,7 @@ var nodeGroupGVR = schema.GroupVersionResource{Group: "deckhouse.io", Version: "
 // cloudProviderNamespace returns the canonical d8-cloud-provider-<name>
 // namespace of the provider module.
 func cloudProviderNamespace(providerName string) string {
-	return providerdata.CloudProviderNamespace(providerName)
+	return CloudProviderNamespace(providerName)
 }
 
 // CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and
@@ -90,7 +89,7 @@ func fetchCloudPermanentNodeGroupsFromCluster(ctx context.Context, kubeCl *clien
 
 	result := make(map[string]map[string]interface{})
 	for _, item := range list.Items {
-		if !providerdata.IsCloudPermanentNodeGroup(item.Object) {
+		if !IsCloudPermanentNodeGroup(item.Object) {
 			continue
 		}
 		name := item.GetName()

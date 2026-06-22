@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package providerdata
+package config
 
 import (
 	"fmt"
@@ -33,8 +33,6 @@ const (
 
 	instanceClassAPIGroup   = "deckhouse.io"
 	instanceClassKindSuffix = "InstanceClass"
-
-	CloudProviderCredentialsSecretType = "cloud-provider.deckhouse.io/credentials"
 
 	cloudProviderModuleNamePrefix = "cloud-provider-"
 )
@@ -103,7 +101,7 @@ func ParseResourcesYAML(resourcesYAML string) (*proto.CloudProviderVars, error) 
 
 		case index.Kind == "Secret":
 			secretType, _, _ := unstructured.NestedString(obj, "type")
-			if secretType == CloudProviderCredentialsSecretType {
+			if secretType == proto.CredentialsSecretType {
 				name, _, _ := unstructured.NestedString(obj, "metadata", "name")
 				if name != "" {
 					if cv.Secrets == nil {
