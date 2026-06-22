@@ -176,7 +176,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if isMaintenanceMode(cpn) {
 		logger.Info("Maintenance mode is enabled for ControlPlaneNode, skipping operation planning")
-		return reconcile.Result{}, nil
+		// using requeueInterval for observation removing maintenance mode label.
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
 	currentOps, err = r.ensureOperationsExist(ctx, cpn, states, currentOps, logger)
