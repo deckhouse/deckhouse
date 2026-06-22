@@ -34,4 +34,4 @@ requirements:
   "testVer": "1.19" # modules/110-istio/requirements/check.go
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
-disruptions:
+disruptions: {}
