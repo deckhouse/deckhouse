@@ -169,8 +169,14 @@ type ModuleEdition struct {
 }
 
 type ModuleDisableOptions struct {
-	Confirmation bool   `json:"confirmation" yaml:"confirmation"`
-	Message      string `json:"message" yaml:"message"`
+	Confirmation bool                   `json:"confirmation" yaml:"confirmation"`
+	Message      string                 `json:"message" yaml:"message"`
+	Messages     *ModuleDisableMessages `json:"messages,omitempty" yaml:"messages,omitempty"`
+}
+
+type ModuleDisableMessages struct {
+	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
+	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
 type ModuleStatus struct {

@@ -73,6 +73,14 @@ spec:
                       type: boolean
                     message:
                       type: string
+                    messages:
+                      type: object
+                      description: Localized disable confirmation messages. Falls back to `message` when the requested language is absent.
+                      properties:
+                        ru:
+                          type: string
+                        en:
+                          type: string
                 requirements:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
