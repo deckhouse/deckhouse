@@ -264,7 +264,7 @@ func buildDefragCPO(nodeName, slotSuffix string, cpnUID k8stypes.UID) *unstructu
 			"nodeName":  nodeName,
 			"component": "Etcd",
 			"steps":     []interface{}{"DefragEtcd"},
-			"approved":  true,
+			"approved":  false,
 		},
 	}
 

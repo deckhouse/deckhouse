@@ -249,7 +249,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 			for _, cpo := range cpos {
 				spec, _ := cpo["spec"].(map[string]interface{})
 				Expect(spec["component"]).To(Equal("Etcd"))
-				Expect(spec["approved"]).To(Equal(true))
+				Expect(spec["approved"]).To(Equal(false))
 				steps, _ := spec["steps"].([]interface{})
 				Expect(steps).To(ConsistOf("DefragEtcd"))
 
