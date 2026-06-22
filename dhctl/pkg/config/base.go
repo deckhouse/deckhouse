@@ -656,6 +656,32 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 	return false
 }
 
+// loadDeliveredProviderSchemas loads an already-delivered external provider
+// bundle's schemas from disk into the in-process store when they are not loaded
+// yet. providerCandiPresent only checks on-disk presence, so on a shared or
+// persisted download dir the schemas can be on disk yet absent from this
+// process's store (built once at startup). In-tree providers (schemas loaded
+// from candi at build time) and already-loaded providers are a no-op.
+func loadDeliveredProviderSchemas(provider string, globalOptions *options.GlobalOptions) error {
+	if _, inTree := inTreePreparatorProviders[provider]; inTree {
+		return nil
+	}
+	store := NewSchemaStore(globalOptions)
+	if store.HasProviderSchemas(provider) {
+		return nil
+	}
+	dir := providerdata.ProviderDir(globalOptions.DownloadDir, provider)
+	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = resolved
+	}
+	if _, err := os.Stat(dir); err != nil {
+		// Not under the download dir (candi-delivered schemas are loaded at
+		// build time); nothing to load here.
+		return nil
+	}
+	return store.LoadProviderDir(provider, "delivered", dir)
+}
+
 // buildRegistryConfig derives an OCI registry config from the input documents
 // (InitConfiguration and/or ModuleConfig "deckhouse"). Only called when
 // candi or provider schemas need to be downloaded.
@@ -787,8 +813,17 @@ func EnsureProviderBundle(ctx context.Context, provider string, docs []string, g
 		provider = fetched
 	}
 	provider = strings.ToLower(provider)
-	if provider == "" || providerCandiPresent(provider, globalOptions) {
+	if provider == "" {
 		return nil
+	}
+	if providerCandiPresent(provider, globalOptions) {
+		// The bundle is delivered on disk (in-tree candi, image bake, or an
+		// unpack by another process on a shared download dir). Make sure its
+		// schemas are loaded into THIS process's store before skipping download:
+		// providerCandiPresent only checks on-disk presence, and the store is
+		// built once at startup, so a bundle delivered later is on disk yet
+		// absent from the store.
+		return loadDeliveredProviderSchemas(provider, globalOptions)
 	}
 
 	digest, err := resolveProviderBundleDigest(provider)
