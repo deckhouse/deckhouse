@@ -210,7 +210,10 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 	// build-time linking; its real plan_rules.yml ships in the DVP bundle.
 	if len(res) == 1 {
 		for cloudName, set := range res {
-			simple := set.(*settings.Simple)
+			simple, ok := set.(*settings.Simple)
+			if !ok {
+				return nil, fmt.Errorf("provider %s settings have unexpected type %T", cloudName, set)
+			}
 			if planRule != nil {
 				simple.VMResourceVal = planRule
 				if err := simple.Validate(false); err != nil {

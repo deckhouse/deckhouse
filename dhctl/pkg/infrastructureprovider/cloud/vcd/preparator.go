@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
@@ -34,7 +36,7 @@ type MetaConfigPreparator struct {
 }
 
 func NewMetaConfigPreparator(logger log.Logger) *MetaConfigPreparator {
-	if logger == nil {
+	if govalue.IsNil(logger) {
 		logger = log.GetSilentLogger()
 	}
 	return &MetaConfigPreparator{

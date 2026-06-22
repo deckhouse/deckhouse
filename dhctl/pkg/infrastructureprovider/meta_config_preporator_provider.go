@@ -89,7 +89,9 @@ func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	}
 	path := providerdata.ValidatorPath(pluginsDir, providerName)
 	info, err := os.Stat(path)
-	if err != nil || info.IsDir() {
+	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
+		// A non-executable file is not a usable validator; treat it as missing
+		// so the caller surfaces the proper missing-validator diagnostic.
 		return ""
 	}
 	return path

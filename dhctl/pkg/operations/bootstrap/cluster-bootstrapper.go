@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -1078,11 +1079,18 @@ func prependMissingNamespaces(resources template.Resources) template.Resources {
 		}
 	}
 
-	stubs := make(template.Resources, 0, len(needed))
+	missing := make([]string, 0, len(needed))
 	for ns := range needed {
 		if _, ok := present[ns]; ok {
 			continue
 		}
+		missing = append(missing, ns)
+	}
+	// Deterministic order: ranging a map yields a random namespace-stub order.
+	sort.Strings(missing)
+
+	stubs := make(template.Resources, 0, len(missing))
+	for _, ns := range missing {
 		stub := unstructured.Unstructured{}
 		stub.SetAPIVersion("v1")
 		stub.SetKind("Namespace")
