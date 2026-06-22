@@ -19,16 +19,16 @@ output "settings" {
 
 output "nodeGroups" {
   description = "Map of resolved NodeGroup objects keyed by node group name."
-  value       = local.use_pcc ? jsondecode(jsonencode(local._pcc_node_groups)) : jsondecode(jsonencode(var.nodeGroups))
+  value       = jsondecode(local.use_pcc ? jsonencode(local._pcc_node_groups) : jsonencode(var.nodeGroups))
 }
 
 output "instanceClasses" {
   description = "Map of resolved DVPInstanceClass objects keyed by instance class name."
-  value       = local.use_pcc ? jsondecode(jsonencode(local._pcc_instance_classes)) : jsondecode(jsonencode(var.instanceClasses))
+  value       = jsondecode(local.use_pcc ? jsonencode(local._pcc_instance_classes) : jsonencode(var.instanceClasses))
 }
 
 output "secrets" {
   description = "Map of resolved credential Secret objects keyed by secret name."
   sensitive   = true
-  value       = local.use_pcc ? jsondecode(jsonencode(local._pcc_credential_secrets)) : jsondecode(jsonencode(var.secrets))
+  value       = jsondecode(local.use_pcc ? jsonencode(local._pcc_credential_secrets) : jsonencode(var.secrets))
 }
