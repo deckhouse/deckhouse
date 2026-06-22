@@ -64,6 +64,12 @@ type postRenderer struct {
 	filtered bool
 	// referencedRoles collects the roleRefs of every binding object the template renders.
 	referencedRoles []BindingRoleRef
+	// manifests, when non-empty, is the source the post-renderer processes instead of the chart's
+	// rendered output. Schema-based (v1alpha2) templates are rendered natively in Go
+	// (controller/internal/render) and applied through this override, so no user data ever passes
+	// through Helm's template engine while the release lifecycle (install/upgrade/prune/history) is
+	// still driven by Helm.
+	manifests string
 }
 
 func newPostRenderer(project *v1alpha3.Project, versions map[string]struct{}, logger logr.Logger, isFirstInstall bool) *postRenderer {
@@ -81,9 +87,16 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 	// clear resources
 	r.project.Status.Resources = make(map[string]map[string]v1alpha3.ResourceKind)
 
+	// A schema-based template renders its objects natively; use them as the source of truth instead
+	// of the (empty) chart output.
+	source := renderedManifests.String()
+	if r.manifests != "" {
+		source = r.manifests
+	}
+
 	var core *unstructured.Unstructured
 	builder := strings.Builder{}
-	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
+	for _, manifest := range releaseutil.SplitManifests(source) {
 		object := new(unstructured.Unstructured)
 		if err := yaml.Unmarshal([]byte(manifest), object); err != nil {
 			r.logger.Info("failed to unmarshal manifest", "project", r.project.Name, "manifest", manifest, "error", err.Error())

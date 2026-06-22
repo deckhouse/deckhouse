@@ -39,6 +39,7 @@ import (
 
 	grantsv1alpha1 "controller/api/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha1"
+	deckhousev1alpha2 "controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	namespacecontroller "controller/internal/controller/namespace"
 	projectcontroller "controller/internal/controller/project"
@@ -47,6 +48,7 @@ import (
 	clusterprojectrolebindingcontroller "controller/internal/controllers/clusterprojectrolebinding"
 	projectnamespacecontroller "controller/internal/controllers/projectnamespace"
 	projectrolebindingcontroller "controller/internal/controllers/projectrolebinding"
+	templategrantscontroller "controller/internal/controllers/templategrants"
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
 	"controller/internal/rolebinding"
@@ -108,6 +110,15 @@ func main() {
 	// register template controller
 	if err = templatecontroller.Register(runtimeManager, templatesPath, logger); err != nil {
 		fatal(logger, err, "register template controller")
+	}
+
+	// register the schema-based template grant materializer (ADR-3): turns a v1alpha2 template's
+	// resources/grantPolicies into managed ClusterResourceGrantPolicy objects.
+	if err = (&templategrantscontroller.Reconciler{
+		Client: runtimeManager.GetClient(),
+		Scheme: runtimeManager.GetScheme(),
+	}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "register template grants reconciler")
 	}
 
 	// register namespace controller
@@ -181,6 +192,7 @@ func fatal(logger logr.Logger, err error, msg string) {
 func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
+		deckhousev1alpha2.AddToScheme,
 		v1alpha3.AddToScheme,
 		grantsv1alpha1.AddToScheme,
 		corev1.AddToScheme,

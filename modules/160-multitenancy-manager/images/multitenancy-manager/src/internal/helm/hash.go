@@ -25,6 +25,13 @@ import (
 	"slices"
 )
 
+// hashString hashes natively rendered manifests for release change detection. The manifests already
+// encode the project name and resolved parameters, so the string alone is a sufficient release key.
+func hashString(s string) string {
+	sum := md5.Sum([]byte(s))
+	return hex.EncodeToString(sum[:])
+}
+
 func hashMD5(templates map[string][]byte, values map[string]any) string {
 	tmp := make(map[string]any, len(templates))
 	for k, v := range templates {

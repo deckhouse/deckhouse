@@ -141,18 +141,31 @@ func (c *Client) DebugLog(format string, args ...any) {
 	c.logger.Info(fmt.Sprintf(format, args...))
 }
 
-// Upgrade upgrades resources. It returns whether any controller-managed resource (ResourceQuota,
+// Upgrade renders a legacy resourcesTemplate (helm-string) template and installs/upgrades the project
+// release from it. It returns whether any controller-managed resource (ResourceQuota,
 // AuthorizationRule) was filtered out of the rendered template.
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (bool, error) {
-	ch := buildChart(c.templates, project.Name)
+	values := buildValues(project, template)
+	return c.release(ctx, project, buildChart(c.templates, project.Name), values, hashMD5(c.templates, values), "")
+}
 
+// UpgradeManifests installs/upgrades the project release from manifests rendered natively from a
+// schema-based (v1alpha2) ProjectTemplate. The Helm chart is a no-op (empty) template: the concrete
+// objects are supplied to the post-renderer, so no user data passes through the Helm template engine
+// while Helm still drives the release lifecycle (install/upgrade/prune/history). The hash is taken
+// over the rendered manifests so a structural or parameter change re-applies the release.
+func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string) (bool, error) {
+	return c.release(ctx, project, buildEmptyChart(project.Name), map[string]any{}, hashString(manifests), manifests)
+}
+
+// release runs the shared install/upgrade machinery: discovery, history lookup, up-to-date short
+// circuit, pending-release rollback and the post-renderer. manifestsOverride is empty for the legacy
+// helm-string path and set to the natively rendered objects for the schema-based path.
+func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *chart.Chart, values map[string]any, hash, manifestsOverride string) (bool, error) {
 	versions, err := c.discoverAPI()
 	if err != nil {
 		return false, fmt.Errorf("discover api: %w", err)
 	}
-
-	values := buildValues(project, template)
-	hash := hashMD5(c.templates, values)
 
 	// action.History exposes no context or timeout; the lookup is a single, bounded API read.
 	releases, err := action.NewHistory(c.conf).Run(project.Name)
@@ -162,6 +175,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 			isFirstInstall = true
 			c.logger.Info("the release not found, install it", "release", project.Name, "namespace", project.Name)
 			post := newPostRenderer(project, versions, c.logger, isFirstInstall)
+			post.manifests = manifestsOverride
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = project.Name
 			install.Timeout = c.opts.Timeout
@@ -194,6 +208,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 	}
 
 	post := newPostRenderer(project, versions, c.logger, isFirstInstall)
+	post.manifests = manifestsOverride
 	upgrade := action.NewUpgrade(c.conf)
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
@@ -259,6 +274,24 @@ func buildChart(templates map[string][]byte, releaseName string) *chart.Chart {
 	return ch
 }
 
+// buildEmptyChart builds a chart whose only template renders to nothing. It is used by the
+// schema-based render path: the real objects are supplied to the post-renderer, so the chart exists
+// only to drive Helm's release machinery and must not template any user data.
+func buildEmptyChart(releaseName string) *chart.Chart {
+	return &chart.Chart{
+		Metadata: &chart.Metadata{
+			Name:    releaseName,
+			Version: "0.0.1",
+		},
+		Templates: []*chart.File{
+			{
+				Name: "templates/manifests.yaml",
+				Data: []byte("# rendered natively by the controller; see internal/render\n"),
+			},
+		},
+	}
+}
+
 func buildValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) map[string]any {
 	// Work on a copy of the spec so the empty-template placeholder below does not mutate the
 	// caller's template (a cache-shared object reused across reconciles).
@@ -286,53 +319,11 @@ func buildValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) 
 	}
 }
 
+// mergeWithDefaults overlays the schema's property defaults onto the project values. It delegates to
+// validate.MergeDefaults, the single implementation shared with the structured render path; it is kept
+// as a thin wrapper so the helm package tests (TestMergeWithDefaults_*) keep their entry point.
 func mergeWithDefaults(schema *spec.Schema, projectValues map[string]any) map[string]any {
-	result := make(map[string]any)
-
-	for property, propertySchema := range schema.Properties {
-		if projectValue, exists := projectValues[property]; exists {
-			// use project value
-			result[property] = projectValue
-
-			// recursively handle nested objects
-			if propertySchema.Type.Contains("object") {
-				if valueMap, ok := projectValue.(map[string]any); ok {
-					result[property] = mergeWithDefaults(&propertySchema, valueMap)
-				}
-			}
-		} else if propertySchema.Default != nil {
-			// use default value from schema
-			result[property] = propertySchema.Default
-		}
-
-		// recursively apply defaults to nested objects
-		if propertySchema.Type.Contains("object") {
-			if _, ok := result[property]; !ok {
-				result[property] = mergeWithDefaults(&propertySchema, nil)
-			}
-		}
-	}
-
-	// Handle additionalProperties (free-form map types). When a schema declares additionalProperties
-	// it models a map, not a fixed object, so the values are user-controlled keys. We deliberately
-	// REPLACE result here (discarding the property defaults computed above): an additionalProperties
-	// schema and named-property defaults are not combined, the map's own keys win. This branch is
-	// pinned by TestMergeWithDefaults_AdditionalProperties.
-	if schema.AdditionalProperties != nil {
-		mapResult := make(map[string]any)
-		for key, value := range projectValues {
-			// skip keys that are already handled as properties
-			if _, exists := schema.Properties[key]; exists {
-				continue
-			}
-
-			mapResult[key] = value
-		}
-
-		result = mapResult
-	}
-
-	return result
+	return validate.MergeDefaults(schema, projectValues)
 }
 
 func (c *Client) rollbackLatestRelease(releases []*release.Release) error {
@@ -411,6 +402,29 @@ func (c *Client) RenderedRoleRefs(project *v1alpha3.Project, template *v1alpha1.
 	}
 
 	return renderer.referencedRoles, nil
+}
+
+// RenderedManifestRoleRefs returns the binding roleRefs declared by natively rendered manifests
+// (the schema-based equivalent of RenderedRoleRefs). It runs the post-renderer on a copy of the
+// project so it does not mutate the caller's status.
+func (c *Client) RenderedManifestRoleRefs(project *v1alpha3.Project, manifests string) ([]BindingRoleRef, error) {
+	renderer := newPostRenderer(project.DeepCopy(), nil, c.logger, false)
+	renderer.manifests = manifests
+	if _, err := renderer.Run(bytes.NewBuffer(nil)); err != nil {
+		return nil, fmt.Errorf("post render: %w", err)
+	}
+	return renderer.referencedRoles, nil
+}
+
+// ValidateManifests checks natively rendered manifests for the namespace-override warning (the
+// schema-based equivalent of ValidateRender).
+func (c *Client) ValidateManifests(project *v1alpha3.Project, manifests string) error {
+	renderer := newPostRenderer(project, nil, c.logger, false)
+	renderer.manifests = manifests
+	if _, err := renderer.Run(bytes.NewBuffer(nil)); err != nil {
+		return fmt.Errorf("post render: %w", err)
+	}
+	return renderer.warning
 }
 
 // ValidateRender tests project render

@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"controller/apis/deckhouse.io/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 )
 
@@ -121,13 +121,16 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha3.Project) 
 	return nil
 }
 
-func (m *Manager) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
-	template := new(v1alpha1.ProjectTemplate)
-
+// projectTemplateByName fetches the schema-based (v1alpha2) ProjectTemplate — the storage version, so
+// its structured fields and fromParam leaves are visible. The caller decides how to render it:
+// natively (structured fields, see internal/render) or through the legacy helm engine (a template that
+// still carries a resourcesTemplate string).
+func (m *Manager) projectTemplateByName(ctx context.Context, name string) (*v1alpha2.ProjectTemplate, error) {
 	if name == "" {
-		return template, nil
+		return new(v1alpha2.ProjectTemplate), nil
 	}
 
+	template := new(v1alpha2.ProjectTemplate)
 	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil

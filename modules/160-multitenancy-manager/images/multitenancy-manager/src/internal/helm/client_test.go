@@ -480,6 +480,26 @@ func TestMergeWithDefaults_AdditionalProperties(t *testing.T) {
 	assert.Equal(t, map[string]any{"free": "value"}, out)
 }
 
+// TestMergeWithDefaults_ObjectDefaultPreserved pins the behaviour the schema-based ProjectTemplate
+// render relies on: an object-typed property whose default is the whole object is kept verbatim (the
+// merge only recurses into sub-properties when there is no default). Structured templates carry their
+// fixed values (namespaceMetadata, dedicatedNodes, allowedUIDs) as such object defaults.
+func TestMergeWithDefaults_ObjectDefaultPreserved(t *testing.T) {
+	schema := &spec.Schema{}
+	schema.Properties = map[string]spec.Schema{
+		"namespace": {SchemaProps: spec.SchemaProps{
+			Type:    spec.StringOrArray{"object"},
+			Default: map[string]any{"labels": map[string]any{"team": "x"}},
+			Properties: map[string]spec.Schema{
+				"labels": {SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"object"}}},
+			},
+		}},
+	}
+
+	out := mergeWithDefaults(schema, map[string]any{})
+	assert.Equal(t, map[string]any{"labels": map[string]any{"team": "x"}}, out["namespace"])
+}
+
 func read[T any](path string) (*T, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

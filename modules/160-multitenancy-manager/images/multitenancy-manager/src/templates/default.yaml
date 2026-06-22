@@ -1,5 +1,10 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
+# Schema-based ProjectTemplate (ADR-3). The built-in templates declare their per-namespace objects as
+# structured fields rendered natively by the controller (no Helm resourcesTemplate). Every field that
+# used to be a per-project parameter is wired to that parameter via {fromParam: <name>}, so the
+# template keeps exactly the override surface it had as v1alpha1 while gaining a typed, declarative
+# shape. The parametersSchema below stays the per-project parameter contract (names, defaults, enums).
+apiVersion: deckhouse.io/v1alpha2
 kind: ProjectTemplate
 metadata:
   name: default
@@ -7,6 +12,22 @@ metadata:
     heritage: deckhouse
 spec:
   description: A template that covers basic project use cases.
+  podSecurityStandard:
+    fromParam: podSecurityProfile
+  networkPolicy:
+    mode:
+      fromParam: networkPolicy
+  features:
+    monitoring:
+      fromParam: extendedMonitoringEnabled
+  logShipping:
+    clusterDestinationRef:
+      fromParam: clusterLogDestinationName
+  namespaceMetadata:
+    labels:
+      fromParam: namespace.labels
+    annotations:
+      fromParam: namespace.annotations
   parametersSchema:
     openAPIV3Schema:
       type: object
@@ -62,112 +83,3 @@ spec:
             If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
             The names of the custom resource must be specified in the `clusterLogDestinationName` field.
           type: string
-  resourcesTemplate: |
-    ---
-    apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: {{ .projectName }}
-      labels:
-        {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
-        {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
-        {{- with .parameters.namespace.labels }}
-        {{- toYaml . | nindent 4 }}
-        {{- end }}
-      {{- with .parameters.namespace.annotations }}
-      annotations:
-        {{- toYaml . | nindent 4 }}
-      {{- end }}
-
-    {{- if eq .parameters.networkPolicy "Isolated" }}
-    ---
-    # Deny all network traffic by default except namespaced traffic and dns.
-    # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
-    kind: NetworkPolicy
-    apiVersion: networking.k8s.io/v1
-    metadata:
-      name: isolated
-    spec:
-      podSelector:
-        matchLabels: {}
-      policyTypes:
-        - Ingress
-        - Egress
-      ingress:
-        - from:
-            # Traffic within the project is allowed.
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "{{ .projectName }}"
-            # Metrics scraping from Prometheus.
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "d8-monitoring"
-              podSelector:
-                matchLabels:
-                  app.kubernetes.io/name: prometheus
-            # Ingress nginx traffic.
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "d8-ingress-nginx"
-              podSelector:
-                matchLabels:
-                  app: controller
-            # ServiceWithHealthChecks agents traffic.
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "d8-service-with-healthchecks"
-              podSelector:
-                matchLabels:
-                  app: agent
-      egress:
-        - to:
-          # Traffic within the project is allowed.
-          - namespaceSelector:
-              matchLabels:
-                kubernetes.io/metadata.name: "{{ .projectName }}"
-        # Allow DNS traffic (both kube-dns and nodelocaldns).
-        - to:
-          - namespaceSelector:
-              matchLabels:
-                kubernetes.io/metadata.name: kube-system
-          ports:
-            - protocol: UDP
-              port: 53
-            - protocol: TCP
-              port: 53
-            - protocol: UDP
-              port: 5353
-            - protocol: TCP
-              port: 5353
-    {{- end }}
-
-    {{- with .parameters.clusterLogDestinationName }}
-    ---
-    # Refer to https://deckhouse.io/modules/log-shipper/
-    apiVersion: deckhouse.io/v1alpha1
-    kind: PodLoggingConfig
-    metadata:
-      name: default
-    spec:
-      clusterDestinationRefs:
-        - {{ . }}
-    {{- end }}
-
-    ---
-    # Referer to https://deckhouse.io/modules/admission-policy-engine/
-    apiVersion: deckhouse.io/v1alpha1
-    kind: OperationPolicy
-    metadata:
-      name: required-requests-{{ .projectName | sha256sum | trunc 8 }}
-    spec:
-      policies:
-        requiredResources:
-          requests:
-            - cpu
-            - memory
-      match:
-        namespaceSelector:
-          labelSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: "{{ .projectName }}"

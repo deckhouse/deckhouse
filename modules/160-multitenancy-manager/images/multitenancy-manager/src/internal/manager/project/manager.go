@@ -33,9 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"controller/apis/deckhouse.io/v1alpha1"
+	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
+	"controller/internal/render"
 	rolebinding "controller/internal/rolebinding"
 	"controller/internal/validate"
 )
@@ -187,7 +188,7 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	project.SetTemplateGeneration(projectTemplate.Generation)
 
 	m.logger.Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
-	if err = validate.Project(project, projectTemplate); err != nil {
+	if err = validate.Project(project, legacyTemplate(projectTemplate)); err != nil {
 		m.logger.Error(err, "failed to validate the project spec", "project", project.Name, "template", projectTemplate.Name)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionProjectValidated, err.Error())
@@ -200,7 +201,7 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
 
 	m.logger.Info("upgrade resources for the project", "project", project.Name, "template", projectTemplate.Name)
-	filtered, err := m.helmClient.Upgrade(ctx, project, projectTemplate)
+	filtered, refs, err := m.upgradeResources(ctx, project, projectTemplate)
 	if err != nil {
 		m.logger.Error(err, "failed to upgrade the project resources", "project", project.Name, "template", projectTemplate.Name)
 		project.SetState(v1alpha3.ProjectStateError)
@@ -219,25 +220,45 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 		project.SetConditionTrue(v1alpha3.ProjectConditionTemplateResourcesFiltered)
 	}
 
-	m.checkTemplateRoles(ctx, project, projectTemplate)
+	m.applyTemplateRolesCondition(ctx, project, refs)
 	return false, nil
 }
 
-// checkTemplateRoles renders the project template and flags any binding that grants a ClusterRole
-// which is forbidden in projects: one carrying the rbac.deckhouse.io/disabled-for-direct-use-in-projects
-// annotation, or (for ProjectRoleBinding/ClusterProjectRoleBinding) one outside the PRB/CPRB
-// allow-list. The result is surfaced as the TemplateRolesAllowed condition, mirroring how
-// TemplateResourcesFiltered is surfaced; it never fails the reconcile.
-func (m *Manager) checkTemplateRoles(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) {
-	refs, err := m.helmClient.RenderedRoleRefs(project, template)
-	if err != nil {
-		// The upgrade above already rendered the template successfully; a render hiccup here must
-		// not flip the project into an error state, so treat the roles as allowed.
-		m.logger.Error(err, "failed to render the project template role refs", "project", project.Name, "template", template.Name)
-		project.SetConditionTrue(v1alpha3.ProjectConditionTemplateRolesAllowed)
-		return
+// upgradeResources installs/upgrades the project release and returns the binding roleRefs the template
+// renders (for the TemplateRolesAllowed check). A schema-based template is rendered natively from its
+// structured fields and applied via UpgradeManifests; a template that still carries a resourcesTemplate
+// string is rendered through the legacy helm engine. The bool reports whether controller-managed kinds
+// (ResourceQuota/AuthorizationRule) were filtered out.
+func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) (bool, []helm.BindingRoleRef, error) {
+	if isStructured(template) {
+		manifests, err := render.Manifests(template, project)
+		if err != nil {
+			return false, nil, fmt.Errorf("render the project template: %w", err)
+		}
+		filtered, err := m.helmClient.UpgradeManifests(ctx, project, manifests)
+		if err != nil {
+			return false, nil, err
+		}
+		refs, err := m.helmClient.RenderedManifestRoleRefs(project, manifests)
+		if err != nil {
+			// The release was already applied; a render hiccup here must not fail the reconcile.
+			m.logger.Error(err, "failed to collect the project template role refs", "project", project.Name, "template", template.Name)
+			return filtered, nil, nil
+		}
+		return filtered, refs, nil
 	}
-	m.applyTemplateRolesCondition(ctx, project, refs)
+
+	legacy := legacyTemplate(template)
+	filtered, err := m.helmClient.Upgrade(ctx, project, legacy)
+	if err != nil {
+		return false, nil, err
+	}
+	refs, err := m.helmClient.RenderedRoleRefs(project, legacy)
+	if err != nil {
+		m.logger.Error(err, "failed to collect the project template role refs", "project", project.Name, "template", template.Name)
+		return filtered, nil, nil
+	}
+	return filtered, refs, nil
 }
 
 // applyTemplateRolesCondition evaluates the roleRefs rendered by a template and sets the

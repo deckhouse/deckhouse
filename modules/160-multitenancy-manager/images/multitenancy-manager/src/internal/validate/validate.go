@@ -19,6 +19,7 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-jose/go-jose/v4/json"
 	"github.com/go-openapi/spec"
@@ -73,6 +74,97 @@ func LoadSchema(properties map[string]any) (*spec.Schema, error) {
 	}
 
 	return schema, nil
+}
+
+// MergeDefaults overlays a parametersSchema's property defaults onto the project-supplied values,
+// producing the effective parameters a template renders against. A project value always wins over a
+// schema default; nested objects are merged recursively; an additionalProperties (free-form map)
+// schema keeps the user's own keys. This is the single source of truth for parameter defaulting,
+// shared by the helm (legacy resourcesTemplate) and the structured render paths.
+func MergeDefaults(schema *spec.Schema, projectValues map[string]any) map[string]any {
+	result := make(map[string]any)
+
+	for property, propertySchema := range schema.Properties {
+		if projectValue, exists := projectValues[property]; exists {
+			result[property] = projectValue
+			if propertySchema.Type.Contains("object") {
+				if valueMap, ok := projectValue.(map[string]any); ok {
+					result[property] = MergeDefaults(&propertySchema, valueMap)
+				}
+			}
+		} else if propertySchema.Default != nil {
+			result[property] = propertySchema.Default
+		}
+
+		if propertySchema.Type.Contains("object") {
+			if _, ok := result[property]; !ok {
+				result[property] = MergeDefaults(&propertySchema, nil)
+			}
+		}
+	}
+
+	// additionalProperties models a free-form map: the user's keys win and the named-property
+	// defaults computed above are discarded (the two are not combined).
+	if schema.AdditionalProperties != nil {
+		mapResult := make(map[string]any)
+		for key, value := range projectValues {
+			if _, exists := schema.Properties[key]; exists {
+				continue
+			}
+			mapResult[key] = value
+		}
+		result = mapResult
+	}
+
+	return result
+}
+
+// ParamPath verifies that a (optionally dotted) fromParam reference resolves to a parameter declared
+// in the loaded parametersSchema. It walks the schema's properties segment by segment; descent stops
+// successfully as soon as it reaches a free-form node (additionalProperties or
+// x-kubernetes-preserve-unknown-fields), since the remaining segments address user-defined keys that
+// the schema cannot enumerate. A segment that is neither a declared property nor under a free-form
+// node is reported as undefined.
+func ParamPath(schema *spec.Schema, path string) error {
+	if path == "" {
+		return errors.New("empty fromParam reference")
+	}
+
+	node := schema
+	walked := make([]string, 0, len(path))
+	for _, segment := range strings.Split(path, ".") {
+		if allowsUnknown(node) {
+			return nil
+		}
+		child, ok := node.Properties[segment]
+		if !ok {
+			where := "spec.parametersSchema.properties"
+			if len(walked) > 0 {
+				where = "property '" + strings.Join(walked, ".") + "'"
+			}
+			return fmt.Errorf("references parameter '%s', but '%s' is not declared in %s", path, segment, where)
+		}
+		node = &child
+		walked = append(walked, segment)
+	}
+	return nil
+}
+
+// allowsUnknown reports whether a schema node accepts keys it does not enumerate, either via
+// additionalProperties or the x-kubernetes-preserve-unknown-fields extension.
+func allowsUnknown(s *spec.Schema) bool {
+	if s == nil {
+		return false
+	}
+	if ap := s.AdditionalProperties; ap != nil && (ap.Allows || ap.Schema != nil) {
+		return true
+	}
+	if ext, ok := s.Extensions["x-kubernetes-preserve-unknown-fields"]; ok {
+		if b, ok := ext.(bool); ok && b {
+			return true
+		}
+	}
+	return false
 }
 
 // transform sets undefined AdditionalProperties to false recursively.

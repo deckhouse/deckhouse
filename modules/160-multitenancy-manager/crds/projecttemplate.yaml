@@ -17,6 +17,11 @@ spec:
   scope: Cluster
   versions:
     - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      subresources:
+        status: {}
       additionalPrinterColumns:
         - jsonPath: .status.ready
           name: Ready
@@ -84,7 +89,248 @@ spec:
                   type: boolean
               type: object
           type: object
+    - name: v1alpha2
       served: true
       storage: true
       subresources:
         status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.ready
+          name: Ready
+          type: boolean
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+        - jsonPath: .spec.title
+          name: Title
+          type: string
+        - jsonPath: .spec.description
+          name: Description
+          type: string
+      schema:
+        openAPIV3Schema:
+          description: |
+            Describes the project template as a set of structured, declarative fields.
+
+            This resource is referenced by the [Project](cr.html#project) custom resource. The
+            cluster-resource availability fields (`resources`, `grantPolicies`) are materialized into
+            [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) objects bound to the
+            projects of this template; the remaining fields are rendered into per-namespace objects.
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                title:
+                  description: Short human-readable name of the template.
+                  type: string
+                description:
+                  description: |
+                    Arbitrary description of the template's purpose. Specify an empty string if no description is required.
+                  type: string
+                resources:
+                  description: |
+                    Inline cluster-resource grants. The controller materializes them into a managed
+                    `ClusterResourceGrantPolicy` bound to projects of this template.
+                  type: array
+                  items:
+                    description: |
+                      One per-resource allow-list/default entry, referencing a GrantableClusterResourceDefinition.
+                    type: object
+                    required:
+                      - resourceName
+                    properties:
+                      resourceName:
+                        description: Name of the GrantableClusterResourceDefinition this entry configures.
+                        type: string
+                      allowed:
+                        description: Explicit list of granted object names (union with allowedSelector).
+                        type: array
+                        items:
+                          type: string
+                      allowedSelector:
+                        description: Grants every object of the granted resource whose labels match (union with allowed).
+                        type: object
+                        x-kubernetes-map-type: atomic
+                        properties:
+                          matchLabels:
+                            type: object
+                            additionalProperties:
+                              type: string
+                          matchExpressions:
+                            type: array
+                            x-kubernetes-list-type: atomic
+                            items:
+                              type: object
+                              required:
+                                - key
+                                - operator
+                              properties:
+                                key:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                  items:
+                                    type: string
+                      denied:
+                        description: Object names explicitly excluded for matched projects (overrides allowed).
+                        type: array
+                        items:
+                          type: string
+                      deniedSelector:
+                        description: Excludes granted objects whose labels match (overrides allowed/allowedSelector).
+                        type: object
+                        x-kubernetes-map-type: atomic
+                        properties:
+                          matchLabels:
+                            type: object
+                            additionalProperties:
+                              type: string
+                          matchExpressions:
+                            type: array
+                            x-kubernetes-list-type: atomic
+                            items:
+                              type: object
+                              required:
+                                - key
+                                - operator
+                              properties:
+                                key:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                  items:
+                                    type: string
+                      default:
+                        description: Per-project default name (overrides the registration's defaultFrom).
+                        type: string
+                      availabilityDefault:
+                        description: Overrides the resource's defaultAvailability (All/None) for matched projects.
+                        type: string
+                        enum:
+                          - All
+                          - None
+                grantPolicies:
+                  description: |
+                    References to library `ClusterResourceGrantPolicy` objects (created without a `projectSelector`).
+                    The controller materializes one managed policy per reference, copying its resources and binding
+                    them to the projects of this template.
+                  type: array
+                  items:
+                    type: string
+                podSecurityStandard:
+                  description: |
+                    Pod Security Standard profile applied to the project namespaces.
+                    - Privileged — unrestricted policy.
+                    - Baseline — minimally restrictive policy preventing known privilege escalations.
+                    - Restricted — heavily restricted, current Pod hardening best practices.
+
+                    A literal string (`Privileged`/`Baseline`/`Restricted`) or a parameter reference
+                    `{fromParam: "<name>"}` pointing at a `parametersSchema` property. The literal value
+                    and the referenced parameter are validated by the admission webhook.
+                  x-kubernetes-preserve-unknown-fields: true
+                networkPolicy:
+                  description: Default network isolation of the project namespaces.
+                  type: object
+                  properties:
+                    mode:
+                      description: |
+                        - Isolated — deny all traffic by default except in-project, DNS, Prometheus scraping and ingress-nginx.
+                        - NotRestricted — allow all traffic by default.
+
+                        A literal string or a parameter reference `{fromParam: "<name>"}`.
+                      x-kubernetes-preserve-unknown-fields: true
+                nodeSelector:
+                  description: |
+                    Restricts the project pods to nodes matching these labels. A literal label map or a
+                    parameter reference `{fromParam: "<name>"}`.
+                  x-kubernetes-preserve-unknown-fields: true
+                tolerations:
+                  description: |
+                    Default tolerations applied to the project pods. A literal list of tolerations or a
+                    parameter reference `{fromParam: "<name>"}`.
+                  x-kubernetes-preserve-unknown-fields: true
+                namespaceMetadata:
+                  description: Extra labels and annotations for the project namespaces.
+                  type: object
+                  properties:
+                    labels:
+                      description: A literal label map or a parameter reference `{fromParam: "<name>"}`.
+                      x-kubernetes-preserve-unknown-fields: true
+                    annotations:
+                      description: A literal annotation map or a parameter reference `{fromParam: "<name>"}`.
+                      x-kubernetes-preserve-unknown-fields: true
+                features:
+                  description: Optional project capabilities.
+                  type: object
+                  properties:
+                    monitoring:
+                      description: |
+                        Enable extended monitoring for the project. A literal boolean or a parameter
+                        reference `{fromParam: "<name>"}`.
+                      x-kubernetes-preserve-unknown-fields: true
+                    vulnerabilityScanning:
+                      description: |
+                        Enable periodic vulnerability scans (Trivy) for the project. A literal boolean or
+                        a parameter reference `{fromParam: "<name>"}`.
+                      x-kubernetes-preserve-unknown-fields: true
+                logShipping:
+                  description: Forwarding of the project logs to a cluster log destination.
+                  type: object
+                  properties:
+                    clusterDestinationRef:
+                      description: |
+                        Name of the ClusterLogDestination to ship logs to. A literal string or a parameter
+                        reference `{fromParam: "<name>"}`.
+                      x-kubernetes-preserve-unknown-fields: true
+                allowedUIDs:
+                  description: |
+                    Range of user IDs allowed in the project containers. A literal `{min, max}` object or a
+                    parameter reference `{fromParam: "<name>"}`.
+                  x-kubernetes-preserve-unknown-fields: true
+                allowedGIDs:
+                  description: |
+                    Range of group IDs allowed in the project containers. A literal `{min, max}` object or a
+                    parameter reference `{fromParam: "<name>"}`.
+                  x-kubernetes-preserve-unknown-fields: true
+                runtimeAudit:
+                  description: Runtime audit rules; effective only when allowedUIDs/allowedGIDs are set.
+                  type: object
+                  properties:
+                    enabled:
+                      description: A literal boolean or a parameter reference `{fromParam: "<name>"}`.
+                      x-kubernetes-preserve-unknown-fields: true
+                parametersSchema:
+                  type: object
+                  required: ["openAPIV3Schema"]
+                  description: |
+                    OpenAPI v3 schema validating the [parameters](#project-v1alpha2-spec-parameters) of a project.
+                  properties:
+                    openAPIV3Schema:
+                      type: object
+                      additionalProperties:
+                        x-kubernetes-preserve-unknown-fields: true
+                      description: |
+                        OpenAPI specification used to check the validity of the parameters passed when creating a new project.
+                resourcesTemplate:
+                  description: |
+                    Legacy Helm template string.
+
+                    Deprecated: kept for backward compatibility with `v1alpha1`. When the structured fields above
+                    are set, the controller uses them and ignores `resourcesTemplate`.
+                  type: string
+            status:
+              type: object
+              properties:
+                message:
+                  description: Message indicating the cause of the current status.
+                  type: string
+                ready:
+                  description: Whether the template is ready to use. Indicates that the template has been successfully validated.
+                  type: boolean
