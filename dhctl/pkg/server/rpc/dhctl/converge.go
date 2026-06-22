@@ -270,6 +270,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
+			[]byte(p.request.RegistryConfig),
 		),
 		Embedded:              true,
 		IsDebug:               s.params.IsDebug,
@@ -297,6 +298,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
+			[]byte(p.request.RegistryConfig),
 		),
 		InfrastructureContext:      infrastructureContext,
 		ApproveDestructiveChangeID: p.request.ApproveDestructionChangeId,

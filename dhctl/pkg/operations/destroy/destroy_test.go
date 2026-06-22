@@ -152,6 +152,7 @@ func TestInitStateLoader(t *testing.T) {
 					CommanderModeParams: commander.NewCommanderModeParams(
 						[]byte(cloudClusterGenericConfigYAML),
 						[]byte(providerConfigYAML),
+						nil,
 					),
 				},
 				kubeProvider: commanderKubeProvider,
@@ -176,6 +177,7 @@ func TestInitStateLoader(t *testing.T) {
 					CommanderModeParams: commander.NewCommanderModeParams(
 						[]byte(cloudClusterGenericConfigYAML),
 						[]byte(providerConfigYAML),
+						nil,
 					),
 				},
 				kubeProvider: commanderKubeProvider,
@@ -200,6 +202,7 @@ func TestInitStateLoader(t *testing.T) {
 					CommanderModeParams: commander.NewCommanderModeParams(
 						[]byte(cloudClusterGenericConfigYAML),
 						[]byte(providerConfigYAML),
+						nil,
 					),
 				},
 				kubeProvider: commanderKubeProvider,
@@ -224,6 +227,7 @@ func TestInitStateLoader(t *testing.T) {
 					CommanderModeParams: commander.NewCommanderModeParams(
 						[]byte(`{"a": "b"}`),
 						[]byte(`{"c": "d"}`),
+						nil,
 					),
 				},
 				kubeProvider: commanderKubeProvider,
