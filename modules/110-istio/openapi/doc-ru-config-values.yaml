@@ -6,9 +6,9 @@ properties:
     description: Дополнительные версии control plane Istio, которые будут установлены. Они будут обслуживать namespace'ы, где явно указана версия с помощью лейбла `istio.io/rev=`.
   outboundTrafficPolicyMode:
     description: |
-      Как поступать с запросами в сторону внешних, то есть не учтенных в mesh'е сервисов:
-      - `AllowAny` — пропускать;
-      - `RegistryOnly` — запрещать. В данном случае для работы с внешними сервисами потребуется регистрировать их с помощью ресурса ServiceEntry или организовывать egressgateway.
+      Политика обработки запросов в сторону внешних сервисов, не учтённых в mesh.
+
+      При `RegistryOnly` внешние сервисы нужно регистрировать через `ServiceEntry` или направлять запросы через `egressgateway`.
   ingressClass:
     description: |
       Класс Ingress-контроллера, который используется для Kiali, metadata-exporter и api-proxy.
@@ -18,12 +18,12 @@ properties:
     description: Параметры федерации с другими кластерами.
     properties:
       enabled:
-        description: Обозначить данный кластер как участник федерации (см. [Включение федерации](./#включение-федерации)).
+        description: Обозначить данный кластер как участник федерации. Подробнее — в разделе [Включение федерации](./#включение-федерации).
   multicluster:
     description: Параметры мультикластерной инсталляции.
     properties:
       enabled:
-        description: Обозначить данный кластер как участник мультикластера (см. [Включение мультикластера](./#включение-мультикластера)).
+        description: Обозначить данный кластер как участник мультикластера. Подробнее — в разделе [Включение мультикластера](./#включение-мультикластера).
   alliance:
     description: Общие настройки для федерации и мультикластера.
     properties:
@@ -62,7 +62,11 @@ properties:
 
               Структура, аналогичная `spec.tolerations` пода Kubernetes.
   tracing:
-    description: Параметры трассировки.
+    description: |
+      Параметры трассировки.
+
+      Если включён модуль [`ingress-nginx`](/modules/ingress-nginx/) (в `global.enabledModules` присутствует `ingress-nginx`), модуль создаёт ресурс `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx`.
+      Поды встроенного Ingress-контроллера с сайдкаром Istio перестают отправлять span'ы в бэкенд трассировки — это снижает шум, не нарушая маршрутизацию в mesh.
     properties:
       enabled:
         description: Включить отправку трейсов в коллектор и интегрировать их отображение в Kiali.
@@ -80,16 +84,36 @@ properties:
               sampling: 100.0
           ```
       collector:
-        description: Параметры отправки трейсов в коллектор.
+        description: |
+          Единая конфигурация коллектора трассировок. Используется и для прежнего режима (`meshConfig.defaultConfig.tracing`), и для Telemetry API (провайдер в `extensionProviders` и `spec.tracing` в CR `Telemetry` `d8-main` при [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled): `deckhouse-tracing`).
+
+          В прежнем режиме используется только Zipkin. Если при включённом Telemetry API заданы и OpenTelemetry, и Zipkin, приоритет у OpenTelemetry.
         properties:
+          opentelemetry:
+            description: |
+              Провайдер OpenTelemetry для пути Telemetry API (`extensionProviders` + mesh-wide `spec.tracing`).
+
+              Нужны `service` и `port` (по умолчанию gRPC OTLP; для HTTP укажите `http.path`). Не применяется при `telemetryAPI.enabled: false`.
+            properties:
+              service:
+                description: Имя хоста коллектора, доступного из mesh (например DNS Service в Kubernetes).
+              port:
+                description: Порт коллектора (например `4317` для gRPC OTLP).
+              http:
+                description: Необязательные параметры HTTP OTLP (без блока — gRPC).
+                properties:
+                  path:
+                    description: Путь HTTP для трасс (в шаблоне по умолчанию `/v1/traces`, если `http` задан без `path`).
+                  timeout:
+                    description: Таймаут HTTP-экспорта (строка длительности Istio).
           zipkin:
             description: |
-              Параметры протокола zipkin, который использует Istio для отправки трейсов.
+              Параметры протокола Zipkin (Jaeger обычно на порту `9411`).
 
-              Jaeger поддерживает этот протокол.
+              При включённой трассировке: в legacy — обязателен `address`; в Telemetry API — если не настроен [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry).
             properties:
               address:
-                description: Сетевой адрес в формате `<IP of FQDN>:<port>`, по которому доступен zipkin-коллектор.
+                description: Сетевой адрес zipkin-коллектора в формате `<хост>:<порт>` (FQDN или IP согласно шаблону в схеме).
       kiali:
         description: |
           Настройки отображения span'ов в Kiali.
@@ -106,6 +130,19 @@ properties:
               Адрес GRPC-интерфейса Jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису Kiali изнутри кластера для служебных запросов.
 
               Если не указать, то Kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
+  telemetryAPI:
+    description: |
+      Интеграция с [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) Istio (ресурсы `telemetry.istio.io`).
+
+      Если `enabled` — `true`, метрики mesh идут через Telemetry API: в `meshConfig` выставляется `defaultProviders.metrics: [prometheus]`, `telemetry.enabled` остаётся `true`, а `telemetry.v2` выключается; к уже существующему `Telemetry` `d8-main` добавляется `spec.metrics`. При [`tracing.enabled`](#parameters-tracing-enabled) с настроенным [`tracing.collector`](#parameters-tracing-collector) дополнительно добавляется `spec.tracing` через `deckhouse-tracing`, чтобы серии `istio_*` снова были видны в Grafana и Kiali.
+
+      Если `false` (по умолчанию), остаётся полный прежний путь `telemetry.v2` (в том числе `prometheus` в Sail), без `defaultProviders.metrics`, а `Telemetry` `d8-main` по-прежнему включает access log (совместимость с релизами, где этот CR уже был).
+
+      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) задаёт шаблон лога в `meshConfig.extensionProviders`; объект `Telemetry` `d8-main` выбирает этот провайдер для access log.
+    properties:
+      enabled:
+        description: |
+          Режим Telemetry API для метрик: `defaultProviders.metrics`, отключённый `telemetry.v2`, `spec.metrics` (и трассировка при необходимости) в `Telemetry` `d8-main`.
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:
@@ -180,6 +217,9 @@ properties:
         description: Цепочка сертификатов в формате PEM на случай, если `cert` — промежуточный сертификат.
       root:
         description: Корневой сертификат в формате PEM на случай, если `cert` — промежуточный сертификат.
+  jwksResolverAdditionalRootCA:
+    description: |
+      Дополнительный корневой сертификат в формате PEM. Используется компонентом istiod при получении JWKS URI по HTTPS.
   controlPlane:
     description: Настройки для компонента istiod.
     properties:
@@ -187,14 +227,26 @@ properties:
         description: |
           Опциональный селектор для компонента istiod. Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если значение не указано или указано `false`, будет использоваться [автоматика](/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
       tolerations:
         description: |
           Опциональные tolerations для компонента istiod.
 
           Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-          Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+          Если значение не указано или указано `false`, будет использоваться [автоматика](/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      extraEnvs:
+        description: |
+          Дополнительные переменные окружения для контейнера istiod (pilot).
+
+          Зарезервированные модулем ключи нельзя переопределить:
+
+          - `ISTIO_MULTIROOT_MESH`
+          - `ENABLE_ENHANCED_RESOURCE_SCOPING`
+          - `PILOT_HTTP10`
+          - `PILOT_ENABLE_AMBIENT`
+          - `PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER`
+          - `PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER`
       replicasManagement:
         description: |
           Настройки управления репликами и горизонтальным масштабированием istiod.
@@ -327,6 +379,30 @@ properties:
             description: Тестовый формат access-логов sidecar-контейнера. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
           jsonLabels:
             description: JSON формат access-логов sidecar-контейнера. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+      extensionProviders:
+        description: |
+          Дополнительные Istio extension providers, которые будут зарегистрированы в mesh configuration.
+
+          Имя provider'а `d8-main` зарезервировано Deckhouse.
+        items:
+          properties:
+            name:
+              description: Уникальное имя extension provider'а.
+            envoyExtAuthzGrpc:
+              description: Внешний сервис авторизации, который реализует Envoy ext_authz gRPC API.
+              properties:
+                service:
+                  description: Сервис, который реализует Envoy ext_authz gRPC API. Формат значения — `[<namespace>/]<hostname>`.
+                port:
+                  description: Порт сервиса.
+                failOpen:
+                  description: Разрешать запросы, если сервис авторизации недоступен или вернул ошибку 5xx.
+                timeout:
+                  description: Максимальное время ожидания ответа от сервиса авторизации.
+                statusOnError:
+                  description: HTTP-статус, который будет возвращён клиенту при ошибке взаимодействия с сервисом авторизации.
+                clearRouteCache:
+                  description: Очищать route cache, чтобы внешний сервис авторизации мог влиять на маршрутизацию.
       trafficRedirectionSetupMode:
         description: |
           Управление режимом перенаправления прикладного трафика для передачи под управление Istio в сетевом пространстве имён пода.
@@ -547,14 +623,14 @@ properties:
 
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Опциональные tolerations для компонентов istio-operator, metadata-exporter и Kiali.
 
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   https:
     description: |
       Тип сертификата, используемого для публичных веб-интерфейсов модуля.
@@ -566,7 +642,7 @@ properties:
           Режим работы HTTPS:
           - `CertManager` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer заданном в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTPS, используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — Kiali/metadata-exporter (including SPIFFE endpoint)/api-proxy будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
 
           **Важно!** В отличие от остальных модулей, istio не поддерживает работу без использования HTTPS (`mode: Disabled`).
       certManager:
@@ -595,7 +671,7 @@ properties:
         description: |
           Параметры для подключения внешней аутентификации (используется механизм Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
+          > Внешняя аутентификация включается автоматически, если включён модуль [user-authn](/modules/user-authn/).
         properties:
           authURL:
             description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
@@ -603,16 +679,16 @@ properties:
             description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
       allowedUserEmails:
         description: |
-          Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
+          Массив адресов электронной почты, пользователям которых разрешён доступ к веб-интерфейсу.
 
-          Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
+          Используется, если включён модуль [user-authn](/modules/user-authn/) или задан параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
           Массив групп, пользователям которых разрешён доступ в публичные веб-интерфейсы модуля.
 
-          Используется, если включен модуль [user-authn](https://deckhouse.ru/modules/user-authn/) или параметр `externalAuthentication`.
+          Используется, если включён модуль [user-authn](/modules/user-authn/) или параметр `externalAuthentication`.
 
-          **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider) DexProvider.
+          **Внимание!** При использовании совместно с модулем [user-authn](/modules/user-authn/) необходимо также добавить разрешённые группы в соответствующее поле в [настройках DexProvider](/modules/user-authn/cr.html#dexprovider).
       whitelistSourceRanges:
         description: Список адресов в формате CIDR, которым разрешено проходить авторизацию в публичные веб-интерфейсы модуля.
       satisfyAny:

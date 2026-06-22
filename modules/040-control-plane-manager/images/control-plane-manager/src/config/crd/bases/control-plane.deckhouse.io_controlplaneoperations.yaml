@@ -138,6 +138,7 @@ spec:
                   - JoinEtcdCluster
                   - WaitPodReady
                   - CertObserve
+                  - RenewSignature
                   type: string
                 minItems: 1
                 type: array
