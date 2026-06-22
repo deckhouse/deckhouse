@@ -62,11 +62,9 @@ func handleComputeEtcdDefrag(_ context.Context, input *go_hook.HookInput) error 
 	input.MetricsCollector.Expire(etcdDefragInvalidCronScheduleGroup)
 
 	cronSchedule := input.Values.Get(etcdDefragScheduleConfigPath).String()
-	input.Logger.Info("etcd defrag schedule from values", "cronSchedule", cronSchedule, "isEmpty", cronSchedule == "")
 
 	if cronSchedule == "" {
 		cronSchedule = etcdDefragDefaultCronSchedule
-		input.Logger.Info("etcd defrag schedule fallback to constant", "cronSchedule", cronSchedule)
 	} else if _, err := cron.Parse("TZ=UTC " + cronSchedule); err != nil {
 		input.Logger.Warn("etcd defrag cronSchedule is invalid, falling back to default", "cronSchedule", cronSchedule, "err", err)
 		input.MetricsCollector.Set(

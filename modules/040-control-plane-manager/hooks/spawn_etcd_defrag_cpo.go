@@ -168,14 +168,13 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	}
 
 	nextSlot := sched.Next(lastHandled)
-	input.Logger.Info("etcd defrag cron check",
+	input.Logger.Debug("etcd defrag cron check",
 		"currentSlot", currentSlot.Format(time.RFC3339),
 		"lastHandled", lastHandled.Format(time.RFC3339),
 		"nextSlot", nextSlot.Format(time.RFC3339),
 	)
 
 	if currentSlot.Before(nextSlot) {
-		input.Logger.Debug("etcd defrag: next slot not reached yet, skipping")
 		return nil
 	}
 
