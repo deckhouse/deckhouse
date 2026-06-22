@@ -256,3 +256,44 @@ func TestDefaultClient_ListTags(t *testing.T) {
 	_, err = c.ListTags(context.Background(), testLogger{}, cfg, "unknown-image")
 	require.ErrorIs(t, err, ErrPackageNotFound)
 }
+
+func TestDefaultClient_GetManifestAnnotations(t *testing.T) {
+	host := newTestRegistry(t)
+
+	c := &DefaultClient{}
+	cfg := &ClientConfig{Repository: host + "/deckhouse", Scheme: "http"}
+
+	// Single image: annotation read straight off the image manifest, no layers pulled.
+	img, err := random.Image(256, 1)
+	require.NoError(t, err)
+	img, ok := mutate.Annotations(img, map[string]string{"contract": "Zm9v"}).(v1.Image)
+	require.True(t, ok)
+	pushImage(t, host, img, "deckhouse/deckhouse-cli/plugins/single", "v1.0.0")
+
+	ann, err := c.GetManifestAnnotations(context.Background(), testLogger{}, cfg, "deckhouse-cli/plugins/single", "v1.0.0")
+	require.NoError(t, err)
+	assert.Equal(t, "Zm9v", ann["contract"])
+
+	// Multi-platform index: the contract lives on the (first) child image manifest.
+	amd64, err := random.Image(256, 1)
+	require.NoError(t, err)
+	amd64, ok = mutate.Annotations(amd64, map[string]string{"contract": "YmFy"}).(v1.Image)
+	require.True(t, ok)
+	arm64, err := random.Image(256, 1)
+	require.NoError(t, err)
+	idx := mutate.AppendManifests(empty.Index,
+		mutate.IndexAddendum{Add: amd64, Descriptor: v1.Descriptor{Platform: &v1.Platform{OS: "linux", Architecture: "amd64"}}},
+		mutate.IndexAddendum{Add: arm64, Descriptor: v1.Descriptor{Platform: &v1.Platform{OS: "linux", Architecture: "arm64"}}},
+	)
+	ref, err := name.NewTag(host+"/deckhouse/deckhouse-cli/plugins/multi:v2.0.0", name.WeakValidation)
+	require.NoError(t, err)
+	require.NoError(t, v1remote.WriteIndex(ref, idx))
+
+	ann, err = c.GetManifestAnnotations(context.Background(), testLogger{}, cfg, "deckhouse-cli/plugins/multi", "v2.0.0")
+	require.NoError(t, err)
+	assert.Equal(t, "YmFy", ann["contract"])
+
+	// Missing tag -> not found.
+	_, err = c.GetManifestAnnotations(context.Background(), testLogger{}, cfg, "deckhouse-cli/plugins/single", "v9.9.9")
+	require.ErrorIs(t, err, ErrPackageNotFound)
+}

@@ -40,4 +40,7 @@ type Client interface {
 	ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string, platform *v1.Platform) (string, error)
 	// ListTags returns all tags available for an image identified by repository path.
 	ListTags(ctx context.Context, log log.Logger, config *ClientConfig, path string) ([]string, error)
+	// GetManifestAnnotations returns the manifest annotations of an image identified by
+	// repository path and tag, without pulling its layers.
+	GetManifestAnnotations(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string) (map[string]string, error)
 }

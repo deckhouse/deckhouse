@@ -17,6 +17,7 @@ package proxy
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
@@ -56,9 +57,13 @@ func TestParseCLIPath(t *testing.T) {
 		{url: "/v1/images/deckhouse-cli/plugins/tags", wantImg: "deckhouse-cli/plugins", wantAction: cliActionListTags},
 		{url: "/v1/images/deckhouse-cli/plugins/foo/tags", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionListTags},
 		{url: "/v1/images/deckhouse-cli/plugins/foo/tags/v2", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionPullTag, wantTag: "v2"},
+		{url: "/v1/images/deckhouse-cli/tags/v1.0.1/contract", wantImg: "deckhouse-cli", wantAction: cliActionGetContract, wantTag: "v1.0.1"},
+		{url: "/v1/images/deckhouse-cli/plugins/foo/tags/v2/contract", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionGetContract, wantTag: "v2"},
 		{url: "/v1/images/", wantErr: true},
 		{url: "/v1/images/just-image", wantErr: true},
 		{url: "/v1/images/img/tags/with/slashes", wantErr: true},
+		{url: "/v1/images/deckhouse-cli/tags/v1.0.1/bogus", wantErr: true},
+		{url: "/v1/images/deckhouse-cli/tags/v1.0.1/contract/extra", wantErr: true},
 	}
 
 	for _, tc := range cases {
@@ -111,18 +116,22 @@ type fakeCLIRegistryClient struct {
 	mu                  sync.Mutex
 	tags                map[string][]string
 	tagToManifestDigest map[string]string
-	platformDigests map[string]string
-	lastPlatform    string
-	packageBody     []byte
-	layerDigest     string
+	platformDigests     map[string]string
+	lastPlatform        string
+	packageBody         []byte
+	layerDigest         string
+	// annotations maps "path:tag" -> manifest annotations for GetManifestAnnotations.
+	annotations map[string]map[string]string
 
-	getPackageCalls int32
-	listTagsCalls   int32
-	resolveTagCalls int32
+	getPackageCalls  int32
+	listTagsCalls    int32
+	resolveTagCalls  int32
+	annotationsCalls int32
 
-	listTagsErr   error
-	resolveTagErr error
-	getPackageErr error
+	listTagsErr    error
+	resolveTagErr  error
+	getPackageErr  error
+	annotationsErr error
 }
 
 func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path string) ([]string, error) {
@@ -165,6 +174,20 @@ func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, _
 		return 0, "", nil, f.getPackageErr
 	}
 	return int64(len(f.packageBody)), f.layerDigest, io.NopCloser(bytes.NewReader(f.packageBody)), nil
+}
+
+func (f *fakeCLIRegistryClient) GetManifestAnnotations(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, tag string) (map[string]string, error) {
+	atomic.AddInt32(&f.annotationsCalls, 1)
+	if f.annotationsErr != nil {
+		return nil, f.annotationsErr
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	ann, ok := f.annotations[path+":"+tag]
+	if !ok {
+		return nil, registry.ErrPackageNotFound
+	}
+	return ann, nil
 }
 
 type fakeCLIGetter struct {
@@ -483,4 +506,66 @@ func TestCLIHandler_PullTag_InvalidPlatform(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.resolveTagCalls))
+}
+
+func TestCLIHandler_GetContract_HappyPath(t *testing.T) {
+	const contractJSON = `{"name":"foo","version":"v1.0.0"}`
+	fake := &fakeCLIRegistryClient{
+		annotations: map[string]map[string]string{
+			"deckhouse-cli/plugins/foo:v1.0.0": {"contract": base64.StdEncoding.EncodeToString([]byte(contractJSON))},
+		},
+	}
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/plugins/foo/tags/v1.0.0/contract")
+	require.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+	assert.Equal(t, contractJSON, string(body))
+	assert.Equal(t, int32(1), atomic.LoadInt32(&fake.annotationsCalls))
+	// The contract comes from the manifest annotation - no image/layer pull.
+	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.getPackageCalls))
+}
+
+func TestCLIHandler_GetContract_NoContractAnnotation(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		annotations: map[string]map[string]string{
+			"deckhouse-cli/plugins/foo:v1.0.0": {"other": "x"},
+		},
+	}
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/plugins/foo/tags/v1.0.0/contract")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func TestCLIHandler_GetContract_TagNotFound(t *testing.T) {
+	fake := &fakeCLIRegistryClient{annotations: map[string]map[string]string{}}
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/plugins/foo/tags/v9.9.9/contract")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }

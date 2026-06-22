@@ -15,6 +15,7 @@
 package registry
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -202,6 +203,94 @@ func childDigestForPlatform(idx v1.ImageIndex, platform *v1.Platform) (string, e
 	}
 
 	return "", ErrPackageNotFound
+}
+
+// GetManifestAnnotations returns the manifest annotations for path:tag without
+// pulling layers. remote.Get fetches only the manifest, so this is cheap. For a
+// multi-platform index, the index-level annotations are merged with the first
+// child manifest's annotations (image metadata like the plugin contract is
+// platform-independent, so any child is representative).
+func (c *DefaultClient) GetManifestAnnotations(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string) (map[string]string, error) {
+	repo := config.Repository
+	if path != "" {
+		repo = fmt.Sprintf("%s/%s", repo, path)
+	}
+
+	nameOpts := newNameOptions(config.Scheme)
+	repository, err := name.NewRepository(repo, nameOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	remoteOpts, err := newRemoteOptions(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	desc, err := remote.Get(repository.Tag(tag), remoteOpts...)
+	if err != nil {
+		e := &transport.Error{}
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return nil, ErrPackageNotFound
+			}
+		}
+		return nil, err
+	}
+
+	if !desc.MediaType.IsIndex() {
+		manifest, err := v1.ParseManifest(bytes.NewReader(desc.Manifest))
+		if err != nil {
+			return nil, err
+		}
+
+		return manifest.Annotations, nil
+	}
+
+	index, err := v1.ParseIndexManifest(bytes.NewReader(desc.Manifest))
+	if err != nil {
+		return nil, err
+	}
+
+	annotations := map[string]string{}
+	for k, v := range index.Annotations {
+		annotations[k] = v
+	}
+
+	if len(index.Manifests) == 0 {
+		return annotations, nil
+	}
+
+	// Merge the first child: descriptor-level annotations (already in the index
+	// bytes) and the child image manifest's own annotations (one extra manifest GET).
+	child := index.Manifests[0]
+	for k, v := range child.Annotations {
+		annotations[k] = v
+	}
+
+	childDesc, err := remote.Get(repository.Digest(child.Digest.String()), remoteOpts...)
+	if err != nil {
+		e := &transport.Error{}
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return nil, ErrPackageNotFound
+			}
+		}
+		return nil, err
+	}
+
+	childManifest, err := v1.ParseManifest(bytes.NewReader(childDesc.Manifest))
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range childManifest.Annotations {
+		annotations[k] = v
+	}
+
+	return annotations, nil
 }
 
 func (c *DefaultClient) ListTags(ctx context.Context, log log.Logger, config *ClientConfig, path string) ([]string, error) {

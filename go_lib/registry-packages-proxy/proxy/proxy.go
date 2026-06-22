@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -556,7 +557,12 @@ const (
 	cliActionUnknown cliAction = iota
 	cliActionListTags
 	cliActionPullTag
+	cliActionGetContract
 )
+
+// contractAnnotation is the manifest annotation key that carries the plugin
+// contract as base64-encoded JSON.
+const contractAnnotation = "contract"
 
 type cliTagsResponse struct {
 	Name string   `json:"name"`
@@ -581,6 +587,8 @@ func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleListTags(w, r, imagePath)
 	case cliActionPullTag:
 		h.handlePullTag(w, r, imagePath, tag)
+	case cliActionGetContract:
+		h.handleGetContract(w, r, imagePath, tag)
 	default:
 		http.NotFound(w, r)
 	}
@@ -642,6 +650,54 @@ func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imag
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
 	_, _ = w.Write(body)
+}
+
+// handleGetContract serves the plugin contract from the image manifest annotation,
+// without pulling any layers. Returns the decoded contract JSON (200), 204 when the
+// manifest carries no contract annotation, or 404 when the tag does not exist.
+func (h *cliHandler) handleGetContract(w http.ResponseWriter, r *http.Request, imagePath, tag string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientIP := getRequestIP(r)
+	logger := h.proxy.logger
+	logger.Infof("CLI get-contract for image %q tag %q from client %s", imagePath, tag, clientIP)
+
+	cfg, ok := h.cliClientConfig(w, logger)
+	if !ok {
+		return
+	}
+
+	annotations, err := h.proxy.registryClient.GetManifestAnnotations(r.Context(), logger, cfg, imagePath, tag)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "tag not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("get manifest annotations for %q tag %q: %v", imagePath, tag, err)
+		http.Error(w, "failed to read manifest", http.StatusBadGateway)
+		return
+	}
+
+	encoded, ok := annotations[contractAnnotation]
+	if !ok || encoded == "" {
+		// Manifest exists but carries no contract: tolerated (contract-less plugin).
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	contract, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		logger.Errorf("decode contract annotation for %q tag %q: %v", imagePath, tag, err)
+		http.Error(w, "invalid contract annotation", http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(contract)))
+	_, _ = w.Write(contract)
 }
 
 func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, imagePath, tag string) {
@@ -782,11 +838,20 @@ func parseCLIPath(urlPath string) (string, cliAction, string, error) {
 	case suffix == "" || suffix == "/":
 		return imagePath, cliActionListTags, "", nil
 	case strings.HasPrefix(suffix, "/"):
-		tag := strings.Trim(suffix[1:], "/")
-		if tag == "" || strings.Contains(tag, "/") {
+		// suffix is either "/<tag>" (pull) or "/<tag>/contract" (contract metadata).
+		parts := strings.Split(strings.Trim(suffix[1:], "/"), "/")
+		tag := parts[0]
+		if tag == "" {
 			return "", cliActionUnknown, "", errors.New("invalid tag")
 		}
-		return imagePath, cliActionPullTag, tag, nil
+		switch {
+		case len(parts) == 1:
+			return imagePath, cliActionPullTag, tag, nil
+		case len(parts) == 2 && parts[1] == "contract":
+			return imagePath, cliActionGetContract, tag, nil
+		default:
+			return "", cliActionUnknown, "", errors.New("invalid tag")
+		}
 	default:
 		return "", cliActionUnknown, "", errors.New("unexpected path suffix")
 	}
