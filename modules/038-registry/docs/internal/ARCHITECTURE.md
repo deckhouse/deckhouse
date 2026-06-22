@@ -3,7 +3,7 @@
 This document describes the architecture of the `registry` module's interaction with the key
 subsystems of the Deckhouse Kubernetes Platform (DKP).
 
-## How it was before
+## Without the registry module
 
 Originally, registry management was performed through a single `deckhouse-registry` secret.
 This secret simultaneously configured two different subsystems:
@@ -71,7 +71,7 @@ flowchart LR
   class C cri;
 ```
 
-## How it is now
+## With the registry module
 
 The `registry` module separates the global and node-manager configuration and introduces a managed,
 staged transition between registry operating modes:
