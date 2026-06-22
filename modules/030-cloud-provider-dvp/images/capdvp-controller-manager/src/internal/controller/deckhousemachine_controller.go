@@ -1186,7 +1186,7 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 ) (bool, error) {
 	disk, err := r.DVP.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
-		if errors.Is(err, cloudprovider.DiskNotFound) {
+		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.DiskNotFound) {
 			if required {
 				return false, fmt.Errorf("disk %q not found", diskName)
 			}
@@ -1237,7 +1237,7 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 		return true, nil
 	case diskSCStepApplyPatch:
 		if _, err := r.DVP.DiskService.GetStorageClass(ctx, desiredStorageClass); err != nil {
-			if errors.Is(err, cloudprovider.DiskNotFound) {
+			if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.DiskNotFound) {
 				return false, fmt.Errorf("storage class %q not found", desiredStorageClass)
 			}
 			return false, err
