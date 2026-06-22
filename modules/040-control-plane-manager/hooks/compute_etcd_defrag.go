@@ -34,7 +34,7 @@ const (
 	mastersNodeInternalPath        = "controlPlaneManager.internal.mastersNode"
 	hasEtcdArbiterNodeInternalPath = "controlPlaneManager.internal.hasEtcdArbiterNode"
 
-	etcdDefragDefaultCronSchedule       = "*/3 * * * *"
+	etcdDefragDefaultCronSchedule       = "0 1 * * *"
 	etcdDefragInvalidCronScheduleGroup  = "D8InvalidEtcdDefragCronSchedule"
 	etcdDefragInvalidCronScheduleMetric = "d8_invalid_etcd_defrag_cron_schedule"
 )
