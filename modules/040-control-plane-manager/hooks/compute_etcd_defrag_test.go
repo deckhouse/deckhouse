@@ -87,6 +87,22 @@ const threeMastersCustomCronValues = `{
 	}
 }`
 
+const threeMastersInvalidCronValues = `{
+	"controlPlaneManager": {
+		"internal": {
+			"mastersNode": ["master-0","master-1","master-2"],
+			"hasEtcdArbiterNode": false,
+			"etcdDefrag": {}
+		},
+		"etcd": {
+			"defrag": {
+				"cronSchedule": "99 25 * * *"
+			}
+		},
+		"apiserver": {"authn": {}, "authz": {}}
+	}
+}`
+
 var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defrag ::", func() {
 	Context("3 master nodes, no explicit config", func() {
 		f := HookExecutionConfigInit(threeMastersValues, ``)
@@ -158,6 +174,29 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: compute_etcd_defr
 		It("uses cronSchedule from values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(etcdDefragScheduleInternalPath).String()).To(Equal("0 3 * * *"))
+		})
+	})
+
+	Context("3 master nodes, semantically invalid cronSchedule in values", func() {
+		f := HookExecutionConfigInit(threeMastersInvalidCronValues, ``)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("falls back to default cronSchedule and emits invalid cron metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(etcdDefragScheduleInternalPath).String()).To(Equal(etcdDefragDefaultCronSchedule))
+
+			found := false
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == etcdDefragInvalidCronScheduleMetric {
+					found = true
+					Expect(*m.Value).To(Equal(1.0))
+					Expect(m.Labels["cron_schedule"]).To(Equal("99 25 * * *"))
+					break
+				}
+			}
+			Expect(found).To(BeTrue())
 		})
 	})
 })
