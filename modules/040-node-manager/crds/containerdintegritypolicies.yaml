@@ -65,6 +65,7 @@ spec:
                     additionalProperties:
                       type: string
                     description: MatchLabels is a map of {key,value} pairs.
+                    x-doc-examples: [{ "foo": "bar" }]
                     type: object
                 type: object
             required:
