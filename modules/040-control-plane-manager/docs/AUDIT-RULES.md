@@ -256,7 +256,6 @@ users:
   - system:serviceaccount:d8-chrony:chrony-exporter-master
   - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
-  - system:serviceaccount:d8-cloud-instance-manager:early-oom
   - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
   - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
   - system:serviceaccount:d8-cloud-instance-manager:node-controller
@@ -759,7 +758,6 @@ rules:
       - system:serviceaccount:d8-chrony:chrony-exporter-master
       - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler
-      - system:serviceaccount:d8-cloud-instance-manager:early-oom
       - system:serviceaccount:d8-cloud-instance-manager:fencing-agent
       - system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager
       - system:serviceaccount:d8-cloud-instance-manager:node-controller
