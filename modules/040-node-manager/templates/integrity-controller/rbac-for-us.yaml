@@ -1,0 +1,95 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: integrity-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-controller")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:integrity-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-controller")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - containerdintegritypolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - containerdintegritypolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:integrity-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:integrity-controller
+subjects:
+- kind: ServiceAccount
+  name: integrity-controller
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:integrity-controller-leader-election-role
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-controller")) | nindent 2 }}
+rules:
+- apiGroups:
+    - coordination.k8s.io
+  resources:
+    - leases
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+- apiGroups:
+    - ""
+  resources:
+    - events
+  verbs:
+    - create
+    - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:integrity-controller-leader-election-role
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:integrity-controller-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: integrity-controller
+  namespace: d8-cloud-instance-manager
