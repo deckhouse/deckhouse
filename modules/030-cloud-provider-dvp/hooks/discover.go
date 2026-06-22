@@ -75,8 +75,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"module":   dvpModuleName,
 				},
 			},
-			// ExecuteHookOnSynchronization=false: skip OperatorStartup informer sync.
-			// Values lack required fields on fresh install; safe to run on OnBeforeHelm only.
 			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 	},
@@ -109,6 +107,13 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		if len(input.Snapshots.Get("storage_classes")) == 0 {
 			input.Logger.Warn("failed to find storage classes for dvp provisioner")
 
+			return nil
+		}
+
+		// StorageClasses from the parent DVP host cluster may already be present in the
+		// snapshot on fresh install, but values schema requires nodes/provider to be set.
+		if _, ok := input.Values.GetOk("cloudProviderDvp.provider"); !ok {
+			input.Logger.Warn("cloudProviderDvp.provider not set, deferring storage class discovery to OnBeforeHelm")
 			return nil
 		}
 

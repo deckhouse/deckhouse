@@ -36,6 +36,14 @@ cloudProviderDvp:
   internal: {}
 `
 
+	const initValuesWithProvider = `
+cloudProviderDvp:
+  provider:
+    parameters:
+      namespace: test-ns
+  internal: {}
+`
+
 	const initValuesWithExclude = `
 cloudProviderDvp:
   storageClass:
@@ -173,7 +181,7 @@ volumeBindingMode: WaitForFirstConsumer
 	})
 
 	Context("When only managed StorageClass snapshots are present", func() {
-		f := HookExecutionConfigInit(initValues, `{}`)
+		f := HookExecutionConfigInit(initValuesWithProvider, `{}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext(), f.KubeStateSet(storageClassesOnly))
 			f.RunHook()
