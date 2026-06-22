@@ -863,7 +863,7 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			if tt.operation == "UPDATE" {
 				objs = append(objs, newModuleCR(moduleName, []string{}, ""))
 			}
-			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, validator, objs...)
+			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, objs...)
 
 			newCfg := newModuleConfigWithSettings(moduleName, boolPtr(true), tt.newVersion, tt.newSettings)
 
@@ -904,7 +904,7 @@ func TestExtractOldSettings_SkipsWhenNoVersion(t *testing.T) {
 	dependencyExtender := moduledependency.NewIExtenderMock(t)
 
 	validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
-	handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, validator)
+	handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator)
 
 	// old object has no spec.version and no spec.settings; ExtractLatestSettings
 	// must return nil, nil → CEL check is skipped
@@ -933,7 +933,7 @@ func TestConfigSchema_ReturnsNilForUnknownModule(t *testing.T) {
 	dependencyExtender := moduledependency.NewIExtenderMock(t)
 
 	validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
-	handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, validator)
+	handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator)
 
 	newCfg := newModuleConfigWithSettings(moduleName, boolPtr(true), 1, map[string]any{"bundle": "Minimal"})
 	oldCfg := newModuleConfigWithSettings(moduleName, boolPtr(true), 1, map[string]any{"bundle": "Default"})
