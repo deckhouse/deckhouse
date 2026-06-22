@@ -261,10 +261,12 @@ spec:
                   type: object
                   properties:
                     labels:
-                      description: A literal label map or a parameter reference `{fromParam: "<name>"}`.
+                      description: |
+                        A literal label map or a parameter reference `{fromParam: "<name>"}`.
                       x-kubernetes-preserve-unknown-fields: true
                     annotations:
-                      description: A literal annotation map or a parameter reference `{fromParam: "<name>"}`.
+                      description: |
+                        A literal annotation map or a parameter reference `{fromParam: "<name>"}`.
                       x-kubernetes-preserve-unknown-fields: true
                 features:
                   description: Optional project capabilities.
@@ -304,7 +306,8 @@ spec:
                   type: object
                   properties:
                     enabled:
-                      description: A literal boolean or a parameter reference `{fromParam: "<name>"}`.
+                      description: |
+                        A literal boolean or a parameter reference `{fromParam: "<name>"}`.
                       x-kubernetes-preserve-unknown-fields: true
                 parametersSchema:
                   type: object
