@@ -171,14 +171,19 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 	}
 
 	for _, zone := range zones {
-		hash := sha256Hash(clusterUUID + zone + instanceClassChecksum)
-		mdSuffix := fmt.Sprintf("%s-%s", ng.Name, hash)
+		// MD name hash must stay stable across InstanceClass changes (no checksum),
+		// so changing InstanceClass updates the same MD in place (rolling update).
+		mdHash := sha256Hash(clusterUUID + zone)
+		mdSuffix := fmt.Sprintf("%s-%s", ng.Name, mdHash)
 		mdName := mdSuffix
 		if instancePrefix != "" {
 			mdName = fmt.Sprintf("%s-%s", instancePrefix, mdSuffix)
 		}
 
-		templateName := fmt.Sprintf("%s-%s", ng.Name, hash)
+		// Template and bootstrap secret names include the checksum so a new
+		// InstanceClass produces new infra objects the MD then rolls onto.
+		templateHash := sha256Hash(clusterUUID + zone + instanceClassChecksum)
+		templateName := fmt.Sprintf("%s-%s", ng.Name, templateHash)
 		bootstrapSecretName := templateName
 
 		annotations := map[string]interface{}{
