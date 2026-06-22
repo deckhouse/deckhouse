@@ -116,6 +116,7 @@ backet
 Backlink
 base64
 BaseDN
+basename
 bashbooster
 bashible
 Bashible
@@ -140,6 +141,7 @@ blog
 bm
 bool
 boostrap
+bootable
 Bootable
 bootloader
 Bootloader
@@ -601,6 +603,7 @@ Graylog
 grep
 gRPC
 GRPC
+gz
 Habr
 hardcoded
 HardPodAntiAffinity
@@ -1161,6 +1164,7 @@ preconfigurations
 preconfigured
 preemptible
 preffered
+preinstalled
 Preinstalled
 preload
 Prestable
@@ -1203,6 +1207,7 @@ PVs
 PWD
 px
 qa
+qcow
 QCOW
 QEMU
 QoS
@@ -1310,6 +1315,7 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
+SDN
 sds
 Searchable
 seccomp
@@ -1418,6 +1424,7 @@ StorageClass
 StorageClasses
 StoragePolicy
 StorageProfile
+STOREDSIZE
 strategis
 Streebog
 Stribog
@@ -1556,6 +1563,7 @@ vCloud
 vCPU
 vCPUs
 VDC
+vdi
 VDI
 ve
 vectoradd
@@ -1571,6 +1579,7 @@ VictoriaMetrics
 VictorOps
 VictorOpsConfig
 virt
+virtio
 VirtIO
 VirtualDataCenter
 VirtualDisk
@@ -1591,6 +1600,8 @@ VLAN
 vm
 VM
 vmagent
+vmdk
+VMDK
 VMs
 VMware
 VMX
@@ -1665,6 +1676,7 @@ worktree
 worseness
 WSL
 www
+xz
 Yadro
 YadroStorageClass
 YadroStorageConnection
@@ -2298,6 +2310,7 @@ ZvirtInstanceClass
 пересоздает
 пересоздаёт
 пересоздается
+пересоздайте
 пересоздастся
 переупорядочивание
 перехешируются
