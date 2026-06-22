@@ -534,6 +534,14 @@ func (s *SchemaStore) ProviderSchemasLoaded(provider, digest string) bool {
 	return digest != "" && s.providerDigests[provider] == digest
 }
 
+// HasProviderSchemas reports whether any schemas for the provider were loaded
+// via LoadProviderDir into this store, regardless of digest.
+func (s *SchemaStore) HasProviderSchemas(provider string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.providerIndexes[provider]) > 0
+}
+
 // LoadProviderDir loads provider schemas from dir (an unpacked bundle root)
 // into the store, replacing schemas previously loaded for this provider. A
 // repeated call with the same digest is a no-op.
