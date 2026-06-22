@@ -75,7 +75,7 @@ locals {
   prefix     = var.clusterConfiguration.cloud.prefix
   node_index = var.nodeIndex
 
-  _master_ng      = module.migration.nodeGroups["master"]
+  _master_ng      = lookup(module.migration.nodeGroups, "master", null)
   _master_ic_name = try(local._master_ng.spec.cloudInstances.classReference.name, "")
   instance_class  = try(module.migration.instanceClasses[local._master_ic_name].spec, {})
 

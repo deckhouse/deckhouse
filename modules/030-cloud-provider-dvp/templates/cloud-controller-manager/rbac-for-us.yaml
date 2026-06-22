@@ -1,4 +1,4 @@
-{{- if not .Values.cloudProviderDvp.nodes.disabled }}
+{{- if not (default false (dig "nodes" "disabled" false .Values.cloudProviderDvp)) }}
 ---
 apiVersion: v1
 kind: ServiceAccount
