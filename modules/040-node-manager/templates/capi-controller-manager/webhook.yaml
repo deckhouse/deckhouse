@@ -164,7 +164,7 @@ webhooks:
       - apiGroups:
           - runtime.cluster.x-k8s.io
         apiVersions:
-          - v1alpha1
+          - v1beta2
         operations:
           - CREATE
           - UPDATE
@@ -407,7 +407,7 @@ webhooks:
       - apiGroups:
           - runtime.cluster.x-k8s.io
         apiVersions:
-          - v1alpha1
+          - v1beta2
         operations:
           - CREATE
           - UPDATE
