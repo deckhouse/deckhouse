@@ -47,6 +47,10 @@ message CommanderDetachStart {
   google.protobuf.Struct create_resources_values = 7;
   google.protobuf.Struct delete_resources_values = 8;
   CommanderDetachStartOptions options = 9;
+  // registry_config carries an InitConfiguration document and/or the deckhouse
+  // ModuleConfig so the server can resolve registry access for the external
+  // provider bundle download.
+  string registry_config = 10;
 }
 
 message CommanderDetachCancel {}

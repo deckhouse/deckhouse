@@ -41,11 +41,11 @@ func New(schemaStore *config.SchemaStore, globalOptions *options.GlobalOptions) 
 	}
 }
 
-// ensureProviderSchemas lazily delivers the external provider bundle so
+// ensureProviderBundle lazily delivers the external provider bundle so
 // validation works on a cold pod.
-func (s *Service) ensureProviderSchemas(ctx context.Context, provider, configYAML string) error {
+func (s *Service) ensureProviderBundle(ctx context.Context, provider, configYAML string) error {
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configYAML), -1)
-	return config.EnsureProviderSchemas(ctx, provider, docs, s.globalOptions)
+	return config.EnsureProviderBundle(ctx, provider, docs, s.globalOptions)
 }
 
 func optionsFromRequest(opts *pb.ValidateOptions) []config.ValidateOption {

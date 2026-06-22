@@ -93,7 +93,7 @@ func stubProviderDownload(t *testing.T, kind string, delay time.Duration, calls 
 	t.Cleanup(func() { downloadProviderBundle = orig })
 }
 
-func TestEnsureProviderSchemasStaticNoop(t *testing.T) {
+func TestEnsureProviderBundleStaticNoop(t *testing.T) {
 	var digestCalls atomic.Int32
 	stubProviderDigest(t, "sha256:unused", &digestCalls)
 
@@ -102,11 +102,11 @@ apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
 `}
-	require.NoError(t, EnsureProviderSchemas(context.Background(), "", docs, ensureTestGlobalOptions(t)))
+	require.NoError(t, EnsureProviderBundle(context.Background(), "", docs, ensureTestGlobalOptions(t)))
 	require.Zero(t, digestCalls.Load(), "static cluster must not resolve provider digest")
 }
 
-func TestEnsureProviderSchemasInTreeNoop(t *testing.T) {
+func TestEnsureProviderBundleInTreeNoop(t *testing.T) {
 	var digestCalls atomic.Int32
 	stubProviderDigest(t, "sha256:unused", &digestCalls)
 
@@ -115,12 +115,12 @@ func TestEnsureProviderSchemasInTreeNoop(t *testing.T) {
 	require.NoError(t, os.MkdirAll(schemaPath, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(schemaPath, "cluster_configuration.yaml"), []byte("kind: X\napiVersions: []\n"), 0o644))
 
-	require.NoError(t, EnsureProviderSchemas(context.Background(), "", []string{ensureClusterConfigDoc("Yandex")}, globalOptions))
-	require.NoError(t, EnsureProviderSchemas(context.Background(), "Yandex", nil, globalOptions), "explicit provider must hit the same no-op")
+	require.NoError(t, EnsureProviderBundle(context.Background(), "", []string{ensureClusterConfigDoc("Yandex")}, globalOptions))
+	require.NoError(t, EnsureProviderBundle(context.Background(), "Yandex", nil, globalOptions), "explicit provider must hit the same no-op")
 	require.Zero(t, digestCalls.Load(), "in-tree provider with bundled candi must not resolve digest")
 }
 
-func TestEnsureProviderSchemasDefaultRegistryFallback(t *testing.T) {
+func TestEnsureProviderBundleDefaultRegistryFallback(t *testing.T) {
 	// Docs without registry data fall back to the default public registry —
 	// same semantics as the rest of dhctl.
 	stubProviderDigest(t, "sha256:noreg", nil)
@@ -134,12 +134,12 @@ func TestEnsureProviderSchemasDefaultRegistryFallback(t *testing.T) {
 	}
 	t.Cleanup(func() { downloadProviderBundle = orig })
 
-	err := EnsureProviderSchemas(context.Background(), "", []string{ensureClusterConfigDoc("EnsNoReg")}, ensureTestGlobalOptions(t))
+	err := EnsureProviderBundle(context.Background(), "", []string{ensureClusterConfigDoc("EnsNoReg")}, ensureTestGlobalOptions(t))
 	require.NoError(t, err)
 	require.Equal(t, "registry.deckhouse.io/deckhouse/ce@sha256:noreg", gotImgName)
 }
 
-func TestEnsureProviderSchemasDownloadsLoadsAndCaches(t *testing.T) {
+func TestEnsureProviderBundleDownloadsLoadsAndCaches(t *testing.T) {
 	stubProviderDigest(t, "sha256:enstest1", nil)
 	var downloads atomic.Int32
 	stubProviderDownload(t, "EnsTestConfiguration", 0, &downloads)
@@ -147,7 +147,7 @@ func TestEnsureProviderSchemasDownloadsLoadsAndCaches(t *testing.T) {
 	globalOptions := ensureTestGlobalOptions(t)
 	docs := []string{ensureClusterConfigDoc("EnsTest"), ensureRegistryMCDoc}
 
-	require.NoError(t, EnsureProviderSchemas(context.Background(), "", docs, globalOptions))
+	require.NoError(t, EnsureProviderBundle(context.Background(), "", docs, globalOptions))
 	require.Equal(t, int32(1), downloads.Load())
 
 	providerDir := filepath.Join(globalOptions.DownloadDir, "enstest")
@@ -161,11 +161,11 @@ func TestEnsureProviderSchemasDownloadsLoadsAndCaches(t *testing.T) {
 	require.NotNil(t, schemaStore.Get(&SchemaIndex{Kind: "EnsTestConfiguration", Version: "deckhouse.io/v1"}))
 
 	// Warm path: no second download.
-	require.NoError(t, EnsureProviderSchemas(context.Background(), "", docs, globalOptions))
+	require.NoError(t, EnsureProviderBundle(context.Background(), "", docs, globalOptions))
 	require.Equal(t, int32(1), downloads.Load())
 }
 
-func TestEnsureProviderSchemasSingleflight(t *testing.T) {
+func TestEnsureProviderBundleSingleflight(t *testing.T) {
 	stubProviderDigest(t, "sha256:ensflight", nil)
 	var downloads atomic.Int32
 	stubProviderDownload(t, "EnsFlightConfiguration", 50*time.Millisecond, &downloads)
@@ -179,7 +179,7 @@ func TestEnsureProviderSchemasSingleflight(t *testing.T) {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
-			errs[n] = EnsureProviderSchemas(context.Background(), "", docs, globalOptions)
+			errs[n] = EnsureProviderBundle(context.Background(), "", docs, globalOptions)
 		}(i)
 	}
 	wg.Wait()
