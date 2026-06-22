@@ -32,96 +32,95 @@ import (
 )
 
 const (
-	capiAPIVersion               = "cluster.x-k8s.io/v1beta1"
-	capiInfrastructureAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
-	capiInfraVCDAPIVersion       = "infrastructure.cluster.x-k8s.io/v1beta2"
-	capiInfraZvirtAPIVersion     = "infrastructure.cluster.x-k8s.io/v1"
+	// CAPI v1.12 uses v1beta2 as the hub (storage) version. All object refs use apiGroup, not apiVersion.
+	capiAPIVersion             = "cluster.x-k8s.io/v1beta2"
+	capiInfrastructureAPIGroup = "infrastructure.cluster.x-k8s.io"
 )
 
-var capiMachineTemplateAPIVersions = map[string]string{
-	"DeckhouseMachineTemplate":   capiInfrastructureAPIVersion,
-	"DynamixMachineTemplate":     capiInfrastructureAPIVersion,
-	"HuaweiCloudMachineTemplate": capiInfrastructureAPIVersion,
-	"StaticMachineTemplate":      capiInfrastructureAPIVersion,
-	"VCDMachineTemplate":         capiInfraVCDAPIVersion,
-	"ZvirtMachineTemplate":       capiInfraZvirtAPIVersion,
+var capiMachineTemplateAPIGroups = map[string]string{
+	"DeckhouseMachineTemplate":   capiInfrastructureAPIGroup,
+	"DynamixMachineTemplate":     capiInfrastructureAPIGroup,
+	"HuaweiCloudMachineTemplate": capiInfrastructureAPIGroup,
+	"StaticMachineTemplate":      capiInfrastructureAPIGroup,
+	"VCDMachineTemplate":         capiInfrastructureAPIGroup,
+	"ZvirtMachineTemplate":       capiInfrastructureAPIGroup,
 }
 
-var capiMachineAPIVersions = map[string]string{
-	"DeckhouseMachine":   capiInfrastructureAPIVersion,
-	"DynamixMachine":     capiInfrastructureAPIVersion,
-	"HuaweiCloudMachine": capiInfrastructureAPIVersion,
-	"StaticMachine":      capiInfrastructureAPIVersion,
-	"VCDMachine":         capiInfraVCDAPIVersion,
-	"ZvirtMachine":       capiInfraZvirtAPIVersion,
+var capiMachineAPIGroups = map[string]string{
+	"DeckhouseMachine":   capiInfrastructureAPIGroup,
+	"DynamixMachine":     capiInfrastructureAPIGroup,
+	"HuaweiCloudMachine": capiInfrastructureAPIGroup,
+	"StaticMachine":      capiInfrastructureAPIGroup,
+	"VCDMachine":         capiInfrastructureAPIGroup,
+	"ZvirtMachine":       capiInfrastructureAPIGroup,
 }
 
-var capiClusterInfraAPIVersions = map[string]string{
-	"DeckhouseCluster":   capiInfrastructureAPIVersion,
-	"DynamixCluster":     capiInfrastructureAPIVersion,
-	"HuaweiCloudCluster": capiInfrastructureAPIVersion,
-	"StaticCluster":      capiInfrastructureAPIVersion,
-	"VCDCluster":         capiInfraVCDAPIVersion,
-	"ZvirtCluster":       capiInfraZvirtAPIVersion,
+var capiClusterInfraAPIGroups = map[string]string{
+	"DeckhouseCluster":   capiInfrastructureAPIGroup,
+	"DynamixCluster":     capiInfrastructureAPIGroup,
+	"HuaweiCloudCluster": capiInfrastructureAPIGroup,
+	"StaticCluster":      capiInfrastructureAPIGroup,
+	"VCDCluster":         capiInfrastructureAPIGroup,
+	"ZvirtCluster":       capiInfrastructureAPIGroup,
 }
 
-var capiControlPlaneAPIVersions = map[string]string{
-	"DeckhouseControlPlane": capiInfrastructureAPIVersion,
+var capiControlPlaneAPIGroups = map[string]string{
+	"DeckhouseControlPlane": capiInfrastructureAPIGroup,
 }
 
 type capiInfraRef struct {
-	Name       string
-	Namespace  string
-	Kind       string
-	APIVersion string
+	Name      string
+	Namespace string
+	Kind      string
+	APIGroup  string
 }
 
 type capiClusterRefs struct {
-	Name                   string
-	Namespace              string
-	InfraKind              string
-	InfraAPIVersion        string
-	ControlPlaneKind       string
-	ControlPlaneAPIVersion string
+	Name                 string
+	Namespace            string
+	InfraKind            string
+	InfraAPIGroup        string
+	ControlPlaneKind     string
+	ControlPlaneAPIGroup string
 }
 
 func filterTemplateInfraRef(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	kind, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "kind")
-	apiVersion, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "apiVersion")
+	apiGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "apiGroup")
 
 	return capiInfraRef{
-		Name:       obj.GetName(),
-		Namespace:  obj.GetNamespace(),
-		Kind:       kind,
-		APIVersion: apiVersion,
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+		Kind:      kind,
+		APIGroup:  apiGroup,
 	}, nil
 }
 
 func filterDirectInfraRef(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	kind, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "kind")
-	apiVersion, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "apiVersion")
+	apiGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "apiGroup")
 
 	return capiInfraRef{
-		Name:       obj.GetName(),
-		Namespace:  obj.GetNamespace(),
-		Kind:       kind,
-		APIVersion: apiVersion,
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+		Kind:      kind,
+		APIGroup:  apiGroup,
 	}, nil
 }
 
 func filterClusterRefs(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	infraKind, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "kind")
-	infraAPIVersion, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "apiVersion")
+	infraAPIGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "apiGroup")
 	cpKind, _, _ := unstructured.NestedString(obj.Object, "spec", "controlPlaneRef", "kind")
-	cpAPIVersion, _, _ := unstructured.NestedString(obj.Object, "spec", "controlPlaneRef", "apiVersion")
+	cpAPIGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "controlPlaneRef", "apiGroup")
 
 	return capiClusterRefs{
-		Name:                   obj.GetName(),
-		Namespace:              obj.GetNamespace(),
-		InfraKind:              infraKind,
-		InfraAPIVersion:        infraAPIVersion,
-		ControlPlaneKind:       cpKind,
-		ControlPlaneAPIVersion: cpAPIVersion,
+		Name:                 obj.GetName(),
+		Namespace:            obj.GetNamespace(),
+		InfraKind:            infraKind,
+		InfraAPIGroup:        infraAPIGroup,
+		ControlPlaneKind:     cpKind,
+		ControlPlaneAPIGroup: cpAPIGroup,
 	}, nil
 }
 
@@ -197,33 +196,33 @@ func patchInfraRefs(input *go_hook.HookInput, snaps []pkg.Snapshot, kindMap map[
 			return fmt.Errorf("failed to iterate over %s snapshots: %w", resourceKind, err)
 		}
 
-		apiVersion, ok := kindMap[ref.Kind]
+		apiGroup, ok := kindMap[ref.Kind]
 		if !ok {
 			input.Logger.Warn("unknown infrastructure kind", slog.String("resource", resourceKind), slog.String("name", ref.Name), slog.String("kind", ref.Kind))
 			continue
 		}
 
-		if ref.APIVersion == apiVersion {
+		if ref.APIGroup == apiGroup {
 			continue
 		}
 
-		if ref.APIVersion != "" {
-			input.Logger.Debug("infrastructureRef.apiVersion already set", slog.String("resource", resourceKind), slog.String("name", ref.Name), slog.String("apiVersion", ref.APIVersion))
+		if ref.APIGroup != "" {
+			input.Logger.Debug("infrastructureRef.apiGroup already set", slog.String("resource", resourceKind), slog.String("name", ref.Name), slog.String("apiGroup", ref.APIGroup))
 			continue
 		}
 
-		input.PatchCollector.PatchWithMerge(buildPatch(apiVersion), capiAPIVersion, resourceKind, ref.Namespace, ref.Name)
+		input.PatchCollector.PatchWithMerge(buildPatch(apiGroup), capiAPIVersion, resourceKind, ref.Namespace, ref.Name)
 	}
 	return nil
 }
 
-func templateInfraRefPatch(apiVersion string) map[string]interface{} {
+func templateInfraRefPatch(apiGroup string) map[string]interface{} {
 	return map[string]interface{}{
 		"spec": map[string]interface{}{
 			"template": map[string]interface{}{
 				"spec": map[string]interface{}{
 					"infrastructureRef": map[string]interface{}{
-						"apiVersion": apiVersion,
+						"apiGroup": apiGroup,
 					},
 				},
 			},
@@ -231,21 +230,21 @@ func templateInfraRefPatch(apiVersion string) map[string]interface{} {
 	}
 }
 
-func directInfraRefPatch(apiVersion string) map[string]interface{} {
+func directInfraRefPatch(apiGroup string) map[string]interface{} {
 	return map[string]interface{}{
 		"spec": map[string]interface{}{
 			"infrastructureRef": map[string]interface{}{
-				"apiVersion": apiVersion,
+				"apiGroup": apiGroup,
 			},
 		},
 	}
 }
 
-func controlPlaneRefPatch(apiVersion string) map[string]interface{} {
+func controlPlaneRefPatch(apiGroup string) map[string]interface{} {
 	return map[string]interface{}{
 		"spec": map[string]interface{}{
 			"controlPlaneRef": map[string]interface{}{
-				"apiVersion": apiVersion,
+				"apiGroup": apiGroup,
 			},
 		},
 	}
@@ -257,49 +256,49 @@ func patchClusterRefs(input *go_hook.HookInput, snaps []pkg.Snapshot) error {
 			return fmt.Errorf("failed to iterate over Cluster snapshots: %w", err)
 		}
 
-		patchRefIfEmpty(input, cluster.Name, cluster.Namespace, cluster.InfraKind, cluster.InfraAPIVersion, capiClusterInfraAPIVersions, directInfraRefPatch)
-		patchRefIfEmpty(input, cluster.Name, cluster.Namespace, cluster.ControlPlaneKind, cluster.ControlPlaneAPIVersion, capiControlPlaneAPIVersions, controlPlaneRefPatch)
+		patchRefIfEmpty(input, cluster.Name, cluster.Namespace, cluster.InfraKind, cluster.InfraAPIGroup, capiClusterInfraAPIGroups, directInfraRefPatch)
+		patchRefIfEmpty(input, cluster.Name, cluster.Namespace, cluster.ControlPlaneKind, cluster.ControlPlaneAPIGroup, capiControlPlaneAPIGroups, controlPlaneRefPatch)
 	}
 	return nil
 }
 
-func patchRefIfEmpty(input *go_hook.HookInput, name, namespace, kind, currentAPIVersion string, kindMap map[string]string, buildPatch func(string) map[string]interface{}) {
+func patchRefIfEmpty(input *go_hook.HookInput, name, namespace, kind, currentAPIGroup string, kindMap map[string]string, buildPatch func(string) map[string]interface{}) {
 	if kind == "" {
 		return
 	}
 
-	expectedAPIVersion, ok := kindMap[kind]
+	expectedAPIGroup, ok := kindMap[kind]
 	if !ok {
 		input.Logger.Warn("unknown kind", slog.String("cluster", name), slog.String("kind", kind))
 		return
 	}
 
-	if currentAPIVersion == expectedAPIVersion {
+	if currentAPIGroup == expectedAPIGroup {
 		return
 	}
 
-	if currentAPIVersion != "" {
-		input.Logger.Debug("apiVersion already set", slog.String("cluster", name), slog.String("apiVersion", currentAPIVersion))
+	if currentAPIGroup != "" {
+		input.Logger.Debug("apiGroup already set", slog.String("cluster", name), slog.String("apiGroup", currentAPIGroup))
 		return
 	}
 
-	input.PatchCollector.PatchWithMerge(buildPatch(expectedAPIVersion), capiAPIVersion, "Cluster", namespace, name)
+	input.PatchCollector.PatchWithMerge(buildPatch(expectedAPIGroup), capiAPIVersion, "Cluster", namespace, name)
 }
 
 func handleSetAPIVersionOnCAPIResources(_ context.Context, input *go_hook.HookInput) error {
-	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_deployments"), capiMachineTemplateAPIVersions, "MachineDeployment", templateInfraRefPatch); err != nil {
+	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_deployments"), capiMachineTemplateAPIGroups, "MachineDeployment", templateInfraRefPatch); err != nil {
 		return err
 	}
 
-	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_sets"), capiMachineTemplateAPIVersions, "MachineSet", templateInfraRefPatch); err != nil {
+	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_sets"), capiMachineTemplateAPIGroups, "MachineSet", templateInfraRefPatch); err != nil {
 		return err
 	}
 
-	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_pools"), capiMachineTemplateAPIVersions, "MachinePool", templateInfraRefPatch); err != nil {
+	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_pools"), capiMachineTemplateAPIGroups, "MachinePool", templateInfraRefPatch); err != nil {
 		return err
 	}
 
-	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machines"), capiMachineAPIVersions, "Machine", directInfraRefPatch); err != nil {
+	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machines"), capiMachineAPIGroups, "Machine", directInfraRefPatch); err != nil {
 		return err
 	}
 
