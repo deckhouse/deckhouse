@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -64,7 +63,11 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	// (e.g. preserved across `wipe-state` or pre-injected for dev iteration), skip the
 	// terraform-manager image download entirely. Saves ~10-15s per bootstrap and lets
 	// us iterate with a custom-patched provider binary without dhctl clobbering it.
-	terraformManagerDir := filepath.Join(providerdata.ProviderDir(conf.DownloadRootDir, cloudName), "terraform-manager")
+	//
+	// downloadImage unpacks the terraform-manager image into DownloadRootDir, so its
+	// binary and terraform_versions.yml land in <DownloadRootDir>/terraform-manager.
+	// The fast-path and the download-fallback must read from that same directory.
+	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if _, statErr := os.Stat(source); statErr == nil {
 		if err := copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
