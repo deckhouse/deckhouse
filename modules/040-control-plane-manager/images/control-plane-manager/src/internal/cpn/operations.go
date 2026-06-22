@@ -16,7 +16,6 @@ limitations under the License.
 package cpn
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -24,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 )
 
@@ -43,17 +43,14 @@ func (s componentState) inSync() bool {
 		s.intended.CA == s.actual.CA
 }
 
-// certsChanged reports whether the component's PKI or CA fingerprints drifted.
 func (s componentState) certsChanged() bool {
 	return s.intended.PKI != s.actual.PKI || s.intended.CA != s.actual.CA
 }
 
-// needsConverge reports whether the component must be (re)applied to match the desired spec.
 func (s componentState) needsConverge() bool {
 	return !s.inSync()
 }
 
-// needsObserve reports whether a deployed component has not been observed within the observe interval.
 func (s componentState) needsObserve() bool {
 	if s.actual.Config == "" {
 		return false // not deployed yet, nothing to observe
@@ -84,13 +81,11 @@ func (s componentState) needsSignatureBootstrap() bool {
 		s.actual.Config == ""
 }
 
-// hasPKI reports whether the component owns leaf certificates that need renewal.
 func hasPKI(c controlplanev1alpha1.OperationComponent) bool {
 	return c == controlplanev1alpha1.OperationComponentEtcd ||
 		c == controlplanev1alpha1.OperationComponentKubeAPIServer
 }
 
-// hasKubeconfigs reports whether the component uses kubeconfig credentials.
 func hasKubeconfigs(c controlplanev1alpha1.OperationComponent) bool {
 	return c != controlplanev1alpha1.OperationComponentEtcd
 }
@@ -132,18 +127,14 @@ func computeComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []compon
 	return states
 }
 
-// convergeSteps returns the pipeline that brings a component to its desired spec.
-// Certificates are reissued only when their PKI/CA drifted.
-func convergeSteps(s componentState) []controlplanev1alpha1.StepName {
-	return buildSteps(s, s.certsChanged())
+func (s componentState) convergeSteps() []controlplanev1alpha1.StepName {
+	return s.buildSteps(s.certsChanged())
 }
 
-// certRenewalSteps returns the pipeline that reissues a component's leaf certificates (always renews PKI).
-func certRenewalSteps(s componentState) []controlplanev1alpha1.StepName {
-	return buildSteps(s, true)
+func (s componentState) certRenewalSteps() []controlplanev1alpha1.StepName {
+	return s.buildSteps(true)
 }
 
-// signatureRenewalSteps returns the kube-apiserver signature-key rotation pipeline.
 func signatureRenewalSteps() []controlplanev1alpha1.StepName {
 	return []controlplanev1alpha1.StepName{
 		controlplanev1alpha1.StepBackup,
@@ -156,7 +147,7 @@ func signatureRenewalSteps() []controlplanev1alpha1.StepName {
 
 // buildSteps returns the apply/restart pipeline for a component, driven by its capabilities.
 // The step names and set are mode-agnostic; the disk/API difference lives in the executor.
-func buildSteps(s componentState, renew bool) []controlplanev1alpha1.StepName {
+func (s componentState) buildSteps(renew bool) []controlplanev1alpha1.StepName {
 	steps := []controlplanev1alpha1.StepName{controlplanev1alpha1.StepBackup}
 
 	if renew {
@@ -185,8 +176,7 @@ func buildSteps(s componentState, renew bool) []controlplanev1alpha1.StepName {
 func buildOperation(cpn *controlplanev1alpha1.ControlPlaneNode, s componentState, steps []controlplanev1alpha1.StepName) *controlplanev1alpha1.ControlPlaneOperation {
 	op := &controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", strings.ToLower(string(s.component))),
-			Namespace:    cpn.Namespace,
+			Namespace: cpn.Namespace,
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
 				constants.ControlPlaneComponentLabelKey: s.component.LabelValue(),
@@ -209,7 +199,22 @@ func buildOperation(cpn *controlplanev1alpha1.ControlPlaneNode, s componentState
 		op.Spec.DesiredPKIChecksum = s.intended.PKI
 		op.Spec.DesiredCAChecksum = s.intended.CA
 	}
+	op.GenerateName = operationGenerateName(op)
 	return op
+}
+
+func operationGenerateName(op *controlplanev1alpha1.ControlPlaneOperation) string {
+	name := strings.ToLower(string(op.Spec.Component))
+	for _, ck := range []string{
+		op.Spec.DesiredConfigChecksum,
+		op.Spec.DesiredPKIChecksum,
+		op.Spec.DesiredCAChecksum,
+	} {
+		if ck != "" {
+			name += "-" + checksum.ShortChecksum(ck)
+		}
+	}
+	return name + "-"
 }
 
 // targetOperation is a desired operation paired with its dedup rule:
@@ -230,8 +235,8 @@ func buildTargetOperations(cpn *controlplanev1alpha1.ControlPlaneNode) []targetO
 		switch {
 		case s.needsConverge():
 			targets = append(targets, targetOperation{
-				op:          buildOperation(cpn, s, convergeSteps(s)),
-				isDuplicate: sameChecksums(s),
+				op:          buildOperation(cpn, s, s.convergeSteps()),
+				isDuplicate: s.matchesChecksums,
 			})
 		case s.needsObserve():
 			targets = append(targets, targetOperation{
@@ -243,7 +248,7 @@ func buildTargetOperations(cpn *controlplanev1alpha1.ControlPlaneNode) []targetO
 		switch {
 		case s.needsCertRenew():
 			targets = append(targets, targetOperation{
-				op:          buildOperation(cpn, s, certRenewalSteps(s)),
+				op:          buildOperation(cpn, s, s.certRenewalSteps()),
 				isDuplicate: hasRenewalStep,
 			})
 		case s.needsSignatureRenew():
@@ -256,14 +261,12 @@ func buildTargetOperations(cpn *controlplanev1alpha1.ControlPlaneNode) []targetO
 	return targets
 }
 
-// sameChecksums matches an active operation that already targets the same desired checksums.
+// matchesChecksums reports whether op already targets this component's desired checksums.
 // Observe-only operations carry no desired checksums, so they never match.
-func sameChecksums(s componentState) func(*controlplanev1alpha1.ControlPlaneOperation) bool {
-	return func(op *controlplanev1alpha1.ControlPlaneOperation) bool {
-		return op.Spec.DesiredConfigChecksum == s.intended.Config &&
-			op.Spec.DesiredPKIChecksum == s.intended.PKI &&
-			op.Spec.DesiredCAChecksum == s.intended.CA
-	}
+func (s componentState) matchesChecksums(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+	return op.Spec.DesiredConfigChecksum == s.intended.Config &&
+		op.Spec.DesiredPKIChecksum == s.intended.PKI &&
+		op.Spec.DesiredCAChecksum == s.intended.CA
 }
 
 // isAnyActive matches any active operation of the component - observe-only operation is the lowest-priority filler.
@@ -272,20 +275,17 @@ func isAnyActive(*controlplanev1alpha1.ControlPlaneOperation) bool {
 	return true
 }
 
-// hasRenewalStep matches an active operation that is already reissuing leaf certificates.
 func hasRenewalStep(op *controlplanev1alpha1.ControlPlaneOperation) bool {
 	return op.HasStep(controlplanev1alpha1.StepRenewPKICerts) ||
 		op.HasStep(controlplanev1alpha1.StepRenewKubeconfigs)
 }
 
-// hasSignatureStep matches an active operation that is already rotating the signature key.
 func hasSignatureStep(op *controlplanev1alpha1.ControlPlaneOperation) bool {
 	return op.HasStep(controlplanev1alpha1.StepRenewSignature)
 }
 
-// SelectOperationsToCreate computes the operations the node needs and returns those not already covered by an active operation of the same component.
-// Callers create the returned ones.
-func SelectOperationsToCreate(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation) []*controlplanev1alpha1.ControlPlaneOperation {
+// BuildOperations returns the operations the node needs that are not already covered by an active operation of the same component.
+func BuildOperations(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation) []*controlplanev1alpha1.ControlPlaneOperation {
 	targets := buildTargetOperations(cpn)
 	var selected []*controlplanev1alpha1.ControlPlaneOperation
 	for _, t := range targets {
@@ -324,7 +324,6 @@ func isOperationOwnedByCPN(op *controlplanev1alpha1.ControlPlaneOperation, cpn *
 	return false
 }
 
-// hasActiveOperation reports whether the component has a non-terminal operation matching the predicate.
 func hasActiveOperation(current []controlplanev1alpha1.ControlPlaneOperation, component controlplanev1alpha1.OperationComponent, match func(*controlplanev1alpha1.ControlPlaneOperation) bool) bool {
 	for i := range current {
 		op := &current[i]

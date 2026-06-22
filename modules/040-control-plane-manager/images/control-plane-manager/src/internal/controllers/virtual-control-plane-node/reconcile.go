@@ -97,7 +97,7 @@ func (r *reconciler) reconcileStatus(ctx context.Context, cpn *controlplanev1alp
 // Deduplication is done first against the informer cache. Only when that decides something must be created do we re-check against a strongly-consistent uncached read.
 // This prevents duplicates without paying the uncached read on steady-state reconciles.
 func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation) error {
-	if len(cpnplanner.SelectOperationsToCreate(cpn, current)) == 0 {
+	if len(cpnplanner.BuildOperations(cpn, current)) == 0 {
 		return nil // nothing to create: no uncached read on steady-state reconciles
 	}
 
@@ -105,7 +105,7 @@ func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev
 	if err != nil {
 		return err
 	}
-	for _, op := range cpnplanner.SelectOperationsToCreate(cpn, fresh) {
+	for _, op := range cpnplanner.BuildOperations(cpn, fresh) {
 		if err := r.createOperation(ctx, cpn, op); err != nil {
 			return err
 		}
