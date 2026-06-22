@@ -1,6 +1,6 @@
 module discoverer
 
-go 1.24.6
+go 1.25.10
 
 replace dvp-common => ../../dvp-common
 
