@@ -1,4 +1,4 @@
-{{- define "istiod_rules_v-1-25" -}}
+{{- define "istiod_rules_v-1-27" -}}
 - apiGroups:
   - apps
   resources:
@@ -239,7 +239,7 @@
   - referencegrants
   - tcproutes
   - tlsroutes
-  - updroutes
+  - udproutes
   verbs:
   - get
   - watch

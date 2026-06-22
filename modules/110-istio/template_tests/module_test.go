@@ -543,9 +543,14 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(istioV25.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV27.Exists()).To(BeTrue())
 
+			deplV27 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27x9")
+
 			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(deplV27.Exists()).To(BeTrue())
+			Expect(deplV27.Field("spec.template.spec.containers.0.volumeMounts").String()).To(ContainSubstring(`"mountPath":"/cacerts"`))
+			Expect(deplV27.Field("spec.template.spec.volumes").String()).To(ContainSubstring("pilot-jwks-extra-cacerts-v1x27x9"))
 		})
 	})
 
@@ -1464,6 +1469,124 @@ MY_VAR: "myvalue"
 
 			Expect(podMonitor.Exists()).To(BeTrue())
 			Expect(podMonitor.Field("spec.namespaceSelector.matchNames")).To(MatchJSON(`["myns","review-123"]`))
+		})
+	})
+
+	Context("custom control plane for operator-free version 1.27", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.HelmRender()
+		})
+
+		It("renders custom istiod resources and skips operator CRs", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x27").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x27").Exists()).To(BeFalse())
+
+			svc := f.KubernetesResource("Service", "d8-istio", "istiod-v1x27")
+			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("grpc-xds"))
+			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("https-webhook"))
+
+			ds := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27")
+			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("cni.istio.io/not-ready"))
+			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("node-role.kubernetes.io/master"))
+
+			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
+			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
+
+			cniConfig := f.KubernetesResource("ConfigMap", "d8-istio", "cni-config")
+			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
+			Expect(cniConfig.Field("data.ISTIO_OWNED_CNI_CONFIG").String()).To(Equal("false"))
+			Expect(cniConfig.Field("data.NATIVE_NFTABLES").String()).To(Equal("false"))
+		})
+	})
+
+	Context("operator-free sidecar with custom static resourcesManagement configuration", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSetFromYaml("istio.sidecar.resourcesManagement", `
+mode: Static
+static:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    memory: 2Gi
+`)
+			f.HelmRender()
+		})
+
+		It("renders sidecar injector values with static proxy resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
+			Expect(injectorValues).To(ContainSubstring(`"cpu":"200m"`))
+			Expect(injectorValues).To(ContainSubstring(`"memory":"256Mi"`))
+			Expect(injectorValues).To(ContainSubstring(`"memory":"2Gi"`))
+		})
+	})
+
+	Context("operator-free istiod with custom controlPlane.extraEnvs", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSetFromYaml("istio.controlPlane.extraEnvs", `
+GODEBUG: "gctrace=1"
+MY_VAR: "myvalue"
+`)
+			f.HelmRender()
+		})
+
+		It("adds custom env vars to istiod deployment after all module env vars", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ds := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27")
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==GODEBUG).value").String()).To(Equal("gctrace=1"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==MY_VAR).value").String()).To(Equal("myvalue"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ISTIO_MULTIROOT_MESH).value").String()).To(Equal("true"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ENABLE_ENHANCED_RESOURCE_SCOPING).value").String()).To(Equal("true"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==GOMAXPROCS)").Exists()).To(BeTrue())
 		})
 	})
 })
