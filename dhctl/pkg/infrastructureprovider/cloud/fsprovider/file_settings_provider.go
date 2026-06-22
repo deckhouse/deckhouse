@@ -205,9 +205,9 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 		return nil, fmt.Errorf("plan_rules.yml next to %s requires a single-provider bundle, got %d providers", filename, len(res))
 	}
 
-	// DVP is guarded only in single-provider bundles (external module layout).
-	// The in-tree main candi lists DVP alongside other providers for werf
-	// build-time linking; its real plan_rules.yml ships in the DVP bundle.
+	// DVP ships as a single-provider bundle: its plan_rules.yml travels next to
+	// terraform_versions.yml (delivered into candi by copyTFVersionFile), so the
+	// rule is loaded here. The main multi-provider candi does not list DVP.
 	if len(res) == 1 {
 		for cloudName, set := range res {
 			simple, ok := set.(*settings.Simple)
