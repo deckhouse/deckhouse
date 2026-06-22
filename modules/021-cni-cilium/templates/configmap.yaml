@@ -116,7 +116,12 @@ data:
     {{- end }}
   {{- end }}
 
+  {{- if $ipv4PodCIDR }}
   enable-ipv4-masquerade: "true"
+  {{- end }}
+  {{- if $ipv6PodCIDR }}
+  enable-ipv6-masquerade: "true"
+  {{- end }}
 
   enable-xt-socket-fallback: "true"
   install-iptables-rules: "true"
@@ -177,7 +182,12 @@ data:
   enable-pmtu-discovery: "true"
 
   ipam: kubernetes
+  {{- if $ipv4PodCIDR }}
   k8s-require-ipv4-pod-cidr: "true"
+  {{- end }}
+  {{- if $ipv6PodCIDR }}
+  k8s-require-ipv6-pod-cidr: "true"
+  {{- end }}
 
   enable-k8s-endpoint-slice: "true"
 
