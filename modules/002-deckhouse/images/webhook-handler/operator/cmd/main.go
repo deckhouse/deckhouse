@@ -27,8 +27,6 @@ import (
 	"sync"
 	"time"
 
-	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
-	"deckhouse.io/webhook/internal/controller"
 	sh_pkg "github.com/flant/shell-operator/pkg"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	hook_types "github.com/flant/shell-operator/pkg/hook/types"
@@ -51,6 +49,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
+	"deckhouse.io/webhook/internal/controller"
 )
 
 var (
