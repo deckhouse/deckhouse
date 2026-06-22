@@ -44,6 +44,12 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
+// NodeGroup engine values (NodeGroup.status.engine), set by the get_crds hook.
+const (
+	engineCAPI = "CAPI"
+	engineMCM  = "MCM"
+)
+
 func init() {
 	register.RegisterController("capi-machine-deployment", &deckhousev1.NodeGroup{}, &MachineDeploymentReconciler{})
 }
@@ -83,8 +89,21 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	switch ng.Spec.NodeType {
 	case deckhousev1.NodeTypeCloudEphemeral:
-		if err := r.reconcileCloudMDs(ctx, ng); err != nil {
-			return ctrl.Result{}, err
+		// The engine (status.engine) decides the machinery: CAPI providers get
+		// CAPI MachineDeployments created here; MCM providers keep helm-managed
+		// MCM MachineDeployments and we only reconcile their replicas.
+		switch ng.Status.Engine {
+		case engineCAPI:
+			if err := r.reconcileCloudMDs(ctx, ng); err != nil {
+				return ctrl.Result{}, err
+			}
+		case engineMCM:
+			minReplicas, maxReplicas := getMinMax(ng)
+			if err := r.reconcileMCMReplicas(ctx, logger, ng.Name, minReplicas, maxReplicas); err != nil {
+				return ctrl.Result{}, err
+			}
+		default:
+			logger.V(1).Info("skipping: engine not set or unsupported", "engine", ng.Status.Engine)
 		}
 	case deckhousev1.NodeTypeStatic, deckhousev1.NodeTypeCloudStatic:
 		if ng.Spec.StaticInstances != nil {
@@ -92,14 +111,6 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				return ctrl.Result{}, err
 			}
 		}
-	default:
-		return ctrl.Result{}, nil
-	}
-
-	// Reconcile replicas for MCM MachineDeployments (legacy).
-	minReplicas, maxReplicas := getMinMax(ng)
-	if err := r.reconcileMCMReplicas(ctx, logger, ng.Name, minReplicas, maxReplicas); err != nil {
-		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
