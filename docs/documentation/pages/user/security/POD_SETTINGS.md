@@ -1,6 +1,6 @@
 ---
 title: Pod security settings
-description: "Practical guide to Pod security settings: seccomp, capabilities, privilege escalation, procMount, and sysctl."
+description: "Practical guide to Pod security settings: seccomp, capabilities, privilege escalation, procMount, sysctl, hostNetwork, hostPID, hostIPC, hostPath, and automountServiceAccountToken."
 permalink: user/security/pod-settings.html
 lang: en
 ---
@@ -28,6 +28,11 @@ On this page we will look at the basic parameters that are used most often:
 - [`privileged`](#privileged)
 - [`procMount`](#procmount)
 - [`sysctls`](#sysctls)
+- [`hostNetwork`](#hostnetwork)
+- [`hostPID`](#hostpid)
+- [`hostIPC`](#hostipc)
+- [`hostPath`](#hostpath)
+- [`automountServiceAccountToken`](#automountserviceaccounttoken)
 
 And let’s look at each parameter: what it is responsible for, how to choose the right value for it, and how it works in practice.
 
@@ -941,4 +946,273 @@ spec:
   containers:
   - name: high-load-nginx
     image: nginx:latest
+```
+
+## `hostNetwork`
+
+The `hostNetwork` (use host network) parameter determines whether the Pod will use the network namespace of the node it is running on, instead of a separate isolated network namespace.
+
+By default, each Pod receives its own network namespace (`netns`) with a virtual network interface, a separate IP address, and its own routing rules. Traffic is isolated from the host and neighboring pods by the network plugin (`CNI`). The `hostNetwork: true` setting disables this isolation.
+
+What happens when you configure `hostNetwork: true`
+
+Kubernetes instructs the container runtime not to create a separate network namespace. In this case:
+
+- The host network stack is shared: The container uses the node's network interfaces (`eth0`, loopback), its IP address, and routing tables directly.
+- Ports are opened on the host: Any port that the application in the container listens on is automatically opened on the node's interfaces and is reachable from outside the cluster.
+- `CNI` is ignored: The cluster network plugin does not assign a separate IP address to the Pod and does not apply network policies (`NetworkPolicy`) to its traffic.
+
+Why this is important for security: enabling `hostNetwork: true` destroys the network isolation of the Pod. The application gains direct access to all network interfaces of the node, can intercept foreign traffic (sniffing), interfere with cluster routing, or conflict on ports with system services of the host. Kubernetes network policies stop applying, since the Pod's traffic is indistinguishable from the traffic of the node itself. An attacker who compromises such a Pod can attack neighboring pods and nodes directly, bypassing micro-segmentation mechanisms.
+
+{% alert level="warning" %}
+Important nuances: `hostNetwork` is often used together with the `dnsPolicy: ClusterFirstWithHostNet` parameter. Without explicitly specifying this policy, a Pod with `hostNetwork: true` will not be able to correctly resolve internal cluster service names through CoreDNS, because by default it will use the host's resolvers.
+{% endalert %}
+
+### Parameter location
+
+The parameter is set exclusively at the level of the entire Pod, since the network namespace is created for the Pod as a whole:
+
+* `spec.hostNetwork`
+
+### Available parameter values
+
+The parameter is of boolean type.
+The following values are available:
+
+* `false` — the Pod uses its own isolated network namespace (default value, recommended);
+* `true` — the Pod uses the network namespace of the node.
+
+### Examples
+
+A Pod using the node's network (for example, a system network agent):
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-network-pod
+spec:
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  containers:
+    - name: network-agent
+      image: my-agent:latest
+```
+
+## `hostPID`
+
+The `hostPID` (use host PID namespace) parameter determines whether the Pod will use the process identifier namespace (`PID namespace`) of the node instead of its own isolated one.
+
+In Linux, process identifiers (`PID`) are unique only within a single namespace. By default, each Pod receives its own `PID` namespace: processes inside the container see only themselves (PID 1 and its child processes), while processes of the host and neighboring pods are invisible to them. The `hostPID: true` setting disables this isolation.
+
+What happens when you configure `hostPID: true`
+
+The container runtime does not create a separate `PID` namespace for the Pod. In this case:
+
+- All node processes are visible: Processes inside the container see the full list of processes running on the node (analogous to the `ps aux` command on the host).
+- Interaction with host processes is available: Provided sufficient privileges, container processes can send signals (`kill`, `SIGTERM`) to node processes or inspect their memory via `/proc`.
+
+Why this is important for security: `hostPID: true` opens a window into the node's operating system for container processes. An attacker who compromises such a Pod can analyze system components running on the node (including `kubelet`, `containerd`, other pods), collect information about command lines and process arguments, and, with sufficient privileges, terminate foreign processes, causing a denial of service. In addition, access to `/proc` of foreign processes allows reading their environment variables, which often contain secrets and tokens.
+
+{% alert level="warning" %}
+Important nuances: the ability to send signals to host processes depends on the privileges of the user inside the container. Even with `hostPID: true`, a non-root container will not be able to directly manage root processes on the host, however, reading process metadata via `/proc` will still be available.
+{% endalert %}
+
+### Parameter location
+
+The parameter is set exclusively at the level of the entire Pod:
+
+* `spec.hostPID`
+
+### Available parameter values
+
+The parameter is of boolean type.
+The following values are available:
+
+* `false` — the Pod uses its own isolated `PID` namespace (default value, recommended);
+* `true` — the Pod uses the `PID` namespace of the node.
+
+### Examples
+
+A Pod with access to node processes (for example, for system monitoring):
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-pid-pod
+spec:
+  hostPID: true
+  containers:
+    - name: process-inspector
+      image: my-tool:latest
+```
+
+## `hostIPC`
+
+The `hostIPC` (use host IPC namespace) parameter determines whether the Pod will use the interprocess communication namespace (`IPC namespace`) of the node instead of its own isolated one.
+
+In Linux, `IPC` mechanisms (message queues, shared memory, semaphores) are separated by namespaces. By default, each Pod receives its own `IPC` namespace, isolated from the host and neighboring pods. This means that container processes cannot use `IPC` resources created by node processes or other pods. The `hostIPC: true` setting disables this isolation.
+
+What happens when you configure `hostIPC: true`
+
+The container runtime uses the `IPC` namespace of the node. In this case:
+
+- Host IPC objects are shared: Message queues (`message queues`), shared memory segments (`shared memory`), and semaphores of the node become available to container processes.
+- Interprocess communication with the host is available: The container can read and modify `IPC` objects created by system processes on the node.
+
+Why this is important for security: `hostIPC: true` creates a data exchange channel between the container and node processes, bypassing standard network and file interfaces. An attacker who compromises such a Pod can intercept or tamper with data exchanged by system services of the host via `IPC`, and can also inject malicious payloads into shared memory, exploiting vulnerabilities in processes that read these segments. In practice, the parameter is used extremely rarely — mostly for legacy applications that use `System V IPC` to synchronize with processes running directly on the node.
+
+{% alert level="warning" %}
+Important nuances: most modern applications do not use `System V IPC`, preferring network sockets or standard file descriptors. Therefore, `hostIPC` can almost always be safely left at `false` without any loss of functionality.
+{% endalert %}
+
+### Parameter location
+
+The parameter is set exclusively at the level of the entire Pod:
+
+* `spec.hostIPC`
+
+### Available parameter values
+
+The parameter is of boolean type.
+The following values are available:
+
+* `false` — the Pod uses its own isolated `IPC` namespace (default value, recommended);
+* `true` — the Pod uses the `IPC` namespace of the node.
+
+### Examples
+
+A Pod with access to the node's IPC resources:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: host-ipc-pod
+spec:
+  hostIPC: true
+  containers:
+    - name: ipc-client
+      image: my-app:latest
+```
+
+## `hostPath`
+
+The `hostPath` (mount host paths) parameter determines the ability to mount arbitrary files and directories of the node's file system directly into the container.
+
+Usually, containers work with data through isolated Kubernetes volumes (`emptyDir`, `PersistentVolume`, `configMap`), which do not give direct access to the node's disk. The `hostPath` volume type bypasses this abstraction and passes the specified path of the host file system inside the container.
+
+What happens when you configure a `hostPath` volume
+
+Kubernetes mounts the specified path from the node into the container. In this case:
+
+- The host file system is shared: The container gets direct access to the files and directories of the node at the specified path (`path`).
+- Storage isolation is ignored: The access is not limited by `PersistentVolume` or quotas — the container works with the real files of the node.
+- The mount type is controlled by the `type` field: The values `""` (check disabled), `Directory`, `File`, `Socket`, `CharDevice`, `BlockDevice` are available — they determine what type of object must exist at the path before mounting.
+
+Why this is important for security: `hostPath` is one of the most dangerous volume types, as it opens direct access to the node's file system for the container. An attacker who gains access to such a container can read confidential host files (for example, `/etc/shadow`, private keys, `kubelet` tokens), modify system binaries, or replace the configuration of critical node services. Mounting root or system paths (`/`, `/var/lib/kubelet`, `/etc`, `/proc`, `/sys`) is essentially equivalent to granting full control over the node and is a direct path to container escape (`Container Escape`).
+
+{% alert level="warning" %}
+Important nuances: when using `hostPath`, it is strongly recommended to mount the volume in read-only mode (`readOnly: true`) if the application does not require write access. The `type` field should also be specified explicitly, so that Kubernetes checks the existence and type of the object before mounting — this prevents the unintended creation of files on the host.
+{% endalert %}
+
+### Parameter location
+
+The `hostPath` volume is described in the Pod's volume array and then mounted into a specific container:
+
+* `spec.volumes[].hostPath` (volume description)
+* `spec.containers[].volumeMounts` (mount point inside the container)
+
+### Available parameter values
+
+The `hostPath` object contains the following fields:
+
+* `path` — the absolute path in the node's file system that will be mounted (string, required field);
+* `type` — the type of object at the specified path (string, optional). The following values are available:
+  * `""` — type check disabled (default value);
+  * `Directory` — the directory must exist;
+  * `DirectoryOrCreate` — the directory will be created if it is missing;
+  * `File` — the file must exist;
+  * `FileOrCreate` — the file will be created if it is missing;
+  * `Socket` — the UNIX socket must exist;
+  * `CharDevice` — the character device must exist;
+  * `BlockDevice` — the block device must exist.
+
+### Examples
+
+Mounting a node's configuration file in read-only mode:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-pod
+spec:
+  containers:
+    - name: app
+      image: my-app:latest
+      volumeMounts:
+        - mountPath: /host/etc/app.conf
+          name: host-config
+          readOnly: true
+  volumes:
+    - name: host-config
+      hostPath:
+        path: /etc/app/app.conf
+        type: File
+```
+
+## `automountServiceAccountToken`
+
+The `automountServiceAccountToken` (automatic mounting of the service account token) parameter determines whether Kubernetes will automatically mount the service account (`ServiceAccount`) token into the container at the standard path.
+
+In Kubernetes, each Pod is associated with a `ServiceAccount` by default (if not specified explicitly, the `default` account is used). For authentication purposes, Kubernetes automatically generates a token for this service account and mounts it into each container of the Pod at the path `/var/run/secrets/kubernetes.io/serviceaccount`. This token allows processes inside the container to access the Kubernetes API server on behalf of their `ServiceAccount`.
+
+What happens when you configure `automountServiceAccountToken: false`
+
+Kubernetes does not mount the `ServiceAccount` token into the container. In this case:
+
+- The token file is absent: No `token` file is created at the path `/var/run/secrets/kubernetes.io/serviceaccount`.
+- No API access on behalf of the service account: Container processes cannot automatically authenticate to the Kubernetes API server with the rights of their `ServiceAccount`.
+- Manual mounting remains possible: If necessary, the token can be mounted explicitly through the `serviceAccountToken` volume type, or modern time-bound tokens (`BoundServiceAccountTokenVolume`), introduced in Kubernetes 1.21+, can be used.
+
+Why this is important for security: an automatically mounted `ServiceAccount` token is a ready-made Credential that an attacker can use for lateral movement across the cluster. If the application does not work with the Kubernetes API (for example, a regular web server or database), mounting the token creates an unnecessary risk: upon compromising the container, the attacker gains the ability to access the API server with the rights of the Pod's `ServiceAccount`, including reading secrets, enumerating resources, and, with excessive rights (`RBAC`), attacking other cluster components. Disabling automatic mounting implements the principle of least privilege and reduces the attack surface.
+
+{% alert level="warning" %}
+Important nuances: the `automountServiceAccountToken` parameter can be set both at the `ServiceAccount` level and at the Pod level (`spec.automountServiceAccountToken`). The value specified in the Pod takes precedence over the value in the `ServiceAccount`. It is also important to make sure that the application does not actually use the Kubernetes API before disabling token mounting.
+{% endalert %}
+
+### Parameter location
+
+The parameter is set at the level of the entire Pod:
+
+* `spec.automountServiceAccountToken`
+
+A similar parameter can be specified at the `ServiceAccount` resource level:
+
+* `serviceAccount.automountServiceAccountToken`
+
+### Available parameter values
+
+The parameter is of boolean type.
+The following values are available:
+
+* `true` — the `ServiceAccount` token is mounted automatically (default value unless otherwise specified);
+* `false` — automatic token mounting is disabled (recommended for pods that do not interact with the Kubernetes API).
+
+### Examples
+
+A Pod with automatic service account token mounting disabled:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-sa-token-pod
+spec:
+  automountServiceAccountToken: false
+  containers:
+    - name: app
+      image: my-app:latest
 ```
