@@ -13,7 +13,10 @@ data:
       "name": "istio-cni",
       "type": "istio-cni",
       "log_level": "info",
-      "log_uds_address": "__LOG_UDS_ADDRESS__",
+      "log_uds_address": "/var/run/istio-cni/log.sock",
+      {{- if ($.Values.istio.internal.enableAmbientMode) }}
+      "cni_event_address": "/var/run/istio-cni/pluginevent.sock",
+      {{- end }}
       "kubernetes": {
         "kubeconfig": "__KUBECONFIG_FILEPATH__",
         "cni_bin_dir": "/opt/cni/bin",

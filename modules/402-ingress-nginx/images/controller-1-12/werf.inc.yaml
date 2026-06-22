@@ -1,6 +1,6 @@
 {{ $controllerBranch := "controller-v1.12.1" }}
-{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.29.5-modsecurity-v1.0.4" }}
-{{ $nginxVersion := "1.29.5" }}
+{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.30.3-modsecurity-v1.0.4" }}
+{{ $nginxVersion := "1.30.3" }}
 {{ $nlohmannJsonBranch := "v3.11.3" }}
 {{ $ngxBrotliCommit := "63ca02abdcf79c9e788d2eedcc388d2335902e52" }}
 {{ $modSecurityBranch := "v3.0.14" }}
@@ -40,11 +40,6 @@ git:
       - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
   to: /src/rootfs
-  stageDependencies:
-    install:
-      - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/curl-chroot-wrapper.sh
-  to: /src/curl-chroot-wrapper.sh
   stageDependencies:
     install:
       - '**/*'
@@ -421,16 +416,16 @@ shell:
   # build nginx
   - cd "$BUILD_PATH/nginx-$NGINX_VERSION"
 
-  # apply nginx patches
-  - |
-    for PATCH in `ls /patches`;do
-      echo "Patch: $PATCH"
-      if [[ "$PATCH" == *.txt ]]; then
-        patch -p0 < /patches/$PATCH
-      else
-        patch -p1 < /patches/$PATCH
-      fi
-    done
+  # apply nginx patches - patches are aleady applied in the ingress-nginx-deps
+  #- |
+  #  for PATCH in `ls /patches`;do
+  #    echo "Patch: $PATCH"
+  #    if [[ "$PATCH" == *.txt ]]; then
+  #      patch -p0 < /patches/$PATCH
+  #    else
+  #      patch -p1 < /patches/$PATCH
+  #    fi
+  #  done
 
   - WITH_FLAGS="--with-debug
     --with-compat
@@ -619,6 +614,7 @@ shell:
   - |
     bash -eu -c '
     writeDirs=(
+      /chroot/tmp/nginx
       /chroot/etc/nginx
       /chroot/usr/local
       /chroot/etc/ingress-controller
@@ -637,7 +633,6 @@ shell:
       /chroot/var/lib/nginx/proxy
       /chroot/var/lib/nginx/scgi
       /chroot/var/lib/nginx/uwsgi
-      /chroot/tmp/nginx
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
@@ -663,12 +658,6 @@ import:
 - image: tools/libcap
   add: /usr/sbin/setcap
   to: /tools/setcap
-  before: install
-- image: tools/curl-curl-8_18_0
-  add: /usr/bin/curl-static
-  to: /chroot/usr/bin/curl
-  owner: "64535"
-  group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
@@ -825,6 +814,15 @@ import:
   - usr/local/lib/libluajit-5.1.so*
   - usr/local/modsecurity/lib/libmodsecurity.so*
   before: install
+- image: tools/bash
+  add: /usr
+  to: /chroot
+  owner: "0"
+  group: "0"
+  includePaths:
+  - bin/bash
+  - bin/sh
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -892,7 +890,7 @@ import:
   - modules_mount
   - var/log
   - etc/nginx
-  - tmp/nginx
+  - tmp
   - etc/ingress-controller
   - var/log/nginx
   - sbin/nginx
@@ -916,12 +914,6 @@ import:
   group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
-  owner: "64535"
-  group: "64535"
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
   owner: "64535"
@@ -930,15 +922,6 @@ import:
 - image: tools/dumb-init
   add: /dumb-init
   to: /usr/bin/dumb-init
-  before: install
-- image: tools/bash
-  add: /usr
-  to: /
-  owner: "0"
-  group: "0"
-  includePaths:
-  - bin/bash
-  - bin/sh
   before: install
 - image: tools/procps
   add: /
@@ -974,14 +957,11 @@ import:
   - usr/bin/cp
   - usr/bin/tail
   before: install
-- image: tools/libcap
-  add: /usr/sbin/setcap
-  to: /apps/setcap
-  before: install
 git:
 {{- include "image mount points" $ }}
 shell:
   install:
+  - /usr/bin/cp -alf /chroot/bin/. /bin/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare

@@ -3,8 +3,33 @@ positive:
   - kubeconfigGenerator:
     - id: abc-1
       masterURI: example.com
+  - rateLimit:
+      enabled: true
+      perIP:
+        requestsPerMinute: 30
+        burst: 10
+  - passwordPolicy:
+      lockout:
+        maxAttempts: 5
+        lockDuration: 10m
+        applyToConnectors: ["LDAP", "Crowd"]
 negative:
   values:
   - kubeconfigGenerator:
     - id: ABC-1
       masterURI: example.com
+  - rateLimit:
+      enabled: true
+      perIP:
+        requestsPerMinute: 0
+        burst: 10
+  - passwordPolicy:
+      lockout:
+        maxAttempts: 5
+        lockDuration: 10m
+        applyToConnectors: ["okta"]
+  - passwordPolicy:
+      lockout:
+        maxAttempts: 5
+        lockDuration: 10m
+        applyToConnectors: ["Local"]

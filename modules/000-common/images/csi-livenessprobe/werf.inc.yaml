@@ -45,6 +45,7 @@ shell:
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
+  - rm -rf vendor
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -72,5 +73,7 @@ shell:
   - cp bin/livenessprobe /livenessprobe
   - chown 64535:64535 /livenessprobe
   - chmod 0755 /livenessprobe
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}

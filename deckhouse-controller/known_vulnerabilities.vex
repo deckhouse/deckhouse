@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 14,
+  "version": 19,
   "statements": [
     {
       "vulnerability": {
@@ -35,48 +35,6 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Docker CLI Windows plugin search path vulnerability - Уязвимость CWE-427 (Uncontrolled Search Path Element) в Docker CLI затрагивает исключительно среду Microsoft Windows: поиск бинарных плагинов в каталоге C:\\ProgramData\\Docker\\cli-plugins может позволить подмену исполняемых файлов. Компонент deckhouse-controller эксплуатируется в среде Kubernetes на базе Linux; официальное описание CVE указывает, что уязвимость не затрагивает бинарные файлы под платформы, отличные от Windows (non-Windows binaries). Таким образом, в рамках текущей эксплуатационной модели уязвимый код не входит в исполняемый путь и возможность эксплуатации исключена.",
       "timestamp": "2026-03-05T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-24051"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.36.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "OpenTelemetry SDK resource detection path hijacking vulnerability (macOS ioreg) - Уязвимость, связанная с потенциальным path hijacking в механизме определения ресурсов (resource detection) при использовании ioreg в среде macOS/Darwin, не оказывает влияния на безопасность deckhouse-controller, эксплуатируемого в Kubernetes на базе Linux. Уязвимый участок кода задействуется исключительно при формировании host id на macOS и не входит в исполняемый путь при целевом сценарии эксплуатации системы, что исключает возможность практической реализации угрозы.",
-      "timestamp": "2026-03-04T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-47914"
-      },
-      "products": [
-        {"@id": "pkg:golang/golang.org/x/crypto@v0.36.0"},
-        {"@id": "pkg:golang/golang.org/x/crypto@v0.38.0"},
-        {"@id": "pkg:golang/golang.org/x/crypto@v0.43.0"}
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Go x/crypto SSH Agent new identity requests vulnerability - Уязвимость в компоненте SSH Agent библиотеки golang.org/x/crypto, связанная с обработкой запросов добавления идентичностей (new identity requests), формально присутствует в используемой версии зависимости. Вместе с тем, в deckhouse-controller отсутствуют сценарии использования уязвимого функционала в контексте, допускающем управление параметрами и размерами обрабатываемых сообщений со стороны потенциального нарушителя. В результате условия эксплуатации уязвимости в рамках текущей архитектуры и эксплуатационной модели не выполняются.",
-      "timestamp": "2026-03-04T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-58181"
-      },
-      "products": [
-        {"@id": "pkg:golang/golang.org/x/crypto@v0.36.0"},
-        {"@id": "pkg:golang/golang.org/x/crypto@v0.38.0"},
-        {"@id": "pkg:golang/golang.org/x/crypto@v0.43.0"}
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Go x/crypto GSSAPI authentication parsing vulnerability - Уязвимость, затрагивающая разбор механизмов аутентификации GSSAPI в библиотеке golang.org/x/crypto, формально присутствует в составе применяемой версии зависимости. При этом в архитектуре deckhouse-controller отсутствуют внешние входные данные и сценарии, позволяющие нарушителю контролировать количество и состав механизмов аутентификации, необходимых для воспроизведения условия уязвимости. Таким образом, эксплуатация уязвимости в рамках фактических процессов обработки и текущих функциональных спецификаций системы не представляется возможной.",
-      "timestamp": "2026-03-04T12:00:00Z"
     },
     {
       "vulnerability": {
@@ -178,20 +136,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-24137"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Функционал TUF клиента с использованием уязвимого кода sigstore версии v1.8.8 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы, что исключает возможность эксплуатации данной уязвимости.",
-      "timestamp": "2026-02-11T10:38:09.437468469Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-1703"
       },
       "products": [
@@ -217,8 +161,189 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал, связанный с шифрованием и криптографическими операциями pypi/cryptography версии 44.0.1, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все криптографические операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду.",
       "timestamp": "2026-02-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34073"
+      },
+      "products": [
+        {"@id": "pkg:pypi/cryptography@44.0.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал, связанный с шифрованием и криптографическими операциями pypi/cryptography версии 44.0.1, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все криптографические операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34986"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-jose/go-jose/v4@v4.1.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/go-jose/go-jose/v4 версии 4.1.3 является транзитивной зависимостью, поступающей через delivery-kit-sdk (werf). Функционал JWE-дешифрования с использованием уязвимого кода не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35206"
+      },
+      "products": [
+        {"@id": "pkg:golang/helm.sh/helm/v3@v3.15.4"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm v3.15.4 CVE-2026-35206 — версия helm не обновляется без соответствующего повышения версии компонентов Kubernetes. Уязвимый функционал не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27459"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pyOpenSSL@24.3.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал, связанный с pyOpenSSL версии 24.3.0, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27448"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pyOpenSSL@24.3.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал, связанный с pyOpenSSL версии 24.3.0, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.5.2+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker является транзитивной, поступающей через цепочку werf (delivery-kit-sdk), go-containerregistry и addon-operator. Уязвимый функционал Docker Engine API не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller. Обновление зависимости невозможно без синхронного обновления всей цепочки werf/delivery-kit.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/docker@v28.5.2+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker является транзитивной, поступающей через цепочку werf (delivery-kit-sdk), go-containerregistry и addon-operator. Уязвимый функционал Docker Engine API не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller. Обновление зависимости невозможно без синхронного обновления всей цепочки werf/delivery-kit.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35469"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/spdystream@v0.2.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/moby/spdystream версии 0.2.0 является транзитивной, поступающей через встроенные бинари (kubectl, k8s.io/* пакеты). В корневом go.mod уже используется фикс-версия v0.5.1. Уязвимый функционал spdystream-протокола не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-3219"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pip@25.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал обработки TAR/ZIP polyglot-архивов pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33809"
+      },
+      "products": [
+        {"@id": "pkg:golang/golang.org/x/image@v0.21.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-434 в golang.org/x/image v0.21.0 не эксплуатируема в образе deckhouse-oss: зависимость транзитивная и не входит в граф импорта бинарника deckhouse-controller (декодирование недоверенных изображений не выполняется), уязвимый путь не достигается в рамках исполнения компонента. Бамп зависимости будет выполнен в рамках планового апгрейда.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27142"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-79 (Cross-site Scripting) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: компонент не рендерит HTML и не отдаёт контент в браузер, XSS-пути стандартной библиотеки в рамках его исполнения не достигаются. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32282"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-59 (Improper Link Resolution Before File Access, symlink following) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: компонент не обрабатывает произвольные пути файловой системы от недоверенных пользователей. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32288"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-770 (Allocation of Resources Without Limits) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: поверхность атаки ограничена, вектор подачи недоверенных данных в уязвимый путь отсутствует. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32289"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-79 (Cross-site Scripting) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: компонент не работает как веб-сервер, выводящий контент в браузер, XSS-уязвимости стандартной библиотеки не достигаются. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6357"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pip@25.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал загрузки функциональности из недоверенных источников (CWE-829) pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator; установка пакетов выполняется только из доверенных источников на этапе сборки образа.",
+      "timestamp": "2026-06-03T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-03-16T12:00:00Z"
+  "last_updated": "2026-06-03T12:00:00Z"
 }

@@ -11,3 +11,5 @@ git:
 imageSpec:
   config:
     entrypoint: ["/bin/prometheus-config-reloader"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

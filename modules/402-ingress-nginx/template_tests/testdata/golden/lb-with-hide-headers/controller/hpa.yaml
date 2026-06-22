@@ -91,8 +91,15 @@ spec:
           requests:
             cpu: 10m
             memory: 1Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
       imagePullSecrets:
       - name: deckhouse-registry
+      securityContext:
+        runAsGroup: 64535
+        runAsNonRoot: true
+        runAsUser: 64535
       tolerations:
       - key: dedicated.deckhouse.io
         operator: Equal

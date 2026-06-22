@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-0a7dee882b0213b53ce1f13791d223657afca21285b99e07e15b935fa0456093",
-  "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 10,
   "statements": [
     {
       "vulnerability": {
@@ -10,29 +10,185 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.35.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
-      "timestamp": "2026-03-04T12:00:38.319437Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-24051"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.21.0"
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T12:02:47.271893Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: containerd не использует path-based авторизационные интерцепторы (grpc/authz или аналоги) с deny-правилами и fallback allow, что является обязательным условием для эксплуатации. Все входящие gRPC-запросы поступают от kubelet через стандартную клиентскую библиотеку, которая автоматически добавляет leading slash в :path pseudo-header, исключая возможность отправки невалидного запроса через штатный интерфейс.",
+      "timestamp": "2026-03-24T14:28:43.234212Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v25.0.5%2Bincompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2025-15558 невозможно эксплуатировать в рамках Deckhouse: платформа использует исключительно Linux-окружения для узлов, в которых отсутствует уязвимый компонент — Docker CLI для Windows. Все операции с контейнерами выполняются через стандартный CRI-интерфейс (containerd), который не использует и не поддерживает механизм плагинов Docker CLI, что исключает сам вектор атаки.",
+      "timestamp": "2026-03-04T12:00:38Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24137"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Функционал TUF клиента с использованием уязвимого кода sigstore версии v1.8.8 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-04T12:00:38Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-34040 невозможно эксплуатировать в рамках Deckhouse: уязвимость относится к работе с запуском dockerd, обслуживанием API Docker Engine и подключением плагинов AuthZ. Соответственно, уязвимый код в патчах привносящих данную зависиомсть в containerd не выполняется.",
+      "timestamp": "2026-04-07T10:43:26.143812Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33997 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает часть по работе с Docker Engine при установке устаревших (legacy) плагинов Docker - установка плагинов и проверка их привилегий в патчах привносящих данную зависиомсть в containerd не выполняются.",
+      "timestamp": "2026-04-07T10:45:27.439571Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34986"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-jose/go-jose/v3@v3.0.4"
+        },
+        {
+          "@id": "pkg:golang/github.com/go-jose/go-jose/v4@v4.0.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-34986 невозможно эксплуатировать в рамках Deckhouse: плтаформа не использует шифрование образов, в ней не настроен и не используется ctd-decoder, цепочка вызовов которого (containerd -\u003e imgcrypt -\u003e ocicrypt -\u003e go-jose) и может привести к эксплуатации уязвимости, при всех воплощённых в ней условиях.",
+      "timestamp": "2026-04-07T13:06:33.386247Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-10T09:12:06.165622Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39882"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Для эксплуатации уязвимости CVE-2026-39882 в containerd должен быть запущен и настроен экспортер трассировки OpenTelemetry. В поставке Deckhouse по умолчанию не заданы необходимые для этого переменные окружения, а также нет настроек, позволяющих включить данную функциональность, что исключает выполнение уязвимого кода.",
+      "timestamp": "2026-04-13T14:49:31.087251Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd/v2"
+        }
+      ],
+      "status": "fixed",
+      "status_notes": "Уязвимость CVE-2026-46680 не может быть эксплуатирована в рамках Deckhouse: используемая версия containerd v2.1.8 уже содержит необходимое исправление безопасности, устраняющее данную уязвимость. Уязвимый код, присутствовавший в более ранних версиях, отсутствует в используемой сборке.",
+      "timestamp": "2026-04-13T14:49:31.087251Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41568 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает функцию createIfNotExists в демоне Docker Engine при операции docker cp. Уязвимый код в патчах, привносящих данную зависимость в containerd, не выполняется.",
+      "timestamp": "2026-06-18T12:31:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42306 невозможно эксплуатировать в рамках Deckhouse: уязвимость связана с гонкой состояний между созданием точки монтирования и вызовом mount() в демоне Docker Engine при операции docker cp. Уязвимый код в патчах, привносящих данную зависимость в containerd, не выполняется.",
+      "timestamp": "2026-06-18T12:31:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41567 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает серверный обработчик PUT /containers/{id}/archive в демоне Docker Engine. Уязвимый код в патчах, привносящих данную зависимость в containerd, не выполняется.",
+      "timestamp": "2026-06-18T12:31:00Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:38Z",
-  "last_updated": "2026-03-04T12:02:47Z"
+  "last_updated": "2026-06-18T12:31:00Z"
 }

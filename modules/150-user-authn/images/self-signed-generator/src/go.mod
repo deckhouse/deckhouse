@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/cloudflare/cfssl v1.6.4
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.9.1
 )
 
 require (

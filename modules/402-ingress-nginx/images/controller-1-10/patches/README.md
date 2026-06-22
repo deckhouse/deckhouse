@@ -59,7 +59,7 @@ Fix tmpDir path for the cleanup procedure.
 
 https://github.com/kubernetes/ingress-nginx/pull/10797
 
-### 010-nginx-build-01.patch
+### 010-nginx-build.patch
 
 Build nginx for controller on ALT Linux.
 
@@ -144,3 +144,13 @@ https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
 This patch fixes rewrite-target CVE-2026-3288 in Ingress-NGINX
 
 https://github.com/kubernetes/kubernetes/issues/137560
+
+### 027-fix-cve-2026-4342.patch
+
+This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.
+
+### 028-fix-cve-2025-15566.patch
+
+This patch fixes CVE-2025-15566
+
+https://github.com/kubernetes/kubernetes/issues/136789

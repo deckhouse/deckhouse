@@ -6,6 +6,8 @@ memory: 100Mi
 {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 {{- $version := $.Values.istio.internal.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $fullVersion := get $versionInfo "fullVersion" }}
+{{- $cniLegacyTmpRunDir := semverCompare "< 1.25.0" $fullVersion }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -71,12 +73,24 @@ spec:
         - name: install-cni
           args:
             - --log_output_level=default:info
+            {{- if $cniLegacyTmpRunDir }}
+            # Before Istio 1.25: hostPath mounted under /tmp for readOnlyRootFilesystem + containerd v2.
+            # CNI JSON on the node still lists /var/run/istio-cni/*.sock.
+            - --log-uds-address=/tmp/istio-cni/log.sock
+            {{- if ($.Values.istio.internal.enableAmbientMode) }}
+            - --cni-event-address=/tmp/istio-cni/pluginevent.sock
+            {{- end }}
+            {{- end }}
           command:
             - install-cni
           {{- if not $.Values.istio.internal.enableAmbientMode }}
-          {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 10 }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
           {{- else }}
-          {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
           {{- end }}
           env:
             {{- if ($.Values.istio.internal.enableAmbientMode) }}
@@ -149,8 +163,14 @@ spec:
               name: cni-bin-dir
             - mountPath: /host/etc/cni/net.d
               name: cni-net-dir
-            - mountPath: /var/run/istio-cni
+            - mountPath: {{ ternary "/tmp/istio-cni" "/var/run/istio-cni" $cniLegacyTmpRunDir }}
               name: cni-log-dir
+            {{- if $cniLegacyTmpRunDir }}
+            - mountPath: /run/istio-cni
+              name: cni-log-dir
+            {{- end }}
+            - mountPath: /tmp
+              name: install-cni-tmp
             {{- if ($.Values.istio.internal.enableAmbientMode) }}
             - mountPath: /host/proc
               name: cni-host-procfs
@@ -247,6 +267,8 @@ spec:
             path: /var/run/istio-cni
             type: ""
           name: cni-log-dir
+        - name: install-cni-tmp
+          emptyDir: {}
         {{- if ($.Values.istio.internal.enableAmbientMode) }}
         - name: cni-host-procfs
           hostPath:

@@ -44,3 +44,5 @@ shell:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /coredns-helper main.go
   - chmod 0700 /coredns-helper
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -31,3 +31,14 @@ rules:
   - get
   - list
   - watch
+# Read-only audit access to internal Dex storage CRDs (incident response: enumerate active
+# sessions, see which users have stored passwords). list-only — `get` on a single object
+# would expose bcrypt hashes / refresh tokens.
+# NOTE: plural is `offlinesessionses` (matches Dex CRD name).
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - passwords
+  - offlinesessionses
+  verbs:
+  - list

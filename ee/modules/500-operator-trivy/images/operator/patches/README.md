@@ -61,5 +61,38 @@ Updated some operator dependencies.
 ### 014-fix-cve2.patch
 
 Fixes CVEs:
+
 - CVE-2025-52881
 - CVE-2024-25621
+
+### 015-fix-cve3.patch
+
+Fixes CVEs:
+
+- CVE-2026-4660
+- CVE-2026-39883
+- CVE-2026-34986
+
+### 016-fix-cve4.patch
+
+Fixec CVEs:
+
+- CVE-2026-33762
+- CVE-2026-34165
+- CVE-2026-35206
+- GHSA-xmrv-pmrh-hhx2
+- GHSA-3xc5-wrhm-f963
+
+# 017-fix-cve5.patch
+
+Fixes CVE:
+
+- GHSA-pmwq-pjrm-6p5r
+
+
+# 018-fix-cve.patch
+
+Fixes CVE:
+
+- CVE-2026-46680
+- CVE-2026-45571

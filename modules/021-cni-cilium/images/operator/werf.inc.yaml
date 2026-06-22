@@ -26,6 +26,10 @@ shell:
   - export GOOS=linux GOARCH=amd64
   - cd /src/cilium
   - go mod vendor && go mod verify
+  # Remove compile-time interface assertion in checkmate to fix newer Go versions compatibility (testing.TB interface changed).
+  # This is safe because checkmate is a transitive test dependency, its *C type is not used in Cilium production code as testing.TB,
+  # and this change just stops the compiler from failing on unused code interface checks.
+  - '[ -f vendor/github.com/cilium/checkmate/check.go ] && sed -i "/var _ testing.TB =/d" vendor/github.com/cilium/checkmate/check.go || true'
   - |
     {{- $_ := set $ "SvaceBuildOptions" "--enable-ptrace-all" -}}
     {{- include "image-build.build" (set $ "BuildCommand" `make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator`) | indent 4 }}

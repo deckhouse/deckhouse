@@ -40,6 +40,13 @@ func CreateNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientProvide
 
 		if err != nil {
 			if k8errors.IsAlreadyExists(err) {
+				existing, err := kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Get(ctx, nodeUser.Name, metav1.GetOptions{})
+				if err != nil {
+					return fmt.Errorf("failed to get existing NodeUser: %w", err)
+				}
+
+				nodeUserResource.SetResourceVersion(existing.GetResourceVersion())
+
 				_, err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Update(ctx, nodeUserResource, metav1.UpdateOptions{})
 				return err
 			}

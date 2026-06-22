@@ -66,3 +66,5 @@ shell:
   - chmod 0755 /registry-packages-proxy
 mount:
 {{ include "mount points for golang builds" . }}
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

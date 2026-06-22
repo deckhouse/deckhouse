@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
-  "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 10,
   "statements": [
     {
       "vulnerability": {
@@ -66,15 +66,127 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T12:03:27.430668Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: crictl является gRPC-клиентом, а не сервером. Уязвимость затрагивает исключительно серверную часть gRPC-Go, которая не используется в crictl. Кроме того, эксплуатация требует наличия path-based авторизационных интерцепторов с deny-правилами и fallback allow на стороне сервера, что не является частью архитектуры crictl.",
+      "timestamp": "2026-03-24T14:29:37.200879Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-6g7g-w4f8-9c9x"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/buger/jsonparser@v1.1.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость GHSA-6g7g-w4f8-9c9x невозможно эксплуатировать в рамках Deckhouse: платформа использует исключительно клиентскую библиотеку github.com/buger/jsonparser через стандартизированные kubelet-интерфейсы, которые не используют функцию Delete при обработке JSON-входов от внешних источников, что является обязательным условием для эксплуатации. Все входящие JSON\u003eзапросы поступают от внутренних компонентов Deckhouse через валидированные protobuf-конверторы, исключая возможность отправки невалидного JSON через штатные интерфейсы управления.",
+      "timestamp": "2026-03-26T14:29:37.200879Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-34040 невозможно эксплуатировать в рамках Deckhouse: платформа использует лишь пакет github.com/docker/docker/api/types/time. Уязвимость относится к работе с запуском dockerd, обслуживанием API Docker Engine и подключением плагинов AuthZ. Соответственно, уязвимый код не используется.",
+      "timestamp": "2026-04-07T10:43:26.143812Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33997 невозможно эксплуатировать в рамках Deckhouse: платформа использует лишь пакет github.com/docker/docker/api/types/time. А уязвимость затрагивает часть по работе с Docker Engine при установке устаревших (legacy) плагинов Docker - установка плагинов и проверка их привилегий в crictl не выполняются.",
+      "timestamp": "2026-04-07T10:45:27.439571Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-10T09:12:10.219163Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41568 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает функцию createIfNotExists в демоне Docker Engine при операции docker cp. Crictl не реализует логику монтирования и не импортирует уязвимый код.",
+      "timestamp": "2026-06-17T13:38:01.32264Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-42306 невозможно эксплуатировать в рамках Deckhouse: уязвимость связана с гонкой состояний между созданием точки монтирования и вызовом mount() в демоне Docker Engine при операции docker cp. Crictl не реализует настройку bind-монтирований и не импортирует уязвимый код.",
+      "timestamp": "2026-06-17T13:38:14.4395Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41567 невозможно эксплуатировать в рамках Deckhouse: уязвимость затрагивает серверный обработчик PUT /containers/{id}/archive в демоне Docker Engine. Crictl не реализует распаковку архивов через Docker Engine и не импортирует уязвимый код.",
+      "timestamp": "2026-06-17T13:38:24.393887Z"
     }
   ],
   "timestamp": "2026-01-21T10:25:02Z",
-  "last_updated": "2026-03-04T12:03:27Z"
+  "last_updated": "2026-06-17T13:38:24Z"
 }

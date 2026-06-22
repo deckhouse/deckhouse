@@ -78,11 +78,13 @@ shell:
   - patch -p1 < /patches/ingress-nginx/021-cve-03022026.patch
   - patch -p1 < /patches/ingress-nginx/022-remove-patch-01.patch
   - patch -p1 < /patches/ingress-nginx/023-fix-rewrite-target-cve.patch
+  - patch -p1 < /patches/ingress-nginx/024-fix-cve-2025-15566.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
   - patch -p1 < /patches/rootfs/003-auth-cookie-always.patch
   - patch -p1 < /patches/rootfs/004-cve-03022026.patch
+  - patch -p1 < /patches/rootfs/005-fix-cve-2026-4342.patch
   - rm -r /src/dumb-init/.git
   - rm -r /src/lua-protobuf/.git
   - rm -r /src/lua-iconv/.git

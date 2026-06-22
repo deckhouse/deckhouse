@@ -37,9 +37,9 @@ shell:
   setup:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
-  - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
   - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
+  - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
+  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
   - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - patch -p1 < /patches/001-go-mod-01.patch
@@ -49,7 +49,7 @@ shell:
   - patch -p1 < /patches/006-metrics-SetSSLExpireTime.patch
   - patch -p1 < /patches/008-util.patch
   - patch -p1 < /patches/009-fix-cleanup.patch
-  - patch -p1 < /patches/010-nginx-build-01.patch
+  - patch -p1 < /patches/010-nginx-build.patch
   - patch -p1 < /patches/011-add-http3.patch
   - patch -p1 < /patches/012-new-metrics.patch
   - patch -p1 < /patches/013-default-backend-fix.patch
@@ -61,11 +61,13 @@ shell:
   - patch -p1 < /patches/020-fix-sorting.patch
   - patch -p1 < /patches/024-cve-03022026-controller.patch
   - patch -p1 < /patches/026-fix-rewrite-target-cve.patch
+  - patch -p1 < /patches/028-fix-cve-2025-15566.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
   - patch -p1 < /patches/007-auth-cookie-always.patch
   - patch -p1 < /patches/025-cve-03022026-rootfs.patch
+  - patch -p1 < /patches/027-fix-cve-2026-4342.patch
   # pass env for build
   - cd /src/ingress-nginx
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
@@ -304,6 +306,9 @@ import:
   add: /chroot
   to: /chroot
   before: setup
+  excludePaths:
+  - usr/lib64/locale
+  - usr/lib/locale
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /usr/bin/mount
   to: /usr/bin/mount
@@ -344,15 +349,15 @@ shell:
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - cp -R /src/rootfs/etc/* /chroot/etc
-  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
+  - mkdir -p /chroot/usr/lib/locale/C.utf8 && cp -alf /usr/lib/locale/C.utf8/. /chroot/usr/lib/locale/C.utf8/
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
   - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
+  - mkdir -p /chroot/var/log/valgrind /chroot/tmp/nginx
   - chmod 1777 /tmp /chroot/tmp /chroot/tmp/nginx
-  - mkdir -p /chroot/var/log/valgrind
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
   - setcap cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
@@ -390,8 +395,6 @@ shell:
   - rm -rf /chroot/usr/lib64/ruby
 # remove owasp-modsecurity-crs/util because of bash scripts cve
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
-# takes ~1GB
-  - rm -rf /chroot/usr/lib64/locale
 imageSpec:
   config:
     workingDir: /

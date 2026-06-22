@@ -26,7 +26,7 @@ git:
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
     to: /patches
     stageDependencies:
-      setup:
+      install:
         - "**/*"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

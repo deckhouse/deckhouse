@@ -52,3 +52,5 @@ git:
 imageSpec:
   config:
     entrypoint: ["/k8s-image-availability-exporter"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

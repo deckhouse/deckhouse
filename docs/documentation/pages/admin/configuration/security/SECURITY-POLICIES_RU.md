@@ -37,9 +37,9 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 Варианты назначения политики:
 
 - глобально — с помощью [параметра `settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) модуля [`admission-policy-engine`](/modules/admission-policy-engine/);
-- для конкретного пространства имён — с помощью лейбла `security.deckhouse.io/pod-policy=<POLICY_NAME>`.
+- для конкретного неймспейса — с помощью лейбла `security.deckhouse.io/pod-policy=<POLICY_NAME>`.
 
-  Пример команды для назначения политики `restricted` на все поды в пространстве имён `my-namespace`:
+  Пример команды для назначения политики `restricted` на все поды в неймспейсе `my-namespace`:
 
   ```shell
   d8 k label ns my-namespace security.deckhouse.io/pod-policy=restricted
@@ -49,7 +49,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 
 Допустимые режимы применения политик:
 
-- `deny` — запрещает выполнений действий.
+- `deny` — запрещает выполнение действий.
 - `dryrun` — не влияет на выполнение действий и используется для отладки.
   Информацию о событиях можно посмотреть в Grafana или в консоли с помощью команды `kubectl`.
 - `warn` — работает как `dryrun`, но дополнительно выводит предупреждение с указанием причины,
@@ -61,9 +61,9 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 Как и в случае с назначением политик, режим их применения можно задать:
 
 - глобально — с помощью [параметра `settings.podSecurityStandards.enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) модуля [`admission-policy-engine`](/modules/admission-policy-engine/);
-- для конкретного пространства имён — с помощью лейбла `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>`.
+- для конкретного неймспейса — с помощью лейбла `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>`.
 
-  Пример команды для установки режима `warn` на все поды в пространстве имён `my-namespace`:
+  Пример команды для установки режима `warn` на все поды в неймспейсе `my-namespace`:
 
   ```shell
   d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
@@ -76,7 +76,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 
 Чтобы расширить политику, выполните следующее:
 
-1. Создайте шаблон проверки с помощью ресурса ConstraintTemplate.
+1. Создайте шаблон проверки с помощью ресурса `ConstraintTemplate`.
 1. Примените созданный шаблон к политике `baseline` или `restricted`.
 
 Пример шаблона для проверки адреса репозитория с образом контейнера:
@@ -140,7 +140,7 @@ spec:
 ```
 
 В этом примере проверяется адрес репозитория в поле `image`
-у всех подов в пространстве имён с лейблом `security.deckhouse.io/pod-policy: restricted`.
+у всех подов в неймспейсе с лейблом `security.deckhouse.io/pod-policy: restricted`.
 Если адрес в поле `image` создаваемого пода начинается не с `mycompany.registry.com`, под создан не будет.
 
 Вспомогательные ресурсы при создании расширенных политик:
@@ -197,10 +197,61 @@ spec:
 допустимые классы приоритетов и другие настройки, повышающие безопасность и стабильность работы приложений.
 
 Чтобы назначить данную операционную политику,
-примените лейбл `operation-policy.deckhouse.io/enabled=true` к необходимому пространству имён:
+примените лейбл `operation-policy.deckhouse.io/enabled=true` к необходимому неймспейсу:
 
 ```shell
 d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
+```
+
+## Запрет запуска уязвимых образов
+
+### Механизм работы
+
+В модуле есть встроенная функция проверки уязвимостей образов и запрета запуска, при наличии уязвимостей с критичностью выше разрешенного уровня.
+Проверка уязвимостей производится выполняется с помощью модуля [`operator-trivy`](/modules/operator-trivy). В момент создания пода производится специальный хук модулю `operator-trivy` с информацией о используемом образе. В ответ возвращается перечень уязвимостей образа. Если среди данных уязвимостей есть уязвимости с критичностью выше разрешенного уровня, то создание объекта запрещается.
+
+{% alert level="info" %}
+Для работы механизма должен быть включен и работоспособен модуль `operator-trivy`.
+
+Проверка применяется только к неймспейсу, где установлен лейбл `security.deckhouse.io/trivy-provider: ""` (подробнее — в документации модуля [`operator-trivy`](/modules/operator-trivy)).
+{% endalert %}
+
+### Настройка проверки
+
+Требуется:
+1. Включить механизм проверки уязвимостей через параметр [`settings.denyVulnerableImages.enabled`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-enabled)
+
+1. Настроить допустимые уровни критичности уязвимостей найденных в контейнерах через параметр  [`settings.denyVulnerableImages.allowedSeverityLevels`](/modules/admission-policy-engine/configuration.html#parameters-denyvulnerableimages-allowedseveritylevels). Данных параметр - это белый список т.е. в нем указываются только разрешенные уровни критичности. Доступные значения - `"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"`. Если параметр пустой или не задан, объект будет отклонен при наличии уязвимостей любого уровня.
+
+Ниже показан пример конфигурации. Для сценариев, соответствующих требованиям ФСТЭК по блокировке критических и высоких уязвимостей, укажите:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: admission-policy-engine
+spec:
+  version: 1
+  settings:
+    denyVulnerableImages:
+      enabled: true
+      # Разрешены только уровни критичности UNKNOWN/LOW/MEDIUM; HIGH и CRITICAL будут блокироваться.
+      allowedSeverityLevels:
+        - UNKNOWN
+        - LOW
+        - MEDIUM
+```
+
+Проверьте что модуль `operator-trivy` включен и имеет статус `Ready`:
+
+```shell
+d8 k get modules operator-trivy
+```
+
+Добавьте лейбл в неймспейс, где должна применяться проверка:
+
+```shell
+d8 k label ns <NAMESPACE> security.deckhouse.io/trivy-provider=
 ```
 
 ## Политики безопасности
@@ -274,17 +325,17 @@ spec:
 ```
 
 Чтобы назначить данную политику безопасности,
-примените лейбл `enforce: "mypolicy"` к необходимому пространству имён.
+примените лейбл `enforce: "mypolicy"` к необходимому неймспейсу.
 
 ### Частичное применение политик
 
 Чтобы применить отдельные политики безопасности, не отключая весь предустановленный набор, выполните следующие шаги:
 
-1. Добавьте в необходимое пространство имён лейбл `security.deckhouse.io/pod-policy: privileged`,
+1. Добавьте в необходимый неймспейс лейбл `security.deckhouse.io/pod-policy: privileged`,
    чтобы отключить встроенный набор политик.
 1. Создайте [ресурс SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy), соответствующий уровню `baseline` или `restricted`.
    В секции `policies` укажите только необходимые вам настройки безопасности.
-1. Добавьте в пространство имён дополнительный лейбл, соответствующий селектору `namespaceSelector` в SecurityPolicy.
+1. Добавьте в неймспейс дополнительный лейбл, соответствующий селектору `namespaceSelector` в SecurityPolicy.
 
 Пример конфигурации SecurityPolicy, соответствующий уровню `baseline`:
 
@@ -513,7 +564,7 @@ spec:
 
 #### Встроенная политика для подов с лейблом `heritage: deckhouse`
 
-Для защиты системных компонентов под управлением Deckhouse
+Для защиты системных компонентов под управлением Deckhouse Kubernetes Platform
 в модуле `admission-policy-engine` предусмотрена встроенная политика `D8DenyExecHeritage`,
 которая запрещает выполнение операций `kubectl exec` и `kubectl attach` во все поды с лейблом `heritage: deckhouse`.
 
@@ -521,13 +572,13 @@ spec:
 которым разрешены операции `kubectl exec` и `kubectl attach` в поды с лейблом `heritage: deckhouse`:
 
 - `system:sudouser`;
-- сервисные аккаунты из пространств имён `d8-*` (`system:serviceaccount:d8-*`);
-- сервисные аккаунты из пространств имён `kube-*` (`system:serviceaccount:kube-*`).
+- сервисные аккаунты из неймспейсов `d8-*` (`system:serviceaccount:d8-*`);
+- сервисные аккаунты из неймспейсов `kube-*` (`system:serviceaccount:kube-*`).
 
 #### Пример пользовательской политики
 
 Вы можете создать собственную политику Gatekeeper
-для запрета операций `kubectl exec` и `kubectl attach` в определённых пространствах имён.
+для запрета операций `kubectl exec` и `kubectl attach` в определённых неймспейсах.
 В примере ниже используются `input.review.operation` и `input.review.resource.resource` для проверки операций `CONNECT`:
 
 ```yaml
@@ -582,7 +633,7 @@ spec:
           is_connect
           is_exec_or_attach
           is_forbidden_namespace
-          msg := sprintf("Exec/attach запрещён в пространстве имён %q", [input.review.namespace])
+          msg := sprintf("Exec/attach запрещён в неймспейсе %q", [input.review.namespace])
         }
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
@@ -606,7 +657,7 @@ spec:
 
 - Используйте `input.review.operation == "CONNECT"` для проверки операций `CONNECT`.
 - Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
-- Пространство имён доступно в `input.review.namespace`.
+- Информация о неймспейсе доступна в `input.review.namespace`.
 
 ## Проверка подписи образов
 
@@ -679,9 +730,9 @@ spec:
 
 Если вместо встроенного механизма управления политиками безопасности
 в кластере DKP используется альтернативное решение (например, [Kyverno](https://kyverno.io/docs/introduction/)),
-настройте исключения для следующих пространств имён:
+настройте исключения для следующих неймспейсов:
 
 - `kube-system`;
-- все пространства имён с префиксом `d8-*` (например, `d8-system`).
+- все неймспейсы с префиксом `d8-*` (например, `d8-system`).
 
 Без этих исключений политики могут блокировать или нарушать работу системных компонентов.

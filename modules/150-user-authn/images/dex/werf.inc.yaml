@@ -29,6 +29,11 @@ git:
         - '**/*.go'
         - '**/go.mod'
         - '**/go.sum'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/crds/
+    to: /module_crds
+    stageDependencies:
+      install:
+        - '**/*'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/
     to: /patches
     stageDependencies:
@@ -43,6 +48,10 @@ shell:
   install:
     - cd /src
     - git apply /patches/*.patch --verbose
+    # Check after patches are applied: our patches may legitimately update Dex
+    # source CRDs (e.g. additionalPrinterColumns for OfflineSessions); the
+    # snapshot in modules/.../crds/external must match the post-patch source.
+    - bash /module_crds/pull_dex_crds.sh --check --dex-dir /src/scripts/manifests/crds
     - rm -rf examples
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact

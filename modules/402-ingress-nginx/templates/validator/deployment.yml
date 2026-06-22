@@ -122,6 +122,8 @@ spec:
       - name: validator
         image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         securityContext:
+          seccompProfile:
+            type: Unconfined
           readOnlyRootFilesystem: true
           capabilities:
             add:
