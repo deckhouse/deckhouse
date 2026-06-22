@@ -226,6 +226,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "In versions 1.10.3 and below, the legacy TUF client (pkg/tuf/client.go) supports caching target files to disk. It constructs a filesystem path by joining a cache base directory with a target name sourced from signed target metadata; however, it does not validate that the resulting path stays within the cache base directory. A malicious TUF repository can trigger arbitrary file overwriting, limited to the permissions that the calling process has. Note that this should only affect clients that are directly using the TUF client in sigstore/sigstore or are using an older version of Cosign. Public Sigstore deployment users are unaffected, as TUF metadata is validated by a quorum of trusted collaborators. This issue has been fixed in version 1.10.4. Deckhouse Kubernetes Platform is not affected by this since it does not rely on any TUF repositories or Cosign.",
       "timestamp": "2026-05-16T12:31:20Z"
+    },
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-42306",
+        "description": "Docker vulnerability affecting github.com/docker/docker.",
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Deckhouse Kubernetes Platform is not affected in admissionPolicyEngine trivyProvider context, because trivyProvider is a Go binary and does not run or expose Docker daemon code paths required to trigger this vulnerability.",
+      "timestamp": "2026-06-22T14:35:00Z"
     }
 
   ],
