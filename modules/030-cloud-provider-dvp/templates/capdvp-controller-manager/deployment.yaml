@@ -3,7 +3,7 @@ checksum/config: {{ include (print $.Template.BasePath "/capdvp-controller-manag
 {{- end -}}
 
 {{- define "capdvp_controller_manager_pod_labels" -}}
-{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
 security.deckhouse.io/security-policy-exception: capdvp-controller-manager
 {{- end }}
 {{- end -}}
@@ -30,7 +30,7 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
       key: clusterUUID
 {{- end -}}
 
-{{- if not .Values.cloudProviderDvp.nodes.disabled }}
+{{- if not (default false (dig "nodes" "disabled" false .Values.cloudProviderDvp)) }}
 {{- $capiConfig := dict -}}
 {{- $_ := set $capiConfig "fullname" "capdvp-controller-manager" -}}
 {{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "capdvpControllerManager")) -}}

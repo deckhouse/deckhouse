@@ -37,37 +37,28 @@ import (
 	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal/v1"
 )
 
-// pccSecretFilterResult holds the parsed data from the PCC secret.
 type pccSecretFilterResult struct {
-	// ProviderClusterConfig is the raw JSON map from the cluster configuration.
-	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfig,omitempty"`
-	// ProviderDiscoveryData is the raw JSON of the cloud provider discovery data.
-	ProviderDiscoveryDataJSON json.RawMessage `json:"providerDiscoveryDataJSON,omitempty"`
+	ProviderClusterConfig     map[string]json.RawMessage `json:"providerClusterConfig,omitempty"`
+	ProviderDiscoveryDataJSON json.RawMessage            `json:"providerDiscoveryDataJSON,omitempty"`
 }
 
-// candiDiscoveryDataFilterResult holds discovery data from the standalone candi secret.
 type candiDiscoveryDataFilterResult struct {
 	DiscoveryDataJSON json.RawMessage `json:"discoveryDataJSON,omitempty"`
 }
 
-// moduleConfigFilterResult holds the relevant fields from a ModuleConfig object.
 type moduleConfigFilterResult struct {
 	Version  int64           `json:"version"`
 	Enabled  bool            `json:"enabled"`
 	Provider json.RawMessage `json:"provider,omitempty"`
 }
 
-// namedResourceResult holds just the name of a Kubernetes resource.
 type namedResourceResult struct {
 	Name string `json:"name"`
 }
 
-// credentialSecretResult holds the name of a credential secret.
 type credentialSecretResult struct {
 	Name string `json:"name"`
 }
-
-// ---- filter functions ----
 
 func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	// The fake k8s dynamic client ignores field selectors, so we guard by name here.
@@ -166,12 +157,9 @@ func filterCandiDiscoverySecret(obj *unstructured.Unstructured) (go_hook.FilterR
 	}, nil
 }
 
-// ---- hook registration ----
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
-		// Binding 0: PCC secret in kube-system (triggers the hook on change)
 		{
 			Name:       "provider_cluster_configuration",
 			ApiVersion: "v1",
@@ -186,7 +174,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterPCCSecret,
 		},
-		// Binding 1: ModuleConfig for the DVP module - triggers hook on change to detect migration completion.
 		{
 			Name:       "module_config",
 			ApiVersion: moduleConfigAPIVersion,
@@ -196,7 +183,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterModuleConfig,
 		},
-		// Binding 2: d8-credentials Secret - triggers hook on change to detect migration completion.
 		{
 			Name:       "credential_secret_d8",
 			ApiVersion: "v1",
@@ -211,22 +197,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterCredentialSecret,
 		},
-		// Binding 3: NodeGroup CRs - triggers hook on change to detect migration completion.
 		{
 			Name:       "node_groups",
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       "NodeGroup",
 			FilterFunc: filterNamedResource,
 		},
-		// Binding 4: DVPInstanceClass CRs - triggers hook on change to detect migration completion.
 		{
 			Name:       "dvp_instance_classes",
 			ApiVersion: moduleConfigAPIVersion,
 			Kind:       dvpInstanceClassKind,
 			FilterFunc: filterNamedResource,
 		},
-		// Binding 5: standalone candi discovery secret written by dhctl for new-style clusters.
-		// Takes priority over discovery data in the PCC secret when both are present.
 		{
 			Name:       "candi_discovery_data",
 			ApiVersion: "v1",
@@ -245,23 +227,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleDVPClusterConfiguration)
 
 func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
-	// ---- Resolve discovery data: candi secret takes priority over PCC secret ----
+	// candi takes priority over PCC
 	discoveryData, candiPresent := resolveDiscoveryData(input)
 
-	// ---- Determine PCC presence ----
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	pccPresent := len(pccSnaps) > 0
 
-	// ---- State machine ----
 	if !pccPresent {
-		// State A: no PCC - new cluster on v2, standard flow.
-		// Values come from ModuleConfig v2 via addon-operator (already in input.Values).
-		// Clean up migration artifacts if they exist.
+		// no PCC: new cluster, standard flow
 		deleteMigrationArtifacts(input)
 		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
-	// PCC is present - parse it.
 	var pccResult pccSecretFilterResult
 	if err := pccSnaps[0].UnmarshalTo(&pccResult); err != nil {
 		return fmt.Errorf("unmarshal PCC snapshot: %w", err)
@@ -274,31 +251,27 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 		}
 	}
 
-	// If candi secret is absent, fall back to discovery data from PCC secret.
+	// fall back to PCC discovery when no candi secret
 	if !candiPresent && len(pccResult.ProviderDiscoveryDataJSON) > 0 {
 		if err := json.Unmarshal(pccResult.ProviderDiscoveryDataJSON, &discoveryData); err != nil {
 			return fmt.Errorf("unmarshal discovery data from PCC: %w", err)
 		}
 	}
 
-	// ---- Determine completeness of new resources ----
 	newResourcesComplete := isNewResourcesComplete(input, &pcc)
 
 	if newResourcesComplete {
-		// State C: PCC present but migration is done.
-		// Values come from MC v2 (root path) - do NOT override from PCC.
-		// Clean up migration artifacts.
+		// migration done: use MC v2 values
 		deleteMigrationArtifacts(input)
 		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
-	// State B: PCC present, new resources incomplete - migration in progress.
-	// Write root values from PCC so templates can render.
+	// migration in progress: populate values from PCC so templates render
 	if err := mapPCCtoRootValues(input, &pcc); err != nil {
 		return fmt.Errorf("map PCC to root values: %w", err)
 	}
 
-	// Validate and enrich the PCC (e.g. merge any MC-level overrides).
+	// validates PCC credentials before namespace exists; actual resources created in create_migration_resources.go
 	var moduleConfiguration v1.DvpModuleConfiguration
 	if err := json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration); err != nil {
 		return fmt.Errorf("parse module configuration: %w", err)
@@ -310,9 +283,7 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 	return mergeAndSetDiscoveryData(input, discoveryData)
 }
 
-// resolveDiscoveryData returns discovery data from the candi standalone secret and whether
-// the secret was present (even if empty). Callers use the bool to decide whether to fall
-// back to the PCC secret.
+// candiPresent=true on unmarshal error suppresses PCC fallback to avoid stale data
 func resolveDiscoveryData(input *go_hook.HookInput) (cloudDataV1.DVPCloudProviderDiscoveryData, bool) {
 	candiSnaps := input.Snapshots.Get("candi_discovery_data")
 	if len(candiSnaps) == 0 {
@@ -321,6 +292,7 @@ func resolveDiscoveryData(input *go_hook.HookInput) (cloudDataV1.DVPCloudProvide
 
 	var candiResult candiDiscoveryDataFilterResult
 	if err := candiSnaps[0].UnmarshalTo(&candiResult); err != nil {
+		input.Logger.Warn("failed to unmarshal candi discovery snapshot; PCC fallback suppressed", "error", err)
 		return cloudDataV1.DVPCloudProviderDiscoveryData{}, true
 	}
 
@@ -330,15 +302,14 @@ func resolveDiscoveryData(input *go_hook.HookInput) (cloudDataV1.DVPCloudProvide
 
 	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
 	if err := json.Unmarshal(candiResult.DiscoveryDataJSON, &discoveryData); err != nil {
+		input.Logger.Warn("failed to parse candi discovery data JSON; PCC fallback suppressed", "error", err)
 		return cloudDataV1.DVPCloudProviderDiscoveryData{}, true
 	}
 
 	return discoveryData, true
 }
 
-// isNewResourcesComplete checks whether the migration target resources are fully in place.
 func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConfiguration) bool {
-	// Check ModuleConfig.
 	mcSnaps := input.Snapshots.Get("module_config")
 	if len(mcSnaps) == 0 {
 		return false
@@ -351,7 +322,6 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 		return false
 	}
 
-	// Check d8-credentials Secret.
 	credSnaps := input.Snapshots.Get("credential_secret_d8")
 	if len(credSnaps) == 0 {
 		return false
@@ -361,7 +331,6 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 		return false
 	}
 
-	// Build sets of existing NodeGroups and DVPInstanceClasses.
 	existingNodeGroups, err := sdkobjectpatch.UnmarshalToStruct[namedResourceResult](input.Snapshots, "node_groups")
 	if err != nil {
 		return false
@@ -380,15 +349,13 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 		icSet[ic.Name] = true
 	}
 
-	// Check master NodeGroup + InstanceClass only when the PCC defines a masterNodeGroup.
-	// Hybrid clusters (static control plane, CSI-only) have no masterNodeGroup in PCC.
+	// hybrid clusters have no masterNodeGroup
 	if pcc != nil && pcc.MasterNodeGroup != nil {
 		if !nodeGroupSet["master"] || !icSet["master-dvp"] {
 			return false
 		}
 	}
 
-	// Check each additional nodeGroup from PCC.
 	if pcc != nil {
 		for _, rawNG := range pcc.NodeGroups {
 			ng, err := mapFromAny(rawNG)
@@ -408,22 +375,13 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 	return true
 }
 
-// mapPCCtoRootValues writes PCC fields into the root module values path
-// (cloudProviderDvp.provider/nodes) in v2 format so templates can render during migration.
-// Only individual leaf values are written so that fields populated by addon-operator from
-// config-values defaults (e.g. nodes.disabled, storage.disabled) are never overwritten.
-// storage is left entirely untouched - PCC does not control subsystem enablement.
-//
-// It also injects a synthetic cloudProviderDvp.internal.credentialSecrets["d8-credentials"]
-// entry built from PCC.provider.kubeconfigDataBase64, but ONLY when the key is absent.
-// The credentials.go hook (Order 19) populates credentialSecrets from real Secrets; if it
-// already placed d8-credentials, we must not overwrite it.
+// leaf-only writes preserve addon-operator defaults (nodes.disabled, storage.disabled)
 func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConfiguration) error {
 	if pcc == nil {
 		return nil
 	}
 
-	// provider - set the whole object (provider has no disabled flag, so overwriting is safe).
+	// provider has no disabled flag, overwriting is safe
 	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
 		input.Values.Set("cloudProviderDvp.provider", map[string]any{
 			"parameters": map[string]any{
@@ -432,8 +390,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		})
 	}
 
-	// nodes.parameters - only PCC-derived fields; nodes.disabled is intentionally not touched
-	// so the default from config-values is preserved.
+	// nodes.disabled intentionally not touched
 	nodesParams := map[string]any{}
 	if pcc.Layout != nil {
 		nodesParams["layout"] = *pcc.Layout
@@ -448,10 +405,7 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		nodesParams["zones"] = *pcc.Zones
 	}
 	if len(nodesParams) > 0 {
-		// Set the whole nodes object at once: a JSON-patch "add" cannot create the
-		// missing intermediate "cloudProviderDvp.nodes" path when MC v2 has not
-		// populated it yet (nodes has no own default, only nodes.disabled does).
-		// Read-merge preserves nodes.disabled when it is already present.
+		// add op cannot create intermediate path; read-merge preserves nodes.disabled
 		nodes := make(map[string]any)
 		if v, ok := input.Values.GetOk("cloudProviderDvp.nodes"); ok {
 			if err := json.Unmarshal([]byte(v.Raw), &nodes); err != nil {
@@ -462,15 +416,10 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		input.Values.Set("cloudProviderDvp.nodes", nodes)
 	}
 
-	// storage - not touched; PCC does not control subsystem enablement.
-
-	// Inject synthetic d8-credentials from PCC kubeconfig only when the real Secret
-	// is not yet present (i.e. credentials.go did not populate it at Order 19).
-	// We must set the whole credentialSecrets map at once to avoid JSON-patch
-	// "missing path" errors when the key does not exist yet.
+	// inject synthetic creds only if credentials.go (Order 19) hasn't populated yet
 	if _, exists := input.Values.GetOk("cloudProviderDvp.internal.credentialSecrets.d8-credentials"); !exists {
 		if pcc.Provider != nil && pcc.Provider.KubeconfigDataBase64 != nil && len(*pcc.Provider.KubeconfigDataBase64) > 0 {
-			// Read existing credentialSecrets map and add the synthetic entry.
+			// set whole map at once; JSON-patch fails on missing intermediate path
 			existing := make(map[string]any)
 			if v, ok := input.Values.GetOk("cloudProviderDvp.internal.credentialSecrets"); ok {
 				if err := json.Unmarshal([]byte(v.Raw), &existing); err != nil {
@@ -488,8 +437,6 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 	return nil
 }
 
-// mergeAndSetDiscoveryData merges the provided discovery data with any existing values
-// and writes the result to internal.providerDiscoveryData.
 func mergeAndSetDiscoveryData(input *go_hook.HookInput, discoveryData cloudDataV1.DVPCloudProviderDiscoveryData) error {
 	providerDiscoveryDataValuesJSON, ok := input.Values.GetOk("cloudProviderDvp.internal.providerDiscoveryData")
 	if ok && len(providerDiscoveryDataValuesJSON.String()) != 0 {

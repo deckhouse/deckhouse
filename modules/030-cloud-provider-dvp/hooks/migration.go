@@ -69,7 +69,6 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 		sshPublicKey = *cfg.SSHPublicKey
 	}
 	nodesSettings := map[string]any{
-		"disabled": false,
 		"parameters": map[string]any{
 			"layout":       layout,
 			"sshPublicKey": sshPublicKey,
@@ -122,7 +121,6 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 			"settings": map[string]any{
 				"provider": providerSettings,
 				"storage": map[string]any{
-					"disabled":   false,
 					"parameters": map[string]any{},
 				},
 				"nodes": nodesSettings,
@@ -200,7 +198,6 @@ func createMigrationResourcesSecret(input *go_hook.HookInput, resources []any) e
 	return nil
 }
 
-// createMigrationConfigMap creates (or updates) the d8-module-is-migrating ConfigMap.
 func createMigrationConfigMap(input *go_hook.HookInput) {
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -219,8 +216,6 @@ func createMigrationConfigMap(input *go_hook.HookInput) {
 	input.PatchCollector.CreateOrUpdate(cm)
 }
 
-// deleteMigrationArtifacts removes d8-migration-resources Secret and
-// d8-module-is-migrating ConfigMap. Missing objects are ignored by the patch collector.
 func deleteMigrationArtifacts(input *go_hook.HookInput) {
 	input.PatchCollector.Delete("v1", "Secret", dvpNamespace, dvpMigrationResourcesName)
 	input.PatchCollector.Delete("v1", "ConfigMap", dvpNamespace, dvpMigrationConfigMapName)
@@ -348,8 +343,7 @@ func replicasFromNodeGroup(nodeGroup map[string]any) (int, error) {
 	if !ok {
 		return 0, errors.New("cannot be empty")
 	}
-	// mapFromAny routes everything through json.Unmarshal into map[string]any,
-	// which always yields float64 for JSON numbers.
+	// json.Unmarshal always yields float64 for JSON numbers
 	v, ok := replicas.(float64)
 	if !ok {
 		return 0, fmt.Errorf("unexpected type %T", replicas)
