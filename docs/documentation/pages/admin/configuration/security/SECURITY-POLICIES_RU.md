@@ -428,6 +428,10 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 вы можете создавать политики безопасности, задающие ограничения на поведение контейнеров в кластере:
 доступ к host-сетям, привилегии, использование AppArmor и т. д.
 
+{% alert level="info" %}
+За что отвечает каждая настройка безопасности Pod (например, `hostNetwork`, `hostPID`, `hostIPC`, `hostPath`, `automountServiceAccountToken`, `capabilities`, `seccompProfile` и др.), как выбрать корректное значение и как это работает на практике, читайте на странице [«Настройка параметров безопасности Pod»](/user/security/pod-settings.html).
+{% endalert %}
+
 Пример политики безопасности:
 
 ```yaml
