@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 0e9481a95f..b24bd2ab8b 100644
+index 0e9481a95f..e6fe1ea7b5 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,30 +1,30 @@
@@ -244,7 +244,7 @@ index 0e9481a95f..b24bd2ab8b 100644
  	github.com/opencontainers/go-digest v1.0.0 // indirect
  	github.com/opencontainers/image-spec v1.1.1 // indirect
  	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
-@@ -192,39 +201,40 @@ require (
+@@ -192,39 +201,46 @@ require (
  	github.com/sagikazarmark/locafero v0.9.0 // indirect
  	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
  	github.com/shopspring/decimal v1.4.0 // indirect
@@ -299,12 +299,18 @@ index 0e9481a95f..b24bd2ab8b 100644
  	sigs.k8s.io/kustomize/kyaml v0.19.0 // indirect
  	sigs.k8s.io/randfill v1.0.0 // indirect
  	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
-+	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
  )
 +
-+replace github.com/go-openapi/testify/v2 => github.com/go-openapi/testify/v2 v2.0.2
++replace (
++	github.com/go-openapi/testify/v2 => github.com/go-openapi/testify/v2 v2.0.2
++	github.com/google/gnostic-models => github.com/google/gnostic-models v0.6.9
++	k8s.io/api => k8s.io/api v0.33.3
++	k8s.io/apimachinery => k8s.io/apimachinery v0.33.3
++	k8s.io/client-go => k8s.io/client-go v0.33.3
++	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
++)
 diff --git a/go.sum b/go.sum
-index 684d5db0bf..16dedd3b13 100644
+index 684d5db0bf..09d6c1a348 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,27 +1,27 @@
@@ -564,17 +570,6 @@ index 684d5db0bf..16dedd3b13 100644
  github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
  github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
  github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
-@@ -194,8 +258,8 @@ github.com/google/btree v1.1.3 h1:CVpQJjYgC4VbzxeGVHfvZrv1ctoYCAI8vbl07Fcxlyg=
- github.com/google/btree v1.1.3/go.mod h1:qOPhT0dTNdNzV6Z/lhRX0YXUafgPLFUh+gZMl761Gm4=
- github.com/google/cel-go v0.25.0 h1:jsFw9Fhn+3y2kBbltZR4VEz5xKkcIFRPDnuEzAGv5GY=
- github.com/google/cel-go v0.25.0/go.mod h1:hjEb6r5SuOSlhCHmFoLzu8HGCERvIsDAbxDAyNU/MmI=
--github.com/google/gnostic-models v0.6.9 h1:MU/8wDLif2qCXZmzncUQ/BOfxWfthHi63KqpoNbWqVw=
--github.com/google/gnostic-models v0.6.9/go.mod h1:CiWsm0s6BSQd1hRn8/QmxqB6BesYcbSZxsz9b0KuDBw=
-+github.com/google/gnostic-models v0.7.0 h1:qwTtogB15McXDaNqTZdzPJRHvaVJlAl+HVQnLmJEJxo=
-+github.com/google/gnostic-models v0.7.0/go.mod h1:whL5G0m6dmc5cPxKc5bdKdEN3UjI7OUGxBlw57miDrQ=
- github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
- github.com/google/go-cmp v0.5.9/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
- github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 @@ -206,24 +270,24 @@ github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/
  github.com/google/gofuzz v1.2.0 h1:xRy4A+RhZaiKjJ1bPfwQ8sedCA+YS2YcCHW6ec7JMi0=
  github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
@@ -1038,40 +1033,16 @@ index 684d5db0bf..16dedd3b13 100644
  helm.sh/helm/v3 v3.18.5 h1:Cc3Z5vd6kDrZq9wO9KxKLNEickiTho6/H/dBNRVSos4=
  helm.sh/helm/v3 v3.18.5/go.mod h1:L/dXDR2r539oPlFP1PJqKAC1CUgqHJDLkxKpDGrWnyg=
  honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
-@@ -623,30 +696,30 @@ istio.io/api v1.27.8-0.20260228163850-469b1b2d2cfa h1:kiDJGusc2Mq+IdNrCell/n0wYM
- istio.io/api v1.27.8-0.20260228163850-469b1b2d2cfa/go.mod h1:DTVGH6CLXj5W8FF9JUD3Tis78iRgT1WeuAnxfTz21Wg=
- istio.io/client-go v1.27.8-0.20260228164351-be89f6f65a7b h1:L2nN27cyz8GAWvvN5P1PNaMtw7CkJu5qeiadhx/DT14=
- istio.io/client-go v1.27.8-0.20260228164351-be89f6f65a7b/go.mod h1:KBIOS3bpRY+/Aw2pYH46KFy2kYmV5qmzwa3HZr7yftA=
--k8s.io/api v0.33.3 h1:SRd5t//hhkI1buzxb288fy2xvjubstenEKL9K51KBI8=
--k8s.io/api v0.33.3/go.mod h1:01Y/iLUjNBM3TAvypct7DIj0M0NIZc+PzAHCIo0CYGE=
-+k8s.io/api v0.35.3 h1:pA2fiBc6+N9PDf7SAiluKGEBuScsTzd2uYBkA5RzNWQ=
-+k8s.io/api v0.35.3/go.mod h1:9Y9tkBcFwKNq2sxwZTQh1Njh9qHl81D0As56tu42GA4=
- k8s.io/apiextensions-apiserver v0.33.3 h1:qmOcAHN6DjfD0v9kxL5udB27SRP6SG/MTopmge3MwEs=
- k8s.io/apiextensions-apiserver v0.33.3/go.mod h1:oROuctgo27mUsyp9+Obahos6CWcMISSAPzQ77CAQGz8=
--k8s.io/apimachinery v0.33.3 h1:4ZSrmNa0c/ZpZJhAgRdcsFcZOw1PQU1bALVQ0B3I5LA=
--k8s.io/apimachinery v0.33.3/go.mod h1:BHW0YOu7n22fFv/JkYOEfkUYNRN0fj0BlvMFWA7b+SM=
-+k8s.io/apimachinery v0.35.3 h1:MeaUwQCV3tjKP4bcwWGgZ/cp/vpsRnQzqO6J6tJyoF8=
-+k8s.io/apimachinery v0.35.3/go.mod h1:jQCgFZFR1F4Ik7hvr2g84RTJSZegBc8yHgFWKn//hns=
- k8s.io/apiserver v0.33.3 h1:Wv0hGc+QFdMJB4ZSiHrCgN3zL3QRatu56+rpccKC3J4=
- k8s.io/apiserver v0.33.3/go.mod h1:05632ifFEe6TxwjdAIrwINHWE2hLwyADFk5mBsQa15E=
- k8s.io/cli-runtime v0.33.3 h1:Dgy4vPjNIu8LMJBSvs8W0LcdV0PX/8aGG1DA1W8lklA=
- k8s.io/cli-runtime v0.33.3/go.mod h1:yklhLklD4vLS8HNGgC9wGiuHWze4g7x6XQZ+8edsKEo=
--k8s.io/client-go v0.33.3 h1:M5AfDnKfYmVJif92ngN532gFqakcGi6RvaOF16efrpA=
--k8s.io/client-go v0.33.3/go.mod h1:luqKBQggEf3shbxHY4uVENAxrDISLOarxpTKMiUuujg=
-+k8s.io/client-go v0.35.3 h1:s1lZbpN4uI6IxeTM2cpdtrwHcSOBML1ODNTCCfsP1pg=
-+k8s.io/client-go v0.35.3/go.mod h1:RzoXkc0mzpWIDvBrRnD+VlfXP+lRzqQjCmKtiwZ8Q9c=
- k8s.io/component-base v0.33.3 h1:mlAuyJqyPlKZM7FyaoM/LcunZaaY353RXiOd2+B5tGA=
+@@ -639,14 +712,14 @@ k8s.io/component-base v0.33.3 h1:mlAuyJqyPlKZM7FyaoM/LcunZaaY353RXiOd2+B5tGA=
  k8s.io/component-base v0.33.3/go.mod h1:ktBVsBzkI3imDuxYXmVxZ2zxJnYTZ4HAsVj9iF09qp4=
  k8s.io/component-helpers v0.33.3 h1:fjWVORSQfI0WKzPeIFSju/gMD9sybwXBJ7oPbqQu6eM=
  k8s.io/component-helpers v0.33.3/go.mod h1:7iwv+Y9Guw6X4RrnNQOyQlXcvJrVjPveHVqUA5dm31c=
 -k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
 -k8s.io/klog/v2 v2.130.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
--k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff h1:/usPimJzUKKu+m+TE36gUyGcf03XZEP0ZIKgKj35LS4=
--k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff/go.mod h1:5jIi+8yX4RIb8wk3XwBo5Pq2ccx4FP10ohkbSKCZoK8=
 +k8s.io/klog/v2 v2.140.0 h1:Tf+J3AH7xnUzZyVVXhTgGhEKnFqye14aadWv7bzXdzc=
 +k8s.io/klog/v2 v2.140.0/go.mod h1:o+/RWfJ6PwpnFn7OyAG3QnO47BFsymfEfrz6XyYSSp0=
-+k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 h1:Y3gxNAuB0OBLImH611+UDZcmKS3g6CthxToOb37KgwE=
-+k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912/go.mod h1:kdmbQkyfwUagLfXIad1y2TdrjPFWp2Q89B3qkRwf/pQ=
+ k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff h1:/usPimJzUKKu+m+TE36gUyGcf03XZEP0ZIKgKj35LS4=
+ k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff/go.mod h1:5jIi+8yX4RIb8wk3XwBo5Pq2ccx4FP10ohkbSKCZoK8=
  k8s.io/kubectl v0.33.3 h1:r/phHvH1iU7gO/l7tTjQk2K01ER7/OAJi8uFHHyWSac=
  k8s.io/kubectl v0.33.3/go.mod h1:euj2bG56L6kUGOE/ckZbCoudPwuj4Kud7BR0GzyNiT0=
 -k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 h1:jgJW5IePPXLGB8e/1wvd0Ich9QE97RvvF3a8J3fP/Lg=
@@ -1092,12 +1063,9 @@ index 684d5db0bf..16dedd3b13 100644
  sigs.k8s.io/knftables v0.0.19-0.20250623122614-e4307300abb5 h1:IvJLfQapBuBLXavhpQmA1raQx+VmPKTtRIT0Vmc0MvA=
  sigs.k8s.io/knftables v0.0.19-0.20250623122614-e4307300abb5/go.mod h1:f/5ZLKYEUPUhVjUCg6l80ACdL7CIIyeL0DxfgojGRTk=
  sigs.k8s.io/kustomize/api v0.19.0 h1:F+2HB2mU1MSiR9Hp1NEgoU2q9ItNOaBJl0I4Dlus5SQ=
-@@ -670,6 +743,8 @@ sigs.k8s.io/randfill v1.0.0 h1:JfjMILfT8A6RbawdsK2JXGBR5AQVfd+9TbzrlneTyrU=
- sigs.k8s.io/randfill v1.0.0/go.mod h1:XeLlZ/jmk4i1HRopwe7/aU3H5n1zNUcX6TM94b3QxOY=
+@@ -671,5 +744,5 @@ sigs.k8s.io/randfill v1.0.0/go.mod h1:XeLlZ/jmk4i1HRopwe7/aU3H5n1zNUcX6TM94b3QxO
  sigs.k8s.io/structured-merge-diff/v4 v4.7.0 h1:qPeWmscJcXP0snki5IYF79Z8xrl8ETFxgMd7wez1XkI=
  sigs.k8s.io/structured-merge-diff/v4 v4.7.0/go.mod h1:dDy58f92j70zLsuZVuUX5Wp9vtxXpaZnkPGWeqDfCps=
-+sigs.k8s.io/structured-merge-diff/v6 v6.3.0 h1:jTijUJbW353oVOd9oTlifJqOGEkUw2jB/fXCbTiQEco=
-+sigs.k8s.io/structured-merge-diff/v6 v6.3.0/go.mod h1:M3W8sfWvn2HhQDIbGWj3S099YozAsymCo/wrT5ohRUE=
  sigs.k8s.io/yaml v1.4.0/go.mod h1:Ejl7/uTz7PSA4eKMyQCUTnhZYNmLIl+5c2lQPGR2BPY=
 -sigs.k8s.io/yaml v1.5.0 h1:M10b2U7aEUY6hRtU870n2VTPgR5RZiL/I6Lcc2F4NUQ=
 -sigs.k8s.io/yaml v1.5.0/go.mod h1:wZs27Rbxoai4C0f8/9urLZtZtF3avA3gKvGyPdDqTO4=
