@@ -48,10 +48,10 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 	if err != nil {
 		return err
 	}
-	if len(bytes.TrimSpace(stdout)) == 0 {
-		return nil
-	}
 
+	// A conformant binary always emits a JSON object ("{}\n" on success).
+	// Empty stdout means a broken binary — fail closed instead of silently
+	// treating it as validated (matches Prepare).
 	var resp providerdata.ValidateResponse
 	if err := json.Unmarshal(stdout, &resp); err != nil {
 		return fmt.Errorf("parse validate response: %w", err)
@@ -103,16 +103,16 @@ func (p *Preparator) call(ctx context.Context, subcommand string, input config.P
 		return nil, fmt.Errorf("marshal %s request: %w", subcommand, err)
 	}
 
-	span.SetAttributes(otattribute.String(subcommand+".request", string(payload)))
-	log.DebugF("external.%s binary=%s request=%s\n", subcommand, p.binaryPath, payload)
+	// The request/response carry provider Vars (decoded credentials,
+	// kubeconfigDataBase64, etc.); never attach them to spans or logs.
+	log.DebugF("external.%s binary=%s request_bytes=%d\n", subcommand, p.binaryPath, len(payload))
 
 	stdout, err := p.run(ctx, subcommand, payload)
 	if err != nil {
 		return nil, err
 	}
 
-	span.SetAttributes(otattribute.String(subcommand+".response", string(stdout)))
-	log.DebugF("external.%s binary=%s response=%s\n", subcommand, p.binaryPath, stdout)
+	log.DebugF("external.%s binary=%s response_bytes=%d\n", subcommand, p.binaryPath, len(stdout))
 	return stdout, nil
 }
 

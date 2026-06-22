@@ -15,7 +15,10 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,6 +26,33 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 )
+
+func fixtureValidator(t *testing.T, script string) string {
+	t.Helper()
+	bin := filepath.Join(t.TempDir(), "validator")
+	require.NoError(t, os.WriteFile(bin, []byte("#!/bin/sh\n"+script+"\n"), 0o755))
+	return bin
+}
+
+func TestValidate_EmptyStdoutFailsClosed(t *testing.T) {
+	// A broken binary that exits 0 but prints nothing must NOT be treated as
+	// validated (fail closed).
+	p := NewBinaryPreparator(fixtureValidator(t, "exit 0"))
+	err := p.Validate(context.Background(), config.ProviderInput{ProviderName: "dvp", Operation: "converge"})
+	require.Error(t, err, "empty validator stdout must fail closed")
+}
+
+func TestValidate_EmptyObjectPasses(t *testing.T) {
+	// A conformant binary emits "{}" on success.
+	p := NewBinaryPreparator(fixtureValidator(t, "echo '{}'"))
+	require.NoError(t, p.Validate(context.Background(), config.ProviderInput{ProviderName: "dvp", Operation: "converge"}))
+}
+
+func TestValidate_ErrorResponsePropagates(t *testing.T) {
+	p := NewBinaryPreparator(fixtureValidator(t, `echo '{"error":"bad layout"}'`))
+	err := p.Validate(context.Background(), config.ProviderInput{ProviderName: "dvp", Operation: "converge"})
+	require.ErrorContains(t, err, "bad layout")
+}
 
 func TestToWireInput_VarsTravelStructurally(t *testing.T) {
 	cv := &providerdata.CloudProviderVars{
