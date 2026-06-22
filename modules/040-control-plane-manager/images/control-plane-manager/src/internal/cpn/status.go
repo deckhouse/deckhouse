@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package virtualcontrolplanenode
+package cpn
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -29,19 +30,22 @@ import (
 	"control-plane-manager/internal/constants"
 )
 
-// computeStatusReport returns the target status computed from the current status and the operations.
-// Pure: works on a copy, does not mutate inputs.
-func computeStatusReport(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) controlplanev1alpha1.ControlPlaneNodeStatus {
+// ComputeStatusReport returns the target status computed from the current status and the operations.
+// Pure: works on a copy, does not mutate the input.
+func ComputeStatusReport(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) controlplanev1alpha1.ControlPlaneNodeStatus {
 	out := cpn.DeepCopy()
-	applyAppliedChecksums(out, ops) // actual catches up to completed operations
-	applyCertDates(out, ops)        // cert dates from ObservedState (ordered by observedAt)
-	deriveCAChecksum(out)           // global status.CAChecksum
-	computeConditions(out, ops)     // per-component Ready
-	computeHealthy(out)             // CertificatesHealthy
+	applyCompletedChecksums(out, ops) // actual catches up completed operations
+	applyCertDates(out, ops)          // cert dates from ObservedState (ordered by observedAt)
+
+	// Reports read the post-fold actual state; compute the snapshot once and share it.
+	states := computeComponentStates(out)
+	applyCAChecksum(out, states)       // global status.CAChecksum
+	applyConditions(out, states, ops)  // per-component Ready
+	applyHealthyCondition(out, states) // CertificatesHealthy
 	return out.Status
 }
 
-func applyAppliedChecksums(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) {
+func applyCompletedChecksums(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) {
 	for _, s := range computeComponentStates(cpn) {
 		applied := latestCompletedOperation(ops, s.component)
 		if applied == nil {
@@ -89,7 +93,8 @@ func applyCertDates(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlpla
 			continue
 		}
 		if len(sn.state.CertificatesExpirationTime) > 0 {
-			cs.CertificatesExpirationTime = sn.state.CertificatesExpirationTime
+			// Clone: the source map belongs to a cached operation object and must not be aliased into status.
+			cs.CertificatesExpirationTime = maps.Clone(sn.state.CertificatesExpirationTime)
 		}
 		if cs.LastCertObserveTime.IsZero() || sn.at.After(cs.LastCertObserveTime.Time) {
 			cs.LastCertObserveTime = sn.at
@@ -97,11 +102,11 @@ func applyCertDates(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlpla
 	}
 }
 
-func deriveCAChecksum(cpn *controlplanev1alpha1.ControlPlaneNode) {
+func applyCAChecksum(cpn *controlplanev1alpha1.ControlPlaneNode, states []componentState) {
 	if cpn.Spec.CAChecksum == "" || cpn.Status.CAChecksum == cpn.Spec.CAChecksum {
 		return
 	}
-	for _, s := range computeComponentStates(cpn) {
+	for _, s := range states {
 		if !s.component.IsStaticPodComponent() {
 			continue
 		}
@@ -113,8 +118,8 @@ func deriveCAChecksum(cpn *controlplanev1alpha1.ControlPlaneNode) {
 	cpn.Status.CAChecksum = cpn.Spec.CAChecksum
 }
 
-func computeConditions(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) {
-	for _, s := range computeComponentStates(cpn) {
+func applyConditions(cpn *controlplanev1alpha1.ControlPlaneNode, states []componentState, ops []controlplanev1alpha1.ControlPlaneOperation) {
+	for _, s := range states {
 		meta.SetStatusCondition(&cpn.Status.Conditions, computeComponentCondition(s, ops, cpn.Generation))
 	}
 }
@@ -137,13 +142,12 @@ func computeComponentCondition(s componentState, ops []controlplanev1alpha1.Cont
 	}
 }
 
-func computeHealthy(cpn *controlplanev1alpha1.ControlPlaneNode) {
-	meta.SetStatusCondition(&cpn.Status.Conditions, computeHealthyCondition(cpn))
+func applyHealthyCondition(cpn *controlplanev1alpha1.ControlPlaneNode, states []componentState) {
+	meta.SetStatusCondition(&cpn.Status.Conditions, computeHealthyCondition(cpn, states))
 }
 
-func computeHealthyCondition(cpn *controlplanev1alpha1.ControlPlaneNode) metav1.Condition {
+func computeHealthyCondition(cpn *controlplanev1alpha1.ControlPlaneNode, states []componentState) metav1.Condition {
 	gen := cpn.Generation
-	states := computeComponentStates(cpn)
 	if len(states) == 0 {
 		return condition(controlplanev1alpha1.CPNConditionCertificatesHealthy, metav1.ConditionUnknown, controlplanev1alpha1.CPNReasonUnknown, gen, "no components")
 	}
@@ -244,8 +248,16 @@ func certDates(cpn *controlplanev1alpha1.ControlPlaneNode, c controlplanev1alpha
 }
 
 func minExpiration(dates map[string]metav1.Time) time.Time {
+	return minExpirationExcluding(dates, "")
+}
+
+// minExpirationExcluding returns the earliest expiry across all dates except the given key.
+func minExpirationExcluding(dates map[string]metav1.Time, exclude string) time.Time {
 	var min time.Time
-	for _, t := range dates {
+	for key, t := range dates {
+		if key == exclude {
+			continue
+		}
 		if min.IsZero() || t.Time.Before(min) {
 			min = t.Time
 		}

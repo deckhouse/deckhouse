@@ -34,7 +34,9 @@ const ControllerName = constants.VirtualControlPlaneNodeController
 func BuildController(mgr manager.Manager) error {
 	r := &reconciler{
 		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
+		// apiReader is an uncached reader used to confirm, right before creating an operation, that the previous reconcile of the same node did not already create it.
+		apiReader: mgr.GetAPIReader(),
+		scheme:    mgr.GetScheme(),
 	}
 
 	cpnPreds, err := controlPlaneNodePredicates()
