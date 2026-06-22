@@ -77,7 +77,7 @@ func LoadConfigFromFile(
 		}
 	}
 
-	if err := EnsureProviderSchemas(ctx, "", docs, globalOptions); err != nil {
+	if err := EnsureProviderBundle(ctx, "", docs, globalOptions); err != nil {
 		return nil, err
 	}
 
@@ -544,6 +544,34 @@ deckhouse: {}
 	return metaConfig.Prepare(ctx, preparatorProvider)
 }
 
+// ParseConfigFromDataEnsureProvider behaves like ParseConfigFromData but first
+// ensures the external provider bundle is downloaded and unpacked (so the
+// provider validator binary is available) and points the preparator at the
+// download dir. Use it on cold server pods (check/converge/destroy/detach)
+// where the bundle is not pre-baked in the install image. Registry access is
+// resolved from the registry_config / InitConfiguration / deckhouse ModuleConfig
+// documents present in configData.
+func ParseConfigFromDataEnsureProvider(
+	ctx context.Context,
+	configData string,
+	preparatorProvider MetaConfigPreparatorProvider,
+	globalOptions *options.GlobalOptions,
+	opts ...ValidateOption,
+) (*MetaConfig, error) {
+	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
+	if err := EnsureProviderBundle(ctx, "", docs, globalOptions); err != nil {
+		return nil, err
+	}
+
+	downloadRootDir := globalOptions.DownloadDir
+	if downloadRootDir == "" {
+		downloadRootDir = options.DefaultTmpDir()
+	}
+	opts = append(opts, ValidateOptionDownloadRootDir(downloadRootDir))
+
+	return ParseConfigFromData(ctx, configData, preparatorProvider, globalOptions, opts...)
+}
+
 func FetchDocuments(paths []string) ([]string, error) {
 	paths = fs.RevealWildcardPaths(paths)
 
@@ -728,12 +756,12 @@ var (
 	downloadProviderBundle = image.DownloadAndUnpackImage
 )
 
-// EnsureProviderSchemas downloads the external provider bundle and loads its
+// EnsureProviderBundle downloads the external provider bundle and loads its
 // schemas so the provider becomes validatable in this process. No-op for
 // static clusters and already-present candi (in-tree or unpacked). Empty
 // provider is extracted from docs; docs also supply registry access (default
 // public registry otherwise). Concurrent same-provider calls share one download.
-func EnsureProviderSchemas(ctx context.Context, provider string, docs []string, globalOptions *options.GlobalOptions) error {
+func EnsureProviderBundle(ctx context.Context, provider string, docs []string, globalOptions *options.GlobalOptions) error {
 	if globalOptions == nil {
 		globalOptions = &options.GlobalOptions{}
 	}

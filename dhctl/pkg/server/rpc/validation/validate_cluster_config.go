@@ -67,7 +67,7 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 
 	// The provider name comes from the cluster config argument; registry
 	// access for the bundle download comes from the registry_config section.
-	if err := s.ensureProviderSchemas(ctx, clusterConfig.Cloud.Provider, request.RegistryConfig); err != nil {
+	if err := s.ensureProviderBundle(ctx, clusterConfig.Cloud.Provider, request.RegistryConfig); err != nil {
 		errResponse, err = errorToResponse(err)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "%s", err)
