@@ -165,6 +165,34 @@ func TestEnsureProviderBundleDownloadsLoadsAndCaches(t *testing.T) {
 	require.Equal(t, int32(1), downloads.Load())
 }
 
+func TestEnsureProviderBundleLoadsDeliveredBundleFromDisk(t *testing.T) {
+	// The bundle is delivered on disk (validator + schemas) but never loaded
+	// into this process's store — as happens on a shared/persisted download dir
+	// where another process unpacked it. EnsureProviderBundle must load the
+	// schemas from disk without downloading.
+	var downloads atomic.Int32
+	orig := downloadProviderBundle
+	downloadProviderBundle = func(_ context.Context, _, _, _ string, _ image.RegistryConfig, _ bool) error {
+		downloads.Add(1)
+		return nil
+	}
+	t.Cleanup(func() { downloadProviderBundle = orig })
+
+	globalOptions := ensureTestGlobalOptions(t)
+	bundleDir := filepath.Join(globalOptions.DownloadDir, "ensdelivered")
+	writeTestProviderSchema(t, bundleDir, "EnsDeliveredConfiguration")
+	require.NoError(t, os.WriteFile(filepath.Join(bundleDir, "validator"), []byte("#!/bin/sh\n"), 0o755))
+
+	require.NoError(t, EnsureProviderBundle(context.Background(), "ensdelivered", nil, globalOptions))
+	require.Equal(t, int32(0), downloads.Load(), "delivered bundle must load from disk, not download")
+
+	schemaStore := NewSchemaStore(globalOptions)
+	require.NotNil(t,
+		schemaStore.Get(&SchemaIndex{Kind: "EnsDeliveredConfiguration", Version: "deckhouse.io/v1"}),
+		"schemas must be loaded from the delivered on-disk bundle",
+	)
+}
+
 func TestEnsureProviderBundleSingleflight(t *testing.T) {
 	stubProviderDigest(t, "sha256:ensflight", nil)
 	var downloads atomic.Int32
