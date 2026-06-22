@@ -101,6 +101,14 @@ rules:
   - get
   - list
   - watch
+# MCM MachineDeployment - patch replicas (capi-machine-deployment controller)
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machinedeployments
+  verbs:
+  - update
+  - patch
 # CAPI Machine and related resources
 - apiGroups:
   - cluster.x-k8s.io
