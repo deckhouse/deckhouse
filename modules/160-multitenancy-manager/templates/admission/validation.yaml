@@ -120,8 +120,12 @@ webhooks:
     rules:
       - apiGroups:
           - deckhouse.io
+        # Only the full-fidelity storage version is listed. With matchPolicy: Equivalent the apiserver
+        # losslessly up-converts a v1alpha1 request to v1alpha2 before delivery, so the handler always
+        # receives the structured fields (grantPolicies, fromParam, podSecurityStandard, ...). Listing
+        # v1alpha1 here would let the apiserver deliver the lossy v1alpha1 view, stripping those fields
+        # and silently bypassing the structured validations.
         apiVersions:
-          - v1alpha1
           - v1alpha2
         resources:
           - projecttemplates

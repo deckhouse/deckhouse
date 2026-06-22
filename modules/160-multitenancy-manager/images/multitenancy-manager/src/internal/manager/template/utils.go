@@ -28,7 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
@@ -101,7 +100,7 @@ func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1
 	return nil
 }
 
-func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.ProjectTemplate, message string, ready bool) error {
+func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha2.ProjectTemplate, message string, ready bool) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, client.ObjectKey{Name: template.Name}, template); err != nil {
 			return fmt.Errorf("get the '%s' project template: %w", template.Name, err)
@@ -112,7 +111,7 @@ func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.Proj
 	})
 }
 
-func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha1.ProjectTemplate) ([]*v1alpha3.Project, error) {
+func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha2.ProjectTemplate) ([]*v1alpha3.Project, error) {
 	projects := new(v1alpha3.ProjectList)
 	if err := m.client.List(ctx, projects, client.MatchingLabels{v1alpha3.ResourceLabelTemplate: template.Name}); err != nil {
 		return nil, fmt.Errorf("list projects by template: %w", err)
