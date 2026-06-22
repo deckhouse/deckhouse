@@ -34,15 +34,23 @@ import (
 // Pure: works on a copy, does not mutate the input.
 func ComputeStatusReport(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) controlplanev1alpha1.ControlPlaneNodeStatus {
 	out := cpn.DeepCopy()
-	applyCompletedChecksums(out, ops) // actual catches up completed operations
-	applyCertDates(out, ops)          // cert dates from ObservedState (ordered by observedAt)
-
-	// Reports read the post-fold actual state; compute the snapshot once and share it.
-	states := computeComponentStates(out)
-	applyCAChecksum(out, states)       // global status.CAChecksum
-	applyConditions(out, states, ops)  // per-component Ready
-	applyHealthyCondition(out, states) // CertificatesHealthy
+	applyObservedState(out, ops)
+	applyDerivedState(out, ops)
 	return out.Status
+}
+
+// applyObservedState updates the per-component actual state from completed operations.
+func applyObservedState(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) {
+	applyCompletedChecksums(cpn, ops)
+	applyCertDates(cpn, ops)
+}
+
+// applyDerivedState computes the global CAChecksum and conditions from intended vs the observed state.
+func applyDerivedState(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) {
+	states := computeComponentStates(cpn)
+	applyCAChecksum(cpn, states)
+	applyConditions(cpn, states, ops)
+	applyHealthyCondition(cpn, states)
 }
 
 func applyCompletedChecksums(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) {
