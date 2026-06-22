@@ -83,10 +83,7 @@ func LoadConfigFromFile(
 
 	// Resolved before ParseConfig: the external preparator binary lives under
 	// <DownloadRootDir>/<provider>/.
-	downloadRootDir := globalOptions.DownloadDir
-	if downloadRootDir == "" {
-		downloadRootDir = options.DefaultTmpDir()
-	}
+	downloadRootDir := resolveDownloadRootDir(globalOptions)
 	downloadCacheDir := globalOptions.DownloadCacheDir
 	if downloadCacheDir == "" {
 		downloadCacheDir = filepath.Join(downloadRootDir, "cache")
@@ -563,13 +560,18 @@ func ParseConfigFromDataEnsureProvider(
 		return nil, err
 	}
 
-	downloadRootDir := globalOptions.DownloadDir
-	if downloadRootDir == "" {
-		downloadRootDir = options.DefaultTmpDir()
-	}
-	opts = append(opts, ValidateOptionDownloadRootDir(downloadRootDir))
+	opts = append(opts, ValidateOptionDownloadRootDir(resolveDownloadRootDir(globalOptions)))
 
 	return ParseConfigFromData(ctx, configData, preparatorProvider, globalOptions, opts...)
+}
+
+// resolveDownloadRootDir returns the root dir for downloaded provider bundles:
+// globalOptions.DownloadDir, falling back to a default tmp dir.
+func resolveDownloadRootDir(globalOptions *options.GlobalOptions) string {
+	if globalOptions.DownloadDir != "" {
+		return globalOptions.DownloadDir
+	}
+	return options.DefaultTmpDir()
 }
 
 func FetchDocuments(paths []string) ([]string, error) {
