@@ -1201,7 +1201,7 @@ alerts:
         d8 k delete moduleconfig monitoring-deckhouse
         ```
 
-        If ModuleConfigs are managed via GitOps (e.g. Argo CD or Deckhouse Commander), remove the `monitoring-deckhouse` ModuleConfig from the source repository so it is not re-created.
+        If the ModuleConfig is deployed from an external source (e.g. a Git repository), make sure it is removed from there so it is not created again.
       summary: |
         Obsolete monitoring-deckhouse ModuleConfig should be removed.
       severity: "9"
