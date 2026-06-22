@@ -80,6 +80,7 @@ const (
 	//
 	//   /v1/images/<image>/tags               -> list tags
 	//   /v1/images/<image>/images/<version>   -> download OCI image tar.gz
+	//   /v1/images/<image>/manifests/<ref>    -> raw image manifest
 	//
 	// where <image> must match the allowlist (deckhouse-cli or deckhouse-cli/plugins/<plugin>).
 	// kube-rbac-proxy (the standard sidecar listening on :4219) gates /v1/images/* with its
@@ -282,11 +283,12 @@ func (p *Proxy) Serve(cfg *Config) {
 // CLIHandler returns an http.HandlerFunc that serves the /v1/images/* CLI download routes
 // (image tag listing and binary pulling) for this Proxy.
 //
-// Two URL shapes are supported under /v1/images/<image>/:
+// Three URL shapes are supported under /v1/images/<image>/:
 //
 //	GET /v1/images/<image>/tags               -> JSON list of available tags
 //	GET /v1/images/<image>/images/<version>   -> stream OCI image tar.gz
 //	                                              as application/x-gzip
+//	GET /v1/images/<image>/manifests/<ref>    -> raw image manifest bytes
 //
 // <image> must match the deckhouse-cli allowlist (deckhouse-cli or
 // deckhouse-cli/plugins/<plugin>); other paths return 404.
@@ -556,6 +558,7 @@ const (
 	cliActionUnknown cliAction = iota
 	cliActionListTags
 	cliActionPullImage
+	cliActionGetManifest
 )
 
 type cliTagsResponse struct {
@@ -581,6 +584,8 @@ func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleListTags(w, r, imagePath)
 	case cliActionPullImage:
 		h.handlePullImage(w, r, imagePath, ref)
+	case cliActionGetManifest:
+		h.handleGetManifest(w, r, imagePath, ref)
 	default:
 		http.NotFound(w, r)
 	}
@@ -642,6 +647,44 @@ func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imag
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
 	_, _ = w.Write(body)
+}
+
+// handleGetManifest serves an image's raw manifest without pulling any layers, so
+// the CLI can read the plugin contract from its annotations itself. Returns the
+// manifest bytes (200) with the upstream media type, or 404 when ref does not exist.
+func (h *cliHandler) handleGetManifest(w http.ResponseWriter, r *http.Request, imagePath, ref string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientIP := getRequestIP(r)
+	logger := h.proxy.logger
+	logger.Infof("CLI get-manifest for image %q ref %q from client %s", imagePath, ref, clientIP)
+
+	cfg, ok := h.cliClientConfig(w, logger)
+	if !ok {
+		return
+	}
+
+	manifest, mediaType, err := h.proxy.registryClient.GetRawManifest(r.Context(), logger, cfg, imagePath, ref)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "manifest not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("get manifest for %q ref %q: %v", imagePath, ref, err)
+		http.Error(w, "failed to read manifest", http.StatusBadGateway)
+		return
+	}
+
+	if mediaType == "" {
+		mediaType = "application/vnd.oci.image.manifest.v1+json"
+	}
+
+	w.Header().Set("Content-Type", mediaType)
+	w.Header().Set("Content-Length", strconv.Itoa(len(manifest)))
+	_, _ = w.Write(manifest)
 }
 
 func (h *cliHandler) handlePullImage(w http.ResponseWriter, r *http.Request, imagePath, version string) {
@@ -780,6 +823,10 @@ func parseCLIPath(urlPath string) (string, cliAction, string, error) {
 
 	if imagePath, version, ok := cutCLIActionSegment(rest, "images"); ok {
 		return imagePath, cliActionPullImage, version, nil
+	}
+
+	if imagePath, ref, ok := cutCLIActionSegment(rest, "manifests"); ok {
+		return imagePath, cliActionGetManifest, ref, nil
 	}
 
 	return "", cliActionUnknown, "", errors.New("unexpected path suffix")

@@ -58,10 +58,15 @@ func TestParseCLIPath(t *testing.T) {
 		{url: "/v1/images/deckhouse-cli/plugins/foo/images/v2", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionPullImage, wantTag: "v2"},
 		// A plugin named after the action word must still parse (anchor on the last segment).
 		{url: "/v1/images/deckhouse-cli/plugins/images/images/v1.0.0", wantImg: "deckhouse-cli/plugins/images", wantAction: cliActionPullImage, wantTag: "v1.0.0"},
+		{url: "/v1/images/deckhouse-cli/manifests/v1.0.1", wantImg: "deckhouse-cli", wantAction: cliActionGetManifest, wantTag: "v1.0.1"},
+		{url: "/v1/images/deckhouse-cli/plugins/foo/manifests/v2", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionGetManifest, wantTag: "v2"},
+		// A digest ref (colon, no slash) is a valid manifest ref.
+		{url: "/v1/images/deckhouse-cli/plugins/foo/manifests/sha256:abc", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionGetManifest, wantTag: "sha256:abc"},
 		{url: "/v1/images/", wantErr: true},
 		{url: "/v1/images/just-image", wantErr: true},
 		{url: "/v1/images/deckhouse-cli/images", wantErr: true},
 		{url: "/v1/images/deckhouse-cli/images/with/slash", wantErr: true},
+		{url: "/v1/images/deckhouse-cli/manifests", wantErr: true},
 	}
 
 	for _, tc := range cases {
@@ -118,14 +123,18 @@ type fakeCLIRegistryClient struct {
 	lastPlatform        string
 	packageBody         []byte
 	layerDigest         string
+	// rawManifests maps "path:ref" -> raw manifest bytes for GetRawManifest.
+	rawManifests map[string]string
 
 	getPackageCalls int32
 	listTagsCalls   int32
 	resolveTagCalls int32
+	manifestCalls   int32
 
 	listTagsErr   error
 	resolveTagErr error
 	getPackageErr error
+	manifestErr   error
 }
 
 func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path string) ([]string, error) {
@@ -168,6 +177,20 @@ func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, _
 		return 0, "", nil, f.getPackageErr
 	}
 	return int64(len(f.packageBody)), f.layerDigest, io.NopCloser(bytes.NewReader(f.packageBody)), nil
+}
+
+func (f *fakeCLIRegistryClient) GetRawManifest(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, ref string) ([]byte, string, error) {
+	atomic.AddInt32(&f.manifestCalls, 1)
+	if f.manifestErr != nil {
+		return nil, "", f.manifestErr
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	raw, ok := f.rawManifests[path+":"+ref]
+	if !ok {
+		return nil, "", registry.ErrPackageNotFound
+	}
+	return []byte(raw), "application/vnd.oci.image.manifest.v1+json", nil
 }
 
 type fakeCLIGetter struct {
@@ -486,4 +509,48 @@ func TestCLIHandler_PullImage_InvalidPlatform(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.resolveTagCalls))
+}
+
+func TestCLIHandler_GetManifest_HappyPath(t *testing.T) {
+	const manifestJSON = `{"annotations":{"contract":"e30="}}`
+	fake := &fakeCLIRegistryClient{
+		rawManifests: map[string]string{
+			"deckhouse-cli/plugins/foo:v1.0.0": manifestJSON,
+		},
+	}
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/plugins/foo/manifests/v1.0.0")
+	require.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "application/vnd.oci.image.manifest.v1+json", resp.Header.Get("Content-Type"))
+	// The proxy returns the manifest bytes verbatim - it does not decode the contract.
+	assert.Equal(t, manifestJSON, string(body))
+	assert.Equal(t, int32(1), atomic.LoadInt32(&fake.manifestCalls))
+	// The manifest fetch pulls no image/layer.
+	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.getPackageCalls))
+}
+
+func TestCLIHandler_GetManifest_NotFound(t *testing.T) {
+	fake := &fakeCLIRegistryClient{rawManifests: map[string]string{}}
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/plugins/foo/manifests/v9.9.9")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
