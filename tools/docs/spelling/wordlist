@@ -1266,12 +1266,15 @@ resourceAttributes
 ResourceList
 ResourceName
 resourcePolicy
+ResourceQuota
 resourcesTemplate
 resourcе
 RESTful
 Restic
 RHEL
 RockSolid
+rolebinding
+RoleBinding
 roleRef
 RollingUpdate
 rollout
@@ -1705,8 +1708,10 @@ ZvirtInstanceClass
 агрегаторе
 агрегаторов
 агрегаторы
+агрегируются
 агрегирующей
 Агрегирующий
+агрегирующую
 админки
 ает
 Актуализируйте
