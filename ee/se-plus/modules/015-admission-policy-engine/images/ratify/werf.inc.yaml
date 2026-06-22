@@ -1,4 +1,4 @@
-{{ $ratifyVersion := "v1.4.0" }}
+{{ $ratifyVersion := include "get_oss_version_by_id" (list "ratify" $ ) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -33,7 +33,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $ratifyVersion }} --single-branch $(cat /run/secrets/SOURCE_REPO)/ratify-project/ratify.git /src
+  - git clone --depth 1 --branch v{{ $ratifyVersion }} --single-branch $(cat /run/secrets/SOURCE_REPO)/ratify-project/ratify.git /src
   - cd /src
   - git apply /patches/*.patch --verbose --allow-empty
   - rm -rf .git
