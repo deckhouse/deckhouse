@@ -1,8 +1,6 @@
 module discoverer
 
-go 1.23.1
-
-toolchain go1.23.5
+go 1.25.10
 
 replace dvp-common => ../../dvp-common
 

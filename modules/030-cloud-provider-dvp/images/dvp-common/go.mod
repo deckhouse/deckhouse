@@ -1,6 +1,6 @@
 module dvp-common
 
-go 1.23.1
+go 1.25.10
 
 require (
 	github.com/deckhouse/virtualization/api v0.15.0
