@@ -1,8 +1,8 @@
 diff --git a/cmd/ovirt-csi-driver/ovirt-csi-driver.go b/cmd/ovirt-csi-driver/ovirt-csi-driver.go
-index ac4b09a..d348c76 100644
+index ac4b09a..a771757 100644
 --- a/cmd/ovirt-csi-driver/ovirt-csi-driver.go
 +++ b/cmd/ovirt-csi-driver/ovirt-csi-driver.go
-@@ -7,15 +7,16 @@ import (
+@@ -7,15 +7,18 @@ import (
  	"os"
  	"time"
  
@@ -13,8 +13,10 @@ index ac4b09a..d348c76 100644
  	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
  	"k8s.io/client-go/kubernetes"
  	"k8s.io/klog"
++	"sigs.k8s.io/controller-runtime/pkg/cache"
  	"sigs.k8s.io/controller-runtime/pkg/client/config"
  	"sigs.k8s.io/controller-runtime/pkg/manager"
++	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
  	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 +
 +	"github.com/ovirt/csi-driver/internal/ovirt"
@@ -22,7 +24,7 @@ index ac4b09a..d348c76 100644
  )
  
  var (
-@@ -26,8 +27,8 @@ var (
+@@ -26,8 +29,8 @@ var (
  )
  
  func init() {
@@ -32,6 +34,17 @@ index ac4b09a..d348c76 100644
  }
  
  func main() {
+@@ -55,8 +58,8 @@ func handle() {
+ 	}
+ 
+ 	opts := manager.Options{
+-		Namespace:          *namespace,
+-		MetricsBindAddress: "0",
++		Cache:   cache.Options{DefaultNamespaces: map[string]cache.Config{*namespace: {}}},
++		Metrics: metricsserver.Options{BindAddress: "0"},
+ 	}
+ 
+ 	// Create a new Cmd to provide shared dependencies and start components
 diff --git a/internal/ovirt/ovirt.go b/internal/ovirt/ovirt.go
 index df687ae..8a11545 100644
 --- a/internal/ovirt/ovirt.go
