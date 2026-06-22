@@ -1,6 +1,6 @@
 {{ $controllerBranch := "controller-v1.12.1" }}
-{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.30.2-modsecurity-v1.0.4" }}
-{{ $nginxVersion := "1.30.2" }}
+{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.30.3-modsecurity-v1.0.4" }}
+{{ $nginxVersion := "1.30.3" }}
 {{ $nlohmannJsonBranch := "v3.11.3" }}
 {{ $ngxBrotliCommit := "63ca02abdcf79c9e788d2eedcc388d2335902e52" }}
 {{ $modSecurityBranch := "v3.0.14" }}
@@ -417,16 +417,16 @@ shell:
   # build nginx
   - cd "$BUILD_PATH/nginx-$NGINX_VERSION"
 
-  # apply nginx patches
-  - |
-    for PATCH in `ls /patches`;do
-      echo "Patch: $PATCH"
-      if [[ "$PATCH" == *.txt ]]; then
-        patch -p0 < /patches/$PATCH
-      else
-        patch -p1 < /patches/$PATCH
-      fi
-    done
+  # apply nginx patches - patches are already applied in the ingress-nginx-deps
+  #- |
+  #  for PATCH in `ls /patches`;do
+  #    echo "Patch: $PATCH"
+  #    if [[ "$PATCH" == *.txt ]]; then
+  #      patch -p0 < /patches/$PATCH
+  #    else
+  #      patch -p1 < /patches/$PATCH
+  #    fi
+  #  done
 
   - WITH_FLAGS="--with-debug
     --with-compat
