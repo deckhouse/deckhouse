@@ -297,10 +297,10 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           WERF_SIGN_KEY: "hashivault://dh-dev-v01"
-          TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
-          WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
-          INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
-          SIGNING_CERT_PATH: "prod-int-pki/cert/1b:95:65:cf:63:56:78:d3:0d:42:e9:a9:08:92:ee:88:ee:aa:30:aa"
+          TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
+          WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
+          SIGNING_CERT_PATH: "dev-int-pki/cert/56:61:03:74:72:94:e1:e7:7b:d9:ac:44:f1:4c:57:aa:2b:b2:8d:9d"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
