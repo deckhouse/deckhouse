@@ -498,9 +498,8 @@ kubectl set image deployment/node-controller-manager \
 
 ## Testing
 
-Two levels (see `.claude/skills/node-controller-testing/SKILL.md` for the full guide and the
-"why"): **envtest** integration tests run the controller in a real manager against a real
-kube-apiserver and assert object state; **unit** tests cover pure logic. Each controller has a
+Two levels **envtest** integration tests run the controller in a real manager against a real
+kube-apiserver and assert object state, **unit** tests cover pure logic. Each controller has a
 `Test<Name>ControllerEnvtest` suite (skipped automatically if the envtest binaries are absent).
 
 ### Running
