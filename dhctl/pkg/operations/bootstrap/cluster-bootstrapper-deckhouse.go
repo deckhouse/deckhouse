@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	libcon "github.com/deckhouse/lib-connection/pkg"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -27,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
@@ -95,24 +92,10 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return err
 	}
 
-	// The air-gap (NeedsSeed) registry finalize execs commands on the first master
-	// over SSH (cache-ready wait, seed->cache fill, seed teardown). Obtain the node
-	// interface only when SSH hosts are configured; NeedsSeed always has them. For
-	// static/non-SSH installs (no seed path) leave Node nil — the finalize is
-	// guarded on config.Registry.NeedsSeed() and is skipped there.
-	var nodeInterface libcon.Interface
-	if b.SSHProviderInitializer.CheckHosts() {
-		nodeInterface, err = helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
-		if err != nil {
-			return fmt.Errorf("get NodeInterface for registry finalize: %w", err)
-		}
-	}
-
 	_, err = InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installConfig, InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error { return nil },
 		State:               NewBootstrapState(cache.Global()),
 		DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
-		Node:                nodeInterface,
 	})
 
 	return err

@@ -16,35 +16,47 @@ package bashible
 
 import "testing"
 
-func TestBootstrapSeedHostsLocal(t *testing.T) {
+func TestBootstrapAirGapHostsLocal(t *testing.T) {
 	const ca = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
-	hosts := BootstrapSeedHostsLocal(ca, "ro", "ropass")
+	hosts := BootstrapAirGapHostsLocal(ca, "ro", "ropass")
 
 	h, ok := hosts["registry.d8-system.svc:5001"]
 	if !ok {
 		t.Fatalf("missing host key registry.d8-system.svc:5001; got %v", hosts)
 	}
-	// Seed only: the cache (registry-cache.d8-system.svc) must NOT be listed in the
-	// bootstrap drop-in — its pod and cluster DNS do not exist during first-master
-	// bring-up, so listing it makes containerd fail control-plane image pulls on
-	// "no such host". The agent adds the cache after bring-up.
-	if len(h.Mirrors) != 1 {
-		t.Fatalf("mirrors = %d, want 1 (seed only)", len(h.Mirrors))
+	// Two ordered mirrors: on-master cache loopback first, then the bundle tunnel
+	// fallback. The cache Service DNS is not listed (no cluster DNS at bring-up).
+	if len(h.Mirrors) != 2 {
+		t.Fatalf("mirrors = %d, want 2 (cache + bundle tunnel)", len(h.Mirrors))
 	}
-	if h.Mirrors[0].Host != "127.0.0.1:5010" {
-		t.Fatalf("mirror0 host = %q, want 127.0.0.1:5010 (seed only)", h.Mirrors[0].Host)
+
+	cache := h.Mirrors[0]
+	if cache.Host != "127.0.0.1:5001" {
+		t.Fatalf("mirror0 host = %q, want 127.0.0.1:5001 (cache)", cache.Host)
 	}
-	if h.Mirrors[0].Scheme != "https" || h.Mirrors[0].CA != ca {
-		t.Fatalf("mirror0 = %+v, want https + module CA", h.Mirrors[0])
+	if cache.Scheme != "https" || cache.CA != ca {
+		t.Fatalf("mirror0 = %+v, want https + module CA", cache)
 	}
-	// Must carry the read-only PKI creds: the seed's docker-auth rejects anonymous
-	// pull (401), so containerd has to authenticate.
-	if h.Mirrors[0].Auth.Username != "ro" || h.Mirrors[0].Auth.Password != "ropass" {
-		t.Fatalf("mirror0 auth = %+v, want ro/ropass", h.Mirrors[0].Auth)
+	if cache.Auth.Username != "ro" || cache.Auth.Password != "ropass" {
+		t.Fatalf("mirror0 auth = %+v, want ro/ropass", cache.Auth)
 	}
-	// No rewrites: seed served rooted at system/deckhouse; imagesBase carries path.
-	if len(h.Mirrors[0].Rewrites) != 0 {
-		t.Fatalf("unexpected rewrites: %+v", h.Mirrors)
+	if len(cache.Rewrites) != 0 {
+		t.Fatalf("unexpected rewrites on cache mirror: %+v", cache.Rewrites)
+	}
+
+	bundle := h.Mirrors[1]
+	if bundle.Host != "127.0.0.1:5511" {
+		t.Fatalf("mirror1 host = %q, want 127.0.0.1:5511 (bundle tunnel)", bundle.Host)
+	}
+	// The bundle registry is plain HTTP with no auth (loopback over the SSH tunnel).
+	if bundle.Scheme != "http" {
+		t.Fatalf("mirror1 scheme = %q, want http (bundle tunnel)", bundle.Scheme)
+	}
+	if bundle.CA != "" || bundle.Auth.Username != "" || bundle.Auth.Password != "" {
+		t.Fatalf("mirror1 = %+v, want no CA / no auth", bundle)
+	}
+	if len(bundle.Rewrites) != 0 {
+		t.Fatalf("unexpected rewrites on bundle mirror: %+v", bundle.Rewrites)
 	}
 }
 

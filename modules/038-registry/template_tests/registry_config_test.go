@@ -1,18 +1,16 @@
-/*
-Copyright 2026 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package template_tests
 
@@ -76,7 +74,7 @@ internal:
     phase: TakingOver
 `
 
-const registryModuleSourceOrderingValues = `
+const registryAdditionalOrderingValues = `
 upstream:
   host: up.example.com
   scheme: HTTPS
@@ -86,11 +84,6 @@ additionalRegistries:
 internal:
   takeover:
     phase: TakingOver
-  moduleSourceEntries:
-    - host: modules.example.com
-      upstream:
-        host: up.example.com
-        scheme: HTTPS
 `
 
 // Derived-config fixtures (7b-2). phase TakingOver keeps isLegacy truthy so the
@@ -211,15 +204,15 @@ var _ = Describe("Module :: registry :: helm template :: registry-config", func(
 		})
 	})
 
-	Context("ModuleSource ordering (Primary → Additional → ModuleSource)", func() {
+	Context("registry ordering (Primary → Additional)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("registry", registryModuleSourceOrderingValues)
+			f.ValuesSetFromYaml("registry", registryAdditionalOrderingValues)
 			f.HelmRender()
 		})
 
-		It("places Primary at index 0, Additional at index 1, ModuleSource at index 2", func() {
+		It("places Primary at index 0, Additional at index 1", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			rc := f.KubernetesGlobalResource("RegistryConfig", "registry")
@@ -230,9 +223,6 @@ var _ = Describe("Module :: registry :: helm template :: registry-config", func(
 
 			Expect(rc.Field("spec.registries.1.source").String()).To(Equal("Additional"))
 			Expect(rc.Field("spec.registries.1.host").String()).To(Equal("extra.example.com"))
-
-			Expect(rc.Field("spec.registries.2.source").String()).To(Equal("ModuleSource"))
-			Expect(rc.Field("spec.registries.2.host").String()).To(Equal("modules.example.com"))
 		})
 	})
 

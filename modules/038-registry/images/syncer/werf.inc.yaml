@@ -3,11 +3,6 @@ image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
 final: false
 git:
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /src/scripts
-    stageDependencies:
-      install:
-        - '**/*'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/app
     to:  /src/app
     stageDependencies:
@@ -43,13 +38,6 @@ shell:
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-    add: /src/scripts
-    to: /
-    includePaths:
-    - install
-    - uninstall
-    before: setup
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /syncer
     to: /syncer

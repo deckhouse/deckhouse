@@ -22,18 +22,6 @@ properties:
             x-examples:
               - plainstring
 
-      moduleSourceEntries:
-        type: array
-        default: []
-        description: Module-source registry entries projected by the module-source controller (populated by a later plan).
-        items:
-          type: object
-          # additionalProperties:true is REQUIRED, not just x-kubernetes-preserve-unknown-fields:
-          # addon-operator's value validator does not honor the k8s extension and would force
-          # additionalProperties:false, rejecting the host/upstream/source keys the projection
-          # hook sets (would fail internal-values validation in production).
-          additionalProperties: true
-          x-kubernetes-preserve-unknown-fields: true
       cache:
         type: object
         default: {}
@@ -96,19 +84,6 @@ properties:
                 role:
                   type: string
                   enum: [ReadOnly, ReadWrite]
-      webhook:
-        type: object
-        default: {}
-        description: |-
-          TLS credentials for the registry-webhook admission server.
-          Populated by hooks/webhook/tls.go via RegisterInternalTLSHook.
-        properties:
-          ca:
-            type: string
-          crt:
-            type: string
-          key:
-            type: string
       takeover:
         type: object
         default: {}

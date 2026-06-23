@@ -210,7 +210,7 @@ func (m *CleanModel) bashibleConfig(pki PKI) (BashibleConfig, error) {
 		cfg.Mode = "Unmanaged"
 		cfg.Hosts = unmanagedHosts(m.Remote)
 	} else if m.NeedsSeed() {
-		cfg.Hosts = toConfigHosts(bashible.BootstrapSeedHostsLocal(pki.CA.Cert, pki.ROUser.Name, pki.ROUser.Password))
+		cfg.Hosts = toConfigHosts(bashible.BootstrapAirGapHostsLocal(pki.CA.Cert, pki.ROUser.Name, pki.ROUser.Password))
 	} else {
 		// connected (with or without cache): forward to upstream during bring-up.
 		host, path := m.Remote.AddressAndPath()

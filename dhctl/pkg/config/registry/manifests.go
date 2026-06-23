@@ -185,22 +185,11 @@ func (b *modeManifestBuilder) BashibleContext(pkiProvider PKIProvider) (Bashible
 			}
 		}
 
-		// Air-gap (Local mode) bootstrap seed:
-		// Replace the FSM Proxy/Local host list from BashibleConfig with two local
-		// mirrors: cache first (preferred once up), then the on-node seed process
-		// (available from the start, before the cache is ready). Both use https
-		// with the module CA. No path rewrite: both are rooted at system/deckhouse
-		// and imagesBase already carries the path (constant.HostWithPath).
-		//
-		// The seed is filled once over the SSH reverse tunnel (registry-syncer
-		// 127.0.0.1:5511 -> 127.0.0.1:5010), then the tunnel is never in the
-		// pull path. For Direct/Proxy modes ToContext() already produced the
-		// correct upstream mirror with the ^system/deckhouse rewrite; we keep it.
-		//
-		// After bring-up the registry-agent takes over registry.d and re-renders
-		// these mirrors with the permanent in-cluster entries.
+		// Air-gap (Local): replace the host list with the two-mirror bootstrap
+		// drop-in (on-master cache + bundle tunnel fallback). Direct/Proxy keep the
+		// upstream mirror ToContext() already produced.
 		if b.modeModel.Mode == constant.ModeLocal {
-			ctx.Hosts = bashible.BootstrapSeedHostsLocal(pki.CA.Cert, pki.ROUser.Name, pki.ROUser.Password)
+			ctx.Hosts = bashible.BootstrapAirGapHostsLocal(pki.CA.Cert, pki.ROUser.Name, pki.ROUser.Password)
 			ctx.ProxyEndpoints = nil
 		}
 	}

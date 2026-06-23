@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,6 +70,7 @@ const (
 	PreInfraPreflightsPhase                OperationPhase = "PreInfraPreflights"
 	PostInfraPreflightsPhase               OperationPhase = "PostInfraPreflights"
 	InstallKubernetesPhase                 OperationPhase = "InstallKubernetes"
+	InstallRegistryPhase                   OperationPhase = "InstallRegistry"
 	InstallDeckhousePhase                  OperationPhase = "InstallDeckhouse"
 	CreateResourcesPhase                   OperationPhase = "CreateResources"
 	InstallAdditionalMastersAndStaticNodes OperationPhase = "InstallAdditionalMastersAndStaticNodes"
@@ -176,6 +177,7 @@ func BootstrapPhases() []PhaseWithSubPhases {
 				InstallKubernetesSubPhaseExecuteBashibleBundle,
 			},
 		},
+		{Phase: InstallRegistryPhase},
 		{
 			Phase: InstallDeckhousePhase,
 			SubPhases: []OperationSubPhase{

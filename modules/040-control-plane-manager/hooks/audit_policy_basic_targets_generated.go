@@ -153,7 +153,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-system:registry-agent",
 	"system:serviceaccount:d8-system:registry-cache",
 	"system:serviceaccount:d8-system:registry-nodeservices",
-	"system:serviceaccount:d8-system:registry-webhook",
 	"system:serviceaccount:d8-system:terraform-auto-converger",
 	"system:serviceaccount:d8-system:terraform-state-exporter",
 	"system:serviceaccount:d8-system:webhook-handler",

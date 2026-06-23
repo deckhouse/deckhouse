@@ -1,18 +1,16 @@
-/*
-Copyright 2026 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package config
 
@@ -189,55 +187,6 @@ func TestBuild_DockerCfgUsernamePassword(t *testing.T) {
 	}
 	if routes[0].Upstream.Creds.Password != "secret" {
 		t.Errorf("password: want %q, got %q", "secret", routes[0].Upstream.Creds.Password)
-	}
-}
-
-func TestBuild_ModuleSourcePathPrefix(t *testing.T) {
-	cfg := RegistryConfig{Registries: []RegistryEntry{{
-		Host:     "nexus.example.com/modules/a",
-		Source:   SourceModuleSource,
-		Upstream: &UpstreamSpec{Host: "nexus.example.com", Path: "modules/a", Scheme: "HTTPS"},
-		Cache:    &CacheSpec{Enabled: false},
-	}}}
-	ds, routes, err := Build(cfg, opts())
-	if err != nil {
-		t.Fatal(err)
-	}
-	// ModuleSource entries ride the primary's containerd host — no separate host.
-	if _, exists := ds.Hosts["nexus.example.com/modules/a"]; exists {
-		t.Errorf("ModuleSource entry must not create its own containerd host")
-	}
-	if len(routes) != 1 {
-		t.Fatalf("expected 1 route, got %d", len(routes))
-	}
-	r := routes[0]
-	if r.NS != PrimaryHost {
-		t.Errorf("NS: want %q, got %q", PrimaryHost, r.NS)
-	}
-	if r.PathPrefix != "nexus.example.com/modules/a" {
-		t.Errorf("PathPrefix: want %q, got %q", "nexus.example.com/modules/a", r.PathPrefix)
-	}
-	if r.Mode != proxy.ModeDirect || r.Upstream == nil {
-		t.Fatalf("want ModeDirect with upstream, got mode=%v upstream=%v", r.Mode, r.Upstream)
-	}
-	if r.Upstream.URL != "https://nexus.example.com" {
-		t.Errorf("URL: want %q, got %q", "https://nexus.example.com", r.Upstream.URL)
-	}
-	if r.Upstream.LocalPathAlias != "nexus.example.com/modules/a" {
-		t.Errorf("LocalPathAlias: want %q, got %q", "nexus.example.com/modules/a", r.Upstream.LocalPathAlias)
-	}
-	if r.Upstream.RemotePath != "modules/a" {
-		t.Errorf("RemotePath: want %q, got %q", "modules/a", r.Upstream.RemotePath)
-	}
-}
-
-func TestBuild_ModuleSourceRequiresUpstream(t *testing.T) {
-	cfg := RegistryConfig{Registries: []RegistryEntry{{
-		Host:   "nexus.example.com/modules/a",
-		Source: SourceModuleSource,
-	}}}
-	if _, _, err := Build(cfg, opts()); err == nil {
-		t.Fatal("expected error: ModuleSource entry without upstream")
 	}
 }
 

@@ -16,7 +16,7 @@ spec:
                       host:
                         description: Виртуальный адрес, перехватываемый на узлах (containerd registry.d/<host>).
                       source:
-                        description: Источник записи (Primary, Additional, ModuleSource).
+                        description: Источник записи (Primary, Additional).
                       upstream:
                         description: Реальный upstream registry. Отсутствие означает air-gap (отдаётся только из кеша).
                         properties:

@@ -430,7 +430,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
 		"registryAgent":       "imageHash-registry-registryAgent",
 		"registryProxy":       "imageHash-registry-registryProxy",
-		"registryWebhook":     "imageHash-registry-registryWebhook",
 		"syncer":              "imageHash-registry-syncer",
 	},
 	"registryPackagesProxy": map[string]interface{}{

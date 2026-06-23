@@ -1,18 +1,16 @@
-/*
-Copyright 2026 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package template_tests
 
@@ -117,22 +115,28 @@ var _ = Describe("Module :: registry :: helm template :: cache secrets", func() 
 			Expect(s.Field(`data.upstream-registry-ca\.crt`).String()).To(Equal(b64("UPSTREAM_CA_PEM")))
 		})
 
-		It("renders the HA StatefulSet on masters with three containers + RWO volumeClaimTemplate", func() {
+		It("renders the cache DaemonSet on masters with three containers + hostPath store", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			s := f.KubernetesResource("StatefulSet", "d8-system", "registry-cache")
+			s := f.KubernetesResource("DaemonSet", "d8-system", "registry-cache")
 			Expect(s.Exists()).To(BeTrue())
-			Expect(s.Field("spec.serviceName").String()).To(Equal("registry-cache-peers"))
 			names := []string{
 				s.Field("spec.template.spec.containers.0.name").String(),
 				s.Field("spec.template.spec.containers.1.name").String(),
 				s.Field("spec.template.spec.containers.2.name").String(),
 			}
 			Expect(names).To(ConsistOf("distribution", "auth", "cache-agent"))
-			Expect(s.Field("spec.volumeClaimTemplates.0.spec.accessModes.0").String()).To(Equal("ReadWriteOnce"))
-			Expect(s.Field("spec.volumeClaimTemplates.0.spec.resources.requests.storage").String()).To(Equal("50Gi"))
+			// node-local hostPath store, not a PVC.
+			vols := s.Field("spec.template.spec.volumes").Array()
+			var dataPath string
+			for _, v := range vols {
+				if v.Get("name").String() == "data" {
+					dataPath = v.Get("hostPath.path").String()
+				}
+			}
+			Expect(dataPath).To(Equal("/var/lib/deckhouse/registry-cache"))
 		})
 
-		It("renders read, leader, and headless Services", func() {
+		It("renders read and leader Services (no peers headless Service)", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			read := f.KubernetesResource("Service", "d8-system", "registry-cache")
 			Expect(read.Exists()).To(BeTrue())
@@ -140,9 +144,8 @@ var _ = Describe("Module :: registry :: helm template :: cache secrets", func() 
 			leader := f.KubernetesResource("Service", "d8-system", "registry-cache-leader")
 			Expect(leader.Exists()).To(BeTrue())
 			Expect(leader.Field("spec.selector.registry-cache-role").String()).To(Equal("leader"))
-			peers := f.KubernetesResource("Service", "d8-system", "registry-cache-peers")
-			Expect(peers.Exists()).To(BeTrue())
-			Expect(peers.Field("spec.clusterIP").String()).To(Equal("None"))
+			// No StatefulSet → no headless peers Service.
+			Expect(f.KubernetesResource("Service", "d8-system", "registry-cache-peers").Exists()).To(BeFalse())
 		})
 
 		It("renders the agent config secret with ro/rw creds and CA", func() {
@@ -182,7 +185,7 @@ var _ = Describe("Module :: registry :: helm template :: cache secrets", func() 
 
 		It("renders no cache workload", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("StatefulSet", "d8-system", "registry-cache").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-system", "registry-cache").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-system", "registry-cache").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-system", "registry-cache-leader").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "d8-system", "registry-cache-agent").Exists()).To(BeFalse())

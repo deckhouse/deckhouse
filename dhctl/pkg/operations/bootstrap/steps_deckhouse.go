@@ -24,8 +24,6 @@ import (
 
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	libcon "github.com/deckhouse/lib-connection/pkg"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -44,11 +42,6 @@ type InstallDeckhouseParams struct {
 	BeforeDeckhouseTask func() error
 	State               *State
 	DeckhouseTimeout    time.Duration
-	// Node is the first-master connection used by the air-gap (NeedsSeed) registry
-	// finalize (cache-ready wait, seed->cache fill, seed teardown). It is required
-	// only when config.Registry.NeedsSeed() is true (air-gap requires SSH); for
-	// non-seed installs and resume/non-SSH callers it may be nil.
-	Node libcon.Interface
 }
 
 func InstallDeckhouse(
@@ -95,36 +88,14 @@ func InstallDeckhouse(
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
-		// Registry new-arch finalize. Air-gap (NeedsSeed) only: the cache must come
-		// up and be filled from the on-node seed before the seed is torn down.
-		// Direct/Proxy need none of this (no seed, cache pull-through or off).
+		// Air-gap (NeedsSeed) only: wait for the module cache + agent to take over,
+		// then tear the temporary bootstrap cache down.
 		if config.Registry.NeedsSeed() {
-			// air-gap (NeedsSeed) requires an SSH connection (the bootstrap tunnel).
-			// The node interface is mandatory here; a nil Node means a caller wired
-			// the finalize wrong, so fail clearly rather than nil-panic later.
-			if params.Node == nil {
-				return fmt.Errorf("registry finalize: air-gap (NeedsSeed) install requires a node connection, but none was provided")
-			}
-
 			if err := registry_ops.WaitForCacheAndAgentReady(ctx, kubeCl); err != nil {
 				return fmt.Errorf("registry cache/agent not ready: %w", err)
 			}
-
-			fillParams, err := registry_ops.CacheFillParamsFromInitSecret(ctx, kubeCl, params.Node)
-			if err != nil {
-				return fmt.Errorf("read registry-init for cache fill: %w", err)
-			}
-			if err := registry_ops.FillCacheFromSeed(ctx, fillParams); err != nil {
-				return fmt.Errorf("fill cache from seed: %w", err)
-			}
-			if err := registry_ops.VerifyCacheNonEmpty(ctx, fillParams); err != nil {
-				return fmt.Errorf("verify cache non-empty: %w", err)
-			}
-			if err := registry_ops.DeleteBootstrapSecret(ctx, kubeCl); err != nil {
-				return fmt.Errorf("delete registry-bootstrap secret: %w", err)
-			}
-			if err := registry_ops.TeardownSeed(ctx, params.Node); err != nil {
-				return fmt.Errorf("teardown registry seed: %w", err)
+			if err := registry_ops.DeleteBootstrapCache(ctx, kubeCl); err != nil {
+				return fmt.Errorf("delete bootstrap cache: %w", err)
 			}
 		}
 

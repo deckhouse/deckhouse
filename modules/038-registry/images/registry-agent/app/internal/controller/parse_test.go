@@ -58,7 +58,7 @@ func fullObject() *unstructured.Unstructured {
 					},
 					map[string]interface{}{
 						"host":   "minimal.example.io",
-						"source": "ModuleSource",
+						"source": "Additional",
 						// no upstream, no cache
 					},
 				},
@@ -171,8 +171,8 @@ func TestParseRegistryConfig_AbsentOptionals(t *testing.T) {
 	if e.Host != "minimal.example.io" {
 		t.Errorf("host: got %q, want %q", e.Host, "minimal.example.io")
 	}
-	if e.Source != "ModuleSource" {
-		t.Errorf("source: got %q, want %q", e.Source, "ModuleSource")
+	if e.Source != "Additional" {
+		t.Errorf("source: got %q, want %q", e.Source, "Additional")
 	}
 	if e.Upstream != nil {
 		t.Errorf("upstream: got non-nil, want nil")

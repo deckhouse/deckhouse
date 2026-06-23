@@ -159,10 +159,9 @@ func TestManifestsLegacyMode(t *testing.T) {
 }
 
 // TestBashibleContext_LocalMode asserts Local (air-gap) mode uses HostWithPath as
-// ImagesBase and seeds containerd with a SINGLE mirror: the on-node seed,
-// authenticated as the read-only PKI user, https with the module CA, no rewrites.
-// The in-cluster cache is NOT listed — its pod and cluster DNS do not exist during
-// first-master bring-up (the agent adds it afterwards).
+// ImagesBase and two ordered mirrors: the on-master cache (127.0.0.1:5001, https +
+// CA + RO auth) then the bundle tunnel (127.0.0.1:5511, http). No rewrite; no
+// cache Service DNS.
 func TestBashibleContext_LocalMode(t *testing.T) {
 	cfg := ConfigBuilder(WithModeLocal())
 	ctx, err := cfg.Manifest().BashibleContext(GeneratePKI)
@@ -173,21 +172,29 @@ func TestBashibleContext_LocalMode(t *testing.T) {
 		"Local mode ImagesBase must be constant.HostWithPath (%s), got %s",
 		constant.HostWithPath, ctx.ImagesBase)
 
-	// C2: Hosts must contain exactly one mirror — the on-node seed.
+	// C2: Hosts must contain exactly two mirrors — cache hostPort then bundle tunnel.
 	entry, ok := ctx.Hosts[constant.Host]
 	require.True(t, ok, "ctx.Hosts must have key constant.Host (%s)", constant.Host)
-	require.Len(t, entry.Mirrors, 1, "Local mode must have exactly 1 mirror (seed only)")
+	require.Len(t, entry.Mirrors, 2, "Local mode must have exactly 2 mirrors (cache + bundle tunnel)")
 
-	// Mirror 0: on-node seed process (available from first boot).
-	seed := entry.Mirrors[0]
-	require.Equal(t, "127.0.0.1:5010", seed.Host,
-		"mirror0 must be the on-node seed")
-	require.Equal(t, "https", seed.Scheme, "seed mirror scheme must be https")
-	require.NotEmpty(t, seed.CA, "seed mirror must carry the module CA")
-	require.NotEmpty(t, seed.Auth.Username, "seed mirror must authenticate (docker-auth rejects anonymous)")
-	require.NotEmpty(t, seed.Auth.Password, "seed mirror must carry the RO password")
-	require.Empty(t, seed.Rewrites,
-		"seed mirror must have NO rewrites: seed serves rooted at system/deckhouse")
+	// Mirror 0: the on-master cache hostPort (preferred once up and filled).
+	cache := entry.Mirrors[0]
+	require.Equal(t, "127.0.0.1:5001", cache.Host,
+		"mirror0 must be the on-master cache hostPort")
+	require.Equal(t, "https", cache.Scheme, "cache mirror scheme must be https")
+	require.NotEmpty(t, cache.CA, "cache mirror must carry the module CA")
+	require.NotEmpty(t, cache.Auth.Username, "cache mirror must authenticate (docker-auth rejects anonymous)")
+	require.NotEmpty(t, cache.Auth.Password, "cache mirror must carry the RO password")
+	require.Empty(t, cache.Rewrites,
+		"cache mirror must have NO rewrites: it serves rooted at system/deckhouse")
+
+	// Mirror 1: the dhctl-side bundle registry over the reverse tunnel (fallback).
+	bundle := entry.Mirrors[1]
+	require.Equal(t, "127.0.0.1:5511", bundle.Host, "mirror1 must be the bundle tunnel")
+	require.Equal(t, "http", bundle.Scheme, "bundle mirror scheme must be http")
+	require.Empty(t, bundle.CA, "bundle mirror is plain HTTP, no CA")
+	require.Empty(t, bundle.Auth.Username, "bundle mirror is anonymous")
+	require.Empty(t, bundle.Rewrites, "bundle mirror must have NO rewrites")
 
 	// I1: Managed mode → module must be enabled and Bootstrap must be set.
 	require.True(t, ctx.RegistryModuleEnable, "Local mode must enable registry module")

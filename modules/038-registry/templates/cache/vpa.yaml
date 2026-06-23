@@ -10,7 +10,7 @@ metadata:
 spec:
   targetRef:
     apiVersion: "apps/v1"
-    kind: StatefulSet
+    kind: DaemonSet
     name: registry-cache
   updatePolicy:
     updateMode: "Recreate"

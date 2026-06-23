@@ -21,13 +21,6 @@
   {{- $_ := set $e "source" "Additional" -}}
   {{- $entries = append $entries $e -}}
 {{- end }}
-
-{{- /* Module-source entries projected by a later plan (empty by default) */ -}}
-{{- range (.Values.registry.internal).moduleSourceEntries }}
-  {{- $e := deepCopy . -}}
-  {{- $_ := set $e "source" "ModuleSource" -}}
-  {{- $entries = append $entries $e -}}
-{{- end }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: RegistryConfig

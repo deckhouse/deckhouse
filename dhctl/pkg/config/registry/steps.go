@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,10 +63,10 @@ func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClie
 	if !config.LegacyMode {
 		// New-arch readiness: require only that registry-init was applied (the PKI
 		// hook persisted the CA into registry-module-pki and set the is-applied
-		// annotation). Cache + agent readiness and the seed->cache fill are
-		// verified earlier in the dhctl finalize sequence
-		// (WaitForCacheAndAgentReady, FillCacheFromSeed, VerifyCacheNonEmpty);
-		// the legacy registry-state Ready condition is no longer consulted.
+		// annotation). Cache + agent readiness is verified earlier in the dhctl
+		// finalize sequence (WaitForCacheAndAgentReady), after which the temporary
+		// bootstrap cache is torn down (DeleteBootstrapCache); the legacy
+		// registry-state Ready condition is no longer consulted.
 		if err := checkInit(ctx, kubeClient); err != nil {
 			log.DebugF("Error while checking registry init: %v\n", err)
 			return ErrIsNotReady

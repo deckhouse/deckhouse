@@ -1,18 +1,16 @@
-/*
-Copyright 2026 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package config
 
@@ -127,15 +125,6 @@ func Build(cfg RegistryConfig, opts Options) (containerd.DesiredState, []proxy.R
 	routes := make([]proxy.Route, 0, len(cfg.Registries))
 
 	for _, e := range cfg.Registries {
-		if e.Source == SourceModuleSource {
-			route, err := moduleSourceRoute(e)
-			if err != nil {
-				return containerd.DesiredState{}, nil, fmt.Errorf("registry %q: %w", e.Host, err)
-			}
-			routes = append(routes, route)
-			continue // no separate containerd host: rides the primary's registry.d entry
-		}
-
 		cacheOn := e.Cache != nil && e.Cache.Enabled
 
 		// containerd entries: agent primary, cache failover only when cache-on.
@@ -214,35 +203,4 @@ func localAliasFor(e RegistryEntry) string {
 		return PrimaryLocalPathAlias
 	}
 	return ""
-}
-
-// moduleSourceRoute builds a path-prefix route for a module-source entry under
-// PrimaryHost. The entry Host is the rewritten repo prefix (<orig-host>/<orig-path>);
-// the agent strips it and forwards to the real upstream's repo path. ModeDirect
-// only — caching module sources through the shared cache is not yet supported.
-func moduleSourceRoute(e RegistryEntry) (proxy.Route, error) {
-	if e.Upstream == nil {
-		return proxy.Route{}, fmt.Errorf("ModuleSource entry has no upstream")
-	}
-	u := e.Upstream
-	scheme := strings.ToLower(u.Scheme)
-	if scheme == "" {
-		scheme = "https"
-	}
-	creds, err := credsFor(u)
-	if err != nil {
-		return proxy.Route{}, err
-	}
-	return proxy.Route{
-		NS:         PrimaryHost,
-		PathPrefix: e.Host,
-		Mode:       proxy.ModeDirect,
-		Upstream: &proxy.Upstream{
-			URL:            scheme + "://" + u.Host,
-			CA:             u.CA,
-			Creds:          creds,
-			LocalPathAlias: e.Host,
-			RemotePath:     strings.Trim(u.Path, "/"),
-		},
-	}, nil
 }

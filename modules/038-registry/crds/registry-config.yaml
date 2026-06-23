@@ -49,7 +49,7 @@ spec:
                         description: Virtual address intercepted on nodes (containerd registry.d/<host>).
                       source:
                         type: string
-                        enum: [Primary, Additional, ModuleSource]
+                        enum: [ Primary, Additional ]
                         default: Additional
                         description: Provenance of the entry.
                       upstream:

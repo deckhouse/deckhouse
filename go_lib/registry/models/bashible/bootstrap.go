@@ -14,34 +14,25 @@
 
 package bashible
 
-// BootstrapSeedHostsLocal builds the first-master bootstrap containerd drop-in
-// for the air-gap (Local mode) install. containerd resolves
-// registry.d8-system.svc:5001 to a single mirror:
-//
-//	127.0.0.1:5010 (the on-node raw-process seed, local disk — serves the
-//	whole bring-up before the cache is ready)
-//
-// https with the module CA, authenticating as the read-only PKI user: the seed's
-// docker-auth ACL grants pull only to the "ro"/"rw" accounts and rejects
-// anonymous token requests with 401, so containerd must present credentials. No
-// path rewrite: the seed store serves rooted at system/deckhouse, and imagesBase
-// already carries the path (constant.HostWithPath =
-// "registry.d8-system.svc:5001/system/deckhouse"), so containerd sends the
-// correct /v2/system/deckhouse/... request directly.
-//
-// The in-cluster cache (registry-cache.d8-system.svc:5001) is deliberately NOT
-// listed here: during first-master bring-up the cache pod does not exist yet and
-// there is no cluster DNS to resolve its name, so listing it (especially first)
-// makes containerd fail every control-plane image pull on "no such host" before
-// it reaches the seed. The registry-agent adds the cache mirror after bring-up,
-// once it takes over registry.d.
-//
-// The seed is filled once over the SSH reverse tunnel (bashible registry-syncer
-// 127.0.0.1:5511 -> 127.0.0.1:5010), then the tunnel is never in the bring-up
-// pull path.
-func BootstrapSeedHostsLocal(ca, username, password string) map[string]ContextHosts {
-	seedMirror := ContextMirrorHost{
-		Host:   "127.0.0.1:5010",
+const (
+	// on-master bootstrap cache (hostNetwork pod) on the node loopback; the
+	// distribution cert carries a 127.0.0.1 SAN.
+	cacheBootstrapHostLocal = "127.0.0.1:5001"
+	// dhctl-side bundle registry over the SSH reverse tunnel (plain HTTP) — the
+	// bring-up fallback until the cache is filled.
+	bundleTunnelHostLocal = "127.0.0.1:5511"
+)
+
+// BootstrapAirGapHostsLocal builds the first-master air-gap containerd drop-in:
+// registry.d8-system.svc:5001 -> two ordered mirrors — the on-master cache loopback
+// (https, module CA, RO creds) then the bundle tunnel (http) as the bring-up
+// fallback (cache absent -> connection refused -> falls through to the bundle).
+// No rewrite: both serve rooted at system/deckhouse (imagesBase carries the path).
+// The cache Service DNS is not listed — no cluster DNS from the node netns at
+// bring-up; the agent re-renders Service mirrors post-install.
+func BootstrapAirGapHostsLocal(ca, username, password string) map[string]ContextHosts {
+	cacheMirror := ContextMirrorHost{
+		Host:   cacheBootstrapHostLocal,
 		Scheme: "https",
 		CA:     ca,
 		Auth: ContextAuth{
@@ -49,8 +40,12 @@ func BootstrapSeedHostsLocal(ca, username, password string) map[string]ContextHo
 			Password: password,
 		},
 	}
+	bundleMirror := ContextMirrorHost{
+		Host:   bundleTunnelHostLocal,
+		Scheme: "http",
+	}
 	return map[string]ContextHosts{
-		"registry.d8-system.svc:5001": {Mirrors: []ContextMirrorHost{seedMirror}},
+		"registry.d8-system.svc:5001": {Mirrors: []ContextMirrorHost{cacheMirror, bundleMirror}},
 	}
 }
 

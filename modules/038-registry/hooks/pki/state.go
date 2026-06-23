@@ -1,18 +1,16 @@
-/*
-Copyright 2026 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package pki
 
@@ -33,13 +31,17 @@ const (
 	distributionCN = "registry-distribution"
 	authCN         = "registry-auth"
 
-	registryServiceDNS = "registry.d8-system.svc"
-	cacheServiceDNS    = "registry-cache.d8-system.svc"
+	registryServiceDNS    = "registry.d8-system.svc"
+	cacheServiceDNS       = "registry-cache.d8-system.svc"
+	cacheLeaderServiceDNS = "registry-cache-leader.d8-system.svc"
 )
 
 var (
-	agentHosts        = []string{"127.0.0.1", "localhost", registryServiceDNS}
-	distributionHosts = []string{cacheServiceDNS, "127.0.0.1", "localhost"}
+	agentHosts = []string{"127.0.0.1", "localhost", registryServiceDNS}
+	// The distribution serves on both the all-replicas Service (reads) and the
+	// leader Service (writes — store-sync from the bootstrap seed and the legacy
+	// migration both push to registry-cache-leader), so the cert must cover both.
+	distributionHosts = []string{cacheServiceDNS, cacheLeaderServiceDNS, "127.0.0.1", "localhost"}
 	authHosts         = []string{"127.0.0.1", "localhost"}
 )
 

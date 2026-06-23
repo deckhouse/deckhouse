@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -256,6 +256,7 @@ func phaseToString(p phases.Progress, completed bool) string {
 	phasesMap[phases.PostInfraPreflightsPhase] = "Static and post-infra preflight checks"
 	phasesMap[phases.BaseInfraPhase] = "Base Infrastructure"
 	phasesMap[phases.InstallKubernetesPhase] = "Install Kubernetes on the first master node"
+	phasesMap[phases.InstallRegistryPhase] = "Set up the registry cache on the first master node"
 	phasesMap[phases.InstallDeckhousePhase] = "Install Deckhouse"
 	phasesMap[phases.CreateResourcesPhase] = "Create resources"
 	phasesMap[phases.InstallAdditionalMastersAndStaticNodes] = "Install additional master nodes and CloudPermanent nodes"
