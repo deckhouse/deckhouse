@@ -18,6 +18,9 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: Label selector that defines which namespaces are protected by this policy.
+      type: string
+      jsonPath: .spec.protectedNamespaces.matchLabels
     - description: Namespaces protected by this policy
       jsonPath: .status.protectedNamespace
       name: ProtectedNamespaces
