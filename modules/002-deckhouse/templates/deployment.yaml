@@ -180,7 +180,7 @@ spec:
   {{- end }}
 {{- end }}
             - name: LOG_LEVEL
-              value: {{ .Values.deckhouse.logLevel }}
+              value: "debug"
             - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
               value: "true"
             - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
