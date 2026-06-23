@@ -31,7 +31,6 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/cpnplanner"
-	"control-plane-manager/internal/operations"
 )
 
 const requeueInterval = 5 * time.Minute
@@ -39,8 +38,9 @@ const requeueInterval = 5 * time.Minute
 type reconciler struct {
 	client client.Client
 	// apiReader is an uncached reader used to confirm, right before creating an operation, that the previous reconcile of the same node did not already create it.
-	apiReader client.Reader
-	scheme    *runtime.Scheme
+	apiReader        client.Reader
+	scheme           *runtime.Scheme
+	operationBuilder cpnplanner.OperationBuilder
 }
 
 var _ reconcile.Reconciler = (*reconciler)(nil)
@@ -95,7 +95,7 @@ func (r *reconciler) reconcileStatus(ctx context.Context, cpn *controlplanev1alp
 // Deduplication is done first against the informer cache. Only when that decides something must be created do we re-check against a strongly-consistent uncached read.
 // This prevents duplicates without paying the uncached read on steady-state reconciles.
 func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation) error {
-	if len(cpnplanner.RequiredOperations(cpn, current, operations.VirtualBuilder{})) == 0 {
+	if len(cpnplanner.RequiredOperations(cpn, current, r.operationBuilder)) == 0 {
 		return nil // nothing to create: no uncached read on steady-state reconciles
 	}
 
@@ -103,7 +103,7 @@ func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev
 	if err != nil {
 		return err
 	}
-	for _, op := range cpnplanner.RequiredOperations(cpn, fresh, operations.VirtualBuilder{}) {
+	for _, op := range cpnplanner.RequiredOperations(cpn, fresh, r.operationBuilder) {
 		if err := r.createOperation(ctx, cpn, op); err != nil {
 			return err
 		}
