@@ -170,7 +170,7 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 			"delay", currentSlot.Sub(nextSlot).String(),
 			"gracePeriod", defragGracePeriod.String(),
 		)
-		stateData := map[string]string{defragLastSlotKey: nextSlot.Format(time.RFC3339)}
+		stateData := map[string]string{defragLastSlotKey: currentSlot.Format(time.RFC3339)}
 		input.PatchCollector.CreateOrUpdate(buildDefragStateCM(stateData))
 		return nil
 	}

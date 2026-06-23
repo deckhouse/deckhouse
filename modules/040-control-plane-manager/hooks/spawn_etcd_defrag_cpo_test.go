@@ -244,7 +244,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 				Expect(spec["component"]).To(Equal("Etcd"))
 				Expect(spec["approved"]).To(Equal(false))
 				steps, _ := spec["steps"].([]interface{})
-				Expect(steps).To(ConsistOf("DefragEtcd"))
+				Expect(steps).To(ConsistOf("DefragEtcd", "WaitPodReady"))
 
 				meta, _ := cpo["metadata"].(map[string]interface{})
 				labels, _ := meta["labels"].(map[string]interface{})
@@ -290,16 +290,16 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
-		It("creates no CPOs and advances lastHandledCronSlot past the missed slot", func() {
+		It("creates no CPOs and sets lastHandledCronSlot to currentSlot to resume on the next tick", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			count, _ := listCPOs(f)
 			Expect(count).To(Equal(0))
 			cm := f.KubernetesResource("ConfigMap", "kube-system", defragStateCMName)
 			Expect(cm.Exists()).To(BeTrue())
-			// lastHandledCronSlot must be updated so the hook does not retry the stale slot.
+			// Must jump to currentSlot (not nextSlot) so the schedule resumes immediately
+			// rather than slowly advancing one slot per tick through the entire missed gap.
 			slot := cm.Field("data.lastHandledCronSlot").String()
-			Expect(slot).NotTo(BeEmpty())
-			Expect(slot).NotTo(Equal(missedSlot))
+			Expect(slot).To(Equal(defragTestNow.Truncate(time.Minute).Format(time.RFC3339)))
 		})
 	})
 })
