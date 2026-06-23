@@ -48,6 +48,7 @@ type SSHConfig struct {
 	SudoPassword        string               `json:"sudoPassword,omitempty"`
 	LegacyMode          bool                 `json:"legacyMode,omitempty"`
 	ModernMode          bool                 `json:"modernMode,omitempty"`
+	ForceUseSSHAgent    bool                 `json:"forceUseSSHAgent,omitempty"`
 }
 
 type SSHAgentPrivateKey struct {
@@ -255,6 +256,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	p.opts.SSH.BastionPass = cfg.SSHConfig.SSHBastionPassword
 	p.opts.SSH.LegacyMode = cfg.SSHConfig.LegacyMode
 	p.opts.SSH.ModernMode = cfg.SSHConfig.ModernMode
+	p.opts.SSH.ForceUseSSHAgent = cfg.SSHConfig.ForceUseSSHAgent
 	// todo it is ugly solution
 	p.opts.SSH.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
 

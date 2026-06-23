@@ -9,6 +9,7 @@ apiVersions:
     anyOf:
       - required: [apiVersion, kind, sshUser, sshAgentPrivateKeys]
       - required: [apiVersion, kind, sshUser, sudoPassword]
+      - required: [apiVersion, kind, sshUser, forceUseSSHAgent]
     x-examples:
       - apiVersion: dhctl.deckhouse.io/v1
         kind: SSHConfig
@@ -74,4 +75,10 @@ apiVersions:
         description: |
           Switch to modern SSH mode (gossh).
         type: boolean
+      forceUseSSHAgent:
+        description: |
+          Force use SSH agent passed with env SSH_AUTH_SOCK instead of inline private keys.
+          When set to true, sshAgentPrivateKeys may be omitted.
+        type: boolean
+        default: false
 
