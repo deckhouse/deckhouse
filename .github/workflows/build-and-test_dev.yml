@@ -528,7 +528,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01/sha2-256"
           TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
           WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
@@ -1126,7 +1126,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01/sha2-256"
           TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
           WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
@@ -1441,7 +1441,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01/sha2-256"
           TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
           WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
@@ -1756,7 +1756,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01/sha2-256"
           TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
           WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
@@ -2071,7 +2071,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01/sha2-256"
           TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
           WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
@@ -2386,7 +2386,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01/sha2-256"
           TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
           WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
@@ -2701,7 +2701,7 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+          WERF_SIGN_KEY: "hashivault://dh-dev-v01/sha2-256"
           TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
           WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"

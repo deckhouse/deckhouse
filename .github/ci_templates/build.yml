@@ -126,7 +126,7 @@ steps:
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- end }!}
 {!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
-      WERF_SIGN_KEY: "hashivault://dh-dev-v01"
+      WERF_SIGN_KEY: "hashivault://dh-dev-v01/sha2-256"
       TRANSIT_SECRET_ENGINE_PATH: "dev-int-signer"
       WERF_VAULT_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
       INTERMEDIARY_CERT_PATH: "dev-int-pki/issuer/default/pem"
@@ -134,7 +134,7 @@ steps:
       REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
       REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 {!{- else }!}
-      WERF_SIGN_KEY: "hashivault://dh-prod-v01"
+      WERF_SIGN_KEY: "hashivault://dh-prod-v01/sha2-256"
       TRANSIT_SECRET_ENGINE_PATH: "prod-int-signer"
       WERF_VAULT_AUTH_ROLE: "dh-signer_dh-signer"
       INTERMEDIARY_CERT_PATH: "prod-int-pki/issuer/default/pem"
