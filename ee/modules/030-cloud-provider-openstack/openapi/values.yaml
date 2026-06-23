@@ -64,6 +64,8 @@ properties:
           type: string
       externalNetworkDHCP:
         type: boolean
+      layout:
+        type: string
       zones:
         type: array
         default: []
@@ -97,6 +99,8 @@ properties:
           - "VXLAN"
           - "DirectRouting"
           - "DirectRoutingWithPortSecurityEnabled"
+      apiServerFloatingIP:
+        type: boolean
       loadBalancer:
         type: object
         default: {}
