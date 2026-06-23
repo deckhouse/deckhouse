@@ -144,19 +144,8 @@ rules:
   - huaweicloudmachinetemplates
   - staticmachinetemplates
   - vcdmachinetemplates
+  - yandexmachinetemplates
   - zvirtmachinetemplates
-  - deckhousemachines
-  - dynamixmachines
-  - huaweicloudmachines
-  - staticmachines
-  - vcdmachines
-  - zvirtmachines
-  - deckhouseclusters
-  - dynamixclusters
-  - huaweicloudclusters
-  - staticclusters
-  - vcdclusters
-  - zvirtclusters
   verbs:
   - get
   - list
