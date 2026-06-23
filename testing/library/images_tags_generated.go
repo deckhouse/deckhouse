@@ -97,6 +97,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManager":       "imageHash-cloudProviderHuaweicloud-terraformManager",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
+		"capoControllerManager":     "imageHash-cloudProviderOpenstack-capoControllerManager",
 		"cinderCsiPlugin131":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin131",
 		"cinderCsiPlugin132":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin132",
 		"cinderCsiPlugin133":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin133",
@@ -416,7 +417,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet1348":                     "imageHash-registrypackages-kubelet1348",
 		"kubelet1355":                     "imageHash-registrypackages-kubelet1355",
 		"kubelet1361":                     "imageHash-registrypackages-kubelet1361",
-		"kubernetesApiProxy":              "imageHash-registrypackages-kubernetesApiProxy",
+		"kubernetesApiProxy":              "imageHash-registrypackages-kubernetesApiProxy", // gitleaks:allow
 		"kubernetesCni162":                "imageHash-registrypackages-kubernetesCni162",
 		"lsblk2402":                       "imageHash-registrypackages-lsblk2402",
 		"netcat110501":                    "imageHash-registrypackages-netcat110501",
