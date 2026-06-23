@@ -425,7 +425,7 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 Using the [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy), you can create security policies that define container behavior restrictions in the cluster, such as host network access, privileges, AppArmor usage, and more.
 
 {% alert level="info" %}
-To learn what each Pod security setting (for example, `hostNetwork`, `hostPID`, `hostIPC`, `hostPath`, `automountServiceAccountToken`, `capabilities`, `seccompProfile`, etc.) is responsible for, how to choose the correct value, and how it works in practice, see the [Pod security settings](/user/security/pod-settings.html) page.
+To learn what each Pod security setting (for example, `hostNetwork`, `hostPID`, `hostIPC`, `hostPath`, `automountServiceAccountToken`, `capabilities`, `seccompProfile`, etc.) is responsible for, how to choose the correct value, and how it works in practice, see the [Pod security settings](../../../user/security/pod-settings.html) page.
 {% endalert %}
 
 Example security policy:
