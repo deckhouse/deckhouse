@@ -521,13 +521,28 @@ func loadDigests(packageDir string) (map[string]string, error) {
 
 // getModuleVersion returns the version of the package at moduleDir.
 // With dm-verity, the version is extracted from the device status.
-// Without dm-verity, the version is derived from the symlink target directory name.
+//
+// Otherwise the version is the name of the versioned directory. There are two
+// on-disk layouts: in the packages deployer layout moduleDir is a symlink that
+// points at the versioned directory, while for adopted functional modules
+// (addon-operator's downloaded layout) moduleDir already is the versioned
+// directory itself.
 func getModuleVersion(ctx context.Context, moduleDir string) (string, error) {
 	if verity.IsSupported() {
 		return verity.GetVersionByDevice(ctx, filepath.Base(moduleDir))
 	}
 
-	// resolve symlink to get the versioned directory name
+	info, err := os.Lstat(moduleDir)
+	if err != nil {
+		return "", fmt.Errorf("lstat '%s': %w", moduleDir, err)
+	}
+
+	// A real directory already is the versioned directory; only resolve the
+	// symlink target when moduleDir actually is a symlink.
+	if info.Mode()&os.ModeSymlink == 0 {
+		return filepath.Base(moduleDir), nil
+	}
+
 	target, err := os.Readlink(moduleDir)
 	if err != nil {
 		return "", fmt.Errorf("readlink '%s': %w", moduleDir, err)
