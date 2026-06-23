@@ -26,8 +26,8 @@ import (
 	"control-plane-manager/internal/constants"
 )
 
-func Build(node NodeRef, d Decision) *controlplanev1alpha1.ControlPlaneOperation {
-	op := newOperation(node, d.component, d.steps())
+func buildOperation(node NodeRef, d Decision, steps []controlplanev1alpha1.StepName) *controlplanev1alpha1.ControlPlaneOperation {
+	op := newOperation(node, d.component, steps)
 	if d.kind == KindObserve {
 		op.Spec.Approved = true
 	} else {
@@ -55,55 +55,6 @@ func newOperation(node NodeRef, component controlplanev1alpha1.OperationComponen
 			Component: component,
 			Steps:     steps,
 		},
-	}
-}
-
-func (d Decision) steps() []controlplanev1alpha1.StepName {
-	switch d.kind {
-	case KindObserve:
-		return []controlplanev1alpha1.StepName{controlplanev1alpha1.StepCertObserve}
-	case KindSignatureRenew:
-		return signatureRenewalSteps()
-	default:
-		return applySteps(d.component, d.renewCertificates, d.seedSignature)
-	}
-}
-
-// applySteps builds the apply/restart pipeline driven by component capabilities.
-// The step names and set are mode-agnostic; the disk/API difference lives in the executor.
-func applySteps(component controlplanev1alpha1.OperationComponent, renew, seedSignature bool) []controlplanev1alpha1.StepName {
-	steps := []controlplanev1alpha1.StepName{controlplanev1alpha1.StepBackup}
-
-	if renew {
-		steps = append(steps, controlplanev1alpha1.StepSyncCA)
-		if component.HasPKI() {
-			steps = append(steps, controlplanev1alpha1.StepRenewPKICerts)
-		}
-		if component.HasKubeconfigs() {
-			steps = append(steps, controlplanev1alpha1.StepRenewKubeconfigs)
-		}
-	}
-
-	if seedSignature {
-		steps = append(steps, controlplanev1alpha1.StepRenewSignature)
-	}
-
-	if component == controlplanev1alpha1.OperationComponentEtcd {
-		steps = append(steps, controlplanev1alpha1.StepJoinEtcdCluster)
-	} else {
-		steps = append(steps, controlplanev1alpha1.StepSyncManifests)
-	}
-
-	return append(steps, controlplanev1alpha1.StepWaitPodReady, controlplanev1alpha1.StepCertObserve)
-}
-
-func signatureRenewalSteps() []controlplanev1alpha1.StepName {
-	return []controlplanev1alpha1.StepName{
-		controlplanev1alpha1.StepBackup,
-		controlplanev1alpha1.StepRenewSignature,
-		controlplanev1alpha1.StepSyncManifests,
-		controlplanev1alpha1.StepWaitPodReady,
-		controlplanev1alpha1.StepCertObserve,
 	}
 }
 

@@ -24,15 +24,19 @@ import (
 
 const maxTerminalOperationsPerComponent = 5
 
+type OperationBuilder interface {
+	Build(node operations.NodeRef, d operations.Decision) *controlplanev1alpha1.ControlPlaneOperation
+}
+
 // RequiredOperations returns the operations the node needs that are not already covered by an active operation.
-func RequiredOperations(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation) []*controlplanev1alpha1.ControlPlaneOperation {
+func RequiredOperations(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation, builder OperationBuilder) []*controlplanev1alpha1.ControlPlaneOperation {
 	node := nodeRef(cpn)
 	var out []*controlplanev1alpha1.ControlPlaneOperation
 	for _, d := range decisions(cpn) {
 		if operations.Covered(current, d) {
 			continue
 		}
-		out = append(out, operations.Build(node, d))
+		out = append(out, builder.Build(node, d))
 	}
 	return out
 }
