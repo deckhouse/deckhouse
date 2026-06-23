@@ -18,11 +18,11 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 // ProviderInput is the native input for built-in provider preparators.
-// Unlike providerdata.PrepareInput, it avoids serialization round-trips:
+// Unlike proto.PrepareInput, it avoids serialization round-trips:
 // ProviderClusterConfig stays as json.RawMessage and CloudProviderVars
 // is already parsed.
 type ProviderInput struct {
@@ -31,12 +31,12 @@ type ProviderInput struct {
 	Layout                string
 	Operation             string
 	ProviderClusterConfig map[string]json.RawMessage
-	CloudProviderVars     *providerdata.CloudProviderVars
+	CloudProviderVars     *proto.CloudProviderVars
 }
 
 type MetaConfigPreparator interface {
 	Validate(ctx context.Context, input ProviderInput) error
-	Prepare(ctx context.Context, input ProviderInput) (providerdata.PrepareResult, error)
+	Prepare(ctx context.Context, input ProviderInput) (proto.PrepareResult, error)
 }
 
 // MetaConfigPreparatorProvider selects a MetaConfigPreparator for the given
@@ -56,6 +56,6 @@ func (p *dummyPreparator) Validate(_ context.Context, _ ProviderInput) error {
 	return nil
 }
 
-func (p *dummyPreparator) Prepare(_ context.Context, _ ProviderInput) (providerdata.PrepareResult, error) {
-	return providerdata.PrepareResult{}, nil
+func (p *dummyPreparator) Prepare(_ context.Context, _ ProviderInput) (proto.PrepareResult, error) {
+	return proto.PrepareResult{}, nil
 }

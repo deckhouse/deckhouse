@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -216,4 +217,31 @@ func TestEnsureProviderBundleSingleflight(t *testing.T) {
 		require.NoError(t, err)
 	}
 	require.Equal(t, int32(1), downloads.Load(), "concurrent calls must share one download")
+}
+
+func TestApplyRegistryToDeckhouseConfigPopulatesDecodableDockerCfg(t *testing.T) {
+	// Commander cold-pod ops carry registry creds in a separate registryConfig
+	// doc, not in the cluster config; the lazy provider-plugin download then
+	// decodes DeckhouseConfig.RegistryDockerCfg. An empty value used to crash
+	// with "unmarshaling dockerconfig JSON: unexpected end of JSON input".
+	metaConfig := &MetaConfig{}
+	require.NoError(t, applyRegistryToDeckhouseConfig(metaConfig, []string{ensureRegistryMCDoc}))
+
+	require.NotEmpty(t, metaConfig.DeckhouseConfig.RegistryDockerCfg, "dockercfg must be populated from registry MC")
+	require.Equal(t, "r.example.com/test", metaConfig.DeckhouseConfig.ImagesRepo)
+	require.True(t, strings.EqualFold("HTTPS", metaConfig.DeckhouseConfig.RegistryScheme))
+
+	// The exact round-trip the lazy image download performs must succeed.
+	dc, err := image.DecodeDockerConfig(metaConfig.DeckhouseConfig.RegistryDockerCfg)
+	require.NoError(t, err)
+	rc, err := image.RegistryConfigFromDockerConfig(dc, "HTTPS", metaConfig.DeckhouseConfig.ImagesRepo)
+	require.NoError(t, err)
+	require.NotNil(t, rc)
+}
+
+func TestApplyRegistryToDeckhouseConfigKeepsExisting(t *testing.T) {
+	metaConfig := &MetaConfig{}
+	metaConfig.DeckhouseConfig.RegistryDockerCfg = "preset"
+	require.NoError(t, applyRegistryToDeckhouseConfig(metaConfig, []string{ensureRegistryMCDoc}))
+	require.Equal(t, "preset", metaConfig.DeckhouseConfig.RegistryDockerCfg, "must not clobber dockercfg already supplied by configData")
 }

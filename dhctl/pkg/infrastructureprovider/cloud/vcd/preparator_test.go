@@ -67,9 +67,7 @@ func TestValidateMetaConfig(t *testing.T) {
 
 	makeInput := func(server, prefix string) config.ProviderInput {
 		p, err := json.Marshal(providerConfig{Server: server})
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
 		return config.ProviderInput{
 			ClusterPrefix: prefix,
 			ProviderClusterConfig: map[string]json.RawMessage{

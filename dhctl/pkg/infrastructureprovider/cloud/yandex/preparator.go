@@ -24,8 +24,8 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
@@ -61,8 +61,8 @@ func (p *MetaConfigPreparator) Validate(_ context.Context, input config.Provider
 	return p.validateWithNATInstanceLayout(input)
 }
 
-func (p *MetaConfigPreparator) Prepare(_ context.Context, _ config.ProviderInput) (providerdata.PrepareResult, error) {
-	return providerdata.PrepareResult{}, nil
+func (p *MetaConfigPreparator) Prepare(_ context.Context, _ config.ProviderInput) (proto.PrepareResult, error) {
+	return proto.PrepareResult{}, nil
 }
 
 func (p *MetaConfigPreparator) validateMasterNodeGroup(input config.ProviderInput) error {
@@ -112,7 +112,7 @@ func (p *MetaConfigPreparator) validateWithNATInstanceLayout(input config.Provid
 		return nil
 	}
 
-	if input.Operation != providerdata.OperationBootstrap {
+	if input.Operation != proto.OperationBootstrap {
 		p.logger.LogDebugLn("Skip validate WithNATInstance layout. Validation disabled")
 		return nil
 	}

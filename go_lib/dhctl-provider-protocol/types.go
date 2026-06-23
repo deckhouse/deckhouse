@@ -19,11 +19,6 @@
 // All messages are newline-terminated JSON. See PROTOCOL.md for the full spec.
 package dhctlproviderprotocol
 
-// ProtocolVersion is the current version of this protocol.
-// dhctl always sends this value in the version field of every request.
-// A binary built with this package rejects requests whose version differs.
-const ProtocolVersion = "1"
-
 // OperationBootstrap is the operation value sent during cluster bootstrap.
 const OperationBootstrap = "bootstrap"
 
@@ -77,26 +72,24 @@ type PrepareResult struct {
 
 // ValidateRequest is the JSON object written to stdin for the validate subcommand.
 type ValidateRequest struct {
-	// Version must equal ProtocolVersion. The binary rejects mismatched versions.
-	Version string       `json:"version"`
-	Input   PrepareInput `json:"input"`
+	Input PrepareInput `json:"input"`
 }
 
-// ValidateResponse is the JSON object written to stdout after validate.
-// A non-empty Error means validation failed; the binary exits 0 regardless.
+// ValidateResponse is the JSON object written to stdout after validate. The
+// binary always writes a JSON object and exits 0; a non-empty Error means
+// validation failed. A crash exits non-zero with no usable stdout.
 type ValidateResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
 // PrepareRequest is the JSON object written to stdin for the prepare subcommand.
 type PrepareRequest struct {
-	// Version must equal ProtocolVersion. The binary rejects mismatched versions.
-	Version string       `json:"version"`
-	Input   PrepareInput `json:"input"`
+	Input PrepareInput `json:"input"`
 }
 
-// PrepareResponse is the JSON object written to stdout after prepare.
-// A non-empty Error means preparation failed; the binary exits 0 regardless.
+// PrepareResponse is the JSON object written to stdout after prepare. The binary
+// always writes a JSON object and exits 0; a non-empty Error means preparation
+// failed. A crash exits non-zero with no usable stdout.
 type PrepareResponse struct {
 	Result *PrepareResult `json:"result,omitempty"`
 	Error  string         `json:"error,omitempty"`

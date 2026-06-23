@@ -62,8 +62,7 @@ type ConfigProvider struct {
 // When both initConfig and deckhouseSettings are provided, deckhouse
 // ModuleConfig takes precedence over initConfiguration.
 func (p *ConfigProvider) IsLocal() (bool, error) {
-	switch {
-	case p.deckhouseSettings != nil:
+	if p.deckhouseSettings != nil {
 		return p.deckhouseSettings.Mode == constant.ModeLocal, nil
 	}
 	return false, nil

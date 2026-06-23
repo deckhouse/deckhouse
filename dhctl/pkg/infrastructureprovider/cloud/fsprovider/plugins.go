@@ -16,8 +16,10 @@ package fsprovider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -64,7 +65,11 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	// (e.g. preserved across `wipe-state` or pre-injected for dev iteration), skip the
 	// terraform-manager image download entirely. Saves ~10-15s per bootstrap and lets
 	// us iterate with a custom-patched provider binary without dhctl clobbering it.
-	terraformManagerDir := filepath.Join(providerdata.ProviderDir(conf.DownloadRootDir, cloudName), "terraform-manager")
+	//
+	// downloadImage unpacks the terraform-manager image into DownloadRootDir, so its
+	// binary and terraform_versions.yml land in <DownloadRootDir>/terraform-manager.
+	// The fast-path and the download-fallback must read from that same directory.
+	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if _, statErr := os.Stat(source); statErr == nil {
 		if err := copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
@@ -87,18 +92,31 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 
 func copyTFVersionFile(downloadRootDir, terraformManagerDir string) error {
 	downloadCandiPath := filepath.Join(downloadRootDir, "deckhouse", "candi")
-	src := filepath.Join(terraformManagerDir, versionFile)
-	dstPath := filepath.Join(downloadCandiPath, versionFile)
+	if err := os.MkdirAll(downloadCandiPath, 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", downloadCandiPath, err)
+	}
 
+	// terraform_versions.yml is required. plan_rules.yml is optional (only
+	// providers with a vmResource rule ship it) and must land next to the
+	// versions file so loadPlanRules picks the rule up adjacent to it.
+	if err := copyCandiFile(terraformManagerDir, downloadCandiPath, versionFile, true); err != nil {
+		return err
+	}
+	return copyCandiFile(terraformManagerDir, downloadCandiPath, planRulesFilename, false)
+}
+
+func copyCandiFile(srcDir, dstDir, name string, required bool) error {
+	src := filepath.Join(srcDir, name)
 	f, err := os.Open(src)
 	if err != nil {
+		if !required && errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
 		return fmt.Errorf("open %s: %w", src, err)
 	}
 	defer f.Close()
 
-	if err := os.MkdirAll(downloadCandiPath, 0o755); err != nil {
-		return fmt.Errorf("mkdir %s: %w", downloadCandiPath, err)
-	}
+	dstPath := filepath.Join(dstDir, name)
 	if err := os.RemoveAll(dstPath); err != nil {
 		return fmt.Errorf("remove %s: %w", dstPath, err)
 	}

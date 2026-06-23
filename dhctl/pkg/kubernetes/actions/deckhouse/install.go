@@ -34,7 +34,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -487,7 +486,7 @@ func CreateDeckhouseManifests(
 	}
 
 	if cfg.HasProviderModuleConfig() {
-		providerNamespace := providerdata.CloudProviderNamespace(cfg.ProviderName)
+		providerNamespace := config.CloudProviderNamespace(cfg.ProviderName)
 		tasks = append(tasks,
 			actions.ManifestTask{
 				Name: fmt.Sprintf(`Namespace %q`, providerNamespace),

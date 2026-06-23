@@ -303,18 +303,10 @@ func (r *Runner) checkInfrastructureUtilityIsRunning() bool {
 	return (atomic.LoadInt32(&r.infrastructureUtilityRunningCounter) % 2) > 0
 }
 
-// traceStateAndVars attaches the current tfvars and state file contents to the
-// span — deliberate development-stage telemetry.
-func (r *Runner) traceStateAndVars(span ottrace.Span) {
-	if len(r.variablesData) > 0 {
-		span.AddEvent("runner.tfvars", ottrace.WithAttributes(otattribute.String("data", string(r.variablesData))))
-	}
-	if r.statePath != "" {
-		if stateData, err := os.ReadFile(r.statePath); err == nil {
-			span.AddEvent("runner.state", ottrace.WithAttributes(otattribute.String("data", string(stateData))))
-		}
-	}
-}
+// traceStateAndVars is intentionally a no-op: tfvars and the state file contain
+// plaintext secrets (cloud credentials, SSH keys, passwords, tokens) and must
+// never be exported as span attributes/events to a telemetry collector.
+func (r *Runner) traceStateAndVars(_ ottrace.Span) {}
 
 func (r *Runner) Init(ctx context.Context) error {
 	if r.stopped {
