@@ -110,6 +110,48 @@ requirements:
 | `requirements.kubernetes` | No | Minimum Kubernetes version constraint |
 | `requirements.modules` | No | Module dependencies (semver constraints) |
 
+## OpenAPI schemas
+
+The `openapi/` directory defines two schemas:
+
+- `config-values.yaml` (or `settings.yaml`) — the schema for `Application.spec.settings` (user-facing configuration).
+- `values.yaml` — the schema for the full set of Helm values.
+
+### Defaulting from cluster resource grants (`x-deckhouse-grant`)
+
+A `settings` field of `type: string` can be bound to a grantable cluster resource managed by the
+[multitenancy-manager](../../../modules/multitenancy-manager/) (for example a `StorageClass`). When the field is bound:
+
+- if the user leaves it empty, the project's **default** granted name is injected into the values;
+- if the user provides a value, it is checked against the names **available** to the project, and rejected otherwise.
+
+Add the `x-deckhouse-grant` extension to the field and reference the grantable resource by name (the
+`AvailableClusterResource` / `GrantableClusterResourceDefinition` name, e.g. `storageclasses`). The
+underlying resource's GVK is owned by the grant definition and must **not** be specified here.
+
+```yaml
+# openapi/settings.yaml
+type: object
+properties:
+  storageClass:
+    type: string
+    x-deckhouse-grant:
+      resource: storageclasses
+  postgres:
+    type: object
+    properties:
+      storageClass:
+        type: string
+        x-deckhouse-grant:
+          resource: postgresclasses
+```
+
+Behavior:
+
+- The default is resolved per project from the `AvailableClusterResource` in the Application's namespace, so different projects can receive different defaults.
+- An explicit user value always wins over the injected default.
+- If the multitenancy feature is inactive for the resource (the CRD is absent, no catalog exists for the project, or the catalog has no default), the field is left untouched — no defaulting and no validation.
+
 ## Local build
 
 Build and push the package to a registry:

@@ -51,9 +51,22 @@ type Storage struct {
 	// These are stored separately before merging with static and openapi values
 	settings addonutils.Values
 
+	// dynamicDefaults are runtime-resolved defaults (e.g. from cluster resource
+	// grants) applied to empty settings fields before the user config layer, so
+	// the user can still override them.
+	dynamicDefaults []DynamicDefault
+
 	// resultValues is the final merged result of all value sources
 	// This is what hooks and templates see
 	resultValues addonutils.Values
+}
+
+// DynamicDefault is a runtime-resolved default value for a settings field located
+// at Path (a property path from the package values root). It is applied only when
+// the field is empty, and always before the user config layer.
+type DynamicDefault struct {
+	Path  []string
+	Value string
 }
 
 // NewStorage creates a new values storage with the specified schemas and static values.
@@ -83,6 +96,12 @@ func NewStorage(name string, staticValues addonutils.Values, settingsBytes, valu
 	}
 
 	return s, nil
+}
+
+// GrantRefs returns the x-deckhouse-grant references declared in the settings
+// schema. Returns nil when no settings schema or no such references exist.
+func (s *Storage) GrantRefs() ([]schema.GrantRef, error) {
+	return s.schemaStorage.GrantRefs()
 }
 
 // GetValuesChecksum returns a checksum of the final merged values.
@@ -201,8 +220,20 @@ func (s *Storage) ApplyValuesPatch(patch addonutils.ValuesPatch) error {
 	return s.calculateResultValues()
 }
 
+// SetDynamicDefaults stores runtime-resolved defaults and recalculates the
+// result values. Defaults are applied to empty settings fields before the user
+// config layer, so an explicit user value always wins.
+func (s *Storage) SetDynamicDefaults(defaults []DynamicDefault) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.dynamicDefaults = defaults
+
+	return s.calculateResultValues()
+}
+
 // calculateResultValues merges all value layers and applies patches.
-// Layer order: static -> config schema defaults -> user config -> values schema defaults -> patches
+// Layer order: static -> config schema defaults -> dynamic defaults -> user config -> values schema defaults -> patches
 func (s *Storage) calculateResultValues() error {
 	merged := mergeLayers(
 		addonutils.Values{},
@@ -211,6 +242,9 @@ func (s *Storage) calculateResultValues() error {
 
 		// from openapi config spec
 		s.openapiDefaultsTransformer(schema.TypeSettings),
+
+		// runtime-resolved defaults (e.g. cluster resource grants) for empty fields
+		valuesTransform(s.applyDynamicDefaults),
 
 		// from package settings
 		s.settings,
@@ -242,6 +276,66 @@ func (s *Storage) calculateResultValues() error {
 func (s *Storage) openapiDefaultsTransformer(schemaType schema.Type) transformer {
 	return &applyDefaults{
 		schema: s.schemaStorage.GetSchema(schemaType),
+	}
+}
+
+// applyDynamicDefaults returns the subset of dynamic defaults whose target field
+// is currently empty in current. Only these are merged, so values already
+// provided by static values or schema defaults are preserved.
+func (s *Storage) applyDynamicDefaults(current addonutils.Values) addonutils.Values {
+	out := addonutils.Values{}
+
+	for _, d := range s.dynamicDefaults {
+		if d.Value == "" || len(d.Path) == 0 {
+			continue
+		}
+		if !isEmptyAtPath(current, d.Path) {
+			continue
+		}
+		setAtPath(out, d.Path, d.Value)
+	}
+
+	return out
+}
+
+// isEmptyAtPath reports whether the value at path in values is missing or an
+// empty string. Any intermediate non-map node is treated as non-empty (the
+// default cannot be placed there).
+func isEmptyAtPath(values map[string]interface{}, path []string) bool {
+	cur := values
+	for i, key := range path {
+		v, ok := cur[key]
+		if !ok {
+			return true
+		}
+		if i == len(path)-1 {
+			str, isStr := v.(string)
+			return isStr && str == ""
+		}
+		next, isMap := v.(map[string]interface{})
+		if !isMap {
+			return false
+		}
+		cur = next
+	}
+
+	return true
+}
+
+// setAtPath sets value at path in values, creating intermediate maps as needed.
+func setAtPath(values map[string]interface{}, path []string, value string) {
+	cur := values
+	for i, key := range path {
+		if i == len(path)-1 {
+			cur[key] = value
+			return
+		}
+		next, ok := cur[key].(map[string]interface{})
+		if !ok {
+			next = map[string]interface{}{}
+			cur[key] = next
+		}
+		cur = next
 	}
 }
 
