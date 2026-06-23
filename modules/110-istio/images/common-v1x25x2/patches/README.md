@@ -16,3 +16,7 @@ Adopted upstream pr https://github.com/istio/istio/pull/58567.
 ## 002-kiali-logout.patch
 
 Enable Logout in Kiali for header auth (DexAuthenticator). The tab that clicks Logout calls `/logout?rd=<app-origin>/` once; other tabs receive a `localStorage` event and only dispatch `sessionExpired` locally (no second sign_out, no reload) to avoid oauth2-proxy CSRF races.
+=======
+## 003-change-to-deckhouse-user.patch
+
+Change runAsUser from 1337 to 64535 in istio templates, changed istio-init.iptables user arg to both 1337 and 64535 UIDs in injection-template.yaml
