@@ -57,12 +57,9 @@ func EnsureCRDs(ctx context.Context, c client.Client) error {
 		return fmt.Errorf("loading CRD manifests: %w", err)
 	}
 
-	klog.Info("waiting for CA bundle secret ", webhookSecretName)
-	caBundle, err := waitForCABundle(ctx, c, webhookSecretName)
-	if err != nil {
-		return fmt.Errorf("waiting for CA bundle: %w", err)
-	}
-	klog.Info("CA bundle secret ready")
+	// Best-effort: do not block startup if capi-webhook-tls is absent (e.g. fresh static
+	// cluster). CRDs are created without CABundle; the reconciler fills the CA later.
+	caBundle := bestEffortCABundle(ctx, c, webhookSecretName)
 
 	for crdName, embeddedCRD := range crds {
 		if !capiCRDNames[crdName] {
@@ -169,6 +166,24 @@ func isConversionWebhookCurrent(crd *apiextensionsv1.CustomResourceDefinition, c
 		return false
 	}
 	return string(wh.ClientConfig.CABundle) == string(caBundle)
+}
+
+// bestEffortCABundle reads the CA bundle once without blocking, returning nil if absent.
+func bestEffortCABundle(ctx context.Context, c client.Client, secretName string) []byte {
+	secret := &corev1.Secret{}
+	if err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: capiNamespace}, secret); err != nil {
+		klog.Infof("CA bundle secret %s/%s not available yet, creating CRDs without CABundle: %v", capiNamespace, secretName, err)
+		return nil
+	}
+
+	ca := secret.Data["ca.crt"]
+	if len(ca) == 0 {
+		klog.Infof("CA bundle secret %s/%s has empty ca.crt, creating CRDs without CABundle", capiNamespace, secretName)
+		return nil
+	}
+
+	klog.Info("CA bundle secret ready")
+	return ca
 }
 
 func waitForCABundle(ctx context.Context, c client.Client, secretName string) ([]byte, error) {
