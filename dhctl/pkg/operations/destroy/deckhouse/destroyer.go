@@ -216,9 +216,6 @@ func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.Kubernete
 		return err
 	}
 
-	// node-controller renders CAPI MachineDeployments from NodeGroups, so it must be stopped
-	// before deleting Machines — otherwise it recreates every deleted MachineDeployment and the
-	// deletion loop below never converges.
 	err = deckhouse.DeleteNodeControllerDeployment(ctx, kubeCl)
 	if err != nil {
 		return err

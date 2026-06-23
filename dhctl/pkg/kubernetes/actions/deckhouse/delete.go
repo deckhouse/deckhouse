@@ -89,9 +89,6 @@ func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 	})
 }
 
-// DeleteNodeControllerDeployment removes the node-controller Deployment before deleting
-// CAPI MachineDeployments. node-controller renders MachineDeployments from NodeGroups, so
-// while it is running it recreates any MachineDeployment that destroy deletes, looping forever.
 func DeleteNodeControllerDeployment(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete node-controller", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		err := kubeCl.AppsV1().Deployments(nodeControllerDeploymentNamespace).Delete(ctx, nodeControllerDeploymentName, metav1.DeleteOptions{PropagationPolicy: new(metav1.DeletePropagationForeground)})
