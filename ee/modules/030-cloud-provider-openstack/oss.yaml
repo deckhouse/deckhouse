@@ -57,3 +57,11 @@
   license: Mozilla Public License 2.0
   id: terraform-provider-openstack
   version: "1.54.1"
+
+- name: OpenStack Cluster API provider
+  link: https://github.com/kubernetes-sigs/cluster-api-provider-openstack
+  description: Infrastructure provider for Kubernetes Cluster API in OpenStack.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+  id: capo-openstack
+  version: v0.12.3
