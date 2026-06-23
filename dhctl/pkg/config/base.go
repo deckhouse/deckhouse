@@ -567,7 +567,57 @@ func ParseConfigFromDataEnsureProvider(
 
 	opts = append(opts, ValidateOptionDownloadRootDir(globalOptions.DownloadDir))
 
-	return ParseConfigFromData(ctx, configData, preparatorProvider, globalOptions, opts...)
+	metaConfig, err := ParseConfigFromData(ctx, configData, preparatorProvider, globalOptions, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Lazy provider-plugin / terraform-manager downloads read registry creds
+	// from DeckhouseConfig. In commander mode those creds arrive in
+	// registryConfig (a separate doc), not in configData, so copy them onto
+	// DeckhouseConfig here; otherwise the cold-pod download decodes an empty
+	// dockercfg ("unmarshaling dockerconfig JSON: unexpected end of JSON
+	// input"). Mirrors parseConfigFromCluster.
+	if err := applyRegistryToDeckhouseConfig(metaConfig, docs); err != nil {
+		return nil, err
+	}
+
+	return metaConfig, nil
+}
+
+// applyRegistryToDeckhouseConfig fills registry access on
+// metaConfig.DeckhouseConfig from the parsed docs (an InitConfiguration and/or a
+// deckhouse ModuleConfig) when configData itself did not supply it, so the lazy
+// provider-plugin / terraform-manager download has working credentials. No-op
+// when DeckhouseConfig already carries a dockercfg or the docs hold no registry
+// data.
+func applyRegistryToDeckhouseConfig(metaConfig *MetaConfig, docs []string) error {
+	if metaConfig.DeckhouseConfig.RegistryDockerCfg != "" {
+		return nil
+	}
+
+	provider, err := RegistryConfigProvider(docs)
+	if err != nil {
+		return err
+	}
+	remoteData, err := provider.RemoteData()
+	if err != nil {
+		return fmt.Errorf("registry data for provider plugin download: %w", err)
+	}
+	if remoteData.ImagesRepo == "" {
+		return nil
+	}
+
+	dockerCfg, err := remoteData.DockerCfgBase64()
+	if err != nil {
+		return fmt.Errorf("encode registry dockercfg: %w", err)
+	}
+
+	metaConfig.DeckhouseConfig.RegistryDockerCfg = dockerCfg
+	metaConfig.DeckhouseConfig.ImagesRepo = remoteData.ImagesRepo
+	metaConfig.DeckhouseConfig.RegistryScheme = string(remoteData.Scheme)
+	metaConfig.DeckhouseConfig.RegistryCA = remoteData.CA
+	return nil
 }
 
 // withDownloadDir returns globalOptions guaranteed non-nil and with a non-empty
