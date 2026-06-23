@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -567,7 +567,67 @@ func ParseConfigFromDataEnsureProvider(
 
 	opts = append(opts, ValidateOptionDownloadRootDir(globalOptions.DownloadDir))
 
-	return ParseConfigFromData(ctx, configData, preparatorProvider, globalOptions, opts...)
+	metaConfig, err := ParseConfigFromData(ctx, configData, preparatorProvider, globalOptions, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// The lazy provider-plugin / terraform-manager image pull needs a cache dir.
+	// ParseConfigFromData leaves DownloadCacheDir empty on the commander data
+	// path, so the pull does mkdir("") ("could not create cache directory").
+	// Mirror LoadConfigFromFile's DownloadDir/cache fallback. DownloadRootDir is
+	// already set by ParseConfigFromData via ValidateOptionDownloadRootDir.
+	metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
+	if metaConfig.DownloadCacheDir == "" {
+		metaConfig.DownloadCacheDir = filepath.Join(globalOptions.DownloadDir, "cache")
+	}
+
+	// Lazy provider-plugin / terraform-manager downloads read registry creds
+	// from DeckhouseConfig. In commander mode those creds arrive in
+	// registryConfig (a separate doc), not in configData, so copy them onto
+	// DeckhouseConfig here; otherwise the cold-pod download decodes an empty
+	// dockercfg ("unmarshaling dockerconfig JSON: unexpected end of JSON
+	// input"). Mirrors parseConfigFromCluster.
+	if err := applyRegistryToDeckhouseConfig(metaConfig, docs); err != nil {
+		return nil, err
+	}
+
+	return metaConfig, nil
+}
+
+// applyRegistryToDeckhouseConfig fills registry access on
+// metaConfig.DeckhouseConfig from the parsed docs (an InitConfiguration and/or a
+// deckhouse ModuleConfig) when configData itself did not supply it, so the lazy
+// provider-plugin / terraform-manager download has working credentials. No-op
+// when DeckhouseConfig already carries a dockercfg or the docs hold no registry
+// data.
+func applyRegistryToDeckhouseConfig(metaConfig *MetaConfig, docs []string) error {
+	if metaConfig.DeckhouseConfig.RegistryDockerCfg != "" {
+		return nil
+	}
+
+	provider, err := RegistryConfigProvider(docs)
+	if err != nil {
+		return err
+	}
+	remoteData, err := provider.RemoteData()
+	if err != nil {
+		return fmt.Errorf("registry data for provider plugin download: %w", err)
+	}
+	if remoteData.ImagesRepo == "" {
+		return nil
+	}
+
+	dockerCfg, err := remoteData.DockerCfgBase64()
+	if err != nil {
+		return fmt.Errorf("encode registry dockercfg: %w", err)
+	}
+
+	metaConfig.DeckhouseConfig.RegistryDockerCfg = dockerCfg
+	metaConfig.DeckhouseConfig.ImagesRepo = remoteData.ImagesRepo
+	metaConfig.DeckhouseConfig.RegistryScheme = string(remoteData.Scheme)
+	metaConfig.DeckhouseConfig.RegistryCA = remoteData.CA
+	return nil
 }
 
 // withDownloadDir returns globalOptions guaranteed non-nil and with a non-empty
@@ -638,7 +698,7 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 	if _, err := os.Stat(systemPath); err == nil {
 		schemaPresent = true
 	}
-	downloadPath := filepath.Join(providerdata.ProviderDir(globalOptions.DownloadDir, provider), "openapi", "cluster_configuration.yaml")
+	downloadPath := filepath.Join(providerdir.ProviderDir(globalOptions.DownloadDir, provider), "openapi", "cluster_configuration.yaml")
 	if _, err := os.Stat(downloadPath); err == nil {
 		schemaPresent = true
 	}
@@ -649,7 +709,7 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 
 	// The validator binary ships in the same image as the schemas, so its
 	// presence alone marks the bundle as delivered.
-	validatorPath := providerdata.ValidatorPath(globalOptions.DownloadDir, provider)
+	validatorPath := providerdir.ValidatorPath(globalOptions.DownloadDir, provider)
 	if _, err := os.Stat(validatorPath); err == nil {
 		return true
 	}
@@ -670,7 +730,7 @@ func loadDeliveredProviderSchemas(provider string, globalOptions *options.Global
 	if store.HasProviderSchemas(provider) {
 		return nil
 	}
-	dir := providerdata.ProviderDir(globalOptions.DownloadDir, provider)
+	dir := providerdir.ProviderDir(globalOptions.DownloadDir, provider)
 	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
 		dir = resolved
 	}
@@ -845,7 +905,7 @@ func providerBundleReady(provider, digest string, globalOptions *options.GlobalO
 	if !NewSchemaStore(globalOptions).ProviderSchemasLoaded(provider, digest) {
 		return false
 	}
-	_, err := os.Stat(providerdata.ProviderDir(globalOptions.DownloadDir, provider))
+	_, err := os.Stat(providerdir.ProviderDir(globalOptions.DownloadDir, provider))
 	return err == nil
 }
 
@@ -859,14 +919,14 @@ func ensureProviderBundle(ctx context.Context, provider, digest string, conf *im
 		}
 		// Load from the real digest dir: filepath.Walk does not follow the
 		// <provider> symlink root.
-		digestDir := providerdata.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
+		digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
 		return nil, NewSchemaStore(globalOptions).LoadProviderDir(provider, digest, digestDir)
 	})
 	return err
 }
 
 func unpackProviderBundle(ctx context.Context, provider, digest string, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {
-	digestDir := providerdata.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
+	digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
 	if _, err := os.Stat(digestDir); err != nil {
 		imgName := conf.GetRegistry() + "@" + digest
 		log.DebugF("Downloading provider bundle for %s\n", provider)
@@ -874,7 +934,7 @@ func unpackProviderBundle(ctx context.Context, provider, digest string, conf *im
 			return fmt.Errorf("download provider bundle %s: %w", imgName, err)
 		}
 	}
-	return switchProviderSymlink(providerdata.ProviderDir(globalOptions.DownloadDir, provider), digestDir)
+	return switchProviderSymlink(providerdir.ProviderDir(globalOptions.DownloadDir, provider), digestDir)
 }
 
 // switchProviderSymlink atomically points linkPath at target. A pre-symlink

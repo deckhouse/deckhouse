@@ -43,8 +43,14 @@ func (h *Handler) Run(ctx context.Context) error {
 
 	switch os.Args[1] {
 	case "validate":
+		if h.Validate == nil {
+			return fmt.Errorf("validate subcommand is not implemented by this binary")
+		}
 		return h.runValidate(ctx)
 	case "prepare":
+		if h.Prepare == nil {
+			return fmt.Errorf("prepare subcommand is not implemented by this binary")
+		}
 		return h.runPrepare(ctx)
 	default:
 		return fmt.Errorf("unknown subcommand: %s", os.Args[1])
@@ -55,9 +61,6 @@ func (h *Handler) runValidate(ctx context.Context) error {
 	var req ValidateRequest
 	if err := json.NewDecoder(os.Stdin).Decode(&req); err != nil {
 		return fmt.Errorf("decode validate request: %w", err)
-	}
-	if req.Version != ProtocolVersion {
-		return fmt.Errorf("unsupported protocol version %q (expected %q)", req.Version, ProtocolVersion)
 	}
 
 	resp := ValidateResponse{}
@@ -71,9 +74,6 @@ func (h *Handler) runPrepare(ctx context.Context) error {
 	var req PrepareRequest
 	if err := json.NewDecoder(os.Stdin).Decode(&req); err != nil {
 		return fmt.Errorf("decode prepare request: %w", err)
-	}
-	if req.Version != ProtocolVersion {
-		return fmt.Errorf("unsupported protocol version %q (expected %q)", req.Version, ProtocolVersion)
 	}
 
 	result, err := h.Prepare(ctx, req.Input)

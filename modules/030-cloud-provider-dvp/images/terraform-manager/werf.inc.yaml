@@ -7,11 +7,19 @@ git:
   to: /
   excludePaths:
   - '**/terraform_versions.yml'
+  - '**/plan_rules.yml'
   stageDependencies:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
+  stageDependencies:
+    install:
+    - '**/*'
+# plan_rules.yml must sit next to terraform_versions.yml so dhctl's
+# copyTFVersionFile delivers it into candi (loadPlanRules reads it adjacent).
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/plan_rules.yml
+  to: /terraform-manager/plan_rules.yml
   stageDependencies:
     install:
     - '**/*'

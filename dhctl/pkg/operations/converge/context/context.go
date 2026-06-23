@@ -68,9 +68,11 @@ type Context struct {
 
 	// metaConfig is memoised per converge run: repeat pipeline steps must not
 	// re-fetch cluster resources and re-run the external provider validator.
-	metaConfigOnce sync.Once
-	metaConfig     *config.MetaConfig
-	metaConfigErr  error
+	// Only a successful load is cached; AutoConverge calls ReloadMetaConfig at
+	// the start of each tick so operator changes are picked up between runs.
+	metaConfigMu     sync.Mutex
+	metaConfig       *config.MetaConfig
+	metaConfigLoaded bool
 }
 
 type Params struct {
@@ -205,10 +207,33 @@ func (c *Context) CompleteExecutionPhase(ctx context.Context, data any) error {
 }
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
-	c.metaConfigOnce.Do(func() {
-		c.metaConfig, c.metaConfigErr = c.loadMetaConfig()
-	})
-	return c.metaConfig, c.metaConfigErr
+	c.metaConfigMu.Lock()
+	defer c.metaConfigMu.Unlock()
+
+	if c.metaConfigLoaded {
+		return c.metaConfig, nil
+	}
+
+	metaConfig, err := c.loadMetaConfig()
+	if err != nil {
+		// Do not cache failures: a transient error (e.g. kube tunnel not ready)
+		// must not be frozen for the lifetime of a reused Context.
+		return nil, err
+	}
+	c.metaConfig = metaConfig
+	c.metaConfigLoaded = true
+	return c.metaConfig, nil
+}
+
+// ReloadMetaConfig drops the memoised MetaConfig so the next MetaConfig call
+// re-reads the live cluster configuration. AutoConverge calls it each tick so
+// operator changes (replicas, instance classes, provider settings) take effect
+// without a process restart.
+func (c *Context) ReloadMetaConfig() {
+	c.metaConfigMu.Lock()
+	defer c.metaConfigMu.Unlock()
+	c.metaConfig = nil
+	c.metaConfigLoaded = false
 }
 
 func (c *Context) loadMetaConfig() (*config.MetaConfig, error) {

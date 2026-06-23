@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 func TestValidateClusterPrefix(t *testing.T) {
@@ -97,7 +97,7 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 	// (converge here) skips it even for otherwise-invalid settings.
 	assertSkipValidationWithNATInstance := func(t *testing.T, settings string, nodeGroups json.RawMessage) {
 		input := getInput(t, settings, nodeGroups)
-		input.Operation = providerdata.OperationConverge
+		input.Operation = proto.OperationConverge
 		preparator := NewMetaConfigPreparator(true, log.NewSilentLogger())
 
 		err := preparator.Validate(context.TODO(), input)
@@ -177,7 +177,7 @@ func fillTestWithNatInstanceLayout(t *testing.T, input *config.ProviderInput, se
 }
 
 func assertValidation(t *testing.T, input config.ProviderInput, hasError bool) {
-	input.Operation = providerdata.OperationBootstrap
+	input.Operation = proto.OperationBootstrap
 	preparator := NewMetaConfigPreparator(true, log.NewSilentLogger())
 
 	err := preparator.Validate(context.TODO(), input)

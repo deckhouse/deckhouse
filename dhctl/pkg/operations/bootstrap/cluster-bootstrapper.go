@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -61,6 +61,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 const (
@@ -1057,7 +1058,7 @@ func isCloudProviderCredentialSecret(resource *template.Resource) bool {
 		return false
 	}
 	secretType, _, _ := unstructured.NestedString(resource.Object.Object, "type")
-	return secretType == providerdata.CloudProviderCredentialsSecretType
+	return secretType == proto.CredentialsSecretType
 }
 
 // prependMissingNamespaces inserts a minimal Namespace stub for every distinct
@@ -1078,11 +1079,18 @@ func prependMissingNamespaces(resources template.Resources) template.Resources {
 		}
 	}
 
-	stubs := make(template.Resources, 0, len(needed))
+	missing := make([]string, 0, len(needed))
 	for ns := range needed {
 		if _, ok := present[ns]; ok {
 			continue
 		}
+		missing = append(missing, ns)
+	}
+	// Deterministic order: ranging a map yields a random namespace-stub order.
+	sort.Strings(missing)
+
+	stubs := make(template.Resources, 0, len(missing))
+	for _, ns := range missing {
 		stub := unstructured.Unstructured{}
 		stub.SetAPIVersion("v1")
 		stub.SetKind("Namespace")

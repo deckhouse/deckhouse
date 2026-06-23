@@ -21,18 +21,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 type fakeMutatingPreparator struct {
-	result providerdata.PrepareResult
+	result proto.PrepareResult
 }
 
 func (p *fakeMutatingPreparator) Validate(_ context.Context, _ ProviderInput) error {
 	return nil
 }
 
-func (p *fakeMutatingPreparator) Prepare(_ context.Context, _ ProviderInput) (providerdata.PrepareResult, error) {
+func (p *fakeMutatingPreparator) Prepare(_ context.Context, _ ProviderInput) (proto.PrepareResult, error) {
 	return p.result, nil
 }
 
@@ -41,8 +41,8 @@ func fakePreparatorProvider(p MetaConfigPreparator) MetaConfigPreparatorProvider
 }
 
 func TestPrepareMutationMergeContract(t *testing.T) {
-	vars := &providerdata.CloudProviderVars{Settings: map[string]interface{}{"zone": "b"}}
-	preparator := &fakeMutatingPreparator{result: providerdata.PrepareResult{
+	vars := &proto.CloudProviderVars{Settings: map[string]interface{}{"zone": "b"}}
+	preparator := &fakeMutatingPreparator{result: proto.PrepareResult{
 		Vars: vars,
 		ProviderClusterConfig: map[string]interface{}{
 			"replaced": map[string]interface{}{"new": true},
@@ -75,7 +75,7 @@ func TestPrepareMutationRevalidatesAgainstSchema(t *testing.T) {
 	store := NewSchemaStore(nil)
 	require.NoError(t, store.LoadProviderDir("mutprov", "sha256:mut1", dir))
 
-	preparator := &fakeMutatingPreparator{result: providerdata.PrepareResult{
+	preparator := &fakeMutatingPreparator{result: proto.PrepareResult{
 		ProviderClusterConfig: map[string]interface{}{
 			"bogus": "not allowed by additionalProperties: false",
 		},
@@ -102,7 +102,7 @@ func TestPrepareMutationValidResultPasses(t *testing.T) {
 	store := NewSchemaStore(nil)
 	require.NoError(t, store.LoadProviderDir("mutprovok", "sha256:mut2", dir))
 
-	preparator := &fakeMutatingPreparator{result: providerdata.PrepareResult{
+	preparator := &fakeMutatingPreparator{result: proto.PrepareResult{
 		ProviderClusterConfig: map[string]interface{}{
 			"layout": "Amended",
 		},

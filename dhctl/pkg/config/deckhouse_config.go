@@ -28,7 +28,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
@@ -82,7 +81,7 @@ func (c *DeckhouseInstaller) HasProviderModuleConfig() bool {
 	if c == nil || c.ProviderName == "" {
 		return false
 	}
-	target := providerdata.CloudProviderModuleName(c.ProviderName)
+	target := CloudProviderModuleName(c.ProviderName)
 	for _, mc := range c.ModuleConfigs {
 		if mc.Name == target {
 			return true

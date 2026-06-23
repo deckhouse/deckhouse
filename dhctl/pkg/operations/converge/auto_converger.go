@@ -126,6 +126,10 @@ func (c *AutoConverger) getHTTPServer() *http.Server {
 func (c *AutoConverger) runConverge(ctx *convergectx.Context, tmpCleaner cache.TmpCleaner) {
 	log.InfoLn("Start next converge")
 
+	// The Context is reused across ticks; re-read the live cluster config so
+	// operator changes between runs are not masked by the per-run memoisation.
+	ctx.ReloadMetaConfig()
+
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		log.ErrorF("Cannot get meta config: %v\n", err)
