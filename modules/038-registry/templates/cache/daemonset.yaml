@@ -56,9 +56,9 @@ spec:
             - { name: pki, mountPath: /pki }
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 14 }}
             {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-              {{- include "registry_cache_distribution_resources" . | nindent 12 }}
+              {{- include "registry_cache_distribution_resources" . | nindent 14 }}
             {{- end }}
         - name: auth
           image: {{ include "helm_lib_module_image" (list . "dockerAuth") }}
@@ -77,9 +77,9 @@ spec:
             - { name: pki, mountPath: /pki }
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 14 }}
             {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-              {{- include "registry_cache_auth_resources" . | nindent 12 }}
+              {{- include "registry_cache_auth_resources" . | nindent 14 }}
             {{- end }}
         - name: cache-agent
           image: {{ include "helm_lib_module_image" (list . "syncer") }}
@@ -98,9 +98,9 @@ spec:
             - { name: agent-config, mountPath: /agent }
           resources:
             requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 14 }}
             {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-              {{- include "registry_cache_agent_resources" . | nindent 12 }}
+              {{- include "registry_cache_agent_resources" . | nindent 14 }}
             {{- end }}
       volumes:
         - name: pki

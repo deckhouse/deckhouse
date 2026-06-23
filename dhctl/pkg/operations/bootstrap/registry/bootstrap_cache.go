@@ -22,19 +22,20 @@ package registry
 // not exposed).
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -225,14 +226,11 @@ func bootstrapCachePodSpec(distributionImage string) *corev1.Pod {
 				Name:  "distribution",
 				Image: distributionImage,
 				Args:  []string{"serve", "/config/config.yaml"},
-				Ports: []corev1.ContainerPort{{Name: "distribution", ContainerPort: 5001}},
-				// tcpSocket, not httpGet: distribution is HTTPS+auth, a TCP check = listening.
-				ReadinessProbe: &corev1.Probe{
-					ProbeHandler: corev1.ProbeHandler{
-						TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(5001)},
-					},
-					PeriodSeconds: 3,
-				},
+				// No readiness probe: distribution binds 127.0.0.1:5001 (loopback, not
+				// exposed), but a hostNetwork pod's probe dials the pod IP (= node IP),
+				// which the loopback bind refuses; the distroless image has no shell for
+				// an exec probe. The fill Pod (hostNetwork, OnFailure) is the de-facto
+				// readiness gate — it retries until the cache answers on the loopback.
 				VolumeMounts: []corev1.VolumeMount{
 					{Name: "data", MountPath: "/data"},
 					{Name: "config", MountPath: "/config"},
@@ -284,19 +282,22 @@ func applyPod(ctx context.Context, kubeCl *client.KubernetesClient, p *corev1.Po
 	return nil
 }
 
+// waitBootstrapCacheReady waits until the distribution container is Running. It
+// does not wait for Ready (see the no-probe note on the pod spec); the fill Pod
+// retries against the loopback until the cache actually answers.
 func waitBootstrapCacheReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for registry-bootstrap-cache to become Ready", bootstrapCacheReadyAttempts, bootstrapCacheReadyWait).
+	return retry.NewLoop("Waiting for registry-bootstrap-cache to start", bootstrapCacheReadyAttempts, bootstrapCacheReadyWait).
 		RunContext(ctx, func() error {
 			p, err := kubeCl.CoreV1().Pods(bootstrapCacheNamespace).Get(ctx, bootstrapCachePodName, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("get pod %s: %w", bootstrapCachePodName, err)
 			}
-			for _, c := range p.Status.Conditions {
-				if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+			for _, cs := range p.Status.ContainerStatuses {
+				if cs.Name == "distribution" && cs.State.Running != nil {
 					return nil
 				}
 			}
-			return fmt.Errorf("registry-bootstrap-cache not ready (phase=%s)", p.Status.Phase)
+			return fmt.Errorf("registry-bootstrap-cache not started (phase=%s)", p.Status.Phase)
 		})
 }
 
@@ -329,7 +330,13 @@ func fillBootstrapCache(ctx context.Context, kubeCl *client.KubernetesClient, cf
 		return err
 	}
 
-	if err := waitFillPodSucceeded(ctx, kubeCl); err != nil {
+	// Stream the syncer's "[N/M] Syncing ..." progress into the bootstrap output;
+	// stops when the wait below returns.
+	logCtx, stopLogs := context.WithCancel(ctx)
+	go streamFillPodLogs(logCtx, kubeCl)
+	err = waitFillPodSucceeded(ctx, kubeCl)
+	stopLogs()
+	if err != nil {
 		return err
 	}
 
@@ -373,10 +380,11 @@ func fillPodSpec(syncerImage string) *corev1.Pod {
 	}
 }
 
-// waitFillPodSucceeded polls the fill Pod until Succeeded. RestartPolicy OnFailure
-// retries a transient syncer error in place; a persistent one exhausts the budget.
+// waitFillPodSucceeded polls the fill Pod until Succeeded. Silent: streamFillPodLogs
+// carries the progress. RestartPolicy OnFailure retries a transient syncer error in
+// place; a persistent one exhausts the budget.
 func waitFillPodSucceeded(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for registry-bootstrap-cache fill to complete", fillPollAttempts, fillPollWait).
+	return retry.NewSilentLoop("registry-bootstrap-cache fill", fillPollAttempts, fillPollWait).
 		RunContext(ctx, func() error {
 			p, err := kubeCl.CoreV1().Pods(bootstrapCacheNamespace).Get(ctx, bootstrapCacheFillPodName, metav1.GetOptions{})
 			if err != nil {
@@ -387,4 +395,31 @@ func waitFillPodSucceeded(ctx context.Context, kubeCl *client.KubernetesClient) 
 			}
 			return fmt.Errorf("registry-bootstrap-cache fill not done (phase=%s)", p.Status.Phase)
 		})
+}
+
+// streamFillPodLogs follows the fill Pod's logs into the bootstrap output so the
+// operator sees the syncer's "[N/M] Syncing ..." progress. Best-effort: it
+// reconnects on stream breaks (incl. an OnFailure container restart) and returns
+// when ctx is cancelled (by fillBootstrapCache once the fill completes).
+func streamFillPodLogs(ctx context.Context, kubeCl *client.KubernetesClient) {
+	logger := log.GetDefaultLogger()
+	for ctx.Err() == nil {
+		rc, err := kubeCl.CoreV1().
+			Pods(bootstrapCacheNamespace).
+			GetLogs(bootstrapCacheFillPodName, &corev1.PodLogOptions{Follow: true}).
+			Stream(ctx)
+		if err != nil {
+			time.Sleep(2 * time.Second) // pod not ready for logs yet; retry
+			continue
+		}
+		sc := bufio.NewScanner(rc)
+		for sc.Scan() {
+			logger.LogInfoLn("registry-syncer:", sc.Text())
+		}
+		if err := sc.Err(); err != nil {
+			logger.LogDebugLn("registry-syncer log stream ended:", err)
+		}
+		_ = rc.Close()
+		time.Sleep(time.Second)
+	}
 }
