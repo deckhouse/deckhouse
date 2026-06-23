@@ -36,11 +36,11 @@ var (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        lib.Queue("monitoring"),
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // The hook relies on operatorVersionsToInstall value discovered in discovery_operator_versions_to_install.go before.
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Relies on versionsToInstall from discovery_versions_to_install.go (Order: 5).
 }, versionCompatibilityMonitoringHook)
 
 func versionCompatibilityMonitoringHook(_ context.Context, input *go_hook.HookInput) error {
-	if !input.Values.Get("istio.internal.operatorVersionsToInstall").Exists() {
+	if !input.Values.Get("istio.internal.versionsToInstall").Exists() {
 		return nil
 	}
 	if !input.Values.Get("global.discovery.kubernetesVersion").Exists() {
@@ -51,9 +51,7 @@ func versionCompatibilityMonitoringHook(_ context.Context, input *go_hook.HookIn
 	}
 	compatibilityMap := make(map[string][]string)
 
-	// Major.Minor
-	istioVersions := input.Values.Get("istio.internal.operatorVersionsToInstall").Array()
-	// Major.Minor.Patch
+	istioVersions := input.Values.Get("istio.internal.versionsToInstall").Array()
 	k8sVersion := input.Values.Get("global.discovery.kubernetesVersion").String()
 	k8sVersionSemver, err := semver.NewVersion(k8sVersion)
 	if err != nil {
@@ -68,15 +66,20 @@ func versionCompatibilityMonitoringHook(_ context.Context, input *go_hook.HookIn
 	input.MetricsCollector.Expire(monitoringMetricsGroup)
 
 OUTER:
-	for _, istioVersion := range istioVersions {
-		for _, k8sCompVersion := range compatibilityMap[istioVersion.String()] {
+	for _, istioVersionRaw := range istioVersions {
+		istioVersionSemver, err := semver.NewVersion(istioVersionRaw.String())
+		if err != nil {
+			continue
+		}
+		istioVersion := fmt.Sprintf("%d.%d", istioVersionSemver.Major(), istioVersionSemver.Minor())
+		for _, k8sCompVersion := range compatibilityMap[istioVersion] {
 			if k8sVersionMajorMinor == k8sCompVersion {
 				continue OUTER
 			}
 		}
 		labels := map[string]string{
 			"k8s_version":   k8sVersion,
-			"istio_version": istioVersion.String(),
+			"istio_version": istioVersion,
 		}
 		input.MetricsCollector.Set(telemetry.WrapName("istio_version_incompatible_with_k8s_version"), 1.0, labels, metrics.WithGroup(monitoringMetricsGroup))
 	}
