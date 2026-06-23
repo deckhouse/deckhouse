@@ -322,6 +322,19 @@ internal:
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  clusterMasterEndpoints:
+  - address: 10.0.0.1
+    kubeApiPort: 6443
+    rppServerPort: 4219
+    rppBootstrapServerPort: 4282
+  - address: 10.0.0.2
+    kubeApiPort: 6443
+    rppServerPort: 4219
+    rppBootstrapServerPort: 4282
+  - address: 10.0.0.3
+    kubeApiPort: 6443
+    rppServerPort: 4219
+    rppBootstrapServerPort: 4282
   kubernetesCA: myclusterca
   cloudProvider:
     type: openstack
@@ -403,6 +416,7 @@ internal:
       internalSubnet: "10.0.0.1/24"
       internalNetworkNames: [mynetwork, mynetwork2]
       externalNetworkNames: [shared]
+      apiServerFloatingIP: true
       tags:
         yyy: zzz
         aaa: xxx
@@ -1197,6 +1211,183 @@ ccc: ddd
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
 			assertBashibleAPIServerTLS(f)
+		})
+
+		Context("split mode with only CAPI autoscaler enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateKind", "OpenStackMachineTemplate")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.deployAutoscaler", true)
+				f.ValuesSet("global.discovery.podSubnet", "10.111.0.0/16")
+				f.ValuesSet("nodeManager.internal.autoscalerNodes", []string{
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-02320933",
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-6bdb5b0d",
+				})
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must render only clusterapi autoscaler", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				clusterAutoscalerDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "cluster-autoscaler")
+				clusterAutoscalerMCMDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "cluster-autoscaler-mcm")
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+
+				Expect(clusterAutoscalerDeploy.Exists()).To(BeTrue())
+				Expect(clusterAutoscalerMCMDeploy.Exists()).To(BeFalse())
+				Expect(clusterAutoscalerDeploy.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--cloud-provider=clusterapi"))
+				Expect(machineDeployment.Exists()).To(BeTrue())
+				Expect(machineDeployment.Field("spec.template.spec.failureDomain").String()).To(Equal("zonea"))
+			})
+
+			It("must render allowed address pairs for internal OpenStack networks", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				Expect(machineDeployment.Exists()).To(BeTrue())
+
+				templateName := machineDeployment.Field("spec.template.spec.infrastructureRef.name").String()
+				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", templateName)
+				Expect(openStackTemplate.Exists()).To(BeTrue())
+
+				Expect(openStackTemplate.Field("spec.template.spec.ports").String()).To(MatchYAML(`
+- network:
+    filter:
+      name: shared
+  securityGroups:
+  - filter:
+      name: groupa
+  - filter:
+      name: groupb
+- network:
+    filter:
+      name: mynetwork
+  securityGroups:
+  - filter:
+      name: groupa
+  - filter:
+      name: groupb
+  allowedAddressPairs:
+  - ipAddress: 10.111.0.0/16
+- network:
+    filter:
+      name: mynetwork2
+  securityGroups:
+  - filter:
+      name: groupa
+  - filter:
+      name: groupb
+  allowedAddressPairs:
+  - ipAddress: 10.111.0.0/16
+`))
+			})
+
+			It("must keep API floating IP enabled for Standard-like layouts", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				openStackCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "openstack")
+				Expect(openStackCluster.Exists()).To(BeTrue())
+				Expect(openStackCluster.Field("spec.disableAPIServerFloatingIP").Exists()).To(BeFalse())
+				Expect(openStackCluster.Field("spec.controlPlaneEndpoint").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("split mode with only CAPI autoscaler enabled and VXLAN pod network", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateKind", "OpenStackMachineTemplate")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.openstack.podNetworkMode", "VXLAN")
+				f.ValuesSet("global.discovery.podSubnet", "10.111.0.0/16")
+				f.ValuesSet("nodeManager.internal.deployAutoscaler", true)
+				f.ValuesSet("nodeManager.internal.autoscalerNodes", []string{
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-02320933",
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-6bdb5b0d",
+				})
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must not render allowed address pairs for VXLAN", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				machineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+				Expect(machineDeployment.Exists()).To(BeTrue())
+
+				templateName := machineDeployment.Field("spec.template.spec.infrastructureRef.name").String()
+				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", templateName)
+				Expect(openStackTemplate.Exists()).To(BeTrue())
+
+				Expect(openStackTemplate.Field("spec.template.spec.ports").String()).To(MatchYAML(`
+- network:
+    filter:
+      name: shared
+  securityGroups:
+  - filter:
+      name: groupa
+  - filter:
+      name: groupb
+- network:
+    filter:
+      name: mynetwork
+  securityGroups:
+  - filter:
+      name: groupa
+  - filter:
+      name: groupb
+- network:
+    filter:
+      name: mynetwork2
+  securityGroups:
+  - filter:
+      name: groupa
+  - filter:
+      name: groupb
+`))
+			})
+		})
+
+		Context("split mode with OpenStack layout without API floating IP", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerOpenstack)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateKind", "OpenStackMachineTemplate")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.openstack.layout", "Standard")
+				f.ValuesSet("nodeManager.internal.cloudProvider.openstack.apiServerFloatingIP", false)
+				f.ValuesSet("nodeManager.internal.deployAutoscaler", true)
+				f.ValuesSet("nodeManager.internal.autoscalerNodes", []string{
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-02320933",
+				})
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("must use the existing control plane endpoint instead of API floating IP", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				openStackCluster := f.KubernetesResource("OpenStackCluster", "d8-cloud-instance-manager", "openstack")
+				Expect(openStackCluster.Exists()).To(BeTrue())
+				Expect(openStackCluster.Field("spec.disableAPIServerFloatingIP").Bool()).To(BeTrue())
+				Expect(openStackCluster.Field("spec.controlPlaneEndpoint.host").String()).To(Equal("10.0.0.1"))
+				Expect(openStackCluster.Field("spec.controlPlaneEndpoint.port").Int()).To(Equal(int64(6443)))
+			})
 		})
 	})
 
