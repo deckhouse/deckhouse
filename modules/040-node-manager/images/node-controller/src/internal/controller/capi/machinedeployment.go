@@ -120,7 +120,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 	logger := log.FromContext(ctx)
 
 	if ng.Spec.CloudInstances == nil {
-		logger.Info("skipping: no cloudInstances")
+		logger.V(1).Info("skipping: no cloudInstances")
 		return nil
 	}
 
@@ -129,30 +129,25 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		return err
 	}
 	if cloudConfig.capiClusterName == "" {
-		logger.Info("skipping: capiClusterName is empty")
+		logger.V(1).Info("skipping: capiClusterName is empty")
 		return nil
 	}
 
-	// Zones can be explicitly set on the NodeGroup or discovered from the cloud provider secret.
 	zones := ng.Spec.CloudInstances.Zones
 	if len(zones) == 0 {
 		zones = cloudConfig.zones
 	}
 	if len(zones) == 0 {
-		logger.Info("skipping: no zones in NodeGroup or cloud provider secret")
+		logger.V(1).Info("skipping: no zones in NodeGroup or cloud provider secret")
 		return nil
 	}
 
-	// The hash for template/MD names includes the instance class checksum so that
-	// changing InstanceClass triggers a rolling update (new template + new MD name).
-	// Helm creates the infra template and stamps the checksum as an annotation.
-	// We read it back to stay consistent.
 	instanceClassChecksum, err := r.readInstanceClassChecksum(ctx, cloudConfig, ng.Name)
 	if err != nil {
 		return err
 	}
 	if instanceClassChecksum == "" {
-		logger.Info("skipping: infrastructure template not found yet, waiting for helm")
+		logger.V(1).Info("skipping: infrastructure template not found yet, waiting for helm")
 		return nil
 	}
 
@@ -217,8 +212,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			"node-group": ng.Name,
 		}
 
-		// Calculate desired replicas: on first creation use minReplicas,
-		// on update clamp existing replicas to [min, max].
 		var desired int32
 		existing := &unstructured.Unstructured{}
 		existing.SetGroupVersionKind(schema.GroupVersionKind{
@@ -283,7 +276,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MachineDeployment %s: %w", mdName, err)
 		}
-		logger.V(1).Info("applied cloud MachineDeployment", "name", mdName, "zone", zone)
+		logger.Info("applied cloud MachineDeployment", "name", mdName, "zone", zone)
 	}
 
 	return nil
@@ -356,7 +349,7 @@ func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng 
 	if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 		return fmt.Errorf("apply static MachineDeployment %s: %w", mdName, err)
 	}
-	logger.V(1).Info("applied static MachineDeployment", "name", mdName)
+	logger.Info("applied static MachineDeployment", "name", mdName)
 	return nil
 }
 

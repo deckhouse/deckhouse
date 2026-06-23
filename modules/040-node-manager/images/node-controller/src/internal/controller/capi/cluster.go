@@ -178,7 +178,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 		return fmt.Errorf("create MachineHealthCheck: %w", err)
 	}
 
-	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
+	logger.Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
 	return nil
 }
 
@@ -266,7 +266,7 @@ func (r *ClusterReconciler) ensureStaticCluster(ctx context.Context, clusterConf
 		return fmt.Errorf("create static MachineHealthCheck: %w", err)
 	}
 
-	logger.V(1).Info("ensured static CAPI cluster resources")
+	logger.Info("ensured static CAPI cluster resources")
 	return nil
 }
 

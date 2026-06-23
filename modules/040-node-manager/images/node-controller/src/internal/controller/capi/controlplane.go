@@ -67,6 +67,6 @@ func (r *ControlPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, fmt.Errorf("patch DeckhouseControlPlane status: %w", err)
 	}
 
-	logger.V(1).Info("patched DeckhouseControlPlane status", "name", obj.GetName())
+	logger.Info("patched DeckhouseControlPlane status", "name", obj.GetName())
 	return ctrl.Result{}, nil
 }
