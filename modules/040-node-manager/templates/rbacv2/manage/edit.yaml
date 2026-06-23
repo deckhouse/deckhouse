@@ -21,6 +21,7 @@ rules:
   - nodeusers
   - sshcredentials
   - staticinstances
+  - containerdintegritypolicies
   verbs:
   - create
   - update
