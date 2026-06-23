@@ -112,16 +112,18 @@ type SyncerUser struct {
 
 // BuildCacheFillSyncerConfig builds the one-shot syncer config that copies the
 // on-node bootstrap seed (local on the master) into the in-cluster cache leader.
-// Source = the seed (https, module CA, RO creds); dest = the cache leader (https,
-// module CA, RW creds). Additive (prune=false): the bootstrap fill never deletes.
-func BuildCacheFillSyncerConfig(caBundle, roUserName, roUserPassword, rwUserName, rwUserPassword string) SyncerConfig {
+// Both endpoints authenticate as the RW user (https, module CA): listing the seed
+// catalog (GET /v2/_catalog) requires docker-auth's `*` action, which only RW
+// holds — the RO grant is `pull` alone — and pushing to the cache leader requires
+// write. Additive (prune=false): the bootstrap fill never deletes.
+func BuildCacheFillSyncerConfig(caBundle, rwUserName, rwUserPassword string) SyncerConfig {
 	return SyncerConfig{
 		Src: SyncerRegistry{
 			Address: cacheFillSyncerSource,
 			CA:      caBundle,
 			User: &SyncerUser{
-				Name:     roUserName,
-				Password: roUserPassword,
+				Name:     rwUserName,
+				Password: rwUserPassword,
 			},
 		},
 		Dest: SyncerRegistry{
@@ -145,11 +147,8 @@ type CacheFillParams struct {
 	// PKICA is the module CA (PEM): trusts both the seed source and the cache dest.
 	PKICA string
 
-	// Seed source RO credentials (the seed requires token auth).
-	PKIROUserName     string
-	PKIROUserPassword string
-
-	// Cache destination RW credentials.
+	// RW credentials, used for both the seed source (catalog needs the `*` action)
+	// and the cache destination (push).
 	PKIRWUserName     string
 	PKIRWUserPassword string
 }
@@ -171,11 +170,7 @@ type CacheFillParams struct {
 // The implementation uses the same SSH exec facilities as readRemoteFile and the
 // bashible runner — Command + File.UploadBytes.
 func FillCacheFromSeed(ctx context.Context, params CacheFillParams) error {
-	cfg := BuildCacheFillSyncerConfig(
-		params.PKICA,
-		params.PKIROUserName, params.PKIROUserPassword,
-		params.PKIRWUserName, params.PKIRWUserPassword,
-	)
+	cfg := BuildCacheFillSyncerConfig(params.PKICA, params.PKIRWUserName, params.PKIRWUserPassword)
 
 	cfgBytes, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -241,8 +236,6 @@ func CacheFillParamsFromInitSecret(ctx context.Context, kubeCl *client.Kubernete
 	return CacheFillParams{
 		NodeInterface:     node,
 		PKICA:             cfg.CA.Cert,
-		PKIROUserName:     cfg.ROUser.Name,
-		PKIROUserPassword: cfg.ROUser.Password,
 		PKIRWUserName:     cfg.RWUser.Name,
 		PKIRWUserPassword: cfg.RWUser.Password,
 	}, nil

@@ -27,22 +27,21 @@ import (
 func TestBuildCacheFillSyncerConfig(t *testing.T) {
 	const (
 		testCA     = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
-		roUser     = "seed-ro"
-		roPassword = "ro-pass"
 		rwUser     = "cache-rw"
 		rwPassword = "rw-pass"
 	)
-	cfg := BuildCacheFillSyncerConfig(testCA, roUser, roPassword, rwUser, rwPassword)
+	cfg := BuildCacheFillSyncerConfig(testCA, rwUser, rwPassword)
 
-	// Source = the on-node seed (local on the master), RO creds, module CA.
+	// Source = the on-node seed (local on the master), RW creds (catalog needs the
+	// `*` action, RO-only would 401 on GET /v2/_catalog), module CA.
 	if cfg.Src.Address != "127.0.0.1:5010" {
 		t.Fatalf("Src.Address = %q, want 127.0.0.1:5010 (seed)", cfg.Src.Address)
 	}
 	if cfg.Src.CA != testCA {
 		t.Fatalf("Src.CA mismatch (seed is https with module CA)")
 	}
-	if cfg.Src.User == nil || cfg.Src.User.Name != roUser || cfg.Src.User.Password != roPassword {
-		t.Fatalf("Src.User = %+v, want seed RO creds", cfg.Src.User)
+	if cfg.Src.User == nil || cfg.Src.User.Name != rwUser || cfg.Src.User.Password != rwPassword {
+		t.Fatalf("Src.User = %+v, want seed RW creds (catalog needs *)", cfg.Src.User)
 	}
 	// Dest = the cache leader, RW creds, module CA.
 	if cfg.Dest.Address != "registry-cache-leader.d8-system.svc:5001" {
