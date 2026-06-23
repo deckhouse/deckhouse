@@ -23,15 +23,19 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 )
+
+const minVersionValuesKey = "istio:minimalVersion"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// The Order below matters for ensure_crds_istio.go, it needs globalVersion to deploy proper CRDs
@@ -108,6 +112,22 @@ func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependen
 
 	input.Values.Set("istio.internal.globalVersion", globalVersion)
 	input.Values.Set("istio.internal.versionsToInstall", versionsToInstall)
+
+	if len(versionsToInstall) == 0 {
+		requirements.RemoveValue(minVersionValuesKey)
+	} else {
+		var minVersion *semver.Version
+		for _, version := range versionsToInstall {
+			versionSemver, err := semver.NewVersion(version)
+			if err != nil {
+				return err
+			}
+			if minVersion == nil || versionSemver.LessThan(minVersion) {
+				minVersion = versionSemver
+			}
+		}
+		requirements.SaveValue(minVersionValuesKey, fmt.Sprintf("%d.%d", minVersion.Major(), minVersion.Minor()))
+	}
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 	for _, ver := range versionsToInstall {

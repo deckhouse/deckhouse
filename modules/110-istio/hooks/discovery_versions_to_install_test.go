@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -66,6 +67,10 @@ globalVersion: "1.2" # default version "from openapi/values.yaml"
 
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").String()).To(MatchJSON(`["1.2"]`))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))
+
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.2"))
 
 			assertTelemetryMetrics(f, "1.2.11")
 		})
@@ -263,6 +268,34 @@ globalVersion: "1.3" # default version "from openapi/values.yaml"
 			Expect(f.GoHookError).To(MatchError("unsupported versions: [2.0,2.7,2.8,2.9]"))
 
 			assertNoMetrics(f)
+		})
+	})
+
+	Context("Operator-free versions set minimal version requirement", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+
+			values := `
+internal:
+  versionMap: {
+    "1.27": {"fullVersion": "1.27.9"},
+    "1.28": {"fullVersion": "1.28.0"}
+  }
+globalVersion: "1.27"
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.ConfigValuesSet("istio.globalVersion", "1.27")
+			f.ConfigValuesSet("istio.additionalVersions", []string{"1.28"})
+			f.RunHook()
+		})
+
+		It("Should publish minimal version from versionsToInstall", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.27", "1.28"}))
+
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.27"))
 		})
 	})
 })
