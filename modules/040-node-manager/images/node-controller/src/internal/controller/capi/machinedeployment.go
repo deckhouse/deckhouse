@@ -54,7 +54,6 @@ func init() {
 	register.RegisterController("capi-machine-deployment", &deckhousev1.NodeGroup{}, &MachineDeploymentReconciler{})
 }
 
-// MachineDeploymentReconciler creates/updates MachineDeployments from NodeGroups.
 type MachineDeploymentReconciler struct {
 	BaseWithReader
 }

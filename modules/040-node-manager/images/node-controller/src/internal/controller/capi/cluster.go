@@ -42,8 +42,6 @@ func init() {
 	register.RegisterController("capi-cluster-resources", &corev1.Secret{}, &ClusterReconciler{})
 }
 
-// ClusterReconciler creates/ensures CAPI Cluster and MachineHealthCheck resources
-// for both cloud and static node groups.
 type ClusterReconciler struct {
 	BaseWithReader
 }

@@ -32,7 +32,6 @@ func init() {
 	register.RegisterController("capi-control-plane", obj, &ControlPlaneReconciler{})
 }
 
-// ControlPlaneReconciler marks DeckhouseControlPlane as ready/initialized.
 type ControlPlaneReconciler struct {
 	register.Base
 }
