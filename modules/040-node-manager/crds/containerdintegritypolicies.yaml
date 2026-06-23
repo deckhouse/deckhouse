@@ -19,8 +19,9 @@ spec:
   versions:
   - additionalPrinterColumns:
     - description: Label selector that defines which namespaces are protected by this policy.
-      type: string
       jsonPath: .spec.protectedNamespaces.matchLabels
+      name: MatchLabels
+      type: string
     - description: Namespaces protected by this policy
       jsonPath: .status.protectedNamespace
       name: ProtectedNamespaces
