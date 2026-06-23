@@ -10,10 +10,7 @@ lang: en
 There are various parameters in the Pod manifest that directly affect the security of containers.
 Typically these parameters are located in the `securityContext` and `containers[].securityContext` block.
 
-The [`admission-policy-engine`](/modules/admission-policy-engine/) module is responsible for monitoring the values ​​specified in these parameters in the Deckhouse Kubernetes Platform (DKP). Using this module, it is possible to validate the values ​​that can be specified in a Pod.
-
-However, this validation does not explain the nature and function of each security parameter.
-On this page we will look at the basic parameters that are used most often:
+This page covers the main parameters used to configure pod security:
 
 - [`runAsUser`](#runasuser)
 - [`runAsNonRoot`](#runasnonroot)
@@ -34,13 +31,16 @@ On this page we will look at the basic parameters that are used most often:
 - [`hostPath`](#hostpath)
 - [`automountServiceAccountToken`](#automountserviceaccounttoken)
 
-And let’s look at each parameter: what it is responsible for, how to choose the right value for it, and how it works in practice.
+
+{% alert level="info" %}
+The [`admission-policy-engine`](/modules/admission-policy-engine/) module is responsible for monitoring the allowed values specified in these parameters in the Deckhouse Kubernetes Platform (DKP).
+{% endalert %}
 
 ## `runAsUser`
 
 The `runAsUser` (run as user) parameter specifies a specific digital user ID (`UID`) under which all processes within the container will run.
 
-It directly controls the access rights of processes in the Linux operating system. Using this option, you can forcefully remove superuser (root) rights from the application at the kernel level, even if the Docker image itself was not built correctly in the first place.
+It directly controls the access rights of processes in the Linux operating system. Using this option, you can forcefully remove superuser (root) rights from the application at the kernel level, even if the Docker image itself is launched with UID 0.
 
 How user authentication works in Linux.
 
@@ -92,7 +92,7 @@ spec:
 ## `runAsNonRoot`
 
 The `runAsNonRoot` (disable launch as root) parameter determines whether the container must be launched exclusively as a non-root user (UID other than 0).
-It includes a built-in agent-side validation mechanism `kubelet`. Using this parameter, Kubernetes checks the manifest and the Docker image itself before starting, completely blocking the launch of the container if superuser rights are protected inside it.
+It includes a built-in agent-side validation mechanism `kubelet`. Using this parameter, Kubernetes checks the manifest and the Docker image itself before starting, completely blocking the launch of the container if the resulting process UID is 0.
 
 How user verification works in Kubernetes.
 
@@ -541,7 +541,7 @@ Example:
 ```
 
 There are three types of profiles:
-1. Built-in CNI profile - `RuntimeDefault`. Contains a basic set of allowed syscalls that is optimal for most containers.
+1. Built-in runtime profile — `RuntimeDefault`. Contains a basic set of allowed syscalls that is optimal for most containers.
 2. Profile without restrictions - `Unconfined`. Allows you to perform any action in the container.
 3. User profiles
 
@@ -866,7 +866,7 @@ Kubernetes issues instructions to runtime to change the mount type. In this case
 Why this is important for security: Setting the value to `Unmasked` allows direct access to the host kernel configuration. If an attacker compromises a container with masking disabled, he can exploit kernel vulnerabilities or directly change the host's system parameters (for example, via `/proc/sysrq-trigger` cause an instant kernel panic or host reboot). This parameter is the critical vector for container escape (`Container Escape`).
 
 {% alert level="warning" %}
-Important nuances: the use of the `Unmasked` type is required extremely rarely. Its main use case is running specialized tools inside containers, such as image collectors (`Knative`, `Tekton`) or nested containers (`Nested Containerization`), which require full, unmodified access to `/proc` subsystems for process emulation.
+Important nuances: the use of the `Unmasked` type is required extremely rarely. Its main use case is running specialized tools inside containers, such as image build tools (`Kaniko`, `Buildah`, etc.) or nested containers (`Nested Containerization`), which require full, unmodified access to `/proc` subsystems for process emulation.
 {% endalert %}
 
 ### Parameter location
