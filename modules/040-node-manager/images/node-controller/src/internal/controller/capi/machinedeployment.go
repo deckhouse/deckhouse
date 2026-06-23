@@ -486,16 +486,15 @@ func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Cont
 	return "", nil
 }
 
-func getMinMax(ng *deckhousev1.NodeGroup) (min, max int32) {
+func getMinMax(ng *deckhousev1.NodeGroup) (int32, int32) {
 	if ng.Spec.StaticInstances != nil && ng.Spec.StaticInstances.Count != nil {
 		count := *ng.Spec.StaticInstances.Count
 		return count, count
 	}
 	if ng.Spec.CloudInstances != nil {
-		min = ng.Spec.CloudInstances.MinPerZone
-		max = ng.Spec.CloudInstances.MaxPerZone
+		return ng.Spec.CloudInstances.MinPerZone, ng.Spec.CloudInstances.MaxPerZone
 	}
-	return min, max
+	return 0, 0
 }
 
 func calculateReplicas(current, min, max int32) int32 {
