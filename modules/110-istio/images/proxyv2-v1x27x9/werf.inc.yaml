@@ -12,7 +12,7 @@
 #  to force manual creation of fresh build cache. If false - /tmp/bazel-cache & /tmp/bazel-deps will stay in build-envoy-artifact image
 {{- $buildWithPreparedCacheAndDeps := true }}
 #  keep /tmp/ccache-dir in build-image-artifact to export llvm ccache into llvm/llvm-build-cache repo
-{{- $buildWithPreparedLlvmCache := false }}
+{{- $buildWithPreparedLlvmCache := true }}
 ---
 # Based on https://github.com/istio/istio/blob/1.27.9/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.27.9/pilot/docker/Dockerfile.proxyv2
