@@ -11,6 +11,12 @@ description: "Описание схем размещения и взаимоде
 В данной схеме размещения узлы не будут иметь публичных IP-адресов и будут выходить в интернет через NAT-шлюз (NAT Gateway) Yandex Cloud. NAT-шлюз (NAT Gateway) использует случайные публичные IP-адреса из [выделенных диапазонов](https://yandex.cloud/ru/docs/overview/concepts/public-ips#virtual-private-cloud). Из-за этого невозможно добавить в белый список (whitelist) адреса облачных ресурсов, находящихся за конкретным NAT-шлюзом, на стороне других сервисов.
 {% endalert %}
 
+{% alert level="warning" %}
+Так как в данной схеме размещения узлы создаются без публичных IP-адресов, для установки кластера у master-узла должен быть SSH-доступ с машины, на которой запускается dhctl: напрямую по приватной сети или через bastion-хост.
+
+Если master-узел недоступен напрямую, запускайте установку с параметрами `--ssh-bastion-host`, `--ssh-bastion-user` и, при необходимости, `--ssh-bastion-port`.
+{% endalert %}
+
 ![Схема размещения Standard в Yandex Cloud](images/yandex-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10422&t=IvETjbByf1MSQzcm-0 --->
 
@@ -44,14 +50,15 @@ masterNodeGroup:
     cores: 4
     memory: 8192
     imageID: <IMAGE_ID>
-    externalIPAddresses:
-    - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
-    - "Auto"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
-    - <ZONE_D_SUBNET_ID>
+    # Опционально: раскомментируйте, чтобы назначить master-узлам публичные IP-адреса.
+    # externalIPAddresses:
+    # - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
+    # - "Auto"
+    # - "Auto"
+    # externalSubnetIDs:
+    # - <ZONE_A_SUBNET_ID>
+    # - <ZONE_B_SUBNET_ID>
+    # - <ZONE_D_SUBNET_ID>
     additionalLabels:
       takes: priority
 nodeGroups:
@@ -65,12 +72,13 @@ nodeGroups:
     memory: 8192
     imageID: <IMAGE_ID>
     coreFraction: 50
-    externalIPAddresses:
-    - "Auto"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
+    # Опционально: раскомментируйте, чтобы назначить worker-узлам публичные IP-адреса.
+    # externalIPAddresses:
+    # - "Auto"
+    # - "Auto"
+    # externalSubnetIDs:
+    # - <ZONE_A_SUBNET_ID>
+    # - <ZONE_B_SUBNET_ID>
     additionalLabels:
       role: example
 labels:
