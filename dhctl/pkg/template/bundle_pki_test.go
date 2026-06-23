@@ -51,7 +51,7 @@ var caFiles = []string{
 
 func newPKITemplateConfig(clusterDomain, serviceSubnetCIDR string) *config.ControlPlaneTemplateConfig {
 	return &config.ControlPlaneTemplateConfig{
-		ClusterConfiguration: map[string]interface{}{
+		ClusterConfiguration: map[string]any{
 			"clusterDomain":     clusterDomain,
 			"serviceSubnetCIDR": serviceSubnetCIDR,
 		},
@@ -188,7 +188,7 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			nodeIP:   "10.0.0.1",
 			endpoint: "10.0.0.1",
 			cfg: &config.ControlPlaneTemplateConfig{
-				ClusterConfiguration: map[string]interface{}{
+				ClusterConfiguration: map[string]any{
 					"serviceSubnetCIDR": "10.96.0.0/12",
 				},
 			},
@@ -201,7 +201,7 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			nodeIP:   "10.0.0.1",
 			endpoint: "10.0.0.1",
 			cfg: &config.ControlPlaneTemplateConfig{
-				ClusterConfiguration: map[string]interface{}{
+				ClusterConfiguration: map[string]any{
 					"clusterDomain": "cluster.local",
 				},
 			},

@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"sort"
 	"time"
@@ -118,9 +119,7 @@ func (c *StateCache) populateSecret(ctx context.Context) (*v1.Secret, error) {
 		labelKey("cluster-name"): c.secretName,
 	}
 
-	for k, v := range c.labels {
-		preparedLabels[k] = v
-	}
+	maps.Copy(preparedLabels, c.labels)
 
 	err = retry.NewSilentLoop("save cache secret", 6, 1*time.Second).Run(func() error {
 		var err error
@@ -197,7 +196,7 @@ func (c *StateCache) Save(ctx context.Context, name string, content []byte) erro
 	)
 }
 
-func (c *StateCache) SaveStruct(ctx context.Context, name string, v interface{}) error {
+func (c *StateCache) SaveStruct(ctx context.Context, name string, v any) error {
 	b := new(bytes.Buffer)
 	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {
@@ -217,7 +216,7 @@ func (c *StateCache) Load(ctx context.Context, name string) ([]byte, error) {
 	return c.get(s, name)
 }
 
-func (c *StateCache) LoadStruct(ctx context.Context, name string, v interface{}) error {
+func (c *StateCache) LoadStruct(ctx context.Context, name string, v any) error {
 	d, err := c.Load(ctx, name)
 	if err != nil {
 		return err
