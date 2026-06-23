@@ -1,3 +1,4 @@
+{{- $version := include "get_oss_version_by_id" (list "capo-openstack" $) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -24,8 +25,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="v0.12.3"
-  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cluster-api-provider-openstack /src
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cluster-api-provider-openstack /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
