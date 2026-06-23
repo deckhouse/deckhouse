@@ -27,11 +27,11 @@ The Level 2 C4 architecture of the [`runtime-audit-engine`](/modules/runtime-aud
 
 The `runtime-audit-engine` module consists of the following components:
 
-1. **Runtime-audit-engine** (DaemonSet): A component deployed on each cluster node. It collects audit events, evaluates rules, and exports triggered rules as Prometheus metrics. Data is received from the Linux kernel via an eBPF driver and from `containerd` via a Unix socket.
+1. **Runtime-audit-engine** (DaemonSet): A component deployed on each cluster node. It collects audit events, evaluates rules, outputs triggered rules to stdout, and exports them as Prometheus metrics. Data is received from the Linux kernel via interception of system calls (syscalls) and from `containerd` via a Unix socket.
 
    The component includes the following containers:
 
-   - **falco**: Main container that collects security events from cluster nodes and containerized applications in DKP based on the [Falco](https://falco.org/) threat detection system. Falco intercepts Linux kernel system calls (syscalls) in real time, processes them based on rules, and outputs triggered audit rule results to stdout.
+   - **falco**: Main container that collects security events from cluster nodes and containerized applications in DKP based on the [Falco](https://falco.org/) threat detection system. 
    - **falcosidekick**: Sidecar container that receives events from the `falco` component and exports audit events as Prometheus metrics.
    - **rules-loader**: Sidecar container that performs the following operations:
       - watches [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resources and stores them in the shared `/etc/falco/rules.d/` Pod directory for processing by the `falco` component;
