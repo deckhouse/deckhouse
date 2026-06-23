@@ -295,6 +295,8 @@
     Geoproxy image will be restarted.
  - **[ingress-nginx]** Initial ingress store sync is  fixed. [#19031](https://github.com/deckhouse/deckhouse/pull/19031)
     All Ingress-NGINX controller pods will be restarted.
+ - **[ingress-nginx]** Nginx is updated to 1.30.3. [#20787](https://github.com/deckhouse/deckhouse/pull/20787)
+    All ingress-nginx pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19865](https://github.com/deckhouse/deckhouse/pull/19865)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20200](https://github.com/deckhouse/deckhouse/pull/20200)
