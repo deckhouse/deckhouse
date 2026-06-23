@@ -45,7 +45,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: lib.Queue("istio-k8s-auto-discovery"),
+	Queue:        lib.Queue("istio-k8s-auto-discovery"),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
@@ -95,7 +95,8 @@ func discoveryIsK8sVersionAutomatic(ctx context.Context, input *go_hook.HookInpu
 		}
 
 		secret, err := k8sClient.CoreV1().Secrets(clusterConfigurationSecretNamespace).Get(ctx, clusterConfigurationSecretName, metav1.GetOptions{})
-		if err == nil {
+		switch {
+		case err == nil:
 			ccYaml, ok := secret.Data["cluster-configuration.yaml"]
 			if !ok {
 				return fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
@@ -110,9 +111,9 @@ func discoveryIsK8sVersionAutomatic(ctx context.Context, input *go_hook.HookInpu
 			if err != nil {
 				return err
 			}
-		} else if !k8serrors.IsNotFound(err) {
+		case !k8serrors.IsNotFound(err):
 			return err
-		} else {
+		default:
 			versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
 			if len(versionParts) < 2 {
 				return errors.New("cluster configuration kubernetesVersion is empty or invalid")
