@@ -231,7 +231,7 @@ func buildDefragCPO(cpoName, nodeName string, slotTime time.Time, cpnUID k8stype
 		"spec": map[string]interface{}{
 			"nodeName":  nodeName,
 			"component": "Etcd",
-			"steps":     []interface{}{"DefragEtcd"},
+			"steps":     []interface{}{"DefragEtcd", "WaitPodReady"},
 			"approved":  false,
 		},
 	}
