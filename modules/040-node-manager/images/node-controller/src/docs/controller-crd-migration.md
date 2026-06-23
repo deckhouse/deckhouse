@@ -80,11 +80,15 @@ the reconcile loop. It:
 
 1. Patches conversion webhooks on deckhouse CRDs **first** (only if a multi-version conversion
    CRD already exists), to unblock the API server before touching CAPI CRDs.
-2. Waits (poll 5s, timeout 10m) for the `capi-webhook-tls` CA via `waitForCABundle`.
+2. Reads the `capi-webhook-tls` CA **best-effort** via `bestEffortCABundle` (single Get, no
+   blocking). On a fresh static cluster `capi-webhook-tls` is not rendered until a NodeGroup
+   with `staticInstances` appears (capi is disabled before that), so a hard wait would deadlock
+   startup. If the secret is absent the CA is `nil` and CRDs are created without a CABundle (the
+   field is optional); the reconciler fills it later via the `checkPreconditions` 30s requeue.
 3. Applies every embedded CAPI CRD through `ensureSingleCRD` (create-or-full-apply, same
    `setMigrationSpec` logic as the reconciler).
 
 ## Files
 
 - `controller.go` — reconciler, watches (startup source + Secret), `setMigrationSpec`, `loadCRDs`
-- `ensure.go` — synchronous `EnsureCRDs` bootstrap path, conversion-webhook patching, CA polling
+- `ensure.go` — synchronous `EnsureCRDs` bootstrap path, conversion-webhook patching, best-effort CA read
