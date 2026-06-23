@@ -40,6 +40,9 @@ const (
 	deckhouseDeploymentNamespace = "d8-system"
 	deckhouseDeploymentName      = "deckhouse"
 	deckhouseClusterNamespace    = "d8-cloud-instance-manager"
+
+	nodeControllerDeploymentNamespace = "d8-cloud-instance-manager"
+	nodeControllerDeploymentName      = "node-controller"
 )
 
 func isCAPIClusterUnsupportedErr(err error) bool {
@@ -83,6 +86,36 @@ func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 			return err
 		}
 		return nil
+	})
+}
+
+// DeleteNodeControllerDeployment removes the node-controller Deployment before deleting
+// CAPI MachineDeployments. node-controller renders MachineDeployments from NodeGroups, so
+// while it is running it recreates any MachineDeployment that destroy deletes, looping forever.
+func DeleteNodeControllerDeployment(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete node-controller", 225, 1*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		err := kubeCl.AppsV1().Deployments(nodeControllerDeploymentNamespace).Delete(ctx, nodeControllerDeploymentName, metav1.DeleteOptions{PropagationPolicy: new(metav1.DeletePropagationForeground)})
+		if err != nil && !errors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	})
+}
+
+func WaitForNodeControllerDeploymentDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Wait for node-controller Deployment deletion", 30, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		_, err := kubeCl.AppsV1().Deployments(nodeControllerDeploymentNamespace).Get(ctx, nodeControllerDeploymentName, metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			log.InfoLn("node-controller Deployment and its dependents are removed")
+			return nil
+		}
+
+		errStr := "node-controller Deployment and its dependents are not removed from the cluster yet"
+		if err != nil {
+			errStr = fmt.Sprintf("Error during waiting, err: %v", err)
+		}
+		//goland:noinspection GoErrorStringFormat
+		return fmt.Errorf("%s", errStr)
 	})
 }
 
