@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cloudflare/cfssl/csr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,9 +25,13 @@ import (
 const clusterDomain = "cluster.local"
 
 func genWebhookCa(logger *log.Logger) (*certificate.Authority, error) {
-	ca, err := certificate.GenerateCA(logger, "capcd-controller-manager-webhook", certificate.WithKeyAlgo("ecdsa"),
+	ca, err := certificate.GenerateCA(logger, "capcd-controller-manager-webhook",
+		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
-		certificate.WithCAExpiry("87600h"))
+		certificate.WithCAExpiry("87600h"),
+		// Match the central hook contract: O=Deckhouse, OU=<module>.
+		certificate.WithNames(csr.Name{O: "Deckhouse", OU: "cloud-provider-vcd"}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate CA: %v", err)
 	}
@@ -41,9 +46,10 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority, cn strin
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
 		certificate.WithSigningDefaultExpiry((24*time.Hour)*365*10),
-		certificate.WithSigningDefaultUsage([]string{"signing",
+		certificate.WithSigningDefaultUsage([]string{
+			"signing",
 			"key encipherment",
-			"requestheader-client",
+			"server auth",
 		}),
 		certificate.WithSANs(
 			sanPrefix+".d8-cloud-provider-vcd",
@@ -91,7 +97,9 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 	})
 	Context("With secrets", func() {
 		caAuthority, _ := genWebhookCa(nil)
-		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "capcd-manager-webhook", "capcd-controller-manager-webhook-service")
+		// CN must match the central hook's configured CN, otherwise CN drift
+		// triggers a re-issue and the test cert in the secret is replaced.
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "capcd-controller-manager-webhook", "capcd-controller-manager-webhook-service")
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`

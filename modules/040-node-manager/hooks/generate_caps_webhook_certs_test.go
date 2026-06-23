@@ -64,7 +64,9 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 	})
 	Context("With secrets", func() {
 		caAuthority, _ := genWebhookCa(nil)
-		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "caps-manager-webhook", "caps-controller-manager-webhook-service")
+		// CN must match the central hook's configured CN, otherwise CN drift
+		// triggers a re-issue and the test cert in the secret is replaced.
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "caps-controller-manager-webhook", "caps-controller-manager-webhook-service")
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`

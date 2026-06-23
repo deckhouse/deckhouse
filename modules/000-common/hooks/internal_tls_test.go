@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cloudflare/cfssl/csr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -258,7 +259,10 @@ func generateTestCert() certificate.Certificate {
 		"d8-module-name:module-name:internal",
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
-		certificate.WithCAExpiry("87600h"))
+		certificate.WithCAExpiry("87600h"),
+		// Match the central hook: CA Subject differentiated from leaf via O+OU.
+		certificate.WithNames(csr.Name{O: "Deckhouse", OU: "module-name"}),
+	)
 
 	sans := []string{
 		"module.d8-module-name",
@@ -275,7 +279,7 @@ func generateTestCert() certificate.Certificate {
 		certificate.WithSigningDefaultUsage([]string{
 			"signing",
 			"key encipherment",
-			"requestheader-client",
+			"server auth",
 		}),
 	)
 

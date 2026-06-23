@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"net/http"
@@ -194,7 +195,18 @@ func main() {
 	mux.HandleFunc("/healthz", httpHandlerHealthz)
 
 	logger.Infof("Listening on :4443")
-	err = http.ListenAndServeTLS(":4443", cfg.certFile, cfg.keyFile, mux)
+	// Category A TLS profile (deckhouse TLS standard, see
+	// go_lib/hooks/tls_certificate/README.md): kube-apiserver is the
+	// only client of this mutating webhook, so we pin the handshake
+	// floor to TLS 1.3 and let Go pick the fixed AEAD cipher suite list.
+	srv := &http.Server{
+		Addr:    ":4443",
+		Handler: mux,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS13,
+		},
+	}
+	err = srv.ListenAndServeTLS(cfg.certFile, cfg.keyFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error serving webhook: %s", err)
 		os.Exit(1)

@@ -50,4 +50,9 @@ import:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    entrypoint: ["/permission-browser-apiserver", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]
+    # Category A TLS profile (deckhouse TLS standard, see
+    # go_lib/hooks/tls_certificate/README.md): permission-browser is an
+    # aggregated extension API server reached only through kube-apiserver
+    # aggregation, so we pin the handshake floor to TLS 1.3 and let Go
+    # pick the fixed AEAD cipher suite list.
+    entrypoint: ["/permission-browser-apiserver", "--tls-min-version", "VersionTLS13"]

@@ -18,10 +18,12 @@ package tls_certificate
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/cloudflare/cfssl/csr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -44,8 +46,38 @@ const (
 	keyAlgorithm = "ecdsa"
 	keySize      = 256
 
+	// caOrganization is placed in the CA's Subject DN (O=). Together with an
+	// OU (see GenSelfSignedTLSHookConf.CAOrganizationalUnit) it guarantees that
+	// the CA's Subject DN is strictly different from the leaf's Subject DN.
+	// Per RFC 5280 §4.1.2.6 a leaf must have Issuer == Subject(CA) and
+	// Subject(leaf) != Subject(CA); when those collide OpenSSL classifies the
+	// leaf as a depth-0 self-signed certificate
+	// (X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) and refuses to chain it to the
+	// CA, even though the leaf is in fact signed by a separate key. Go's
+	// crypto/x509 (and thus kube-apiserver) is more lenient, so legacy
+	// certificates issued without this differentiation continue to validate
+	// for Go-based clients, but external scanners (Trivy, MaxPatrol) and
+	// strict TLS stacks (Java keystore, openssl verify) reject them.
+	caOrganization = "Deckhouse"
+
+	// namespacePrefix is the conventional Deckhouse namespace prefix that is
+	// stripped to derive a default CA OU when the caller has not supplied one.
+	namespacePrefix = "d8-"
+
 	SnapshotKey = "secret"
 )
+
+// defaultUsages is the minimum set of cfssl usages for a TLS server
+// certificate. The legacy default contained the pseudo-usage
+// "requestheader-client" which is not present in cfssl's signing/extkeyusage
+// maps; cfssl-signer silently drops it and emits a certificate without any
+// ExtendedKeyUsage. Strict validators (Trivy, MaxPatrol with EKU checks, Java
+// keystores) reject such certificates.
+var defaultUsages = []string{
+	"signing",
+	"key encipherment",
+	"server auth",
+}
 
 // DefaultSANs helper to generate list of sans for certificate
 // you can also use helpers:
@@ -82,6 +114,17 @@ type GenSelfSignedTLSHookConf struct {
 	// often it is module name
 	CN string
 
+	// CAOrganizationalUnit is set as the OU on the CA's Subject DN to ensure
+	// CA and leaf certificates have distinct Subject DNs (see caOrganization
+	// for the rationale). Set this to the Deckhouse module name (e.g.
+	// "node-manager", "loki"). When left empty the value is derived from
+	// Namespace by stripping the "d8-" prefix; if Namespace does not have the
+	// prefix or is empty, CN is used as a last-resort fallback. The leaf
+	// certificate is intentionally signed CN-only — do NOT pass the same OU
+	// to GenerateSelfSignedCert, otherwise Subject(leaf) == Subject(CA) and
+	// the depth-0 self-signed collision returns.
+	CAOrganizationalUnit string
+
 	// Namespace - namespace for TLS secret
 	Namespace string
 	// TLSSecretName - TLS secret name
@@ -92,6 +135,17 @@ type GenSelfSignedTLSHookConf struct {
 	// Usages specifies valid usage contexts for keys.
 	// See: https://tools.ietf.org/html/rfc5280#section-4.2.1.3
 	//      https://tools.ietf.org/html/rfc5280#section-4.2.1.12
+	//
+	// Always pass an explicit set that contains "server auth" for server
+	// certificates and "client auth" for mTLS clients. Never pass
+	// "requestheader-client" — it is not a valid cfssl usage and silently
+	// produces certificates with empty ExtendedKeyUsage.
+	//
+	// Reference sets:
+	//   server cert:                ["signing", "key encipherment", "server auth"]
+	//   mTLS client cert:           ["signing", "key encipherment", "client auth"]
+	//   mTLS server validating
+	//   a client (dual-purpose):    ["signing", "key encipherment", "server auth", "client auth"]
 	Usages []certificatesv1.KeyUsage
 
 	// FullValuesPathPrefix - prefix full path to store CA certificate TLS private key and cert
@@ -118,6 +172,22 @@ func (gss GenSelfSignedTLSHookConf) path() string {
 	return strings.TrimSuffix(gss.FullValuesPathPrefix, ".")
 }
 
+// caOU returns the Organizational Unit placed on the CA's Subject DN.
+// Priority: explicit CAOrganizationalUnit → Namespace with the "d8-" prefix
+// stripped → CN. The result is always non-empty when CN is non-empty, which
+// is what differentiates the CA's Subject from the leaf's CN-only Subject.
+func (gss GenSelfSignedTLSHookConf) caOU() string {
+	if gss.CAOrganizationalUnit != "" {
+		return gss.CAOrganizationalUnit
+	}
+	if strings.HasPrefix(gss.Namespace, namespacePrefix) {
+		if trimmed := strings.TrimPrefix(gss.Namespace, namespacePrefix); trimmed != "" {
+			return trimmed
+		}
+	}
+	return gss.CN
+}
+
 type certValues struct {
 	CA  string `json:"ca"`
 	Crt string `json:"crt"`
@@ -125,7 +195,7 @@ type certValues struct {
 }
 
 // The certificate mapping "cert" -> "crt". We are migrating to "crt" naming for certificates
-// in values.
+// in values.
 func convCertToValues(cert certificate.Certificate) certValues {
 	return certValues{
 		CA:  cert.CA,
@@ -184,11 +254,7 @@ func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, input *go_hook.HookInput) error {
 	var usages []string
 	if conf.Usages == nil {
-		usages = []string{
-			"signing",
-			"key encipherment",
-			"requestheader-client",
-		}
+		usages = append(usages, defaultUsages...)
 	} else {
 		for _, v := range conf.Usages {
 			usages = append(usages, string(v))
@@ -216,7 +282,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 		if len(certs) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
-			cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
+			cert, err = generateNewSelfSignedTLS(input, conf, sans, usages)
 			if err != nil {
 				return err
 			}
@@ -230,7 +296,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 				input.Logger.Error(err.Error())
 			}
 
-			certOutdated, err := isIrrelevantCert(cert.Cert, sans)
+			certOutdated, err := isIrrelevantCert(cert.Cert, cn, sans)
 			if err != nil {
 				input.Logger.Error(err.Error())
 			}
@@ -238,7 +304,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 			// In case of errors, both these flags are false to avoid regeneration loop for the
 			// certificate.
 			if caOutdated || certOutdated {
-				cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
+				cert, err = generateNewSelfSignedTLS(input, conf, sans, usages)
 				if err != nil {
 					return err
 				}
@@ -250,8 +316,18 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 	}
 }
 
-// check certificate duration and SANs list
-func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
+// isIrrelevantCert decides whether an existing leaf certificate must be
+// re-issued. It triggers a re-issue when:
+//
+//   - the certificate is approaching its expiry,
+//   - the configured CN no longer matches Subject.CommonName,
+//   - the leaf was issued without Subject DN differentiation
+//     (Subject == Issuer), which produces certificates rejected by openssl,
+//   - the leaf has no ExtendedKeyUsage extension, which happens when a hook
+//     was previously configured with the legacy "requestheader-client"
+//     pseudo-usage (cfssl silently drops it),
+//   - the SAN set drifted from the desired one.
+func isIrrelevantCert(certData string, desiredCN string, desiredSANSs []string) (bool, error) {
 	cert, err := certificate.ParseCertificate(certData)
 	if err != nil {
 		return false, fmt.Errorf("parse certificate: %w", err)
@@ -260,11 +336,30 @@ func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 	if time.Until(cert.NotAfter) < certOutdatedDuration {
 		return true, nil
 	}
+
+	if desiredCN != "" && cert.Subject.CommonName != desiredCN {
+		return true, nil
+	}
+
+	// Legacy certificates issued before the Subject DN differentiation rule
+	// have Subject == Issuer and are rejected by strict validators. Force a
+	// re-issue so the new code path can produce a compliant certificate.
+	if cert.Subject.String() == cert.Issuer.String() {
+		return true, nil
+	}
+
+	// Legacy "requestheader-client" usage produced certificates without any
+	// ExtendedKeyUsage. Detect them and force re-issue.
+	if !hasAnyExtendedKeyUsage(cert) {
+		return true, nil
+	}
+
 	var dnsNames, ipAddrs []string
 	for _, san := range desiredSANSs {
-		if net.IsIPv4String(san) {
+		switch {
+		case net.IsIPv4String(san), net.IsIPv6String(san):
 			ipAddrs = append(ipAddrs, san)
-		} else {
+		default:
 			dnsNames = append(dnsNames, san)
 		}
 	}
@@ -286,6 +381,13 @@ func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 	return false, nil
 }
 
+// hasAnyExtendedKeyUsage reports whether the certificate carries an
+// ExtendedKeyUsage extension. Either the standard ExtKeyUsage slice or the
+// raw UnknownExtKeyUsage slice (custom OIDs) is enough.
+func hasAnyExtendedKeyUsage(cert *x509.Certificate) bool {
+	return len(cert.ExtKeyUsage) > 0 || len(cert.UnknownExtKeyUsage) > 0
+}
+
 func isOutdatedCA(ca string) (bool, error) {
 	// Issue a new certificate if there is no CA in the secret.
 	// Without CA it is not possible to validate the certificate.
@@ -305,18 +407,24 @@ func isOutdatedCA(ca string) (bool, error) {
 	return false, nil
 }
 
-func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages []string) (certificate.Certificate, error) {
+func generateNewSelfSignedTLS(input *go_hook.HookInput, conf GenSelfSignedTLSHookConf, sans, usages []string) (certificate.Certificate, error) {
 	ca, err := certificate.GenerateCA(input.Logger,
-		cn,
+		conf.CN,
 		certificate.WithKeyAlgo(keyAlgorithm),
 		certificate.WithKeySize(keySize),
-		certificate.WithCAExpiry(caExpiryDurationStr))
+		certificate.WithCAExpiry(caExpiryDurationStr),
+		// O=Deckhouse, OU=<module> on the CA → leaf's CN-only Subject
+		// differs from the CA's Subject. Do NOT replicate WithNames on
+		// GenerateSelfSignedCert below, otherwise Subject(leaf) ==
+		// Subject(CA) and the depth-0 self-signed collision returns.
+		certificate.WithNames(csr.Name{O: caOrganization, OU: conf.caOU()}),
+	)
 	if err != nil {
 		return certificate.Certificate{}, fmt.Errorf("generate ca: %w", err)
 	}
 
 	cert, err := certificate.GenerateSelfSignedCert(input.Logger,
-		cn,
+		conf.CN,
 		ca,
 		certificate.WithSANs(sans...),
 		certificate.WithKeyAlgo(keyAlgorithm),

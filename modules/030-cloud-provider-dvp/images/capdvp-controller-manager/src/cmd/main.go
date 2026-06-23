@@ -117,6 +117,17 @@ func main() {
 		tlsOpts = append(tlsOpts, disableHTTP2)
 	}
 
+	// Category A TLS profile (deckhouse TLS standard, see
+	// go_lib/hooks/tls_certificate/README.md): the only client of the
+	// admission/conversion webhook server is kube-apiserver, and the
+	// metrics endpoint is consumed by in-cluster Prometheus, so TLS 1.3
+	// is the safe floor for both. CipherSuites are intentionally cleared
+	// (Go fixes the TLS 1.3 suite list).
+	tlsOpts = append(tlsOpts, func(c *tls.Config) {
+		c.MinVersion = tls.VersionTLS13
+		c.CipherSuites = nil
+	})
+
 	// Create watchers for metrics and webhooks certificates
 	var metricsCertWatcher, webhookCertWatcher *certwatcher.CertWatcher
 

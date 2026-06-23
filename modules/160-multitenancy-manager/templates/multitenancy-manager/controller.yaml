@@ -46,6 +46,7 @@ spec:
         app: multitenancy-manager
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+        checksum/certificate: {{ include (print $.Template.BasePath "/admission/secret.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}

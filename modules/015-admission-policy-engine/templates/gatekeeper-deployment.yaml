@@ -50,6 +50,8 @@ spec:
         app: 'gatekeeper'
         control-plane: controller-manager
         gatekeeper.sh/operation: webhook
+      annotations:
+        checksum/certificate: {{ include (print $.Template.BasePath "/cert-secret.yaml") . | sha256sum }}
     spec:
       affinity:
         nodeAffinity:
