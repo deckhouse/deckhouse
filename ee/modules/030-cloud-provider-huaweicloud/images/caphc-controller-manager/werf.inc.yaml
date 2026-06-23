@@ -1,5 +1,6 @@
-{{- $version := "v0.6.2" }}
-{{- $version_common := "v0.8.0" }}
+{{/* TODO: Change after merging PR*/}}
+{{- $version := "fix/cve" }}
+{{- $version_common := "fix/cve" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
