@@ -1,24 +1,35 @@
-/*
-Copyright 2026 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package modulesource
 
 import (
 	"testing"
 )
+
+func TestProjectEntries_EmptyIsNonNilSlice(t *testing.T) {
+	// Regression: a fresh cluster has zero ModuleSources. The result must be a
+	// non-nil empty slice so it serializes to [] (not null) — null fails the
+	// required-array values schema and wedges the registry startup hook.
+	entries, toPatch := projectEntries(nil)
+	if entries == nil {
+		t.Fatal("entries must be a non-nil slice for zero ModuleSources (got nil -> serializes to null)")
+	}
+	if len(entries) != 0 || len(toPatch) != 0 {
+		t.Fatalf("want empty entries+toPatch, got %d/%d", len(entries), len(toPatch))
+	}
+}
 
 func TestProjectEntries_FromAnnotation(t *testing.T) {
 	// already-rewritten MS: real upstream comes from the annotation.

@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -159,8 +159,10 @@ func TestManifestsLegacyMode(t *testing.T) {
 }
 
 // TestBashibleContext_LocalMode asserts Local (air-gap) mode uses HostWithPath as
-// ImagesBase and seeds containerd with TWO mirrors: cache (preferred) then seed
-// (fallback), both https with the module CA and without any path rewrites.
+// ImagesBase and seeds containerd with a SINGLE mirror: the on-node seed,
+// authenticated as the read-only PKI user, https with the module CA, no rewrites.
+// The in-cluster cache is NOT listed — its pod and cluster DNS do not exist during
+// first-master bring-up (the agent adds it afterwards).
 func TestBashibleContext_LocalMode(t *testing.T) {
 	cfg := ConfigBuilder(WithModeLocal())
 	ctx, err := cfg.Manifest().BashibleContext(GeneratePKI)
@@ -171,26 +173,19 @@ func TestBashibleContext_LocalMode(t *testing.T) {
 		"Local mode ImagesBase must be constant.HostWithPath (%s), got %s",
 		constant.HostWithPath, ctx.ImagesBase)
 
-	// C2: Hosts must contain two mirrors — cache first, seed fallback.
+	// C2: Hosts must contain exactly one mirror — the on-node seed.
 	entry, ok := ctx.Hosts[constant.Host]
 	require.True(t, ok, "ctx.Hosts must have key constant.Host (%s)", constant.Host)
-	require.Len(t, entry.Mirrors, 2, "Local mode must have exactly 2 mirrors (cache then seed)")
+	require.Len(t, entry.Mirrors, 1, "Local mode must have exactly 1 mirror (seed only)")
 
-	// Mirror 0: in-cluster cache (preferred once up).
-	cache := entry.Mirrors[0]
-	require.Equal(t, "registry-cache.d8-system.svc:5001", cache.Host,
-		"mirror0 must be the in-cluster cache")
-	require.Equal(t, "https", cache.Scheme, "cache mirror scheme must be https")
-	require.NotEmpty(t, cache.CA, "cache mirror must carry the module CA")
-	require.Empty(t, cache.Rewrites,
-		"cache mirror must have NO rewrites: cache serves rooted at system/deckhouse")
-
-	// Mirror 1: on-node seed process (available from first boot).
-	seed := entry.Mirrors[1]
+	// Mirror 0: on-node seed process (available from first boot).
+	seed := entry.Mirrors[0]
 	require.Equal(t, "127.0.0.1:5010", seed.Host,
-		"mirror1 must be the on-node seed")
+		"mirror0 must be the on-node seed")
 	require.Equal(t, "https", seed.Scheme, "seed mirror scheme must be https")
 	require.NotEmpty(t, seed.CA, "seed mirror must carry the module CA")
+	require.NotEmpty(t, seed.Auth.Username, "seed mirror must authenticate (docker-auth rejects anonymous)")
+	require.NotEmpty(t, seed.Auth.Password, "seed mirror must carry the RO password")
 	require.Empty(t, seed.Rewrites,
 		"seed mirror must have NO rewrites: seed serves rooted at system/deckhouse")
 

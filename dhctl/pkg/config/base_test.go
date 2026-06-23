@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -996,6 +996,39 @@ deckhouse:
 		isLocal, err := provider.IsLocal()
 		require.NoError(t, err)
 		require.Equal(t, false, isLocal)
+	})
+
+	t.Run("Clean registry ModuleConfig air-gap needs seed", func(t *testing.T) {
+		// Regression: RegistryConfigProvider must wire moduleConfig/registry so the
+		// bundle registry starts during air-gap bootstrap. Without it NeedsSeed is
+		// false, the seed never comes up, and preflight fails dialing 127.0.0.1:5511.
+		mcRegistry := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  version: 1
+  enabled: true
+  settings:
+    cache:
+      enabled: true
+      storageSize: 50Gi
+`
+
+		provider, err := RegistryConfigProvider(func() ([]string, error) {
+			return []string{mcRegistry}, nil
+		})
+		require.NoError(t, err)
+
+		needsSeed, err := provider.NeedsSeed()
+		require.NoError(t, err)
+		require.True(t, needsSeed, "clean air-gap (cache, no upstream) must need seed")
+
+		remote, err := provider.RemoteData()
+		require.NoError(t, err)
+		require.Equal(t, registry_const.BundleImagesRepo, remote.ImagesRepo)
 	})
 }
 

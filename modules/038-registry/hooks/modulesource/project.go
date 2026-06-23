@@ -1,18 +1,16 @@
-/*
-Copyright 2026 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package modulesource
 
@@ -87,6 +85,11 @@ type Entry struct {
 //   - Entry.Upstream.Path = remainder
 //   - Scheme/CA/Credentials from the real upstream
 func projectEntries(snaps []MSSnap) (entries []Entry, toPatch []string) {
+	// Start non-nil: registry.internal.moduleSourceEntries is a required array in
+	// the values schema, so a fresh cluster with zero ModuleSources must serialize
+	// to [] — a nil slice becomes null and fails OpenAPI validation, wedging the
+	// registry module's startup hook.
+	entries = make([]Entry, 0, len(snaps))
 	for _, s := range snaps {
 		var realRepo, scheme, ca, dockerCfg string
 

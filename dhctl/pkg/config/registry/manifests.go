@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -200,7 +200,7 @@ func (b *modeManifestBuilder) BashibleContext(pkiProvider PKIProvider) (Bashible
 		// After bring-up the registry-agent takes over registry.d and re-renders
 		// these mirrors with the permanent in-cluster entries.
 		if b.modeModel.Mode == constant.ModeLocal {
-			ctx.Hosts = bashible.BootstrapSeedHostsLocal(pki.CA.Cert)
+			ctx.Hosts = bashible.BootstrapSeedHostsLocal(pki.CA.Cert, pki.ROUser.Name, pki.ROUser.Password)
 			ctx.ProxyEndpoints = nil
 		}
 	}

@@ -319,35 +319,11 @@ EOF
 
 registry-syncer $syncer_config_path | bb-log-stream-dhctl
 
-# --- create the registry-bootstrap secret (agent fallback signal) ---------------
-seed_secret_path="$(bb-tmp-file)"
-bb-sync-file $seed_secret_path - << EOF
-host: 127.0.0.1:5010
-scheme: https
-ca: |
-{{ .registry.bootstrap.init.ca.cert | nindent 2 }}
-EOF
-
-export BB_KUBE_AUTH_TYPE="admin-cert"
-export BB_KUBE_APISERVER_URL=""
-bb-curl-helper-extract-admin-certs
-
-bb-curl-kube "/api/v1/namespaces/d8-system" >/dev/null 2>&1 || \
-  bb-curl-kube "/api/v1/namespaces" \
-    -X POST \
-    -H "Content-Type: application/json" \
-    --data '{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"d8-system"}}' >/dev/null
-
-bb-curl-kube "/api/v1/namespaces/d8-system/secrets/registry-bootstrap" -X DELETE >/dev/null 2>&1 || true
-
-bb-curl-kube "/api/v1/namespaces/d8-system/secrets" \
-  -X POST \
-  -H "Content-Type: application/json" \
-  --data "$(jq -nc \
-    --arg seed "$(base64 -w0 < "$seed_secret_path")" \
-    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"registry-bootstrap","namespace":"d8-system","labels":{"app":"registry"},"annotations":{"helm.sh/resource-policy":"keep"}},"type":"Opaque","data":{"bootstrap-seed.yaml":$seed}}')" >/dev/null
-
-rm -f "$syncer_config_path" "$seed_secret_path"
+# The registry-bootstrap secret (agent fallback signal) is created later in
+# 073_init_registry_secrets.sh — after the control plane is up and the kube API
+# (admin.conf) exists. It cannot be created here: this seed step runs before
+# kubeadm, precisely so kubeadm can pull its images from the seed.
+rm -f "$syncer_config_path"
 
 bb-unset-proxy
 

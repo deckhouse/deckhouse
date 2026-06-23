@@ -1,18 +1,16 @@
-/*
-Copyright 2026 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package bashible
 
@@ -20,32 +18,32 @@ import "testing"
 
 func TestBootstrapSeedHostsLocal(t *testing.T) {
 	const ca = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
-	hosts := BootstrapSeedHostsLocal(ca)
+	hosts := BootstrapSeedHostsLocal(ca, "ro", "ropass")
 
 	h, ok := hosts["registry.d8-system.svc:5001"]
 	if !ok {
 		t.Fatalf("missing host key registry.d8-system.svc:5001; got %v", hosts)
 	}
-	if len(h.Mirrors) != 2 {
-		t.Fatalf("mirrors = %d, want 2 (cache then seed)", len(h.Mirrors))
+	// Seed only: the cache (registry-cache.d8-system.svc) must NOT be listed in the
+	// bootstrap drop-in — its pod and cluster DNS do not exist during first-master
+	// bring-up, so listing it makes containerd fail control-plane image pulls on
+	// "no such host". The agent adds the cache after bring-up.
+	if len(h.Mirrors) != 1 {
+		t.Fatalf("mirrors = %d, want 1 (seed only)", len(h.Mirrors))
 	}
-	// Cache first (preferred).
-	if h.Mirrors[0].Host != "registry-cache.d8-system.svc:5001" {
-		t.Fatalf("mirror0 host = %q, want registry-cache.d8-system.svc:5001", h.Mirrors[0].Host)
+	if h.Mirrors[0].Host != "127.0.0.1:5010" {
+		t.Fatalf("mirror0 host = %q, want 127.0.0.1:5010 (seed only)", h.Mirrors[0].Host)
 	}
 	if h.Mirrors[0].Scheme != "https" || h.Mirrors[0].CA != ca {
 		t.Fatalf("mirror0 = %+v, want https + module CA", h.Mirrors[0])
 	}
-	// Seed fallback second.
-	if h.Mirrors[1].Host != "127.0.0.1:5010" {
-		t.Fatalf("mirror1 host = %q, want 127.0.0.1:5010", h.Mirrors[1].Host)
+	// Must carry the read-only PKI creds: the seed's docker-auth rejects anonymous
+	// pull (401), so containerd has to authenticate.
+	if h.Mirrors[0].Auth.Username != "ro" || h.Mirrors[0].Auth.Password != "ropass" {
+		t.Fatalf("mirror0 auth = %+v, want ro/ropass", h.Mirrors[0].Auth)
 	}
-	if h.Mirrors[1].Scheme != "https" || h.Mirrors[1].CA != ca {
-		t.Fatalf("mirror1 = %+v, want https + module CA", h.Mirrors[1])
-	}
-	// No rewrites: bundle/seed served rooted at system/deckhouse; imagesBase
-	// already carries the path.
-	if len(h.Mirrors[0].Rewrites) != 0 || len(h.Mirrors[1].Rewrites) != 0 {
+	// No rewrites: seed served rooted at system/deckhouse; imagesBase carries path.
+	if len(h.Mirrors[0].Rewrites) != 0 {
 		t.Fatalf("unexpected rewrites: %+v", h.Mirrors)
 	}
 }

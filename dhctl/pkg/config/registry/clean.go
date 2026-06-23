@@ -1,4 +1,5 @@
 // Copyright 2026 Flant JSC
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -209,7 +210,7 @@ func (m *CleanModel) bashibleConfig(pki PKI) (BashibleConfig, error) {
 		cfg.Mode = "Unmanaged"
 		cfg.Hosts = unmanagedHosts(m.Remote)
 	} else if m.NeedsSeed() {
-		cfg.Hosts = toConfigHosts(bashible.BootstrapSeedHostsLocal(pki.CA.Cert))
+		cfg.Hosts = toConfigHosts(bashible.BootstrapSeedHostsLocal(pki.CA.Cert, pki.ROUser.Name, pki.ROUser.Password))
 	} else {
 		// connected (with or without cache): forward to upstream during bring-up.
 		host, path := m.Remote.AddressAndPath()

@@ -41,4 +41,29 @@ bb-curl-kube "/api/v1/namespaces/d8-system/secrets" \
   --data "$(jq -nc --arg data "$(base64 -w0 < "$INIT_CONFIG_PATH")" \
     '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"registry-init","namespace":"d8-system"},"type":"Opaque","data":{"config":$data}}')" >/dev/null
 
+{{- if (($.registry).bootstrap).seed }}
+# Air-gap only: the registry-bootstrap secret is the agent's fallback signal to
+# the on-node seed registry stood up in 022 (serves on 127.0.0.1:5010 until dhctl
+# finalize). Created here — not in 022 — because it needs the kube API, which
+# only exists after the control plane (072) is up.
+SEED_SECRET_PATH="$(bb-tmp-file)"
+bb-sync-file $SEED_SECRET_PATH - << EOF
+host: 127.0.0.1:5010
+scheme: https
+ca: |
+{{ .ca.cert | nindent 2 }}
+EOF
+
+bb-curl-kube "/api/v1/namespaces/d8-system/secrets/registry-bootstrap" -X DELETE >/dev/null 2>&1 || true
+
+bb-curl-kube "/api/v1/namespaces/d8-system/secrets" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  --data "$(jq -nc \
+    --arg seed "$(base64 -w0 < "$SEED_SECRET_PATH")" \
+    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"registry-bootstrap","namespace":"d8-system","labels":{"app":"registry"},"annotations":{"helm.sh/resource-policy":"keep"}},"type":"Opaque","data":{"bootstrap-seed.yaml":$seed}}')" >/dev/null
+
+rm -f "$SEED_SECRET_PATH"
+{{- end }}
+
 {{- end }}
