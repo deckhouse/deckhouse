@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cpn
+package cpnplanner
 
 import (
 	"fmt"
@@ -253,22 +253,4 @@ func certDates(cpn *controlplanev1alpha1.ControlPlaneNode, c controlplanev1alpha
 		return nil
 	}
 	return cs.CertificatesExpirationTime
-}
-
-func minExpiration(dates map[string]metav1.Time) time.Time {
-	return minExpirationExcluding(dates, "")
-}
-
-// minExpirationExcluding returns the earliest expiry across all dates except the given key.
-func minExpirationExcluding(dates map[string]metav1.Time, exclude string) time.Time {
-	var min time.Time
-	for key, t := range dates {
-		if key == exclude {
-			continue
-		}
-		if min.IsZero() || t.Time.Before(min) {
-			min = t.Time
-		}
-	}
-	return min
 }

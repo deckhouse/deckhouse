@@ -30,13 +30,10 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-	cpnplanner "control-plane-manager/internal/cpn"
+	"control-plane-manager/internal/cpnplanner"
 )
 
-const (
-	requeueInterval                   = 5 * time.Minute
-	maxTerminalOperationsPerComponent = 5
-)
+const requeueInterval = 5 * time.Minute
 
 type reconciler struct {
 	client client.Client
@@ -97,7 +94,7 @@ func (r *reconciler) reconcileStatus(ctx context.Context, cpn *controlplanev1alp
 // Deduplication is done first against the informer cache. Only when that decides something must be created do we re-check against a strongly-consistent uncached read.
 // This prevents duplicates without paying the uncached read on steady-state reconciles.
 func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation) error {
-	if len(cpnplanner.BuildOperations(cpn, current)) == 0 {
+	if len(cpnplanner.RequiredOperations(cpn, current)) == 0 {
 		return nil // nothing to create: no uncached read on steady-state reconciles
 	}
 
@@ -105,7 +102,7 @@ func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev
 	if err != nil {
 		return err
 	}
-	for _, op := range cpnplanner.BuildOperations(cpn, fresh) {
+	for _, op := range cpnplanner.RequiredOperations(cpn, fresh) {
 		if err := r.createOperation(ctx, cpn, op); err != nil {
 			return err
 		}
@@ -115,7 +112,7 @@ func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev
 
 // reconcileRotation deletes terminal operations beyond the per-component retention limit.
 func (r *reconciler) reconcileRotation(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation) error {
-	for _, name := range cpnplanner.ComputeOperationsToRotate(current, maxTerminalOperationsPerComponent) {
+	for _, name := range cpnplanner.OperationsToRotate(current) {
 		if err := r.deleteOperation(ctx, cpn.Namespace, name); err != nil {
 			return err
 		}
@@ -142,7 +139,7 @@ func (r *reconciler) listOperations(ctx context.Context, reader client.Reader, c
 		return nil, err
 	}
 	// Keep only operations owned by this exact CPN (name + UID): prevents reconstructing state from a previous same-name instance's not yet garbage collected operations after CPN recreation.
-	return cpnplanner.FilterOperationsOwnedByCPN(list.Items, cpn), nil
+	return cpnplanner.OwnedOperations(cpn, list.Items), nil
 }
 
 func (r *reconciler) createOperation(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, op *controlplanev1alpha1.ControlPlaneOperation) error {
