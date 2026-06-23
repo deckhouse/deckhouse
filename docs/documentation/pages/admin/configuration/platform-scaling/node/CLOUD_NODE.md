@@ -187,7 +187,7 @@ There are two ways to solve this problem:
 1. You cat set taints to NodeGroup's `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [`spec.tolerations`](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
 {% alert level="info" %}
-DKP tolerates the `dedicated` key by default, so we recommend using the `dedicated` key with any value for taints on your dedicated nodes.️
+DKP tolerates the `dedicated` key by default, so we recommend using the `dedicated` key with any value for taints on your dedicated nodes.
 
 To use custom keys for taints (e.g., `dedicated.client.com`), you must add the key's value to the `modules.placement.customTolerationKeys` parameter. This way, Deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
@@ -790,7 +790,7 @@ To add master nodes in a cloud cluster:
 
 1. Make sure the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
 
-1. Open the `ClusterConfiguration` file (e.g., `OpenStackClusterConfiguration`).
+1. Open the ClusterConfiguration file (e.g., OpenStackClusterConfiguration).
 
 1. Add or update the `masterNodeGroup` section:
 
