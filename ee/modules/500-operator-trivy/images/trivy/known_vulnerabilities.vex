@@ -226,6 +226,36 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "The vulnerability affects Docker daemon archive extraction behavior. Deckhouse Kubernetes Platform is not affected because it does not ship or use Docker daemon API endpoints in this execution path for operator-trivy and trivy binaries.",
       "timestamp": "2026-06-19T14:09:00Z"
+    },
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-42306",
+        "description": "Docker vulnerability affecting github.com/docker/docker.",
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        { "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible" },
+        { "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Deckhouse Kubernetes Platform is not affected because operator-trivy components are Go binaries and do not run or expose Docker daemon code paths required to trigger this vulnerability.",
+      "timestamp": "2026-06-22T14:37:00Z"
+    },
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-41568",
+        "description": "Docker vulnerability affecting github.com/docker/docker.",
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        { "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible" },
+        { "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Deckhouse Kubernetes Platform is not affected because operator-trivy components are Go binaries and do not run or expose Docker daemon code paths required to trigger this vulnerability.",
+      "timestamp": "2026-06-22T14:40:00Z"
     }
 
   ],
