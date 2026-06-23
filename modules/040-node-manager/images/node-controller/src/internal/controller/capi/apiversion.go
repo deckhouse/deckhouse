@@ -41,6 +41,7 @@ var machineTemplateAPIGroups = map[string]string{
 	"HuaweiCloudMachineTemplate": capiInfraAPIGroup,
 	"StaticMachineTemplate":      capiInfraAPIGroup,
 	"VCDMachineTemplate":         capiInfraAPIGroup,
+	"YandexMachineTemplate":      capiInfraAPIGroup,
 	"ZvirtMachineTemplate":       capiInfraAPIGroup,
 }
 
@@ -50,6 +51,7 @@ var machineAPIGroups = map[string]string{
 	"HuaweiCloudMachine": capiInfraAPIGroup,
 	"StaticMachine":      capiInfraAPIGroup,
 	"VCDMachine":         capiInfraAPIGroup,
+	"YandexMachine":      capiInfraAPIGroup,
 	"ZvirtMachine":       capiInfraAPIGroup,
 }
 
@@ -59,6 +61,7 @@ var clusterInfraAPIGroups = map[string]string{
 	"HuaweiCloudCluster": capiInfraAPIGroup,
 	"StaticCluster":      capiInfraAPIGroup,
 	"VCDCluster":         capiInfraAPIGroup,
+	"YandexCluster":      capiInfraAPIGroup,
 	"ZvirtCluster":       capiInfraAPIGroup,
 }
 

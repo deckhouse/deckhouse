@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -57,6 +58,8 @@ func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
 		}
 		return obj.GetNamespace() == cloudProviderSecretNamespace && obj.GetName() == cloudProviderSecretName
 	}))
+	// Re-enqueue only on spec/generation changes — NodeGroup status updates must not trigger
+	// a no-op re-ensure, otherwise the createIfNotExists path logs on every status bump.
 	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
 		func(_ context.Context, _ client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: types.NamespacedName{
@@ -64,7 +67,7 @@ func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
 				Namespace: cloudProviderSecretNamespace,
 			}}}
 		},
-	))
+	), builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 }
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -183,7 +186,7 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 		return fmt.Errorf("create MachineHealthCheck: %w", err)
 	}
 
-	logger.Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
+	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
 	return nil
 }
 
@@ -271,7 +274,7 @@ func (r *ClusterReconciler) ensureStaticCluster(ctx context.Context, clusterConf
 		return fmt.Errorf("create static MachineHealthCheck: %w", err)
 	}
 
-	logger.Info("ensured static CAPI cluster resources")
+	logger.V(1).Info("ensured static CAPI cluster resources")
 	return nil
 }
 
