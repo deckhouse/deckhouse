@@ -35,7 +35,6 @@ import (
 
 const capiInfraAPIGroup = "infrastructure.cluster.x-k8s.io"
 
-// machineTemplateAPIGroups maps infra machine template Kind → expected apiGroup.
 var machineTemplateAPIGroups = map[string]string{
 	"DeckhouseMachineTemplate":   capiInfraAPIGroup,
 	"DynamixMachineTemplate":     capiInfraAPIGroup,
@@ -45,7 +44,6 @@ var machineTemplateAPIGroups = map[string]string{
 	"ZvirtMachineTemplate":       capiInfraAPIGroup,
 }
 
-// machineAPIGroups maps infra machine Kind → expected apiGroup.
 var machineAPIGroups = map[string]string{
 	"DeckhouseMachine":   capiInfraAPIGroup,
 	"DynamixMachine":     capiInfraAPIGroup,
@@ -55,7 +53,6 @@ var machineAPIGroups = map[string]string{
 	"ZvirtMachine":       capiInfraAPIGroup,
 }
 
-// clusterInfraAPIGroups maps infra cluster Kind → expected apiGroup.
 var clusterInfraAPIGroups = map[string]string{
 	"DeckhouseCluster":   capiInfraAPIGroup,
 	"DynamixCluster":     capiInfraAPIGroup,
@@ -65,7 +62,6 @@ var clusterInfraAPIGroups = map[string]string{
 	"ZvirtCluster":       capiInfraAPIGroup,
 }
 
-// controlPlaneAPIGroups maps control plane Kind → expected apiGroup.
 var controlPlaneAPIGroups = map[string]string{
 	"DeckhouseControlPlane": capiInfraAPIGroup,
 }
