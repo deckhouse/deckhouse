@@ -34,17 +34,17 @@ description: Архитектура модуля registry в Deckhouse Kubernete
 Модуль [`registry`](/modules/registry/) в режиме `Direct`:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля registry в режиме Direct](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.ru.svg)
+![Архитектура модуля registry в режиме Direct](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.ru.png)
 
 Модуль [`registry`](/modules/registry/) в режиме `Proxy`:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля registry в режиме Proxy](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.ru.svg)
+![Архитектура модуля registry в режиме Proxy](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.ru.png)
 
 Модуль [`registry`](/modules/registry/) в режиме `Local`:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля registry в режиме Local](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.ru.svg)
+![Архитектура модуля registry в режиме Local](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.ru.png)
 
 ## Компоненты модуля
 
