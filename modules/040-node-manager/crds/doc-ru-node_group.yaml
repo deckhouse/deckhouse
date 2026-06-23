@@ -317,7 +317,8 @@ spec:
                     Количество резервных инстансов в группе.
                 upToDate:
                   description: |
-                    Количество узлов в актуальном состоянии.    - name: v1alpha2
+                    Количество узлов в актуальном состоянии.
+    - name: v1alpha2
       schema:
         openAPIV3Schema:
           description: |
@@ -628,7 +629,8 @@ spec:
                     Количество резервных инстансов в группе.
                 upToDate:
                   description: |
-                    Количество узлов в актуальном состоянии.    - name: v1
+                    Количество узлов в актуальном состоянии.
+    - name: v1
       schema:
         openAPIV3Schema:
           description: |

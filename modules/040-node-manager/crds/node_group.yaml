@@ -631,7 +631,8 @@ spec:
                                 # the same time, kubernetes labels keys and values can't be longer than 63 characters.
                                 # Length of hashes is 21 characters, so we leave 63-21=42 characters.
                                 # Further, validation webhook will check that length of <cluster prefix>-<group node name>
-                                # fits the 42 characters limitation.            status:
+                                # fits the 42 characters limitation.
+            status:
               type: object
               required: []
               properties:
@@ -1351,7 +1352,8 @@ spec:
                       enum:
                         - "True"
                         - "False"
-                      type: string    - name: v1
+                      type: string
+    - name: v1
       served: true
       storage: true
       additionalPrinterColumns:
