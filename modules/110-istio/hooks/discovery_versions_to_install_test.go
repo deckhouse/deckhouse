@@ -296,6 +296,10 @@ globalVersion: "1.27"
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("1.27"))
+
+			installedVersions, exists := requirements.GetValue(installedVersionsValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(installedVersions).To(BeEquivalentTo([]string{"1.27", "1.28"}))
 		})
 	})
 })

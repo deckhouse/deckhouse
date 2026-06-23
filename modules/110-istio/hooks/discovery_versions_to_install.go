@@ -35,7 +35,10 @@ import (
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 )
 
-const minVersionValuesKey = "istio:minimalVersion"
+const (
+	minVersionValuesKey        = "istio:minimalVersion"
+	installedVersionsValuesKey = "istio:installedVersions"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// The Order below matters for ensure_crds_istio.go, it needs globalVersion to deploy proper CRDs
@@ -115,17 +118,25 @@ func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependen
 
 	if len(versionsToInstall) == 0 {
 		requirements.RemoveValue(minVersionValuesKey)
+		requirements.RemoveValue(installedVersionsValuesKey)
 	} else {
 		var minVersion *semver.Version
+		installedVersions := make([]string, 0, len(versionsToInstall))
 		for _, version := range versionsToInstall {
 			versionSemver, err := semver.NewVersion(version)
 			if err != nil {
 				return err
 			}
+			majorMinor := fmt.Sprintf("%d.%d", versionSemver.Major(), versionSemver.Minor())
+			if !lib.Contains(installedVersions, majorMinor) {
+				installedVersions = append(installedVersions, majorMinor)
+			}
 			if minVersion == nil || versionSemver.LessThan(minVersion) {
 				minVersion = versionSemver
 			}
 		}
+		sort.Strings(installedVersions)
+		requirements.SaveValue(installedVersionsValuesKey, installedVersions)
 		requirements.SaveValue(minVersionValuesKey, fmt.Sprintf("%d.%d", minVersion.Major(), minVersion.Minor()))
 	}
 
