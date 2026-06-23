@@ -152,7 +152,7 @@ spec:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
 
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                    > **Caution.** Can only be used together with `nodeType: CloudEphemeral`.
                   type: object
                   required:
                     - classReference
@@ -378,7 +378,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution.** The `master` node group update mode must be `Manual` to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
 
@@ -399,7 +399,7 @@ spec:
                           description: |
                             Drain Pods from the nodes before approving disruption.
 
-                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            **Caution.** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
@@ -512,7 +512,7 @@ spec:
 
                     If used, `cri.type` must be set to `Docker`.
 
-                    > **Note!** the `Docker` is deprecated.
+                    > **Note.** the `Docker` is deprecated.
                   type: object
                   properties:
                     maxConcurrentDownloads:
@@ -550,7 +550,7 @@ spec:
                       description: |
                         Maximum log file size before it is rotated.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        > **Warning.** This parameter does nothing if CRI type is `Docker`.
                     containerLogMaxFiles:
                       type: integer
                       minimum: 1
@@ -559,7 +559,79 @@ spec:
                       description: |
                         How many rotated log files to store before deleting them.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        > **Warning.** This parameter does nothing if CRI type is `Docker`.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
+    - name: v1alpha2
+      served: true
+      storage: false
+      additionalPrinterColumns:
+        - name: Type
+          type: string
+          description: Type of nodes in group
+          jsonPath: .spec.nodeType
+        - name: Ready
+          type: integer
+          description: Number of ready Kubernetes nodes in the group.
+          jsonPath: .status.ready
+        - name: Nodes
+          type: integer
+          description: Number of Kubernetes nodes (in any state) in the group.
+          jsonPath: .status.nodes
+        - name: UpToDate
+          type: integer
+          description: Number of up-to-date nodes in the group.
+          jsonPath: .status.upToDate
+        - name: Instances
+          type: integer
+          description: Number of instances (in any state) in the group.
+          jsonPath: .status.instances
+        - name: Desired
+          type: integer
+          description: Number of desired instances in the group.
+          jsonPath: .status.desired
+        - name: Min
+          type: integer
+          description: Minimal amount of instances in the group.
+          jsonPath: .status.min
+        - name: Max
+          type: integer
+          description: Maximum amount of instances in the group.
+          jsonPath: .status.max
+        - name: Standby
+          type: integer
+          description: Number of overprovisioned instances in the group.
+          jsonPath: .status.standby
+        - name: Status
+          type: string
+          description: Status message about group handling.
+          jsonPath: .status.conditionSummary.statusMessage
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes the runtime parameters of the node group.
+          required:
+            - spec
+          properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" # In Amazon cloud, AWSMachineClass name can't contain dots.
+                  maxLength: 42 # One of labels assigned by the cloud instance manager contains full node name,
+                                # the same time, kubernetes labels keys and values can't be longer than 63 characters.
+                                # Length of hashes is 21 characters, so we leave 63-21=42 characters.
+                                # Further, validation webhook will check that length of <cluster prefix>-<group node name>
+                                # fits the 42 characters limitation.
             status:
               type: object
               required: []
@@ -772,7 +844,7 @@ spec:
                       description: |
                         Docker settings for nodes.
 
-                        > **Note!** the `Docker` is deprecated.
+                        > **Note.** the `Docker` is deprecated.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
@@ -813,7 +885,7 @@ spec:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
 
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                    > **Caution.** Can only be used together with `nodeType: CloudEphemeral`.
                   type: object
                   required:
                     - classReference
@@ -1025,7 +1097,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution.** The `master` node group update mode must be `Manual` to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
 
@@ -1046,7 +1118,7 @@ spec:
                           description: |
                             Drain Pods from the nodes before approving disruption.
 
-                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            **Caution.** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
@@ -1178,7 +1250,7 @@ spec:
                       description: |
                         Maximum log file size before it is rotated.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        > **Warning.** This parameter does nothing if CRI type is `Docker`.
                     containerLogMaxFiles:
                       type: integer
                       minimum: 1
@@ -1187,7 +1259,11 @@ spec:
                       description: |
                         How many rotated log files to store before deleting them.
 
-                        > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                        > **Warning.** This parameter does nothing if CRI type is `Docker`.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
             status:
               type: object
               required: []
@@ -1709,7 +1785,7 @@ spec:
                   description: |
                     Parameter for provisioning the cloud-based VMs.
 
-                    > **Caution!** Can only be used together with `nodeType: CloudEphemeral`.
+                    > **Caution.** Can only be used together with `nodeType: CloudEphemeral`.
                   type: object
                   required:
                     - classReference
@@ -1947,7 +2023,7 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. Nodes are not drained automatically in `Manual` mode. If necessary, manually drain nodes before setting the `update.node.deckhouse.io/disruption-approved=` annotation. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. Nodes are not drained automatically in `Manual` mode. If necessary, manually drain nodes before setting the `update.node.deckhouse.io/disruption-approved=` annotation. **Caution.** The `master` node group update mode must be `Manual` to avoid issues with draining.
                         - `Automatic` —  automatically approve disruption-involving updates. Nodes could be drained automatically before reboot, as configured by the [drainBeforeApproval](#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) option.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
 
@@ -1968,7 +2044,7 @@ spec:
                           description: |
                             Drain Pods from the nodes before approving disruption.
 
-                            **Caution!** This setting ignores (nodes will be approved without draining Pods):
+                            **Caution.** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
                             - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
@@ -2107,6 +2183,10 @@ spec:
                       default: 4
                       description: |
                         How many rotated log files to store before deleting them.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
                     resourceReservation:
                       default: {}
                       type: object
@@ -2298,7 +2378,7 @@ spec:
                         - `Watchdog`: Uses the watchdog kernel module to automatically reboot nodes that lose connectivity with the cluster. In this mode, the fencing-agent also monitors node availability in the cluster.
 
                         When `fencing` is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin` parameter set to the value of `spec.fencing.watchdog.timeout` (60 seconds by default) and `soft_panic=1`.
-                        
+
                         How the fencing-agent works:
 
                         - The agent opens the `/dev/watchdog` device and sets the `node-manager.deckhouse.io/fencing-enabled` label on the node, as well as the `node-manager.deckhouse.io/fencing-mode` label with the value `Watchdog`.
