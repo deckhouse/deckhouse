@@ -1,3 +1,180 @@
+.installer-carousel {
+  margin: 20px auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.installer-carousel__viewport {
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  touch-action: pan-y;
+}
+
+.installer-carousel__track {
+  display: flex;
+  transition: transform 0.35s ease;
+  will-change: transform;
+}
+
+.installer-carousel__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.installer-carousel__figure {
+  margin: 0;
+}
+
+.installer-carousel__slide img {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid #E7E9F5;
+}
+
+.installer-carousel__caption {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #00122C;
+}
+
+.installer-carousel__nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 64px;
+  margin-top: 12px;
+}
+
+.installer-carousel__counter {
+  min-width: 7em;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.2;
+  color: #555;
+  user-select: none;
+}
+
+.installer-carousel__prev,
+.installer-carousel__next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 38px;
+  border-radius: 9px;
+  color: #0064FF;
+  font-size: 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.installer-carousel {
+  margin: 20px auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.installer-carousel__viewport {
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  touch-action: pan-y;
+  border-radius: 8px;
+  background: #FFF;
+  box-shadow: 0 2.881px 8.643px 0.96px rgba(59, 66, 109, 0.15);
+}
+
+.installer-carousel__track {
+  display: flex;
+  transition: transform 0.35s ease;
+  will-change: transform;
+}
+
+.installer-carousel__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.installer-carousel__figure {
+  margin: 0;
+}
+
+.installer-carousel__slide img {
+  display: block;
+}
+
+.installer-carousel__nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 64px;
+  margin-top: 12px;
+}
+
+.installer-carousel__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 16px;
+  min-width: 304px;
+  user-select: none;
+  color: #222A5D;
+  font-size: 16px;
+  font-weight: 400;
+
+  .installer-carousel__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 38px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+
+    &:hover:not(.is-active) {
+      color: #0066ff;
+    }
+
+    &.is-active {
+      color: #FFF;
+      font-weight: 600;
+      background: #408BFF;
+      cursor: default;
+    }
+  }
+
+  .installer-carousel__ellipsis {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 38px;
+  }
+}
+
 .installer_box {
   max-width: 100%;
   padding-top: 20px;
@@ -70,7 +247,7 @@
 .sub-tabs {
   display: flex;
   border-bottom: 1px solid #ddd;
-  #margin-bottom: 15px;
+  margin-bottom: 15px;
 }
 
 .sub-tab-button {
