@@ -348,6 +348,22 @@ func (r *Runtime) adoptModule(ctx context.Context, name string) error {
 		return status.NewError("LoadFailed", fmt.Errorf("load module conf from %q: %w", path, err))
 	}
 
+	// Downloaded modules carry their source registry, injected into the
+	// BasicModule by moduleloader from the ModuleSource. Mirror it into
+	// conf.Repository so .Module.Package.Registry is populated — otherwise
+	// helm_lib's image helper fails with "Registry base is not set". Embedded
+	// modules use the legacy global.modulesImages helpers and omit Package.
+	if !embedded {
+		if reg := basic.GetRegistry(); reg != nil {
+			conf.Repository = registry.Remote{
+				Repository:   reg.Base,
+				DockerConfig: reg.DockerCfg,
+				Scheme:       reg.Scheme,
+				CA:           reg.CA,
+			}
+		}
+	}
+
 	module, err := modules.NewModuleByConfig(name, conf, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
