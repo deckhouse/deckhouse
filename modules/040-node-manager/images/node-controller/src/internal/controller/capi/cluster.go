@@ -47,7 +47,14 @@ type ClusterReconciler struct {
 }
 
 func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
+	// WithEventFilter is controller-wide, so it also covers the NodeGroup watch below.
+	// NodeGroup events must always pass — on a static cluster the cloud-provider Secret may not
+	// exist, and NodeGroup is the only trigger for ensureStaticCluster. The Secret (primary For)
+	// is filtered down to the cloud-provider one.
 	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if _, ok := obj.(*deckhousev1.NodeGroup); ok {
+			return true
+		}
 		return obj.GetNamespace() == cloudProviderSecretNamespace && obj.GetName() == cloudProviderSecretName
 	}))
 	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(

@@ -32,9 +32,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	sigsyaml "sigs.k8s.io/yaml"
 
@@ -62,8 +64,12 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	mcmMD.SetGroupVersionKind(schema.GroupVersionKind{
 		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeployment",
 	})
-	w.Watches(mcmMD, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup))
-	w.Watches(&capiv1beta2.MachineDeployment{}, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup))
+	// Re-enqueue only on spec/generation changes — status updates (e.g. from
+	// capi-controller-manager) must not trigger a re-apply, otherwise reconcile loops.
+	w.Watches(mcmMD, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup),
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	w.Watches(&capiv1beta2.MachineDeployment{}, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup),
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 }
 
 func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
@@ -267,7 +273,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 			return fmt.Errorf("apply MachineDeployment %s: %w", mdName, err)
 		}
-		logger.Info("applied cloud MachineDeployment", "name", mdName, "zone", zone)
+		logger.V(1).Info("applied cloud MachineDeployment", "name", mdName, "zone", zone)
 	}
 
 	return nil
@@ -340,7 +346,7 @@ func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng 
 	if err := r.Client.Patch(ctx, md, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
 		return fmt.Errorf("apply static MachineDeployment %s: %w", mdName, err)
 	}
-	logger.Info("applied static MachineDeployment", "name", mdName)
+	logger.V(1).Info("applied static MachineDeployment", "name", mdName)
 	return nil
 }
 
