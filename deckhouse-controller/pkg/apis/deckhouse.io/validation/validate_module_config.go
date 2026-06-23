@@ -226,7 +226,69 @@ func (v *moduleConfigValidator) validateModuleEnabling(ctx context.Context, cfg 
 		return rejectResult(err.Error())
 	}
 
-	return v.checkExperimentalFromModuleCR(ctx, cfg.Name, allowExperimental, rejectMissingModuleCR)
+	// The Module CR is fetched once and feeds both the experimental gate and the
+	// dependency fallback below. The global module has no Module CR.
+	if cfg.Name == globalModuleName {
+		return nil, nil
+	}
+
+	module := new(v1alpha1.Module)
+	if err := v.client.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+		}
+
+		if rejectMissingModuleCR {
+			return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+		}
+
+		return nil, nil
+	}
+
+	if module.IsExperimental() && !allowExperimental {
+		return rejectResult(experimentalRejectMessage(cfg.Name))
+	}
+
+	// Fallback for the dependency extender: enforce the parent-module
+	// requirements declared on the Module CR when the extender has no registered
+	// constraints for the module (e.g. the module is not yet downloaded to disk,
+	// so its module.yaml requirements were never loaded into the extender).
+	if res, err := v.checkDependenciesFromModuleCR(module); res != nil || err != nil {
+		return res, err
+	}
+
+	return nil, nil
+}
+
+// checkDependenciesFromModuleCR enforces the "parent module must be enabled" part
+// of the requirements declared on the Module CR. It is a fallback for the
+// dependency extender, which only knows about modules whose module.yaml has been
+// loaded from disk; a module whose requirements are synced from the registry but
+// not yet downloaded would otherwise pass the extender's CheckEnabling silently.
+// Version constraints are intentionally not validated here: they are enforced by
+// the extender once the module is downloaded and its constraints are registered.
+func (v *moduleConfigValidator) checkDependenciesFromModuleCR(module *v1alpha1.Module) (*kwhvalidating.ValidatorResult, error) {
+	if module.Properties.Requirements == nil || len(module.Properties.Requirements.ParentModules) == 0 {
+		return nil, nil
+	}
+
+	missing := make([]string, 0, len(module.Properties.Requirements.ParentModules))
+	for parent := range module.Properties.Requirements.ParentModules {
+		if parent == module.Name {
+			continue
+		}
+		if !v.moduleManager.IsModuleEnabled(parent) {
+			missing = append(missing, parent)
+		}
+	}
+
+	if len(missing) == 0 {
+		return nil, nil
+	}
+
+	slices.Sort(missing)
+
+	return rejectResult(fmt.Sprintf("the '%s' module depends on disabled module(s): %s", module.Name, strings.Join(missing, ", ")))
 }
 
 // checkExperimentalFromStorage applies the experimental gate using the downloaded
@@ -239,32 +301,6 @@ func (v *moduleConfigValidator) checkExperimentalFromStorage(moduleName string, 
 	}
 
 	if module.GetModuleDefinition().IsExperimental() && !allowExperimental {
-		return rejectResult(experimentalRejectMessage(moduleName))
-	}
-
-	return nil, nil
-}
-
-// checkExperimentalFromModuleCR applies the experimental gate using the Module CR
-// (whose properties are synced from the registry even before the module is
-// downloaded). The global module has no Module CR and is skipped.
-func (v *moduleConfigValidator) checkExperimentalFromModuleCR(ctx context.Context, moduleName string, allowExperimental, rejectMissing bool) (*kwhvalidating.ValidatorResult, error) {
-	if moduleName == globalModuleName {
-		return nil, nil
-	}
-
-	module := new(v1alpha1.Module)
-	if err := v.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
-		}
-		if rejectMissing {
-			return rejectResult(fmt.Sprintf("the '%s' module not found", moduleName))
-		}
-		return nil, nil
-	}
-
-	if module.IsExperimental() && !allowExperimental {
 		return rejectResult(experimentalRejectMessage(moduleName))
 	}
 

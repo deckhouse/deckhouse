@@ -134,6 +134,15 @@ func newModuleCR(name string, availableSources []string, stage string) *v1alpha1
 	}
 }
 
+// newModuleCRWithRequirements builds a Module CR that declares parent-module
+// requirements, to exercise the dependency extender fallback that reads them
+// from the Module CR when the extender itself has no registered constraints.
+func newModuleCRWithRequirements(name string, availableSources []string, stage string, parentModules map[string]string) *v1alpha1.Module {
+	m := newModuleCR(name, availableSources, stage)
+	m.Properties.Requirements = &v1alpha1.ModuleRequirements{ParentModules: parentModules}
+	return m
+}
+
 func newModuleConfigFull(name string, enabled *bool, source, updatePolicy string) *v1alpha1.ModuleConfig {
 	cfg := newModuleConfig(name, enabled, nil)
 	cfg.Spec.Source = source
@@ -911,6 +920,125 @@ func TestModuleConfigValidationHandler_ExperimentalOnUpdate(t *testing.T) {
 				newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""),
 				newModuleConfigFull(moduleName, boolPtr(false), "", ""),
 			)
+
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed)
+				return
+			}
+
+			require.False(t, resp.Allowed)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage)
+		})
+	}
+}
+
+// TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR covers the
+// fallback that enforces parent-module requirements read from the Module CR when
+// the dependency extender has no registered constraints for the module (the
+// extender only knows about modules whose module.yaml has been loaded from disk).
+func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing.T) {
+	const moduleName = "dependent-module"
+
+	requirements := map[string]string{"log-shipper": ">= 0.0.0", "loki": ">= 0.0.0"}
+
+	tests := []struct {
+		name             string
+		operation        string
+		newConfig        *v1alpha1.ModuleConfig
+		oldConfig        *v1alpha1.ModuleConfig
+		moduleCR         *v1alpha1.Module
+		enabledParents   map[string]bool
+		dependencyErr    error
+		wantAllowed      bool
+		wantMessage      string
+	}{
+		{
+			name:           "create: both required parents disabled is rejected from the Module CR",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{},
+			wantAllowed:    false,
+			wantMessage:    "depends on disabled module(s)",
+		},
+		{
+			name:           "create: one required parent disabled is rejected from the Module CR",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{"loki": true},
+			wantAllowed:    false,
+			wantMessage:    "depends on disabled module(s): log-shipper",
+		},
+		{
+			name:           "create: all required parents enabled is allowed",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
+			wantAllowed:    true,
+		},
+		{
+			name:           "update: both required parents enabled is allowed",
+			operation:      "UPDATE",
+			newConfig:      newModuleConfigFull(moduleName, boolPtr(true), "deckhouse", ""),
+			oldConfig:      newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
+			wantAllowed:    true,
+		},
+		{
+			name:           "module CR without requirements is allowed",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCR(moduleName, []string{"deckhouse"}, ""),
+			enabledParents: map[string]bool{},
+			wantAllowed:    true,
+		},
+		{
+			name:           "update: missing Module CR skips the dependency fallback and is allowed",
+			operation:      "UPDATE",
+			newConfig:      newModuleConfigFull(moduleName, boolPtr(true), "deckhouse", ""),
+			oldConfig:      newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:       nil,
+			enabledParents: map[string]bool{},
+			wantAllowed:    true,
+		},
+		{
+			name:           "extender rejection takes precedence over the Module CR fallback",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
+			dependencyErr:  fmt.Errorf("module %q depends on a disabled module", moduleName),
+			wantAllowed:    false,
+			wantMessage:    "depends on a disabled module",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newStorageModule(t, moduleName, "", ""),
+				},
+			}
+			manager := &fakeModuleManager{enabled: tt.enabledParents}
+
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+			dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(tt.dependencyErr)
+
+			var objs []client.Object
+			if tt.moduleCR != nil {
+				objs = append(objs, tt.moduleCR)
+			}
+
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, objs...)
+
+			review := newModuleConfigAdmissionReview(tt.operation, tt.newConfig, tt.oldConfig)
 
 			resp := callHandler(t, handler, review)
 
