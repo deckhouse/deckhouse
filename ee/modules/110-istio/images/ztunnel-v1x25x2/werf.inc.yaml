@@ -6,8 +6,8 @@ import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/ztunnel/bin/ztunnel
     to: /usr/local/bin/ztunnel
-    owner: 1337
-    group: 1337
+    owner: 64535
+    group: 64535
     before: install
   - from: {{ index $.Images "libs/glibc-v2.41" }}
     add: /lib64/libc.so.6
@@ -31,8 +31,8 @@ import:
     before: install
 imageSpec:
   config:
-    user: "1337:1337"
-    env:  
+    user: "64535:64535"
+    env:
       ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     entrypoint: ["/usr/local/bin/ztunnel"]
 ---
