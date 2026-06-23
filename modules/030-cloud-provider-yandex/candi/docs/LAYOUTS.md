@@ -13,7 +13,6 @@ In this placement strategy, nodes do not have public IP addresses allocated to t
 
 {% alert level="warning" %}
 Because nodes are created without public IP addresses in this layout, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly over a private network or through a bastion host.
-
 If the master node is not directly accessible, run the installation with the `--ssh-bastion-host`, `--ssh-bastion-user`, and, if needed, `--ssh-bastion-port` parameters.
 {% endalert %}
 
