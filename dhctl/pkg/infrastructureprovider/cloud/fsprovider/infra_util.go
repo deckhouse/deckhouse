@@ -78,12 +78,17 @@ func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *conf
 }
 
 func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string, showProgress bool) error {
+	log.InfoF("[DVP-DEBUG] downloadImage: name=%s section=%s downloadRootDir=%q downloadCacheDir=%q deckhouseConfigNotNil=%t\n",
+		name, section, conf.DownloadRootDir, conf.DownloadCacheDir, govalue.NotNil(conf.DeckhouseConfig))
 	var regConfig *image.RegistryConfig
 	var err error
 	var imageName string
 	if govalue.NotNil(conf.DeckhouseConfig) {
+		log.InfoF("[DVP-DEBUG] downloadImage: DeckhouseConfig branch registryDockerCfgLen=%d imagesRepo=%q scheme=%q\n",
+			len(conf.DeckhouseConfig.RegistryDockerCfg), conf.DeckhouseConfig.ImagesRepo, conf.DeckhouseConfig.RegistryScheme)
 		dc, decodeErr := image.DecodeDockerConfig(conf.DeckhouseConfig.RegistryDockerCfg)
 		if decodeErr != nil {
+			log.InfoF("[DVP-DEBUG] downloadImage: DecodeDockerConfig err: %v\n", decodeErr)
 			return decodeErr
 		}
 		scheme := "HTTPS"
@@ -91,6 +96,9 @@ func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section s
 			scheme = strings.ToUpper(conf.DeckhouseConfig.RegistryScheme)
 		}
 		regConfig, err = image.RegistryConfigFromDockerConfig(dc, scheme, conf.DeckhouseConfig.ImagesRepo)
+		if err != nil {
+			log.InfoF("[DVP-DEBUG] downloadImage: RegistryConfigFromDockerConfig err: %v\n", err)
+		}
 		imageName = conf.DeckhouseConfig.ImagesRepo + "@"
 	} else {
 		regConfig, err = image.NewRegistryConfig(string(conf.Registry.Settings.RemoteData.Scheme), conf.Registry.Settings.RemoteData.ImagesRepo, conf.Registry.Settings.RemoteData.Username, conf.Registry.Settings.RemoteData.Password, conf.Registry.Settings.RemoteData.CA)
@@ -110,5 +118,6 @@ func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section s
 	}
 	imageName += tfImage
 
+	log.InfoF("[DVP-DEBUG] downloadImage: pulling imageName=%q into rootDir=%q cacheDir=%q\n", imageName, conf.DownloadRootDir, conf.DownloadCacheDir)
 	return image.DownloadAndUnpackImage(ctx, imageName, conf.DownloadRootDir, conf.DownloadCacheDir, *regConfig, showProgress)
 }
