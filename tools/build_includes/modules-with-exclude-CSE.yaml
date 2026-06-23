@@ -383,22 +383,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /modules/340-monitoring-deckhouse
-  to: /deckhouse/modules/340-monitoring-deckhouse
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
   excludePaths:
@@ -998,6 +982,38 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/templates/waypoint-controller
+  to: /deckhouse/modules/110-istio/templates/waypoint-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/110-istio/templates/ztunnel
+  to: /deckhouse/modules/110-istio/templates/ztunnel
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
   stageDependencies:
@@ -1005,6 +1021,11 @@
         - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-waypointinstance.yaml
   stageDependencies:
     install:
         - '**/*'
@@ -1018,8 +1039,23 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/crds/waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/waypointinstance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
   stageDependencies:
     install:
         - '**/*'
@@ -1035,11 +1071,6 @@
         - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/_helper.tpl
-  to: /deckhouse/modules/380-metallb/templates/_helper.tpl
   stageDependencies:
     install:
         - '**/*'

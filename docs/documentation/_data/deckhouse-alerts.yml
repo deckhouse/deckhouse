@@ -856,9 +856,9 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8CNIEnabledMoreThanOne
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Deckhouse has detected that multiple CNIs are enabled in the cluster.
@@ -870,9 +870,9 @@ alerts:
       severity: "2"
       markupFormat: markdown
     - name: D8CNIMisconfigured
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         This happened because there were several sources for configuring CNI parameters in the cluster, and ModuleConfig did not have the highest priority previously.
@@ -971,9 +971,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseConfigInvalid
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: "Deckhouse configuration contains errors.\n\nSteps to troubleshoot:\n\n1. Check Deckhouse logs by running the following command:\n\n   ```bash\n   d8 k -n d8-system logs -f -l app=deckhouse\n   ```\n\n1. Edit the Deckhouse global configuration:\n\n   ```bash\n   d8 k edit mc global\n   ```\n   \n   Or edit configuration of a specific module:\n\n   ```bash\n   d8 k edit mc <MODULE_NAME>\n   ```\n"
       summary: |
@@ -981,9 +981,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhouseCouldNotDeleteModule
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         To investigate the issue, check the logs by running the following command:
@@ -996,9 +996,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseCouldNotDiscoverModules
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         To investigate the issue, check the logs by running the following command:
@@ -1011,9 +1011,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseCouldNotRunGlobalHook
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         To investigate the issue, check the logs by running the following command:
@@ -1026,9 +1026,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhouseCouldNotRunModule
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         To investigate the issue, check the logs by running the following command:
@@ -1041,9 +1041,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseCouldNotRunModuleHook
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         To investigate the issue, check the logs by running the following command:
@@ -1056,9 +1056,9 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8DeckhouseCustomTargetDown
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: ""
       summary: |
@@ -1066,9 +1066,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseDeprecatedConfigmapManagedByArgoCD
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The Deckhouse ConfigMap is no longer used.
@@ -1079,9 +1079,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseGlobalHookFailsTooOften
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The `{{ $labels.hook }}` hook has failed multiple times in the last `__SCRAPE_INTERVAL_X_4__`.
@@ -1096,9 +1096,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseHasNoAccessToRegistry
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Deckhouse can't connect to the registry (typically `registry.deckhouse.io`) to check for a new Docker image. These checks are performed every 15 seconds. Without access to the registry, automatic updates are unavailable.
@@ -1109,9 +1109,9 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8DeckhouseIsHung
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Deckhouse is probably down, since the `deckhouse_live_ticks` metric in Prometheus has stopped increasing.
@@ -1121,9 +1121,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseIsNotOnReleaseChannel
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Deckhouse in this cluster isn't subscribed to any of the regular release channels: `Alpha`, `Beta`, `EarlyAccess`, `Stable`, or `RockSolid`.
@@ -1142,9 +1142,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseModuleHookFailsTooOften
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The `{{ $labels.hook }}` hook of the `{{ $labels.module }}` module has failed multiple times in the last `__SCRAPE_INTERVAL_X_4__`.
@@ -1159,9 +1159,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseModuleUpdatePolicyNotFound
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The module update policy for {{ $labels.moduleRelease }} is missing.
@@ -1178,19 +1178,38 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhouseModuleValidationError
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: "Initial config for module {{ $labels.module }} is not valid. \n\nYou can get more details via\n\n```bash\nd8 k get mr -l module={{ $labels.module }}\n```\n\nProvided error: {{ $labels.error }}\n"
       summary: |
         Module configuration failed for module {{ $labels.module }}.
       severity: "5"
       markupFormat: markdown
+    - name: D8DeckhouseObsoleteMonitoringDeckhouseModuleConfig
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |-
+        The `monitoring-deckhouse` module was merged into the `deckhouse` module, but its ModuleConfig still exists in the cluster and is no longer used.
+
+        Remove it manually:
+
+        ```bash
+        d8 k delete moduleconfig monitoring-deckhouse
+        ```
+
+        If the ModuleConfig is deployed from an external source (e.g. a Git repository), make sure it is removed from there so it is not created again.
+      summary: |
+        Obsolete monitoring-deckhouse ModuleConfig should be removed.
+      severity: "9"
+      markupFormat: markdown
     - name: D8DeckhousePodIsNotReady
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: ""
       summary: |
@@ -1198,9 +1217,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhousePodIsNotRunning
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: ""
       summary: |
@@ -1208,9 +1227,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhousePodIsRestartingTooOften
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Number of restarts in the last hour: {{ $value }}.
@@ -1227,9 +1246,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseQueueIsHung
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Deckhouse cannot finish processing of the `{{ $labels.queue }}` queue, which currently has {{ $value }} pending task(s).
@@ -1244,9 +1263,9 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8DeckhouseSelfTargetAbsent
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: ""
       summary: |
@@ -1254,9 +1273,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseSelfTargetDown
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: ""
       summary: |
@@ -1264,9 +1283,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8DeckhouseWatchErrorOccurred
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: "Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.\n\nSteps to investigate:\n\n1. Check Deckhouse logs for more information by running:\n\n   ```bash\n   d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch\n   ```\n\n1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.\n   \n   To compare the snapshot with the actual node objects for this hook, run the following command:\n\n   ```bash\n   diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'|sort) <(d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '.\"040-node-manager/hooks/handle_node_templates.go\"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)\n   ```\n"
       summary: |
@@ -1544,9 +1563,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: D8HasModuleConfigAllowedToDisable
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The ModuleConfig is pending module disabling.
@@ -1706,6 +1725,36 @@ alerts:
         Prometheus can't scrape metrics of image-availability-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8IstioActiveWaypointsWithAmbientDisabled
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Deckhouse has detected an active waypoint Deployment `{{$labels.deployment}}` in namespace `{{$labels.namespace}}`, created for WaypointInstance `{{$labels.waypoint_instance}}`, while ambient mesh is disabled.
+
+        This usually happens if ambient mesh was enabled, a WaypointInstance was created, and then ambient mesh was disabled. In this state the waypoint-controller is not running, so it cannot reconcile or clean up WaypointInstance resources.
+
+        To inspect affected resources, run:
+
+        ```bash
+        d8 k -n {{$labels.namespace}} get waypointinstance {{$labels.waypoint_instance}} -o yaml
+        d8 k -n {{$labels.namespace}} get deploy,svc,sa,gateway,pdb,hpa,vpa -l istio.deckhouse.io/waypoint-instance={{$labels.waypoint_instance}}
+        ```
+
+        Recommended remediation:
+
+        1. Temporarily enable ambient mesh.
+        2. Wait until waypoint-controller starts.
+        3. Delete the affected WaypointInstance or change configuration as needed.
+        4. Wait until managed waypoint resources are reconciled as needed or removed.
+        5. Disable ambient mesh again.
+
+        If ambient mesh cannot be re-enabled, manually remove the managed waypoint resources and then remove the WaypointInstance finalizer only after verifying that no managed resources remain.
+      summary: |
+        Active Istio waypoint exists while ambient mesh is disabled.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioActualDataPlaneVersionNotEqualDesired
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
@@ -1765,6 +1814,32 @@ alerts:
         ```
       summary: |
         Additional control plane isn't working.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IstioAllianceDataPlaneNotConnected
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The data-plane health check of {{$labels.alliance_kind}} `{{$labels.name}}` with uuid `{{$labels.remote_cluster_uuid}}` has been failing for more than 5 minutes.
+
+        This means that actual service mesh traffic between clusters is not flowing properly, even though the control plane metadata exchange may be working.
+
+        Possible causes:
+
+        - The remote cluster's `alliance-healthcheck` pod is not running.
+        - Istio sidecar injection is not working properly on the healthcheck pods.
+        - The ingress gateway between clusters is misconfigured or unreachable.
+        - mTLS or trust domain configuration issues between clusters.
+
+        To check the status:
+
+        ```bash
+        d8 k get {{$labels.alliance_kind}} {{$labels.name}} -o json | jq '.status.conditions[] | select(.type=="DataplaneConnectionReady")'
+        ```
+      summary: |
+        Data-plane connectivity check failed for {{$labels.alliance_kind}} {{$labels.name}}.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
@@ -2420,9 +2495,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: D8ModuleOutdatedByMajorVersion
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Module `{{ $labels.module }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
@@ -2624,6 +2699,61 @@ alerts:
         Node {{ $labels.node }} is using deprecated containerd v1 – migration to v2 required.
       severity: "8"
       markupFormat: markdown
+    - name: D8NodeControllerReconcileErrorsHigh
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-controller.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Controller `{{ $labels.controller }}` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
+
+        Check node-controller logs:
+
+        ```bash
+        kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
+        ```
+      summary: |
+        Node-controller reconcile errors are high for {{ $labels.controller }}.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8NodeControllerReconcileP99High
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-controller.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The p99 reconcile duration for controller `{{ $labels.controller }}` has been above 5 seconds for more than 10 minutes.
+
+        This may indicate slow reconciliation, Kubernetes API latency, or degraded controller performance.
+
+        To inspect node-controller logs:
+
+        ```bash
+        kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
+        ```
+      summary: |
+        Node-controller reconcile p99 is high for {{ $labels.controller }}.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8NodeControllerWorkqueueDepthHigh
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-controller.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The node-controller workqueue `{{ $labels.name }}` has more than 50 queued objects for more than 15 minutes.
+
+        This may indicate that the controller cannot process reconciliation events fast enough.
+
+        To inspect node-controller logs:
+
+        ```bash
+        kubectl -n d8-cloud-instance-manager logs deploy/node-controller --all-pods=true
+        ```
+      summary: |
+        Node-controller workqueue {{ $labels.name }} has a high backlog.
+      severity: "8"
+      markupFormat: markdown
     - name: D8NodeGroupIsNotUpdating
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
@@ -2639,9 +2769,9 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8NodeHasDeprecatedOSVersion
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/node-os-requirements.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/node-os-requirements.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |-
         Deckhouse has detected nodes running deprecated OS versions.
@@ -2881,6 +3011,46 @@ alerts:
       summary: |
         Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
+      markupFormat: markdown
+    - name: D8ObsoleteEncryptionAlgorithmInClusterConfiguration
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `encryptionAlgorithm` field is set to a non-default value in ClusterConfiguration but has not been migrated to ModuleConfig `control-plane-manager` yet.
+
+        Until the migration is complete, the value from ClusterConfiguration is used to avoid unintended certificate rotation.
+
+        **To resolve this alert, migrate the setting:**
+
+        1. If ModuleConfig `control-plane-manager` does not exist, create it first:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Migrate the value from ClusterConfiguration to ModuleConfig in one command:
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
+           {"spec": {"version": 3, "settings": {"encryptionAlgorithm": "$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep encryptionAlgorithm | awk '{print $2}')"}}}
+           EOF
+           )"
+           ```
+
+        Once ModuleConfig is updated, this alert will be resolved automatically.
+
+        3. Remove `encryptionAlgorithm` from ClusterConfiguration:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete the `encryptionAlgorithm` field and save.
+      summary: |
+        Obsolete encryptionAlgorithm in ClusterConfiguration needs to be migrated to control-plane-manager ModuleConfig.
+      severity: "6"
       markupFormat: markdown
     - name: D8ObsoleteGlobalControlPlaneResourcesRequests
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
@@ -3814,9 +3984,9 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: DeckhouseEditionNotFound
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Specify a Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
@@ -3831,9 +4001,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseHighMemoryUsage
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Deckhouse pod `{{ $labels.pod }}` on node `{{ $labels.node }}` has high memory usage.
@@ -3852,9 +4022,9 @@ alerts:
       severity: "3"
       markupFormat: markdown
     - name: DeckhouseMigratedModuleNotFound
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Module `{{ $labels.module }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
@@ -3887,9 +4057,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The '{{ $labels.module }}' Module update has failed.
@@ -3908,9 +4078,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedModuleIsNotValid
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The '{{ $labels.module }}' Module update has failed.
@@ -3940,9 +4110,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: DeckhouseReleaseDisruptionApprovalRequired
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The new Deckhouse release includes a disruptive update that requires manual approval.
@@ -3963,9 +4133,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DeckhouseReleaseIsBlocked
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The requirements for the Deckhouse release haven't been met.
@@ -3980,9 +4150,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: DeckhouseReleaseIsWaitingManualApproval
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         A new Deckhouse release is available but requires manual approval before it can be applied.
@@ -3997,9 +4167,9 @@ alerts:
       severity: "3"
       markupFormat: markdown
     - name: DeckhouseReleaseIsWaitingManualApproval
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         A new Deckhouse release is available but requires manual approval before it can be applied.
@@ -4014,9 +4184,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseReleaseIsWaitingManualApproval
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         A new Deckhouse release is available but requires manual approval before it can be applied.
@@ -4031,9 +4201,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: DeckhouseReleaseNotificationNotSent
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The Deckhouse release notification webhook failed to send.
@@ -4048,9 +4218,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DeckhouseUpdating
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: ""
       summary: |
@@ -4058,9 +4228,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DeckhouseUpdatingFailed
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The Deckhouse update has failed.
@@ -5206,9 +5376,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: ModuleAtConflict
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Deckhouse has detected conflicting sources for the {{ $labels.module }} module.
@@ -5239,9 +5409,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: ModuleConfigObsoleteVersion
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Deckhouse has detected that ModuleConfig `{{ $labels.name }}` is outdated.
@@ -5276,9 +5446,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: ModuleHasDeprecatedUpdatePolicy
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |-
         Deckhouse has detected that the module `{{ $labels.module }}` is using the deprecated update policy `{{ $labels.updatePolicy }}`. The `v1alpha1` policy has a selector that no longer functions.
@@ -5299,9 +5469,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: ModuleIsDeprecated
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.
@@ -5310,9 +5480,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: ModuleIsInMaintenanceMode
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Module `{{ $labels.module }}` is running in maintenance mode. In this mode, its state is not reconciled, which prevents configuration or hook changes from being applied automatically.
@@ -5327,9 +5497,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         A new release for module `{{ $labels.module }}` has been blocked because it doesn't meet the required conditions.
@@ -5344,9 +5514,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: ModuleReleaseIsOutdated
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Module `{{ $labels.module }}` is running {{ $labels.versionLag }} or more minor versions behind the latest available release.
@@ -5362,9 +5532,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: ModuleReleaseIsOutdated
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Module `{{ $labels.module }}` is running 2 minor versions behind the latest available release.
@@ -5380,9 +5550,9 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: ModuleReleaseIsOutdated
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         Module `{{ $labels.module }}` is running 1 minor version behind the latest available release.
@@ -5398,9 +5568,9 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: ModuleReleaseIsWaitingManualApproval
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
       edition: ce
       description: |
         A new release for module `{{ $labels.module }}` is available but requires manual approval before it can be applied.
@@ -6681,10 +6851,12 @@ alerts:
       module: prometheus
       edition: ce
       description: |
-        The cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, e.g. for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance)
-        This approach is deprecated and the direct access to Prometheus will not be possible in the future Deckhouse Kubernetes Platform releases.
+        The DKP cluster has an Ingress that allows direct access to Prometheus with client certificate authentication, for example, for [the external metrics access](https://deckhouse.io/modules/prometheus/usage.html#connecting-prometheus-to-an-external-grafana-instance).
+        This approach is deprecated and the direct access to Prometheus will not be possible in the future DKP releases.
 
-        To resolve this issue, remove the deprecated Ingress and use the [observability module to manage Prometheus metrics access](https://deckhouse.io/products/kubernetes-platform/modules/observability/stable/faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster).
+        To resolve this issue, remove the deprecated Ingress and use the `observability` module to manage Prometheus metrics access.
+
+        Refer to the [module documentation](https://deckhouse.io/modules/observability/metrics.html#external-access-to-metrics) for instructions.
       summary: |
         Deprecated Ingress with direct Prometheus access found in cluster.
       severity: "6"
@@ -7071,6 +7243,37 @@ alerts:
         Unsupported version of CRI {{$labels.container_runtime_version}} installed for Kubernetes version {{$labels.kubelet_version}}.
       severity: undefined
       markupFormat: markdown
+    - name: VerticalPodAutoscalerDeprecatedUpdateModeAuto
+      sourceFile: modules/302-vertical-pod-autoscaler/monitoring/prometheus-rules/update-mode-deprecation.yaml
+      moduleUrl: 302-vertical-pod-autoscaler
+      module: vertical-pod-autoscaler
+      edition: ce
+      description: |
+        There are `{{ $value }}` VerticalPodAutoscaler object(s) in the cluster
+        configured with the deprecated update mode (`spec.updatePolicy.updateMode: Auto`).
+
+        The `Auto` update mode is deprecated. It currently behaves like `Recreate`
+        (the VPA updater evicts pods to apply new resource requests) and its semantics
+        are reserved to change in future versions, which makes cluster behavior
+        ambiguous and potentially disruptive.
+
+        Set the affected VPA object(s) to one of the supported update modes ([`spec.updatePolicy.updateMode`](https://deckhouse.io/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode)):
+
+        - `InPlaceOrRecreate`: Apply recommendations in place when possible, fall back to recreation (recommended).
+        - `Recreate`: Evict and recreate pods to apply recommendations.
+        - `Initial`: Apply only when pods are (re)created.
+        - `Off`: Recommendations only, no changes to running pods.
+
+        To list the affected objects, open the **VPA Deprecated Update Mode** Grafana
+        dashboard, or run:
+
+        ```prometheus
+        kube_verticalpodautoscaler_spec_updatepolicy_updatemode{update_mode="Auto"} == 1
+        ```
+      summary: |
+        VerticalPodAutoscaler objects use the deprecated Auto update mode.
+      severity: "9"
+      markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
     - cert-manager
@@ -7079,6 +7282,7 @@ modules-having-alerts:
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager
+    - deckhouse
     - documentation
     - extended-monitoring
     - ingress-nginx
@@ -7089,7 +7293,6 @@ modules-having-alerts:
     - metallb
     - monitoring-applications
     - monitoring-custom
-    - monitoring-deckhouse
     - monitoring-kubernetes
     - monitoring-kubernetes-control-plane
     - monitoring-ping
@@ -7104,3 +7307,4 @@ modules-having-alerts:
     - terraform-manager
     - user-authn
     - user-authz
+    - vertical-pod-autoscaler

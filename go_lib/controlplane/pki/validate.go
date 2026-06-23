@@ -61,7 +61,7 @@ func validateRootCert(oldCert *x509.Certificate, newCertCfg certConfig) error {
 	return nil
 }
 
-func certificateExpiresSoon(cert *x509.Certificate, durationLeft time.Duration) bool {
+func certificateExpiresSoon(cert *x509.Certificate, durationLeft time.Duration) bool { //nolint:unparam
 	return pkiutil.CertificateExpiresSoon(cert, durationLeft)
 }
 

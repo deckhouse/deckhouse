@@ -162,42 +162,42 @@ func (l *InMemoryLogger) LogProcess(p, t string, action func() error) error {
 	return err
 }
 
-func (l *InMemoryLogger) LogInfoF(format string, a ...interface{}) {
+func (l *InMemoryLogger) LogInfoF(format string, a ...any) {
 	l.writeEntityFormatted(format, a...)
 	l.parent.LogInfoF(format, a...)
 }
 
-func (l *InMemoryLogger) LogInfoLn(a ...interface{}) {
+func (l *InMemoryLogger) LogInfoLn(a ...any) {
 	l.writeEntityFormatted("%v\n", a)
 	l.parent.LogInfoLn(a...)
 }
 
-func (l *InMemoryLogger) LogErrorF(format string, a ...interface{}) {
+func (l *InMemoryLogger) LogErrorF(format string, a ...any) {
 	l.writeEntityWithPrefix(l.errorPrefix, format, a...)
 	l.parent.LogErrorF(format, a...)
 }
 
-func (l *InMemoryLogger) LogErrorLn(a ...interface{}) {
+func (l *InMemoryLogger) LogErrorLn(a ...any) {
 	l.writeEntityWithPrefix(l.errorPrefix, "%v\n", a)
 	l.parent.LogErrorLn(a...)
 }
 
-func (l *InMemoryLogger) LogDebugF(format string, a ...interface{}) {
+func (l *InMemoryLogger) LogDebugF(format string, a ...any) {
 	l.writeEntityWithPrefix(l.debugPrefix, format, a...)
 	l.parent.LogDebugF(format, a...)
 }
 
-func (l *InMemoryLogger) LogDebugLn(a ...interface{}) {
+func (l *InMemoryLogger) LogDebugLn(a ...any) {
 	l.writeEntityWithPrefix(l.debugPrefix, "%v\n", a)
 	l.parent.LogDebugLn(a...)
 }
 
-func (l *InMemoryLogger) LogWarnF(format string, a ...interface{}) {
+func (l *InMemoryLogger) LogWarnF(format string, a ...any) {
 	l.writeEntityFormatted(format, a...)
 	l.parent.LogWarnF(format, a...)
 }
 
-func (l *InMemoryLogger) LogWarnLn(a ...interface{}) {
+func (l *InMemoryLogger) LogWarnLn(a ...any) {
 	l.writeEntityFormatted("%v\n", a)
 	l.parent.LogWarnLn(a...)
 }

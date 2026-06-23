@@ -336,7 +336,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception/nginx: allow-privilege-escalation-true-container
+                  security.deckhouse.io/security-policy-exception.container.nginx: allow-privilege-escalation-true-container
                 name: allowed-by-container-exception-allowprivilegeescalation-true
               spec:
                 containers:

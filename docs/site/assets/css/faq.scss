@@ -15,16 +15,6 @@
         }
     }
 
-    .post-content {
-        &> p:first-child {
-            margin-bottom: 56px;
-
-            @include breakpoints.max-w(l) {
-                margin-bottom: 40px;
-            }
-        }
-    }
-
     .show__containers--expand, .show__containers--collapse {
         text-decoration: none;
         background: none;
@@ -47,8 +37,13 @@
     }
 
     .show__containers--expand {
+        margin-top: 56px;
         padding-right: 14px;
         border-right: 1px solid mixins.$ntrl-400;
+
+        @include breakpoints.max-w(l) {
+            margin-top: 40px;
+        }
     }
 
     .show__containers--collapse {

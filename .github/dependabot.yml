@@ -169,6 +169,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/alliance-healthcheck/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/110-istio/images/api-proxy/src"
   labels:
   - "type/dependencies"
@@ -188,6 +197,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/ee/modules/110-istio/images/metrics-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/waypoint-controller/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

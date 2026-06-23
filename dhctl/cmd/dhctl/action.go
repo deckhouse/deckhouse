@@ -67,8 +67,7 @@ func newActionIniter(opts *options.Options) *actionIniter {
 }
 
 func (i *actionIniter) setParams(params actionIniterParams) *actionIniter {
-	paramsCopy := params
-	i.params = &paramsCopy
+	i.params = new(params)
 	return i
 }
 

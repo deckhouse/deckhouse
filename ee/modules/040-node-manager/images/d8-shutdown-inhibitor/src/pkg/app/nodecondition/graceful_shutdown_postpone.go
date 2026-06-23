@@ -22,7 +22,7 @@ const (
 	ReasonOnStart                = "ShutdownInhibitorIsStarted"
 	ReasonOnUnlock               = "NoRunningPodsWithLabel"
 	ReasonPodsArePresent         = "PodsWithLabelAreRunningOnNode"
-	ReasonPendindgState          = "Pending"
+	ReasonArmed                  = "WaitingForShutdownSignal"
 )
 
 func GracefulShutdownPostpone(klient *kubernetes.Klient) *gracefulShutdownPostpone {
@@ -41,19 +41,23 @@ func (g *gracefulShutdownPostpone) SetOnStart(ctx context.Context, nodeName stri
 	if !afterReboot {
 		return nil
 	}
-	return g.SetStatusUnknow(ctx, nodeName)
+	return g.SetArmed(ctx, nodeName)
 }
 
-func (g *gracefulShutdownPostpone) SetStatusUnknow(ctx context.Context, nodeName string) error {
-	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusUnknown, ReasonPendindgState)
+// SetArmed puts the condition into its steady state while the node runs.
+// Status is True (not Unknown) on purpose: the frozen kubelet patch treats
+// True as "postpone", so shutdown stays blocked by default until the inhibitor
+// decides, which closes the race on the shutdown signal.
+func (g *gracefulShutdownPostpone) SetArmed(ctx context.Context, nodeName string) error {
+	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusTrue, ReasonArmed, "Node is armed; graceful shutdown will be postponed until stateful pods are evicted")
 }
 
 func (g *gracefulShutdownPostpone) SetPodsArePresent(ctx context.Context, nodeName string) error {
-	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusTrue, ReasonPodsArePresent)
+	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusTrue, ReasonPodsArePresent, "")
 }
 
 func (g *gracefulShutdownPostpone) UnsetOnUnlock(ctx context.Context, nodeName string) error {
-	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusFalse, ReasonOnUnlock)
+	return g.patchGracefulShutdownPostponeCondition(ctx, nodeName, StatusFalse, ReasonOnUnlock, "")
 }
 
 // patchGracefulShutdownPostponeCondition updates GracefulShutdownPostpone condition.
@@ -66,9 +70,9 @@ kubectl patch node/static-vm-node-00 --type strategic
 -p '{"status":{"conditions":[{"type":"GracefulShutdownPostpone", "status":"False", "reason":"NoRunningPodsWithLabel"}]}}'
 --subresource=status
 */
-func (g *gracefulShutdownPostpone) patchGracefulShutdownPostponeCondition(ctx context.Context, nodeName, status, reason string) error {
+func (g *gracefulShutdownPostpone) patchGracefulShutdownPostponeCondition(ctx context.Context, nodeName, status, reason, message string) error {
 	return g.Klient.GetNode(ctx, nodeName).
-		PatchCondition(ctx, GracefulShutdownPostponeType, status, reason, "").
+		PatchCondition(ctx, GracefulShutdownPostponeType, status, reason, message).
 		Err()
 }
 

@@ -22,7 +22,7 @@ description: Архитектура модуля cloud-provider-huaweicloud в D
 Архитектура модуля [`cloud-provider-huaweicloud`](/modules/cloud-provider-huaweicloud/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля cloud-provider-huaweicloud](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-huaweicloud.ru.png)
+![Архитектура модуля cloud-provider-huaweicloud](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-huaweicloud.ru.png)
 
 ## Компоненты модуля
 
@@ -60,7 +60,7 @@ description: Архитектура модуля cloud-provider-huaweicloud в D
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-4. **CSI-драйвер (huaweicloud)** — реализация CSI-драйвера для Huawei Cloud. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html).
+4. **CSI-драйвер (huaweicloud)** — реализация CSI-драйвера для Huawei Cloud. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
 
    CSI-драйвер (huaweicloud) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

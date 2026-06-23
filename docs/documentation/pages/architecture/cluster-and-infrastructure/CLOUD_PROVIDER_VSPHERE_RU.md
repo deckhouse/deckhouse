@@ -22,7 +22,7 @@ description: Архитектура модуля cloud-provider-vsphere в Deckh
 Архитектура модуля [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля cloud-provider-vsphere](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vsphere.ru.png)
+![Архитектура модуля cloud-provider-vsphere](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vsphere.ru.png)
 
 ## Компоненты модуля
 
@@ -50,7 +50,7 @@ description: Архитектура модуля cloud-provider-vsphere в Deckh
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-1. **CSI-драйвер (vsphere)** — реализация CSI-драйвера для VMware vSphere. С архитектурой CSI-драйвера, используемого в модуле `cloud-provider-vsphere` DKP, можно ознакомиться в [соответствующем разделе документации](../infrastructure/csi-vsphere.html).
+1. **CSI-драйвер (vsphere)** — реализация CSI-драйвера для VMware vSphere. С архитектурой CSI-драйвера, используемого в модуле `cloud-provider-vsphere` DKP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver-vsphere.html).
 
    CSI-драйвер (vsphere) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

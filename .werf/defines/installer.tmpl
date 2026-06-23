@@ -15,6 +15,10 @@
   - modules/*/openapi/conversions/*.yaml
   - global-hooks/openapi/config-values.yaml
   after: setup
+- image: dev-prebuild
+  add: /deckhouse/deckhouse-controller/crds/module-config.yaml
+  to: /deckhouse/crds/module-config.yaml
+  after: setup
 - image: images-digests
   add: /images_digests.json
   to: /deckhouse/candi/images_digests.json

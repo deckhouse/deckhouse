@@ -444,6 +444,6 @@ type nodeState struct {
 	Outputs struct {
 		MasterIPAddressForSSH struct {
 			Value string `json:"value,omitempty"`
-		} `json:"master_ip_address_for_ssh,omitempty"`
-	} `json:"outputs,omitempty"`
+		} `json:"master_ip_address_for_ssh"`
+	} `json:"outputs"`
 }

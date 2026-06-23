@@ -1,0 +1,231 @@
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- if not (get $versionInfo "supportsOperator") }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- $imageSuffix := get $versionInfo "imageSuffix" }}
+  {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: istiod-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 2 }}
+spec:
+{{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "Deployment" (printf "istiod-%s" $revision) "discovery" $.Values.istio.controlPlane.resourcesManagement ) | nindent 2 }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istiod-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot" "istio" "istiod")) | nindent 2 }}
+spec:
+  {{- if ne $.Values.istio.controlPlane.replicasManagement.mode "HPA" }}
+  {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
+  replicas: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
+  {{- else if eq $.Values.istio.controlPlane.replicasManagement.mode "Static" }}
+  replicas: {{ $.Values.istio.controlPlane.replicasManagement.static.replicas }}
+  {{- end }}
+  {{- end }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+  selector:
+    matchLabels:
+      app: istiod
+      istio.io/rev: {{ $revision }}
+  template:
+    metadata:
+      labels:
+        app: istiod
+        istio.io/rev: {{ $revision }}
+        istio: istiod
+        sidecar.istio.io/inject: "false"
+        operator.istio.io/component: Pilot
+        istio.io/dataplane-mode: none
+      annotations:
+        prometheus.io/port: "15014"
+        prometheus.io/scrape: "true"
+        sidecar.istio.io/inject: "false"
+        istio-mtls-ca-bundle-checksum: {{ $.Values.istio.internal.ca | toYaml | sha256sum }}
+    spec:
+      serviceAccountName: istiod-{{ $revision }}
+      {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ (dict "app" "istiod" "istio.io/rev" $revision)) | nindent 6 }}
+      tolerations:
+      - key: cni.istio.io/not-ready
+        operator: Exists
+      {{- if $.Values.istio.controlPlane.tolerations }}
+      {{- $.Values.istio.controlPlane.tolerations | toYaml | nindent 6 }}
+      {{- else }}
+      {{- include "_helm_lib_any_node_tolerations" $ | nindent 6 }}
+      {{- include "_helm_lib_additional_tolerations_storage_problems" $ | nindent 6 }}
+      {{- end }}
+      {{- if $.Values.istio.controlPlane.nodeSelector }}
+      nodeSelector:
+      {{- $.Values.istio.controlPlane.nodeSelector | toYaml | nindent 8 }}
+      {{- else }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- end }}
+      containers:
+      - name: discovery
+        image: {{ include "helm_lib_module_image" (list $ (printf "pilot%s" $imageSuffix)) }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - discovery
+        - --monitoringAddr=:15014
+        - --log_output_level=default:info
+        - --domain
+        - {{ $.Values.global.discovery.clusterDomain | quote }}
+        - --keepaliveMaxServerConnectionAge
+        - "30m"
+        ports:
+        - containerPort: 8080
+          name: http-debug
+          protocol: TCP
+        - containerPort: 15010
+          name: grpc-xds
+          protocol: TCP
+        - containerPort: 15012
+          name: tls-xds
+          protocol: TCP
+        - containerPort: 15017
+          name: https-webhooks
+          protocol: TCP
+        - containerPort: 15014
+          name: http-monitoring
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 1
+          periodSeconds: 3
+          timeoutSeconds: 5
+        env:
+        - name: REVISION
+          value: {{ $revision | quote }}
+        - name: PILOT_CERT_PROVIDER
+          value: istiod
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: KUBECONFIG
+          value: /var/run/secrets/remote/config
+        - name: CA_TRUSTED_NODE_ACCOUNTS
+          value: d8-{{ $.Chart.Name }}/ztunnel
+        - name: PILOT_ENABLE_ANALYSIS
+          value: "false"
+        - name: CLUSTER_ID
+          value: {{ printf "%s-%s" ($.Values.global.discovery.clusterDomain | replace "." "-") ($.Values.global.discovery.clusterUUID | adler32sum) | quote }}
+        - name: ISTIO_MULTIROOT_MESH
+          value: "true"
+        - name: ENABLE_ENHANCED_RESOURCE_SCOPING
+          value: "true"
+        - name: PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER
+          value: "false"
+        - name: PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER
+          value: "false"
+        {{- if $.Values.istio.dataPlane.enableHTTP10 }}
+        - name: PILOT_HTTP10
+          value: "1"
+        {{- end }}
+        {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+        - name: PILOT_ENABLE_AMBIENT
+          value: "true"
+        {{- end }}
+        - name: ENABLE_NATIVE_SIDECARS
+          value: "false"
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.memory
+              divisor: "1"
+        - name: GOMAXPROCS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+              divisor: "1"
+        {{- range $name, $value := $.Values.istio.controlPlane.extraEnvs }}
+        - name: {{ $name }}
+          value: {{ $value | quote }}
+        {{- end }}
+        resources:
+        {{- include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: istio-token
+          mountPath: /var/run/secrets/tokens
+          readOnly: true
+        - name: local-certs
+          mountPath: /var/run/secrets/istio-dns
+        - name: cacerts
+          mountPath: /etc/cacerts
+          readOnly: true
+        - name: istio-kubeconfig
+          mountPath: /var/run/secrets/remote
+          readOnly: true
+        - name: istio-csr-dns-cert
+          mountPath: /var/run/secrets/istiod/tls
+          readOnly: true
+        - name: istio-csr-ca-configmap
+          mountPath: /var/run/secrets/istiod/ca
+          readOnly: true
+        {{- if $.Values.istio.jwksResolverAdditionalRootCA }}
+        - name: extracacerts
+          mountPath: /cacerts
+        {{- end }}
+      volumes:
+      - name: local-certs
+        emptyDir:
+          medium: Memory
+      - name: istio-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              audience: istio-ca
+              expirationSeconds: 43200
+              path: istio-token
+      - name: cacerts
+        secret:
+          secretName: cacerts
+          optional: true
+      - name: istio-kubeconfig
+        secret:
+          secretName: istio-kubeconfig
+          optional: true
+      - name: istio-csr-dns-cert
+        secret:
+          secretName: istiod-tls
+          optional: true
+      - name: istio-csr-ca-configmap
+        configMap:
+          name: istio-ca-root-cert
+          defaultMode: 420
+          optional: true
+      {{- if $.Values.istio.jwksResolverAdditionalRootCA }}
+      - name: extracacerts
+        configMap:
+          name: pilot-jwks-extra-cacerts-{{ $revision }}
+      {{- end }}
+  {{- end }}
+{{- end }}

@@ -370,6 +370,8 @@ lint-doc-spellcheck-pr:
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
 	@echo "Sorting wordlist..."
 	@sort ./tools/docs/spelling/wordlist -o ./tools/docs/spelling/wordlist
+	@echo "Validating wordlist..."
+	@./tools/docs/spelling/validate_wordlist.sh
 	@echo "Generating dictionary..."
 	@test -f ./tools/docs/spelling/dictionaries/dev_OPS.dic && rm ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@touch ./tools/docs/spelling/dictionaries/dev_OPS.dic
@@ -607,7 +609,7 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.31.0
-DMT_VERSION ?= 0.1.78
+DMT_VERSION ?= 0.1.84
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
@@ -629,7 +631,7 @@ generate-werf: yq ## Generate changes in werf files.
 .PHONY: dmt-gen
 dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
   ##~ Options: DMT_VERSION=X.Y.Z
-	@sed -i 's/DMT_VERSION=[0-9.]\+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh
+	@sed -i.bak -E 's/DMT_VERSION=[0-9.]+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh && rm -f tools/dmt-lint.sh.bak
 	@echo "Updated DMT_VERSION to $(DMT_VERSION) in tools/dmt-lint.sh"
 
 ## Generate tools documentation
