@@ -139,12 +139,14 @@ masterNodeGroup:
     # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2404-lts")] | sort_by(.created_at)[-1].id'
     # [<ru>] Возможно, захотите изменить.
     imageID: fd83ica41cade1mj35sr
-    # [<en>] The public IP address is used by the `dhctl` installer to connect to the master node over SSH. 
-    # [<en>] If the master node is not directly accessible, run the installation through a bastion host using the `--ssh-bastion-host` and `--ssh-bastion-user` parameters. 
-    # [<ru>] Публичный IP-адрес используется инсталлятором `dhctl` для подключения к master-узлу по SSH. 
-    # [<ru>] Если master-узел недоступен напрямую, запускайте установку через bastion-хост с параметрами `--ssh-bastion-host` и `--ssh-bastion-user`.
-    externalIPAddresses:
-    - "Auto"
+    # [<en>] In the `Standard` layout, nodes are created without public IP addresses by default.
+    # [<en>] Uncomment this parameter only if the `dhctl` installer must connect to the master node directly over SSH using a public IP address.
+    # [<en>] If the master node is not directly accessible, run the installation through a bastion host using the `--ssh-bastion-host`, `--ssh-bastion-user`, and, if needed, `--ssh-bastion-port` parameters.
+    # [<ru>] В схеме размещения `Standard` узлы по умолчанию создаются без публичных IP-адресов.
+    # [<ru>] Раскомментируйте этот параметр только если инсталлятору `dhctl` нужно подключаться к master-узлу напрямую по SSH через публичный IP-адрес.
+    # [<ru>] Если master-узел недоступен напрямую, запускайте установку через bastion-хост с параметрами `--ssh-bastion-host`, `--ssh-bastion-user` и, при необходимости, `--ssh-bastion-port`.
+    # externalIPAddresses:
+    # - "Auto"
 # [<en>] This subnet will be split into three equal parts; they will serve as a basis for subnets in three Yandex Cloud zones.
 # [<ru>] Данная подсеть будет разделена на три равных части и использована для создания подсетей в трёх зонах Yandex Cloud.
 nodeNetworkCIDR: "10.241.32.0/20"
