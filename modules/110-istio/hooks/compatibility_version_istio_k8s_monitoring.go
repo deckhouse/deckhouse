@@ -61,7 +61,9 @@ func versionCompatibilityMonitoringHook(_ context.Context, input *go_hook.HookIn
 	}
 	k8sVersionMajorMinor := fmt.Sprintf("%d.%d", k8sVersionSemver.Major(), k8sVersionSemver.Minor())
 	compatibilityMapStr := input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()
-	_ = json.Unmarshal([]byte(compatibilityMapStr), &compatibilityMap)
+	if err := json.Unmarshal([]byte(compatibilityMapStr), &compatibilityMap); err != nil {
+		return fmt.Errorf("cannot parse istioToK8sCompatibilityMap: %w", err)
+	}
 
 	input.MetricsCollector.Expire(monitoringMetricsGroup)
 

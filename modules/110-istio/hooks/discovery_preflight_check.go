@@ -96,9 +96,10 @@ func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput)
 		}
 	}
 
-	// Get array of compatibility k8s versions for every operator version
 	k8sCompatibleVersions := make(map[string][]string)
-	_ = json.Unmarshal([]byte(input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()), &k8sCompatibleVersions)
+	if err := json.Unmarshal([]byte(input.Values.Get("istio.internal.istioToK8sCompatibilityMap").String()), &k8sCompatibleVersions); err != nil {
+		return fmt.Errorf("cannot parse istioToK8sCompatibilityMap: %w", err)
+	}
 	requirements.SaveValue(istioToK8sCompatibilityMapKey, k8sCompatibleVersions)
 
 	requirements.SaveValue(isK8sVersionAutomaticKey, kubernetesVersionStr == "Automatic")
