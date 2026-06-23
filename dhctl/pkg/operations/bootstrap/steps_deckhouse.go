@@ -106,11 +106,11 @@ func InstallDeckhouse(
 				return fmt.Errorf("registry finalize: air-gap (NeedsSeed) install requires a node connection, but none was provided")
 			}
 
-			if err := registry_ops.WaitForCacheAndAgentReady(ctx, params.Node); err != nil {
+			if err := registry_ops.WaitForCacheAndAgentReady(ctx, kubeCl); err != nil {
 				return fmt.Errorf("registry cache/agent not ready: %w", err)
 			}
 
-			fillParams, err := registry_ops.CacheFillParamsFromInitSecret(ctx, params.Node)
+			fillParams, err := registry_ops.CacheFillParamsFromInitSecret(ctx, kubeCl, params.Node)
 			if err != nil {
 				return fmt.Errorf("read registry-init for cache fill: %w", err)
 			}
@@ -120,7 +120,7 @@ func InstallDeckhouse(
 			if err := registry_ops.VerifyCacheNonEmpty(ctx, fillParams); err != nil {
 				return fmt.Errorf("verify cache non-empty: %w", err)
 			}
-			if err := registry_ops.DeleteBootstrapSecret(ctx, params.Node); err != nil {
+			if err := registry_ops.DeleteBootstrapSecret(ctx, kubeCl); err != nil {
 				return fmt.Errorf("delete registry-bootstrap secret: %w", err)
 			}
 			if err := registry_ops.TeardownSeed(ctx, params.Node); err != nil {

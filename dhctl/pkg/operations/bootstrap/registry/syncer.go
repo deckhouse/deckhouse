@@ -36,17 +36,17 @@ package registry
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	initsecret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
-
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -225,26 +225,17 @@ func FillCacheFromSeed(ctx context.Context, params CacheFillParams) error {
 //
 // config.Registry exposes no bootstrap-cred accessors (the init creds live in the
 // in-cluster registry-init secret, not in the dhctl install config), so we fetch
-// them from the master at finalize time — the most robust source, since the seed
-// and cache were brought up with exactly these credentials.
-func CacheFillParamsFromInitSecret(ctx context.Context, node libcon.Interface) (CacheFillParams, error) {
-	cmd := node.Command(
-		"kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
-		"get", "secret", "registry-init", "-n", "d8-system",
-		"-o", "jsonpath={.data.config}",
-	)
-	cmd.Sudo(ctx)
-	cmd.WithTimeout(30 * time.Second)
-	out, _, err := cmd.Output(ctx)
+// them from the cluster at finalize time — the most robust source, since the seed
+// and cache were brought up with exactly these credentials. node is carried into
+// CacheFillParams for the subsequent on-node syncer exec.
+func CacheFillParamsFromInitSecret(ctx context.Context, kubeCl *client.KubernetesClient, node libcon.Interface) (CacheFillParams, error) {
+	secret, err := kubeCl.CoreV1().Secrets("d8-system").Get(ctx, "registry-init", metav1.GetOptions{})
 	if err != nil {
-		return CacheFillParams{}, fmt.Errorf("kubectl get secret registry-init: %w", err)
+		return CacheFillParams{}, fmt.Errorf("get secret registry-init: %w", err)
 	}
-	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(out)))
-	if err != nil {
-		return CacheFillParams{}, fmt.Errorf("decode registry-init config: %w", err)
-	}
+	// Secret.Data values are already base64-decoded by the typed client.
 	var cfg initsecret.Config
-	if err := yaml.Unmarshal(raw, &cfg); err != nil {
+	if err := yaml.Unmarshal(secret.Data["config"], &cfg); err != nil {
 		return CacheFillParams{}, fmt.Errorf("parse registry-init config: %w", err)
 	}
 	return CacheFillParams{
@@ -267,14 +258,9 @@ func VerifyCacheNonEmpty(ctx context.Context, params CacheFillParams) error {
 // DeleteBootstrapSecret removes the registry-bootstrap secret on the master so the
 // module drops the seed mirror from RegistryConfig and the agent re-renders
 // containerd to [agent, cache] only. Idempotent (NotFound tolerated).
-func DeleteBootstrapSecret(ctx context.Context, node libcon.Interface) error {
-	cmd := node.Command(
-		"kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
-		"delete", "secret", "registry-bootstrap", "-n", "d8-system", "--ignore-not-found",
-	)
-	cmd.Sudo(ctx)
-	cmd.WithTimeout(30 * time.Second)
-	if _, _, err := cmd.Output(ctx); err != nil {
+func DeleteBootstrapSecret(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	err := kubeCl.CoreV1().Secrets("d8-system").Delete(ctx, "registry-bootstrap", metav1.DeleteOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("delete registry-bootstrap secret: %w", err)
 	}
 	return nil
@@ -312,75 +298,50 @@ func cleanupSyncerConfig(ctx context.Context, node libcon.Interface) error {
 	return err
 }
 
-// WaitForCacheAndAgentReady polls the Kubernetes API (via the node's ssh exec)
-// until both the registry-cache StatefulSet (≥1 ready replica, leader elected)
-// and the registry-agent DaemonSet (all desired pods Ready) are healthy.
+// WaitForCacheAndAgentReady polls the Kubernetes API until both the registry-cache
+// StatefulSet (≥1 ready replica, leader elected) and the registry-agent DaemonSet
+// (all desired pods Ready) are healthy.
 //
 // Readiness predicate chosen:
 //
 //	registry-cache: StatefulSet readyReplicas == spec.replicas && replicas >= 1
 //	registry-agent: DaemonSet numberReady == desiredNumberScheduled
 //
-// We use kubectl exec on the master rather than a direct kube API call so that
-// this function is self-contained within the SSH exec facilities already used
-// during bootstrap (no additional kubeconfig plumbing needed here).
-// The kubectl binary is available on the master after kubeadm init.
+// Queries go through the in-process kube client (the same one that installed
+// Deckhouse), not node-side kubectl: dhctl already holds an API client here, and
+// shelling kubectl over SSH+sudo added a PATH dependency (/opt/deckhouse/bin).
 //
 // TODO(e2e-gate): Exercised by the air-gap bootstrap e2e assert-statefulset-replicas step.
-func WaitForCacheAndAgentReady(ctx context.Context, node libcon.Interface) error {
+func WaitForCacheAndAgentReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Waiting for registry-cache + registry-agent to become Ready", cacheReadyPollAttempts, cacheReadyPollWait).
 		RunContext(ctx, func() error {
-			return checkCacheAndAgentReady(ctx, node)
+			return checkCacheAndAgentReady(ctx, kubeCl)
 		})
 }
 
 // checkCacheAndAgentReady performs a single readiness probe for the cache
-// StatefulSet and agent DaemonSet using kubectl on the master node.
-func checkCacheAndAgentReady(ctx context.Context, node libcon.Interface) error {
+// StatefulSet and agent DaemonSet via the kube API.
+func checkCacheAndAgentReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	// Check registry-cache StatefulSet: readyReplicas == spec.replicas >= 1
-	cacheCheck := node.Command(
-		"kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
-		"get", "statefulset", "registry-cache",
-		"-n", "d8-system",
-		"-o", "jsonpath={.spec.replicas},{.status.readyReplicas}",
-	)
-	cacheCheck.Sudo(ctx)
-	cacheCheck.WithTimeout(15 * time.Second)
-
-	cacheOut, _, err := cacheCheck.Output(ctx)
+	sts, err := kubeCl.AppsV1().StatefulSets("d8-system").Get(ctx, "registry-cache", metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("kubectl get statefulset registry-cache: %w", err)
+		return fmt.Errorf("get statefulset registry-cache: %w", err)
 	}
-
-	var desired, ready int
-	if _, err := fmt.Sscanf(string(cacheOut), "%d,%d", &desired, &ready); err != nil {
-		return fmt.Errorf("parse statefulset output %q: %w", string(cacheOut), err)
+	var desired int32
+	if sts.Spec.Replicas != nil {
+		desired = *sts.Spec.Replicas
 	}
-	if desired < 1 || ready < desired {
-		return fmt.Errorf("registry-cache not ready (desired=%d ready=%d)", desired, ready)
+	if desired < 1 || sts.Status.ReadyReplicas < desired {
+		return fmt.Errorf("registry-cache not ready (desired=%d ready=%d)", desired, sts.Status.ReadyReplicas)
 	}
 
 	// Check registry-agent DaemonSet: numberReady == desiredNumberScheduled
-	agentCheck := node.Command(
-		"kubectl", "--kubeconfig=/etc/kubernetes/admin.conf",
-		"get", "daemonset", "registry-agent",
-		"-n", "d8-system",
-		"-o", "jsonpath={.status.desiredNumberScheduled},{.status.numberReady}",
-	)
-	agentCheck.Sudo(ctx)
-	agentCheck.WithTimeout(15 * time.Second)
-
-	agentOut, _, err := agentCheck.Output(ctx)
+	ds, err := kubeCl.AppsV1().DaemonSets("d8-system").Get(ctx, "registry-agent", metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("kubectl get daemonset registry-agent: %w", err)
+		return fmt.Errorf("get daemonset registry-agent: %w", err)
 	}
-
-	var agentDesired, agentReady int
-	if _, err := fmt.Sscanf(string(agentOut), "%d,%d", &agentDesired, &agentReady); err != nil {
-		return fmt.Errorf("parse daemonset output %q: %w", string(agentOut), err)
-	}
-	if agentDesired < 1 || agentReady < agentDesired {
-		return fmt.Errorf("registry-agent not ready (desired=%d ready=%d)", agentDesired, agentReady)
+	if ds.Status.DesiredNumberScheduled < 1 || ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
+		return fmt.Errorf("registry-agent not ready (desired=%d ready=%d)", ds.Status.DesiredNumberScheduled, ds.Status.NumberReady)
 	}
 
 	return nil

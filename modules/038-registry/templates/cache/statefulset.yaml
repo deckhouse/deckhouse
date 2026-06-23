@@ -71,10 +71,13 @@ spec:
         args: ["-logtostderr", "/config/config.yaml"]
         ports:
         - { name: auth, containerPort: 5051 }
+        # tcpSocket (not httpGet): docker-auth has no 2xx health path, and an
+        # httpGet with host:127.0.0.1 dials the node loopback (the agent), not this
+        # container. A plain TCP check on the pod IP confirms auth is listening.
         livenessProbe:
-          httpGet: { path: /, port: auth, scheme: HTTPS, host: 127.0.0.1 }
+          tcpSocket: { port: auth }
         readinessProbe:
-          httpGet: { path: /, port: auth, scheme: HTTPS, host: 127.0.0.1 }
+          tcpSocket: { port: auth }
         volumeMounts:
         - { name: auth-config, mountPath: /config }
         - { name: pki, mountPath: /pki }

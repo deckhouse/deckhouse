@@ -81,7 +81,12 @@ auth:
 */ -}}
 {{- define "registry.cache.authConfig" }}
 server:
-  addr: "127.0.0.1:5051"
+  # Bind all interfaces (not only pod-loopback): distribution still reaches auth
+  # via 127.0.0.1:5051, but the kubelet probe must dial the pod IP. kubelet runs
+  # probes from the node netns, where 127.0.0.1:5051 is the registry-agent (HTTP),
+  # not this container — so a host:127.0.0.1 probe hit the agent and crash-looped
+  # auth. Binding :5051 lets the probe reach auth on the pod IP.
+  addr: ":5051"
   real_ip_header: "X-Forwarded-For"
   certificate: "/pki/auth.crt"
   key: "/pki/auth.key"

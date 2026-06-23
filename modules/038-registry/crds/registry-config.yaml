@@ -88,6 +88,8 @@ spec:
                           enabled: {type: boolean, default: false}
                           ttl: {type: string}
                           storageSize: {type: string}
+                          storageClass: { type: string }
+                          publish: { type: boolean, default: false }
                 auth:
                   type: object
                   description: Local auth presented by the agent/cache to in-cluster clients and containerd.
