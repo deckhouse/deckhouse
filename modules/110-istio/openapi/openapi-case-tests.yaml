@@ -38,6 +38,12 @@ positive:
         enabled: true
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
+    - telemetryAPI:
+        enabled: true
+    - jwksResolverAdditionalRootCA: |
+        -----BEGIN CERTIFICATE-----
+        MIIDXTCCAkWgAwIBAgIJAN...
+        -----END CERTIFICATE-----
     - dataPlane:
         extensionProviders:
         - name: authservice-grpc

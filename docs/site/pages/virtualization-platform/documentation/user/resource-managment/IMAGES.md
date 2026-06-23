@@ -42,6 +42,12 @@ The following preinstalled image formats are supported:
 - vmdk
 - vdi
 
+{% alert level="info" %}
+When migrating VMs from VMware, see the [migration guide](/products/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp.html).
+Disks from vSphere usually require guest OS preparation (for example, via virt-v2v).
+Importing a VMDK without preparation often causes problems when starting the VM.
+{% endalert %}
+
 Image files can also be compressed with one of the following compression algorithms: gz, xz.
 
 Once a share is created, the image type and size are automatically determined, and this information is reflected in the share status.

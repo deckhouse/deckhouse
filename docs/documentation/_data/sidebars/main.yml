@@ -1223,6 +1223,30 @@ entries:
                 ru: Разработка и отладка
               url: /architecture/module-development/development/
         - title:
+            en: Marketplace
+            ru: Marketplace
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/marketplace/
+            - title:
+                en: Concepts
+                ru: Концепции
+              url: /architecture/marketplace/concepts.html
+            - title:
+                en: Application development
+                ru: Разработка приложений
+              url: /architecture/marketplace/application-development.html
+            - title:
+                en: Nelm annotations
+                ru: Аннотации Nelm
+              url: /architecture/marketplace/nelm-annotations.html
+            - title:
+                en: Hooks
+                ru: Хуки
+              url: /architecture/marketplace/hooks.html
+        - title:
             en: Disaster resilience
             ru: Катастрофоустойчивость
           folders:
@@ -1258,30 +1282,6 @@ entries:
                 en: Direct mode of registry module
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
-        - title:
-            en: Marketplace
-            ru: Marketplace
-          folders:
-            - title:
-                en: Overview
-                ru: Обзор
-              url: /architecture/marketplace/
-            - title:
-                en: Concepts
-                ru: Концепции
-              url: /architecture/marketplace/concepts.html
-            - title:
-                en: Application development
-                ru: Разработка приложений
-              url: /architecture/marketplace/application-development.html
-            - title:
-                en: Nelm annotations
-                ru: Аннотации Nelm
-              url: /architecture/marketplace/nelm-annotations.html
-            - title:
-                en: Hooks
-                ru: Хуки
-              url: /architecture/marketplace/hooks.html
         - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
@@ -1598,6 +1598,10 @@ entries:
                 en: Prometheus module
                 ru: Модуль prometheus
               url: /architecture/observability/prometheus.html
+            - title:
+                en: Observability module
+                ru: Модуль observability
+              url: /architecture/observability/observability.html                
             - title:
                 en: Logging modules
                 ru: Модули логирования

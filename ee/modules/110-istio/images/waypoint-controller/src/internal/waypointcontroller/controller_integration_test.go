@@ -379,6 +379,19 @@ func TestWaypointInstanceLifecycle(t *testing.T) {
 		if dep.Spec.Template.Spec.Affinity == nil || dep.Spec.Template.Spec.Affinity.PodAntiAffinity == nil {
 			t.Errorf("expected pod anti-affinity for replicas >= 2")
 		}
+		// Verify the hardcoded one-at-a-time rolling update strategy.
+		if dep.Spec.Strategy.Type != appsv1.RollingUpdateDeploymentStrategyType {
+			t.Errorf("deployment strategy type = %q, want RollingUpdate", dep.Spec.Strategy.Type)
+		}
+		if dep.Spec.Strategy.RollingUpdate == nil {
+			t.Fatal("expected RollingUpdate config")
+		}
+		if dep.Spec.Strategy.RollingUpdate.MaxSurge == nil || dep.Spec.Strategy.RollingUpdate.MaxSurge.IntVal != 1 {
+			t.Errorf("expected maxSurge = 1, got %v", dep.Spec.Strategy.RollingUpdate.MaxSurge)
+		}
+		if dep.Spec.Strategy.RollingUpdate.MaxUnavailable == nil || dep.Spec.Strategy.RollingUpdate.MaxUnavailable.IntVal != 1 {
+			t.Errorf("expected maxUnavailable = 1, got %v", dep.Spec.Strategy.RollingUpdate.MaxUnavailable)
+		}
 	})
 
 	t.Run("create/Service-ports", func(t *testing.T) {

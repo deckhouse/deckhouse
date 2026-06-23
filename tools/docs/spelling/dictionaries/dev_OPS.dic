@@ -1,4 +1,4 @@
-2675
+2698
 1GB
 2GB
 5XX
@@ -117,6 +117,7 @@ backet
 Backlink
 base64
 BaseDN
+basename
 bashbooster
 bashible
 Bashible
@@ -141,6 +142,7 @@ blog
 bm
 bool
 boostrap
+bootable
 Bootable
 bootloader
 Bootloader
@@ -603,6 +605,7 @@ Graylog
 grep
 gRPC
 GRPC
+gz
 Habr
 hardcoded
 HardPodAntiAffinity
@@ -1163,6 +1166,7 @@ preconfigurations
 preconfigured
 preemptible
 preffered
+preinstalled
 Preinstalled
 preload
 Prestable
@@ -1205,6 +1209,7 @@ PVs
 PWD
 px
 qa
+qcow
 QCOW
 QEMU
 QoS
@@ -1268,12 +1273,15 @@ resourceAttributes
 ResourceList
 ResourceName
 resourcePolicy
+ResourceQuota
 resourcesTemplate
 resourcе
 RESTful
 Restic
 RHEL
 RockSolid
+rolebinding
+RoleBinding
 roleRef
 RollingUpdate
 rollout
@@ -1309,6 +1317,7 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
+SDN
 sds
 Searchable
 seccomp
@@ -1417,6 +1426,7 @@ StorageClass
 StorageClasses
 StoragePolicy
 StorageProfile
+STOREDSIZE
 strategis
 Streebog
 Stribog
@@ -1525,6 +1535,7 @@ unschedulable
 uploadproxy
 upmeter
 UpmeterHookProbe
+UpmeterHookProbes
 UpmeterRemoteWrite
 uptick
 UPTODATE
@@ -1554,6 +1565,7 @@ vCloud
 vCPU
 vCPUs
 VDC
+vdi
 VDI
 ve
 vectoradd
@@ -1562,12 +1574,14 @@ versioned
 versioning
 VersionItems
 VerticalPodAutoscaler
+VerticalPodAutoscalerCheckpoints
 vg
 vhost
 VictoriaMetrics
 VictorOps
 VictorOpsConfig
 virt
+virtio
 VirtIO
 VirtualDataCenter
 VirtualDisk
@@ -1578,6 +1592,7 @@ Virtualization
 VirtualMachine
 VirtualMachineClass
 VirtualMachineIPAddress
+VirtualMachineOperation
 VirtualMachines
 VirtualService
 Vitastor
@@ -1587,6 +1602,8 @@ VLAN
 vm
 VM
 vmagent
+vmdk
+VMDK
 VMs
 VMware
 VMX
@@ -1661,6 +1678,7 @@ worktree
 worseness
 WSL
 www
+xz
 Yadro
 YadroStorageClass
 YadroStorageConnection
@@ -1705,8 +1723,10 @@ ZvirtInstanceClass
 агрегаторе
 агрегаторов
 агрегаторы
+агрегируются
 агрегирующей
 Агрегирующий
+агрегирующую
 админки
 ает
 Актуализируйте
@@ -1742,6 +1762,7 @@ ZvirtInstanceClass
 аутентификационные
 аутентифицировались
 аутентифицированному
+аутентифицированные
 аутентифицированных
 аутентифицировать
 аутентифицироваться
@@ -1762,6 +1783,7 @@ ZvirtInstanceClass
 балансировщиков
 балансировщиком
 балансировщику
+бандами
 бандл
 бандла
 бандлами
@@ -1849,6 +1871,7 @@ ZvirtInstanceClass
 высокоуровневых
 г
 гайде
+гайду
 Гб
 Гбит
 геораспределенном
@@ -2059,6 +2082,9 @@ ZvirtInstanceClass
 логгеру
 логирование
 логирования
+логировать
+Логировать
+логируемого
 логируются
 ложноположительных
 м
@@ -2127,6 +2153,7 @@ ZvirtInstanceClass
 нативно
 неавторизованного
 неавторизованный
+неаутентифицированные
 невалидным
 недеструктивные
 недеструктивных
@@ -2234,6 +2261,7 @@ ZvirtInstanceClass
 патчи
 патчится
 патчить
+переадресация
 Перебалансировке
 перебалансировки
 Перевыкат
@@ -2287,6 +2315,7 @@ ZvirtInstanceClass
 пересоздает
 пересоздаёт
 пересоздается
+пересоздайте
 пересоздастся
 переупорядочивание
 перехешируются
