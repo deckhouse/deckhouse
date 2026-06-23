@@ -40,15 +40,16 @@ import (
 )
 
 type MetaConfig struct {
-	ClusterType          string                 `json:"-"`
-	Layout               string                 `json:"-"`
-	ProviderName         string                 `json:"-"`
-	OriginalProviderName string                 `json:"-"`
-	ClusterPrefix        string                 `json:"-"`
-	ClusterDNSAddress    string                 `json:"-"`
-	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
-	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
-	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
+	ClusterType           string                 `json:"-"`
+	Layout                string                 `json:"-"`
+	ProviderName          string                 `json:"-"`
+	OriginalProviderName  string                 `json:"-"`
+	ClusterPrefix         string                 `json:"-"`
+	ClusterDNSAddress     string                 `json:"-"`
+	ClusterDNSAddressIPv6 string                 `json:"-"`
+	DeckhouseConfig       DeckhouseClusterConfig `json:"-"`
+	MasterNodeGroupSpec   MasterNodeGroupSpec    `json:"-"`
+	TerraNodeGroupSpecs   []TerraNodeGroupSpec   `json:"-"`
 
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
@@ -141,6 +142,13 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
 		}
 		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
+
+		if serviceSubnetIPv6Raw, ok := m.ClusterConfig["serviceSubnetCIDRIPv6"]; ok {
+			var serviceSubnetIPv6 string
+			if err := json.Unmarshal(serviceSubnetIPv6Raw, &serviceSubnetIPv6); err == nil {
+				m.ClusterDNSAddressIPv6 = getDNSAddress(serviceSubnetIPv6)
+			}
+		}
 
 		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
@@ -431,9 +439,21 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		data["kubernetesVersion"] = DefaultKubernetesVersion
 	}
 
+	// On dual-stack clusters expose both DNS addresses to bashible as a
+	// single comma-separated string. Templates that need a single value
+	// (kubelet clusterDNS, etc.) can split on ",".
+	clusterDNSAddress := m.ClusterDNSAddress
+	if m.ClusterDNSAddressIPv6 != "" {
+		if clusterDNSAddress == "" {
+			clusterDNSAddress = m.ClusterDNSAddressIPv6
+		} else {
+			clusterDNSAddress = clusterDNSAddress + "," + m.ClusterDNSAddressIPv6
+		}
+	}
+
 	clusterBootstrap := map[string]interface{}{
 		"clusterDomain":     data["clusterDomain"],
-		"clusterDNSAddress": m.ClusterDNSAddress,
+		"clusterDNSAddress": clusterDNSAddress,
 	}
 
 	if nodeIP != "" {
@@ -713,9 +733,11 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	}
 
 	var (
-		clusterDomain     string
-		podSubnetCIDR     string
-		serviceSubnetCIDR string
+		clusterDomain         string
+		podSubnetCIDR         string
+		serviceSubnetCIDR     string
+		podSubnetCIDRIPv6     string
+		serviceSubnetCIDRIPv6 string
 	)
 	err = json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -731,6 +753,17 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	}
 
 	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
+
+	if podSubnetIPv6Raw, ok := m.ClusterConfig["podSubnetCIDRIPv6"]; ok {
+		if err := json.Unmarshal(podSubnetIPv6Raw, &podSubnetCIDRIPv6); err == nil {
+			p.NoProxy = append(p.NoProxy, podSubnetCIDRIPv6)
+		}
+	}
+	if serviceSubnetIPv6Raw, ok := m.ClusterConfig["serviceSubnetCIDRIPv6"]; ok {
+		if err := json.Unmarshal(serviceSubnetIPv6Raw, &serviceSubnetCIDRIPv6); err == nil {
+			p.NoProxy = append(p.NoProxy, serviceSubnetCIDRIPv6)
+		}
+	}
 
 	ret := make(map[string]interface{})
 	if p.HTTPProxy != "" {

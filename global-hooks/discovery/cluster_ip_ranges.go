@@ -44,8 +44,8 @@ const (
 )
 
 var (
-	podSubnetRegexp     = regexp.MustCompile(`(^|\s+)--cluster-cidr=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+)(\s+|$)`)
-	serviceSubnetRegexp = regexp.MustCompile(`(^|\s+)--service-cluster-ip-range=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]+)(\s+|$)`)
+	podSubnetRegexp     = regexp.MustCompile(`(^|\s+)--cluster-cidr=([0-9a-fA-F:\.,\/]+)(\s+|$)`)
+	serviceSubnetRegexp = regexp.MustCompile(`(^|\s+)--service-cluster-ip-range=([0-9a-fA-F:\.,\/]+)(\s+|$)`)
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

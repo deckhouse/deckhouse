@@ -17,8 +17,13 @@
 
 
 {{- if eq .runType "ClusterBootstrap" }}
-# Read previously discovered IP and hostname
-export MY_IP="$(</var/lib/bashible/discovered-node-ip)"
+# Read previously discovered IP and hostname.
+# discovered-node-ip may contain a comma-separated dual-stack pair ("v4,v6");
+# control-plane static manifests (etcd, kube-apiserver) expect a single host,
+# so trim to the first address. kubelet reads the full dual-stack value
+# directly from discovered-node-ip via its own configuration step.
+discovered_node_ip="$(</var/lib/bashible/discovered-node-ip)"
+export MY_IP="${discovered_node_ip%%,*}"
 export MY_NODENAME="$(</var/lib/bashible/discovered-node-name)"
 
 function subst_config() {
