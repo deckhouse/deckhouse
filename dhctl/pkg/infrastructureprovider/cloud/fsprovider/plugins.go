@@ -55,10 +55,8 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	source := fsproviderpath.GetPluginDir(p.pluginsDir, params.Settings, params.Version.Version, params.Version.Arch)
 	_, err := os.Stat(source)
 	if err == nil {
-		log.InfoF("[DVP-DEBUG] DownloadPlugin: fast-path-1 pluginsDir hit source=%q\n", source)
 		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 	}
-	log.InfoF("[DVP-DEBUG] DownloadPlugin: pluginsDir miss source=%q downloadRootDir=%q\n", source, conf.DownloadRootDir)
 
 	cloudName := strings.ToLower(params.Settings.CloudName())
 	sectionName := "cloudProvider" + strings.ToUpper(cloudName[:1]) + cloudName[1:]
@@ -74,16 +72,13 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if _, statErr := os.Stat(source); statErr == nil {
-		log.InfoF("[DVP-DEBUG] DownloadPlugin: fast-path-2 terraform-manager binary hit source=%q\n", source)
 		if err := copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
 			return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 		}
 		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 	}
-	log.InfoF("[DVP-DEBUG] DownloadPlugin: slow-path downloadImage terraformManager section=%q (binary miss source=%q)\n", sectionName, source)
 
 	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
-		log.InfoF("[DVP-DEBUG] DownloadPlugin: downloadImage err: %v\n", err)
 		return err
 	}
 	if err = copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
