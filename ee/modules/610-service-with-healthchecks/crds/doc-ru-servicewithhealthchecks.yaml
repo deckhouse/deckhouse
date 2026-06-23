@@ -389,7 +389,44 @@ spec:
                           таких как `Available`, но поскольку произвольные условия могут быть полезными (см. `.node.status.conditions`),
                           важна возможность разрешения конфликтов. Регулярное выражение, которому оно соответствует: (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                 endpointStatuses:
-                  description: Текущие состояние службы
+                  description: |-
+                    Текущее состояние службы.
+                  items:
+                    properties:
+                      failedProbes:
+                        description: |-
+                          Список проб, завершившихся неудачно во время последней проверки.
+                      nodeName:
+                        description: |-
+                          Узел, на котором запущен под.
+                      podName:
+                        description: |-
+                          Имя проверяемого пода.
+                      probesSuccessful:
+                        description: |-
+                          Указывает, были ли успешными все пользовательские пробы ServiceWithHealthchecks.
+                      ready:
+                        description: |-
+                          Указывает, прошел ли под стандартные проверки readiness Kubernetes.
+                      lastTransitionTime:
+                        description: |-
+                          Время, когда состояние пробы последний раз перешло из одного статуса в другой.
+                      lastProbeTime:
+                        description: |-
+                          Время последней проверки пода (обновляется в зависимости от настройки verboseStatus).
+                healthcheckCondition:
+                  description: |-
+                    Сводка результатов проверок (health checks).
+                  properties:
+                    endpoints:
+                      description: |-
+                        Общее количество эндпоинтов (подов), для которых выполняются проверки.
+                    observedGeneration:
+                      description: |-
+                        Последнее поколение (generation) ресурса, которое наблюдал контроллер.
+                    readyEndpoints:
+                      description: |-
+                        Количество эндпоинтов (подов), успешно прошедших проверки.
                 loadBalancer:
                   description: |-
                     Содержит текущее состояние балансировщика нагрузки, если он присутствует.
