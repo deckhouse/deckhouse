@@ -44,7 +44,6 @@ The module interacts with the following components:
 
 2. Node filesystem:
 
-   * `/proc`: Reads PSI metrics for OOM handling.
    * `/dev/watchdog`: Sends signals to reset the Watchdog timer.
 
 The following external components interact with the module:
