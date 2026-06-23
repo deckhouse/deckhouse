@@ -20,7 +20,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - pm install m4 automake autoconf binutils linux-headers openssl-devel pcre-devel pcre2-devel net-snmp-devel pkgconf perl
+  - pm install m4 automake autoconf binutils linux-headers openssl-devel pcre-devel pcre2-devel net-snmp-devel pkgconf perl libxcrypt-devel
   install:
   - cd /src
   - ./autogen.sh
