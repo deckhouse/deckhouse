@@ -21,14 +21,16 @@ index d32a006..8c0f8b6 100644
  	github.com/hashicorp/errwrap v1.1.0 // indirect
  	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
  	github.com/hashicorp/go-cty v1.4.1-0.20200414143053-d3edf31b6320 // indirect
-@@ -63,14 +63,14 @@ require (
+@@ -62,15 +62,15 @@ require (
+ 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
  	github.com/vmihailenco/tagparser v0.1.1 // indirect
  	github.com/zclconf/go-cty v1.11.0 // indirect
- 	go.mongodb.org/mongo-driver v1.12.0 // indirect
+-	go.mongodb.org/mongo-driver v1.12.0 // indirect
 -	golang.org/x/crypto v0.21.0 // indirect
 -	golang.org/x/net v0.23.0 // indirect
 -	golang.org/x/sys v0.18.0 // indirect
 -	golang.org/x/text v0.14.0 // indirect
++	go.mongodb.org/mongo-driver v1.17.7 // indirect
 +	golang.org/x/crypto v0.46.0 // indirect
 +	golang.org/x/net v0.48.0 // indirect
 +	golang.org/x/sys v0.39.0 // indirect
@@ -134,10 +136,14 @@ index 46ea7dc..9a98ba5 100644
  github.com/sirupsen/logrus v1.4.1/go.mod h1:ni0Sbl8bgC9z8RoU9G6nDWqqs/fq4eDPysMBDgk/93Q=
  github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
  github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-@@ -236,6 +248,18 @@ github.com/zclconf/go-cty v1.11.0/go.mod h1:s9IfD1LK5ccNMSWCVFCE2rJfHiZgi7JijgeW
+@@ -234,8 +246,21 @@ github.com/zclconf/go-cty v1.10.0/go.mod h1:vVKLxnk3puL4qRAv72AO+W99LUD4da90g3uU
+ github.com/zclconf/go-cty v1.11.0 h1:726SxLdi2SDnjY+BStqB9J1hNp4+2WlzyXLuimibIe0=
+ github.com/zclconf/go-cty v1.11.0/go.mod h1:s9IfD1LK5ccNMSWCVFCE2rJfHiZgi7JijgeWIMfhLvA=
  github.com/zclconf/go-cty-debug v0.0.0-20191215020915-b22d67c1ba0b/go.mod h1:ZRKQfBXbGkpdV6QMzT3rU1kSTAnfu1dO8dPKjYprgj8=
- go.mongodb.org/mongo-driver v1.12.0 h1:aPx33jmn/rQuJXPQLZQ8NtfPQG8CaqgLThFtqRb0PiE=
+-go.mongodb.org/mongo-driver v1.12.0 h1:aPx33jmn/rQuJXPQLZQ8NtfPQG8CaqgLThFtqRb0PiE=
  go.mongodb.org/mongo-driver v1.12.0/go.mod h1:AZkxhPnFJUoH7kZlFkVKucV20K387miPfm7oimrSmK0=
++go.mongodb.org/mongo-driver v1.17.7 h1:a9w+U3Vt67eYzcfq3k/OAv284/uUUkL0uP75VE5rCOU=
++go.mongodb.org/mongo-driver v1.17.7/go.mod h1:Hy04i7O2kC4RS06ZrhPRqj/u4DTYkFDAAccj+rVKqgQ=
 +go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 +go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
 +go.opentelemetry.io/otel v1.39.0 h1:8yPrr/S0ND9QEfTfdP9V+SiwT4E0G7Y5MO7p85nis48=
