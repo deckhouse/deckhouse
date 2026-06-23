@@ -23,16 +23,16 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	sigsyaml "sigs.k8s.io/yaml"
@@ -51,13 +51,13 @@ const (
 )
 
 var capiCRDNames = map[string]bool{
-	"clusters.cluster.x-k8s.io":            true,
-	"machines.cluster.x-k8s.io":            true,
-	"machinesets.cluster.x-k8s.io":         true,
-	"machinedeployments.cluster.x-k8s.io":  true,
-	"machinehealthchecks.cluster.x-k8s.io": true,
-	"machinedrainrules.cluster.x-k8s.io":   true,
-	"machinepools.cluster.x-k8s.io":        true,
+	"clusters.cluster.x-k8s.io":                 true,
+	"machines.cluster.x-k8s.io":                 true,
+	"machinesets.cluster.x-k8s.io":              true,
+	"machinedeployments.cluster.x-k8s.io":       true,
+	"machinehealthchecks.cluster.x-k8s.io":      true,
+	"machinedrainrules.cluster.x-k8s.io":        true,
+	"machinepools.cluster.x-k8s.io":             true,
 	"extensionconfigs.runtime.cluster.x-k8s.io": true,
 }
 
