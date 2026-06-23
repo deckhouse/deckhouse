@@ -12,4 +12,4 @@ description: "Управление облачными ресурсами в Deck
   - Актуализация метаданных Yandex Cloud Instances и Kubernetes Nodes. Удаление из Kubernetes узлов, которых уже нет в Yandex Cloud.
 - Заказ дисков в Yandex Cloud с помощью компонента `CSI storage`.
 - Регистрация в модуле [node-manager](../../modules/node-manager/) для использования [YandexInstanceClass'ы](cr.html#yandexinstanceclass) можно было использовать при описании [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
-- Включение необходимого CNI (который использует [simple bridge](../../modules/cni-simple-bridge/)).
+- Автоматическое включение CNI для новых кластеров. Начиная с DKP 1.76 по умолчанию используется [`cni-cilium`](/modules/cni-cilium/) в режиме `VXLAN`с трансляцией исходных IP-адресов средствами [BPF](/products/kubernetes-platform/documentation/v1/admin/configuration/network/other/bpflb.html).

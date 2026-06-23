@@ -42,7 +42,7 @@ concurrency:
 jobs:
   close_dependabot_prs_for_forks:
     name: Autoclose Dependabot PRs for forks
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
     env:
       ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
@@ -76,7 +76,7 @@ jobs:
     name: Prepare input for validation scripts
     needs:
       - pull_request_info
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     outputs:
       run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
@@ -162,7 +162,7 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: "ubuntu-slim"
+    runs-on: self-slim
     needs:
       - discover
       - pull_request_info
@@ -224,7 +224,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-24.04
+runs-on: self-slim
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
@@ -249,7 +249,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-24.04
+runs-on: self-slim
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 

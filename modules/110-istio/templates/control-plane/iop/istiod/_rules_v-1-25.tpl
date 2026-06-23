@@ -239,7 +239,7 @@
   - referencegrants
   - tcproutes
   - tlsroutes
-  - updroutes
+  - udproutes
   verbs:
   - get
   - watch

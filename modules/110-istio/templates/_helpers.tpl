@@ -40,13 +40,35 @@
   {{- end -}}
 {{- end -}}
 
+{{- define "istioTracingProvider" -}}
+  {{- $otel := $.Values.istio.tracing.collector.opentelemetry | default dict -}}
+  {{- $zipkin := $.Values.istio.tracing.collector.zipkin | default dict -}}
+  {{- if and $otel.service $otel.port -}}
+- name: deckhouse-tracing
+  opentelemetry:
+    service: {{ $otel.service | quote }}
+    port: {{ $otel.port }}
+    {{- if $otel.http }}
+    http:
+      path: {{ default "/v1/traces" $otel.http.path | quote }}
+      {{- if $otel.http.timeout }}
+      timeout: {{ $otel.http.timeout | quote }}
+      {{- end }}
+    {{- end }}
+  {{- else if $zipkin.address }}
+- name: deckhouse-tracing
+  zipkin:
+    address: {{ $zipkin.address | quote }}
+  {{- end }}
+{{- end -}}
+
 {{- define "istioUserExtensionProviders" -}}
   {{- $providers := .Values.istio.dataPlane.extensionProviders | default list -}}
   {{- $seen := dict -}}
   {{- range $provider := $providers -}}
     {{- $name := $provider.name -}}
-    {{- if eq $name "main-access-log-format" -}}
-      {{- fail "istio.dataPlane.extensionProviders must not use reserved provider name main-access-log-format" -}}
+    {{- if eq $name "d8-main" -}}
+      {{- fail "istio.dataPlane.extensionProviders must not use reserved provider name d8-main" -}}
     {{- end -}}
     {{- if hasKey $seen $name -}}
       {{- fail (printf "istio.dataPlane.extensionProviders contains duplicate provider name %q" $name) -}}
