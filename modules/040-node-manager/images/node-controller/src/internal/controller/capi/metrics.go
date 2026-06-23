@@ -62,7 +62,6 @@ func init() {
 	register.RegisterController("capi-md-metrics", &capiv1beta2.MachineDeployment{}, &MetricsReconciler{})
 }
 
-// MetricsReconciler exports MachineDeployment metrics to Prometheus.
 type MetricsReconciler struct {
 	register.Base
 }

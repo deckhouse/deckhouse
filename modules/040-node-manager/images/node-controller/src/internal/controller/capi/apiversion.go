@@ -70,7 +70,6 @@ func init() {
 	register.RegisterController("capi-api-version", &capiv1beta2.MachineDeployment{}, &APIVersionReconciler{})
 }
 
-// APIVersionReconciler patches empty apiGroup on infra refs of CAPI resources.
 type APIVersionReconciler struct {
 	register.Base
 }

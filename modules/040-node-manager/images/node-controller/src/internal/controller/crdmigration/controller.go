@@ -50,7 +50,6 @@ const (
 	requeueAfterCreate  = 5 * time.Second
 )
 
-// capiCRDNames is the set of CAPI CRD names managed by this controller.
 var capiCRDNames = map[string]bool{
 	"clusters.cluster.x-k8s.io":            true,
 	"machines.cluster.x-k8s.io":            true,
@@ -128,7 +127,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	crdName := req.Name
 
-	// Handle conversion webhook CRDs (nodegroups, instances).
 	if isConversionCRD(crdName) {
 		return r.reconcileConversionWebhook(ctx, logger, crdName)
 	}
@@ -143,18 +141,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	// Check preconditions via uncached reader.
 	caBundle, err := r.checkPreconditions(ctx)
 	if err != nil {
 		logger.Info("preconditions not met, requeue", "crd", crdName, "reason", err.Error())
 		return ctrl.Result{RequeueAfter: requeuePrecondition}, nil
 	}
 
-	// Get current CRD state (uncached).
 	existing := &apiextensionsv1.CustomResourceDefinition{}
 	err = r.apiReader.Get(ctx, types.NamespacedName{Name: crdName}, existing)
 	if errors.IsNotFound(err) {
-		// Fresh install — create CRD with v1beta2 storage + conversion webhook.
 		logger.Info("CRD not found, creating with migration applied", "crd", crdName)
 		newCRD := embeddedCRD.DeepCopy()
 		setMigrationSpec(newCRD, caBundle)
@@ -206,10 +201,8 @@ func (r *Reconciler) checkPreconditions(ctx context.Context) ([]byte, error) {
 	return caBundle, nil
 }
 
-// setMigrationSpec modifies the CRD spec to v1beta2 storage + conversion webhook.
 func setMigrationSpec(crd *apiextensionsv1.CustomResourceDefinition, caBundle []byte) {
-	// Switch storage to v1beta2, clear on all others.
-	// Safety: only change storage if v1beta2 actually exists in versions.
+	// Only switch storage if v1beta2 actually exists in versions.
 	hasV1beta2 := false
 	for _, v := range crd.Spec.Versions {
 		if v.Name == "v1beta2" {
@@ -223,7 +216,6 @@ func setMigrationSpec(crd *apiextensionsv1.CustomResourceDefinition, caBundle []
 		}
 	}
 
-	// Set conversion webhook.
 	crd.Spec.Conversion = &apiextensionsv1.CustomResourceConversion{
 		Strategy: apiextensionsv1.WebhookConverter,
 		Webhook: &apiextensionsv1.WebhookConversion{
@@ -241,7 +233,6 @@ func setMigrationSpec(crd *apiextensionsv1.CustomResourceDefinition, caBundle []
 	}
 }
 
-// loadCRDs reads CRD yaml files from the given directory.
 func loadCRDs(dir string) (map[string]*apiextensionsv1.CustomResourceDefinition, error) {
 	files, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
 	if err != nil {

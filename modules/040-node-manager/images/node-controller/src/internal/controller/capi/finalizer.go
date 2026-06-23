@@ -35,7 +35,6 @@ func init() {
 	register.RegisterController("capi-finalizer-cleanup", obj, &FinalizerReconciler{})
 }
 
-// FinalizerReconciler removes the legacy capi-controller-manager finalizer from Cluster resources.
 type FinalizerReconciler struct {
 	register.Base
 }
