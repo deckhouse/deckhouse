@@ -627,3 +627,31 @@
         ```
 
         Where `DKP_EDITION` is the edition you want to use: `CE`, `BE`, `EE`, `SE`, or `SE-plus`.
+
+- name: d8.deckhouse.migration
+  rules:
+  - alert: D8DeckhouseObsoleteMonitoringDeckhouseModuleConfig
+    expr: |
+      d8_deckhouse_obsolete_moduleconfig{moduleconfig="monitoring-deckhouse"} == 1
+    for: 5m
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deckhouse_obsolete_moduleconfig: "D8DeckhouseObsoleteMonitoringDeckhouseModuleConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deckhouse_obsolete_moduleconfig: "D8DeckhouseObsoleteMonitoringDeckhouseModuleConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Obsolete `monitoring-deckhouse` ModuleConfig should be removed.
+      description: |-
+        The `monitoring-deckhouse` module was merged into the `deckhouse` module, but its ModuleConfig still exists in the cluster and is no longer used.
+
+        Remove it manually:
+
+        ```bash
+        d8 k delete moduleconfig monitoring-deckhouse
+        ```
+
+        If the ModuleConfig is deployed from an external source (e.g. a Git repository), make sure it is removed from there so it is not created again.
