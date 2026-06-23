@@ -35,8 +35,6 @@ const (
 	clusterUUIDConfigMapNS       = "kube-system"
 )
 
-// BaseWithReader embeds register.Base and adds an uncached APIReader
-// for reading kube-system secrets that are not in the cache.
 type BaseWithReader struct {
 	register.Base
 	APIReader client.Reader

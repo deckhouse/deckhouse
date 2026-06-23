@@ -44,7 +44,6 @@ import (
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-// NodeGroup engine values (NodeGroup.status.engine), set by the get_crds hook.
 const (
 	engineCAPI = "CAPI"
 	engineMCM  = "MCM"
@@ -88,9 +87,6 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	switch ng.Spec.NodeType {
 	case deckhousev1.NodeTypeCloudEphemeral:
-		// The engine (status.engine) decides the machinery: CAPI providers get
-		// CAPI MachineDeployments created here; MCM providers keep helm-managed
-		// MCM MachineDeployments and we only reconcile their replicas.
 		switch ng.Status.Engine {
 		case engineCAPI:
 			if err := r.reconcileCloudMDs(ctx, ng); err != nil {
@@ -176,8 +172,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 	}
 
 	for _, zone := range zones {
-		// MD name hash must stay stable across InstanceClass changes (no checksum),
-		// so changing InstanceClass updates the same MD in place (rolling update).
 		mdHash := sha256Hash(clusterUUID + zone)
 		mdSuffix := fmt.Sprintf("%s-%s", ng.Name, mdHash)
 		mdName := mdSuffix
@@ -185,8 +179,6 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			mdName = fmt.Sprintf("%s-%s", instancePrefix, mdSuffix)
 		}
 
-		// Template and bootstrap secret names include the checksum so a new
-		// InstanceClass produces new infra objects the MD then rolls onto.
 		templateHash := sha256Hash(clusterUUID + zone + instanceClassChecksum)
 		templateName := fmt.Sprintf("%s-%s", ng.Name, templateHash)
 		bootstrapSecretName := templateName
@@ -470,9 +462,6 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 	return cfg.Cloud.Prefix, nil
 }
 
-// readInstanceClassChecksum finds the infrastructure template created by Helm for the given
-// NodeGroup and returns its "checksum/instance-class" annotation. All templates for the same
-// NodeGroup share the same checksum (it depends only on InstanceClass spec, not on zone).
 func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, cloudConfig *cloudProviderConfig, ngName string) (string, error) {
 	templateList := &unstructured.UnstructuredList{}
 	templateList.SetGroupVersionKind(schema.GroupVersionKind{

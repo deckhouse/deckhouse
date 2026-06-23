@@ -29,26 +29,13 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-// On upgrade from a release where Cluster / MachineHealthCheck / MachineDeployment
-// were rendered by the node-manager helm chart to this branch where they are owned
-// by node-controller, helm sees the resources are missing from the new manifest and
-// schedules them for deletion — which cascades into capi-controller-manager tearing
-// down dependent Machines / Nodes.
-//
-// Detach them from helm ownership by stamping `helm.sh/resource-policy: keep`.
-// The hook runs OnBeforeHelm to ensure it fires before helm install/upgrade.
-//
-// No Kubernetes bindings: on bootstrap, CRDs don't exist yet and addon-operator
-// would fail at discovery. Direct API calls handle missing CRDs gracefully.
-//
-// TODO(v1beta2): GVR uses v1beta1 for rolling upgrade from CSE 1.73 which still
-// serves v1beta1. Switch to v1beta2 once v1beta1 is no longer served.
-
 const (
 	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
 	capiNamespace                = "d8-cloud-instance-manager"
 )
 
+// TODO(v1beta2): GVR uses v1beta1 for rolling upgrade from CSE 1.73 which still
+// serves v1beta1. Switch to v1beta2 once v1beta1 is no longer served.
 var capiResources = []schema.GroupVersionResource{
 	{Group: "cluster.x-k8s.io", Version: "v1beta1", Resource: "clusters"},
 	{Group: "cluster.x-k8s.io", Version: "v1beta1", Resource: "machinehealthchecks"},
@@ -78,7 +65,6 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 	for _, gvr := range capiResources {
 		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
-			// CRD doesn't exist (bootstrap) or API not available — skip.
 			input.Logger.Info("skipping resource", slog.String("resource", gvr.Resource), slog.Any("error", err))
 			continue
 		}
@@ -88,7 +74,6 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 			if annotations == nil {
 				continue
 			}
-			// Only patch resources owned by helm that don't have keep annotation yet.
 			if _, hasHelm := annotations["meta.helm.sh/release-name"]; !hasHelm {
 				continue
 			}
