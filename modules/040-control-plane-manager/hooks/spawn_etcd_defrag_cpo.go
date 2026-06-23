@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"time"
 
@@ -65,30 +66,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "master_nodes_defrag",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"node-role.kubernetes.io/control-plane": "",
-				},
-			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterDefragNode,
-		},
-		{
-			Name:       "arbiter_nodes_defrag",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"node.deckhouse.io/etcd-arbiter": "",
-				},
-			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterDefragNode,
-		},
-		{
 			Name:       "control_plane_nodes_defrag",
 			ApiVersion: "control-plane.deckhouse.io/v1alpha1",
 			Kind:       "ControlPlaneNode",
@@ -109,15 +86,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{defragStateCMNamespace},
 				},
 			},
-			NameSelector: &types.NameSelector{MatchNames: []string{defragStateCMName}},
-			FilterFunc:   filterDefragStateCM,
+			NameSelector:        &types.NameSelector{MatchNames: []string{defragStateCMName}},
+			ExecuteHookOnEvents: ptr.To(false),
+			FilterFunc:          filterDefragStateCM,
 		},
 	},
 }, handleSpawnEtcdDefragCPO)
-
-func filterDefragNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
-}
 
 func filterDefragCPN(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return defragCPN{
@@ -167,6 +141,16 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		}
 	}
 
+	// First install: no state CM yet. Record the current time so the first real
+	// defrag fires at the next scheduled slot, not immediately after deploy.
+	if lastHandled.IsZero() {
+		input.Logger.Info("etcd defrag: first run, initializing state; CPOs will be created at the next scheduled slot")
+		input.PatchCollector.CreateOrUpdate(buildDefragStateCM(map[string]string{
+			defragLastSlotKey: currentSlot.Format(time.RFC3339),
+		}))
+		return nil
+	}
+
 	nextSlot := sched.Next(lastHandled)
 	input.Logger.Debug("etcd defrag cron check",
 		"currentSlot", currentSlot.Format(time.RFC3339),
@@ -180,8 +164,7 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 
 	// Grace period: if the slot is older than defragGracePeriod (e.g. Deckhouse was down),
 	// record it as handled and skip — running a stale defrag is pointless.
-	// Skip this check on the very first run (no CM yet) — always fire immediately.
-	if !lastHandled.IsZero() && currentSlot.Sub(nextSlot) > defragGracePeriod {
+	if currentSlot.Sub(nextSlot) > defragGracePeriod {
 		input.Logger.Warn("etcd defrag: slot missed by more than grace period, skipping",
 			"nextSlot", nextSlot.Format(time.RFC3339),
 			"delay", currentSlot.Sub(nextSlot).String(),
@@ -192,36 +175,15 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 		return nil
 	}
 
-	// Build nodeName→UID map from ControlPlaneNode snapshots for OwnerReference.
+	// Collect all etcd nodes (masters + arbiters) from ControlPlaneNode snapshots.
+	var nodeNames []string
 	cpnUIDs := make(map[string]k8stypes.UID)
 	for cpn, err := range sdkobjectpatch.SnapshotIter[defragCPN](input.Snapshots.Get("control_plane_nodes_defrag")) {
 		if err != nil {
 			return fmt.Errorf("iterate control_plane_nodes_defrag: %w", err)
 		}
+		nodeNames = append(nodeNames, cpn.Name)
 		cpnUIDs[cpn.Name] = cpn.UID
-	}
-
-	// Collect all etcd nodes (masters + arbiters), deduplicated by name.
-	seen := make(map[string]struct{})
-	var nodeNames []string
-
-	for name, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("master_nodes_defrag")) {
-		if err != nil {
-			return fmt.Errorf("iterate master_nodes_defrag: %w", err)
-		}
-		if _, exists := seen[name]; !exists {
-			seen[name] = struct{}{}
-			nodeNames = append(nodeNames, name)
-		}
-	}
-	for name, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("arbiter_nodes_defrag")) {
-		if err != nil {
-			return fmt.Errorf("iterate arbiter_nodes_defrag: %w", err)
-		}
-		if _, exists := seen[name]; !exists {
-			seen[name] = struct{}{}
-			nodeNames = append(nodeNames, name)
-		}
 	}
 
 	if len(nodeNames) == 0 {
@@ -231,10 +193,10 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 
 	input.Logger.Info("etcd defrag: spawning CPOs", "nodes", nodeNames, "slot", nextSlot.Format(time.RFC3339))
 
-	slotSuffix := nextSlot.Format("060102-1504")
 	for _, nodeName := range nodeNames {
-		input.PatchCollector.CreateIfNotExists(buildDefragCPO(nodeName, slotSuffix, cpnUIDs[nodeName]))
-		input.Logger.Info("etcd defrag: CPO created", "name", "etcd-defrag-"+nodeName+"-"+slotSuffix)
+		name := etcdDefragCPOName(nextSlot, nodeName)
+		input.PatchCollector.CreateIfNotExists(buildDefragCPO(name, nodeName, nextSlot, cpnUIDs[nodeName]))
+		input.Logger.Info("etcd defrag: CPO created", "name", name, "node", nodeName)
 	}
 
 	stateData := map[string]string{
@@ -245,16 +207,23 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	return nil
 }
 
-func buildDefragCPO(nodeName, slotSuffix string, cpnUID k8stypes.UID) *unstructured.Unstructured {
+func etcdDefragCPOName(slotTime time.Time, nodeName string) string {
+	slot := sha256.Sum256([]byte(slotTime.Format(time.RFC3339)))
+	name := sha256.Sum256([]byte(nodeName))
+	return fmt.Sprintf("etcd-defrag-%x-%x", slot[:3], name[:3])
+}
+
+func buildDefragCPO(cpoName, nodeName string, slotTime time.Time, cpnUID k8stypes.UID) *unstructured.Unstructured {
 	obj := map[string]interface{}{
 		"apiVersion": "control-plane.deckhouse.io/v1alpha1",
 		"kind":       "ControlPlaneOperation",
 		"metadata": map[string]interface{}{
-			"name":      "etcd-defrag-" + nodeName + "-" + slotSuffix,
+			"name":      cpoName,
 			"namespace": defragStateCMNamespace,
 			"labels": map[string]interface{}{
 				"control-plane.deckhouse.io/node":      nodeName,
 				"control-plane.deckhouse.io/component": "etcd",
+				"control-plane.deckhouse.io/slot":      slotTime.Format("060102-1504"),
 				"heritage":                             "deckhouse",
 				"module":                               "control-plane-manager",
 			},
