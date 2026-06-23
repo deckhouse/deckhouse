@@ -36,20 +36,22 @@ var cpoGVR = schema.GroupVersionResource{
 }
 
 // fixedNow is the injected "current time" for all spawn_etcd_defrag_cpo tests.
-var defragTestNow = time.Date(2024, 6, 15, 10, 33, 0, 0, time.UTC)
+// 01:02 UTC — 2 minutes past the "0 1 * * *" cron slot, within the 5-min grace window.
+var defragTestNow = time.Date(2024, 6, 15, 1, 2, 0, 0, time.UTC)
 
-// pastSlot is three minutes before fixedNow; Next("* * * * *", pastSlot) = 10:31 <= 10:33 → fires.
-const defragPastSlot = "2024-06-15T10:30:00Z"
+// defragPastSlot is before 01:00 so sched.Next(pastSlot) = 01:00 ≤ 01:02 → hook fires.
+const defragPastSlot = "2024-06-15T00:59:00Z"
 
-// currentSlotStr matches fixedNow truncated to minute; Next(..., currentSlot) = 10:34 > 10:33 → no fire.
-const defragCurrentSlot = "2024-06-15T10:33:00Z"
+// defragCurrentSlot matches defragTestNow truncated to minute;
+// sched.Next(currentSlot) lands on 2024-06-16T01:00 > 01:02 → no fire (idempotency).
+const defragCurrentSlot = "2024-06-15T01:02:00Z"
 
 const (
 	valuesDefragEnabled = `{
 		"global": {"clusterIsBootstrapped": true},
 		"controlPlaneManager": {
 			"internal": {
-				"etcdDefrag": {"enabled": true, "cronSchedule": "* * * * *"}
+				"etcdDefrag": {"enabled": true, "cronSchedule": "0 1 * * *"}
 			},
 			"apiserver": {"authn": {}, "authz": {}}
 		}
@@ -59,7 +61,7 @@ const (
 		"global": {"clusterIsBootstrapped": true},
 		"controlPlaneManager": {
 			"internal": {
-				"etcdDefrag": {"enabled": false, "cronSchedule": "* * * * *"}
+				"etcdDefrag": {"enabled": false, "cronSchedule": "0 1 * * *"}
 			},
 			"apiserver": {"authn": {}, "authz": {}}
 		}
@@ -69,7 +71,7 @@ const (
 		"global": {"clusterIsBootstrapped": false},
 		"controlPlaneManager": {
 			"internal": {
-				"etcdDefrag": {"enabled": true, "cronSchedule": "* * * * *"}
+				"etcdDefrag": {"enabled": true, "cronSchedule": "0 1 * * *"}
 			},
 			"apiserver": {"authn": {}, "authz": {}}
 		}
@@ -90,42 +92,6 @@ data:
 }
 
 const (
-	defragMaster0 = `
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: master-0
-  labels:
-    node-role.kubernetes.io/control-plane: ""`
-
-	defragMaster1 = `
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: master-1
-  labels:
-    node-role.kubernetes.io/control-plane: ""`
-
-	defragMaster2 = `
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: master-2
-  labels:
-    node-role.kubernetes.io/control-plane: ""`
-
-	defragArbiter = `
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: arbiter-0
-  labels:
-    node.deckhouse.io/etcd-arbiter: ""`
-
 	defragCPN0 = `
 ---
 apiVersion: control-plane.deckhouse.io/v1alpha1
@@ -152,6 +118,17 @@ metadata:
   name: master-2
   namespace: kube-system
   uid: "uid-master-2"`
+
+	// defragCPNArbiter represents an etcd-arbiter node — the configuration controller
+	// creates ControlPlaneNode objects for both master and arbiter nodes.
+	defragCPNArbiter = `
+---
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneNode
+metadata:
+  name: arbiter-0
+  namespace: kube-system
+  uid: "uid-arbiter-0"`
 )
 
 func newDefragHook(values string) *HookExecutionConfig {
@@ -182,7 +159,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("defrag disabled in internal values", func() {
 		f := newDefragHook(valuesDefragDisabled)
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(defragMaster0 + defragMaster1 + defragMaster2))
+			f.BindingContexts.Set(f.KubeStateSet(defragCPN0 + defragCPN1 + defragCPN2))
 			f.RunHook()
 		})
 		It("executes successfully and creates no CPOs", func() {
@@ -195,7 +172,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("cluster not bootstrapped", func() {
 		f := newDefragHook(valuesNotBootstrapped)
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(defragMaster0 + defragMaster1 + defragMaster2))
+			f.BindingContexts.Set(f.KubeStateSet(defragCPN0 + defragCPN1 + defragCPN2))
 			f.RunHook()
 		})
 		It("executes successfully and creates no CPOs", func() {
@@ -208,7 +185,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("cron slot already handled (idempotency)", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
-			state := defragMaster0 + defragMaster1 + defragMaster2 + defragStateCMYAML(defragCurrentSlot)
+			state := defragCPN0 + defragCPN1 + defragCPN2 + defragStateCMYAML(defragCurrentSlot)
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
@@ -222,7 +199,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("no etcd nodes", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
-			// ConfigMap with past slot so the cron fires, but there are no nodes.
+			// ConfigMap with past slot so the cron fires, but there are no CPNs.
 			f.BindingContexts.Set(f.KubeStateSet(defragStateCMYAML(defragPastSlot)))
 			f.RunHook()
 		})
@@ -233,10 +210,26 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 		})
 	})
 
-	Context("cron fired, 3 master nodes, no ConfigMap", func() {
+	Context("first install: no ConfigMap", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
-			state := defragMaster0 + defragMaster1 + defragMaster2 + defragCPN0 + defragCPN1 + defragCPN2
+			f.BindingContexts.Set(f.KubeStateSet(defragCPN0 + defragCPN1 + defragCPN2))
+			f.RunHook()
+		})
+		It("initializes the ConfigMap without creating CPOs", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			count, _ := listCPOs(f)
+			Expect(count).To(Equal(0))
+			cm := f.KubernetesResource("ConfigMap", "kube-system", defragStateCMName)
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.lastHandledCronSlot").String()).To(Equal(defragTestNow.Truncate(time.Minute).Format(time.RFC3339)))
+		})
+	})
+
+	Context("cron fired, 3 master nodes, past slot in ConfigMap", func() {
+		f := newDefragHook(valuesDefragEnabled)
+		BeforeEach(func() {
+			state := defragCPN0 + defragCPN1 + defragCPN2 + defragStateCMYAML(defragPastSlot)
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
@@ -257,6 +250,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 				labels, _ := meta["labels"].(map[string]interface{})
 				Expect(labels["control-plane.deckhouse.io/component"]).To(Equal("etcd"))
 				Expect(labels["heritage"]).To(Equal("deckhouse"))
+				Expect(labels["control-plane.deckhouse.io/slot"]).NotTo(BeEmpty())
 
 				ownerRefs, _ := meta["ownerReferences"].([]interface{})
 				Expect(ownerRefs).To(HaveLen(1))
@@ -275,11 +269,11 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 	Context("cron fired, 2 masters + 1 arbiter node", func() {
 		f := newDefragHook(valuesDefragEnabled)
 		BeforeEach(func() {
-			state := defragMaster0 + defragMaster1 + defragArbiter + defragCPN0 + defragCPN1 + defragStateCMYAML(defragPastSlot)
+			state := defragCPN0 + defragCPN1 + defragCPNArbiter + defragStateCMYAML(defragPastSlot)
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
-		It("creates 3 CPOs (masters + arbiter, deduplicated)", func() {
+		It("creates 3 CPOs (masters + arbiter)", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			count, _ := listCPOs(f)
 			Expect(count).To(Equal(3))
@@ -288,10 +282,11 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 
 	Context("grace period exceeded: slot missed by more than 5 minutes", func() {
 		f := newDefragHook(valuesDefragEnabled)
-		// missedSlot is 10 minutes before fixedNow — outside 5-min grace period.
-		const missedSlot = "2024-06-15T10:20:00Z"
+		// missedSlot from the previous day: sched.Next(missedSlot) = 2024-06-14T01:00,
+		// delay from currentSlot (2024-06-15T01:02) = ~24h >> 5-min grace period.
+		const missedSlot = "2024-06-14T00:00:00Z"
 		BeforeEach(func() {
-			state := defragMaster0 + defragMaster1 + defragMaster2 + defragStateCMYAML(missedSlot)
+			state := defragCPN0 + defragCPN1 + defragCPN2 + defragStateCMYAML(missedSlot)
 			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
@@ -305,22 +300,6 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: spawn_etcd_defrag
 			slot := cm.Field("data.lastHandledCronSlot").String()
 			Expect(slot).NotTo(BeEmpty())
 			Expect(slot).NotTo(Equal(missedSlot))
-		})
-	})
-
-	Context("cron fired, master also has arbiter label (edge case dedup)", func() {
-		f := newDefragHook(valuesDefragEnabled)
-		BeforeEach(func() {
-			// master-0 appears only in master snapshot; arbiter-0 is a separate node.
-			// Both master-0 and arbiter-0 should produce exactly 2 CPOs, not 3.
-			state := defragMaster0 + defragArbiter + defragStateCMYAML(defragPastSlot)
-			f.BindingContexts.Set(f.KubeStateSet(state))
-			f.RunHook()
-		})
-		It("creates exactly 2 CPOs without duplicates", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			count, _ := listCPOs(f)
-			Expect(count).To(Equal(2))
 		})
 	})
 })
