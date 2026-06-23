@@ -169,9 +169,6 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 		if pkgType == "" {
 			pkgType = cachedTypes[pkg.Name]
 		}
-		if pkgType == "" {
-			continue
-		}
 		s.repo.Status.Packages = append(s.repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
 			Name: pkg.Name,
 			Type: pkgType,

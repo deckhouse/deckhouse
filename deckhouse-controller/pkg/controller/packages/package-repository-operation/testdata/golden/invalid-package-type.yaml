@@ -59,5 +59,9 @@ status:
     type: LastScanSucceeded
   lastNewVersions: 0
   lastScanTime: "2025-10-31T12:00:00Z"
+  packages:
+  - name: test-package
+    type: ""
+  packagesCount: 1
   partialScanAvailable: false
   phase: Active
