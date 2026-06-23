@@ -27,8 +27,6 @@ import (
 
 func ptr[T any](v T) *T { return &v }
 
-// calculateReplicas must mirror the original set_replicas_on_machine_deployment
-// hook switch exactly, for both MCM and CAPI MachineDeployments.
 func TestCalculateReplicas(t *testing.T) {
 	cases := []struct {
 		name                    string
@@ -113,9 +111,6 @@ func TestSha256Hash(t *testing.T) {
 		t.Fatalf("hash not deterministic: %s != %s", a, b)
 	}
 
-	// The crux of the name-split fix: the MachineDeployment name hash (no
-	// checksum) must differ from the template/bootstrap hash (with checksum),
-	// so the MD name stays stable across InstanceClass changes.
 	mdHash := sha256Hash(uuid + zone)
 	templateHash := sha256Hash(uuid + zone + checksum)
 	if mdHash == templateHash {
