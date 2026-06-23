@@ -27,31 +27,37 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
 
 const (
-	isK8sVersionAutomaticKey      = "istio:isK8sVersionAutomatic"
-	istioToK8sCompatibilityMapKey = "istio:istioToK8sCompatibilityMap"
+	clusterConfigurationSecretNamespace = "kube-system"
+	clusterConfigurationSecretName      = "d8-cluster-configuration"
+	isK8sVersionAutomaticKey            = "istio:isK8sVersionAutomatic"
+	istioToK8sCompatibilityMapKey       = "istio:istioToK8sCompatibilityMap"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("istio-k8s-auto-discovery"),
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:              "cluster-configuration",
 			ApiVersion:        "v1",
 			Kind:              "Secret",
-			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}}},
-			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-cluster-configuration"}},
+			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{clusterConfigurationSecretNamespace}}},
+			NameSelector:      &types.NameSelector{MatchNames: []string{clusterConfigurationSecretName}},
 			FilterFunc:        applyClusterConfigurationYamlFilter,
 		},
 	},
-}, discoveryIsK8sVersionAutomatic)
+}, dependency.WithExternalDependencies(discoveryIsK8sVersionAutomatic))
 
 func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
@@ -65,34 +71,53 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 		return nil, fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
 	}
 
-	var metaConfig *config.MetaConfig
-	// only cluster configuration, provider preparation and validation do not need here
-	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider(), nil)
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetesVersion, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetesVersion, err
+	return rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
 }
 
-func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput) error {
+func discoveryIsK8sVersionAutomatic(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	var kubernetesVersionStr string
+
 	clusterConfigurationSnapshots := input.Snapshots.Get("cluster-configuration")
-	if len(clusterConfigurationSnapshots) == 0 {
-		versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
-		if len(versionParts) < 2 {
-			return errors.New("cluster configuration kubernetesVersion is empty or invalid")
-		}
-		kubernetesVersionStr = versionParts[0] + "." + versionParts[1]
-	} else {
+	if len(clusterConfigurationSnapshots) > 0 {
 		err := clusterConfigurationSnapshots[0].UnmarshalTo(&kubernetesVersionStr)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal 'cluster-configuration' snapshot: %w", err)
+		}
+	} else {
+		k8sClient, err := dc.GetK8sClient()
+		if err != nil {
+			return err
+		}
+
+		secret, err := k8sClient.CoreV1().Secrets(clusterConfigurationSecretNamespace).Get(ctx, clusterConfigurationSecretName, metav1.GetOptions{})
+		if err == nil {
+			ccYaml, ok := secret.Data["cluster-configuration.yaml"]
+			if !ok {
+				return fmt.Errorf(`"cluster-configuration.yaml" not found in "d8-cluster-configuration" Secret`)
+			}
+
+			metaConfig, err := config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider(), nil)
+			if err != nil {
+				return err
+			}
+
+			kubernetesVersionStr, err = rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
+			if err != nil {
+				return err
+			}
+		} else if !k8serrors.IsNotFound(err) {
+			return err
+		} else {
+			versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
+			if len(versionParts) < 2 {
+				return errors.New("cluster configuration kubernetesVersion is empty or invalid")
+			}
+			kubernetesVersionStr = versionParts[0] + "." + versionParts[1]
 		}
 	}
 
@@ -101,7 +126,6 @@ func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput)
 		return fmt.Errorf("cannot parse istioToK8sCompatibilityMap: %w", err)
 	}
 	requirements.SaveValue(istioToK8sCompatibilityMapKey, k8sCompatibleVersions)
-
 	requirements.SaveValue(isK8sVersionAutomaticKey, kubernetesVersionStr == "Automatic")
 
 	return nil
