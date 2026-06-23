@@ -139,7 +139,24 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - "*"
+  - deckhousemachinetemplates
+  - dynamixmachinetemplates
+  - huaweicloudmachinetemplates
+  - staticmachinetemplates
+  - vcdmachinetemplates
+  - zvirtmachinetemplates
+  - deckhousemachines
+  - dynamixmachines
+  - huaweicloudmachines
+  - staticmachines
+  - vcdmachines
+  - zvirtmachines
+  - deckhouseclusters
+  - dynamixclusters
+  - huaweicloudclusters
+  - staticclusters
+  - vcdclusters
+  - zvirtclusters
   verbs:
   - get
   - list
