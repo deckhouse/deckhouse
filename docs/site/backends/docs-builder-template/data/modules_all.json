@@ -488,6 +488,23 @@
       "ssdlc"
     ]
   },
+  "prompp": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/prompp/",
+    "tags": [
+      "observability",
+      "helper"
+    ]
+  },
   "pod-reloader": {
     "editions": [
       "ce",
