@@ -18,7 +18,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "cilium" $ ) }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src/cilium
   - cd /src/cilium
-  # - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
+  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
   - rm -rf Documentation
   - rm -rf /src/cilium/.git
 ---
