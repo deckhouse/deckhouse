@@ -575,14 +575,12 @@ func ParseConfigFromDataEnsureProvider(
 	// The lazy provider-plugin / terraform-manager image pull needs a cache dir.
 	// ParseConfigFromData leaves DownloadCacheDir empty on the commander data
 	// path, so the pull does mkdir("") ("could not create cache directory").
-	// Mirror LoadConfigFromFile's DownloadDir/cache fallback.
-	metaConfig.DownloadRootDir = globalOptions.DownloadDir
+	// Mirror LoadConfigFromFile's DownloadDir/cache fallback. DownloadRootDir is
+	// already set by ParseConfigFromData via ValidateOptionDownloadRootDir.
 	metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
 	if metaConfig.DownloadCacheDir == "" {
 		metaConfig.DownloadCacheDir = filepath.Join(globalOptions.DownloadDir, "cache")
 	}
-	log.InfoF("[DVP-DEBUG] ParseConfigFromDataEnsureProvider: downloadRootDir=%q downloadCacheDir=%q\n",
-		metaConfig.DownloadRootDir, metaConfig.DownloadCacheDir)
 
 	// Lazy provider-plugin / terraform-manager downloads read registry creds
 	// from DeckhouseConfig. In commander mode those creds arrive in
@@ -605,34 +603,25 @@ func ParseConfigFromDataEnsureProvider(
 // data.
 func applyRegistryToDeckhouseConfig(metaConfig *MetaConfig, docs []string) error {
 	if metaConfig.DeckhouseConfig.RegistryDockerCfg != "" {
-		log.InfoF("[DVP-DEBUG] applyRegistryToDeckhouseConfig: RegistryDockerCfg already set (len=%d), skip\n", len(metaConfig.DeckhouseConfig.RegistryDockerCfg))
 		return nil
 	}
 
 	provider, err := RegistryConfigProvider(docs)
 	if err != nil {
-		log.InfoF("[DVP-DEBUG] applyRegistryToDeckhouseConfig: RegistryConfigProvider err: %v\n", err)
 		return err
 	}
 	remoteData, err := provider.RemoteData()
 	if err != nil {
-		log.InfoF("[DVP-DEBUG] applyRegistryToDeckhouseConfig: RemoteData err: %v\n", err)
 		return fmt.Errorf("registry data for provider plugin download: %w", err)
 	}
-	log.InfoF("[DVP-DEBUG] applyRegistryToDeckhouseConfig: RemoteData imagesRepo=%q scheme=%q hasUser=%t passLen=%d caLen=%d\n",
-		remoteData.ImagesRepo, string(remoteData.Scheme), remoteData.Username != "", len(remoteData.Password), len(remoteData.CA))
 	if remoteData.ImagesRepo == "" {
-		log.InfoF("[DVP-DEBUG] applyRegistryToDeckhouseConfig: empty imagesRepo, skip\n")
 		return nil
 	}
 
 	dockerCfg, err := remoteData.DockerCfgBase64()
 	if err != nil {
-		log.InfoF("[DVP-DEBUG] applyRegistryToDeckhouseConfig: DockerCfgBase64 err: %v\n", err)
 		return fmt.Errorf("encode registry dockercfg: %w", err)
 	}
-	log.InfoF("[DVP-DEBUG] applyRegistryToDeckhouseConfig: set RegistryDockerCfg len=%d imagesRepo=%q scheme=%q\n",
-		len(dockerCfg), remoteData.ImagesRepo, string(remoteData.Scheme))
 
 	metaConfig.DeckhouseConfig.RegistryDockerCfg = dockerCfg
 	metaConfig.DeckhouseConfig.ImagesRepo = remoteData.ImagesRepo
