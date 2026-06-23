@@ -15,7 +15,6 @@
 [Unit]
 Description=containerd container runtime
 Documentation=https://containerd.io
-After=network.target dbus.service
 # Immutable OS: config.toml is generated at boot by the runtime controller
 # into tmpfs /run (not /etc, which is stateless/templated). Refuse to start
 # until it exists.
@@ -57,4 +56,4 @@ TasksMax=infinity
 OOMScoreAdjust=-999
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=node.target
