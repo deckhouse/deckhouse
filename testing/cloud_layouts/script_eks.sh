@@ -63,6 +63,7 @@ function prepare_environment() {
   export INITIAL_IMAGE_TAG="$INITIAL_IMAGE_TAG"
   export DECKHOUSE_IMAGE_TAG="$DECKHOUSE_IMAGE_TAG"
   export PREFIX="$PREFIX"
+  export EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
   if [[ -z "$KUBERNETES_VERSION" ]]; then
     # shellcheck disable=SC2016

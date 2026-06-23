@@ -925,6 +925,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -941,6 +942,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -971,6 +973,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1058,6 +1061,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v $(pwd)/testing:/deckhouse/testing \
