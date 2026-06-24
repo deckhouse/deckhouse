@@ -230,9 +230,10 @@ func TestContextToMap(t *testing.T) {
 							"registry.d8-system.svc": map[string]any{
 								"mirrors": []any{
 									map[string]any{
-										"host":   "r.example.com",
-										"scheme": "https",
-										"ca":     "==exampleCA==",
+										"host":       "r.example.com",
+										"scheme":     "https",
+										"ca":         "==exampleCA==",
+										"skipVerify": false,
 										"auth": map[string]any{
 											"username": "user",
 											"password": "password",
@@ -290,9 +291,10 @@ func TestContextToMap(t *testing.T) {
 							"registry.d8-system.svc": map[string]any{
 								"mirrors": []any{
 									map[string]any{
-										"host":   "r.example.com",
-										"scheme": "http",
-										"ca":     "",
+										"host":       "r.example.com",
+										"scheme":     "http",
+										"ca":         "",
+										"skipVerify": false,
 										"auth": map[string]any{
 											"username": "",
 											"password": "",
@@ -399,9 +401,10 @@ func TestContextToMap(t *testing.T) {
 							"registry.d8-system.svc": map[string]any{
 								"mirrors": []any{
 									map[string]any{
-										"host":   "r.example.com",
-										"scheme": "http",
-										"ca":     "",
+										"host":       "r.example.com",
+										"scheme":     "http",
+										"ca":         "",
+										"skipVerify": false,
 										"auth": map[string]any{
 											"username": "",
 											"password": "",
