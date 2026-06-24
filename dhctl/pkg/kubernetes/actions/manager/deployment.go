@@ -33,7 +33,7 @@ import (
 func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx, deploymentName string) error {
 	hasDeployment := false
 
-	err := retry.NewLoop(fmt.Sprintf("Check deployment %s/%s exists", global.D8SystemNamespace, deploymentName), 10, 5*time.Second).
+	err := retry.NewLoop(fmt.Sprintf("Check deployment %s/%s exists", global.D8SystemNamespace, deploymentName), 50, 1*time.Second).
 		RunContext(ctx, func() error {
 			kubeCl, err := kubeClProvider.KubeClientCtx(ctx)
 			if err != nil {
@@ -61,17 +61,17 @@ func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.Ku
 		return nil
 	}
 
-	err = retry.NewLoop(fmt.Sprintf("Restart deployment %s/%s with adding annotation", global.D8SystemNamespace, deploymentName), 10, 5*time.Second).
+	err = retry.NewLoop(fmt.Sprintf("Restart deployment %s/%s with adding annotation", global.D8SystemNamespace, deploymentName), 50, 1*time.Second).
 		RunContext(ctx, func() error {
 			kubeCl, err := kubeClProvider.KubeClientCtx(ctx)
 			if err != nil {
 				return err
 			}
-			patch, err := json.Marshal(map[string]interface{}{
-				"spec": map[string]interface{}{
-					"template": map[string]interface{}{
-						"metadata": map[string]interface{}{
-							"annotations": map[string]interface{}{
+			patch, err := json.Marshal(map[string]any{
+				"spec": map[string]any{
+					"template": map[string]any{
+						"metadata": map[string]any{
+							"annotations": map[string]any{
 								"dhctl.deckhouse.io/restart-infra-deployment": time.Now().Format(time.RFC3339),
 							},
 						},

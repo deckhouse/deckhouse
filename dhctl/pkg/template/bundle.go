@@ -41,12 +41,12 @@ const (
 type saveFromTo struct {
 	from        string
 	to          string
-	data        map[string]interface{}
+	data        map[string]any
 	ignorePaths map[string]struct{}
 }
 
-func logTemplatesData(name string, data map[string]interface{}) {
-	dataForLog := make(map[string]interface{})
+func logTemplatesData(name string, data map[string]any) {
+	dataForLog := make(map[string]any)
 	for k, v := range data {
 		switch k {
 		case "k8s", "bashible", "images":
@@ -97,7 +97,7 @@ func PrepareBundle(
 func PrepareBashibleBundle(
 	ctx context.Context,
 	templateController *Controller,
-	templateData map[string]interface{},
+	templateData map[string]any,
 	provider string,
 	devicePath string,
 	globalOptions *options.GlobalOptions,

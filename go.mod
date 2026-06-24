@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse
 
-go 1.25.8
+go 1.26.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -66,6 +66,7 @@ require (
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gammazero/deque v1.1.0
+	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-logr/logr v1.4.3
 	github.com/go-openapi/swag/loading v0.26.0
 	github.com/go-openapi/swag/yamlutils v0.26.0
@@ -102,18 +103,19 @@ require (
 	cel.dev/expr v0.25.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/090809/oteljsonl v0.0.2 // indirect
-	github.com/PaesslerAG/gval v1.0.0 // indirect
+	github.com/Azure/go-ntlmssp v0.1.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
-	github.com/deckhouse/lib-connection v0.10.0 // indirect
+	github.com/deckhouse/lib-connection v0.11.0 // indirect
 	github.com/deckhouse/lib-dhctl v0.18.2 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-openapi/swag v0.26.0 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.0 // indirect
 	github.com/go-openapi/swag/conv v0.26.0 // indirect

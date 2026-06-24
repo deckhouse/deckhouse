@@ -628,6 +628,19 @@
     "external": "true",
     "path": "/modules/stronghold/"
   },
+  "upmeter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/upmeter/"
+  },
   "user-authz": {
     "editionFullyAvailable": [
       "be",

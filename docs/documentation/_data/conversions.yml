@@ -76,7 +76,21 @@ metallb:
         en: Remove all `addressPool` elements with the `layer2` protocol.
         ru: Удалите все элементы `addressPool` с протоколом `layer2`.
       conversions:
-        - .
+        - del(.addressPools[]? | select(.protocol == "layer2"))
+    - version: 3
+      description:
+        en: |
+            Address pools and BGP settings have been moved to separate Custom Resources. Please remove the following fields from the `metallb` `ModuleConfig`:
+              - `.settings.addressPools`
+              - `.settings.bgpPeers`
+              - `.settings.bgpCommunities`
+        ru: |
+            Настройки пулов и BGP вынесены в отдельные Custom Resources. Пожалуйста, удалите следующие поля из `ModuleConfig` `metallb`:
+              - `.settings.addressPools`
+              - `.settings.bgpPeers`
+              - `.settings.bgpCommunities`
+      conversions:
+        - del(.bgpPeers, .bgpCommunities, .addressPools)
 monitoring-kubernetes:
     - version: 2
       description:
@@ -104,14 +118,6 @@ prometheus:
         ru: Удалите поле `.auth.password`. Если в результате объект `.auth` становится пуст, удалите его.
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
-upmeter:
-    - version: 2
-      conversions:
-        - del(.auth.status.password) | if .auth.status == {} then del(.auth.status) end | if .auth == {} then del(.auth) end
-        - del(.auth.webui.password) | if .auth.webui == {} then del(.auth.webui) end | if .auth == {} then del(.auth) end
-    - version: 3
-      conversions:
-        - del(.smokeMini.ingressClass) | if .smokeMini == {} then del(.smokeMini) end
 user-authn:
     - version: 2
       description:

@@ -51,7 +51,7 @@ func ProjectName(ns *corev1.Namespace) string {
 
 // ApplicableGrants returns every ClusterResourceGrantPolicy whose projectSelector matches the labels of the
 // given namespace. A nil selector matches nothing; an invalid selector is skipped.
-func ApplicableGrants(ctx context.Context, cl client.Client, namespace string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
+func ApplicableGrants(ctx context.Context, cl client.Reader, namespace string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
 	ns := &corev1.Namespace{}
 	if err := cl.Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -63,7 +63,7 @@ func ApplicableGrants(ctx context.Context, cl client.Client, namespace string) (
 }
 
 // GrantsForLabels returns every ClusterResourceGrantPolicy whose projectSelector matches the given labels.
-func GrantsForLabels(ctx context.Context, cl client.Client, nsLabels map[string]string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
+func GrantsForLabels(ctx context.Context, cl client.Reader, nsLabels map[string]string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
 	grantList := &v1alpha1.ClusterResourceGrantPolicyList{}
 	if err := cl.List(ctx, grantList); err != nil {
 		return nil, fmt.Errorf("list ClusterResourceGrantPolicys: %w", err)
@@ -111,7 +111,7 @@ type MatchedReference struct {
 // (group, version, resource): every GrantableClusterResourceReference whose rule matches and whose
 // target definition exists and is Managed. Unbound references (dangling grantableClusterResourceName)
 // and references to External definitions are skipped — they enforce nothing here.
-func ReferencesForRequest(ctx context.Context, cl client.Client, group, version, resource string) ([]MatchedReference, error) {
+func ReferencesForRequest(ctx context.Context, cl client.Reader, group, version, resource string) ([]MatchedReference, error) {
 	refList := &v1alpha1.GrantableClusterResourceReferenceList{}
 	if err := cl.List(ctx, refList); err != nil {
 		return nil, fmt.Errorf("list GrantableClusterResourceReferences: %w", err)
@@ -211,7 +211,7 @@ func (r *Resolved) Available() []v1alpha1.AvailableObject {
 // object-backed resources it lists the live granted objects to expand allowed/denied/excluded selectors.
 func Resolve(
 	ctx context.Context,
-	cl client.Client,
+	cl client.Reader,
 	mapper meta.RESTMapper,
 	reg *v1alpha1.GrantableClusterResourceDefinition,
 	entries []v1alpha1.GrantResource,
@@ -361,7 +361,7 @@ func grantedGVK(mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDe
 }
 
 // defaultFromAnnotation finds the single granted object annotated as the cluster-wide default.
-func defaultFromAnnotation(ctx context.Context, cl client.Client, mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDefinition) (string, error) {
+func defaultFromAnnotation(ctx context.Context, cl client.Reader, mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDefinition) (string, error) {
 	gvk, err := grantedGVK(mapper, reg)
 	if err != nil {
 		return "", err
@@ -385,7 +385,7 @@ func defaultFromAnnotation(ctx context.Context, cl client.Client, mapper meta.RE
 
 // ProjectNamespaces returns the names of namespaces belonging to the project, including the control
 // namespace (the project name). The project namespaces are those labelled projects.deckhouse.io/project.
-func ProjectNamespaces(ctx context.Context, cl client.Client, project string) ([]string, error) {
+func ProjectNamespaces(ctx context.Context, cl client.Reader, project string) ([]string, error) {
 	nsList := &corev1.NamespaceList{}
 	if err := cl.List(ctx, nsList, client.MatchingLabels{naming.ProjectLabel: project}); err != nil {
 		return nil, fmt.Errorf("list project namespaces: %w", err)

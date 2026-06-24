@@ -92,12 +92,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 		require.NoError(t, err)
 
 		var updated1 controlplanev1alpha1.ControlPlaneOperation
-		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-api-1"}, &updated1))
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-api-1", Namespace: constants.KubeSystemNamespace}, &updated1))
 		// First one should be approved (limit is 1)
 		require.True(t, updated1.Spec.Approved)
 
 		var updated2 controlplanev1alpha1.ControlPlaneOperation
-		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-api-2"}, &updated2))
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-api-2", Namespace: constants.KubeSystemNamespace}, &updated2))
 		// Second one should NOT be approved because limit is 1 (based only on 2 masters), despite 5 arbiters
 		require.False(t, updated2.Spec.Approved)
 	})
@@ -116,7 +116,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 		require.NoError(t, err)
 
 		var updated controlplanev1alpha1.ControlPlaneOperation
-		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-etcd"}, &updated))
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-etcd", Namespace: constants.KubeSystemNamespace}, &updated))
 		require.True(t, updated.Spec.Approved)
 	})
 
@@ -142,11 +142,11 @@ func TestReconciler_Reconcile(t *testing.T) {
 		require.NoError(t, err)
 
 		var etcdUpdated controlplanev1alpha1.ControlPlaneOperation
-		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "zzz-etcd"}, &etcdUpdated))
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "zzz-etcd", Namespace: constants.KubeSystemNamespace}, &etcdUpdated))
 		require.True(t, etcdUpdated.Spec.Approved)
 
 		var apiUpdated controlplanev1alpha1.ControlPlaneOperation
-		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "aaa-apiserver"}, &apiUpdated))
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "aaa-apiserver", Namespace: constants.KubeSystemNamespace}, &apiUpdated))
 		require.False(t, apiUpdated.Spec.Approved)
 	})
 
@@ -165,7 +165,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 		require.NoError(t, err)
 
 		var updated controlplanev1alpha1.ControlPlaneOperation
-		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "etcd-next"}, &updated))
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "etcd-next", Namespace: constants.KubeSystemNamespace}, &updated))
 		require.False(t, updated.Spec.Approved)
 	})
 }

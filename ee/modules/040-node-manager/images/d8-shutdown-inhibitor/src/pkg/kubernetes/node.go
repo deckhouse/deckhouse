@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -164,14 +165,33 @@ func (n *Node) RemoveCordonAnnotation(ctx context.Context) *Node {
 	})
 }
 
+// conditionTransitionTime returns the lastTransitionTime to set for a condition of
+// condType moving to status: the existing time when the status is unchanged, and the
+// current time when the status flips or the condition is new. This matches the
+// Kubernetes meaning of lastTransitionTime, which tracks status changes, not reason changes.
+func (n *Node) conditionTransitionTime(condType, status string) string {
+	for _, c := range n.Status.Conditions {
+		if string(c.Type) != condType {
+			continue
+		}
+		if string(c.Status) == status && !c.LastTransitionTime.Time.IsZero() {
+			return c.LastTransitionTime.UTC().Format(time.RFC3339)
+		}
+		break
+	}
+	return time.Now().UTC().Format(time.RFC3339)
+}
+
 func (n *Node) PatchCondition(ctx context.Context, condType, status, reason, message string) *Node {
 	if n.err != nil {
 		return n
 	}
 
+	lastTransitionTime := n.conditionTransitionTime(condType, status)
+
 	patch := fmt.Sprintf(
-		`{"status":{"conditions":[{"type":"%s", "status":"%s", "reason":"%s", "message":"%s"}]}}`,
-		condType, status, reason, message,
+		`{"status":{"conditions":[{"type":"%s", "status":"%s", "reason":"%s", "message":"%s", "lastTransitionTime":"%s"}]}}`,
+		condType, status, reason, message, lastTransitionTime,
 	)
 
 	var lastErr error

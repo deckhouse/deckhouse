@@ -1,6 +1,7 @@
 # WARNING!
-# Please evaluate to add changes to ee/cse/candi/openapi/cluster_configuration.yaml
-# After change this file!
+# if you change this file please evaluate to change files
+# /candi/openapi/cluster_configuration.yaml
+# /ee/cse/candi/openapi/cluster_configuration.yaml
 
 kind: ClusterConfiguration
 apiVersions:
@@ -157,7 +158,12 @@ apiVersions:
         - "Automatic"
       encryptionAlgorithm:
         type: string
+        x-doc-deprecated: true
         description: |
+          **Deprecated.** Use `encryptionAlgorithm` in the `control-plane-manager` ModuleConfig instead.
+          
+          When the ModuleConfig field is set, it takes precedence over this field.
+
           Starting from version **1.31**, kubeadm use the specified asymmetric encryption algorithm
           when generating keys and certificates for the following control-plane components:
 

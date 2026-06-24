@@ -123,7 +123,6 @@
       "secret-copier",
       "service-with-healthchecks",
       "terraform-manager",
-      "upmeter",
       "user-authn",
       "user-authz",
       "vertical-pod-autoscaler"
@@ -194,7 +193,6 @@
       "storage-volume-data-manager",
       "stronghold",
       "terraform-manager",
-      "upmeter",
       "user-authn",
       "user-authz",
       "vertical-pod-autoscaler"
@@ -265,7 +263,6 @@
       "storage-volume-data-manager",
       "stronghold",
       "terraform-manager",
-      "upmeter",
       "user-authn",
       "user-authz",
       "vertical-pod-autoscaler",

@@ -73,7 +73,6 @@ area/monitoring:
   - modules/340-extended-monitoring/**
   - modules/340-monitoring-*/**
   - modules/500-okmeter/**
-  - modules/500-upmeter/**
 
 area/network:
   - modules/021-cni-cilium/**

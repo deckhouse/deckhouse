@@ -57,7 +57,7 @@ func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeNa
 		return nil
 	}
 
-	err := retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 5, 10*time.Second).
+	err := retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 50, 1*time.Second).
 		RunContext(ctx, func() error {
 			return drainNode(ctx, kubeCl, nodeName, opts)
 		})
@@ -142,7 +142,7 @@ func isNodeUnreachable(node *corev1.Node) bool {
 
 // writer implements io.Writer interface as a pass-through for klog.
 type writer struct {
-	logFunc func(elems ...interface{})
+	logFunc func(elems ...any)
 }
 
 func (w writer) Write(p []byte) (int, error) {

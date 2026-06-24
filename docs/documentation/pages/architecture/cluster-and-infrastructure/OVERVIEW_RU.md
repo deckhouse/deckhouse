@@ -15,7 +15,6 @@ extractedLinksMax: 0
 В разделе описаны:
 
 * Механизмы управления всеми используемыми в DKP типами узлов, а также [гибридными группами узлов и кластерами](node-management/hybrid-nodegroups-and-clusters.html).
-* Типовая архитектура [CSI-драйвера](infrastructure/csi-driver.html), используемая в DKP.
 * Служба [bashible](node-management/bashible.html), которая является ключевым компонентом подсистемы Cluster & Infrastructure. Bashible используется модулем [`node-manager`](/modules/node-manager/) для управления конфигурацией узлов.
 
 В подсистему Cluster & Infrastructure также входят следующие модули:

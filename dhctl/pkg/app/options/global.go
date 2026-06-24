@@ -31,12 +31,14 @@ const (
 	DefaultGlobalHooksModule      = DefaultDeckhouseDir + "/global-hooks"
 	DefaultVersionMap             = DefaultCandiDir + "/version_map.yml"
 	DefaultModulesDir             = DefaultDeckhouseDir + "/modules"
+	DefaultModuleConfigCRDPath    = DefaultDeckhouseDir + "/crds/module-config.yaml"
 )
 
 var ConvergerPodsSpiCheckPaths = []string{
 	DefaultModulesDir,
 	DefaultGlobalHooksModule,
 	DefaultVersionMap,
+	DefaultModuleConfigCRDPath,
 }
 
 // GlobalOptions holds settings shared by every dhctl command.
@@ -61,6 +63,7 @@ type GlobalOptions struct {
 	GlobalHooksModule      string
 	VersionMap             string
 	ModulesDir             string
+	ModuleConfigCRDPath    string
 
 	// indecates if download is needed
 	NeedDownload bool
@@ -217,6 +220,10 @@ func CheckDirs(skip ...string) bool {
 			path:  DefaultModulesDir,
 			isDir: true,
 		},
+		{
+			path:  DefaultModuleConfigCRDPath,
+			isDir: false,
+		},
 	}
 
 	forCheck := make([]pathToIsDir, 0, len(forCheckDefaults))
@@ -261,4 +268,5 @@ func SetPaths(root string, o *GlobalOptions) {
 	o.GlobalHooksModule = filepath.Join(o.DeckhouseDir, "global-hooks")
 	o.VersionMap = filepath.Join(o.CandiDir, "version_map.yml")
 	o.ModulesDir = filepath.Join(o.DeckhouseDir, "modules")
+	o.ModuleConfigCRDPath = filepath.Join(o.DeckhouseDir, "crds", "module-config.yaml")
 }

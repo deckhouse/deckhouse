@@ -1,12 +1,13 @@
 ---
 title: "Модуль istio: Custom Resources (от istio.io)"
+description: "Справочник по апстрим-ресурсам Istio, используемым модулем: маршрутизация (DestinationRule, VirtualService, ServiceEntry), аутентификация (PeerAuthentication, RequestAuthentication), авторизация (AuthorizationPolicy) и Sidecar."
 ---
 
 ## Маршрутизация
 
 ### DestinationRule
 
-[Reference](https://istio.io/v1.21/docs/reference/config/networking/destination-rule/)
+[Reference](https://istio.io/v1.25/docs/reference/config/networking/destination-rule/)
 
 Позволяет:
 * Определить стратегию балансировки трафика между эндпоинтами сервиса:
@@ -20,7 +21,7 @@ title: "Модуль istio: Custom Resources (от istio.io)"
 
 ### VirtualService
 
-[Reference](https://istio.io/v1.21/docs/reference/config/networking/virtual-service/)
+[Reference](https://istio.io/v1.25/docs/reference/config/networking/virtual-service/)
 
 Использование VirtualService опционально, классические сервисы продолжают работать, если вам достаточно их функционала.
 
@@ -41,7 +42,7 @@ Istio необходимо знать о существовании `destination
 
 ### ServiceEntry
 
-[Reference](https://istio.io/v1.21/docs/reference/config/networking/service-entry/)
+[Reference](https://istio.io/v1.25/docs/reference/config/networking/service-entry/)
 
 Аналог Endpoints + Service из ванильного Kubernetes. Позволяет сообщить Istio о существовании внешнего сервиса или даже переопределить его адрес.
 
@@ -55,13 +56,13 @@ Istio необходимо знать о существовании `destination
 
 ### PeerAuthentication
 
-[Reference](https://istio.io/v1.21/docs/reference/config/security/peer_authentication/)
+[Reference](https://istio.io/v1.25/docs/reference/config/security/peer_authentication/)
 
 Позволяет определить стратегию mTLS в отдельном неймспейсе — принимать или нет нешифрованные запросы. Каждый mTLS-запрос автоматически позволяет определить источник и использовать его в правилах авторизации.
 
 ### RequestAuthentication
 
-[Reference](https://istio.io/v1.21/docs/reference/config/security/request_authentication/)
+[Reference](https://istio.io/v1.25/docs/reference/config/security/request_authentication/)
 
 Позволяет настроить JWT-аутентификацию для запросов.
 
@@ -73,7 +74,7 @@ Istio необходимо знать о существовании `destination
 
 ### AuthorizationPolicy
 
-[Reference](https://istio.io/v1.21/docs/reference/config/security/authorization-policy/).
+[Reference](https://istio.io/v1.25/docs/reference/config/security/authorization-policy/).
 
 Включает и определяет контроль доступа к `workload`. Поддерживает как ALLOW-, так и DENY-правила. Как только у workload появляется хотя бы одна политика, начинает работать следующий приоритет:
 
@@ -92,7 +93,7 @@ Istio необходимо знать о существовании `destination
   * Host;
   * порт;
   * URI.
-* [conditions](https://istio.io/v1.21/docs/reference/config/security/conditions/#supported-conditions):
+* [conditions](https://istio.io/v1.25/docs/reference/config/security/conditions/#supported-conditions):
   * HTTP-заголовки
   * аргументы source
   * аргументы destination
@@ -100,6 +101,6 @@ Istio необходимо знать о существовании `destination
 
 ### Sidecar
 
-[Reference](https://istio.io/v1.21/docs/reference/config/networking/sidecar/)
+[Reference](https://istio.io/v1.25/docs/reference/config/networking/sidecar/)
 
 Данный ресурс позволяет ограничить количество сервисов, информация о которых будет передана в сайдкар `istio-proxy`.

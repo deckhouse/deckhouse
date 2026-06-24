@@ -52,24 +52,24 @@ type DeckhouseRelease struct {
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	Approved bool `json:"approved"`
 
 	Spec DeckhouseReleaseSpec `json:"spec"`
 
-	Status DeckhouseReleaseStatus `json:"status,omitempty"`
+	Status DeckhouseReleaseStatus `json:"status"`
 }
 
 // +k8s:deepcopy-gen=false
 
 type DeckhouseReleaseSpec struct {
-	Version       string                 `json:"version,omitempty"`
-	ApplyAfter    *time.Time             `json:"applyAfter,omitempty"`
-	Requirements  map[string]string      `json:"requirements,omitempty"`
-	Disruptions   []string               `json:"disruptions,omitempty"`
-	Changelog     map[string]interface{} `json:"changelog,omitempty"`
-	ChangelogLink string                 `json:"changelogLink,omitempty"`
+	Version       string            `json:"version,omitempty"`
+	ApplyAfter    *time.Time        `json:"applyAfter,omitempty"`
+	Requirements  map[string]string `json:"requirements,omitempty"`
+	Disruptions   []string          `json:"disruptions,omitempty"`
+	Changelog     map[string]any    `json:"changelog,omitempty"`
+	ChangelogLink string            `json:"changelogLink,omitempty"`
 }
 
 // +k8s:deepcopy-gen=false
@@ -77,7 +77,7 @@ type DeckhouseReleaseSpec struct {
 type DeckhouseReleaseStatus struct {
 	Phase          string    `json:"phase,omitempty"`
 	Approved       bool      `json:"approved"`
-	TransitionTime time.Time `json:"transitionTime,omitempty"`
+	TransitionTime time.Time `json:"transitionTime"`
 	Message        string    `json:"message"`
 }
 
@@ -104,7 +104,7 @@ func (d Duration) MarshalJSON() ([]byte, error) {
 }
 
 func (d *Duration) UnmarshalJSON(b []byte) error {
-	var v interface{}
+	var v any
 	if err := json.Unmarshal(b, &v); err != nil {
 		return err
 	}

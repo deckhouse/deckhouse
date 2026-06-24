@@ -698,6 +698,23 @@
       "ssdlc"
     ]
   },
+  "upmeter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/upmeter/",
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
   "virtualization": {
     "editions": [
       "ce",

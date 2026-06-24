@@ -1421,92 +1421,116 @@ To enable field protection, do the following:
 
 A complete configuration example and results are available in the [Examples](examples.html#protecting-resources-with-sensitive-fields) section.
 
-## How to Verify the Data Integrity Control Functionality Stored in etcd?
+<!--- Hidden because the feature is currently available in CSE Lite and CSE Pro only.
+
+## How to verify the integrity control mechanism for data stored in etcd?
 
 {% alert level="warning" %}
-Verify the Data Integrity Control Stored in etcd functionality available only for CSE-lite and CSE-pro editions.
+The integrity control of the data stored in etcd is available only in the EE edition.
 {% endalert %}
 
-### Verifying the Format of Stored Data
+### Verifying the format of data stored in etcd
 
-To verify the type of data stored in etcd, you need to create an object and then query its contents using etcdctl. The following commands should be executed from a control-plane node of the cluster.
+To verify the format of data stored in etcd, create a test object and retrieve its contents using `etcdctl`.
 
-Create a test object:
+The following commands should be executed from a master node of the cluster.
 
-```bash
-kubectl create secret generic test-secret --from-literal=foo=bar
-```
+1. Create a test object:
 
-Query the contents using etcdctl:
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
 
-```bash
-ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
-$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
-```
+1. Retrieve the contents of the secret using `etcdctl`:
 
-Command output examples:
-1. Integrity control mode `Enforce` or `Migrate`:
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
 
-```bash
-/registry/secrets/default/test-secret
-{"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
-```
+   Command output examples:
 
-1. Integrity control mode `Rollback`:
+   - Integrity control mode [`Enforce` or `Migrate`](configuration.html#parameters-apiserver-signature):
 
-```bash
-/registry/secrets/default/test-secret
-k8s
-v1Secret
-test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
-kubectl-createUpdatevFieldsV1:,
-*{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
-foobarOpaque"
-```
+     ```console
+     /registry/secrets/default/test-secret
+     {"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
+     ```
 
-1. Secret encryption enabled (`apiserver.encryptionEnabled`), integrity control mode `Rollback`:
+   - Integrity control mode [`Rollback`](configuration.html#parameters-apiserver-signature):
 
-```bash
-/registry/secrets/default/test-secret
-k8s:enc:aescbc:v1:secretbox: <binary data>
-```
+     ```console
+     /registry/secrets/default/test-secret
+     k8s
+     v1Secret
+     test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
+     kubectl-createUpdatevFieldsV1:,
+     *{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
+     foobarOpaque"
+     ```
 
-### Verifying the Prohibition of Processing Data Not Passing Signature Verification
+   - Secret encryption enabled ([`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled)), integrity control mode [`Rollback`](configuration.html#parameters-apiserver-signature):
 
-The following commands should be executed from a control-plane node of the cluster.
+     ```console
+     /registry/secrets/default/test-secret
+     k8s:enc:aescbc:v1:secretbox: <binary data>
+     ```
 
-Create a test object:
+### Verifying the prohibition of processing data with an invalid signature
 
-```bash
-kubectl create secret generic test-secret --from-literal=foo=bar
-```
+To verify the mechanism that rejects processing of data with an invalid signature, modify the value of the `signature` field.
 
-Query the contents using etcdctl:
+The following commands should be executed from a master node of the cluster.
 
-```bash
-ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
-$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
-```
+1. Create a test object:
 
-Intentionally change the `signature` field in the secret:
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
 
-```bash
-etcdctl put /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
-```
+1. Retrieve the contents of the secret using `etcdctl`:
 
-Query the contents using kubectl:
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
 
-```bash
-kubectl get secret test-secret 
-```
+1. Change the `signature` field in the secret:
 
-Example output (only in integrity control mode `Enforce`):
+   ```bash
+   etcdctl put /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ \
+     '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
+   ```
 
-```bash
-Error from server (InternalError): Internal error occurred: bad signature, record rejected
-```
+1. Retrieve the contents of the secret:
 
-View the audit log of the request (in any integrity control mode):
+   ```bash
+   d8 k get secret test-secret 
+   ```
+
+   Example output (only in the [`Enforce`](configuration.html#parameters-apiserver-signature) integrity control mode, which allows working only with records that have a valid signature):
+
+   ```console
+   Error from server (InternalError): Internal error occurred: bad signature, record rejected
+   ```
+
+#### Verifying audit log event recording
+
+When an invalid or missing signature is detected, information about it is recorded in the Kubernetes audit log regardless of the selected integrity control mode.
+
+To view the audit log records, run the following command:
 
 ```bash
 jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
@@ -1514,7 +1538,7 @@ jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.lo
 
 Example output:
 
-```bash
+```console
 {
   "kind": "Event",
   "apiVersion": "audit.k8s.io/v1",
@@ -1552,3 +1576,4 @@ Example output:
   }
 }
 ```
+--->

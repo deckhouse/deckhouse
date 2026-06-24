@@ -286,8 +286,7 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHC
 		c.WithStderrHandler(stdOutErrHandler)
 		err := c.Run(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				// script reboot node
 				if ee.ExitCode() == 255 {
 					return nil
@@ -537,7 +536,7 @@ func (d *Destroyer) logger() log.Logger {
 	return log.SafeProvideLogger(d.params.LoggerProvider)
 }
 
-var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(5, 15*time.Second)
+var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(75, 1*time.Second)
 
 func (d *Destroyer) destroyMasterLoopParams(host session.Host) retry.Params {
 	return retry.SafeCloneOrNewParams(d.params.Loops.DestroyMaster, getDestroyMastersDefaultOpts...).

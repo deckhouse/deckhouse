@@ -31,6 +31,18 @@ description: "Авторизация и управление доступом п
 - [Use-роли](#use-роли) — для назначения прав пользователям (например, разработчикам приложений) **в конкретном пространстве имён**.
 - [Manage-роли](#manage-роли) — для назначения прав администраторам.
 
+{: #rolebinding-car .anchored}
+
+{% alert level="warning" %}
+Обратите внимание на особенности настройки комбинированного доступа и совместного использования RoleBinding и ClusterAuthorizationRule (CAR) для одного и того же пользователя.
+
+Если в кластере включён режим мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)) и для указанного в RoleBinding пользователя или его группы существует ClusterAuthorizationRule (CAR) с правилами для другого неймспейса, отличного от целевого (указанного в RoleBinding), правила из ClusterRole, указанного в RoleBinding, работать не будут.
+
+Это связано с особенностями работы вебхука модуля `user-authz`. Он проверяет принадлежность запроса к разрешённым неймспейсам на уровне группы. Если группа пользователя привязана к CAR с селектором только на определенный неймспейс, все запросы в неймспейсы, не указанные в CAR, будут отвергнуты, независимо от наличия RoleBinding с этими неймспейсами для пользователя.
+
+Рекомендуется не использовать RoleBinding для пользователя совместно с CAR. Если требуется комбинированный доступ, используйте AuthorizationRule вместо ClusterAuthorizationRule.
+{% endalert %}
+
 ### Use-роли
 
 {% alert level="warning" %}
@@ -154,6 +166,7 @@ Manage-роль определяет права на доступ:
 
 ```text
 read:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
@@ -167,7 +180,6 @@ read:
     - batch/jobs
     - cert-manager.io/certificaterequests
     - cert-manager.io/certificates
-    - cert-manager.io/challenges
     - cert-manager.io/clusterissuers
     - cert-manager.io/issuers
     - cilium.io/ciliumclusterwidenetworkpolicies
@@ -275,7 +287,10 @@ read:
     - namespaces
     - network.deckhouse.io/egressgatewaypolicies
     - network.deckhouse.io/egressgateways
+    - network.deckhouse.io/metalloadbalancerbgppeers
     - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/metalloadbalancerconfigurations
+    - network.deckhouse.io/metalloadbalancerpools
     - network.deckhouse.io/servicewithhealthchecks
     - networking.istio.io/destinationrules
     - networking.istio.io/gateways
@@ -397,10 +412,10 @@ write:
 create,patch,update:
     - pods
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - apps/replicasets
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
     - extensions/replicasets
 read:
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -432,9 +447,9 @@ write:
 
 ```text
 delete,deletecollection:
+    - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
-    - cert-manager.io/challenges
 patch,update:
     - nodes
 read:
@@ -455,11 +470,9 @@ read:
     - sailoperator.io/ztunnels
 read-write:
     - apps.kruise.io/daemonsets
-    - deckhouse.io/downtimes
     - deckhouse.io/ingressnginxcontrollers
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
-    - deckhouse.io/upmeterremotewrites
     - multitenancy.deckhouse.io/clusterresourcegrantpolicies
 write:
     - apiextensions.k8s.io/customresourcedefinitions
@@ -562,6 +575,7 @@ read-write:
     - cluster.x-k8s.io/machines
     - cluster.x-k8s.io/machinesets
     - deckhouse.io/clusterauthorizationrules
+    - deckhouse.io/dexproviderchecks
     - deckhouse.io/dexproviders
     - deckhouse.io/groups
     - deckhouse.io/nodeusers
@@ -612,7 +626,10 @@ write:
     - mutations.gatekeeper.sh/assignmetadata
     - mutations.gatekeeper.sh/modifyset
     - namespaces
+    - network.deckhouse.io/metalloadbalancerbgppeers
     - network.deckhouse.io/metalloadbalancerclasses
+    - network.deckhouse.io/metalloadbalancerconfigurations
+    - network.deckhouse.io/metalloadbalancerpools
     - rbac.authorization.k8s.io/clusterrolebindings
     - rbac.authorization.k8s.io/clusterroles
     - resourcequotas

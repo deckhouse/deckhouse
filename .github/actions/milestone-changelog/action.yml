@@ -28,7 +28,7 @@ runs:
     - name: Install changelog generator
       shell: bash
       env:
-        CHANGELOG_GENERATOR_VERSION: "v1.0.1"
+        CHANGELOG_GENERATOR_VERSION: "v1.0.3"
       run: |
         pip install --upgrade pip
         pip install "deckhouse-changelog-generator==${CHANGELOG_GENERATOR_VERSION}" \
@@ -41,6 +41,7 @@ runs:
         SECTIONS_FILE="${RUNNER_TEMP}/allowed-sections.txt"
         deckhouse-write-changelog-sections \
           --repo-root "${GITHUB_WORKSPACE}" \
+          --milestone "${{ steps.args.outputs.milestone_title }}" \
           --output "${SECTIONS_FILE}"
 
         deckhouse-collect-changelog \

@@ -45,13 +45,16 @@ var _ http.Handler = &DefaultsMutator{}
 // granted name into a referenced field, per the reference path's defaulting mode (FillEmpty/Coerce).
 type DefaultsMutator struct {
 	log     logr.Logger
-	cl      client.Client
+	cl      client.Reader
 	mapper  meta.RESTMapper
 	factory jsonpath.Factory
 }
 
-// NewDefaultsMutator builds the /defaults mutating webhook.
-func NewDefaultsMutator(log logr.Logger, cl client.Client, mapper meta.RESTMapper, factory jsonpath.Factory) *DefaultsMutator {
+// NewDefaultsMutator builds the /defaults mutating webhook. cl is a direct (uncached) API reader for the
+// same reason as the /is-granted validator: a cache-backed read lazily starts an informer and blocks on
+// its sync inside the admission request, which can exceed the webhook deadline and pile up into a queue
+// lock. A direct reader keeps reads bounded so the webhook cannot hang.
+func NewDefaultsMutator(log logr.Logger, cl client.Reader, mapper meta.RESTMapper, factory jsonpath.Factory) *DefaultsMutator {
 	return &DefaultsMutator{log: log.WithValues("component", "defaults"), cl: cl, mapper: mapper, factory: factory}
 }
 
@@ -69,7 +72,11 @@ func (m *DefaultsMutator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := review.Request
-	resp, err := m.decide(r.Context(), req)
+	// Hard-bound the decision so the webhook always answers quickly and can never become a queue lock.
+	ctx, cancel := context.WithTimeout(r.Context(), webhookDecisionTimeout)
+	defer cancel()
+
+	resp, err := m.decide(ctx, req)
 	if err != nil {
 		m.log.Error(err, "defaults decision failed")
 		http.Error(w, "defaults decision failed", http.StatusInternalServerError)
@@ -80,6 +87,14 @@ func (m *DefaultsMutator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.AdmissionRequest) (*admissionv1.AdmissionResponse, error) {
+	// Never mutate (nor stall) a system / cluster-component / module writer: a module's resources are
+	// applied into project namespaces by the deckhouse-controller's Helm release, and with
+	// failurePolicy: Fail a slow/erroring defaulting call fails that apply and deadlocks the module's
+	// queue. The apiserver-level matchConditions already skip this webhook for those writers; this is
+	// the handler-level backstop. Mirrors is_granted.go / protect.go.
+	if isSystemRequest(req) {
+		return allowedResponse(req.UID), nil
+	}
 	if namespaces.IsSystem(req.Namespace) || req.SubResource != "" || req.Namespace == "" {
 		return allowedResponse(req.UID), nil
 	}

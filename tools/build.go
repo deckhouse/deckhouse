@@ -651,6 +651,7 @@ func (e *executor) executeEdition(editionName string) {
 		writeSettingsExcludeFileName.Prefix = prefix
 		writeSettingsExcludeFileName.Dir = "modules"
 		writeSettingsExcludeFileName.ExcludePaths = defaultModulesExcludes
+		writeSettingsExcludeFileName.StageDependencies = stageDependenciesSetup
 
 		writeSettingStageDeps.Prefix = prefix
 		writeSettingStageDeps.Dir = "modules"
