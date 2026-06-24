@@ -1493,6 +1493,11 @@ MY_VAR: "myvalue"
 			ds := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27")
 			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("cni.istio.io/not-ready"))
 			Expect(ds.Field("spec.template.spec.tolerations").String()).To(ContainSubstring("node-role.kubernetes.io/master"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/name").String()).To(Equal("istiod"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/instance").String()).To(Equal("v1x27-istiod"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/version").String()).To(Equal("1.27.9"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/part-of").String()).To(Equal("istio"))
+			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/managed-by").String()).To(Equal("Helm"))
 
 			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
 			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
