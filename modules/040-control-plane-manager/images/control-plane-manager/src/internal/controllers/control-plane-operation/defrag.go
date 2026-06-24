@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	etcdDefragFragRatioThreshold = 0.20
+	etcdDefragFragRatioThreshold = 0.40
 
 	etcdDefragTimeout       = 2 * time.Minute
 	etcdDefragStatusTimeout = 10 * time.Second
