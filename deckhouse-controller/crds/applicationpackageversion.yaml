@@ -162,6 +162,24 @@ spec:
                         description: Russian description of the package.
                         type: string
                     type: object
+                  disableOptions:
+                    description: Parameters of package disable protection.
+                    properties:
+                      confirmation:
+                        description: Whether confirmation is required to disable the
+                          package.
+                        type: boolean
+                      messages:
+                        description: Localized disable confirmation messages.
+                        properties:
+                          en:
+                            description: English disable confirmation message.
+                            type: string
+                          ru:
+                            description: Russian disable confirmation message.
+                            type: string
+                        type: object
+                    type: object
                   licensing:
                     description: Licensing information for different editions.
                     properties:
