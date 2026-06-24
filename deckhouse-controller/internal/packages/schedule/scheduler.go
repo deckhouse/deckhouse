@@ -324,16 +324,6 @@ func (s *Scheduler) Reschedule(name string) {
 	s.schedule()
 }
 
-// Schedule forces a full scheduling pass without changing any node state.
-// Use when external conditions (e.g. Kubernetes version) have changed
-// and the graph needs re-evaluation.
-func (s *Scheduler) Schedule() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.schedule()
-}
-
 // schedule recomputes enabled status and advances idle nodes that are
 // eligible to the scheduled state, emitting an [EventSchedule] for each.
 func (s *Scheduler) schedule() {

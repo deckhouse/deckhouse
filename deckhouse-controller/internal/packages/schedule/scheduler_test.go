@@ -232,7 +232,7 @@ func (s *SchedulerSuite) TestMandatoryDependency() {
 	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 
 	s.versions["parent"] = mustVersion("1.0.0")
-	s.sched.Schedule()
+	s.sched.Reschedule("")
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 }
@@ -280,7 +280,7 @@ func (s *SchedulerSuite) TestEnabledToDisabledFlipEmitsEventDisable() {
 
 	// Parent disappears — consumer must flip enabled→disabled.
 	delete(s.versions, "parent")
-	s.sched.Schedule()
+	s.sched.Reschedule("")
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
 }
@@ -314,7 +314,7 @@ func (s *SchedulerSuite) TestStatusFlipResetsOnlyAffectedNode() {
 	// stable is now active. Flip flapper from disabled → enabled by installing
 	// its dep. compute() must reset flapper to idle but leave stable alone.
 	s.versions["absent"] = mustVersion("1.0.0")
-	s.sched.Schedule()
+	s.sched.Reschedule("")
 
 	events := s.collectEvents()
 	scheduled := eventNames(events, schedule.EventSchedule)
@@ -573,7 +573,7 @@ func (s *SchedulerSuite) TestAnyOfMultipleGroupsAllMustPass() {
 	// Installing a member of the second group satisfies all groups; consumer
 	// schedules on the next pass.
 	s.versions["minio"] = mustVersion("2.0.0")
-	s.sched.Schedule()
+	s.sched.Reschedule("")
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 }
@@ -662,7 +662,7 @@ func (s *SchedulerSuite) TestAnyOfMemberInstallTriggersReschedule() {
 	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 
 	s.versions["gcp"] = mustVersion("1.5.0")
-	s.sched.Schedule()
+	s.sched.Reschedule("")
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 }
@@ -804,7 +804,7 @@ func (s *SchedulerSuite) TestNoneOfMultipleGroupsAllMustPass() {
 
 	// Removing the violator from the second group enables the consumer.
 	delete(s.versions, "deprecated-storage")
-	s.sched.Schedule()
+	s.sched.Reschedule("")
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 }
@@ -895,7 +895,7 @@ func (s *SchedulerSuite) TestNoneOfMemberInstallTriggersDisable() {
 
 	// Forbidden module appears; consumer must flip enabled→disabled.
 	s.versions["haproxy-legacy"] = mustVersion("1.0.0")
-	s.sched.Schedule()
+	s.sched.Reschedule("")
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
 }
@@ -986,7 +986,7 @@ func (s *SchedulerSuite) TestDisablePreservesCheckerReason() {
 	s.drainEvents()
 
 	s.versions["parent"] = mustVersion("1.0.0")
-	s.sched.Schedule()
+	s.sched.Reschedule("")
 
 	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer",
 		"explicitly disabled node must stay off even when its checkers pass")
