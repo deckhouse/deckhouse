@@ -34,7 +34,7 @@ Users need permission to manage merge request settings in the project. In standa
 
 ### Status checks must succeed
 
-The **Status checks must succeed** checkbox blocks merge requests until all applicable external status checks have the `passed` status.
+The "Status checks must succeed" checkbox blocks merge requests until all applicable external status checks have the `passed` status.
 
 If the checkbox is cleared, external status checks are still shown in merge requests but do not block merging.
 
