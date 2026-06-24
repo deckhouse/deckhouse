@@ -392,7 +392,7 @@ html {
                 display: inline-block;
                 margin-left: 7px;
                 width: 10px;
-                height: 5px;
+                height: 6px;
                 background:url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") bottom / contain no-repeat ;
                 transition: .15s;
 
@@ -668,6 +668,7 @@ html {
                 align-items: flex-end;
                 cursor: pointer;
                 display: flex;
+                top: 1px;
                 gap: 4px;
                 width: fit-content;
                 color: #6e7084;
@@ -684,18 +685,23 @@ html {
                     height: 6px;
                     transition: .3s;
                     width: 10px;
+
+
+                    @include breakpoints.max-w(xs) {
+                        top: 4px;
+                    }
                 }
 
                 @include breakpoints.min-w(l) {
                     display: none;
                 }
 
-                @include breakpoints.max-w(s) {
-                    top: 4px;
+                @include breakpoints.max-w(xs) {
+                    font-size: .75rem;
                 }
 
                 @include breakpoints.max-w(xs) {
-                    font-size: .75rem;
+                    line-height: 16px;
                 }
             }
         }
