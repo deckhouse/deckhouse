@@ -14,26 +14,36 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package operations is the ControlPlaneOperation domain: building an operation from explicit inputs,
+// telling whether an active operation already covers a needed step, and rotating terminal operations.
 package operations
 
 import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 )
 
-func buildOperation(node NodeRef, d Decision, steps []controlplanev1alpha1.StepName) *controlplanev1alpha1.ControlPlaneOperation {
-	op := newOperation(node, d.component, steps)
-	if d.kind == KindObserve {
+type NodeRef struct {
+	Namespace string
+	Name      string
+	Type      string // control-plane.deckhouse.io/type label value
+	UID       types.UID
+}
+
+func New(node NodeRef, c controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName, intended controlplanev1alpha1.Checksums, approved bool) *controlplanev1alpha1.ControlPlaneOperation {
+	op := newOperation(node, c, steps)
+	if approved {
 		op.Spec.Approved = true
 	} else {
-		op.Spec.DesiredConfigChecksum = d.intended.Config
-		op.Spec.DesiredPKIChecksum = d.intended.PKI
-		op.Spec.DesiredCAChecksum = d.intended.CA
+		op.Spec.DesiredConfigChecksum = intended.Config
+		op.Spec.DesiredPKIChecksum = intended.PKI
+		op.Spec.DesiredCAChecksum = intended.CA
 	}
 	op.GenerateName = generateName(op)
 	return op
@@ -70,4 +80,17 @@ func generateName(op *controlplanev1alpha1.ControlPlaneOperation) string {
 		}
 	}
 	return name + "-"
+}
+
+func StepCoveredByActiveOperation(current []controlplanev1alpha1.ControlPlaneOperation, c controlplanev1alpha1.OperationComponent, step controlplanev1alpha1.StepName) bool {
+	for i := range current {
+		op := &current[i]
+		if op.IsTerminal() || op.Spec.Component != c {
+			continue
+		}
+		if op.HasStep(step) {
+			return true
+		}
+	}
+	return false
 }

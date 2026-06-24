@@ -17,6 +17,8 @@ limitations under the License.
 package cpnplanner
 
 import (
+	"k8s.io/apimachinery/pkg/api/equality"
+
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/operations"
@@ -24,59 +26,50 @@ import (
 
 const maxTerminalOperationsPerComponent = 5
 
-type OperationBuilder interface {
-	Build(node operations.NodeRef, d operations.Decision) *controlplanev1alpha1.ControlPlaneOperation
+type Plan struct {
+	Status *controlplanev1alpha1.ControlPlaneNodeStatus
+	Create []*controlplanev1alpha1.ControlPlaneOperation
+	Delete []*controlplanev1alpha1.ControlPlaneOperation
 }
 
-// RequiredOperations returns the operations the node needs that are not already covered by an active operation.
-func RequiredOperations(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation, builder OperationBuilder) []*controlplanev1alpha1.ControlPlaneOperation {
-	node := nodeRef(cpn)
-	var out []*controlplanev1alpha1.ControlPlaneOperation
-	for _, d := range decisions(cpn) {
-		if operations.Covered(current, d) {
-			continue
-		}
-		out = append(out, builder.Build(node, d))
+type StepBuilder interface {
+	Steps(s componentState, current []controlplanev1alpha1.ControlPlaneOperation) []controlplanev1alpha1.StepName
+}
+
+func ComputePlan(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation, builder StepBuilder) Plan {
+	status := ComputeStatusReport(cpn, current)
+	var p Plan
+	if !equality.Semantic.DeepEqual(cpn.Status, status) {
+		p.Status = &status
 	}
-	return out
+	if IsMaintenanceMode(cpn) {
+		return p
+	}
+	node := nodeRef(cpn)
+	for _, s := range computeComponentStates(cpn) {
+		if op := componentOperation(node, s, current, builder); op != nil {
+			p.Create = append(p.Create, op)
+		}
+	}
+	p.Delete = operations.ComputeOperationsToRotate(current, maxTerminalOperationsPerComponent)
+	return p
+}
+
+func componentOperation(node operations.NodeRef, s componentState, current []controlplanev1alpha1.ControlPlaneOperation, builder StepBuilder) *controlplanev1alpha1.ControlPlaneOperation {
+	steps := builder.Steps(s, current)
+	if len(steps) == 0 {
+		return nil
+	}
+	return operations.New(node, s.component, steps, s.intended, isObserveOnly(steps))
 }
 
 func OwnedOperations(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) []controlplanev1alpha1.ControlPlaneOperation {
 	return operations.FilterOwnedBy(ops, nodeRef(cpn))
 }
 
-func OperationsToRotate(ops []controlplanev1alpha1.ControlPlaneOperation) []string {
-	return operations.ComputeOperationsToRotate(ops, maxTerminalOperationsPerComponent)
-}
-
 func IsMaintenanceMode(cpn *controlplanev1alpha1.ControlPlaneNode) bool {
 	_, ok := cpn.Labels[constants.MaintenanceModeLabelKey]
 	return ok
-}
-
-// decisions translates the node's component states into operation decisions.
-//
-// Two independent choices per component:
-//   - lifecycle: a mutating converge (spec drift) or a read-only observe — mutually exclusive;
-//   - renewal: an expiring leaf certificate or signature key — runs in parallel to the lifecycle.
-func decisions(cpn *controlplanev1alpha1.ControlPlaneNode) []operations.Decision {
-	var ds []operations.Decision
-	for _, s := range computeComponentStates(cpn) {
-		switch {
-		case s.needsConverge():
-			ds = append(ds, operations.ConvergeDecision(s.component, s.intended, s.certsChanged(), s.needsSignatureBootstrap()))
-		case s.needsObserve():
-			ds = append(ds, operations.ObserveDecision(s.component))
-		}
-
-		switch {
-		case s.needsCertRenew():
-			ds = append(ds, operations.CertRenewDecision(s.component, s.intended))
-		case s.needsSignatureRenew():
-			ds = append(ds, operations.SignatureRenewDecision(s.component, s.intended))
-		}
-	}
-	return ds
 }
 
 func nodeRef(cpn *controlplanev1alpha1.ControlPlaneNode) operations.NodeRef {

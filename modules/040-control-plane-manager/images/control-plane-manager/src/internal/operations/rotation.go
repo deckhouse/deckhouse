@@ -22,9 +22,9 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 )
 
-// ComputeOperationsToRotate returns the names of terminal operations exceeding the per-component retention limit, oldest first.
+// ComputeOperationsToRotate returns terminal operations exceeding the per-component retention limit, oldest first.
 // Active operations are never rotated.
-func ComputeOperationsToRotate(current []controlplanev1alpha1.ControlPlaneOperation, keepPerComponent int) []string {
+func ComputeOperationsToRotate(current []controlplanev1alpha1.ControlPlaneOperation, keepPerComponent int) []*controlplanev1alpha1.ControlPlaneOperation {
 	if keepPerComponent <= 0 {
 		return nil
 	}
@@ -37,7 +37,7 @@ func ComputeOperationsToRotate(current []controlplanev1alpha1.ControlPlaneOperat
 		}
 	}
 
-	var toDelete []string
+	var toDelete []*controlplanev1alpha1.ControlPlaneOperation
 	for _, ops := range terminalByComponent {
 		if len(ops) <= keepPerComponent {
 			continue
@@ -49,12 +49,10 @@ func ComputeOperationsToRotate(current []controlplanev1alpha1.ControlPlaneOperat
 			}
 			return ti.Before(tj)
 		})
-		for _, op := range ops[:len(ops)-keepPerComponent] {
-			toDelete = append(toDelete, op.Name)
-		}
+		toDelete = append(toDelete, ops[:len(ops)-keepPerComponent]...)
 	}
 
-	sort.Strings(toDelete)
+	sort.SliceStable(toDelete, func(i, j int) bool { return toDelete[i].Name < toDelete[j].Name })
 	return toDelete
 }
 

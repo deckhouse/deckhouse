@@ -27,7 +27,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-	"control-plane-manager/internal/operations"
+	"control-plane-manager/internal/cpnplanner"
 )
 
 const ControllerName = constants.VirtualControlPlaneNodeController
@@ -36,9 +36,9 @@ func BuildController(mgr manager.Manager) error {
 	r := &reconciler{
 		client: mgr.GetClient(),
 		// apiReader is an uncached reader used to confirm, right before creating an operation, that the previous reconcile of the same node did not already create it.
-		apiReader:        mgr.GetAPIReader(),
-		scheme:           mgr.GetScheme(),
-		operationBuilder: operations.VirtualBuilder{},
+		apiReader:   mgr.GetAPIReader(),
+		scheme:      mgr.GetScheme(),
+		stepBuilder: cpnplanner.VirtualStepBuilder{},
 	}
 
 	cpnPreds, err := controlPlaneNodePredicates()

@@ -28,8 +28,8 @@ import (
 // componentState is the intended (from spec) versus actual (from status) state of a single component.
 type componentState struct {
 	component       controlplanev1alpha1.OperationComponent
-	intended        controlplanev1alpha1.Checksums // Config, PKI, CA(=global)
-	actual          controlplanev1alpha1.Checksums // Config, PKI, CA(per-component)
+	intended        controlplanev1alpha1.Checksums // Config, PKI, CA(=global) - spec
+	actual          controlplanev1alpha1.Checksums // Config, PKI, CA(per-component) - status
 	certExpiry      time.Time                      // earliest observed leaf-certificate expiry (excludes signature); zero if unobserved
 	signatureExpiry time.Time                      // observed signature-key expiry (kube-apiserver, CSE); zero if unobserved
 	lastObserve     time.Time                      // last successful certificate observation; zero if never
@@ -51,32 +51,26 @@ func (s componentState) needsConverge() bool {
 
 func (s componentState) needsObserve() bool {
 	if s.actual.Config == "" {
-		return false // not deployed yet, nothing to observe
+		return false
 	}
 	return s.lastObserve.IsZero() || time.Since(s.lastObserve) > constants.CertObserveInterval
 }
 
-// needsCertRenew reports whether leaf certificates expire soon and no converge is already reissuing them.
 func (s componentState) needsCertRenew() bool {
 	if s.certsChanged() {
-		return false
+		return true
 	}
 	return !s.certExpiry.IsZero() && time.Until(s.certExpiry) < constants.CertRenewalThreshold
 }
 
-// needsSignatureRenew reports whether the kube-apiserver signature key expires soon (CSE builds only).
 func (s componentState) needsSignatureRenew() bool {
 	if !constants.SignatureEnabled() || s.component != controlplanev1alpha1.OperationComponentKubeAPIServer {
 		return false
 	}
+	if s.actual.Config == "" {
+		return true
+	}
 	return !s.signatureExpiry.IsZero() && time.Until(s.signatureExpiry) < constants.SignatureRenewalThreshold
-}
-
-// needsSignatureBootstrap reports whether the first kube-apiserver deploy must seed the signature keys (CSE builds only).
-func (s componentState) needsSignatureBootstrap() bool {
-	return constants.SignatureEnabled() &&
-		s.component == controlplanev1alpha1.OperationComponentKubeAPIServer &&
-		s.actual.Config == ""
 }
 
 // computeComponentStates pairs intended (spec + global CA) with actual (status) per component, in a stable order.
