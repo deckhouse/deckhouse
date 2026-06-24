@@ -444,7 +444,7 @@ properties:
     description: |
       The amount of CPU and memory resources allocated to control-plane components on each master node.
 
-      When unset, DKP sizes each control-plane component's requests automatically (a per-component floor plus linear growth by the cluster node count, capped). Setting `cpu` and/or `memory` here overrides that with a fixed total budget split between the components; `cpu` and `memory` can be overridden independently.
+      When unset, DKP sizes each control-plane component's requests automatically in discrete tiers based on the cluster node count (stepped rather than continuous, so the static pods stay stable within a tier and only change at rare tier boundaries instead of restarting on every node scale event). The total is additionally capped at 75% of the smallest master node's usable allocatable, so the control plane never crowds out the other pods on master nodes; if a master is too small for the cluster size, the requests are clamped down and the `D8ControlPlaneMasterResourcesInsufficient` alert fires. Setting `cpu` and/or `memory` here overrides that with a fixed total budget split between the components; `cpu` and `memory` can be overridden independently.
 
       These settings do not apply if the cluster control plane is managed by a cloud provider (for example, Google Kubernetes Engine or Azure Kubernetes Service).
       More info in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).

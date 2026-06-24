@@ -93,6 +93,52 @@ var _ = Describe("Module hooks :: control-plane-manager :: calculate_resources_r
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64(0)))
 			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64(0)))
 		})
+
+		It("Hook should set the node safety cap to 75% of the master usable allocatable", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// Capacity 4 CPU / 8 GiB, Capacity==Allocatable so the kubelet floor
+			// (100m / 900Mi) applies: usable = (4000-100-300)m = 3600m and
+			// (8Gi-900Mi-512Mi) = 7109345280 bytes. Cap = 75% of usable.
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.maxMilliCpuControlPlane").Int()).To(Equal(int64(2700)))
+			Expect(f.ValuesGet("controlPlaneManager.internal.resourcesRequests.maxMemoryControlPlane").Int()).To(Equal(int64(5332008960)))
+		})
+
+		It("Hook should not flag the master as undersized when the auto footprint fits", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			found := false
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == masterResourcesInsufficientMetricName {
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeFalse())
+		})
+	})
+
+	Context("Cluster with one undersized master node (auto mode)", func() {
+		// A 2 CPU / 4 GiB master is large enough to host a control plane, but the
+		// recommended auto footprint for the smallest tier (~4.25 GiB) does not fit
+		// into 75% of its usable allocatable, so the hook raises the advisory metric.
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "2", memory: "4Gi"}})))
+			f.RunHook()
+		})
+
+		It("Hook should run and raise the master-undersized advisory metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			found := false
+			value := 0.0
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == masterResourcesInsufficientMetricName {
+					found = true
+					value = *m.Value
+					break
+				}
+			}
+			Expect(found).To(BeTrue())
+			Expect(value).To(Equal(1.0))
+		})
 	})
 
 	Context("Cluster with one master node, kubelet settled (auto mode)", func() {

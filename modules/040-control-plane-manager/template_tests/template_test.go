@@ -1172,13 +1172,15 @@ internal:
   resourcesRequests:
     milliCpuControlPlane: %d
     memoryControlPlane: %d
+    maxMilliCpuControlPlane: %d
+    maxMemoryControlPlane: %d
 apiserver:
   publishAPI:
     ingress: {}
     loadBalancer: {}
 `
-			renderComponent := func(nodesCount, poolCPU, poolMem int, manifestKey string) corev1.Pod {
-				f.ValuesSetFromYaml("controlPlaneManager", fmt.Sprintf(testValuesTemplate, nodesCount, poolCPU, poolMem))
+			renderComponent := func(nodesCount, poolCPU, poolMem, maxCPU, maxMem int, manifestKey string) corev1.Pod {
+				f.ValuesSetFromYaml("controlPlaneManager", fmt.Sprintf(testValuesTemplate, nodesCount, poolCPU, poolMem, maxCPU, maxMem))
 				f.HelmRender()
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
@@ -1198,37 +1200,45 @@ apiserver:
 				Expect(req.Memory().Value()).To(Equal(expMem.Value()))
 			}
 
-			Context("auto mode (no override pool), 34 nodes", func() {
-				It("sizes each component per-component (floor + linear growth)", func() {
-					assertRequests(renderComponent(34, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "354m", "3136Mi")
-					assertRequests(renderComponent(34, 0, 0, "etcd\\.yaml\\.tpl"), "168m", "784Mi")
-					assertRequests(renderComponent(34, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "63m", "392Mi")
-					assertRequests(renderComponent(34, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "33m", "196Mi")
+			Context("auto mode (no override pool), 34 nodes (tier <100)", func() {
+				It("sizes each component by the node-count tier", func() {
+					assertRequests(renderComponent(34, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "750m", "5248Mi")
+					assertRequests(renderComponent(34, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "300m", "1408Mi")
+					assertRequests(renderComponent(34, 0, 0, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "90m", "768Mi")
+					assertRequests(renderComponent(34, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "40m", "384Mi")
 				})
 			})
 
-			Context("auto mode (no override pool), small cluster base values", func() {
-				It("uses the per-component base value at 0 nodes", func() {
-					// apiserver memory base (2048Mi) is above its floor (1536Mi), so base wins.
-					assertRequests(renderComponent(0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "150m", "2048Mi")
-					assertRequests(renderComponent(0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "30m", "128Mi")
+			Context("auto mode (no override pool), small cluster (tier <25)", func() {
+				It("uses the lowest tier at 0 nodes", func() {
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "300m", "2944Mi")
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "40m", "256Mi")
 				})
 			})
 
-			Context("auto mode (no override pool), large cluster caps", func() {
-				It("clamps to the per-component cap at 1000 nodes", func() {
-					assertRequests(renderComponent(1000, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "3000m", "12288Mi")
-					assertRequests(renderComponent(1000, 0, 0, "etcd\\.yaml\\.tpl"), "1500m", "4096Mi")
+			Context("auto mode (no override pool), large cluster (top tier)", func() {
+				It("uses the top tier (per-component caps) at 1000 nodes", func() {
+					assertRequests(renderComponent(1000, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "3000m", "12288Mi")
+					assertRequests(renderComponent(1000, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "1500m", "4096Mi")
+				})
+			})
+
+			Context("auto mode with node safety cap (undersized master)", func() {
+				It("clamps the auto value to the component share of the cap", func() {
+					// 1000 nodes => apiserver top tier is 3000m / 12288Mi, but the
+					// hook reports a safety cap of 2000m / 6Gi, so apiserver is
+					// clamped to 33%: min(3000m, 660m) and min(12288Mi, 2126008811).
+					assertRequests(renderComponent(1000, 0, 0, 2000, 6442450944, "kube-apiserver\\.yaml\\.tpl"), "660m", "2126008811")
 				})
 			})
 
 			Context("override pool set", func() {
-				It("splits the pool by the historical component shares", func() {
+				It("splits the pool by the historical component shares (ignores the safety cap)", func() {
 					// pool: 1500m CPU / 1Gi memory.
-					assertRequests(renderComponent(34, 1500, 1073741824, "kube-apiserver\\.yaml\\.tpl"), "495m", "354334801")
-					assertRequests(renderComponent(34, 1500, 1073741824, "etcd\\.yaml\\.tpl"), "525m", "375809638")
-					assertRequests(renderComponent(34, 1500, 1073741824, "kube-controller-manager\\.yaml\\.tpl"), "300m", "214748364")
-					assertRequests(renderComponent(34, 1500, 1073741824, "kube-scheduler\\.yaml\\.tpl"), "150m", "107374182")
+					assertRequests(renderComponent(34, 1500, 1073741824, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "495m", "354334801")
+					assertRequests(renderComponent(34, 1500, 1073741824, 0, 0, "etcd\\.yaml\\.tpl"), "525m", "375809638")
+					assertRequests(renderComponent(34, 1500, 1073741824, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "300m", "214748364")
+					assertRequests(renderComponent(34, 1500, 1073741824, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "150m", "107374182")
 				})
 			})
 		})

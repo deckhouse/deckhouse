@@ -10,24 +10,42 @@
   {{- $resourcesRequests = .settings.resourcesRequests -}}
 {{- end -}}
 {{- $nodesCount := .nodesCount | default 0 | int -}}
+{{- $maxMilliCPU := $resourcesRequests.maxMilliCPU | default 0 | int -}}
+{{- $maxMemoryBytes := $resourcesRequests.maxMemoryBytes | default 0 | int -}}
 {{- /*
-  Resource requests for the etcd static pod.
+  Resource requests for the etcd static pod (component share: 35%).
+
   Manual override (controlPlaneManager.resourcesRequests) arrives as a single
-  pool via settings.resourcesRequests and keeps the historical component share
-  (35%). Otherwise requests are sized per-component: a fixed floor + linear
-  growth by cluster node count, capped.
+  pool and is split by the historical component share (CPU and memory
+  independently). Otherwise requests are sized per-component in discrete tiers
+  by the cluster node count — stepped, not linear, so the static pod stays
+  stable within a tier and only changes at rare tier boundaries. The auto value
+  is clamped to its share of the node safety cap ($maxMilliCPU / $maxMemoryBytes)
+  computed by the hook, so it never crowds out other pods on an undersized master.
 */ -}}
 {{- $millicpu := 0 -}}
+{{- $memory := 0 -}}
 {{- if $resourcesRequests.milliCPU -}}
   {{- $millicpu = div (mul $resourcesRequests.milliCPU 35) 100 -}}
 {{- else -}}
-  {{- $millicpu = max 100 (min (add 100 (mul 2 $nodesCount)) 1500) -}}
+  {{- if lt $nodesCount 25 -}}{{- $millicpu = 150 -}}
+  {{- else if lt $nodesCount 100 -}}{{- $millicpu = 300 -}}
+  {{- else if lt $nodesCount 250 -}}{{- $millicpu = 600 -}}
+  {{- else if lt $nodesCount 500 -}}{{- $millicpu = 1100 -}}
+  {{- else -}}{{- $millicpu = 1500 -}}
+  {{- end -}}
+  {{- if $maxMilliCPU -}}{{- $millicpu = min $millicpu (div (mul $maxMilliCPU 35) 100) -}}{{- end -}}
 {{- end -}}
-{{- $memory := 0 -}}
 {{- if $resourcesRequests.memoryBytes -}}
   {{- $memory = div (mul $resourcesRequests.memoryBytes 35) 100 -}}
 {{- else -}}
-  {{- $memory = mul (max 512 (min (add 512 (mul 8 $nodesCount)) 4096)) 1048576 -}}
+  {{- if lt $nodesCount 25 -}}{{- $memory = 768 -}}
+  {{- else if lt $nodesCount 100 -}}{{- $memory = 1408 -}}
+  {{- else if lt $nodesCount 250 -}}{{- $memory = 2560 -}}
+  {{- else -}}{{- $memory = 4096 -}}
+  {{- end -}}
+  {{- $memory = mul $memory 1048576 -}}
+  {{- if $maxMemoryBytes -}}{{- $memory = min $memory (div (mul $maxMemoryBytes 35) 100) -}}{{- end -}}
 {{- end }}
 {{- /* etcd */ -}}
 apiVersion: v1
