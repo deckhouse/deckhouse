@@ -28,7 +28,8 @@ type Definition struct {
 	Critical bool   `json:"critical,omitempty" yaml:"critical,omitempty"`
 	Weight   uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 
-	Requirements Requirements `json:"requirements" yaml:"requirements"`
+	Requirements   Requirements   `json:"requirements" yaml:"requirements"`
+	DisableOptions DisableOptions `json:"disableOptions" yaml:"disableOptions"`
 }
 
 // Requirements specifies dependencies required by the module.
@@ -66,6 +67,18 @@ type ModulesRequirements struct {
 type ModuleGroup struct {
 	Name    string                         `json:"name" yaml:"name"`
 	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
+}
+
+// DisableOptions configures module disablement behavior.
+type DisableOptions struct {
+	Confirmation bool            `json:"confirmation" yaml:"confirmation"`
+	Messages     DisableMessages `json:"messages,omitempty" yaml:"messages,omitempty"`
+}
+
+// DisableMessages holds localized disable confirmation messages for the module.
+type DisableMessages struct {
+	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
+	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
 // Constraints projects the module definition onto the scheduler input shape,

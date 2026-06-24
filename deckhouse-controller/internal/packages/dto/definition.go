@@ -173,6 +173,13 @@ func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 		Name:    d.Name,
 		Version: d.Version,
 		Stage:   d.Stage,
+		DisableOptions: apps.DisableOptions{
+			Confirmation: d.DisableOptions.Confirmation,
+			Messages: apps.DisableMessages{
+				Ru: d.DisableOptions.Messages.Ru,
+				En: d.DisableOptions.Messages.En,
+			},
+		},
 		Requirements: apps.Requirements{
 			Kubernetes: kubernetesConstraint,
 			Deckhouse:  deckhouseConstraint,
@@ -240,6 +247,13 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 		Critical: d.Critical,
 		Weight:   uint32(d.Weight),
 		Stage:    d.Stage,
+		DisableOptions: modules.DisableOptions{
+			Confirmation: d.DisableOptions.Confirmation,
+			Messages: modules.DisableMessages{
+				Ru: d.DisableOptions.Messages.Ru,
+				En: d.DisableOptions.Messages.En,
+			},
+		},
 		Requirements: modules.Requirements{
 			Kubernetes: kubernetesConstraint,
 			Deckhouse:  deckhouseConstraint,

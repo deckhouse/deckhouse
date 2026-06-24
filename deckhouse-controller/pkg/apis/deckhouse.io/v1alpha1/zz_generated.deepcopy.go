@@ -315,6 +315,11 @@ func (in *ApplicationPackageVersionStatusMetadata) DeepCopyInto(out *Application
 		*out = new(PackageDescription)
 		**out = **in
 	}
+	if in.DisableOptions != nil {
+		in, out := &in.DisableOptions, &out.DisableOptions
+		*out = new(PackageDisableOptions)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Requirements != nil {
 		in, out := &in.Requirements, &out.Requirements
 		*out = new(PackageRequirements)
