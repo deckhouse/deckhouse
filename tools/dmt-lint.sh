@@ -74,9 +74,7 @@ function structure_prepare {
 
       if [[ -f "${target_module_dir}/oss.yaml" && -f "${source_module_dir}/oss.yaml" ]]; then
         merged_oss_tmp=$(mktemp)
-        cat "${target_module_dir}/oss.yaml" > "${merged_oss_tmp}"
-        printf "\n" >> "${merged_oss_tmp}"
-        cat "${source_module_dir}/oss.yaml" >> "${merged_oss_tmp}"
+        yq eval-all '. as $item ireduce ({}; . * $item)' "${target_module_dir}/oss.yaml" "${source_module_dir}/oss.yaml" > "${merged_oss_tmp}"
       fi
 
       if [[ -d "${target_module_dir}" ]]; then
