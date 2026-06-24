@@ -832,6 +832,9 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /modules/600-namespace-configurator
   to: /deckhouse/modules/600-namespace-configurator
   excludePaths:
