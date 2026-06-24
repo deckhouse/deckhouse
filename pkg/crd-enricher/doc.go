@@ -30,6 +30,7 @@
 //	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
 //	+crd-enricher:deckhouse:crd:<key>[=<value>]              // CRD-level setting
+//	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
 // The raw entity injects a standard schema field and lives directly under the
 // prefix; the documentation entities (examples, deprecated, default) carry the
@@ -57,6 +58,11 @@
 //     valued simple entity becomes x-doc-<entity>);
 //   - raw:<key> — injects an arbitrary standard schema field named <key>
 //     directly (a dotted <key> walks into nested schema nodes);
+//   - sensitive-data — a schema-level flag rendered as
+//     x-kubernetes-sensitive-data: true. It marks a field (or an object/array
+//     subtree) as sensitive so the apiserver's CRDSensitiveData feature
+//     encrypts the resource in etcd, filters the field by RBAC and masks it in
+//     audit logs. It must not be placed on the root type;
 //   - crd:<key> — a type-level entity configuring CRD-level settings
 //     (preserveUnknownFields, the minimal style, schema format stripping) and
 //     the curated deckhouse style. Each setting is its own "crd:<key>=<value>"

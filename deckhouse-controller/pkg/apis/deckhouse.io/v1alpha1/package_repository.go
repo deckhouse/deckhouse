@@ -111,10 +111,12 @@ type PackageRepositorySpecRegistry struct {
 
 	// Username for authenticating to the container registry.
 	// +optional
+	// +crd-enricher:deckhouse:sensitive-data
 	Login string `json:"login,omitempty"`
 
 	// Password for authenticating to the container registry.
 	// +optional
+	// +crd-enricher:deckhouse:sensitive-data
 	Password string `json:"password,omitempty"`
 }
 

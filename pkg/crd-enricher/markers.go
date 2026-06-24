@@ -26,14 +26,15 @@ import (
 //	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
 //	+crd-enricher:deckhouse:crd:<key>[=<value>]              // CRD-level setting
+//	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
 // The raw entity lives directly under the prefix because it injects a standard
 // schema field rather than deckhouse-specific documentation. The documentation
 // entities (examples, deprecated, default) carry the extra
-// "deckhouse:documentation" sub-namespace. The crd entity configures the CRD
-// rather than documenting a field, so it carries the shorter "deckhouse"
-// sub-namespace. Every shape is reduced to the bare entity name during parsing
-// so the rest of the enricher matches on it.
+// "deckhouse:documentation" sub-namespace. The crd and sensitive-data entities
+// configure the CRD or its schema rather than documenting a field, so they
+// carry the shorter "deckhouse" sub-namespace. Every shape is reduced to the
+// bare entity name during parsing so the rest of the enricher matches on it.
 const markerPrefix = "crd-enricher:"
 
 // docSubPrefix is the "deckhouse:documentation" sub-namespace stripped from the
@@ -89,6 +90,24 @@ const crdMarker = "crd"
 func isCRDMarker(name string) bool {
 	return name == crdMarker || strings.HasPrefix(name, crdMarker+":")
 }
+
+// sensitiveDataMarker is the schema-level entity that flags a field (or an
+// object/array subtree) as sensitive. It lives under the "deckhouse"
+// sub-namespace, like crd:
+//
+//	// +crd-enricher:deckhouse:sensitive-data
+//	Token string `json:"token"`
+//
+// Unlike the documentation entities it renders to the kube-apiserver flag
+// x-kubernetes-sensitive-data rather than an x-doc-* key. The CRDSensitiveData
+// feature of the apiserver then encrypts the resource in etcd, filters the
+// field from API responses based on RBAC and masks it in audit logs. It must
+// not be placed on the schema root, which also covers the system apiVersion,
+// kind and metadata fields.
+const sensitiveDataMarker = "sensitive-data"
+
+// sensitiveDataKey is the schema field the sensitiveDataMarker renders to.
+const sensitiveDataKey = "x-kubernetes-sensitive-data"
 
 // rootMarker is the controller-gen marker that designates a Go type as the
 // root object of a CRD. The enricher relies on it to know which types map to a

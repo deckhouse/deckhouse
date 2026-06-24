@@ -238,6 +238,16 @@ func (e *Enricher) enrichCRD(crd map[string]any) {
 
 		e.enrichType(openAPISchema, named)
 
+		// x-kubernetes-sensitive-data must not sit on the schema root: the root
+		// also covers the system apiVersion, kind and metadata fields, which the
+		// apiserver cannot encrypt. Drop it with a warning if a root type carries
+		// the marker by mistake.
+		if _, ok := openAPISchema[sensitiveDataKey]; ok {
+			delete(openAPISchema, sensitiveDataKey)
+			e.warnings = append(e.warnings, fmt.Sprintf(
+				"%s: sensitive-data marker is not allowed on the root type; apply it to spec or a field", kind))
+		}
+
 		// Examples are generated bottom-up after every marker has been applied,
 		// so explicit examples, defaults and enums are already in place.
 		e.generateExamples(spec, names, name, openAPISchema)
@@ -575,6 +585,22 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 				}
 			} else {
 				schema[key] = value
+			}
+
+		case m.name == sensitiveDataMarker:
+			// sensitive-data renders to the kube-apiserver flag
+			// x-kubernetes-sensitive-data rather than an x-doc-* key. On an
+			// object or array node it marks the whole subtree as sensitive. It
+			// is a value-less flag by default but accepts an explicit boolean.
+			if m.hasValue {
+				value, err := decodeValue(m.rawValue)
+				if err != nil {
+					e.warnings = append(e.warnings, err.Error())
+					continue
+				}
+				schema[sensitiveDataKey] = value
+			} else {
+				schema[sensitiveDataKey] = true
 			}
 
 		case !m.hasValue:

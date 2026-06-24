@@ -37,6 +37,7 @@ func TestParseMarkerLine(t *testing.T) {
 		{"examples", "+crd-enricher:deckhouse:documentation:examples=5m", marker{name: "examples", rawValue: "5m", hasValue: true, enricher: true}, true},
 		{"crd subkey", "+crd-enricher:deckhouse:crd:minimal=true", marker{name: "crd:minimal", rawValue: "true", hasValue: true, enricher: true}, true},
 		{"crd subkey flag", "+crd-enricher:deckhouse:crd:minimal", marker{name: "crd:minimal", enricher: true}, true},
+		{"sensitive-data", "+crd-enricher:deckhouse:sensitive-data", marker{name: "sensitive-data", enricher: true}, true},
 		{"raw", "+crd-enricher:raw:pattern=^a$", marker{name: "raw:pattern", rawValue: "^a$", hasValue: true, enricher: true}, true},
 	}
 
@@ -95,6 +96,22 @@ func TestApplyMarkersScalarAndFlag(t *testing.T) {
 	}
 	if _, ok := schema["kubebuilder:validation:Required"]; ok {
 		t.Errorf("non-enricher marker leaked into schema")
+	}
+}
+
+func TestApplyMarkersSensitiveData(t *testing.T) {
+	e := &Enricher{}
+	schema := map[string]any{"type": "string"}
+
+	e.applyMarkers(schema, []marker{
+		{name: "sensitive-data", enricher: true},
+	})
+
+	if got := schema["x-kubernetes-sensitive-data"]; got != true {
+		t.Errorf("x-kubernetes-sensitive-data = %#v, want true", got)
+	}
+	if _, ok := schema["x-doc-sensitive-data"]; ok {
+		t.Error("sensitive-data must not render as an x-doc-* key")
 	}
 }
 
