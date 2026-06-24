@@ -270,6 +270,8 @@ properties:
     description: |
       Количество ресурсов CPU и памяти, выделяемых компонентам control plane на каждом master-узле.
 
+      Если не задано, DKP вычисляет запросы для каждого компонента control plane автоматически (нижняя граница на компонент плюс линейный рост от числа узлов в кластере с ограничением сверху). Указание `cpu` и/или `memory` переопределяет это фиксированным суммарным бюджетом, который распределяется между компонентами; `cpu` и `memory` можно переопределять независимо.
+
       Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например Google Kubernetes Engine или Azure Kubernetes Service.
       Подробнее об единицах измерения ресурсов — в [документации Kubernetes](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
     properties:

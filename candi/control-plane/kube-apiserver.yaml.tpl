@@ -78,8 +78,28 @@
 {{- if and .settings .settings.resourcesRequests -}}
   {{- $resourcesRequests = .settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $nodesCount := .nodesCount | default 0 | int -}}
+{{- /*
+  Resource requests for the kube-apiserver static pod.
+  When a manual override is set (controlPlaneManager.resourcesRequests), it
+  arrives as a single pool via settings.resourcesRequests and is split by the
+  historical component share (33%). Otherwise requests are sized per-component:
+  a fixed floor + linear growth by cluster node count, capped. CPU tracks the
+  median real usage (control-plane pods have no CPU limit, so spikes burst onto
+  spare master cores); memory is sized more generously because it is incompressible.
+*/ -}}
+{{- $millicpu := 0 -}}
+{{- if $resourcesRequests.milliCPU -}}
+  {{- $millicpu = div (mul $resourcesRequests.milliCPU 33) 100 -}}
+{{- else -}}
+  {{- $millicpu = max 150 (min (add 150 (mul 6 $nodesCount)) 3000) -}}
+{{- end -}}
+{{- $memory := 0 -}}
+{{- if $resourcesRequests.memoryBytes -}}
+  {{- $memory = div (mul $resourcesRequests.memoryBytes 33) 100 -}}
+{{- else -}}
+  {{- $memory = mul (max 1536 (min (add 2048 (mul 32 $nodesCount)) 12288)) 1048576 -}}
+{{- end }}
 {{- /* kube-apiserver */ -}}
 apiVersion: v1
 kind: Pod
@@ -248,8 +268,8 @@ spec:
       timeoutSeconds: 15
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 33) 100 }}m"
-        memory: "{{ div (mul $memory 33) 100 }}"
+        cpu: "{{ $millicpu }}m"
+        memory: "{{ $memory }}"
     securityContext:
       capabilities:
         drop:

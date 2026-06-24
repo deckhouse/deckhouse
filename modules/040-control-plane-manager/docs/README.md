@@ -78,7 +78,9 @@ Note. This feature only takes effect in environments where the `--terminated-pod
 
 ## Configuring Control Plane Resource Requests
 
-The module allows you to configure the total CPU and memory resource requests for control plane components on each master node: `kube-apiserver`, `etcd`, `kube-controller-manager`, and `kube-scheduler`.
+By default DKP sizes the CPU and memory requests of every control plane static pod (`kube-apiserver`, `etcd`, `kube-controller-manager`, `kube-scheduler`) automatically and individually per component. Each request is computed as a fixed floor plus a linear growth based on the total number of nodes in the cluster, capped at an upper bound. This keeps requests close to real-world usage on small clusters while scaling them up as the cluster grows. The result does not depend on the master node size — control plane load is driven by cluster size, not by master hardware. Control plane pods have no CPU limit, so short spikes burst onto spare master cores.
+
+You can override these automatically calculated values with a fixed total CPU and/or memory requests budget for control plane components on each master node.
 
 Use the [`resourcesRequests`](configuration.html#parameters-resourcesrequests) parameter in the `control-plane-manager` ModuleConfig:
 
@@ -96,7 +98,7 @@ spec:
       memory: 500Mi
 ```
 
-The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
+When set, the specified values are used as a common requests budget for control plane components on each master node, overriding the automatic per-component sizing. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests. CPU and memory can be overridden independently — if you set only one of them, the other keeps using the automatic per-component sizing.
 
 {% alert level="info" %}
 These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.

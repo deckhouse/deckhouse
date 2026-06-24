@@ -31,8 +31,26 @@
 {{- if and $.settings $.settings.resourcesRequests -}}
   {{- $resourcesRequests = $.settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $nodesCount := .nodesCount | default 0 | int -}}
+{{- /*
+  Resource requests for the kube-scheduler static pod.
+  Manual override (controlPlaneManager.resourcesRequests) arrives as a single
+  pool via settings.resourcesRequests and keeps the historical component share
+  (10%). Otherwise requests are sized per-component: a fixed floor + linear
+  growth by cluster node count, capped.
+*/ -}}
+{{- $millicpu := 0 -}}
+{{- if $resourcesRequests.milliCPU -}}
+  {{- $millicpu = div (mul $resourcesRequests.milliCPU 10) 100 -}}
+{{- else -}}
+  {{- $millicpu = max 30 (min (add 30 (div $nodesCount 10)) 120) -}}
+{{- end -}}
+{{- $memory := 0 -}}
+{{- if $resourcesRequests.memoryBytes -}}
+  {{- $memory = div (mul $resourcesRequests.memoryBytes 10) 100 -}}
+{{- else -}}
+  {{- $memory = mul (max 128 (min (add 128 (mul 2 $nodesCount)) 512)) 1048576 -}}
+{{- end }}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -89,8 +107,8 @@ spec:
       timeoutSeconds: 15
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 10) 100 }}m"
-        memory: "{{ div (mul $memory 10) 100 }}"
+        cpu: "{{ $millicpu }}m"
+        memory: "{{ $memory }}"
     securityContext:
       capabilities:
         drop:

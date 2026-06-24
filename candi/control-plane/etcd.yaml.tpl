@@ -9,8 +9,26 @@
 {{- if and .settings .settings.resourcesRequests -}}
   {{- $resourcesRequests = .settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
+{{- $nodesCount := .nodesCount | default 0 | int -}}
+{{- /*
+  Resource requests for the etcd static pod.
+  Manual override (controlPlaneManager.resourcesRequests) arrives as a single
+  pool via settings.resourcesRequests and keeps the historical component share
+  (35%). Otherwise requests are sized per-component: a fixed floor + linear
+  growth by cluster node count, capped.
+*/ -}}
+{{- $millicpu := 0 -}}
+{{- if $resourcesRequests.milliCPU -}}
+  {{- $millicpu = div (mul $resourcesRequests.milliCPU 35) 100 -}}
+{{- else -}}
+  {{- $millicpu = max 100 (min (add 100 (mul 2 $nodesCount)) 1500) -}}
+{{- end -}}
+{{- $memory := 0 -}}
+{{- if $resourcesRequests.memoryBytes -}}
+  {{- $memory = div (mul $resourcesRequests.memoryBytes 35) 100 -}}
+{{- else -}}
+  {{- $memory = mul (max 512 (min (add 512 (mul 8 $nodesCount)) 4096)) 1048576 -}}
+{{- end }}
 {{- /* etcd */ -}}
 apiVersion: v1
 kind: Pod
@@ -91,8 +109,8 @@ spec:
       timeoutSeconds: 15
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 35) 100 }}m"
-        memory: "{{ div (mul $memory 35) 100 }}"
+        cpu: "{{ $millicpu }}m"
+        memory: "{{ $memory }}"
     securityContext:
       capabilities:
         drop:

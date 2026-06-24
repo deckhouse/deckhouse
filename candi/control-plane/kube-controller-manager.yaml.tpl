@@ -2,9 +2,26 @@
 {{- if and $.settings $.settings.resourcesRequests -}}
   {{- $resourcesRequests = $.settings.resourcesRequests -}}
 {{- end -}}
-{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
-{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 {{- $nodesCount := .nodesCount | default 0 | int }}
+{{- /*
+  Resource requests for the kube-controller-manager static pod.
+  Manual override (controlPlaneManager.resourcesRequests) arrives as a single
+  pool via settings.resourcesRequests and keeps the historical component share
+  (20%). Otherwise requests are sized per-component: a fixed floor + linear
+  growth by cluster node count, capped.
+*/ -}}
+{{- $millicpu := 0 -}}
+{{- if $resourcesRequests.milliCPU -}}
+  {{- $millicpu = div (mul $resourcesRequests.milliCPU 20) 100 -}}
+{{- else -}}
+  {{- $millicpu = max 50 (min (add 50 (div (mul $nodesCount 4) 10)) 300) -}}
+{{- end -}}
+{{- $memory := 0 -}}
+{{- if $resourcesRequests.memoryBytes -}}
+  {{- $memory = div (mul $resourcesRequests.memoryBytes 20) 100 -}}
+{{- else -}}
+  {{- $memory = mul (max 256 (min (add 256 (mul 4 $nodesCount)) 1536)) 1048576 -}}
+{{- end }}
 {{- $gcThresholdCount := 1000 }}
 {{- if lt $nodesCount 100 }}
     {{- $gcThresholdCount = 1000 }}
@@ -108,8 +125,8 @@ spec:
         scheme: HTTPS
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 20) 100 }}m"
-        memory: "{{ div (mul $memory 20) 100 }}"
+        cpu: "{{ $millicpu }}m"
+        memory: "{{ $memory }}"
     securityContext:
       capabilities:
         drop:

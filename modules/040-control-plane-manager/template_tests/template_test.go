@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -1154,6 +1155,82 @@ apiserver:
 			testTerminatedPodGcThreshold(299, "3000")
 			testTerminatedPodGcThreshold(300, "6000")
 			testTerminatedPodGcThreshold(500, "6000")
+		})
+
+		Context("control-plane resource requests sizing", func() {
+			const testValuesTemplate = `
+internal:
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  nodesCount: %d
+  kubeSchedulerExtenders: []
+  authn: {}
+  selfSignedCA: {}
+  resourcesRequests:
+    milliCpuControlPlane: %d
+    memoryControlPlane: %d
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
+`
+			renderComponent := func(nodesCount, poolCPU, poolMem int, manifestKey string) corev1.Pod {
+				f.ValuesSetFromYaml("controlPlaneManager", fmt.Sprintf(testValuesTemplate, nodesCount, poolCPU, poolMem))
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+				raw, err := base64.StdEncoding.DecodeString(secret.Field("data." + manifestKey).String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var pod corev1.Pod
+				Expect(yaml.Unmarshal(raw, &pod)).ShouldNot(HaveOccurred())
+				return pod
+			}
+
+			assertRequests := func(pod corev1.Pod, expectCPU, expectMem string) {
+				req := pod.Spec.Containers[0].Resources.Requests
+				expCPU := resource.MustParse(expectCPU)
+				expMem := resource.MustParse(expectMem)
+				Expect(req.Cpu().MilliValue()).To(Equal(expCPU.MilliValue()))
+				Expect(req.Memory().Value()).To(Equal(expMem.Value()))
+			}
+
+			Context("auto mode (no override pool), 34 nodes", func() {
+				It("sizes each component per-component (floor + linear growth)", func() {
+					assertRequests(renderComponent(34, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "354m", "3136Mi")
+					assertRequests(renderComponent(34, 0, 0, "etcd\\.yaml\\.tpl"), "168m", "784Mi")
+					assertRequests(renderComponent(34, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "63m", "392Mi")
+					assertRequests(renderComponent(34, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "33m", "196Mi")
+				})
+			})
+
+			Context("auto mode (no override pool), small cluster base values", func() {
+				It("uses the per-component base value at 0 nodes", func() {
+					// apiserver memory base (2048Mi) is above its floor (1536Mi), so base wins.
+					assertRequests(renderComponent(0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "150m", "2048Mi")
+					assertRequests(renderComponent(0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "30m", "128Mi")
+				})
+			})
+
+			Context("auto mode (no override pool), large cluster caps", func() {
+				It("clamps to the per-component cap at 1000 nodes", func() {
+					assertRequests(renderComponent(1000, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "3000m", "12288Mi")
+					assertRequests(renderComponent(1000, 0, 0, "etcd\\.yaml\\.tpl"), "1500m", "4096Mi")
+				})
+			})
+
+			Context("override pool set", func() {
+				It("splits the pool by the historical component shares", func() {
+					// pool: 1500m CPU / 1Gi memory.
+					assertRequests(renderComponent(34, 1500, 1073741824, "kube-apiserver\\.yaml\\.tpl"), "495m", "354334801")
+					assertRequests(renderComponent(34, 1500, 1073741824, "etcd\\.yaml\\.tpl"), "525m", "375809638")
+					assertRequests(renderComponent(34, 1500, 1073741824, "kube-controller-manager\\.yaml\\.tpl"), "300m", "214748364")
+					assertRequests(renderComponent(34, 1500, 1073741824, "kube-scheduler\\.yaml\\.tpl"), "150m", "107374182")
+				})
+			})
 		})
 	})
 

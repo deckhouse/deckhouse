@@ -31,7 +31,6 @@ import (
 )
 
 const (
-	controlPlanePercent     = 40                     // %
 	configEveryNodeMilliCPU = 300                    // 0.3 Cpu
 	configEveryNodeMemory   = 512 * 1024 * 1024      // 512Mb
 	hardLimitMilliCPU       = 4 * 1000               // 4 Cpu
@@ -124,31 +123,23 @@ func effectiveMasterResources(n *Node) (int64, int64) {
 func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(obsoleteGlobalResourcesRequestsMetricGroup)
 
-	var (
-		calculatedMasterNodeMilliCPU int64
-		calculatedMasterNodeMemory   int64
-
-		calculatedControlPlaneMilliCPU int64
-		calculatedControlPlaneMemory   int64
-
-		discoveryMasterNodeMilliCPU int64
-		discoveryMasterNodeMemory   int64
-	)
-
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.Snapshots, "NodesResources")
 	if err != nil {
 		return fmt.Errorf("unmarshal NodesResources snapshots: %v", err)
 	}
 
-	// Managed cloud
+	// Managed cloud (no master nodes under our control, e.g. GKE) — leave the
+	// requests at zero, control-plane static pods are not rendered there.
 	if len(nodes) == 0 {
 		return nil
 	}
 
-	// Hardcoded maximum values for master node resources
-	discoveryMasterNodeMilliCPU = hardLimitMilliCPU
-	discoveryMasterNodeMemory = hardLimitMemory
-
+	// Validate the smallest master can host the per-node reservation budget.
+	// In auto mode the actual per-component requests are sized by cluster node
+	// count inside the static-pod templates, not by master capacity — this check
+	// only guards against masters too small to run a control plane at all.
+	discoveryMasterNodeMilliCPU := int64(hardLimitMilliCPU)
+	discoveryMasterNodeMemory := int64(hardLimitMemory)
 	for _, n := range nodes {
 		effCPU, effMem := effectiveMasterResources(&n)
 		if effCPU < discoveryMasterNodeMilliCPU {
@@ -159,59 +150,57 @@ func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) err
 		}
 	}
 
-	calculatedMasterNodeMilliCPU = discoveryMasterNodeMilliCPU - configEveryNodeMilliCPU
-	calculatedMasterNodeMemory = discoveryMasterNodeMemory - configEveryNodeMemory
-
-	if calculatedMasterNodeMilliCPU <= 0 {
+	if discoveryMasterNodeMilliCPU-configEveryNodeMilliCPU <= 0 {
 		return fmt.Errorf("cpu resources for allocating on master nodes must be greater than %dm", configEveryNodeMilliCPU)
 	}
-
-	if calculatedMasterNodeMemory <= 0 {
+	if discoveryMasterNodeMemory-configEveryNodeMemory <= 0 {
 		return fmt.Errorf("memory resources for allocating on master nodes must be greater than %dMi", configEveryNodeMemory/1024/1024)
 	}
 
-	calculatedControlPlaneMilliCPU = calculatedMasterNodeMilliCPU * controlPlanePercent / 100
-	calculatedControlPlaneMemory = calculatedMasterNodeMemory * controlPlanePercent / 100
+	// Auto mode keeps the pool at zero so the static-pod templates compute
+	// per-component requests (floor + linear growth by node count, capped).
+	// A manual override (controlPlaneManager.resourcesRequests, or the obsolete
+	// global.modules.resourcesRequests.controlPlane fallback) switches a resource
+	// back to the single-pool model that the templates split by the historical
+	// component shares. CPU and memory are overridden independently.
+	var (
+		controlPlaneMilliCPU int64
+		controlPlaneMemory   int64
+		usedGlobalFallback   bool
+	)
 
 	cpmCPUPath := "controlPlaneManager.resourcesRequests.cpu"
 	cpmMemoryPath := "controlPlaneManager.resourcesRequests.memory"
 	globalCPUPath := "global.modules.resourcesRequests.controlPlane.cpu"
 	globalMemoryPath := "global.modules.resourcesRequests.controlPlane.memory"
 
-	cpmCPUExists := input.Values.Exists(cpmCPUPath)
-	cpmMemoryExists := input.Values.Exists(cpmMemoryPath)
-	globalCPUExists := input.Values.Exists(globalCPUPath)
-	globalMemoryExists := input.Values.Exists(globalMemoryPath)
-
-	usedGlobalFallback := false
-
-	if cpmCPUExists {
+	if input.Values.Exists(cpmCPUPath) {
 		quantity, err := getAndParseResourceQuantity(input.Values.Get(cpmCPUPath))
 		if err != nil {
 			return err
 		}
-		calculatedControlPlaneMilliCPU = quantity.MilliValue()
-	} else if globalCPUExists {
+		controlPlaneMilliCPU = quantity.MilliValue()
+	} else if input.Values.Exists(globalCPUPath) {
 		quantity, err := getAndParseResourceQuantity(input.Values.Get(globalCPUPath))
 		if err != nil {
 			return err
 		}
-		calculatedControlPlaneMilliCPU = quantity.MilliValue()
+		controlPlaneMilliCPU = quantity.MilliValue()
 		usedGlobalFallback = true
 	}
 
-	if cpmMemoryExists {
+	if input.Values.Exists(cpmMemoryPath) {
 		quantity, err := getAndParseResourceQuantity(input.Values.Get(cpmMemoryPath))
 		if err != nil {
 			return err
 		}
-		calculatedControlPlaneMemory = quantity.Value()
-	} else if globalMemoryExists {
+		controlPlaneMemory = quantity.Value()
+	} else if input.Values.Exists(globalMemoryPath) {
 		quantity, err := getAndParseResourceQuantity(input.Values.Get(globalMemoryPath))
 		if err != nil {
 			return err
 		}
-		calculatedControlPlaneMemory = quantity.Value()
+		controlPlaneMemory = quantity.Value()
 		usedGlobalFallback = true
 	}
 
@@ -224,8 +213,8 @@ func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) err
 		)
 	}
 
-	input.Values.Set("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane", calculatedControlPlaneMilliCPU)
-	input.Values.Set("controlPlaneManager.internal.resourcesRequests.memoryControlPlane", calculatedControlPlaneMemory)
+	input.Values.Set("controlPlaneManager.internal.resourcesRequests.milliCpuControlPlane", controlPlaneMilliCPU)
+	input.Values.Set("controlPlaneManager.internal.resourcesRequests.memoryControlPlane", controlPlaneMemory)
 
 	return nil
 }
