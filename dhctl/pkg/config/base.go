@@ -381,9 +381,9 @@ func detectMergedDocuments(doc string) error {
 	// if we have multiple root-level apiVersion/kind fields
 	var rootLevelKinds []string
 	var rootLevelAPIVersions []string
-	lines := strings.Split(doc, "\n")
+	lines := strings.SplitSeq(doc, "\n")
 
-	for _, line := range lines {
+	for line := range lines {
 		trimmed := strings.TrimSpace(line)
 		// Skip comments and empty lines
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
@@ -395,13 +395,13 @@ func detectMergedDocuments(doc string) error {
 
 		// Only consider fields at root level (indent 0)
 		if leadingWhitespace == 0 {
-			if strings.HasPrefix(trimmed, "apiVersion:") {
-				apiVersionValue := strings.TrimSpace(strings.TrimPrefix(trimmed, "apiVersion:"))
+			if after, ok := strings.CutPrefix(trimmed, "apiVersion:"); ok {
+				apiVersionValue := strings.TrimSpace(after)
 				if apiVersionValue != "" {
 					rootLevelAPIVersions = append(rootLevelAPIVersions, apiVersionValue)
 				}
-			} else if strings.HasPrefix(trimmed, "kind:") {
-				kindValue := strings.TrimSpace(strings.TrimPrefix(trimmed, "kind:"))
+			} else if after, ok := strings.CutPrefix(trimmed, "kind:"); ok {
+				kindValue := strings.TrimSpace(after)
 				if kindValue != "" {
 					rootLevelKinds = append(rootLevelKinds, kindValue)
 				}

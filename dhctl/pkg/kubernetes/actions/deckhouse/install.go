@@ -81,14 +81,14 @@ func controllerDeploymentTask(
 ) actions.ManifestTask {
 	return actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return CreateDeckhouseDeploymentManifest(cfg)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(ctx, manifest.(*appsv1.Deployment), metav1.CreateOptions{})
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			preparedManifest, err := prepareDeckhouseDeploymentForUpdate(ctx, kubeCl, cfg, manifest.(*appsv1.Deployment))
 			if err != nil {
 				return err
@@ -132,7 +132,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 
 	return &actions.ManifestTask{
 		Name: `ConfigMap "deckhouse-bootstrap-lock"`,
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return &apiv1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ConfigMap",
@@ -144,7 +144,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 				},
 			}
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			cm := manifest.(*apiv1.ConfigMap)
 
 			_, err := kubeCl.
@@ -152,7 +152,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 				Create(ctx, cm, metav1.CreateOptions{})
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			return nil
 		},
 	}, nil
@@ -204,8 +204,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `Admin ClusterRole "cluster-admin"`,
-			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRole() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseAdminClusterRole() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoles().
 					Get(ctx, manifest.(*rbacv1.ClusterRole).GetName(), metav1.GetOptions{})
@@ -219,7 +219,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoles().
 					Update(ctx, manifest.(*rbacv1.ClusterRole), metav1.UpdateOptions{})
@@ -229,8 +229,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `ClusterRoleBinding "deckhouse"`,
-			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRoleBinding() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseAdminClusterRoleBinding() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoleBindings().
 					Get(ctx, manifest.(*rbacv1.ClusterRoleBinding).GetName(), metav1.GetOptions{})
@@ -244,7 +244,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoleBindings().
 					Update(ctx, manifest.(*rbacv1.ClusterRoleBinding), metav1.UpdateOptions{})
@@ -254,8 +254,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `ServiceAccount "deckhouse"`,
-			Manifest: func() interface{} { return manifests.DeckhouseServiceAccount() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseServiceAccount() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ServiceAccounts("d8-system").
 					Get(ctx, manifest.(*apiv1.ServiceAccount).GetName(), metav1.GetOptions{})
@@ -269,7 +269,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ServiceAccounts("d8-system").
 					Update(ctx, manifest.(*apiv1.ServiceAccount), metav1.UpdateOptions{})
@@ -279,7 +279,7 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name: `ConfigMap "install-data"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return &apiv1.ConfigMap{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ConfigMap",
@@ -294,7 +294,7 @@ func CreateDeckhouseManifests(
 					},
 				}
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				cm := manifest.(*apiv1.ConfigMap)
 
 				_, err := kubeCl.
@@ -303,7 +303,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				cm := manifest.(*apiv1.ConfigMap)
 
 				_, err := kubeCl.
@@ -394,8 +394,8 @@ func CreateDeckhouseManifests(
 	if len(cfg.InfrastructureState) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-terraform-state"`,
-			Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -411,7 +411,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -422,13 +422,13 @@ func CreateDeckhouseManifests(
 	}
 
 	for nodeName, tfState := range cfg.NodesInfrastructureState {
-		getManifest := func() interface{} {
+		getManifest := func() any {
 			return manifests.SecretWithNodeInfrastructureState(nodeName, "master", tfState, nil)
 		}
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -445,7 +445,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -458,8 +458,8 @@ func CreateDeckhouseManifests(
 	if len(cfg.ClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-configuration"`,
-			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -475,7 +475,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -488,12 +488,12 @@ func CreateDeckhouseManifests(
 	if len(cfg.ProviderClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "d8-provider-cluster-configuration"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.SecretWithProviderClusterConfig(
 					cfg.ProviderClusterConfig, cfg.CloudDiscovery,
 				)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -509,7 +509,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*apiv1.Secret))
 				if err != nil {
 					return err
@@ -532,10 +532,10 @@ func CreateDeckhouseManifests(
 	if len(cfg.StaticClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "d8-static-cluster-configuration"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.SecretWithStaticClusterConfig(cfg.StaticClusterConfig)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -551,7 +551,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*apiv1.Secret))
 				if err != nil {
 					return err
@@ -574,17 +574,17 @@ func CreateDeckhouseManifests(
 	if len(cfg.UUID) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `ConfigMap "d8-cluster-uuid"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.ClusterUUIDConfigMap(cfg.UUID)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).
 					Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).
 					Update(ctx, manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
@@ -601,10 +601,10 @@ func CreateDeckhouseManifests(
 	if cfg.KubeDNSAddress != "" {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Service "kube-dns"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.KubeDNSService(cfg.KubeDNSAddress)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Services("kube-system").
 					Get(ctx, manifest.(*apiv1.Service).GetName(), metav1.GetOptions{})
@@ -624,7 +624,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Services("kube-system").
 					Update(ctx, manifest.(*apiv1.Service), metav1.UpdateOptions{})

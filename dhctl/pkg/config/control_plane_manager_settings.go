@@ -18,6 +18,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -28,7 +29,7 @@ const controlPlaneManagerModuleName = "control-plane-manager"
 // ready for template rendering. Returns nil when the ModuleConfig is absent.
 // resourcesRequests.{cpu,memory} are replaced with milliCPU and memoryBytes (int64)
 // so templates can use them directly in arithmetic.
-func (m *MetaConfig) controlPlaneManagerSettings() (map[string]interface{}, error) {
+func (m *MetaConfig) controlPlaneManagerSettings() (map[string]any, error) {
 	var mc *ModuleConfig
 	for _, c := range m.ModuleConfigs {
 		if c.GetName() == controlPlaneManagerModuleName {
@@ -40,17 +41,15 @@ func (m *MetaConfig) controlPlaneManagerSettings() (map[string]interface{}, erro
 		return nil, nil
 	}
 
-	out := make(map[string]interface{}, len(mc.Spec.Settings))
-	for k, v := range mc.Spec.Settings {
-		out[k] = v
-	}
+	out := make(map[string]any, len(mc.Spec.Settings))
+	maps.Copy(out, mc.Spec.Settings)
 
-	if rr, ok := mc.Spec.Settings["resourcesRequests"].(map[string]interface{}); ok {
+	if rr, ok := mc.Spec.Settings["resourcesRequests"].(map[string]any); ok {
 		milliCPU, memoryBytes, err := parseResourceRequests(rr)
 		if err != nil {
 			return nil, fmt.Errorf("parse resourcesRequests: %w", err)
 		}
-		parsed := map[string]interface{}{}
+		parsed := map[string]any{}
 		if milliCPU != 0 {
 			parsed["milliCPU"] = milliCPU
 		}
@@ -63,7 +62,7 @@ func (m *MetaConfig) controlPlaneManagerSettings() (map[string]interface{}, erro
 	return out, nil
 }
 
-func parseResourceRequests(rr map[string]interface{}) (int64, int64, error) {
+func parseResourceRequests(rr map[string]any) (int64, int64, error) {
 	var milliCPU int64
 	var memoryBytes int64
 

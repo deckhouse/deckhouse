@@ -563,6 +563,8 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20695
     - summary: Cap package task retry backoff at 2h so chronically failing installs stop hammering.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20742
+    - summary: Enable NELM debug
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20662
 deckhouse-controller:
   features:
     - summary: Add Module package type support to PackageRepositoryOperation controller
@@ -798,6 +800,10 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20754
     - summary: Add prometheus module architecture section.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20756
+    - summary: Add observability module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20783
+    - summary: Update kubelet architecture section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20473
   fixes:
     - summary: Changing module descriptions
       pull_request: https://github.com/deckhouse/deckhouse/pull/18148
@@ -911,6 +917,8 @@ documentation:
       pull_request: https://github.com/deckhouse/deckhouse/pull/18835
     - summary: Allow only root crds paths for documentation builder.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20080
+    - summary: Add /app/hugo to docs-builder mount points
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20822
 extended-monitoring:
   fixes:
     - summary: fix typo in image-availability-exporter template
@@ -961,6 +969,9 @@ ingress-nginx:
     - summary: Nginx was updated to 1.30.2.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20200
       impact: All Ingress-nginx controller pods will be restarted.
+    - summary: Nginx is updated to 1.30.3.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20787
+      impact: All ingress-nginx pods will be restarted.
 istio:
   features:
     - summary: Added support for the `istio.io/rev:default` label.

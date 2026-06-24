@@ -45,7 +45,7 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 	errRes := &multierror.Error{}
 
 	checkers := make([]Checker, 0)
-	singleConstructors := make(map[string]interface{})
+	singleConstructors := make(map[string]any)
 
 	tryToAppendCheck := func(check Checker, err error) {
 		if err != nil {

@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -274,9 +275,7 @@ func cniBootstrapConfirmMessage(a *CNIBootstrapAnalysis) string {
 // key (overwrite, not deep merge).
 func resolveCNIBootstrapSettings(b cniBootstrap, providerCfg map[string]json.RawMessage) (map[string]any, error) {
 	settings := map[string]any{}
-	for k, v := range b.Config.Default {
-		settings[k] = v
-	}
+	maps.Copy(settings, b.Config.Default)
 
 	if len(b.Config.Rules) == 0 {
 		return settings, nil
@@ -299,9 +298,7 @@ func resolveCNIBootstrapSettings(b cniBootstrap, providerCfg map[string]json.Raw
 		if !cniBootstrapMatches(value, r.Match.Values) {
 			continue
 		}
-		for k, v := range r.Settings {
-			settings[k] = v
-		}
+		maps.Copy(settings, r.Settings)
 	}
 
 	return settings, nil

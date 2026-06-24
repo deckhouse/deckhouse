@@ -47,10 +47,10 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 
 	return actions.ManifestTask{
 		Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return mcUnstruct
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			if createMsg != "" {
 				log.InfoLn(createMsg)
 			}
@@ -77,7 +77,7 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			// fake client does not support cache
 			if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
 				// need for invalidate cache
@@ -122,7 +122,7 @@ func prepareModuleConfig(ctx context.Context, mc *config.ModuleConfig, res *Mani
 	}
 }
 
-func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, mcName string, value interface{}, field []string) error {
+func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, mcName string, value any, field []string) error {
 	log.DebugF("setSettingToModuleConfig for mc %s, field %v, value %v", mcName, field, value)
 
 	cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(ctx, mcName, metav1.GetOptions{})
@@ -185,7 +185,7 @@ func prepareGlobalMC(ctx context.Context, mc *config.ModuleConfig, res *Manifest
 
 	log.DebugLn("Found global mc. Trying to prepare...")
 
-	var httpsSettings map[string]interface{}
+	var httpsSettings map[string]any
 
 	modulesRaw, hasModules := mc.Spec.Settings["modules"]
 	if !hasModules {
@@ -193,7 +193,7 @@ func prepareGlobalMC(ctx context.Context, mc *config.ModuleConfig, res *Manifest
 		return
 	}
 
-	modules, ok := modulesRaw.(map[string]interface{})
+	modules, ok := modulesRaw.(map[string]any)
 	if !ok {
 		log.ErrorLn("modules is not a map in global mc. Finished preparing")
 		return
@@ -205,7 +205,7 @@ func prepareGlobalMC(ctx context.Context, mc *config.ModuleConfig, res *Manifest
 		return
 	}
 
-	httpsSettings, ok = HTTPSRaw.(map[string]interface{})
+	httpsSettings, ok = HTTPSRaw.(map[string]any)
 	if !ok {
 		log.ErrorLn("https is not a map in global mc. Finished preparing")
 		return

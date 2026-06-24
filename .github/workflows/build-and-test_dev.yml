@@ -68,6 +68,7 @@ jobs:
       labels: ${{ steps.pr_props.outputs.labels }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+      changes_node_controller: ${{ steps.changes.outputs.node_controller }}
 
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
@@ -272,6 +273,8 @@ jobs:
               - './ee/candi/**/openapi/*'
             not_markdown:
               - '!./**/*.md'
+            node_controller:
+              - './modules/040-node-manager/images/node-controller/**'
 
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
@@ -405,7 +408,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -526,15 +528,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -983,7 +984,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1104,15 +1104,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1278,7 +1277,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1399,15 +1397,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1573,7 +1570,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1694,15 +1690,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1868,7 +1863,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1989,15 +1983,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -2163,7 +2156,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -2284,15 +2276,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -2458,7 +2449,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -2579,15 +2569,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
-          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          VAULT_KEY: "dh-2025-aug-dev"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          VAULT_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -3045,6 +3034,140 @@ jobs:
           docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
           docker rm -f ${CONTAINER_ID}
     # </template: tests_before_build_template>
+
+  tests_node_controller:
+    if: ${{ needs.pull_request_info.outputs.changes_node_controller == 'true' }}
+    name: Tests node-controller
+    needs:
+      - git_info
+      - pull_request_info
+
+    # <template: tests_node_controller_envtest_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
+      - name: Run node-controller tests
+        env:
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:889c5d72b24fc14957a6c7c6dc3d4907598a3fb7ed9953f5ad8d2b999c0b3b37"
+        run: |
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull base golang image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          # Persistent on-runner caches, created up front so the bind mounts are owned by the runner
+          # user (Docker would otherwise create a missing host path as root, making it unwritable
+          # in-container):
+          #   envtest-assets                 - kubebuilder assets (etcd, kube-apiserver, kubectl) + setup-envtest + gotestfmt
+          #   go-build-cache-node-controller - GOCACHE, so test binaries are not recompiled from scratch every run
+          #   go-mod-cache-node-controller   - GOMODCACHE (dedicated, not the shared ~/go-pkg-cache which root
+          #                                    jobs populate with root-owned entries that break our non-root tool installs)
+          mkdir -p ~/envtest-assets ~/go-build-cache-node-controller ~/go-mod-cache-node-controller
+          # On-runner cache status — MISS means this run will download/recompile (debugging aid;
+          # emitted as GitHub annotations so a cold runner is easy to spot).
+          for entry in "envtest-assets|$HOME/envtest-assets/k8s" "setup-envtest|$HOME/envtest-assets/setup-envtest" "gotestfmt|$HOME/envtest-assets/gotestfmt" "go-build|$HOME/go-build-cache-node-controller" "go-mod|$HOME/go-mod-cache-node-controller"; do
+            name="${entry%%|*}"; path="${entry#*|}";
+            if [ -e "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ]; then
+              echo "::notice::cache HIT  ${name}";
+            else
+              echo "::warning::cache MISS ${name} — will download/recompile";
+            fi;
+          done
+          echo "⚓️ 🏎 [$(date -u)] Run node-controller tests (unit + envtest)..."
+          # GOFLAGS=-buildvcs=false: the tests don't need a git stamp, so go won't shell out to git —
+          # this lets us skip installing git into the image (saves ~30s/run) and the safe.directory dance.
+          CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-mod-cache-node-controller:/go/pkg -v ~/envtest-assets:/envtest-assets -v ~/go-build-cache-node-controller:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
+          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets GOTESTFMT_CI=github"
+          docker rm -f ${CONTAINER_ID}
+    # </template: tests_node_controller_envtest_template>
 
   tests_python_webhooks:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
