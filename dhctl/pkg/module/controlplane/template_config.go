@@ -41,7 +41,7 @@ type TemplateConfig struct {
 // to a flat map so templates can access all fields uniformly. VersionMap keys (k8s version
 // data, image digests, etc.) are merged into the root. Explicit fields win over VersionMap
 // keys with the same name.
-func (c *ControlPlaneTemplateConfig) ToMap() map[string]any {
+func (c *TemplateConfig) ToMap() map[string]any {
 	m := make(map[string]any)
 	maps.Copy(m, c.VersionMap)
 	m["runType"] = c.RunType
