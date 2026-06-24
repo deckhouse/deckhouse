@@ -69,5 +69,6 @@ search: monitoring overview, cluster monitoring, metrics collection, monitoring 
 - **мониторинг пользовательских приложений** — можно настроить сбор метрик с приложения, следуя [инструкции](app.html);
 - **создание собственных дашбордов** — можно добавлять специализированные дашборды,
   используя [ресурс GrafanaDashboardDefinition](/modules/prometheus/faq.html#как-добавить-дополнительные-дашборды-в-вашем-проекте);
-- **настройка собственных алертов** — можно задать новые правила уведомлений,
-  используя ресурсы [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) и [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) модуля `observability`.
+- **настройка собственных алертов** — можно задать новые правила уведомлений одним из двух способов:
+  - **рекомендуемый способ** — с помощью ресурсов [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) и [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) модуля `observability`;
+  - **устаревший способ** — с помощью ресурса [CustomPrometheusRules](/modules/prometheus/cr.html#customprometheusrules) модуля `prometheus`. Пример этого способа доступен [в документации модуля](/modules/prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
