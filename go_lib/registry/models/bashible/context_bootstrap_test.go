@@ -283,6 +283,7 @@ func TestContextBootstrap_ToMap(t *testing.T) {
 			expected: map[string]any{
 				"init":  initConfigMap,
 				"proxy": proxyConfigMap,
+				"seed":  false,
 			},
 		},
 		{
@@ -292,6 +293,7 @@ func TestContextBootstrap_ToMap(t *testing.T) {
 			},
 			expected: map[string]any{
 				"init": initConfigMap,
+				"seed": false,
 			},
 		},
 	}

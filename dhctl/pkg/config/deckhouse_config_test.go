@@ -20,6 +20,9 @@ import (
 	"testing"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 	"github.com/stretchr/testify/require"
 )
 
@@ -438,5 +441,71 @@ spec:
 
 		_, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
 		require.Error(t, err)
+	})
+}
+
+// TestCleanRegistryNoDeckhouseMCRegistryBlock verifies that a clean-install
+// registry config (Registry.Clean != nil) does NOT inject a "registry" key
+// into the deckhouse ModuleConfig's settings. The clean registry config is
+// applied independently as moduleConfig/registry; writing an empty/zero-valued
+// registry block into the deckhouse MC would fail schema validation because
+// registry.mode must be one of {Unmanaged,Direct,Proxy,Local}.
+//
+// The test constructs MetaConfig directly (bypassing YAML parsing) so it
+// works without the /deckhouse schema tree present (no Docker required).
+func TestCleanRegistryNoDeckhouseMCRegistryBlock(t *testing.T) {
+	enabled := true
+
+	// Build the clean-path registry Config directly, the same way prepareRegistry
+	// would when it finds a moduleConfig/registry in the parsed manifests.
+	cleanMC := &module_config.RegistryModuleConfig{
+		Enabled: &enabled,
+		Settings: module_config.CleanSettings{
+			Cache: module_config.CacheSettings{
+				Enabled:     true,
+				StorageSize: "20Gi",
+			},
+		},
+	}
+	registryConfig, err := registry.NewConfigProvider(nil, nil, cleanMC).Config(constant.CRIContainerdV1, true)
+	require.NoError(t, err)
+	require.NotNil(t, registryConfig.Clean, "sanity: clean path must set Registry.Clean")
+
+	// Test the guard at line ~194 of deckhouse_config.go:
+	//   if !metaConfig.Registry.LegacyMode && metaConfig.Registry.Clean == nil {
+	//       mc.Spec.Settings["registry"] = registry
+	//   }
+	// When a deckhouse MC already exists in ModuleConfigs, the bug would
+	// mutate it by writing mc.Spec.Settings["registry"] = {"mode":""}.
+	// With the fix, it must leave Settings unchanged.
+	t.Run("existing deckhouse MC: registry key must not be injected on clean path", func(t *testing.T) {
+		deckhouseMC := &ModuleConfig{}
+		deckhouseMC.Name = "deckhouse"
+		deckhouseMC.Spec.Enabled = &enabled
+		deckhouseMC.Spec.Version = 1
+		deckhouseMC.Spec.Settings = SettingsValues{
+			"bundle":   "Default",
+			"logLevel": "Info",
+		}
+
+		metaConfig := &MetaConfig{
+			Registry:      registryConfig,
+			ModuleConfigs: []*ModuleConfig{deckhouseMC},
+		}
+
+		installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, nil)
+		require.NoError(t, err)
+
+		var deckhouseCM *ModuleConfig
+		for _, mc := range installConfig.ModuleConfigs {
+			if mc.GetName() == "deckhouse" {
+				deckhouseCM = mc
+				break
+			}
+		}
+		require.NotNil(t, deckhouseCM, "deckhouse ModuleConfig must be present in result")
+		require.NotContains(t, deckhouseCM.Spec.Settings, "registry",
+			"deckhouse MC must NOT contain a 'registry' key on the clean path; "+
+				"the clean registry config lives in moduleConfig/registry, not in deckhouse MC settings")
 	})
 }

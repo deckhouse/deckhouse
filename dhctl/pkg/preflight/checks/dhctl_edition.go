@@ -90,7 +90,7 @@ func (c DhctlEditionCheck) Run(ctx context.Context) error {
 }
 
 func (c DhctlEditionCheck) deckhouseImageConfig(ctx context.Context) (*v1.ConfigFile, error) {
-	registry := c.MetaConfig.Registry.Settings.RemoteData
+	registry := c.MetaConfig.Registry.RemoteData()
 	image := c.Installer.GetRemoteImage(true)
 
 	ref, err := c.parseReference(image, string(registry.Scheme))

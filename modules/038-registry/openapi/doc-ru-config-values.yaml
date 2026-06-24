@@ -1,5 +1,42 @@
 type: object
 properties:
+  migrate:
+    description: |
+      Триггер для перехода (takeover) с устаревшей архитектуры registry на новую
+      архитектуру на основе агента. На кластере, всё ещё работающем на старой
+      архитектуре, установка значения `true` запускает переход (Legacy -> TakingOver -> New).
+      Возврат значения в `false` до завершения перехода откатывает его обратно.
+      Не действует на новой установке (уже New) или когда новая архитектура уже управляет кластером.
+
+      Переход автоматически переносит upstream и учётные данные старой конфигурации, но
+      включение кэша на мастерах — это явный выбор: если старый registry использовал кэш
+      (режим Proxy) или работал в air-gap (режим Local), необходимо также установить
+      `cache.enabled: true` (и соответствующие настройки `cache`) вместе с `migrate: true`.
+      Без этого у новых агентов не будет кэша, проверка готовности не пройдёт и переход
+      автоматически откатится в Legacy по истечении `migrateTimeout`. Для подключённого
+      режима Direct кэш не требуется.
+
+      Автоматический переход выполняется для старых кластеров в режимах Direct, Proxy и Local.
+      Для Proxy/Local старый per-node registry на хостовом порту уступает место агенту во
+      время перехода, а кэш на мастерах обслуживает образы на время короткого переключения
+      каждого узла — поэтому для этих режимов требуется `cache.enabled: true`.
+
+      Сценарий для air-gap Local: установите `cache.enabled: true`, оставаясь на старой
+      архитектуре, — новый кэш на мастерах запустится, и внутрикластерная задача скопирует
+      в него старый registry. Дождитесь завершения копирования (переход не перейдёт на новую
+      архитектуру, пока кэш не наполнен; для air-gap нет upstream для отката), затем установите
+      `migrate: true`. Если `migrate` установлен до завершения копирования, переход будет ждать
+      и автоматически откатится по истечении `migrateTimeout`, если не сможет завершиться.
+  migrateTimeout:
+    description: |
+      Максимальное время, в течение которого переход может оставаться в фазе TakingOver,
+      прежде чем автоматически откатиться в Legacy, если новый стек (агенты + кэш) не стал
+      готов. Строка длительности в формате Go (например, `30m`, `1h`).
+  cleanupAfter:
+    description: |
+      Время, в течение которого кластер должен оставаться в фазе New, прежде чем переход
+      автоматически перейдёт в CleanupPending и устаревшие ресурсы registry будут удалены.
+      Строка длительности в формате Go (по умолчанию 7 дней).
   whitelistSourceRanges:
     description: "Список адресов в формате CIDR, которым разрешено подключение к registry. Если не указано, то разрешено подключение с любых адресов."
   ingressClass:
@@ -34,3 +71,42 @@ properties:
               Имя секрета в пространстве имен `d8-system`, который будет использовать ingress registry.
 
               Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  upstream:
+    description: |
+      Реальный upstream registry для образов DKP (основной registry, перехватываемый на узлах как `registry.d8-system.svc:5001`).
+
+      Не указывайте для air-gap: тогда образы отдаются только из кеша на мастерах, наполняемого `d8 mirror push`.
+    properties:
+      host: {description: Хост upstream registry.}
+      path: {description: Префикс пути репозитория в upstream registry.}
+      scheme: {description: Схема обращения к upstream registry.}
+      ca: {description: Кастомный CA-сертификат (PEM) upstream registry.}
+      credentials:
+        description: Учётные данные для upstream registry.
+        properties:
+          username: {description: Имя пользователя.}
+          password: {description: Пароль.}
+          dockerCfg: {description: Docker config в base64; альтернатива username/password.}
+      mirrors:
+        description: HA-зеркала upstream registry.
+        items:
+          properties:
+            host: {description: Хост зеркала.}
+            scheme: {description: Схема обращения к зеркалу.}
+            ca: {description: Кастомный CA-сертификат (PEM) зеркала.}
+            credentials:
+              description: Учётные данные для зеркала.
+              properties:
+                username: {description: Имя пользователя.}
+                password: {description: Пароль.}
+                dockerCfg: {description: Docker config в base64; альтернатива username/password.}
+  cache:
+    description: Параметры кеширования основного registry.
+    properties:
+      enabled: {description: Включить кеширующий proxy на мастерах. При false агент форвардит напрямую в upstream.}
+      ttl: {description: TTL pull-through кеша (connected-режим).}
+      storageSize: {description: Размер персистентного хранилища кеша.}
+  additionalRegistries:
+    description: Дополнительные registry, маршрутизируемые/кешируемые через агент (например docker.io, внутренний registry).
+  auth:
+    description: Локальная аутентификация, отдаваемая агентом/кешем in-cluster-клиентам и containerd. В основном генерируется; здесь — опциональные overrides.

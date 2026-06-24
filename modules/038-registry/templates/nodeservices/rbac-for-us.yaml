@@ -1,3 +1,4 @@
+{{- if (include "registry.isPureLegacy" .) }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -64,3 +65,4 @@ roleRef:
   kind: ClusterRole
   name: d8:{{ .Chart.Name }}:nodeservices
   apiGroup: rbac.authorization.k8s.io
+{{- end }}

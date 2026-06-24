@@ -22,6 +22,12 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 )
 
+// FourModeConfigured reports whether the legacy four-mode registry block is set.
+// Fresh bootstrap rejects it (migration-only); converge tolerates it.
+func FourModeConfigured(s *module_config.DeckhouseSettings) bool {
+	return s != nil && s.Mode != ""
+}
+
 func errDuplicateConfig() error {
 	return fmt.Errorf("duplicate registry configuration detected: " +
 		"registry is configured in both 'initConfiguration.deckhouse' " +
@@ -52,16 +58,18 @@ func errNonStaticClusterMode(mode constant.ModeType) error {
 	)
 }
 
-func NewConfigProvider(init *init_config.Config, deckhouseSettings *module_config.DeckhouseSettings) *ConfigProvider {
+func NewConfigProvider(init *init_config.Config, deckhouseSettings *module_config.DeckhouseSettings, cleanMC *module_config.RegistryModuleConfig) *ConfigProvider {
 	return &ConfigProvider{
 		initConfig:        init,
 		deckhouseSettings: deckhouseSettings,
+		cleanMC:           cleanMC,
 	}
 }
 
 type ConfigProvider struct {
 	initConfig        *init_config.Config
 	deckhouseSettings *module_config.DeckhouseSettings
+	cleanMC           *module_config.RegistryModuleConfig
 }
 
 // IsLocal returns true when the bootstrap registry mode is Local.
@@ -73,6 +81,24 @@ func (p *ConfigProvider) IsLocal() (bool, error) {
 
 	case p.deckhouseSettings != nil:
 		return p.deckhouseSettings.Mode == constant.ModeLocal, nil
+
+	case p.cleanMC != nil:
+		// clean config is never legacy-Local; air-gap uses NeedsSeed
+		return false, nil
+	}
+	return false, nil
+}
+
+// NeedsSeed reports whether the on-node seed bootstrap is required (clean air-gap
+// or legacy Local). Used before the full Config is built.
+func (p *ConfigProvider) NeedsSeed() (bool, error) {
+	switch {
+	case p.initConfig != nil && p.deckhouseSettings != nil:
+		return false, errDuplicateConfig()
+	case p.deckhouseSettings != nil:
+		return p.deckhouseSettings.Mode == constant.ModeLocal, nil
+	case p.cleanMC != nil:
+		return p.cleanMC.Settings.Cache.Enabled && p.cleanMC.Settings.Upstream == nil && !p.cleanMC.IsUnmanaged(), nil
 	}
 	return false, nil
 }
@@ -90,6 +116,21 @@ func (p *ConfigProvider) RemoteData() (Data, error) {
 		if err := config.useDeckhouseSettings(*p.deckhouseSettings); err != nil {
 			return Data{}, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
+
+	case p.cleanMC != nil:
+		initImagesRepo := ""
+		if p.initConfig != nil {
+			rd, err := dataFromInitConfig(*p.initConfig)
+			if err != nil {
+				return Data{}, err
+			}
+			initImagesRepo = rd.ImagesRepo
+		}
+		clean, err := NewCleanModel(*p.cleanMC, initImagesRepo)
+		if err != nil {
+			return Data{}, err
+		}
+		return clean.RemoteData(), nil
 
 	case p.initConfig != nil:
 		if err := config.useInitConfig(*p.initConfig); err != nil {
@@ -131,6 +172,27 @@ func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic bool) (Con
 			return Config{}, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
 
+	case p.cleanMC != nil:
+		if !criSupported {
+			return Config{}, errUnsupportedCRI(defaultCRI)
+		}
+		if err := p.cleanMC.Settings.Validate(); err != nil {
+			return Config{}, fmt.Errorf("validate registry settings from 'moduleConfig/registry': %w", err)
+		}
+		initImagesRepo := ""
+		if p.initConfig != nil {
+			rd, err := dataFromInitConfig(*p.initConfig)
+			if err != nil {
+				return Config{}, err
+			}
+			initImagesRepo = rd.ImagesRepo
+		}
+		clean, err := NewCleanModel(*p.cleanMC, initImagesRepo)
+		if err != nil {
+			return Config{}, fmt.Errorf("build registry config from 'moduleConfig/registry': %w", err)
+		}
+		config = Config{Clean: clean}
+
 	case p.initConfig != nil:
 		if err := config.useInitConfig(*p.initConfig); err != nil {
 			return Config{}, fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
@@ -149,6 +211,7 @@ type Config struct {
 	Settings          ModeSettings
 	DeckhouseSettings module_config.DeckhouseSettings
 	LegacyMode        bool
+	Clean             *CleanModel
 }
 
 // useDefault configures the registry with default CE settings.
@@ -230,12 +293,62 @@ func (c *Config) Process(deckhouseSettings module_config.DeckhouseSettings, lega
 }
 
 func (c *Config) IsLocal() bool {
+	if c.Clean != nil {
+		return false
+	}
 	return c.Settings.Mode == constant.ModeLocal
 }
 
+// dataFromInitConfig extracts the remote Data (ImagesRepo) from an init_config.Config.
+// Used by the clean branch when initConfig is present for the unmanaged case.
+func dataFromInitConfig(ic init_config.Config) (Data, error) {
+	var tmp Config
+	if err := tmp.useInitConfig(ic); err != nil {
+		return Data{}, err
+	}
+	return tmp.Settings.RemoteData, nil
+}
+
 // Manifest creates a ManifestBuilder instance for generating configuration manifests.
-func (c *Config) Manifest() *ManifestBuilder {
+func (c *Config) Manifest() ManifestBuilder {
+	if c.Clean != nil {
+		return c.Clean
+	}
 	return newManifestBuilder(c.Settings.ToModel(), c.LegacyMode)
+}
+
+// RemoteData returns the pull-from registry, dispatching legacy/clean.
+func (c *Config) RemoteData() Data {
+	if c.Clean != nil {
+		return c.Clean.RemoteData()
+	}
+	return c.Settings.RemoteData
+}
+
+// InClusterImagesRepo returns the in-cluster images repository address,
+// dispatching between the clean and legacy paths.
+func (c *Config) InClusterImagesRepo() string {
+	if c.Clean != nil {
+		return c.Clean.InClusterImagesRepo
+	}
+	return c.Settings.ToModel().InClusterImagesRepo
+}
+
+// RemoteImagesRepo returns the remote images repository address,
+// dispatching between the clean and legacy paths.
+func (c *Config) RemoteImagesRepo() string {
+	if c.Clean != nil {
+		return c.Clean.RemoteData().ImagesRepo
+	}
+	return c.Settings.ToModel().RemoteImagesRepo
+}
+
+// NeedsSeed reports whether the new-arch bootstrap must stand up the on-node seed.
+func (c *Config) NeedsSeed() bool {
+	if c.Clean != nil {
+		return c.Clean.NeedsSeed()
+	}
+	return c.Settings.Mode == constant.ModeLocal
 }
 
 // DeepCopyInto copies the receiver into out.
@@ -243,6 +356,14 @@ func (c *Config) DeepCopyInto(out *Config) {
 	*out = *c
 	c.Settings.DeepCopyInto(&out.Settings)
 	c.DeckhouseSettings.DeepCopyInto(&out.DeckhouseSettings)
+	if c.Clean != nil {
+		cleanCopy := *c.Clean
+		if c.Clean.Upstream != nil {
+			upstreamCopy := *c.Clean.Upstream
+			cleanCopy.Upstream = &upstreamCopy
+		}
+		out.Clean = &cleanCopy
+	}
 }
 
 // DeepCopy returns a deep copy of the receiver.

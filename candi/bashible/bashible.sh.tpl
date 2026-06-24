@@ -349,7 +349,6 @@ function main() {
   export BASHIBLE_INITIALIZED_FILE="$BOOTSTRAP_DIR/bashible-fully-initialized"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
-  export REGISTRY_MODULE_IGNITER_DIR="$TMPDIR/registry_module_igniter"
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
   export BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages" # Deprecated, backward compatibility

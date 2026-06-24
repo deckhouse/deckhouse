@@ -223,6 +223,19 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
+	// Registry mc (clean model)
+	var cleanMC *moduleconfig.RegistryModuleConfig
+	if mc := m.getModuleConfig("registry"); mc != nil {
+		rawJSON, err := json.Marshal(mc)
+		if err != nil {
+			return err
+		}
+		cleanMC, err = registry.ParseJSONRegistryMC(rawJSON)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Default CRI
 	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
 		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
@@ -233,6 +246,7 @@ func (m *MetaConfig) prepareRegistry() error {
 	registry, err := registry.NewConfigProvider(
 		initConfig,
 		deckhouseSettings,
+		cleanMC,
 	).Config(
 		defaultCRI,
 		m.IsStatic(),

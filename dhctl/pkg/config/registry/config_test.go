@@ -463,7 +463,7 @@ func TestConfigProvider_IsLocal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isLocal, err := NewConfigProvider(tt.input.initConfig, tt.input.deckhouseSettings).IsLocal()
+			isLocal, err := NewConfigProvider(tt.input.initConfig, tt.input.deckhouseSettings, nil).IsLocal()
 
 			if tt.output.err {
 				require.Error(t, err)
@@ -546,7 +546,7 @@ func TestConfigProvider_RemoteData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := NewConfigProvider(tt.input.initConfig, tt.input.deckhouseSettings).RemoteData()
+			data, err := NewConfigProvider(tt.input.initConfig, tt.input.deckhouseSettings, nil).RemoteData()
 
 			if tt.output.err {
 				require.Error(t, err)
@@ -714,6 +714,7 @@ func TestConfigProvider_Config(t *testing.T) {
 			config, err := NewConfigProvider(
 				tt.input.initConfig,
 				tt.input.deckhouseSettings,
+				nil,
 			).Config(
 				tt.input.defaultCRI,
 				tt.input.isStatic,
@@ -729,5 +730,112 @@ func TestConfigProvider_Config(t *testing.T) {
 			require.Equal(t, tt.output.mode, config.Settings.Mode)
 			require.Equal(t, tt.output.legacyMode, config.LegacyMode)
 		})
+	}
+}
+
+func TestFourModePresentRejectsFreshInstall(t *testing.T) {
+	legacy := &module_config.DeckhouseSettings{Mode: constant.ModeDirect, Direct: &module_config.RegistrySettings{ImagesRepo: "r.io/x", Scheme: constant.SchemeHTTPS}}
+	if !FourModeConfigured(legacy) {
+		t.Fatal("FourModeConfigured must be true for a present four-mode block")
+	}
+	if FourModeConfigured(nil) {
+		t.Fatal("FourModeConfigured must be false for nil")
+	}
+}
+
+func TestConfigRoutingCleanWhenNoLegacy(t *testing.T) {
+	tr := true
+	clean := &module_config.RegistryModuleConfig{
+		Enabled:  &tr,
+		Settings: module_config.CleanSettings{Cache: module_config.CacheSettings{Enabled: true, StorageSize: "20Gi"}},
+	}
+	cfg, err := NewConfigProvider(nil, nil, clean).Config(constant.CRIContainerdV1, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Clean == nil {
+		t.Fatal("expected clean path")
+	}
+	if cfg.IsLocal() {
+		t.Fatal("clean config IsLocal must be false")
+	}
+	if !cfg.NeedsSeed() {
+		t.Fatal("air-gap clean must need seed")
+	}
+}
+
+func TestConfigRoutingLegacyWins(t *testing.T) {
+	tr := true
+	clean := &module_config.RegistryModuleConfig{Enabled: &tr, Settings: module_config.CleanSettings{Cache: module_config.CacheSettings{Enabled: true, StorageSize: "20Gi"}}}
+	legacy := &module_config.DeckhouseSettings{Mode: constant.ModeDirect, Direct: &module_config.RegistrySettings{ImagesRepo: "r.io/x", Scheme: constant.SchemeHTTPS}}
+	cfg, err := NewConfigProvider(nil, legacy, clean).Config(constant.CRIContainerdV1, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Clean != nil {
+		t.Fatal("legacy must win when both present")
+	}
+	if cfg.RemoteData().ImagesRepo == "" {
+		t.Fatal("legacy RemoteData must be populated (converge safety)")
+	}
+}
+
+// Converge safety: a legacy four-mode cluster (converge path) must still yield a
+// populated RemoteData — fsprovider/preflight depend on it.
+func TestConvergeSafetyLegacyRemoteDataPopulated(t *testing.T) {
+	for _, mode := range []constant.ModeType{constant.ModeDirect, constant.ModeProxy, constant.ModeUnmanaged} {
+		legacy := module_config.New(mode)
+		// fill the active section's imagesRepo so RemoteData is non-empty
+		switch mode {
+		case constant.ModeDirect:
+			legacy.Direct.ImagesRepo = "r.io/x"
+		case constant.ModeProxy:
+			legacy.Proxy.ImagesRepo = "proxy.io/x"
+		case constant.ModeUnmanaged:
+			legacy.Unmanaged.ImagesRepo = "ext.io/x"
+		}
+		cfg, err := NewConfigProvider(nil, &legacy, nil).Config(constant.CRIContainerdV1, true)
+		if err != nil {
+			t.Fatalf("%s: %v", mode, err)
+		}
+		if cfg.Clean != nil {
+			t.Fatalf("%s: legacy must not route clean", mode)
+		}
+		if cfg.RemoteData().ImagesRepo == "" {
+			t.Fatalf("%s: RemoteData empty — converge would break", mode)
+		}
+	}
+}
+
+func TestConfigRoutingCleanConnected(t *testing.T) {
+	tr := true
+	clean := &module_config.RegistryModuleConfig{
+		Enabled: &tr,
+		Settings: module_config.CleanSettings{
+			Cache:    module_config.CacheSettings{Enabled: true, StorageSize: "20Gi"},
+			Upstream: &module_config.UpstreamSettings{Host: "r.io", Path: "/d/ee", Scheme: constant.SchemeHTTPS},
+		},
+	}
+	cfg, err := NewConfigProvider(nil, nil, clean).Config(constant.CRIContainerdV1, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.NeedsSeed() {
+		t.Fatal("connected+cache must not need seed")
+	}
+	if cfg.RemoteData().ImagesRepo != "r.io/d/ee" {
+		t.Fatalf("connected RemoteData wrong: %q", cfg.RemoteData().ImagesRepo)
+	}
+}
+
+func TestConfigRoutingCleanInvalidMatrix(t *testing.T) {
+	tr := true
+	clean := &module_config.RegistryModuleConfig{
+		Enabled:  &tr,
+		Settings: module_config.CleanSettings{Cache: module_config.CacheSettings{Enabled: false}}, // no cache, no upstream
+	}
+	_, err := NewConfigProvider(nil, nil, clean).Config(constant.CRIContainerdV1, true)
+	if err == nil {
+		t.Fatal("invalid matrix must error")
 	}
 }

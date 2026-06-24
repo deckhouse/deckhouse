@@ -1,0 +1,19 @@
+{{- if (include "registry.renderNew" .) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry" "component" "registry-agent")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  internalTrafficPolicy: Local
+  selector:
+    app: registry-agent
+  ports:
+    - name: registry
+      port: 5001
+      targetPort: 5001
+      protocol: TCP
+{{- end }}

@@ -28,7 +28,7 @@ import (
 )
 
 func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
-	registry := metaConfig.Registry.Settings.RemoteData
+	registry := metaConfig.Registry.RemoteData()
 	return registryutil.NewRegistryClient(string(registry.Scheme), registry.CA)
 }
 
@@ -62,7 +62,7 @@ func (c registryAuthCheck) Run(ctx context.Context) error {
 		return err
 	}
 
-	authData := c.MetaConfig.Registry.Settings.RemoteData.AuthBase64()
+	authData := c.MetaConfig.Registry.RemoteData().AuthBase64()
 
 	if err := checkBasicRegistryAuth(ctx, c.MetaConfig, authData, client); err == nil {
 		return nil
@@ -74,7 +74,7 @@ func (c registryAuthCheck) Run(ctx context.Context) error {
 }
 
 func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig, authData string) (*http.Request, error) {
-	registry := metaConfig.Registry.Settings.RemoteData
+	registry := metaConfig.Registry.RemoteData()
 	registryAddress, _ := registry.AddressAndPath()
 
 	registryURL := &url.URL{
@@ -95,7 +95,7 @@ func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig, 
 }
 
 func prepareAuthRequest(ctx context.Context, authURL, registryService, authData string, metaConfig *config.MetaConfig) (*http.Request, error) {
-	registry := metaConfig.Registry.Settings.RemoteData
+	registry := metaConfig.Registry.RemoteData()
 	_, registryPath := registry.AddressAndPath()
 
 	authURLValues := url.Values{}

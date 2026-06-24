@@ -3,11 +3,6 @@ image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
 final: false
 git:
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /src/scripts
-    stageDependencies:
-      install:
-        - '**/*'
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/app
     to:  /src/app
     stageDependencies:
@@ -36,22 +31,24 @@ shell:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /syncer ./cmd/syncer
-    - chown 64535:64535 /syncer
-    - chmod 0755 /syncer
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /cache-agent ./cmd/cache-agent
+    - chown 64535:64535 /syncer /cache-agent
+    - chmod 0755 /syncer /cache-agent
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-    add: /src/scripts
-    to: /
-    includePaths:
-    - install
-    - uninstall
-    before: setup
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /syncer
     to: /syncer
+    before: setup
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /cache-agent
+    to: /cache-agent
+    before: setup
+  - image: "{{ $.ModuleName }}/docker-distribution"
+    add: /registry
+    to: /registry
     before: setup
 imageSpec:
   config:

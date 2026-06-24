@@ -1,0 +1,34 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Желаемое состояние data plane модуля registry, потребляемое агентом на узлах.
+            Рендерится модулем из ModuleConfig; не предназначено для ручного редактирования.
+          properties:
+            spec:
+              properties:
+                registries:
+                  description: Registry, перехватываемые на узлах и проксируемые через агент.
+                  items:
+                    properties:
+                      host:
+                        description: Виртуальный адрес, перехватываемый на узлах (containerd registry.d/<host>).
+                      source:
+                        description: Источник записи (Primary, Additional).
+                      upstream:
+                        description: Реальный upstream registry. Отсутствие означает air-gap (отдаётся только из кеша).
+                        properties:
+                          host: {description: Хост upstream registry.}
+                          path: {description: Префикс репозитория.}
+                          scheme: {description: Схема обращения (HTTP или HTTPS).}
+                          ca: {description: Кастомный CA upstream registry.}
+                          credentials: {description: Учётные данные для upstream registry.}
+                          mirrors: {description: HA-зеркала upstream registry.}
+                      cache:
+                        description: Параметры кеширования для записи.
+                auth:
+                  description: Локальная аутентификация, отдаваемая агентом/кешем in-cluster-клиентам и containerd.
+            status:
+              description: Фактическое состояние.

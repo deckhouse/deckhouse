@@ -1,0 +1,78 @@
+{{- /* Air-gap Local store sync: copy the legacy registry into the new cache
+       BEFORE the flip. Renders while the legacy registry (registry.d8-system.svc
+       :5001 -> nodeservices) still serves AND the cache is up (cache.enabled).
+       Kept across Legacy->TakingOver so its terminal status survives. */ -}}
+{{- $st := ((.Values.registry.internal.orchestrator).state) }}
+{{- $isLegacyLocal := and $st (eq ($st.mode | default "") "Local") }}
+{{- $ca := dig "internal" "pki" "ca" "cert" "" .Values.registry }}
+{{- $phase := (.Values.registry.internal.takeover).phase | default "Legacy" }}
+{{- /* Only while the legacy source still exists: Legacy and TakingOver. NOT New
+       or CleanupPending — there the new arch is in control and the legacy
+       registry (the sync source) is gone (IsNewArchControl covers both). */ -}}
+{{- $syncPhase := or (eq $phase "Legacy") (eq $phase "TakingOver") }}
+{{- if and .Values.registry.cache.enabled $isLegacyLocal $ca $syncPhase }}
+{{-   $ro := "" }}{{- $roPass := "" }}{{- $rw := "" }}{{- $rwPass := "" }}
+{{-   range (.Values.registry.internal.pki).users }}
+{{-     if eq .role "ReadOnly" }}{{- $ro = .name }}{{- $roPass = .password }}{{- end }}
+{{-     if eq .role "ReadWrite" }}{{- $rw = .name }}{{- $rwPass = .password }}{{- end }}
+{{-   end }}
+{{-   $cfg := dict "once" true "ca" "/ca/ca.crt" "local" "registry-cache-leader.d8-system.svc:5001" "remote" (list "registry.d8-system.svc:5001") "users" (dict "puller" (dict "name" $ro "password" $roPass) "pusher" (dict "name" $rw "password" $rwPass)) }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-cache-store-sync
+  namespace: d8-system
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-cache-store-sync")) | nindent 2 }}
+type: Opaque
+stringData:
+  config.yaml: |
+{{ $cfg | toYaml | indent 4 }}
+  ca.crt: |
+{{ $ca | indent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: registry-cache-store-sync
+  namespace: d8-system
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-cache-store-sync")) | nindent 2 }}
+spec:
+  backoffLimit: 20
+  template:
+    metadata:
+      labels:
+        app: registry-cache-store-sync
+    spec:
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      restartPolicy: OnFailure
+      containers:
+      - name: mirrorer
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "mirrorer") }}
+        command: ["/mirrorer", "/config/config.yaml"]
+        volumeMounts:
+        - { name: config, mountPath: /config, readOnly: true }
+        - { name: ca, mountPath: /ca, readOnly: true }
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+      volumes:
+      - name: config
+        secret:
+          secretName: registry-cache-store-sync
+          items:
+          - { key: config.yaml, path: config.yaml }
+      - name: ca
+        secret:
+          secretName: registry-cache-store-sync
+          items:
+          - { key: ca.crt, path: ca.crt }
+{{- end }}

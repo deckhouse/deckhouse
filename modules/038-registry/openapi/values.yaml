@@ -22,6 +22,110 @@ properties:
             x-examples:
               - plainstring
 
+      cache:
+        type: object
+        default: {}
+        properties:
+          enabled:
+            type: boolean
+            default: false
+          upstream:
+            type: object
+            properties:
+              scheme:
+                type: string
+              host:
+                type: string
+              path:
+                type: string
+              username:
+                type: string
+              password:
+                type: string
+              hasCA:
+                type: boolean
+              ttl:
+                type: string
+      pki:
+        type: object
+        default: {}
+        properties:
+          hash:
+            type: string
+          httpSecret:
+            type: string
+          ca: &pkiCertKey
+            type: object
+            properties:
+              cert:
+                type: string
+              key:
+                type: string
+          token:
+            <<: *pkiCertKey
+          agent:
+            <<: *pkiCertKey
+          distribution:
+            <<: *pkiCertKey
+          auth:
+            <<: *pkiCertKey
+          users:
+            type: array
+            default: []
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                password:
+                  type: string
+                passwordHash:
+                  type: string
+                role:
+                  type: string
+                  enum: [ReadOnly, ReadWrite]
+      takeover:
+        type: object
+        default: {}
+        description: |-
+          Migration phase between the legacy registry arch and the new arch.
+          Written by hooks/takeover; gates in-place-reworked templates.
+        properties:
+          phase:
+            type: string
+            enum: ["Legacy", "TakingOver", "New", "CleanupPending"]
+            description: |-
+              Legacy: old orchestrator in control. New: new arch in control.
+              TakingOver/CleanupPending: transitional (set by 7b / cleanup).
+          flippedAt:
+            type: string
+            description: |-
+              RFC3339 timestamp at which the cluster entered the New phase. Empty
+              until the flip completes.
+          takingOverStartedAt:
+            type: string
+            description: RFC3339 time the cluster entered TakingOver (drives migrateTimeout).
+          storeSynced:
+            type: boolean
+            description: |-
+              True once the air-gap Local store-sync Job has copied the legacy
+              registry into the new cache. Gates TakingOver -> New for air-gap.
+          derived:
+            type: object
+            default: {}
+            description: |-
+              New-arch config auto-translated from the legacy registry-config during
+              the takeover (written by hooks/takeover). The RegistryConfig CR prefers
+              this over the operator's upstream/cache while migrating.
+            properties:
+              present:
+                type: boolean
+              upstream:
+                type: object
+                additionalProperties: true
+              cache:
+                type: object
+                additionalProperties: true
       orchestrator:
         type: object
         default: {}

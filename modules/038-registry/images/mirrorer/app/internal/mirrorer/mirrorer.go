@@ -18,6 +18,7 @@ package mirrorer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -98,6 +99,27 @@ func New(logger *slog.Logger, cfg config.Config) (Mirrorer, error) {
 	ret.log = logger.With("component", "mirrorer")
 
 	return ret, nil
+}
+
+// RunOnce runs every configured syncer exactly once and returns the joined error
+// of any that failed. Unlike Run (which loops and swallows per-cycle errors for
+// the continuous cache-agent path), RunOnce is for one-shot Jobs: a non-nil
+// return makes the Job fail and retry, so it only succeeds on a complete copy.
+func (m *mirrorer) RunOnce(ctx context.Context) error {
+	var errs []error
+	for _, sync := range m.syncers {
+		if err := sync.Sync(ctx); err != nil {
+			m.log.Error("Sync error", "error", err)
+			errs = append(errs, err)
+			continue
+		}
+		if n := sync.Failed(); n > 0 {
+			err := fmt.Errorf("%d tag(s) failed to sync (src=%s dst=%s)", n, sync.Src, sync.Dst)
+			m.log.Error("incomplete sync", "error", err)
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func (m *mirrorer) Run(ctx context.Context) error {

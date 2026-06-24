@@ -1,0 +1,128 @@
+{{- define "registry_cache_distribution_resources" }}
+cpu: 50m
+memory: 128Mi
+{{- end }}
+{{- define "registry_cache_auth_resources" }}
+cpu: 25m
+memory: 64Mi
+{{- end }}
+{{- define "registry_cache_agent_resources" }}
+cpu: 25m
+memory: 64Mi
+{{- end }}
+{{- if .Values.registry.cache.enabled }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: registry-cache
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-cache")) | nindent 2 }}
+spec:
+  # One node-local cache per master. DaemonSet (not StatefulSet): leader via Lease,
+  # followers mirror from the leader Service, store is a node-local hostPath — no
+  # stable identity / PVC needed.
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: registry-cache
+  template:
+    metadata:
+      labels:
+        app: registry-cache
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      imagePullSecrets:
+        - name: deckhouse-registry
+      serviceAccountName: registry-cache
+      containers:
+        - name: distribution
+          image: {{ include "helm_lib_module_image" (list . "dockerDistribution") }}
+          args: [ "serve", "/config/config.yaml" ]
+          ports:
+            - { name: distribution, containerPort: 5001 }
+            - { name: debug, containerPort: 5002 }
+          livenessProbe:
+            httpGet: { path: /, port: distribution, scheme: HTTPS }
+          readinessProbe:
+            httpGet: { path: /, port: distribution, scheme: HTTPS }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: distribution-config, mountPath: /config }
+            - { name: pki, mountPath: /pki }
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 14 }}
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "registry_cache_distribution_resources" . | nindent 14 }}
+            {{- end }}
+        - name: auth
+          image: {{ include "helm_lib_module_image" (list . "dockerAuth") }}
+          args: [ "-logtostderr", "/config/config.yaml" ]
+          ports:
+            - { name: auth, containerPort: 5051 }
+          # tcpSocket (not httpGet): docker-auth has no 2xx health path, and an
+          # httpGet with host:127.0.0.1 dials the node loopback (the agent), not this
+          # container. A plain TCP check on the pod IP confirms auth is listening.
+          livenessProbe:
+            tcpSocket: { port: auth }
+          readinessProbe:
+            tcpSocket: { port: auth }
+          volumeMounts:
+            - { name: auth-config, mountPath: /config }
+            - { name: pki, mountPath: /pki }
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 14 }}
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "registry_cache_auth_resources" . | nindent 14 }}
+            {{- end }}
+        - name: cache-agent
+          image: {{ include "helm_lib_module_image" (list . "syncer") }}
+          command: [ "/cache-agent" ]
+          env:
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: AGENT_CONFIG
+              value: /agent/config.yaml
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: distribution-config, mountPath: /config }
+            - { name: pki, mountPath: /pki }
+            - { name: agent-config, mountPath: /agent }
+          resources:
+            requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 14 }}
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "registry_cache_agent_resources" . | nindent 14 }}
+            {{- end }}
+      volumes:
+        - name: pki
+          secret: { secretName: registry-cache-pki }
+        - name: distribution-config
+          secret:
+            secretName: registry-cache-config
+            items:
+              - { key: distribution-config.yaml, path: config.yaml }
+        - name: auth-config
+          secret:
+            secretName: registry-cache-config
+            items:
+              - { key: auth-config.yaml, path: config.yaml }
+        - name: agent-config
+          secret: { secretName: registry-cache-agent }
+        # Node-local hostPath store (not a PVC): rebuildable mirror, survives pod
+        # recreate in place. The air-gap bootstrap fills this same dir on the first
+        # master before the DaemonSet adopts it. Keep the path in sync with the
+        # dhctl bootstrap cache (bootstrap_cache.go).
+        - name: data
+          hostPath:
+            path: /var/lib/deckhouse/registry-cache
+            type: DirectoryOrCreate
+{{- end }}

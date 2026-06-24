@@ -388,6 +388,7 @@ func TestContextToMap(t *testing.T) {
 								"ca":       "---cert---",
 								"ttl":      "5m",
 							},
+							"seed": false,
 						},
 						"registryModuleEnable": true,
 						"mode":                 "unmanaged",
@@ -422,5 +423,13 @@ func TestContextToMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(t, tt.result.toMap, tt.input.ToMap())
 		})
+	}
+}
+
+func TestContextBootstrapSeedToMap(t *testing.T) {
+	cb := ContextBootstrap{Seed: true}
+	m := cb.ToMap()
+	if m["seed"] != true {
+		t.Fatalf("bootstrap ToMap missing seed=true, got %v", m["seed"])
 	}
 }

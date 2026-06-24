@@ -1,0 +1,50 @@
+{{- if .Values.registry.cache.enabled }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: registry-cache
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-cache")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: registry-cache
+  updatePolicy:
+    updateMode: "Recreate"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: distribution
+      minAllowed:
+        {{- include "registry_cache_distribution_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 500m
+        memory: 512Mi
+    - containerName: auth
+      minAllowed:
+        {{- include "registry_cache_auth_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 128Mi
+    - containerName: cache-agent
+      minAllowed:
+        {{- include "registry_cache_agent_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 128Mi
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: registry-cache
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-cache")) | nindent 2 }}
+spec:
+  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  selector:
+    matchLabels:
+      app: registry-cache
+{{- end }}

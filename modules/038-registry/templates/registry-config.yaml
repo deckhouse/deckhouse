@@ -1,0 +1,36 @@
+{{- $entries := list -}}
+
+{{- /* Primary DKP registry entry, fixed virtual host */ -}}
+{{- $primary := dict "host" "registry.d8-system.svc:5001" "source" "Primary" -}}
+{{- /* Prefer the takeover-derived upstream/cache (auto-translated from the
+       legacy registry-config) over the operator's config while migrating. */ -}}
+{{- $derived := dict -}}
+{{- with (.Values.registry.internal).takeover -}}{{- with .derived -}}{{- $derived = . -}}{{- end -}}{{- end -}}
+{{- if $derived.present -}}
+  {{- with $derived.upstream }}{{- $primary = set $primary "upstream" . -}}{{- end }}
+  {{- with $derived.cache }}{{- $primary = set $primary "cache" . -}}{{- end }}
+{{- else -}}
+  {{- with .Values.registry.upstream }}{{- $primary = set $primary "upstream" . -}}{{- end }}
+  {{- with .Values.registry.cache }}{{- $primary = set $primary "cache" . -}}{{- end }}
+{{- end }}
+{{- $entries = append $entries $primary -}}
+
+{{- /* User-defined additional registries */ -}}
+{{- range .Values.registry.additionalRegistries }}
+  {{- $e := deepCopy . -}}
+  {{- $_ := set $e "source" "Additional" -}}
+  {{- $entries = append $entries $e -}}
+{{- end }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryConfig
+metadata:
+  name: registry
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  registries:
+    {{- $entries | toYaml | nindent 4 }}
+  {{- with .Values.registry.auth }}
+  auth:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}

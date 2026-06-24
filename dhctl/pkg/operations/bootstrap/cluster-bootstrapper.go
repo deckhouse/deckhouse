@@ -26,6 +26,7 @@ import (
 	"github.com/pterm/pterm"
 	otattribute "go.opentelemetry.io/otel/attribute"
 
+	registryconst "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -33,6 +34,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	configregistry "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -258,6 +260,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		b.bootstrapBaseInfra,
 		b.bootstrapPostInfraPreflights,
 		b.bootstrapKubernetes,
+		b.bootstrapRegistry,
 		b.bootstrapDeckhouse,
 		b.bootstrapAdditionalNodes,
 		b.bootstrapCreateResources,
@@ -299,6 +302,10 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	}
 
 	log.DebugLn("MetaConfig was loaded")
+
+	if configregistry.FourModeConfigured(&metaConfig.Registry.DeckhouseSettings) && metaConfig.Registry.Clean == nil {
+		return fmt.Errorf("fresh install: configure the registry via moduleConfig/registry (settings.cache / settings.upstream); the four-mode moduleConfig/deckhouse.settings.registry is supported only for migrating existing clusters")
+	}
 
 	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
@@ -688,6 +695,59 @@ func (b *ClusterBootstrapper) bootstrapKubernetes(ctx context.Context, bctx *boo
 	bashibleBundleSpan.End()
 
 	return nil
+}
+
+// bootstrapRegistry brings up and fills the on-master bootstrap cache between
+// Kubernetes and Deckhouse, so Deckhouse pulls from the filled cache. Air-gap
+// (NeedsSeed) only; no-op otherwise.
+func (b *ClusterBootstrapper) bootstrapRegistry(ctx context.Context, bctx *bootstrapContext) error {
+	if !bctx.deckhouseInstallConfig.Registry.NeedsSeed() {
+		return nil
+	}
+
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallRegistryPhase, false, bctx.stateCache, nil); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
+	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.Registry")
+	defer span.End()
+
+	return log.ProcessCtx(ctx, "bootstrap", "Set up registry cache", func(ctx context.Context) error {
+		nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+		if err != nil {
+			return fmt.Errorf("get NodeInterface for registry cache: %w", err)
+		}
+
+		// Re-raise the bundle-registry reverse tunnel (the bashible-phase one is
+		// gone); the fill reaches the bundle at 127.0.0.1:5511 over it.
+		tunnelStop, err := registry.InitTunnel(ctx, registry.TunnelParams{
+			MetaConfig: bctx.metaConfig,
+			Node:       nodeInterface,
+			Logger:     b.loggerProvider(),
+			GlobalOpts: &b.Options.Global,
+		})
+		if err != nil {
+			return fmt.Errorf("raise bundle registry tunnel: %w", err)
+		}
+		defer tunnelStop()
+
+		kubeCl, err := b.KubeProvider.Client(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client for registry cache: %w", err)
+		}
+
+		distDigest, _ := bctx.metaConfig.Images["registry"]["dockerDistribution"].(string)
+		syncerDigest, _ := bctx.metaConfig.Images["registry"]["syncer"].(string)
+		if distDigest == "" || syncerDigest == "" {
+			return fmt.Errorf("registry image digests not found (dockerDistribution=%q syncer=%q)", distDigest, syncerDigest)
+		}
+		distImage := fmt.Sprintf("%s@%s", registryconst.HostWithPath, distDigest)
+		syncerImage := fmt.Sprintf("%s@%s", registryconst.HostWithPath, syncerDigest)
+
+		return registry.SetupBootstrapCache(ctx, &client.KubernetesClient{KubeClient: kubeCl}, distImage, syncerImage)
+	})
 }
 
 func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *bootstrapContext) error {

@@ -60,9 +60,9 @@ func (params TunnelParams) Validate() error {
 }
 
 // InitTunnel starts an SSH reverse tunnel so the bootstrap target can reach the
-// local OCI bundle registry when the registry mode is Local and not a standalone install.
-// Returns a Close function to gracefully shut down the tunnel,
-// or a no-op function if the tunnel was not started.
+// local OCI bundle registry when the registry requires a seed (clean air-gap or
+// legacy Local) and not a standalone install. Returns a Close function to
+// gracefully shut down the tunnel, or a no-op function if the tunnel was not started.
 func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	nop := func() {}
 
@@ -70,7 +70,7 @@ func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 		return nop, err
 	}
 
-	if !params.MetaConfig.Registry.IsLocal() {
+	if !params.MetaConfig.Registry.NeedsSeed() {
 		return nop, nil
 	}
 

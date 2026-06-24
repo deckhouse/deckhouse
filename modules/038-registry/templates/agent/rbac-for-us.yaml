@@ -1,0 +1,38 @@
+{{- if (include "registry.renderNew" .) }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: registry-agent
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-agent")) | nindent 2 }}
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:registry-agent
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-agent")) | nindent 2 }}
+rules:
+- apiGroups: ["deckhouse.io"]
+  resources: ["registryconfigs"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["registryconfigs/status"]
+  verbs: ["update", "patch"]
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:{{ .Chart.Name }}:registry-agent
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-agent")) | nindent 2 }}
+subjects:
+- kind: ServiceAccount
+  name: registry-agent
+  namespace: d8-system
+roleRef:
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:registry-agent
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

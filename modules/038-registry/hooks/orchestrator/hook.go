@@ -212,6 +212,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		initSecret = InitSecretSnap{}
 	}
 
+	stateRestored := false
 	if values.State.Mode == "" {
 		input.Logger.Info("State not initialized, trying restore from secret")
 
@@ -228,8 +229,13 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 				"error", err,
 			)
 		} else {
+			stateRestored = true
 			input.Logger.Info("State successfully restored from secret")
 		}
+	} else {
+		// Mode already in the values store from a previous reconcile of an
+		// already-restored/initialized cluster: treat as restored.
+		stateRestored = true
 	}
 
 	if values.State.Mode == "" {
@@ -310,8 +316,8 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	// Load checker params
 	values.State.CheckerParams = checker.GetParams(ctx, input)
 
-	// Process the state with init secret
-	if initSecret.IsExist && !initSecret.Applied {
+	// Process the state with init secret (restore-only: never on a fresh install).
+	if shouldInitialize(stateRestored, initSecret) {
 		input.Logger.Info("initializing state from init configuration")
 
 		err = values.State.initialize(input.Logger, inputs)
@@ -381,8 +387,8 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 			"v1", "Secret", "d8-system", "deckhouse-registry")
 	}
 
-	// Patch init secret
-	if initSecret.IsExist && !initSecret.Applied {
+	// Patch init secret only when this (legacy) orchestrator actually consumed it.
+	if shouldInitialize(stateRestored, initSecret) {
 		input.Logger.Debug("Marking init secret as applied by setting annotation")
 		patch := map[string]any{
 			"metadata": map[string]any{
@@ -395,6 +401,17 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 			patch, "v1", "Secret", "d8-system", "registry-init")
 	}
 	return nil
+}
+
+// shouldInitialize encodes the restore-only rule: the legacy orchestrator
+// initializes its FSM state from registry-init ONLY when a prior registry-state
+// secret was restored (a genuine legacy cluster being upgraded — the migration
+// source). On a fresh new-arch install there is no registry-state, so initialize
+// is suppressed: the orchestrator stays Unmanaged and renders nothing, leaving
+// registry-init for the new-arch PKI hook and the deckhouse-registry /
+// registry-bashible-config secrets for the new-arch writers.
+func shouldInitialize(stateRestored bool, init InitSecretSnap) bool {
+	return stateRestored && init.IsExist && !init.Applied
 }
 
 func configFromSecret(secret v1core.Secret) (Params, error) {

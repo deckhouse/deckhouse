@@ -1,3 +1,4 @@
+{{- if (include "registry.isPureLegacy" .) }}
 {{ $orchestrator := .Values.registry.internal.orchestrator }}
 {{- if $orchestrator -}}
 {{- $mode := ($orchestrator.state).registry_service -}}
@@ -23,5 +24,6 @@ spec:
       protocol: TCP
       targetPort: distribution
 
+{{- end }}
 {{- end }}
 {{- end }}

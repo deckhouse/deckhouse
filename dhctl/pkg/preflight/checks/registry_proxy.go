@@ -85,7 +85,7 @@ func (c RegistryProxyCheck) Run(ctx context.Context) error {
 		return nil
 	}
 
-	registry := c.MetaConfig.Registry.Settings.RemoteData
+	registry := c.MetaConfig.Registry.RemoteData()
 	registryAddress, _ := registry.AddressAndPath()
 	if utils.ShouldSkipProxyCheck(registryAddress, noProxy) {
 		return nil

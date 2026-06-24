@@ -428,6 +428,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"dockerDistribution":  "imageHash-registry-dockerDistribution",
 		"mirrorer":            "imageHash-registry-mirrorer",
 		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
+		"registryAgent":       "imageHash-registry-registryAgent",
 		"registryProxy":       "imageHash-registry-registryProxy",
 		"syncer":              "imageHash-registry-syncer",
 	},

@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,16 +26,36 @@ import (
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
 
-// newManifestBuilder creates a new ManifestBuilder instance.
-func newManifestBuilder(modeModel ModeModel, legacyMode bool) *ManifestBuilder {
-	return &ManifestBuilder{
+// ManifestBuilder produces the bootstrap artifacts. Two implementations: the
+// legacy four-mode modeManifestBuilder and the clean CleanModel.
+type ManifestBuilder interface {
+	DeckhouseRegistrySecretData(pkiProvider PKIProvider) (SecretData, error)
+	RegistryBashibleConfigSecretData(pkiProvider PKIProvider) (bool, SecretData, error)
+	KubeadmContext() KubeadmContext
+	BashibleContext(pkiProvider PKIProvider) (BashibleContext, error)
+}
+
+var _ ManifestBuilder = (*modeManifestBuilder)(nil)
+
+// managedMode reports whether m is a managed registry mode (Direct, Proxy, or
+// Local). Unmanaged mode leaves the in-cluster registry untouched, so managed-
+// only fields (RegistryModuleEnable, Bootstrap.Init, air-gap seed Hosts) must
+// not be set for it.
+func managedMode(m constant.ModeType) bool {
+	return constant.ModuleRequired(m)
+}
+
+// newManifestBuilder creates a new modeManifestBuilder instance.
+func newManifestBuilder(modeModel ModeModel, legacyMode bool) *modeManifestBuilder {
+	return &modeManifestBuilder{
 		modeModel:  modeModel,
 		legacyMode: legacyMode,
 	}
 }
 
-// ManifestBuilder is responsible for building various configuration manifests.
-type ManifestBuilder struct {
+// modeManifestBuilder is responsible for building various configuration manifests
+// using the legacy four-mode registry model.
+type modeManifestBuilder struct {
 	modeModel  ModeModel
 	legacyMode bool
 }
@@ -47,7 +67,7 @@ type ManifestBuilder struct {
 // Returns:
 //   - secretData: byte map containing secret data
 //   - err: error from the operation
-func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (SecretData, error) {
+func (b *modeManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (SecretData, error) {
 	var inClusterData Data
 
 	if !b.legacyMode {
@@ -89,7 +109,7 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (
 //   - secretExists: boolean indicating secret presence
 //   - secretData: byte map containing secret data
 //   - err: error from the operation
-func (b *ManifestBuilder) RegistryBashibleConfigSecretData(pkiProvider PKIProvider) (bool, SecretData, error) {
+func (b *modeManifestBuilder) RegistryBashibleConfigSecretData(pkiProvider PKIProvider) (bool, SecretData, error) {
 	if b.legacyMode {
 		return false, nil, nil
 	}
@@ -114,7 +134,7 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData(pkiProvider PKIProvid
 // KubeadmContext builds kubeadm context struct.
 // Returns:
 //   - KubeadmContext: context structure
-func (b *ManifestBuilder) KubeadmContext() KubeadmContext {
+func (b *modeManifestBuilder) KubeadmContext() KubeadmContext {
 	address, path := helpers.SplitAddressAndPath(b.modeModel.InClusterImagesRepo)
 	return KubeadmContext{
 		Address: address,
@@ -129,7 +149,7 @@ func (b *ManifestBuilder) KubeadmContext() KubeadmContext {
 // Returns:
 //   - BashibleContext: context structure
 //   - err: error from the operation
-func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleContext, error) {
+func (b *modeManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleContext, error) {
 	pki, err := pkiProvider()
 	if err != nil {
 		return BashibleContext{}, fmt.Errorf("get PKI: %w", err)
@@ -142,25 +162,35 @@ func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleCont
 
 	ctx := cfg.ToContext()
 
-	ctx.RegistryModuleEnable = true
-	if b.legacyMode {
-		ctx.RegistryModuleEnable = false
-	}
+	// Managed modes (Direct, Proxy, Local) enable the registry module and supply
+	// a Bootstrap.Init PKI bundle. Unmanaged mode leaves registry infrastructure
+	// untouched, so these fields must not be set for it.
+	if !b.legacyMode && managedMode(b.modeModel.Mode) {
+		ctx.RegistryModuleEnable = true
 
-	ctx.Bootstrap = &bashible.ContextBootstrap{
-		Init: pki,
-	}
+		ctx.Bootstrap = &bashible.ContextBootstrap{
+			Init: pki,
+		}
 
-	if b.modeModel.Mode == constant.ModeProxy {
-		host, path := b.modeModel.RemoteData.AddressAndPath()
-		ctx.Bootstrap.Proxy = &bashible.ContextBootstrapProxy{
-			Host:     host,
-			Path:     path,
-			Scheme:   strings.ToLower(string(b.modeModel.RemoteData.Scheme)),
-			CA:       b.modeModel.RemoteData.CA,
-			Username: b.modeModel.RemoteData.Username,
-			Password: b.modeModel.RemoteData.Password,
-			TTL:      b.modeModel.TTL,
+		if b.modeModel.Mode == constant.ModeProxy {
+			host, path := b.modeModel.RemoteData.AddressAndPath()
+			ctx.Bootstrap.Proxy = &bashible.ContextBootstrapProxy{
+				Host:     host,
+				Path:     path,
+				Scheme:   strings.ToLower(string(b.modeModel.RemoteData.Scheme)),
+				CA:       b.modeModel.RemoteData.CA,
+				Username: b.modeModel.RemoteData.Username,
+				Password: b.modeModel.RemoteData.Password,
+				TTL:      b.modeModel.TTL,
+			}
+		}
+
+		// Air-gap (Local): replace the host list with the two-mirror bootstrap
+		// drop-in (on-master cache + bundle tunnel fallback). Direct/Proxy keep the
+		// upstream mirror ToContext() already produced.
+		if b.modeModel.Mode == constant.ModeLocal {
+			ctx.Hosts = bashible.BootstrapAirGapHostsLocal(pki.CA.Cert, pki.ROUser.Name, pki.ROUser.Password)
+			ctx.ProxyEndpoints = nil
 		}
 	}
 

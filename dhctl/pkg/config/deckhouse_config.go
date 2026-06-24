@@ -93,12 +93,12 @@ func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 
 func (c *DeckhouseInstaller) GetInclusterImage(forceVersionTag bool) string {
 	tag := c.GetImageTag(forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag)
+	return fmt.Sprintf("%s:%s", c.Registry.InClusterImagesRepo(), tag)
 }
 
 func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
 	tag := c.GetImageTag(forceVersionTag)
-	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag)
+	return fmt.Sprintf("%s:%s", c.Registry.RemoteImagesRepo(), tag)
 }
 
 // ReadVersionTagFromInstallerContainer reads the installer image version tag.
@@ -191,7 +191,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		if ok {
 			bundle = bundleRaw.(string)
 		}
-		if !metaConfig.Registry.LegacyMode {
+		if !metaConfig.Registry.LegacyMode && metaConfig.Registry.Clean == nil {
 			mc.Spec.Settings["registry"] = registry
 		}
 	}
@@ -201,7 +201,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 			"bundle":   bundle,
 			"logLevel": logLevel,
 		}
-		if !metaConfig.Registry.LegacyMode {
+		if !metaConfig.Registry.LegacyMode && metaConfig.Registry.Clean == nil {
 			settings["registry"] = registry
 		}
 		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, settings)

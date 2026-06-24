@@ -44,7 +44,7 @@ type syncer struct {
 	srcPuller, dstPuller *remote.Puller
 	pusher               *remote.Pusher
 
-	copied, processed atomic.Int64
+	copied, processed, failed atomic.Int64
 }
 
 func (rs *syncer) Sync(ctx context.Context) error {
@@ -59,6 +59,7 @@ func (rs *syncer) Sync(ctx context.Context) error {
 
 	rs.copied.Store(0)
 	rs.processed.Store(0)
+	rs.failed.Store(0)
 
 	log.Info("Sync start")
 	defer func() {
@@ -166,12 +167,14 @@ func (rs *syncer) handleTag(ctx context.Context, src name.Tag) {
 	log.Info("Copy tag start", "start_time", copyStartTime)
 
 	if err := rs.pusher.Push(ctx, dst, srcManifest); err != nil {
+		rs.failed.Add(1)
 		log.Error(
 			"Copy tag error",
 			"src", src.String(),
 			"dst", dst.String(),
 			"error", err,
 		)
+		return
 	}
 
 	tagsCount := rs.copied.Add(1)
@@ -204,6 +207,7 @@ func (rs *syncer) isTagCopyNeeded(ctx context.Context, src, dst name.Tag) (*remo
 
 	srcManifest, err := rs.srcPuller.Get(ctx, src)
 	if err != nil {
+		rs.failed.Add(1)
 		log.Error("Cannot get src manifest", "error", err)
 		return nil, false
 	}
@@ -219,6 +223,7 @@ func (rs *syncer) isTagCopyNeeded(ctx context.Context, src, dst name.Tag) (*remo
 			return srcManifest, true
 		}
 
+		rs.failed.Add(1)
 		log.Error("Cannot get dst manifest", "error", err)
 		return srcManifest, false
 	}
@@ -230,12 +235,14 @@ func (rs *syncer) isTagCopyNeeded(ctx context.Context, src, dst name.Tag) (*remo
 	if srcManifest.MediaType.IsImage() && dstManifest.MediaType.IsImage() {
 		srcCfg, err := getImageConfigFile(srcManifest)
 		if err != nil {
+			rs.failed.Add(1)
 			log.Error("Cannot get src image config file", "error", err)
 			return srcManifest, false
 		}
 
 		dstCfg, err := getImageConfigFile(dstManifest)
 		if err != nil {
+			rs.failed.Add(1)
 			log.Error("Cannot get dst image config file", "error", err)
 			return srcManifest, false
 		}
@@ -252,4 +259,9 @@ func (rs *syncer) isTagCopyNeeded(ctx context.Context, src, dst name.Tag) (*remo
 	}
 
 	return srcManifest, true
+}
+
+// Failed returns the number of tags that failed to copy during the last Sync call.
+func (rs *syncer) Failed() int64 {
+	return rs.failed.Load()
 }

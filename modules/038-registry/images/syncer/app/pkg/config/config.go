@@ -26,8 +26,9 @@ import (
 )
 
 type Config struct {
-	Src  Registry `json:"source"`
-	Dest Registry `json:"destination"`
+	Src   Registry `json:"source"`
+	Dest  Registry `json:"destination"`
+	Prune bool     `json:"prune,omitempty"`
 }
 
 func (c *Config) Validate() error {

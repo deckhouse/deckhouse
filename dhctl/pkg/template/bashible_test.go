@@ -75,6 +75,27 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 	require.NotContains(t, content, `10.0.0.2:<no value>`)
 }
 
+func TestRender099CleanupDoesNotRemoveRegistryPackagesForNewModelLocal(t *testing.T) {
+	tplContent, err := os.ReadFile("/deckhouse/candi/bashible/common-steps/cluster-bootstrap/099_cleanup_after_cluster_bootstrap.sh.tpl")
+	require.NoError(t, err)
+
+	data := map[string]interface{}{
+		"registry": map[string]interface{}{
+			"registryModuleEnable": true,
+			"mode":                 "Local",
+		},
+	}
+
+	// 099 must NOT bb-package-remove the registry packages on a new-model install:
+	// the new arch manages the registry via in-cluster pods (agent DaemonSet, cache
+	// DaemonSet) and the dhctl bootstrap cache, so there are no legacy registry
+	// node-packages/igniter to clean up here.
+	rendered, err := RenderTemplate("099_cleanup_after_cluster_bootstrap.sh.tpl", tplContent, data)
+	require.NoError(t, err)
+	require.NotContains(t, rendered.Content.String(), "bb-package-remove")
+	require.NotContains(t, rendered.Content.String(), "REGISTRY_MODULE_IGNITER_DIR")
+}
+
 func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *testing.T) {
 	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.New().Global)
 	require.NoError(t, err)

@@ -1,0 +1,26 @@
+{{- if (include "registry.renderNew" .) }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: registry-agent
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-agent")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: DaemonSet
+    name: registry-agent
+  updatePolicy:
+    updateMode: "Recreate"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: registry-agent
+      minAllowed:
+        {{- include "registry_agent_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 128Mi
+{{- end }}
+{{- end }}

@@ -537,6 +537,7 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 	var (
 		initConfig        *initconfig.Config
 		deckhouseSettings *moduleconfig.DeckhouseSettings
+		cleanMC           *moduleconfig.RegistryModuleConfig
 	)
 
 	for _, doc := range docs {
@@ -555,19 +556,26 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 			initConfig = ret
 
 		case ModuleConfigKind:
-			if obj.GetName() != "deckhouse" {
-				continue
-			}
+			switch obj.GetName() {
+			case "deckhouse":
+				ret, err := registry.ParseYAMLDeckhouseMC([]byte(doc))
+				if err != nil {
+					return nil, err
+				}
 
-			ret, err := registry.ParseYAMLDeckhouseMC([]byte(doc))
-			if err != nil {
-				return nil, err
-			}
+				deckhouseSettings = ret
 
-			deckhouseSettings = ret
+			case "registry":
+				ret, err := registry.ParseYAMLRegistryMC([]byte(doc))
+				if err != nil {
+					return nil, err
+				}
+
+				cleanMC = ret
+			}
 		}
 	}
-	return registry.NewConfigProvider(initConfig, deckhouseSettings), nil
+	return registry.NewConfigProvider(initConfig, deckhouseSettings, cleanMC), nil
 }
 
 func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {
