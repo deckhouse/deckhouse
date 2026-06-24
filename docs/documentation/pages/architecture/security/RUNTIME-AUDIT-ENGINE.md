@@ -31,7 +31,7 @@ The `runtime-audit-engine` module consists of the following components:
 
    The component includes the following containers:
 
-   - **falco**: Main container that collects security events from cluster nodes and containerized applications in DKP based on the [Falco](https://falco.org/) threat detection system. 
+   - **falco**: Main container that collects security events from cluster nodes and containerized applications in DKP based on the [Falco](https://falco.org/) threat detection system.
    - **falcosidekick**: Sidecar container that receives events from the `falco` component and exports audit events as Prometheus metrics.
    - **rules-loader**: Sidecar container that performs the following operations:
       - watches [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resources and stores them in the shared `/etc/falco/rules.d/` Pod directory for processing by the `falco` component;
