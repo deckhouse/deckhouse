@@ -105,7 +105,8 @@
 {{- if $resourcesRequests.milliCPU -}}
   {{- $millicpu = div (mul $resourcesRequests.milliCPU 33) 100 -}}
 {{- else -}}
-  {{- if lt $nodesCount 25 -}}{{- $millicpu = 300 -}}
+  {{- if lt $nodesCount 10 -}}{{- $millicpu = 150 -}}
+  {{- else if lt $nodesCount 25 -}}{{- $millicpu = 250 -}}
   {{- else if lt $nodesCount 100 -}}{{- $millicpu = 750 -}}
   {{- else if lt $nodesCount 250 -}}{{- $millicpu = 1650 -}}
   {{- else -}}{{- $millicpu = 3000 -}}
@@ -115,7 +116,8 @@
 {{- if $resourcesRequests.memoryBytes -}}
   {{- $memory = div (mul $resourcesRequests.memoryBytes 33) 100 -}}
 {{- else -}}
-  {{- if lt $nodesCount 25 -}}{{- $memory = 2944 -}}
+  {{- if lt $nodesCount 10 -}}{{- $memory = 2048 -}}
+  {{- else if lt $nodesCount 25 -}}{{- $memory = 2944 -}}
   {{- else if lt $nodesCount 100 -}}{{- $memory = 5248 -}}
   {{- else if lt $nodesCount 250 -}}{{- $memory = 10112 -}}
   {{- else -}}{{- $memory = 12288 -}}

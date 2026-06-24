@@ -1209,10 +1209,21 @@ apiserver:
 				})
 			})
 
-			Context("auto mode (no override pool), small cluster (tier <25)", func() {
+			Context("auto mode (no override pool), tiny cluster (tier <10)", func() {
 				It("uses the lowest tier at 0 nodes", func() {
-					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "300m", "2944Mi")
-					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "40m", "256Mi")
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "150m", "2048Mi")
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "100m", "512Mi")
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "50m", "256Mi")
+					assertRequests(renderComponent(0, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "30m", "128Mi")
+				})
+			})
+
+			Context("auto mode (no override pool), small cluster (tier <25)", func() {
+				It("uses the <25 tier at 15 nodes", func() {
+					assertRequests(renderComponent(15, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "250m", "2944Mi")
+					assertRequests(renderComponent(15, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "150m", "768Mi")
+					assertRequests(renderComponent(15, 0, 0, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "50m", "384Mi")
+					assertRequests(renderComponent(15, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "30m", "256Mi")
 				})
 			})
 
