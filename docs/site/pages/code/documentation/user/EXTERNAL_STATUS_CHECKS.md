@@ -133,9 +133,9 @@ POST /projects/:id/merge_requests/:merge_request_iid/status_check_responses
 
 The request must include:
 
-- `external_status_check_id` - status check ID.
-- `sha` - current `HEAD` SHA of the merge request source branch.
-- `status` - `passed` or `failed`.
+- `external_status_check_id`: Status check ID.
+- `sha`: Current `HEAD` SHA of the merge request source branch.
+- `status`: `passed` or `failed`.
 
 Deckhouse Code does not update the response if:
 
