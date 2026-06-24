@@ -103,7 +103,7 @@ func UnaryParallelTasksLimiter(sem chan struct{}, prefix string) grpc.UnaryServe
 }
 
 func StreamParallelTasksLimiter(sem chan struct{}, prefix string) grpc.StreamServerInterceptor {
-	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		if !strings.HasPrefix(info.FullMethod, prefix) {
 			return handler(srv, ss)
 		}

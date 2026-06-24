@@ -164,7 +164,7 @@ func (i *InteractiveLogger) LogProcess(p, t string, run func() error) error {
 	return nil
 }
 
-func (i *InteractiveLogger) LogInfoF(format string, a ...interface{}) {
+func (i *InteractiveLogger) LogInfoF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
 		if i.pbStarted {
@@ -175,7 +175,7 @@ func (i *InteractiveLogger) LogInfoF(format string, a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLogger) LogInfoLn(a ...interface{}) {
+func (i *InteractiveLogger) LogInfoLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
 		if i.pbStarted {
@@ -186,7 +186,7 @@ func (i *InteractiveLogger) LogInfoLn(a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLogger) LogErrorF(format string, a ...interface{}) {
+func (i *InteractiveLogger) LogErrorF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
 		if i.pbStarted {
@@ -197,7 +197,7 @@ func (i *InteractiveLogger) LogErrorF(format string, a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLogger) LogErrorLn(a ...interface{}) {
+func (i *InteractiveLogger) LogErrorLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
 		if i.pbStarted {
@@ -208,11 +208,11 @@ func (i *InteractiveLogger) LogErrorLn(a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLogger) LogDebugF(format string, a ...interface{}) {
+func (i *InteractiveLogger) LogDebugF(format string, a ...any) {
 	i.logger.DebugF(format, a...)
 }
 
-func (i *InteractiveLogger) LogDebugLn(a ...interface{}) {
+func (i *InteractiveLogger) LogDebugLn(a ...any) {
 	i.logger.DebugF("%v", a...)
 }
 
@@ -234,7 +234,7 @@ func (i *InteractiveLogger) LogFailRetry(l string) {
 	}
 }
 
-func (i *InteractiveLogger) LogWarnLn(a ...interface{}) {
+func (i *InteractiveLogger) LogWarnLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugF("%v", a...)
 		if i.pbStarted {
@@ -245,7 +245,7 @@ func (i *InteractiveLogger) LogWarnLn(a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLogger) LogWarnF(format string, a ...interface{}) {
+func (i *InteractiveLogger) LogWarnF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
 		if i.pbStarted {
@@ -284,10 +284,6 @@ func getInteractiveLoggerWrapper(loggerType string, opts LoggerOptions, interact
 				OptionsSetter: CommonOptions,
 			},
 		},
-	}
-
-	if loggerType == "pretty" {
-		loggerType = "simple"
 	}
 
 	extLogger, err := external.NewLoggerWithOptions(external.Type(loggerType), extOpts)
@@ -401,7 +397,7 @@ func (i *InteractiveLoggerWrapper) Process(p external.Process, t string, run fun
 	return nil
 }
 
-func (i *InteractiveLoggerWrapper) InfoFWithoutLn(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) InfoFWithoutLn(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
 		if isPbStarted() {
@@ -412,7 +408,7 @@ func (i *InteractiveLoggerWrapper) InfoFWithoutLn(format string, a ...interface{
 	}
 }
 
-func (i *InteractiveLoggerWrapper) InfoLn(a ...interface{}) {
+func (i *InteractiveLoggerWrapper) InfoLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
 		if isPbStarted() {
@@ -423,7 +419,7 @@ func (i *InteractiveLoggerWrapper) InfoLn(a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLoggerWrapper) InfoF(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) InfoF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
 		if isPbStarted() {
@@ -434,7 +430,7 @@ func (i *InteractiveLoggerWrapper) InfoF(format string, a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLoggerWrapper) ErrorFWithoutLn(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) ErrorFWithoutLn(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
 		if isPbStarted() {
@@ -445,7 +441,7 @@ func (i *InteractiveLoggerWrapper) ErrorFWithoutLn(format string, a ...interface
 	}
 }
 
-func (i *InteractiveLoggerWrapper) ErrorLn(a ...interface{}) {
+func (i *InteractiveLoggerWrapper) ErrorLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
 		if isPbStarted() {
@@ -456,7 +452,7 @@ func (i *InteractiveLoggerWrapper) ErrorLn(a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLoggerWrapper) ErrorF(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) ErrorF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
 		if isPbStarted() {
@@ -467,19 +463,19 @@ func (i *InteractiveLoggerWrapper) ErrorF(format string, a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLoggerWrapper) DebugFWithoutLn(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) DebugFWithoutLn(format string, a ...any) {
 	i.logger.DebugFWithoutLn(format, a...)
 }
 
-func (i *InteractiveLoggerWrapper) DebugLn(a ...interface{}) {
+func (i *InteractiveLoggerWrapper) DebugLn(a ...any) {
 	i.logger.DebugLn(a...)
 }
 
-func (i *InteractiveLoggerWrapper) DebugF(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) DebugF(format string, a ...any) {
 	i.logger.DebugF(format, a...)
 }
 
-func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
 		if isPbStarted() {
@@ -490,7 +486,7 @@ func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...interface{
 	}
 }
 
-func (i *InteractiveLoggerWrapper) WarnLn(a ...interface{}) {
+func (i *InteractiveLoggerWrapper) WarnLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
 		if isPbStarted() {
@@ -501,7 +497,7 @@ func (i *InteractiveLoggerWrapper) WarnLn(a ...interface{}) {
 	}
 }
 
-func (i *InteractiveLoggerWrapper) WarnF(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) WarnF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
 		if isPbStarted() {

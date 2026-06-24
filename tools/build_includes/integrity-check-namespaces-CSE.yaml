@@ -22,6 +22,7 @@ namespaces_for_integrity:
     - d8-metallb
     - d8-monitoring
     - d8-multitenancy-manager
+    - d8-neuvector
     - d8-observability
     - d8-operator-argo
     - d8-operator-prometheus

@@ -12,4 +12,4 @@ Features of the `cloud-provider-yandex` module:
   - Updating Yandex Cloud Instances and Kubernetes Nodes metadata. Deleting nodes from Kubernetes that are no longer in Yandex Cloud.
 - Provisioning disks in Yandex Cloud using the `CSI storage` component.
 - Registration in the [node-manager](../../modules/node-manager/) module, so that [YandexInstanceClasses](cr.html#yandexinstanceclass) can be used when creating the [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
-- Enabling the necessary CNI plugin (which uses [simple bridge](../../modules/cni-simple-bridge/)).
+- Automatic CNI enablement for new clusters. Starting with DKP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default in `VXLAN` mode with source IP address translation performed using [BPF](/products/kubernetes-platform/documentation/v1/admin/configuration/network/other/bpflb.html).

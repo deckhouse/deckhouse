@@ -22,7 +22,7 @@ description: Архитектура модуля cloud-provider-gcp в Deckhouse
 Архитектура модуля [`cloud-provider-gcp`](/modules/cloud-provider-gcp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля cloud-provider-gcp](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-gcp.ru.png)
+![Архитектура модуля cloud-provider-gcp](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-gcp.ru.png)
 
 ## Компоненты модуля
 
@@ -51,7 +51,7 @@ description: Архитектура модуля cloud-provider-gcp в Deckhouse
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-1. **CSI-драйвер (gcp)** — реализация CSI-драйвера для GCP. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../infrastructure/csi-driver.html).
+1. **CSI-драйвер (gcp)** — реализация CSI-драйвера для GCP. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html).
 
 ## Взаимодействия модуля
 

@@ -1,0 +1,20 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:multitenancy-manager:view
+rules:
+# Tenants discover what their project may use (the read-only catalog).
+- apiGroups:
+  - multitenancy.deckhouse.io
+  resources:
+  - availableclusterresources
+  verbs:
+  - get
+  - list
+  - watch

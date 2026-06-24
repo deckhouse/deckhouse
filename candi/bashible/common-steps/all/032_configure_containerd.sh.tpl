@@ -386,8 +386,7 @@ oom_score = 0
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".auth]
           {{- if (($mirror).auth).username }}
-          username = {{ $mirror.auth.username | quote }}
-          password = {{ $mirror.auth.password | default "" | quote }}
+          auth = {{ printf "%s:%s" ($mirror.auth.username) ($mirror.auth.password | default "") | b64enc | quote }}
           {{- else }}
           auth = {{ (($mirror).auth).auth | default "" | quote }}
           {{- end }}

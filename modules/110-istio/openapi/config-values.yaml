@@ -22,9 +22,9 @@ properties:
     enum: [AllowAny, RegistryOnly]
     x-examples: ["AllowAny"]
     description: |
-      How to handle requests directed to external services which aren't registered in service mesh.
-      - `AllowAny` — allow.
-      - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry custom resource or to organize egressgateway.
+      Policy for requests directed to external services that aren't registered in the service mesh.
+
+      With `RegistryOnly`, external services must be registered via a `ServiceEntry` custom resource or routed through an `egressgateway`.
     default: AllowAny
   ingressClass:
     type: string
@@ -43,7 +43,7 @@ properties:
     properties:
       enabled:
         type: boolean
-        description: Designate this cluster as a federation member (see [Enabling federation](./#enabling-the-federation)).
+        description: Designate this cluster as a federation member. See [how to enable federation](./#enabling-the-federation).
         default: false
         x-examples: [true]
   multicluster:
@@ -56,7 +56,7 @@ properties:
     properties:
       enabled:
         type: boolean
-        description: Designate this cluster as a multicluster member (see [Enabling multicluster](./#enabling-the-multicluster)).
+        description: Designate this cluster as a multicluster member. See [how to enable multicluster](./#enabling-the-multicluster).
         default: false
         x-examples: [true]
   alliance:
@@ -135,6 +135,16 @@ properties:
               - cse-pro
             example:
               yandex.cpi.flant.com/listener-subnet-id: xyz-123
+          gatewayPodAnnotations:
+            type: object
+            additionalProperties:
+              type: string
+            description: Additional annotations for ingressgateway DaemonSet pods.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            example:
+              checksum/config: xyz-123
           nodeSelector:
             type: object
             additionalProperties:
@@ -174,7 +184,11 @@ properties:
             - [{"operator": "Exists"}]
   tracing:
     type: object
-    description: Tracing parameters.
+    description: |
+      Tracing parameters.
+
+      If the [`ingress-nginx`](/modules/ingress-nginx/) module is enabled (`global.enabledModules` contains `ingress-nginx`), the module creates Istio `Telemetry` resource `ingress-nginx-disable-span-reporting` in namespace `d8-ingress-nginx`.
+      Built-in Ingress controller pods with an Istio sidecar stop exporting spans to the tracing backend (reduces noise while keeping meshes functional).
     default: {}
     properties:
       enabled:
@@ -203,20 +217,54 @@ properties:
         x-examples: [50.05]
       collector:
         type: object
-        description: Tracing collection settings.
+        description: |
+          Tracing collection settings. Single source for both legacy control-plane tracing and the Telemetry API path.
+
+          - If [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `false` and [`tracing.enabled`](#parameters-tracing-enabled) is `true`, the module fills `meshConfig.defaultConfig.tracing.zipkin` from `collector.zipkin.address` (with [`tracing.sampling`](#parameters-tracing-sampling)). OpenTelemetry export requires the Telemetry API path.
+          - If `telemetryAPI.enabled` is `true` and tracing is enabled, configure either [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry) or [`collector.zipkin`](#parameters-tracing-collector-zipkin). When both are set, OpenTelemetry wins. In either case the extension provider is named `deckhouse-tracing` with `spec.tracing` on `Telemetry` `d8-main`.
         default: {}
         properties:
+          opentelemetry:
+            type: object
+            description: |
+              OpenTelemetry extension provider for the Telemetry API path (`meshConfig.extensionProviders` + mesh-wide `spec.tracing`).
+
+              Requires `service` and `port` (gRPC OTLP by default; set `http.path` for HTTP export). Not used when [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `false`.
+            default: {}
+            properties:
+              service:
+                type: string
+                description: Collector hostname reachable from the mesh (for example a Kubernetes Service DNS name).
+                example: "opentelemetry-collector.observability.svc.cluster.local"
+              port:
+                type: integer
+                description: Collector port (for example `4317` for gRPC OTLP).
+                minimum: 1
+                maximum: 65535
+                example: 4317
+              http:
+                type: object
+                description: Optional HTTP OTLP exporter settings (omit to use gRPC).
+                properties:
+                  path:
+                    type: string
+                    description: OTLP traces HTTP path (defaults to `/v1/traces` in the chart when `http` is set but `path` is empty).
+                    example: "/v1/traces"
+                  timeout:
+                    type: string
+                    description: HTTP export timeout (Istio duration string).
+                    example: "10s"
           zipkin:
             type: object
             description: |
-              Zipkin protocol parameters used by Istio for sending traces. Jaeger supports this protocol.
+              Zipkin protocol parameters used by Istio for sending traces. Jaeger accepts Zipkin ingestion on the standard port (`9411`).
 
-              If tracing is enabled, this settings section is mandatory.
+              With tracing enabled, set `address` here for legacy mode or for Telemetry API when OpenTelemetry is not configured under [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry).
             default: {}
             properties:
               address:
                 type: string
-                description: Network address of zipkin collector in `<IP of FQDN>:<port>` format.
+                description: Network address of zipkin collector in `<host>:<port>` format (FQDN/IP and port allowed by the regex).
                 pattern: '[0-9a-zA-Z\.-]+'
                 example: "zipkin.myjaeger.svc:9411"
       kiali:
@@ -242,6 +290,24 @@ properties:
         - {}
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
           jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
+  telemetryAPI:
+    type: object
+    description: |
+      [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) integration.
+
+      When `enabled` is `true`, the module drives mesh metrics via the Telemetry API and `meshConfig.defaultProviders.metrics: [prometheus]`, keeps `values.telemetry.enabled` but disables the previous `telemetry.v2` filters, and extends the always-present `Telemetry` `d8-main` in `d8-istio` with `spec.metrics`. When [`tracing.enabled`](#parameters-tracing-enabled) is `true` with a configured [`tracing.collector`](#parameters-tracing-collector), `spec.tracing` is added via `deckhouse-tracing` so Grafana and Kiali keep seeing `istio_*` series from sidecars.
+
+      When `false` (default), the previous `telemetry.v2` stack stays on (including Sail's `telemetry.v2.prometheus`), without `defaultProviders.metrics`, while `Telemetry` `d8-main` still enables access logs (backwards compatible with releases since the access-log `Telemetry` was introduced).
+
+      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) defines the Envoy log template in `meshConfig.extensionProviders`; the `Telemetry` `d8-main` object selects that provider for access logging.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: |
+          Telemetry API path: wires `defaultProviders.metrics`, turns off `telemetry.v2`, adds `spec.metrics` (and tracing when configured) to `Telemetry` `d8-main`.
+        default: false
+        x-examples: [true]
   sidecar:
     type: object
     description: Network settings for traffic capture by istio sidecar.
@@ -386,6 +452,15 @@ properties:
       root:
         type: string
         description: The root certificate in PEM format if `cert` is an intermediate certificate.
+  jwksResolverAdditionalRootCA:
+    type: string
+    description: |
+      An additional root certificate in PEM format. It is used by istiod when resolving JWKS URIs over HTTPS.
+    x-examples:
+    - |
+      -----BEGIN CERTIFICATE-----
+      MIIDXTCCAkWgAwIBAgIJAN...
+      -----END CERTIFICATE-----
   controlPlane:
     type: object
     description: istiod specific settings.
@@ -417,13 +492,13 @@ properties:
         description: |
           Optional `nodeSelector` for istiod. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+          If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
       tolerations:
         type: array
         description: |
           Optional `tolerations` for istiod. The same as `spec.tolerations` for the Kubernetes pod.
 
-          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+          If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
         items:
           type: object
           properties:
@@ -438,6 +513,32 @@ properties:
               format: int64
             value:
               type: string
+      extraEnvs:
+        type: object
+        additionalProperties:
+          type: string
+        default: {}
+        description: |
+          Additional environment variables for the istiod (pilot) container.
+
+          Keys reserved by the module cannot be overridden:
+
+          - `ISTIO_MULTIROOT_MESH`
+          - `ENABLE_ENHANCED_RESOURCE_SCOPING`
+          - `PILOT_HTTP10`
+          - `PILOT_ENABLE_AMBIENT`
+          - `PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER`
+          - `PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER`
+        x-examples:
+        - GODEBUG: "gctrace=1"
+        not:
+          anyOf:
+          - required: ["ISTIO_MULTIROOT_MESH"]
+          - required: ["ENABLE_ENHANCED_RESOURCE_SCOPING"]
+          - required: ["PILOT_HTTP10"]
+          - required: ["PILOT_ENABLE_AMBIENT"]
+          - required: ["PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER"]
+          - required: ["PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER"]
       replicasManagement:
         description: |
           Replication management settings and scaling of istiod.
@@ -720,6 +821,53 @@ properties:
               user_agent: "%REQ(USER-AGENT)%"
               authority: "%REQ(:AUTHORITY)%"
               upstream_host: "%UPSTREAM_HOST%"
+      extensionProviders:
+        type: array
+        description: |
+          Additional Istio extension providers to register in the mesh configuration.
+
+          The provider name `d8-main` is reserved by Deckhouse.
+        default: []
+        x-examples:
+        - - name: authservice-grpc
+            envoyExtAuthzGrpc:
+              service: authservice.example.svc.cluster.local
+              port: 10003
+        items:
+          type: object
+          additionalProperties: false
+          required: ["name", "envoyExtAuthzGrpc"]
+          properties:
+            name:
+              type: string
+              description: Unique extension provider name.
+              pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+            envoyExtAuthzGrpc:
+              type: object
+              additionalProperties: false
+              description: External authorization provider that implements Envoy ext_authz gRPC API.
+              required: ["service", "port"]
+              properties:
+                service:
+                  type: string
+                  description: Service that implements Envoy ext_authz gRPC API. The format is `[<namespace>/]<hostname>`.
+                port:
+                  type: integer
+                  description: Service port.
+                  minimum: 1
+                  maximum: 65535
+                failOpen:
+                  type: boolean
+                  description: Allow requests when the authorization service is unavailable or returns a 5xx error.
+                timeout:
+                  type: string
+                  description: Maximum duration the proxy waits for the authorization service response.
+                statusOnError:
+                  type: string
+                  description: HTTP status returned to the client when communication with the authorization service fails.
+                clearRouteCache:
+                  type: boolean
+                  description: Clear route cache to let the external authorization service affect routing decisions.
       trafficRedirectionSetupMode:
         type: string
         description: |
@@ -769,8 +917,12 @@ properties:
         type: object
         description: |
           ztunnel specific settings.
-        default: {}
+        x-doc-d8Editions:
+        - ee
+        - cse-pro
+        x-doc-skip: true
         x-experimental: true
+        default: {}
         properties:
           resourcesManagement:
             description: |
@@ -943,10 +1095,14 @@ properties:
                           Configuring memory limits.
   ambient:
     type: object
-    default: {"enabled": false}
     description: |
       Ambient mesh related settings.
+    x-doc-d8Editions:
+    - ee
+    - cse-pro
+    x-doc-skip: true
     x-experimental: true
+    default: {"enabled": false}
     properties:
       enabled:
         type: boolean
@@ -955,6 +1111,175 @@ properties:
           Enable ambient mesh.
         x-experimental: true
         x-examples: [true]
+      waypointController:
+        type: object
+        description: |
+          Settings for CPU and memory requests and limits by waypoint-controller pods.
+        x-doc-d8Editions:
+        - ee
+        - cse-pro
+        x-doc-skip: true
+        x-experimental: true
+        default: {}
+        properties:
+          resourcesManagement:
+            description: |
+              Settings for CPU and memory requests and limits by waypoint-controller pods.
+            type: object
+            default: {}
+            x-examples:
+            - mode: VPA
+              vpa:
+                mode: InPlaceOrRecreate
+                cpu:
+                  min: "25m"
+                  max: 1
+                  limitRatio: 1.5
+                memory:
+                  min: "64Mi"
+                  max: "1Gi"
+                  limitRatio: 1.5
+            - mode: Static
+              static:
+                requests:
+                  cpu: "25m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+            properties:
+              mode:
+                type: string
+                description: |
+                  Resource management mode.
+
+                  Possible values:
+
+                  - `Static`: allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-ambient-waypointcontroller-resourcesmanagement-static) parameter section;
+                  - `VPA`: uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-ambient-waypointcontroller-resourcesmanagement-vpa) parameter section.
+                enum: ['VPA', 'Static']
+                default: 'VPA'
+              vpa:
+                type: object
+                default: {}
+                description: |
+                  Resource management options for the `VPA` mode.
+                properties:
+                  mode:
+                    type: string
+                    description: |
+                      VPA operating mode.
+
+                      Possible values:
+
+                      - `Initial`: VPA sets initial values for pod resource requests and limits at pod creation time.
+                        Resource values are not changed automatically afterwards.
+
+                      - `InPlaceOrRecreate`: VPA attempts to update pod resources in place when supported by the cluster.
+                        If in-place updates are not possible, the pod will be recreated.
+                    enum: ['Initial', 'InPlaceOrRecreate']
+                    default: 'InPlaceOrRecreate'
+                  cpu:
+                    type: object
+                    default: {}
+                    description: |
+                      CPU-related VPA settings.
+                    properties:
+                      max:
+                        description: |
+                          The maximum value that the VPA can set for the CPU requests.
+                        default: 1
+                        oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      min:
+                        description: |
+                          The minimum value that the VPA can set for the CPU requests.
+                        default: '25m'
+                        oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      limitRatio:
+                        type: number
+                        examples: [1.5]
+                        description: |
+                          The CPU limits/requests ratio.
+
+                          This ratio is used for calculating the initial CPU limits for a pod.
+
+                          If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
+                  memory:
+                    type: object
+                    default: {}
+                    description: |
+                      Memory-related VPA settings.
+                    properties:
+                      max:
+                        description: |
+                          The maximum memory requests the VPA can set.
+                        default: '1Gi'
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                      min:
+                        description: |
+                          The minimum memory requests the VPA can set.
+                        default: '64Mi'
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                      limitRatio:
+                        type: number
+                        examples: [1.5]
+                        description: |
+                          The memory limits/requests ratio.
+
+                          This ratio is used for calculating the initial memory limits for a pod.
+
+                          If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
+              static:
+                type: object
+                description: |
+                  Resource management options for the `Static` mode.
+                properties:
+                  requests:
+                    type: object
+                    description: |
+                      Resource requests settings for pods.
+                    properties:
+                      cpu:
+                        type: string
+                        pattern: "^[0-9]+m?$"
+                        description: |
+                          Configuring CPU requests.
+                      memory:
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                        description: |
+                          Configuring memory requests.
+                  limits:
+                    type: object
+                    description: |
+                      Configuring CPU and memory limits.
+                    properties:
+                      cpu:
+                        type: string
+                        pattern: "^[0-9]+m?$"
+                        description: |
+                          Configuring CPU limits.
+                      memory:
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                        description: |
+                          Configuring memory limits.
   nodeSelector:
     type: object
     additionalProperties:
@@ -962,13 +1287,13 @@ properties:
     description: |
       Optional `nodeSelector` for istio-operator, metadata-exporter and Kiali. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       Optional `tolerations` for istio-operator, metadata-exporter and Kiali. The same as `spec.tolerations` for the Kubernetes pod.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:
@@ -1055,7 +1380,7 @@ properties:
         description: |
           Parameters to enable external authentication based on the Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](/modules/user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -1085,7 +1410,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](/modules/user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:

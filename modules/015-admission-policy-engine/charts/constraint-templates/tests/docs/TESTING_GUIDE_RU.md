@@ -1,6 +1,6 @@
 # Руководство по тестированию Constraint Templates (RU)
 
-Руководство охватывает всё, что нужно для написания, запуска и поддержки тестов Gatekeeper ConstraintTemplates в Deckhouse. Написано для новичков с **нулевым контекстом**.
+Руководство охватывает всё, что нужно для написания, запуска и поддержки тестов Gatekeeper `ConstraintTemplates` в Deckhouse. Написано для новичков с **нулевым контекстом**.
 
 > **Схемы валидации** для каждого YAML-файла, описанного ниже, находятся в [`../openapi/`](../openapi/). Используйте их как авторитетный справочник по допустимым полям и значениям.
 
@@ -29,13 +29,13 @@
 
 | Термин                  | Значение                                                                                                                                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Constraint**          | Политика Gatekeeper, которая валидирует объекты Kubernetes (например, Pod). У каждого constraint своя директория тестов.                                                             |
-| **ConstraintTemplate**  | Шаблон на Rego, определяющий логику политики. Находится в `charts/constraint-templates/templates/`.                                                                                  |
-| **SPE**                 | SecurityPolicyException — CRD Deckhouse, задающий исключения для constraint. Поля SPE описаны в [`security-policy-exception.yaml`](../../../../crds/security-policy-exception.yaml). |
-| **Track (трек)**        | Группа тестов: *Functional*, *SPE Pod* или *SPE Container*.                                                                                                                          |
-| **Scenario (сценарий)** | Конкретный ракурс тестирования поля (positive, negative, absent и т.д.).                                                                                                             |
-| **Block (блок)**        | Именованная секция в сгенерированном test suite (`rendered/test_suite.yaml`), группирующая кейсы с общей парой template+constraint.                                                  |
-| **Gator**               | CLI-инструмент OPA Gatekeeper для офлайн-проверки тестов constraint.                                                                                                                 |
+| **`Constraint`**          | Политика Gatekeeper, которая валидирует объекты Kubernetes (например, Pod). У каждого constraint своя директория тестов.                                                             |
+| **`ConstraintTemplate`**  | Шаблон на Rego, определяющий логику политики. Находится в `charts/constraint-templates/templates/`.                                                                                  |
+| **`SPE`**                 | `SecurityPolicyException` — CRD Deckhouse, задающий исключения для constraint. Поля SPE описаны в [`security-policy-exception.yaml`](../../../../crds/security-policy-exception.yaml). |
+| **`Track` (трек)**        | Группа тестов: *Functional*, *SPE Pod* или *SPE Container*.                                                                                                                          |
+| **`Scenario` (сценарий)** | Конкретный ракурс тестирования поля (positive, negative, absent и т.д.).                                                                                                             |
+| **`Block` (блок)**        | Именованная секция в сгенерированном test suite (`rendered/test_suite.yaml`), группирующая кейсы с общей парой template+constraint.                                                  |
+| **`Gator`**               | CLI-инструмент OPA Gatekeeper для офлайн-проверки тестов constraint.                                                                                                                 |
 | `constraint_testgen`    | Go-инструмент, преобразующий `test-matrix.yaml` в сгенерированные тестовые артефакты.                                                                                                |
 
 ---
@@ -93,7 +93,7 @@ charts/constraint-templates/tests/
 
 - `pss_baseline.yaml` — constraint для baseline-совместимых тестов
 - `pss_restricted.yaml` — constraint для restricted-совместимых тестов
-- `policy_<n>.yaml` — дополнительные сценарно-специфичные constraint-ы (нумерация с 1)
+- `policy_<n>.yaml` — дополнительные специфичные constraint-ы (нумерация с 1)
 
 ---
 
@@ -273,7 +273,7 @@ blocks:
 Кейсы используют паттерн **base + merge**:
 - `base` ссылается на ключ из `spec.bases`
 - `merge` — deep-merge патч, применяемый поверх базового документа
-- Словари рекурсивно мержатся; **массивы в `merge` заменяют** весь массив по этому пути
+- Словари рекурсивно соединяются; **массивы в `merge` заменяют** весь массив по этому пути
 - Используйте `containerMerges` / `initContainerMerges` для точечных патчей контейнеров, когда base уже определяет этот контейнер
 
 ### Пути `ref` в inventory и `$TEST_ROOT`
@@ -297,21 +297,21 @@ defaultInventory:
 ```yaml
 fields:
   - path: spec.hostNetwork        # Должен точно совпадать с путём из test_fields.yaml
-    scenario: negative             # Должен быть валидным именем сценария
+    scenario: negative             # Должен быть корректным именем сценария
   - path: spec.containers[].ports[].hostPort
     scenario: multiContainer
 ```
 
 **Правила:**
 - Каждый `path` должен **побайтово совпадать** с `path` из `test_fields.yaml`
-- Каждый `scenario` должен быть валидным именем сценария
+- Каждый `scenario` должен быть корректным именем сценария
 - Для кейсов исключений используйте пути SPE-полей и SPE-сценарии
 - Один кейс может покрывать несколько пар поле+сценарий
 - Несколько кейсов могут покрывать одну и ту же пару (для покрытия достаточно одного)
 
 ### SPE-кейсы
 
-Для кейсов SecurityPolicyException добавьте исключение как inventory:
+Для кейсов `SecurityPolicyException` добавьте исключение как inventory:
 
 ```yaml
 cases:
@@ -855,15 +855,31 @@ opa version
 
 ## 12. Известные ограничения
 
-1. **Семантика мержа массивов**: массивы в патчах `merge` **заменяют** весь массив по этому пути. Используйте `containerMerges` / `initContainerMerges` для точечных патчей контейнеров.
+1. **Семантика слияния массивов**: массивы в патчах `merge` **заменяют** весь массив по этому пути. Используйте `containerMerges` / `initContainerMerges` для точечных патчей контейнеров.
 
 2. **Сгенерированные файлы**: никогда не редактируйте файлы в `rendered/` вручную. Они перезаписываются при каждом запуске `generate`.
 
 ### Тестирование constraint-ов с external_data
 
-Constraint-ы, использующие `external_data` (например, `verify-image-signature`, `vulnerable-images`), **могут** быть протестированы через gator с помощью паттерна мок-данных через inventory. Подход:
+Constraint-ы, использующие `external_data` (например, `verify-image-signature`, `vulnerable-images`), **могут** быть протестированы через gator с помощью паттерна мок-данных через inventory.
 
-1. **Rego-шаблон** включает параметр `isTest`. Когда `isTest: true`, шаблон вызывает `external_data_from_inventory(provider, keys)` вместо реальной функции `external_data`. Этот хелпер читает мок-ответы из inventory-объектов gator.
+#### Автоматическая подмена
+
+Когда в тест-матрице объявлен `spec.externalData`, генератор **автоматически переписывает** вызовы `external_data()` в сгенерированном constraint-template Rego:
+
+- `external_data({"provider": "X", "keys": Y})` → `external_data_from_inventory("X", Y)`
+
+Это означает, что **runtime Rego-шаблон сохраняет настоящий вызов `external_data()`** — не нужно поддерживать отдельную тестовую версию. Подмена затрагивает только сгенерированные артефакты в `rendered/`.
+
+> **Ручной override**: если нужен полный контроль над тестовым шаблоном, положите файл `constraint-template.gator.yaml` рядом с тест-матрицей. Он имеет приоритет над автоподменой.
+
+#### Шаги настройки
+
+1. **Rego-шаблон** должен включать:
+   - Параметр `isTest` в CRD-схеме.
+   - Правило `is_test_mode`, проверяющее `input.parameters.isTest`.
+   - Хелпер `external_data_from_inventory(provider, keys)`, читающий мок-данные из `data.inventory`.
+   - Диспетчер `get_data`: вызывает `external_data_from_inventory` в тестовом режиме, `external_data` в production.
 
 2. **Манифест constraint** устанавливает `parameters.isTest: true`:
 
@@ -950,7 +966,7 @@ Constraint-ы, использующие `external_data` (например, `veri
 - [ ] `level`, `defaultBehavior` и `applicableTracks` заданы корректно
 - [ ] Для каждого обязательного сценария каждого поля есть хотя бы один кейс в `test-matrix.yaml`
 - [ ] `constraint_testgen generate` выполняется успешно, `rendered/` обновлён
-- [ ] `constraint_testgen verify` проходит (профиль валиден, обязательные блоки присутствуют)
+- [ ] `constraint_testgen verify` проходит (профиль корректен, обязательные блоки присутствуют)
 - [ ] Coverage не показывает пропущенных обязательных сценариев
 - [ ] Проверка gator проходит успешно
-- [ ] Имена кейсов и аннотации `fields` понятны ревьюеру без контекста
+- [ ] Имена кейсов и аннотации `fields` понятны читателю без контекста

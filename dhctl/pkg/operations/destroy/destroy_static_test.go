@@ -1267,10 +1267,8 @@ func (w *testNodeUserWaiter) waitAll() {
 }
 
 func (w *testNodeUserWaiter) goWaitNodeUserAddUserToNodes(ctx context.Context, kubeCl *client.KubernetesClient, hosts []session.Host) {
-	w.wg.Add(1)
 
-	go func() {
-		defer w.wg.Done()
+	w.wg.Go(func() {
 		err := retry.NewSilentLoop("wait node user", 20, 500*time.Millisecond).RunContext(ctx, func() error {
 			_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(ctx, global.ConvergeNodeUserName, metav1.GetOptions{})
 			return err
@@ -1300,7 +1298,7 @@ func (w *testNodeUserWaiter) goWaitNodeUserAddUserToNodes(ctx context.Context, k
 		}
 
 		w.setErr(nil)
-	}()
+	})
 }
 
 type testStaticDestroyTest struct {

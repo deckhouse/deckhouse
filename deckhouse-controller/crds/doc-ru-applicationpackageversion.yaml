@@ -6,7 +6,19 @@ spec:
           description: |
             Представляет версию пакета приложения.
           properties:
+            apiVersion:
+              description: |-
+                Определяет версионированную схему этого представления объекта. Серверы должны преобразовывать распознанные схемы в последнее внутреннее значение и могут отклонять нераспознанные значения.
+
+                Больше информации [в документации Kubernetes](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
+            kind:
+              description: |-
+                Значение представляет REST-ресурс, который описывает данный объект. Серверы могут определить его по эндпоинту, к которому клиент отправляет запросы. Не может быть изменено. Используется в CamelCase.
+
+                Больше информации [в документации Kubernetes](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             spec:
+              description: |
+                Определяет параметры версии пакета приложения.
               properties:
                 packageName:
                   description: |
@@ -19,32 +31,34 @@ spec:
                     Версия пакета приложения.
             status:
               description: |
-                Статус ресурса.
+                Статус версии пакета приложения.
               properties:
                 conditions:
                   description: |
-                    Условия представляют последние доступные наблюдения за состоянием версии пакета.
+                    Условия, отражающие последние наблюдения за состоянием версии пакета.
                   items:
+                    description: |
+                      Условие, описывающее один аспект текущего состояния версии пакета.
                     properties:
                       lastTransitionTime:
                         description: |
                           Последнее время перехода условия из одного статуса в другой.
                       message:
                         description: |
-                          Человеко-читаемое сообщение, указывающее детали последнего перехода.
+                          Сообщение с деталями перехода. Может быть пустым.
                       observedGeneration:
                         description: |
-                          Значение .metadata.generation, на основании которого было установлено условие.
+                          Значение `.metadata.generation`, на котором было установлено условие.
+                          Позволяет определить актуальность условия для текущего состояния ресурса.
                       reason:
                         description: |
-                          Машино-читаемый текст в UpperCamelCase, указывающий причину последнего перехода условия.
+                          Программный идентификатор причины последнего перехода условия.
                       status:
                         description: |
-                          Статус условия.
-                          Может быть True, False, Unknown.
+                          Статус условия. Может быть `True`, `False` или `Unknown`.
                       type:
                         description: |
-                          Тип условия.
+                          Тип условия версии пакета в CamelCase или в формате `foo.example.com/CamelCase`.
                 packageMetadata:
                   description: |
                     Метаданные о пакете, такие как описание, требования и т.д.
@@ -90,7 +104,7 @@ spec:
                       properties:
                         deckhouse:
                           description: |
-                            Требуемая версия Deckhouse.
+                            Требуемая версия Deckhouse Kubernetes Platform .
                           properties:
                             constraint:
                               description: |

@@ -20,7 +20,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -157,17 +156,17 @@ type byConditionsParams struct {
 
 var kindsByConditions = map[string]byConditionsParams{
 	"Deployment": {
-		waitAttemptsBeforeCheck: ptr.To(3),
+		waitAttemptsBeforeCheck: new(3),
 		conditionsForCheck:      availableConditions,
 		checkAll:                false,
 	},
 	"APIService": {
-		waitAttemptsBeforeCheck: ptr.To(2),
+		waitAttemptsBeforeCheck: new(2),
 		conditionsForCheck:      availableConditions,
 		checkAll:                false,
 	},
 	"NodeGroup": {
-		waitAttemptsBeforeCheck: ptr.To(5),
+		waitAttemptsBeforeCheck: new(5),
 		conditionsForCheck: Conditions{
 			readyCondition: trueCondition,
 		},

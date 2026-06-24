@@ -1337,7 +1337,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception/nginx: allow-root-user
+                  security.deckhouse.io/security-policy-exception.container.nginx: allow-root-user
                 name: allowed-by-exception-multiple-containers-all-allowed
               spec:
                 containers:

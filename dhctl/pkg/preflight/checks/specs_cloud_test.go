@@ -51,7 +51,7 @@ func TestCloudSystemRequirementsCheck(t *testing.T) {
 			installConfig: &config.DeckhouseInstaller{
 				ProviderClusterConfig: invalidPCC,
 			},
-			assertionCheck: func(t assert.TestingT, err error, i ...interface{}) bool {
+			assertionCheck: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "expected at least")
 			},
 		},
@@ -60,7 +60,7 @@ func TestCloudSystemRequirementsCheck(t *testing.T) {
 			installConfig: &config.DeckhouseInstaller{
 				ProviderClusterConfig: malformedPCC,
 			},
-			assertionCheck: func(t assert.TestingT, err error, i ...interface{}) bool {
+			assertionCheck: func(t assert.TestingT, err error, i ...any) bool {
 				return assert.ErrorContains(t, err, "malformed provider cluster configuration")
 			},
 		},

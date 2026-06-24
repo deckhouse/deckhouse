@@ -31,7 +31,7 @@ relatedLinks:
 Архитектура модуля [`kube-dns`](/modules/kube-dns/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля kube-dns](../../../images/architecture/network/c4-l2-kube-dns.ru.png)
+![Архитектура модуля kube-dns](../../images/architecture/network/c4-l2-kube-dns.ru.png)
 
 ### Компоненты модуля
 
@@ -93,7 +93,7 @@ relatedLinks:
 Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании Cilium в качестве CNI-плагина на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля node-local-dns](../../../images/architecture/network/c4-l2-node-local-dns.ru.png)
+![Архитектура модуля node-local-dns](../../images/architecture/network/c4-l2-node-local-dns.ru.png)
 
 #### Компоненты модуля
 
@@ -150,7 +150,7 @@ relatedLinks:
 Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании CNI-плагина [`cni-flannel`](/modules/cni-flannel/) или [`cni-simple-bridge`](/modules/cni-simple-bridge/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля node-local-dns](../../../images/architecture/network/c4-l2-node-local-dns-without-cilium.ru.png)
+![Архитектура модуля node-local-dns](../../images/architecture/network/c4-l2-node-local-dns-without-cilium.ru.png)
 
 #### Компоненты модуля
 

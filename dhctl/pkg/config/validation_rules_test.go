@@ -320,7 +320,6 @@ masterNodeGroup:
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			err := ValidateClusterSettingsChanges(tt.phase, tt.oldConfig, tt.newConfig, tt.schema, validateOpts...)
 			if tt.errContains == "" {

@@ -111,11 +111,11 @@ func (m *mockProcessState) Success() bool {
 	return m.exitCode == 0
 }
 
-func (m *mockProcessState) Sys() interface{} {
+func (m *mockProcessState) Sys() any {
 	return nil
 }
 
-func (m *mockProcessState) SysUsage() interface{} {
+func (m *mockProcessState) SysUsage() any {
 	return nil
 }
 

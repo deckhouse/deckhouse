@@ -51,11 +51,13 @@ var once sync.Once
 var store *SchemaStore
 
 type validateOptions struct {
-	omitDocInError     bool
-	commanderMode      bool
-	strictUnmarshal    bool
-	validateExtensions bool
-	requiredSSHHost    bool
+	omitDocInError       bool
+	commanderMode        bool
+	strictUnmarshal      bool
+	validateExtensions   bool
+	requiredSSHHost      bool
+	collectAllErrors     bool
+	skipSchemaValidation bool
 }
 
 type ValidateOption func(o *validateOptions)
@@ -93,6 +95,27 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
+// ValidateOptionCollectAllErrors makes ParseConfigFromData accumulate per-doc
+// errors into a *ValidationError instead of returning on the first one. Off
+// by default — bootstrap CLI keeps its fail-fast semantics. Validators that
+// want multi-error UX enable this.
+func ValidateOptionCollectAllErrors(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.collectAllErrors = v
+	}
+}
+
+// ValidateOptionSkipSchemaValidation makes parseDocument skip schemaStore
+// OpenAPI checks and just categorize a document by its kind. Use it for
+// "intent extraction" passes — domain analyzers (e.g. CNI mismatch) that
+// must read the user's cluster intent without re-running schema checks the
+// schema-validator pass has already done.
+func ValidateOptionSkipSchemaValidation(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.skipSchemaValidation = v
+	}
+}
+
 func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
 	// fallback to default value
 	candiDir := options.DefaultCandiDir
@@ -103,8 +126,8 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
-		pathsNoTrimmed := strings.Split(pathsStr, ",")
-		for _, p := range pathsNoTrimmed {
+		pathsNoTrimmed := strings.SplitSeq(pathsStr, ",")
+		for p := range pathsNoTrimmed {
 			paths = append(paths, strings.TrimSpace(p))
 		}
 	}
@@ -425,7 +448,7 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (bool, error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
-	var blank map[string]interface{}
+	var blank map[string]any
 
 	if options.strictUnmarshal {
 		err := yaml.UnmarshalStrict(*dataObj, &blank)
@@ -483,7 +506,7 @@ func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
 	conversion := s.conversionsStore.Get(mc.GetName())
 	log.DebugF("Starting conversion for module %s. Latest version: %d\n", mc.GetName(), conversion.LatestVersion())
 	var err error
-	var conversed map[string]interface{}
+	var conversed map[string]any
 	if mc.Spec.Version < conversion.LatestVersion() {
 		set := &mc.Spec.Settings
 		unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(set)

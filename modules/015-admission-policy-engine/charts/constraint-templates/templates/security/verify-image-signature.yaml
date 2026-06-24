@@ -49,7 +49,7 @@ spec:
 
         get_data(filtered_images) = response {
           not is_test_mode
-          response := external_data_from_inventory("ratify-provider", filtered_images)
+          response := external_data({"provider": "ratify-provider", "keys": filtered_images})
         }
 
         external_data_from_inventory(provider, keys) = response {

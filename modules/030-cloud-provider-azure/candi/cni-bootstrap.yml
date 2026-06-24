@@ -1,0 +1,4 @@
+schemaVersion: 1
+name: simple-bridge
+config:
+  default: {}

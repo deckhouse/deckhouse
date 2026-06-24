@@ -42,6 +42,7 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
+	cachemetrics "github.com/deckhouse/node-controller/internal/metrics/cache"
 	"github.com/deckhouse/node-controller/internal/register"
 	_ "github.com/deckhouse/node-controller/internal/register/controllers"
 	"github.com/deckhouse/node-controller/internal/webhook"
@@ -68,6 +69,7 @@ func main() {
 	var webhookPort int
 	var disabledControllers string
 	var maxConcurrentReconcilesRaw string
+	var leaderElect bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":4291", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":4292", "The address the probe endpoint binds to.")
@@ -75,6 +77,7 @@ func main() {
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
 	flag.StringVar(&disabledControllers, "disable-controllers", "", "Comma-separated list of controllers to disable")
 	flag.StringVar(&maxConcurrentReconcilesRaw, "max-concurrent-reconciles", "10", "Maximum number of concurrent reconciles per controller. Format: N or N,controller1=M,controller2=K")
+	flag.BoolVar(&leaderElect, "leader-elect", false, "Enable leader election for controller manager")
 
 	logs.AddGoFlags(flag.CommandLine)
 
@@ -104,9 +107,22 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		Cache:                  cacheOpts,
 		Client:                 clientOpts,
+
+		LeaderElection:          leaderElect,
+		LeaderElectionID:        "node-controller.deckhouse.io",
+		LeaderElectionNamespace: os.Getenv("POD_NAMESPACE"),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	instrumentedClient := &cachemetrics.InstrumentedClient{
+		Client: mgr.GetClient(),
+	}
+
+	if err = mgr.Add(cachemetrics.NewCollector(instrumentedClient)); err != nil {
+		setupLog.Error(err, "unable to add cache metrics collector")
 		os.Exit(1)
 	}
 
@@ -123,7 +139,7 @@ func main() {
 	}
 	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
 
-	if err = register.SetupAll(mgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
+	if err = register.SetupAll(mgr, instrumentedClient, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}

@@ -524,7 +524,9 @@ function main() {
     # parsed by dhctl-side measurement tooling to map where bashible time goes.
     local start_ts
     start_ts=$(date +%s.%N)
-    echo "=== Step ${step_base} ==="
+    echo ===
+    echo === Step: $step
+    echo ===
 
     span_ctx=$(bb-telemetry-start-span "$step_base" "${BB_TELEMETRY_PARENT_SPAN_ID:-}")
 
@@ -545,7 +547,9 @@ function main() {
       fi
       >&2 echo "Failed to execute step ${step_base}, retrying in 2 seconds"
       sleep 2
-      echo "=== Step ${step_base} retry ${attempt} ==="
+      echo ===
+      echo === Step: $step
+      echo ===
       if [ "$attempt" -gt 2 ]; then
         sx=x
       fi

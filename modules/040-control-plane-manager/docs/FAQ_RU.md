@@ -1432,92 +1432,114 @@ d8 k get cpn
 
 Полный пример конфигурации и результатов доступен в разделе [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями).
 
-## Как проверить функционал контроля целостности данных, хранимых в etcd?
+## Как проверить работу механизма контроля целостности данных, хранимых в etcd?
 
 {% alert level="warning" %}
-Функционал контроля целостности данных, хранимых в etcd доступен только для CSE-lite и CSE-pro редакций.
+Контроль целостности данных, хранимых в etcd, доступен только в редакциях CSE Lite и CSE Pro.
 {% endalert %}
 
-### Проверка формата хранимых данных
+### Проверка формата данных, хранящихся в etcd
 
-Для проверки типа данных, хранящихся в etcd, необходимо создать объект, а затем запросить его содержимое через etcdctl. Приведённые команды следует выполнять с узла control-plane кластера.
+Чтобы проверить формат данных, хранящихся в etcd, создайте тестовый объект и запросите его содержимое через `etcdctl`.
 
-Создание тестового объекта:
+Приведённые команды следует выполнять с master-узла кластера.
 
-```bash
-kubectl create secret generic test-secret --from-literal=foo=bar
-```
+1. Создайте тестовый объект:
 
-Запрос содержимого через etcdctl:
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
 
-```bash
-ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
-$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
-```
+1. Запросите содержимое секрета через `etcdctl`:
 
-Примеры вывода команды:
-1. Режим работы контроля целостности `Enforce` или `Migrate`:
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
 
-```bash
-/registry/secrets/default/test-secret
-{"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
-```
+   Примеры вывода команды:
 
-1. Режим работы контроля целостности `Rollback`:
+   - Режим контроля целостности `Enforce` или `Migrate`:
 
-```bash
-/registry/secrets/default/test-secret
-k8s
-v1Secret
-test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
-kubectl-createUpdatevFieldsV1:,
-*{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
-foobarOpaque"
-```
+     ```console
+     /registry/secrets/default/test-secret
+     {"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
+     ```
 
-1. Включено шифрование секретов (`apiserver.encryptionEnabled`), режим работы контроля целостности `Rollback`:
+   - Режим контроля целостности `Rollback`:
 
-```bash
-/registry/secrets/default/test-secret
-k8s:enc:aescbc:v1:secretbox: <binary data>
-```
+     ```console
+     /registry/secrets/default/test-secret
+     k8s
+     v1Secret
+     test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
+     kubectl-createUpdatevFieldsV1:,
+     *{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
+     foobarOpaque"
+     ```
 
-### Проверка запрета обработки данных, не прошедших проверку подписи
+   - Включено шифрование секретов ([`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled)), режим контроля целостности `Rollback`:
 
-Приведённые команды следует выполнять с узла control-plane кластера.
+     ```console
+     /registry/secrets/default/test-secret
+     k8s:enc:aescbc:v1:secretbox: <binary data>
+     ```
 
-Создание тестового объекта:
+### Проверка запрета обработки данных с некорректной подписью
 
-```bash
-kubectl create secret generic test-secret --from-literal=foo=bar
-```
+Чтобы проверить механизм запрета обработки данных с некорректной подписью, измените значение поля `signature`.
 
-Запрос содержимого через etcdctl:
+Приведённые команды следует выполнять с master-узла кластера.
 
-```bash
-ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
-$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
-```
+1. Создайте тестовый объект:
 
-Намеренное изменение поля `signature` в секрете:
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
 
-```bash
-etcdctl put /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
-```
+1. Запросите содержимое секрета через `etcdctl`:
 
-Запрос содержимого через kubectl:
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
 
-```bash
-kubectl get secret test-secret 
-```
+1. Измените поле `signature` в секрете:
 
-Пример вывода (только в режиме работы контроля целостности `Enforce`):
+   ```bash
+   etcdctl put /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ \
+     '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
+   ```
 
-```bash
-Error from server (InternalError): Internal error occurred: bad signature, record rejected
-```
+1. Запросите содержимое секрета:
 
-Просмотр аудит-лога запроса (в любом режиме работы контроля целостности):
+   ```bash
+   d8 k get secret test-secret 
+   ```
+
+   Пример вывода (только в режиме контроля целостности `Enforce`, который разрешает работу только с записями с корректной подписью):
+
+   ```console
+   Error from server (InternalError): Internal error occurred: bad signature, record rejected
+   ```
+
+#### Проверка записи событий в журнал аудита
+
+При обнаружении некорректной или отсутствующей подписи информация об этом записывается в журнал аудита Kubernetes независимо от режима контроля целостности.
+
+Для просмотра записей журнала аудита выполните следующую команду:
 
 ```bash
 jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
@@ -1525,7 +1547,7 @@ jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.lo
 
 Пример вывода:
 
-```bash
+```console
 {
   "kind": "Event",
   "apiVersion": "audit.k8s.io/v1",
