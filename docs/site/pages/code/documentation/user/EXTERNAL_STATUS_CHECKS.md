@@ -108,10 +108,10 @@ The header value is an HMAC-SHA256 digest of the request body, generated with th
 
 The secret is stored encrypted. After it is saved, the UI only shows that a secret exists. To replace the secret:
 
-1. In the status check row, select **Update**.
-1. Select **Edit secret**.
+1. In the status check row, select "Update".
+1. Select "Edit secret".
 1. Enter a new value.
-1. Select **Update status check**.
+1. Select "Update status check".
 
 ## Check lifecycle
 
