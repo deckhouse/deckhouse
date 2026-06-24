@@ -60,13 +60,12 @@ spec:
       containers:
       - name: integrity-containerd-configurator
         image: {{ include "helm_lib_module_image" (list . "integrityContainerdConfigurator") }}
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" dict | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         command:
         - /integrity-containerd-configurator
         args:
         - --health-probe-bind-address=0.0.0.0:8081
         - --config-dir=/host/etc/containerd/integrity
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         livenessProbe:
           httpGet:
             path: /healthz

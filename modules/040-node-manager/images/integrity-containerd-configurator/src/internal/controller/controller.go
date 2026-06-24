@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
+	//nolint:goimports
+	//nolint:gci
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
