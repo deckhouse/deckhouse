@@ -29,7 +29,6 @@ prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
 terraformManagerEnabled: true
-upmeterEnabled: true
 userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerEnabled: true

@@ -447,11 +447,9 @@ read:
     - sailoperator.io/ztunnels
 read-write:
     - apps.kruise.io/daemonsets
-    - deckhouse.io/downtimes
     - deckhouse.io/ingressnginxcontrollers
     - deckhouse.io/nodegroupconfigurations
     - deckhouse.io/staticinstances
-    - deckhouse.io/upmeterremotewrites
     - multitenancy.deckhouse.io/clusterresourcegrantpolicies
 write:
     - apiextensions.k8s.io/customresourcedefinitions

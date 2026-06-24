@@ -509,12 +509,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManagerYandex":      "imageHash-terraformManager-terraformManagerYandex",
 		"terraformManagerZvirt":       "imageHash-terraformManager-terraformManagerZvirt",
 	},
-	"upmeter": map[string]interface{}{
-		"smokeMini": "imageHash-upmeter-smokeMini",
-		"status":    "imageHash-upmeter-status",
-		"upmeter":   "imageHash-upmeter-upmeter",
-		"webui":     "imageHash-upmeter-webui",
-	},
 	"userAuthn": map[string]interface{}{
 		"basicAuthProxy":      "imageHash-userAuthn-basicAuthProxy",
 		"dex":                 "imageHash-userAuthn-dex",
