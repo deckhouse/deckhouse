@@ -118,8 +118,18 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:storageversion
+// +kubebuilder:printcolumn:name="Weight",type="integer",JSONPath=".properties.weight",priority=1,description="Module weight"
+// +kubebuilder:printcolumn:name="Stage",type="string",JSONPath=".properties.stage",description="Module stage"
+// +kubebuilder:printcolumn:name="Release channel",type="string",JSONPath=".properties.releaseChannel",priority=1,description="Release channel of the module."
+// +kubebuilder:printcolumn:name="Source",type="string",JSONPath=".properties.source",description="Source of the module it provided by one."
+// +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".properties.version",priority=1,description="Module version."
+// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="Module phase."
+// +kubebuilder:printcolumn:name="Enabled",type="string",JSONPath=".status.conditions[?(@.type=='EnabledByModuleManager')].status",description="Module`s enabled status."
+// +kubebuilder:printcolumn:name="Disabled Message",type="string",JSONPath=".status.conditions[?(@.type=='EnabledByModuleManager')].message",priority=1,description="Module`s enabled information."
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='IsReady')].status",description="Module`s ready status."
+// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse}, preserveUnknownFields: false, minimal: true, stripFormat: [int32]}
 
-// Module is a deckhouse module representation.
+// Describes the module's status in the cluster. The `Module` object is created automatically after configuring the [ModuleSource](#modulesource) and successfully completing synchronization.
 type Module struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -134,70 +144,90 @@ type Module struct {
 
 type ModuleRequirements struct {
 	ModulePlatformRequirements `json:",inline" yaml:",inline"`
-	ParentModules              map[string]string `json:"modules,omitempty" yaml:"modules,omitempty"`
+	// A list of other enabled modules required for the module.
+	ParentModules map[string]string `json:"modules,omitempty" yaml:"modules,omitempty"`
 }
 
 type ModulePlatformRequirements struct {
-	Deckhouse  string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	// Required Deckhouse version.
+	Deckhouse string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	// Required Kubernetes version.
 	Kubernetes string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
+	// Required cluster installation status (for built-in DKP modules only).
+	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
 }
 
 type ModuleProperties struct {
-	Weight           uint32                `json:"weight,omitempty"`
-	Source           string                `json:"source,omitempty"`
-	ReleaseChannel   string                `json:"releaseChannel,omitempty"`
-	Stage            string                `json:"stage,omitempty"`
-	Critical         bool                  `json:"critical,omitempty"`
-	Namespace        string                `json:"namespace,omitempty"`
-	Subsystems       []string              `json:"subsystems,omitempty"`
-	Version          string                `json:"version,omitempty"`
-	UpdatePolicy     string                `json:"updatePolicy,omitempty"`
-	ExclusiveGroup   string                `json:"exclusiveGroup,omitempty" yaml:"exclusiveGroup,omitempty"`
-	AvailableSources []string              `json:"availableSources,omitempty"`
-	Requirements     *ModuleRequirements   `json:"requirements,omitempty" yaml:"requirements,omitempty"`
-	DisableOptions   *ModuleDisableOptions `json:"disableOptions,omitempty" yaml:"disableOptions,omitempty"`
-	Accessibility    *ModuleAccessibility  `json:"accessibility,omitempty" yaml:"accessibility,omitempty"`
+	// Module _weight_ (priority).
+	Weight uint32 `json:"weight,omitempty"`
+	// Source the module was downloaded from (otherwise will be blank).
+	Source string `json:"source,omitempty"`
+	// Module release channel.
+	ReleaseChannel string `json:"releaseChannel,omitempty"`
+	// Current stage of the module lifecycle.
+	Stage string `json:"stage,omitempty"`
+	// Indicates whether the module critical or not.
+	Critical bool `json:"critical,omitempty"`
+	// Module namespace.
+	Namespace string `json:"namespace,omitempty"`
+	// Module subsystems.
+	Subsystems []string `json:"subsystems,omitempty"`
+	// Module version.
+	Version string `json:"version,omitempty"`
+	// Module update policy.
+	UpdatePolicy string `json:"updatePolicy,omitempty"`
+	// Indicates the group where only one module can be active at a time.
+	ExclusiveGroup string `json:"exclusiveGroup,omitempty" yaml:"exclusiveGroup,omitempty"`
+	// Available sources for downloading the module.
+	AvailableSources []string `json:"availableSources,omitempty"`
+	// Module dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Requirements *ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
+	// Parameters of module disable protection.
+	DisableOptions *ModuleDisableOptions `json:"disableOptions,omitempty" yaml:"disableOptions,omitempty"`
+	// Module accessibility settings.
+	Accessibility *ModuleAccessibility `json:"accessibility,omitempty" yaml:"accessibility,omitempty"`
 }
 
 type ModuleAccessibility struct {
-	Editions map[string]ModuleEdition `json:"editions" yaml:"editions"`
+	// Module operation settings in Deckhouse editions.
+	Editions map[string]ModuleEdition `json:"editions,omitempty" yaml:"editions"`
 }
 
 type ModuleEdition struct {
-	Available        bool     `json:"available" yaml:"available"`
-	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
+	Available        bool     `json:"available,omitempty" yaml:"available"`
+	EnabledInBundles []string `json:"enabledInBundles,omitempty" yaml:"enabledInBundles"`
 }
 
 type ModuleDisableOptions struct {
-	Confirmation bool   `json:"confirmation" yaml:"confirmation"`
-	Message      string `json:"message" yaml:"message"`
+	Confirmation bool   `json:"confirmation,omitempty" yaml:"confirmation"`
+	Message      string `json:"message,omitempty" yaml:"message"`
 }
 
 type ModuleStatus struct {
-	Phase      string            `json:"phase,omitempty"`
-	HooksState string            `json:"hooksState,omitempty"`
+	// Module phase.
+	// +kubebuilder:validation:Enum=Unavailable;Available;Downloading;DownloadingError;Reconciling;Installing;HooksDisabled;WaitSyncTasks;Downloaded;Conflict;Ready;Error
+	Phase string `json:"phase,omitempty"`
+	// Hooks status report.
+	HooksState string `json:"hooksState,omitempty"`
+	// +crd-enricher:raw:x-kubernetes-patch-strategy=merge
+	// +crd-enricher:raw:x-kubernetes-patch-merge-key=type
 	Conditions []ModuleCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ModuleCondition struct {
 	// Type is the type of the condition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	Type string `json:"type,omitempty"`
 	// Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	Reason string `json:"reason,omitempty"`
 	// Human-readable message indicating details about last transition.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	Message string `json:"message,omitempty"`
 	// Status is the status of the condition.
 	// Can be True, False, Unknown.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	Status corev1.ConditionStatus `json:"status,omitempty"`
 	// Timestamp of when the condition was last probed.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
 	// Last time the condition transitioned from one status to another.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 

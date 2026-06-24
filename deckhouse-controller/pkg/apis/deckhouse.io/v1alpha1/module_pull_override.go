@@ -57,9 +57,14 @@ var _ runtime.Object = (*ModulePullOverride)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=mpo
+// +kubebuilder:unservedversion
+// +kubebuilder:deprecatedversion
+// +kubebuilder:printcolumn:name="Updated",type="date",format="date-time",JSONPath=".status.updatedAt",description="When the module was last updated."
+// +kubebuilder:printcolumn:name="msg",type="string",JSONPath=".status.message",description="Detailed description."
+// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse}, preserveUnknownFields: false, minimal: true, stripFormat: true}
 
-// ModulePullOverride object
+// Defines the configuration.
 type ModulePullOverride struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -67,24 +72,33 @@ type ModulePullOverride struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of an ModulePullOverride.
 	Spec ModulePullOverrideSpec `json:"spec"`
 
-	// Status of an ModulePullOverride.
 	Status ModulePullOverrideStatus `json:"status,omitempty"`
 }
 
 type ModulePullOverrideSpec struct {
-	Source       string          `json:"source,omitempty"`
-	ImageTag     string          `json:"imageTag"`
-	ScanInterval libapi.Duration `json:"scanInterval"`
+	// Reference to the ModuleSource with the module.
+	Source string `json:"source"`
+	// Module container image tag, which will be pulled.
+	ImageTag string `json:"imageTag"`
+	// Scan interval for checking the image digest. If the digest changes, the module is updated.
+	// +kubebuilder:default="15s"
+	ScanInterval libapi.Duration `json:"scanInterval,omitempty"`
+	// Indicates whether the module release should be rollback after deleting ModulePullOverride.
+	// +kubebuilder:default=false
+	Rollback bool `json:"rollback,omitempty"`
 }
 
 type ModulePullOverrideStatus struct {
-	UpdatedAt   metav1.Time `json:"updatedAt"`
-	Message     string      `json:"message"`
-	ImageDigest string      `json:"imageDigest"`
-	Weight      uint32      `json:"weight,omitempty"`
+	// When the module was last updated.
+	UpdatedAt metav1.Time `json:"updatedAt,omitempty"`
+	// Details of the resource status.
+	Message string `json:"message,omitempty"`
+	// Digest of the module image.
+	ImageDigest string `json:"imageDigest,omitempty"`
+	// Module weight.
+	Weight uint32 `json:"weight,omitempty"`
 }
 
 // GetModuleSource returns the module source of the related module
