@@ -60,7 +60,7 @@ The table contains:
 - The target branch scope.
 - The status check timeout or the project default timeout.
 - The HMAC shared secret status.
-- **Update** and **Delete** actions.
+- "Update" and "Delete" actions.
 
 If a check does not have an individual timeout, the table shows the project default timeout with the `(default)` label.
 
