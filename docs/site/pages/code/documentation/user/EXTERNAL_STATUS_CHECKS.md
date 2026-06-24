@@ -51,7 +51,7 @@ Behavior:
 
 ## External status checks table
 
-The **External status checks** table shows all status check services configured for the project.
+The "External status checks" table shows all status check services configured for the project.
 
 The table contains:
 
