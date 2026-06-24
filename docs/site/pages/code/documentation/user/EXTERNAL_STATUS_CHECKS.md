@@ -121,9 +121,9 @@ A check response can have one of the following statuses:
 
 | Status | Description |
 |--------|-------------|
-| `pending` | Deckhouse Code is waiting for the external service response. |
-| `passed` | The external service approved the merge request state. |
-| `failed` | The external service rejected the merge request state, the request to the external URL failed, or the timeout expired. |
+| `pending` | Deckhouse Code is waiting for the external service response |
+| `passed` | The external service approved the merge request state |
+| `failed` | The external service rejected the merge request state, the request to the external URL failed, or the timeout expired |
 
 The external service updates a response by using the API endpoint:
 
