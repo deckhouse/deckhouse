@@ -36,6 +36,7 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
@@ -97,6 +98,7 @@ type Runtime struct {
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
 	debugServer *debug.Server       // Unix socket debug API
 
+	crdInstaller      *crd.Installer                      // Installs CRDs from package paths
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
@@ -397,6 +399,9 @@ func (r *Runtime) buildNelmService() error {
 		return fmt.Errorf("initialize nelm service client: %w", err)
 	}
 
+	// Create CRD installer with nelm client
+	r.crdInstaller = crd.NewInstaller(client, r.logger)
+
 	// Create controller-runtime cache for efficient resource queries during monitoring
 	cache, err := runtimecache.New(client.RestConfig(), runtimecache.Options{})
 	if err != nil {
@@ -547,6 +552,18 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 
 	onScheduleHook := func(enabled []string) {
 		r.logger.Info("enabled packages", "packages", enabled)
+
+		for _, name := range enabled {
+			module, ok := r.modules[name]
+			if !ok {
+				continue
+			}
+
+			if err := r.crdInstaller.Install(context.Background(), module); err != nil {
+				r.logger.Error(fmt.Sprintf("failed to install crds for module %s: %v", name, err.Error()))
+			}
+		}
+
 		r.global.SetEnabledModules(enabled)
 	}
 

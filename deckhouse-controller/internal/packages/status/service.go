@@ -43,6 +43,8 @@ const (
 	ConditionConfigured ConditionType = "Configured"
 	// ConditionPending indicates that the package wait converge
 	ConditionPending ConditionType = "Pending"
+	// ConditionCustomResourcesApplied indicates that CRDs are ensured
+	ConditionCustomResourcesApplied ConditionType = "CustomResourcesApplied"
 
 	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
 	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
@@ -423,6 +425,7 @@ func (s *Service) NewStatus(name string) {
 			{Type: ConditionScaled, Status: metav1.ConditionUnknown},
 			{Type: ConditionConfigured, Status: metav1.ConditionUnknown},
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
+			{Type: ConditionCustomResourcesApplied, Status: metav1.ConditionUnknown},
 		},
 	}
 
