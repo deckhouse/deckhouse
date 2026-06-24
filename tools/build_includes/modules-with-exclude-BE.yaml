@@ -718,6 +718,9 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /modules/462-loki
   to: /deckhouse/modules/462-loki
   excludePaths:
