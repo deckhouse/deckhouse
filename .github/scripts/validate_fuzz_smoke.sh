@@ -6,15 +6,44 @@ set -euo pipefail
 
 S3_BRANCH="${FUZZ_S3_BRANCH:-main}"
 
-echo "Detect changed fuzz tests"
+echo "Detect changed files"
 
-grep '^+++ b/.*_fuzz_test\.' "${DIFF_PATH}" \
+grep '^+++ b/' "${DIFF_PATH}" \
   | sed 's#^+++ b/##' \
+  | grep -v '^/dev/null$' \
   | sort -u \
-  > fuzz-tests.txt
+  > changed-files.txt
+
+if [ ! -s changed-files.txt ]; then
+  echo "No changed files"
+  exit 0
+fi
+
+echo "Detect affected fuzz tests"
+
+: > fuzz-tests.txt
+
+while read -r changed_file; do
+  dir="$(dirname "${changed_file}")"
+
+  while [ "${dir}" != "." ] && [ "${dir}" != "/" ]; do
+    find "${dir}" -maxdepth 1 -type f \
+      \( -name '*_fuzz_test.go' \
+      -o -name '*_fuzz_test.py' \
+      -o -name '*_fuzz_test.c' \
+      -o -name '*_fuzz_test.cc' \
+      -o -name '*_fuzz_test.cpp' \
+      -o -name '*_fuzz_test.rb' \) \
+      >> fuzz-tests.txt
+
+    dir="$(dirname "${dir}")"
+  done
+done < changed-files.txt
+
+sort -u fuzz-tests.txt -o fuzz-tests.txt
 
 if [ ! -s fuzz-tests.txt ]; then
-  echo "No changed fuzz tests"
+  echo "No affected fuzz tests"
   exit 0
 fi
 
