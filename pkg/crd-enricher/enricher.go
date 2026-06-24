@@ -58,6 +58,12 @@ type Enricher struct {
 	// deckhouse style via the x-doc-crd marker. Such files omit the leading
 	// document separator.
 	curatedStyle bool
+
+	// exampleScope is set per file from the crd:exampleScope marker. It controls
+	// where generated composite examples are attached: the default empty value
+	// (and "root") attaches a single synthesized example to the CRD root, while
+	// "tree" attaches a composite example to every object node as well.
+	exampleScope string
 }
 
 // Run loads the API packages, then walks and enriches every CRD file in the
@@ -153,6 +159,7 @@ func (e *Enricher) enrichFile(path string) (bool, error) {
 	}
 
 	e.curatedStyle = false
+	e.exampleScope = ""
 	e.enrichCRD(crd)
 
 	out, err := yaml.Marshal(crd)
@@ -230,6 +237,10 @@ func (e *Enricher) enrichCRD(crd map[string]any) {
 		}
 
 		e.enrichType(openAPISchema, named)
+
+		// Examples are generated bottom-up after every marker has been applied,
+		// so explicit examples, defaults and enums are already in place.
+		e.generateExamples(spec, names, name, openAPISchema)
 	}
 }
 
@@ -265,6 +276,12 @@ func (e *Enricher) applyCRDMarkers(crd map[string]any, markers []marker) {
 	}
 	if len(config) == 0 {
 		return
+	}
+
+	// exampleScope selects where generated examples are attached and is consumed
+	// later by generateExamples; it is not written onto the CRD itself.
+	if scope, ok := config["exampleScope"].(string); ok {
+		e.exampleScope = scope
 	}
 
 	metadata := childMap(crd, "metadata")

@@ -73,7 +73,10 @@ const rawMarkerPrefix = "raw:"
 //	+crd-enricher:deckhouse:crd:stripFormat=true
 //
 // The value after "=" is parsed as YAML (so stripFormat=[int32] yields a list),
-// and a value-less sub-entity is treated as the boolean true. Labels and
+// and a value-less sub-entity is treated as the boolean true. The
+// exampleScope=tree setting additionally makes the example generator attach a
+// composite example to every object node instead of the CRD root only. Labels
+// and
 // annotations are not configured here: controller-gen emits them natively from
 // the +kubebuilder:metadata:labels and +kubebuilder:metadata:annotations
 // markers. It is handled separately from the schema-level documentation
