@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -131,5 +132,65 @@ func TestServer_ServesTLS(t *testing.T) {
 	defer resp.Body.Close()
 	if b, _ := io.ReadAll(resp.Body); string(b) != "AGENT-OK" {
 		t.Fatalf("body = %q", b)
+	}
+}
+
+// TestServer_listenWithRetry_cancelsWhileOccupied asserts the bind retry loop
+// keeps retrying (does not error out) while the port is held, and exits on ctx
+// cancellation rather than crashing.
+func TestServer_listenWithRetry_cancelsWhileOccupied(t *testing.T) {
+	occ, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("occupy: %v", err)
+	}
+	defer occ.Close()
+
+	s := &Server{addr: occ.Addr().String()}
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	if _, err := s.listenWithRetry(ctx, 10*time.Millisecond, 1_000_000); err == nil {
+		t.Fatal("expected ctx error while port is occupied, got nil (should not have bound)")
+	}
+}
+
+// TestServer_listenWithRetry_failsAfterMaxAttempts asserts the retry is bounded:
+// a permanently-held port eventually errors out (so the pod exits and kubelet
+// restarts it) rather than retrying forever.
+func TestServer_listenWithRetry_failsAfterMaxAttempts(t *testing.T) {
+	occ, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("occupy: %v", err)
+	}
+	defer occ.Close()
+
+	s := &Server{addr: occ.Addr().String()}
+	_, err = s.listenWithRetry(context.Background(), time.Millisecond, 3)
+	if err == nil {
+		t.Fatal("expected error after exhausting attempts, got nil")
+	}
+	if !strings.Contains(err.Error(), "still in use after") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// TestServer_listenWithRetry_bindsWhenFree asserts a free port binds on the first
+// attempt.
+func TestServer_listenWithRetry_bindsWhenFree(t *testing.T) {
+	tmp, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserve: %v", err)
+	}
+	addr := tmp.Addr().String()
+	_ = tmp.Close()
+
+	s := &Server{addr: addr}
+	ln, err := s.listenWithRetry(context.Background(), 2*time.Second, 150)
+	if err != nil {
+		t.Fatalf("expected bind on free port, got %v", err)
+	}
+	defer ln.Close()
+	if ln.Addr().String() != addr {
+		t.Fatalf("bound %s, want %s", ln.Addr(), addr)
 	}
 }

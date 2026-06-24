@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 )
 
 // Authenticator validates local client credentials. A bcrypt-backed
@@ -67,6 +68,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no routes configured", http.StatusServiceUnavailable)
 		return
 	}
+	// Token endpoint: a /auth* request carries no ns and arrives only because the
+	// agent rewrote the cache's Bearer realm to point back at itself (see
+	// proxyCache). Forward it to the cache's auth so a node's containerd can fetch
+	// a token via the agent instead of the cache's unresolvable Service DNS.
+	if isAuthPath(r.URL.Path) {
+		h.proxyCacheAuth(w, r, router)
+		return
+	}
 	ns := r.URL.Query().Get("ns")
 	route, ok := router.Match(ns, r.Host, r.URL.Path)
 	if !ok {
@@ -94,6 +103,37 @@ func (h *Handler) proxyCache(w http.ResponseWriter, r *http.Request, route Route
 	// The cache serves HTTPS with a cert signed by the module CA, which is not in
 	// the system roots — trust route.CacheCA explicitly (else: x509 unknown
 	// authority). Empty CacheCA falls back to the default transport.
+	base, err := transportWithCA(route.CacheCA)
+	if err != nil {
+		http.Error(w, "bad cache ca", http.StatusInternalServerError)
+		return
+	}
+	rp := &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+		},
+		Transport:      base,
+		ModifyResponse: rewriteAuthRealm(r.Host),
+	}
+	rp.ServeHTTP(w, r)
+}
+
+// proxyCacheAuth forwards a token (/auth*) request to the cache's auth endpoint.
+// Token requests carry no ns, so they cannot be matched by the ns router; route
+// them to any cache. The realm the client followed here was rewritten by
+// proxyCache to the agent's own host, so the client reaches us (node-reachable)
+// instead of the cache's in-cluster Service DNS.
+func (h *Handler) proxyCacheAuth(w http.ResponseWriter, r *http.Request, router *Router) {
+	route, ok := router.firstCacheRoute()
+	if !ok {
+		http.Error(w, "no cache route for auth", http.StatusNotFound)
+		return
+	}
+	target, err := url.Parse(route.CacheURL)
+	if err != nil {
+		http.Error(w, "bad cache url", http.StatusInternalServerError)
+		return
+	}
 	base, err := transportWithCA(route.CacheCA)
 	if err != nil {
 		http.Error(w, "bad cache ca", http.StatusInternalServerError)
@@ -166,4 +206,53 @@ func transportWithCA(caPEM string) (http.RoundTripper, error) {
 	}
 	tr.TLSClientConfig = &tls.Config{RootCAs: pool}
 	return tr, nil
+}
+
+// isAuthPath reports whether p is the registry token endpoint the agent proxies
+// to the cache's auth (the path component of the cache's Bearer realm, /auth).
+func isAuthPath(p string) bool {
+	return p == "/auth" || strings.HasPrefix(p, "/auth/")
+}
+
+// rewriteAuthRealm returns a ReverseProxy ModifyResponse that rewrites the host
+// of a Bearer `realm="…"` in a Www-Authenticate header to host (the address the
+// client used to reach the agent). The cache advertises its in-cluster Service
+// DNS as the realm, which a node's containerd (node DNS) cannot resolve; pointing
+// the realm back at the agent lets the token fetch come through the agent. A
+// no-op when there is no Www-Authenticate header (cache hits never 401).
+func rewriteAuthRealm(host string) func(*http.Response) error {
+	return func(resp *http.Response) error {
+		const hdr = "Www-Authenticate"
+		v := resp.Header.Get(hdr)
+		if v == "" {
+			return nil
+		}
+		if nv, changed := rewriteRealmHost(v, host); changed {
+			resp.Header.Set(hdr, nv)
+		}
+		return nil
+	}
+}
+
+// rewriteRealmHost replaces the host in the realm="<url>" token of a
+// Www-Authenticate header value with newHost, preserving scheme + path. Returns
+// the original value and false when there is no parseable realm URL.
+func rewriteRealmHost(headerValue, newHost string) (string, bool) {
+	const key = `realm="`
+	i := strings.Index(headerValue, key)
+	if i < 0 {
+		return headerValue, false
+	}
+	start := i + len(key)
+	rel := strings.IndexByte(headerValue[start:], '"')
+	if rel < 0 {
+		return headerValue, false
+	}
+	end := start + rel
+	u, err := url.Parse(headerValue[start:end])
+	if err != nil || u.Host == "" {
+		return headerValue, false
+	}
+	u.Host = newHost
+	return headerValue[:start] + u.String() + headerValue[end:], true
 }

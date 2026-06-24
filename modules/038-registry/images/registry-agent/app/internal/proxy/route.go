@@ -129,6 +129,23 @@ func (r *Router) Match(ns, host, path string) (Route, bool) {
 	return Route{}, false
 }
 
+// firstCacheRoute returns any ModeCache route, used to forward token (/auth)
+// requests — which carry no ns and so cannot be matched by the ns router — to a
+// cache that can issue the token. ok is false when no cache route exists.
+func (r *Router) firstCacheRoute() (Route, bool) {
+	for _, nr := range r.routes {
+		if nr.def != nil && nr.def.Mode == ModeCache {
+			return *nr.def, true
+		}
+		for _, pr := range nr.prefixed {
+			if pr.Mode == ModeCache {
+				return pr, true
+			}
+		}
+	}
+	return Route{}, false
+}
+
 // repoFromPath returns the repository portion of a registry path (after "/v2/"),
 // or "" when the path is not a /v2/ request.
 func repoFromPath(path string) string {

@@ -21,7 +21,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -130,6 +132,20 @@ func main() {
 	}
 	if err := mgr.AddReadyzCheck("reconciled", controller.ReadyzCheck(readyFlag)); err != nil {
 		log.Error("failed to add readyz check", "error", err)
+		os.Exit(1)
+	}
+	// Gate readiness on the proxy actually listening on :5001, not just on a
+	// reconcile. During the air-gap handover the proxy may still be retrying its
+	// bind (the bootstrap cache owns :5001); without this check /readyz would go
+	// green while the agent cannot yet serve pulls, and the dhctl finalize gate
+	// (WaitForAgentReady) would proceed prematurely.
+	if err := mgr.AddReadyzCheck("proxy-listening", func(*http.Request) error {
+		if srv.Addr() == "" {
+			return fmt.Errorf("proxy server not listening on %s yet", listen)
+		}
+		return nil
+	}); err != nil {
+		log.Error("failed to add proxy readyz check", "error", err)
 		os.Exit(1)
 	}
 

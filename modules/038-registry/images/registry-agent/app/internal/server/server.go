@@ -20,9 +20,13 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"errors"
+	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -51,9 +55,18 @@ func (s *Server) Addr() string {
 	return ""
 }
 
+// bindRetryWait/bindMaxAttempts bound the in-process bind retry. 150×2s = 5min
+// comfortably covers the install handover (bootstrap cache deletion) yet still
+// gives up so a genuinely stuck port surfaces (the pod exits and kubelet
+// restarts it) instead of retrying forever.
+const (
+	bindRetryWait   = 2 * time.Second
+	bindMaxAttempts = 150
+)
+
 // Start serves until ctx is cancelled, then shuts down gracefully.
 func (s *Server) Start(ctx context.Context) error {
-	ln, err := net.Listen("tcp", s.addr)
+	ln, err := s.listenWithRetry(ctx, bindRetryWait, bindMaxAttempts)
 	if err != nil {
 		return err
 	}
@@ -81,6 +94,36 @@ func (s *Server) Start(ctx context.Context) error {
 		return nil
 	}
 	return err
+}
+
+// listenWithRetry binds s.addr, retrying in-process while the port is briefly
+// held by another process. During an air-gap install the dhctl bootstrap cache
+// owns the node's 127.0.0.1:5001 until the install finalize deletes it; the agent
+// DaemonSet is scheduled before that, so its first binds fail with EADDRINUSE.
+// Retrying in-process (rather than crashing and letting kubelet restart us)
+// avoids an exponential CrashLoopBackOff that would otherwise leave :5001
+// unserved for tens of seconds after the bootstrap cache is removed — a window
+// in which every other pod's image pull on this node fails.
+func (s *Server) listenWithRetry(ctx context.Context, retryWait time.Duration, maxAttempts int) (net.Listener, error) {
+	log := slog.Default().With("component", "server")
+	for attempt := 1; ; attempt++ {
+		ln, err := net.Listen("tcp", s.addr)
+		if err == nil {
+			return ln, nil
+		}
+		if !errors.Is(err, syscall.EADDRINUSE) {
+			return nil, err
+		}
+		if attempt >= maxAttempts {
+			return nil, fmt.Errorf("address %s still in use after %d attempts: %w", s.addr, attempt, err)
+		}
+		log.Info("address in use, retrying bind", "addr", s.addr, "attempt", attempt, "maxAttempts", maxAttempts)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(retryWait):
+		}
+	}
 }
 
 // getCertificate loads the cert/key from disk per handshake (cheap, picks up

@@ -21,12 +21,84 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
 type stubAuth struct{ ok bool }
 
 func (s stubAuth) Authenticate(user, pass string) bool { return s.ok }
+
+// TestHandler_CacheRewritesAuthRealm asserts proxyCache rewrites the host of the
+// Bearer realm in a cache 401 to the agent's own host, so a node's containerd
+// (node DNS) fetches the token via the agent instead of the cache's unresolvable
+// Service DNS.
+func TestHandler_CacheRewritesAuthRealm(t *testing.T) {
+	cache := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Www-Authenticate",
+			`Bearer realm="https://registry-cache.d8-system.svc:5001/auth",service="Deckhouse registry",scope="repository:system/deckhouse:pull"`)
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer cache.Close()
+
+	router := NewRouter([]Route{{NS: "registry.d8-system.svc:5001", Mode: ModeCache, CacheURL: cache.URL}})
+	h, err := NewHandler(router, stubAuth{ok: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v2/system/deckhouse/manifests/x?ns=registry.d8-system.svc:5001", nil)
+	req.Host = "127.0.0.1:5001"
+	h.ServeHTTP(rr, req)
+
+	got := rr.Result().Header.Get("Www-Authenticate")
+	if !strings.Contains(got, `realm="https://127.0.0.1:5001/auth"`) {
+		t.Fatalf("realm not rewritten to agent host: %q", got)
+	}
+	if strings.Contains(got, "registry-cache.d8-system.svc") {
+		t.Fatalf("cache Service DNS still present in realm: %q", got)
+	}
+	// service/scope must survive the rewrite.
+	if !strings.Contains(got, `service="Deckhouse registry"`) || !strings.Contains(got, "scope=") {
+		t.Fatalf("service/scope lost in rewrite: %q", got)
+	}
+}
+
+// TestHandler_RoutesAuthToCache asserts a /auth token request (no ns) is routed
+// to the cache's auth endpoint with its query preserved.
+func TestHandler_RoutesAuthToCache(t *testing.T) {
+	var gotPath, gotQuery string
+	cache := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		_, _ = io.WriteString(w, `{"token":"abc"}`)
+	}))
+	defer cache.Close()
+
+	router := NewRouter([]Route{{NS: "registry.d8-system.svc:5001", Mode: ModeCache, CacheURL: cache.URL}})
+	h, err := NewHandler(router, stubAuth{ok: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/auth?service=Deckhouse+registry&scope=repository:system/deckhouse:pull", nil)
+	h.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rr.Code)
+	}
+	if gotPath != "/auth" {
+		t.Fatalf("cache received path %q, want /auth", gotPath)
+	}
+	if !strings.Contains(gotQuery, "scope=") {
+		t.Fatalf("scope not forwarded to cache: %q", gotQuery)
+	}
+	if b, _ := io.ReadAll(rr.Result().Body); string(b) != `{"token":"abc"}` {
+		t.Fatalf("token body not returned: %s", b)
+	}
+}
 
 func TestHandler_CachePassThrough(t *testing.T) {
 	var gotAuth, gotNS string
