@@ -75,7 +75,10 @@ spec:
                       type: string
                     messages:
                       type: object
-                      description: Localized disable confirmation messages. Falls back to `message` when the requested language is absent.
+                      description: |-
+                        Warning messages displayed when disabling the module, localized for different languages.
+                        
+                        If a message for the selected language is not defined, the value of the `message` field is used instead.
                       properties:
                         ru:
                           type: string
