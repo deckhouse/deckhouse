@@ -158,12 +158,10 @@ and can be enabled using the ModuleConfig object, and will be enabled by default
 {% endraw %}
 
 {% alert level="warning" %}
-
 * To use this mechanism, the `module.yaml` file must be included in the release image.
 * A module can still be disabled using ModuleConfig.
 * A module will remain on the last available release if the next release disables it
   (for example, by setting `available: false` in the corresponding edition).
-
 {% endalert %}
 
 {% raw %}
@@ -305,7 +303,9 @@ The module will keep running after ModulePullOverride is removed. But if there i
 
 ![Module auto-update logic](../../../images/architecture/module-development/module_update_flow.svg)
 
-> ModuleRelease versions v1.0.0 and v1.1.1 are provided as examples.
+{% alert level="info" %}
+ModuleRelease versions v1.0.0 and v1.1.1 are provided as examples.
+{% endalert %}
 
 1. **Module installation**. When a module is enabled (`enable module <module name>`), the latest available version from the selected stability channel is automatically downloaded and deployed to the cluster. For example, this could be ModuleRelease v1.0.0. The most recent version is used; older versions are not installed.
 
@@ -346,7 +346,9 @@ update:
       to:   "2.0" # Transitions between major versions are specified in the X.Y format.
 ```
 
-> A constrained release is a module release whose `module.yaml` contains the [`update.versions`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update) section. The `from-to` mechanism works only with such releases.
+{% alert level="info" %}
+A constrained release is a module release whose `module.yaml` contains the [`update.versions`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update) section. The `from-to` mechanism works only with such releases.
+{% endalert %}
 
 Conditions for applying `from-to`:
 

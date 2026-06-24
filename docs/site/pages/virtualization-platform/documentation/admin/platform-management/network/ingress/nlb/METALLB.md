@@ -100,7 +100,9 @@ This approach means:
 
 1. Create a Service resource with the annotation and name MetalLoadBalancerClass:
 
-   > When creating a Service resource, you can omit the annotations `network.deckhouse.io/l2-load-balancer-external-ips-count` and `network.deckhouse.io/load-balancer-ips` from the examples below. In this case, the service will automatically be assigned 1 random address from the pool.
+   {% alert level="info" %}
+   When creating a Service resource, you can omit the annotations `network.deckhouse.io/l2-load-balancer-external-ips-count` and `network.deckhouse.io/load-balancer-ips` from the examples below. In this case, the service will automatically be assigned 1 random address from the pool.
+   {% endalert %}
 
    ```yaml
    apiVersion: v1
@@ -122,7 +124,9 @@ This approach means:
 
 {% offtopic title="If you need to assign specific IP addresses from the pool to the service..." %}
 
-> If the service needs to allocate specific IP addresses from the pool, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`).
+{% alert level="info" %}
+If the service needs to allocate specific IP addresses from the pool, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`).
+{% endalert %}
 
 ```yaml
 apiVersion: v1

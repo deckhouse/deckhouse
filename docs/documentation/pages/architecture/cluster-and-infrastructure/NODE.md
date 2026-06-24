@@ -99,7 +99,9 @@ Node configuration, draining, adding to the cluster and removal can be performed
 
 - **Manually, with transition to automatic management** via CAPS.
 
-  > Available since DKP 1.63.
+  {% alert level="info" %}
+  Available since DKP 1.63.
+  {% endalert %}
 
   To transfer an existing cluster node under CAPS control, prepare StaticInstance and SSHCredentials as for automatic management described above, and annotate the StaticInstance resource with `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 

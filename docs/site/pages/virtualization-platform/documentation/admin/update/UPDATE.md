@@ -118,13 +118,17 @@ d8 k get modulereleases
 
 To disable the platform update mechanism, remove the `.spec.settings.releaseChannel` parameter from the `deckhouse` module configuration. In this case, the platform does not check for updates, and patch-release updates are not performed.
 
-> **Warning.** Disabling automatic updates is highly discouraged. This will block updates to patch releases, which may include critical vulnerability and bug fixes.
+{% alert level="warning" %}
+Disabling automatic updates is highly discouraged. This will block updates to patch releases, which may include critical vulnerability and bug fixes.
+{% endalert %}
 
 ## Immediate Update Application
 
 To apply an update immediately, set the annotation `release.deckhouse.io/apply-now: "true"` on the corresponding [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource.
 
-> In this case, update windows, [canary-release](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-spec-applyafter) settings, and the [manual cluster update mode](/modules/deckhouse/configuration.html#parameters-update-mode) will be ignored. The update will be applied immediately after setting the annotation.
+{% alert level="info" %}
+In this case, update windows, [canary-release](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-spec-applyafter) settings, and the [manual cluster update mode](/modules/deckhouse/configuration.html#parameters-update-mode) will be ignored. The update will be applied immediately after setting the annotation.
+{% endalert %}
 
 Example command to set the annotation for bypassing update windows for version `v1.56.2`:
 

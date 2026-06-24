@@ -156,23 +156,26 @@ EOF
 aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 
-> В ответ отобразится следующий текст:
-> ```yaml
-  {
-      "Policy": {
-          "PolicyName": "D8CloudProviderAWS",
-          "PolicyId": "AAA",
-          "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
-          "Path": "/",
-          "DefaultVersionId": "v1",
-          "AttachmentCount": 0,
-          "PermissionsBoundaryUsageCount": 0,
-          "IsAttachable": true,
-          "CreateDate": "2020-08-27T02:52:06+00:00",
-          "UpdateDate": "2020-08-27T02:52:06+00:00"
-      }
-  }
-  ```
+{% alert level="info" %}
+В ответ отобразится следующий текст:
+
+```yaml
+{
+    "Policy": {
+        "PolicyName": "D8CloudProviderAWS",
+        "PolicyId": "AAA",
+        "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
+        "Path": "/",
+        "DefaultVersionId": "v1",
+        "AttachmentCount": 0,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "CreateDate": "2020-08-27T02:52:06+00:00",
+        "UpdateDate": "2020-08-27T02:52:06+00:00"
+    }
+}
+```
+{% endalert %}
 
 Создайте нового пользователя:
 
@@ -180,18 +183,21 @@ aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://
 aws iam create-user --user-name deckhouse
 ```
 
-> В ответ отобразится следующий текст:
-> ```yaml
-  {
-      "User": {
-          "Path": "/",
-          "UserName": "deckhouse",
-          "UserId": "AAAXXX",
-          "Arn": "arn:aws:iam::123:user/deckhouse",
-          "CreateDate": "2020-08-27T03:05:42+00:00"
-      }
-  }
-  ```
+{% alert level="info" %}
+В ответ отобразится следующий текст:
+
+```yaml
+{
+    "User": {
+        "Path": "/",
+        "UserName": "deckhouse",
+        "UserId": "AAAXXX",
+        "Arn": "arn:aws:iam::123:user/deckhouse",
+        "CreateDate": "2020-08-27T03:05:42+00:00"
+    }
+}
+```
+{% endalert %}
 
 Разрешите доступ к API и сохраните пару `AccessKeyId` + `SecretAccessKey`:
 
@@ -199,18 +205,21 @@ aws iam create-user --user-name deckhouse
 aws iam create-access-key --user-name deckhouse
 ```
 
-> В ответ отобразится следующий текст:
-> ```yaml
-  {
-      "AccessKey": {
-          "UserName": "deckhouse",
-          "AccessKeyId": "XXXYYY",
-          "Status": "Active",
-          "SecretAccessKey": "ZZZzzz",
-          "CreateDate": "2020-08-27T03:06:22+00:00"
-      }
-  }
-  ```
+{% alert level="info" %}
+В ответ отобразится следующий текст:
+
+```yaml
+{
+    "AccessKey": {
+        "UserName": "deckhouse",
+        "AccessKeyId": "XXXYYY",
+        "Status": "Active",
+        "SecretAccessKey": "ZZZzzz",
+        "CreateDate": "2020-08-27T03:06:22+00:00"
+    }
+}
+```
+{% endalert %}
 
 Объедините `User` и `Policy`:
 

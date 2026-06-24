@@ -140,7 +140,9 @@ To properly restore a multi-master cluster, follow these steps:
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-   > **Warning.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
+   {% alert level="warning" %}
+   If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
+   {% endalert %}
 
 1. Reboot the master node. Ensure that the other nodes transition to the `Ready` state.
 
@@ -610,7 +612,9 @@ The archive includes only those objects that meet the following criteria:
   heritage=deckhouse
   ```
 
-> The backup includes only CR objects, but not the CRD definitions themselves. To fully restore the cluster, the corresponding CRDs must already be present (e.g., installed by Deckhouse modules).
+{% alert level="info" %}
+The backup includes only CR objects, but not the CRD definitions themselves. To fully restore the cluster, the corresponding CRDs must already be present (e.g., installed by Deckhouse modules).
+{% endalert %}
 
 Example whitelist content:
 

@@ -232,7 +232,9 @@ To ensure DKP functions correctly with KESL installed, follow these steps:
    - `Network Threat Protection (ID: 17)`
    - `Web Control (ID: 26)`
 
-   > The list of tasks may differ in future KESL versions.
+   {% alert level="info" %}
+   The list of tasks may differ in future KESL versions.
+   {% endalert %}
 
 1. Make sure node resources meet the requirements of:
 

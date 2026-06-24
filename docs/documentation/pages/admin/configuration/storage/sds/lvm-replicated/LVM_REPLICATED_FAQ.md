@@ -32,7 +32,9 @@ There are two ways to obtain this information:
 
    Go to "Dashboards" → "Storage" → "LINSTOR/DRBD". The current cluster space usage level is shown in the upper‑right corner.
 
-   > **Warning.** The value reflects the state of all available space. When you create volumes with two replicas, divide the reported figures by two to estimate how many volumes can actually be placed.
+   {% alert level="warning" %}
+   The value reflects the state of all available space. When you create volumes with two replicas, divide the reported figures by two to estimate how many volumes can actually be placed.
+   {% endalert %}
 
 1. Via the command line:
 
@@ -40,7 +42,9 @@ There are two ways to obtain this information:
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list
    ```
 
-   > **Warning.** The value reflects the state of all available space. When you create volumes with two replicas, divide the reported figures by two to estimate how many volumes can actually be placed.
+   {% alert level="warning" %}
+   The value reflects the state of all available space. When you create volumes with two replicas, divide the reported figures by two to estimate how many volumes can actually be placed.
+   {% endalert %}
 
 ## Assigning the default StorageClass
 
@@ -530,7 +534,9 @@ User data is not affected because the migration moves to a new namespace and add
    linstor resource list --faulty
    ```
 
-   > **Warning.** All resources must be healthy before migration.
+   {% alert level="warning" %}
+   All resources must be healthy before migration.
+   {% endalert %}
 
 1. Disable the `linstor` module:
 
@@ -566,7 +572,9 @@ User data is not affected because the migration moves to a new namespace and add
 
 1. Create a ModuleConfig for [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
-   > **Warning.** If `settings.dataNodes.nodeSelector` is not specified for `sds-replicated-volume`, its value will be taken from the `linstor` module. If it is absent there as well, it will remain empty and all cluster nodes will be considered data nodes.
+   {% alert level="warning" %}
+   If `settings.dataNodes.nodeSelector` is not specified for `sds-replicated-volume`, its value will be taken from the `linstor` module. If it is absent there as well, it will remain empty and all cluster nodes will be considered data nodes.
+   {% endalert %}
 
    ```shell
    d8 k apply -f - <<EOF
@@ -652,7 +660,9 @@ The migration will not affect user data, as it is performed in a new namespace a
    linstor resource list --faulty
    ```
 
-   > **Warning.** All DRBD resources must be healthy before migration.
+   {% alert level="warning" %}
+   All DRBD resources must be healthy before migration.
+   {% endalert %}
 
 1. Disable the `sds-drbd` module:
 
@@ -668,7 +678,9 @@ The migration will not affect user data, as it is performed in a new namespace a
 
 1. Create a ModuleConfig for [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
-   > **Warning.** If `settings.dataNodes.nodeSelector` is not specified for `sds-replicated-volume`, its value will be taken from the `sds-drbd` module. If it is absent there as well, it will remain empty and all cluster nodes will be considered data nodes.
+   {% alert level="warning" %}
+   If `settings.dataNodes.nodeSelector` is not specified for `sds-replicated-volume`, its value will be taken from the `sds-drbd` module. If it is absent there as well, it will remain empty and all cluster nodes will be considered data nodes.
+   {% endalert %}
 
    ```shell
    d8 k apply -f - <<EOF
@@ -709,7 +721,9 @@ The migration will not affect user data, as it is performed in a new namespace a
 
 If no faulty resources are found, migration was successful.
 
-> **Warning.** DRBDStoragePool and DRBDStorageClass resources will be automatically migrated to ReplicatedStoragePool and ReplicatedStorageClass. No user action is required.
+{% alert level="warning" %}
+DRBDStoragePool and DRBDStorageClass resources will be automatically migrated to ReplicatedStoragePool and ReplicatedStorageClass. No user action is required.
+{% endalert %}
 
 The logic of these resources remains unchanged. However, verify that no DRBDStoragePool or DRBDStorageClass resources remain. If they do, contact the [Deckhouse technical support](/tech-support/).
 

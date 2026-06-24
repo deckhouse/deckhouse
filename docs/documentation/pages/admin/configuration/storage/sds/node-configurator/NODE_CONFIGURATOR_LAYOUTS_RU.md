@@ -232,11 +232,9 @@ EOF
 ### Частичное зеркало
 
 {% alert level="warning" %}
-
 - Не используйте разделы с одинаковыми `PARTUUID`.
 - Изменение `PARTUUID` раздела, на котором уже создан VG, не поддерживается.
 - Для таблицы разделов рекомендуется использовать GPT — в MBR `PARTUUID` псевдослучайный и содержит номер раздела, а также отсутствует поддержка `PARTLABEL`, который может пригодиться для идентификации разделов в Deckhouse.  
-
 {% endalert %}
 
 В данном сценарии используются два раздела на каждом диске:
@@ -538,13 +536,15 @@ EOF
    EOF
    ```
 
-   > В примере выше замените `<replicated-storage-pool-name>` на информативное имя, в зависимости от типа дополнительных дисков.
-   >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
-   >
-   > - `data-ssd-nvme` — для дисков NVMe SSD;
-   > - `data-ssd-sata` — для дисков SATA SSD;
-   > - `data-hdd` — для дисков HDD.
+   {% alert level="info" %}
+   В примере выше замените `<replicated-storage-pool-name>` на информативное имя, в зависимости от типа дополнительных дисков.
+
+   Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+
+   - `data-ssd-nvme` — для дисков NVMe SSD;
+   - `data-ssd-sata` — для дисков SATA SSD;
+   - `data-hdd` — для дисков HDD.
+   {% endalert %}
 
 1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool):
 
@@ -616,13 +616,15 @@ EOF
    vgchange <vg-name>-unsafe --addtag storage.deckhouse.io/enabled=true
    ```
 
-   > В примере выше `<vg-name>` замените на информативный префикс, в зависимости от типа дополнительных дисков.
-   >
-   > Примеры информативного префикса `<vg-name>` для дополнительных дисков разных типов:
-   >
-   > - `ssd-nvme` — для дисков NVMe SSD;
-   > - `ssd-sata` — для дисков SATA SSD;
-   > - `hdd` — для дисков HDD.
+   {% alert level="info" %}
+   В примере выше `<vg-name>` замените на информативный префикс, в зависимости от типа дополнительных дисков.
+
+   Примеры информативного префикса `<vg-name>` для дополнительных дисков разных типов:
+
+   - `ssd-nvme` — для дисков NVMe SSD;
+   - `ssd-sata` — для дисков SATA SSD;
+   - `hdd` — для дисков HDD.
+   {% endalert %}
 
 #### Пример настройки модулей SDS (комбинированное хранилище, «Частичное зеркало»)
 
@@ -710,13 +712,15 @@ EOF
    EOF
    ```
 
-   > В примере выше замените `data-<vg-name>-safe` на информативное имя, в зависимости от типа дополнительных дисков.
-   >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
-   >
-   > - `data-ssd-nvme-safe` — для дисков NVMe SSD;
-   > - `data-ssd-sata-safe` — для дисков SATA SSD;
-   > - `data-hdd-safe` — для дисков HDD.
+   {% alert level="info" %}
+   В примере выше замените `data-<vg-name>-safe` на информативное имя, в зависимости от типа дополнительных дисков.
+
+   Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+
+   - `data-ssd-nvme-safe` — для дисков NVMe SSD;
+   - `data-ssd-sata-safe` — для дисков SATA SSD;
+   - `data-hdd-safe` — для дисков HDD.
+   {% endalert %}
 
 1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-<vg-name>-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
    чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
@@ -737,13 +741,15 @@ EOF
    EOF
    ```
 
-   > В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
-   >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
-   >
-   > - `data-ssd-nvme-unsafe` — для дисков NVMe SSD;
-   > - `data-ssd-sata-unsafe` — для дисков SATA SSD;
-   > - `data-hdd-unsafe` — для дисков HDD.
+   {% alert level="info" %}
+   В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
+
+   Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+
+   - `data-ssd-nvme-unsafe` — для дисков NVMe SSD;
+   - `data-ssd-sata-unsafe` — для дисков SATA SSD;
+   - `data-hdd-unsafe` — для дисков HDD.
+   {% endalert %}
 
 1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool),
    чтобы на всех узлах использовались VG `<vg-name>-safe` и `<vg-name>-unsafe`:
@@ -783,18 +789,20 @@ EOF
    EOF
    ```
 
-   > В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
-   >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
-   >
-   > - `data-ssd-nvme-unsafe` — для дисков NVMe SSD;
-   > - `data-ssd-sata-unsafe` — для дисков SATA SSD;
-   > - `data-hdd-unsafe` — для дисков HDD.
-   >
-   > Аналогичным образом замените `data-<vg-name>-safe`.
-   >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
-   >
-   > - `data-ssd-nvme-safe` — для дисков NVMe SSD;
-   > - `data-ssd-sata-safe` — для дисков SATA SSD;
-   > - `data-hdd-safe` — для дисков HDD.
+   {% alert level="info" %}
+   В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
+
+   Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+
+   - `data-ssd-nvme-unsafe` — для дисков NVMe SSD;
+   - `data-ssd-sata-unsafe` — для дисков SATA SSD;
+   - `data-hdd-unsafe` — для дисков HDD.
+
+   Аналогичным образом замените `data-<vg-name>-safe`.
+
+   Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+
+   - `data-ssd-nvme-safe` — для дисков NVMe SSD;
+   - `data-ssd-sata-safe` — для дисков SATA SSD;
+   - `data-hdd-safe` — для дисков HDD.
+   {% endalert %}

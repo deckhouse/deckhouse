@@ -26,7 +26,9 @@ This section provides an example of creating a `helloworld` module based on [mod
 
    We will use the `helloworld` module name in this example, but you can use any name you like. For this, replace 'helloworld' in the commands and in your repo's name with the one you prefer.
 
-   > Note that the module name may differ depending on the command. In may be written in *kebab-case* as well as *camelCase*. If you use a custom module name, make sure to modify it accordingly.
+   {% alert level="info" %}
+   Note that the module name may differ depending on the command. In may be written in *kebab-case* as well as *camelCase*. If you use a custom module name, make sure to modify it accordingly.
+   {% endalert %}
 
    Run the following command to add the module name to the `module.yaml` file or edit it manually:
 
@@ -50,7 +52,9 @@ This section provides an example of creating a `helloworld` module based on [mod
 
 1. Replace the `.Values` path in the chart templates with `.Values.helloworld`.
 
-   > This is due to the architectural feature of [addon-operator](https://github.com/flant/addon-operator). You have to stick to it to be able to access module values.
+   {% alert level="info" %}
+   This is due to the architectural feature of [addon-operator](https://github.com/flant/addon-operator). You have to stick to it to be able to access module values.
+   {% endalert %}
 
    ```shell
    sed -i -e 's/.Values/.Values.helloworld/g' $(find templates/ -type f)

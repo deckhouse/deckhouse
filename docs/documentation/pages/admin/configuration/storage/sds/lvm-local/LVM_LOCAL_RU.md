@@ -255,7 +255,9 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-   > **Важно.** В [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) с `type: Thick` нельзя использовать LocalVolumeGroup, содержащие хотя бы один thin pool.
+   {% alert level="info" %}
+   **Важно.** В [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) с `type: Thick` нельзя использовать LocalVolumeGroup, содержащие хотя бы один thin pool.
+   {% endalert %}
 
 1. Дождитесь, когда созданный ресурс LocalStorageClass перейдет в состояние `Created`:
 

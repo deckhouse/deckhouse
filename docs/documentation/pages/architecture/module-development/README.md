@@ -40,9 +40,15 @@ To get an idea of how DKP modules work, check out [addon-operator](https://githu
 
 * Review the operator documentation on the concept of hooks, e.g., [what a hook configuration is and what functions it provides](https://flant.github.io/shell-operator/HOOKS.html#hook-configuration). The configuration is used to configure the data that will be available from the hook.
 * Check out [bindings](https://flant.github.io/addon-operator/HOOKS.html#bindings). Bindings are events that trigger the hook. They are specified in the hook configuration. A hook can be triggered not only by Kubernetes events, but also, e.g., on a schedule or before a module is started.
-> The Hook allows you to keep values in memory and use them later when rendering Helm templates. We recommend reading the [Hooks and Helm values](https://flant.github.io/addon-operator/OVERVIEW.html#hooks-and-helm-values) section to learn more about this feature as well as the module's operating cycle.
+{% alert level="info" %}
+The Hook allows you to keep values in memory and use them later when rendering Helm templates. We recommend reading the [Hooks and Helm values](https://flant.github.io/addon-operator/OVERVIEW.html#hooks-and-helm-values) section to learn more about this feature as well as the module's operating cycle.
+{% endalert %}
+
 * Explore [the concept of snapshots](https://flant.github.io/shell-operator/HOOKS.html#snapshots). With snapshots, you can implement a reconciliation loop approach that is more efficient than event subscription.
- > This is how DKP implements support for all existing backend module hooks.
+ {% alert level="info" %}
+ This is how DKP implements support for all existing backend module hooks.
+ {% endalert %}
+
 * Additionally, hooks can be used instead of the Prometheus exporter. Hooks can provide metrics that DKP will export. See [metrics](https://flant.github.io/addon-operator/metrics/METRICS_FROM_HOOKS.html#custom-metrics).
 
 ## Got a question?

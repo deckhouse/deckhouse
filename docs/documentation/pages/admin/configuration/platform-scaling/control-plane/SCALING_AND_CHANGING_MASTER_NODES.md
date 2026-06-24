@@ -65,7 +65,9 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
        - Run `d8 k delete node <node-name>`;
        - Power off the corresponding VMs or servers.
 
-   > **Important**. In cloud clusters, all necessary actions are automatically handled by the `dhctl converge` command.
+   {% alert level="info" %}
+   In cloud clusters, all necessary actions are automatically handled by the `dhctl converge` command.
+   {% endalert %}
 
 1. **Changing the number of master nodes in a cloud cluster**:
 
@@ -219,7 +221,9 @@ After completing these steps, the node will no longer be considered a master nod
 
 ## Adding master nodes to a static or hybrid cluster
 
-> It is important to have an odd number of masters to ensure a quorum.
+{% alert level="info" %}
+It is important to have an odd number of masters to ensure a quorum.
+{% endalert %}
 
 When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
 To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
@@ -313,16 +317,19 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **Yandex Cloud**, if public IPs are assigned to master nodes, the number of elements in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using the `Auto` value (automatic public IP assignment), the number of items in the array must still match.
-   >
-   > For example, with three master nodes (`masterNodeGroup.replicas: 3`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look like:
-   >
-   > ```yaml
-   > externalIPAddresses:
-   > - "Auto"
-   > - "Auto"
-   > - "Auto"
-   > ```
+   {% alert level="info" %}
+   For **Yandex Cloud**, if public IPs are assigned to master nodes, the number of elements in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using the `Auto` value (automatic public IP assignment), the number of items in the array must still match.
+
+   For example, with three master nodes (`masterNodeGroup.replicas: 3`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look like:
+
+   ```yaml
+   externalIPAddresses:
+   - "Auto"
+   - "Auto"
+   - "Auto"
+   ```
+
+   {% endalert %}
 
 1. **In the installer container**, run the following command to trigger scaling:
 
@@ -373,14 +380,17 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
-   >
-   > For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look like:
-   >
-   > ```yaml
-   > externalIPAddresses:
-   > - "Auto"
-   > ```
+   {% alert level="info" %}
+   For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
+
+   For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look like:
+
+   ```yaml
+   externalIPAddresses:
+   - "Auto"
+   ```
+
+   {% endalert %}
 
 1. **In the installer container**, run the following command to trigger the scaling operation:
 
@@ -388,11 +398,13 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
-   >
-   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
-   >
-   > If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
+   {% alert level="info" %}
+   For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
+
+   For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+
+   If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
+   {% endalert %}
 
 1. Check the Deckhouse queue and make sure that there are no errors with the command:
 

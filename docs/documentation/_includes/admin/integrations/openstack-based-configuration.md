@@ -114,13 +114,11 @@ All nodes (including master ones) have two interfaces: the first one to the publ
 This layout should be used if you want all nodes in the cluster to be directly accessible.
 
 {% alert level="warning" %}
-
 - This strategy does not support a LoadBalancer since a Floating IP is not available for the router-less network.
   Thus, you cannot provision a LoadBalancer with the Floating IP.
   An internal LoadBalancer with the virtual IP in the public network is only accessible from cluster nodes.
 - Using this strategy, make sure to explicitly specify the name of the internal network in `additionalNetworks`
   when creating an [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) in the cluster.
-
 {% endalert %}
 
 ![StandardWithNoRouter layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
@@ -525,9 +523,11 @@ specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInsta
 
 1. Prepare an openrc file that contains credentials for accessing the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
 
-   > The method of obtaining the openrc file may vary depending on the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} provider.
-   > If your provider offers the standard interface for {{ site.data.admin.cloud-types.types[page.cloud_type].name }},
-   > follow [this guide](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file) to download the file.
+   {% alert level="info" %}
+   The method of obtaining the openrc file may vary depending on the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} provider.
+   If your provider offers the standard interface for {{ site.data.admin.cloud-types.types[page.cloud_type].name }},
+   follow [this guide](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file) to download the file.
+   {% endalert %}
 
 1. Alternatively, install the OpenStack CLI tools following the [instructions](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
 
@@ -678,9 +678,11 @@ The resulting disk type depends on the combination of the following parameters:
 
 {% if page.cloud_type != 'selectel' %}
 
-> In Selectel Cloud, when creating nodes with CloudEphemeral type outside zone A,
-> you must pre-create a flavor with the target disk size.
-> In this case, you do not need to set the [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter.
+{% alert level="info" %}
+In Selectel Cloud, when creating nodes with CloudEphemeral type outside zone A,
+you must pre-create a flavor with the target disk size.
+In this case, you do not need to set the [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter.
+{% endalert %}
 
 {% endif %}
 

@@ -13,11 +13,15 @@ The YAML installation configuration file includes parameters for several resourc
 
 - [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — general cluster settings such as control plane version, networking parameters, CRI settings, and more.
 
-  > The ClusterConfiguration resource should only be included in the configuration if the platform installation involves deploying a new Kubernetes cluster. It is not required when installing the platform into an existing Kubernetes cluster.
+  {% alert level="info" %}
+  The ClusterConfiguration resource should only be included in the configuration if the platform installation involves deploying a new Kubernetes cluster. It is not required when installing the platform into an existing Kubernetes cluster.
+  {% endalert %}
 
 - [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — settings for a Kubernetes cluster deployed on bare-metal servers.
 
-  > Similar to ClusterConfiguration, the StaticClusterConfiguration resource is not required if the platform is being installed in an existing Kubernetes cluster.
+  {% alert level="info" %}
+  Similar to ClusterConfiguration, the StaticClusterConfiguration resource is not required if the platform is being installed in an existing Kubernetes cluster.
+  {% endalert %}
 
 - [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for the platform's modules.
 

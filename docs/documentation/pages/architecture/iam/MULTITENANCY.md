@@ -76,7 +76,9 @@ The module consists of the following components:
   - Validating Namespace if [`.spec.settings.allowNamespacesWithoutProjects=false`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) is set in the `multitenancy-manager` module parameters.
   - Creating the resources specified in the ProjectTemplate custom resource based on the parameters set in Project.
 
-   > **Warning.** Multitenancy-manager has `cluster-admin` permissions, which allow it to create any objects described in the ProjectTemplate resource.
+   {% alert level="warning" %}
+   Multitenancy-manager has `cluster-admin` permissions, which allow it to create any objects described in the ProjectTemplate resource.
+   {% endalert %}
 
 ## Module interactions
 

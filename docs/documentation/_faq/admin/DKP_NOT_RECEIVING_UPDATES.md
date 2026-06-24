@@ -54,8 +54,10 @@ Below is an example of how DNS settings may result in different resolution behav
   search company.my
   ```
 
-  > On nodes, the default `ndot` setting is **1** (`options ndots:1`), while in Kubernetes Pods, it’s **5**.
-  > This causes different resolution logic for DNS names with 5 or fewer dots on a node and on the Pod.
+  {% alert level="info" %}
+  On nodes, the default `ndot` setting is **1** (`options ndots:1`), while in Kubernetes Pods, it’s **5**.
+  This causes different resolution logic for DNS names with 5 or fewer dots on a node and on the Pod.
+  {% endalert %}
 
 - The DNS zone `company.my` has a wildcard entry `*.company.my` that resolves to `10.0.0.100`.
   This means any undefined DNS name in the `company.my` zone resolves to `10.0.0.100`.

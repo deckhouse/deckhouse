@@ -70,8 +70,10 @@ Example of creating a virtual machine with Ubuntu 22.04.
    - Click the "Create" button.
    - The disk status is displayed at the top left, under the disk name.
 
-   > Remember, if your StorageClass has the WaitForFirstConsumer setting, the disk will wait for a VM to be created with that disk.
-   > In this case, the disk status will be "CREATING 0%," but the disk will already be selectable when creating a VM, [see the disks section](/products/virtualization-platform/documentation/user/resource-management/disks.html).
+   {% alert level="info" %}
+   Remember, if your StorageClass has the WaitForFirstConsumer setting, the disk will wait for a VM to be created with that disk.
+   In this case, the disk status will be "CREATING 0%," but the disk will already be selectable when creating a VM, [see the disks section](/products/virtualization-platform/documentation/user/resource-management/disks.html).
+   {% endalert %}
 
 1. Creating a virtual machine:
 

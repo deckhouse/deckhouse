@@ -129,14 +129,17 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
    * Save your changes.
 
-   > For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
-   >
-   > For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look as follows:
-   >
-   > ```yaml
-   > externalIPAddresses:
-   > - "Auto"
-   > ```
+   {% alert level="info" %}
+   For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
+
+   For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look as follows:
+
+   ```yaml
+   externalIPAddresses:
+   - "Auto"
+   ```
+
+   {% endalert %}
 
 1. **In the installer container**, run the following command to trigger the scaling operation:
 
@@ -144,11 +147,13 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST>
    ```
 
-   > **Important**. For **OpenStack** and **VK Cloud (OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in OpenStack itself.
-   >
-   > For example, when deleting the `cloud-demo-master-2` node in the OpenStack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
-   >
-   > If the `kubernetes-data` disk remains, there may be problems with etcd operation as the number of master nodes increases.
+   {% alert level="info" %}
+   For **OpenStack** and **VK Cloud (OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in OpenStack itself.
+
+   For example, when deleting the `cloud-demo-master-2` node in the OpenStack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+
+   If the `kubernetes-data` disk remains, there may be problems with etcd operation as the number of master nodes increases.
+   {% endalert %}
 
 1. Check the Deckhouse queue with the following command and make sure there are no errors:
 

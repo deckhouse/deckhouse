@@ -315,8 +315,10 @@ To avoid this, download only the images relevant to your version following these
    d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
    ```
 
-   > If you have already set up periodic downloading and pushing of vulnerability databases to your registry,
-   > you can add the flag `--no-security-db` to skip them during this process.
+   {% alert level="info" %}
+   If you have already set up periodic downloading and pushing of vulnerability databases to your registry,
+   you can add the flag `--no-security-db` to skip them during this process.
+   {% endalert %}
 
    This will download the latest patch releases of all required platform minor versions and modules,
    starting from the latest patch versions up to the current ones on [release channels](https://releases.deckhouse.io/ee).

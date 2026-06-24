@@ -167,10 +167,8 @@ To change the configuration of the volume group (adding/removing block devices o
 The `status` section of the resource automatically reflects the current information about the state of the Volume Group (list of physical volumes, thin pool data, free/used space, etc.).
 
 {% alert level="warning" %}
-
 - The controller does not change the `spec` automatically — it only reads the desired state and brings the actual state of the node into compliance. All changes to the desired state must be made by the user in `spec`.
 - Avoid modifying `status` manually, as this section is managed by the controller.
-
 {% endalert %}
 
 ### Deleting an LVMVolumeGroup resource

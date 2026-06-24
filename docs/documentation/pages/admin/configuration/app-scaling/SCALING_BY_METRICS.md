@@ -93,7 +93,9 @@ spec:
         averageValue: 10
 ```
 
-> When the metric exceeds (or falls below) the threshold `averageValue: 10`, the system will adjust the number of replicas of `myapp` within the range of 1 to 2.
+{% alert level="info" %}
+When the metric exceeds (or falls below) the threshold `averageValue: 10`, the system will adjust the number of replicas of `myapp` within the range of 1 to 2.
+{% endalert %}
 
 ### Configuring metrics via CustomPrometheusRules
 
@@ -119,7 +121,9 @@ spec:
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
 
-> All metrics with the `kube_adapter_metric_` prefix are automatically registered in the Kubernetes API without the need to create CustomPrometheusRules. This allows you to use existing Prometheus metrics for scaling without additional configuration.
+{% alert level="info" %}
+All metrics with the `kube_adapter_metric_` prefix are automatically registered in the Kubernetes API without the need to create CustomPrometheusRules. This allows you to use existing Prometheus metrics for scaling without additional configuration.
+{% endalert %}
 
 ### Working with unstable metrics
 

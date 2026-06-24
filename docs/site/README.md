@@ -1,6 +1,8 @@
 # Deckhouse documentation website
 
-> This README is a work in progress. Some information may be incomplete or outdated.
+{% alert level="info" %}
+This README is a work in progress. Some information may be incomplete or outdated.
+{% endalert %}
 
 This document describes the architecture of Deckhouse documentation and explains how to run the documentation website locally.
 
@@ -154,7 +156,9 @@ To run the debugger:
 
 ## Working with spellchecker
 
-> Run the following commands from the root of the repository.
+{% alert level="info" %}
+Run the following commands from the root of the repository.
+{% endalert %}
 
 Spellchecking commands:
 
@@ -173,7 +177,9 @@ Spellchecking commands:
 
 ## Architecture (WIP)
 
-> ![NOTE] Architecture has been updated. This section is a work in progress. Some information may be incomplete or outdated.
+{% alert level="info" %}
+![NOTE] Architecture has been updated. This section is a work in progress. Some information may be incomplete or outdated.
+{% endalert %}
 
 The Deckhouse website consists of the following parts:
 
@@ -210,7 +216,9 @@ The Deckhouse website consists of the following parts:
 
 ### Structure of the Jekyll-based projects
 
-> Some information is outdated.
+{% alert level="info" %}
+Some information is outdated.
+{% endalert %}
 
 The project uses [werf](werf.io) to build and deploy documentation.
 
@@ -260,7 +268,9 @@ Things to note:
 
 ### Jekyll data
 
-> Some information is outdated.
+{% alert level="info" %}
+Some information is outdated.
+{% endalert %}
 
 Some data is stored in the `_data` directory of the Jekyll project,
 while other data is generated from the repo by the scripts or Jekyll hooks.

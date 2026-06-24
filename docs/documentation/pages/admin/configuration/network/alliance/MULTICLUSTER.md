@@ -18,14 +18,21 @@ Available only in DKP Enterprise Edition (EE).
   and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters
   of the ClusterConfiguration resource must be unique for each multicluster member.
 
-  > - When analyzing HTTP and HTTPS traffic _(in Istio terminology)_,
+  {% alert level="info" %}
+  - When analyzing HTTP and HTTPS traffic _(in Istio terminology)_,
+  {% endalert %}
+
       you can identify them and decide on further routing or blocking based on their headers.
-  > - At the same time, when analyzing TCP traffic _(in Istio terminology)_, it is possible to identify them
+  {% alert level="info" %}
+  - At the same time, when analyzing TCP traffic _(in Istio terminology)_, it is possible to identify them
+  {% endalert %}
+
       and decide on further routing or blocking based only on their destination IP address or port number.
-  >
-  > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the Istio's rules.
-  > The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
-  > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+  {% alert level="info" %}
+  If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the Istio's rules.
+  The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
+  Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+  {% endalert %}
 
 ### General principles
 

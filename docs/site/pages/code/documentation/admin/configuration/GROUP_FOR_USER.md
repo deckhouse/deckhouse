@@ -26,7 +26,9 @@ permalink: en/code/documentation/admin/configuration/group.html
    - Go to the "Manage Access" section.
    - Click "Invite members", enter the user's email or username, and assign a role (e.g., "Developer").
 
-   > **Important**. When using SSO integrations, the access setup process may differ.
+   {% alert level="info" %}
+   When using SSO integrations, the access setup process may differ.
+   {% endalert %}
 
 1. Assign roles to group members.
 

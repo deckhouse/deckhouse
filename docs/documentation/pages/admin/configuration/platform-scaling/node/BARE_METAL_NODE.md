@@ -69,8 +69,10 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
        user: ubuntu
      ```
 
-     > **Important**. The `privateSSHKey` field must contain a private SSH key encoded in Base64 format.
-     > The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
+     {% alert level="info" %}
+     The `privateSSHKey` field must contain a private SSH key encoded in Base64 format.
+     The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
+     {% endalert %}
 
 1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance)` object for each server:
 

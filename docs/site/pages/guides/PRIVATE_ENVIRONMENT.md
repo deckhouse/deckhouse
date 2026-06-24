@@ -204,7 +204,9 @@ Next, configure Docker to work with the private container registry over TLS. Cre
 sudo mkdir -p /etc/docker/certs.d/harbor.example
 ```
 
-> The `-p` option tells `mkdir` to create parent directories if they do not exist (in this case, the `certs.d` directory).
+{% alert level="info" %}
+The `-p` option tells `mkdir` to create parent directories if they do not exist (in this case, the `certs.d` directory).
+{% endalert %}
 
 Copy the generated certificates into it:
 
@@ -277,7 +279,6 @@ https:
 #   enabled: true
 #   # put your cert and key files on dir
 #   dir: /etc/harbor/tls/internal
-
 
 # Uncomment external_url if you want to enable external proxy
 # And when it enabled the hostname will no longer used
@@ -862,7 +863,9 @@ Push the downloaded images to the private registry. Substitute the DKP edition a
 d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<EDITION>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
-> The `--tls-skip-verify` flag tells the CLI to trust the registry certificate and skip verification.
+{% alert level="info" %}
+The `--tls-skip-verify` flag tells the CLI to trust the registry certificate and skip verification.
+{% endalert %}
 
 Images are read from the local bundles and pushed to the registry. This step is usually faster than download and often takes about 15 minutes.
 
@@ -979,7 +982,9 @@ There are two ways to connect:
    ssh -A ubuntu@<BASTION_IP>
    ```
 
-   > Note: for this to work, you may need to start ssh-agent and add your key with `ssh-add` on the workstation from which you run the command.
+   {% alert level="info" %}
+   Note: for this to work, you may need to start ssh-agent and add your key with `ssh-add` on the workstation from which you run the command.
+   {% endalert %}
 
    Then connect to the target servers:
 
@@ -993,7 +998,9 @@ There are two ways to connect:
 <INTERNAL-IP-ADDRESS> harbor.example proxy.local
 ```
 
-> Replace `<INTERNAL-IP-ADDRESS>` with the Harbor VM’s actual internal IP address.
+{% alert level="info" %}
+Replace `<INTERNAL-IP-ADDRESS>` with the Harbor VM’s actual internal IP address.
+{% endalert %}
 
 ### Creating a user for the master node
 
@@ -1369,7 +1376,9 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   --ask-become-pass
 ```
 
-> Replace `id_rsa` with the name of your private key file if it differs.
+{% alert level="info" %}
+Replace `id_rsa` with the name of your private key file if it differs.
+{% endalert %}
 
 The installation process may take up to 30 minutes depending on the network speed.
 

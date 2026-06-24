@@ -87,11 +87,13 @@ The application mode for such updates is configured via the [`disruptions.approv
   d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=
   ```
 
-  > **Important**: In this mode, the node is not drained automatically.  
-  > If needed, perform the drain manually before applying the annotation.  
-  >
-  > To avoid issues during draining,
-  > always use the `Manual` mode for master node groups.
+  {% alert level="info" %}
+  : In this mode, the node is not drained automatically.  
+  If needed, perform the drain manually before applying the annotation.  
+
+  To avoid issues during draining,
+  always use the `Manual` mode for master node groups.
+  {% endalert %}
 
 - `Automatic`: Automatic approval mode for disruptive updates.  
 
@@ -189,7 +191,9 @@ Configuration specifics:
 
 If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can use the `staticInstances` section. This allows DKP to automatically connect, configure, and, if necessary, clean up static nodes based on StaticInstance and SSHCredentials resources.
 
-> In a [NodeGroup](/modules/node-manager/cr.html#nodegroup) of type Static or CloudStatic, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DKP uses this value for state monitoring and automation.
+{% alert level="info" %}
+In a [NodeGroup](/modules/node-manager/cr.html#nodegroup) of type Static or CloudStatic, you can explicitly specify the number of nodes using the `spec.staticInstances.count` parameter. This allows you to define the expected number of nodes — DKP uses this value for state monitoring and automation.
+{% endalert %}
 
 ## Running DKP on an arbitrary node
 

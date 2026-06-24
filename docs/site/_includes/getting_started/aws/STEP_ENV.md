@@ -156,23 +156,26 @@ Create a new Policy based on the specification created above with `D8CloudProvid
 aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 
-> You will see the following:
-> ```yaml
-  {
-      "Policy": {
-          "PolicyName": "D8CloudProviderAWS",
-          "PolicyId": "AAA",
-          "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
-          "Path": "/",
-          "DefaultVersionId": "v1",
-          "AttachmentCount": 0,
-          "PermissionsBoundaryUsageCount": 0,
-          "IsAttachable": true,
-          "CreateDate": "2020-08-27T02:52:06+00:00",
-          "UpdateDate": "2020-08-27T02:52:06+00:00"
-      }
-  }
-  ```
+{% alert level="info" %}
+You will see the following:
+
+```yaml
+{
+    "Policy": {
+        "PolicyName": "D8CloudProviderAWS",
+        "PolicyId": "AAA",
+        "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
+        "Path": "/",
+        "DefaultVersionId": "v1",
+        "AttachmentCount": 0,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "CreateDate": "2020-08-27T02:52:06+00:00",
+        "UpdateDate": "2020-08-27T02:52:06+00:00"
+    }
+}
+```
+{% endalert %}
 
 Create a new user:
 
@@ -180,18 +183,21 @@ Create a new user:
 aws iam create-user --user-name deckhouse
 ```
 
-> You will see the following:
-> ```yaml
-  {
-      "User": {
-          "Path": "/",
-          "UserName": "deckhouse",
-          "UserId": "AAAXXX",
-          "Arn": "arn:aws:iam::123:user/deckhouse",
-          "CreateDate": "2020-08-27T03:05:42+00:00"
-      }
-  }
-  ```
+{% alert level="info" %}
+You will see the following:
+
+```yaml
+{
+    "User": {
+        "Path": "/",
+        "UserName": "deckhouse",
+        "UserId": "AAAXXX",
+        "Arn": "arn:aws:iam::123:user/deckhouse",
+        "CreateDate": "2020-08-27T03:05:42+00:00"
+    }
+}
+```
+{% endalert %}
 
 You need to allow access to the API and remember your `AccessKeyId` + `SecretAccessKey` values:
 
@@ -199,18 +205,21 @@ You need to allow access to the API and remember your `AccessKeyId` + `SecretAcc
 aws iam create-access-key --user-name deckhouse
 ```
 
-> You will see the following:
-> ```yaml
-  {
-      "AccessKey": {
-          "UserName": "deckhouse",
-          "AccessKeyId": "XXXYYY",
-          "Status": "Active",
-          "SecretAccessKey": "ZZZzzz",
-          "CreateDate": "2020-08-27T03:06:22+00:00"
-      }
-  }
-  ```
+{% alert level="info" %}
+You will see the following:
+
+```yaml
+{
+    "AccessKey": {
+        "UserName": "deckhouse",
+        "AccessKeyId": "XXXYYY",
+        "Status": "Active",
+        "SecretAccessKey": "ZZZzzz",
+        "CreateDate": "2020-08-27T03:06:22+00:00"
+    }
+}
+```
+{% endalert %}
 
 Attach the specified `Policy` to the specified `User`:
 

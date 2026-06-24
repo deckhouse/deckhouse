@@ -250,7 +250,9 @@ The module is configured using the [ModuleConfig](/products/kubernetes-platform/
 - `spec.settings` — module settings. This field is optional if the `spec.enabled` field is used. For a description of the available settings, see *Settings* in the module's documentation.
 - `spec.enabled` — this optional field allows you to explicitly [enable or disable the module](#enabling-and-disabling-the-module). The module may be enabled by default based on the [bundle in use](#module-bundles) if this parameter is not set.
 
-> Deckhouse doesn't modify ModuleConfig resources. As part of the Infrastructure as Code (IaC) approach, you can store ModuleConfigs in a version control system and use Helm, `d8 k`, and other familiar tools for deploy.
+{% alert level="info" %}
+Deckhouse doesn't modify ModuleConfig resources. As part of the Infrastructure as Code (IaC) approach, you can store ModuleConfigs in a version control system and use Helm, `d8 k`, and other familiar tools for deploy.
+{% endalert %}
 
 An example of a custom resource for configuring the [`kube-dns`](/modules/kube-dns/) module:
 
@@ -276,7 +278,9 @@ Some modules can also be configured using custom resources. Use the search bar a
 
 ### Enabling and disabling the module
 
-> Depending on the [bundle used](#module-bundles), some modules may be enabled by default.
+{% alert level="info" %}
+Depending on the [bundle used](#module-bundles), some modules may be enabled by default.
+{% endalert %}
 
 To enable/disable the module, set [`spec.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig-v1alpha1-spec-enabled) field of the ModuleConfig custom resource to `true` or `false`. Note that this may require you to first create a ModuleConfig resource for the module.
 
@@ -333,7 +337,7 @@ Modules from sources are not included in this table.
 ### Things to keep in mind when working with the Minimal module set
 
 {% alert level="warning" %}
-**Note** that several basic modules are not included in the `Minimal` set of modules (for example, the CNI module).
+that several basic modules are not included in the `Minimal` set of modules (for example, the CNI module).
 
 Deckhouse Kubernetes Platform with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
 {% endalert %}

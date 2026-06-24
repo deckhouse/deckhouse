@@ -17,7 +17,9 @@ Webhooks are an event-driven integration mechanism with external systems. They e
 - Integration with CI/CD, monitoring, messaging platforms, and tracking systems.
 - Retry mechanism for connection failures.
 
-> Project webhooks are supported in GitLab CE.
+{% alert level="info" %}
+Project webhooks are supported in GitLab CE.
+{% endalert %}
 
 ## Group webhooks
 
@@ -27,8 +29,10 @@ To add a webhook at the group level, open the group page and navigate to "Settin
 - Project events;
 - Subgroup events.
 
-> If the user has no public email specified, the email in the request body will appear as "[REDACTED]".  
-> Member events trigger upon creation, modification, or deletion of group or project members.
+{% alert level="info" %}
+If the user has no public email specified, the email in the request body will appear as "[REDACTED]".  
+Member events trigger upon creation, modification, or deletion of group or project members.
+{% endalert %}
 
 ## Creating group webhooks
 

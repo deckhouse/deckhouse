@@ -158,12 +158,10 @@ accessibility:
 {% endraw %}
 
 {% alert level="warning" %}
-
 * Чтобы использовать этот механизм, файл `module.yaml` должен быть включён в релизный образ.
 * Модуль по-прежнему можно отключить с помощью объекта ModuleConfig.
 * Модуль останется на последнем доступном релизе, если в следующем релизе он будет отключён
   (например, при установке `available: false` в соответствующей редакции).
-
 {% endalert %}
 
 {% raw %}
@@ -305,7 +303,9 @@ status:
 
 ![Логика автообновления модулей](../../../images/architecture/module-development/module_update_flow_ru.svg)
 
-> Версии ModuleRelease `v1.0.0` и `v1.1.1` приведены в качестве примера.
+{% alert level="info" %}
+Версии ModuleRelease `v1.0.0` и `v1.1.1` приведены в качестве примера.
+{% endalert %}
 
 1. **Установка модуля**. При включении модуля (`enable module <module name>`) в кластер автоматически загружается и разворачивается актуальная версия модуля из выбранного канала стабильности. Это может быть, например, ModuleRelease v1.0.0. Загружается последняя доступная версия, старые версии не устанавливаются.
 
@@ -346,7 +346,9 @@ update:
       to:   "2.0" # Переход между основными версиями задаётся форматом X.0.
 ```
 
-> Релиз с ограничениями (constrained release) — это релиз модуля, в чьём `module.yaml` задана секция [`update.versions`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update). Механизм `from-to` работает только с такими релизами.
+{% alert level="info" %}
+Релиз с ограничениями (constrained release) — это релиз модуля, в чьём `module.yaml` задана секция [`update.versions`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update). Механизм `from-to` работает только с такими релизами.
+{% endalert %}
 
 Условия применения `from-to`:
 

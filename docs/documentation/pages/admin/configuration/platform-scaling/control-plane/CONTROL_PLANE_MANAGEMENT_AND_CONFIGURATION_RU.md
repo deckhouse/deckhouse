@@ -21,7 +21,9 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
 
 - Настройка kubeconfig. DKP формирует актуальный конфигурационный файл (с правами `cluster-admin`), генерирует, продлевает и обновляет kubeconfig для компонентов control plane и административный kubeconfig (`admin.conf`), а также создает символическую ссылку для пользователя `root` (`/root/.kube/config` -> `admin.conf`). При включённом модуле [`user-authz`](/modules/user-authz/) символическую ссылку можно отключить параметром [`rootKubeconfigSymlink`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) в модуле `control-plane-manager` (подробнее — в [«FAQ»](/modules/control-plane-manager/faq.html#модель-административного-доступа-к-кластеру) модуля `control-plane-manager`). Также DKP ужесточает права доступа к файлам `admin.conf` и `super-admin.conf` для усиления безопасности.
 
-> Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
+{% alert level="info" %}
+Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
+{% endalert %}
 
 ## Включение, отключение и настройка модуля
 

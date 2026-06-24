@@ -74,7 +74,9 @@ EOF
 
 ### Using services with active health checks
 
-> **Warning.** This feature is in testing phase and will be available in upcoming versions.
+{% alert level="warning" %}
+This feature is in testing phase and will be available in upcoming versions.
+{% endalert %}
 
 The `ServiceWithHealthchecks` resource allows you to configure active health checks for a service on specified TCP ports. If the health checks for virtual machines are unsuccessful, those machines will not be included in the traffic balancing.
 

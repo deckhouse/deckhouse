@@ -138,9 +138,11 @@ To create your own template:
 
 1. Edit the `my-project-template.yaml` file, make the necessary changes.
 
-   > It is necessary to change not only the template, but also the scheme of input parameters for it.
-   >
-   > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
+   {% alert level="info" %}
+   It is necessary to change not only the template, but also the scheme of input parameters for it.
+
+   Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
+   {% endalert %}
 
 1. Change the template name in the `.metadata.name` field.
 1. Apply your new template with the command:

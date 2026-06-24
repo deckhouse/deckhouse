@@ -207,11 +207,9 @@ The `aggregationRule` section defines which roles and modules are aggregated int
 This way, the role inherits permissions from the `deckhouse` and `kubernetes` subsystems as well as from the [`user-authn`](/modules/user-authn/) module.
 
 {% alert level="info" %}
-
 - There are no restrictions on the role name, but it is recommended that you follow a readable and consistent naming style.
 - Use roles will be automatically created in the namespaces of the corresponding subsystems and modules.
   The role type is determined by its label.
-
 {% endalert %}
 
 ## Extending a custom role

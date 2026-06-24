@@ -32,15 +32,18 @@ If the parameter is not specified, no group-based filtering will be applied.
    - Set the redirect URI to `https://dex.<publicDomainTemplate>/callback`.
    - Obtain the `clientID` and `clientSecret`.
 
-   > **Important**: When specifying the redirect URI, substitute the actual value of `publicDomainTemplate` without `%s`.  
-   > For example, if `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'`, the actual URI would be:  
-   > `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
-   >
-   > To retrieve the Dex address (URI), run:
-   >
-   > ```console
-   > d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
-   > ```
+   {% alert level="info" %}
+   : When specifying the redirect URI, substitute the actual value of `publicDomainTemplate` without `%s`.  
+   For example, if `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'`, the actual URI would be:  
+   `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
+
+   To retrieve the Dex address (URI), run:
+
+   ```console
+   d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
+   ```
+
+   {% endalert %}
 
 1. Create a [DexProvider](/modules/user-authn/cr.html#dexprovider) resource tailored to the specifics of your selected identity provider.
 

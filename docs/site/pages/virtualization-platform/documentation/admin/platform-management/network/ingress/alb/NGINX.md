@@ -262,7 +262,9 @@ Available in DVP Enterprise Edition only.
 
 1. Create a MetalLoadBalancerClass resource:
 
-   > Metallb balancers should be placed on the same nodes as ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose (to deploy ingress controllers and Metallb load balancers on frontend nodes, use the annotation `node-role.deckhouse.io/frontend: ""` in their manifests).
+   {% alert level="info" %}
+   Metallb balancers should be placed on the same nodes as ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose (to deploy ingress controllers and Metallb load balancers on frontend nodes, use the annotation `node-role.deckhouse.io/frontend: ""` in their manifests).
+   {% endalert %}
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -302,7 +304,9 @@ Available in DVP Enterprise Edition only.
        operator: Equal
    ```
 
-   > When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). [Example of using annotations](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
+   {% alert level="info" %}
+   When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). [Example of using annotations](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
+   {% endalert %}
 
 The platform will create a LoadBalancer Service with the specified number of IPs:
 

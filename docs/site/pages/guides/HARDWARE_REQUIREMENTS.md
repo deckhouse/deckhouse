@@ -79,7 +79,10 @@ See [Configuration Features](https://deckhouse.io/products/kubernetes-platform/g
 Features of the configurations listed in the table above:
 
 * **Minimum** — Minimum cluster configuration is suitable for small, light-load projects with low reliability requirements. It is up to you to define the characteristics of the worker node based on the expected user load. Note that in this configuration, some of the DKP components will also run on the worker node.
-  > Such a cluster configuration is risky because if a single master node fails, the entire cluster will be affected.
+  {% alert level="info" %}
+  Such a cluster configuration is risky because if a single master node fails, the entire cluster will be affected.
+  {% endalert %}
+
 * **Typical** — This is the recommended configuration that can tolerate the failure of two master nodes. It greatly improves service availability.
 * **Increased load** — Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
 

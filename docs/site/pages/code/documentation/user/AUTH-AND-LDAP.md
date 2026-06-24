@@ -66,7 +66,9 @@ providers:
     groups_attribute: 'gitlab_group'
 ```
 
-> If a user belongs to `admin_groups` but is not listed in `allowed_groups`, access will be denied. In this case, administrative privileges will not be granted either.
+{% alert level="info" %}
+If a user belongs to `admin_groups` but is not listed in `allowed_groups`, access will be denied. In this case, administrative privileges will not be granted either.
+{% endalert %}
 
 ## LDAP synchronization
 
@@ -205,7 +207,9 @@ To view the full synchronization logs:
 3. Run the log collection command, substituting the copied JID and pod name (POD_NAME):
    `kubectl -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
 
-> Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
+{% alert level="info" %}
+Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
+{% endalert %}
 
 ### LDAP Sync behavior
 

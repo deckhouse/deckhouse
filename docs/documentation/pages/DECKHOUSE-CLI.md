@@ -40,7 +40,10 @@ The `d8 delivery-kit` and `d8 mirror` command groups are not available in Commun
 There are two ways to install the Deckhouse CLI:
 
 * Starting with version 0.10, you can install using [trdl](https://trdl.dev/). This method allows you to get fresh versions of the tool with all improvements and fixes.
-  > Note that trdl installation requires Internet access to the tuf repository containing the tool. This method will not work in an air-gapped environment!
+  {% alert level="info" %}
+  Note that trdl installation requires Internet access to the tuf repository containing the tool. This method will not work in an air-gapped environment!
+  {% endalert %}
+
 * You can manually download the executable file and install it on the system.
 
 ### trdl-based installation

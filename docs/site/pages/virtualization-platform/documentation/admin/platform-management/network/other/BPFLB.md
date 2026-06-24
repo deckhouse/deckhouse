@@ -45,10 +45,12 @@ which affects the behavior of Services of the `NodePort` and `LoadBalancer` type
 
   ![DSR data flow diagram](/images/cni-cilium/dsr.png)
 
-  > In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster`
-  > additional network environment settings are required.  
-  > Network equipment must be ready for asymmetric traffic flow:
-  > IP address anti-spoofing tools (`uRPF`, `sourceGuard`, etc.) must be disabled or configured accordingly.
+  {% alert level="info" %}
+  In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster`
+  additional network environment settings are required.  
+  Network equipment must be ready for asymmetric traffic flow:
+  IP address anti-spoofing tools (`uRPF`, `sourceGuard`, etc.) must be disabled or configured accordingly.
+  {% endalert %}
 
 * `Hybrid`: In this mode, TCP traffic is handled per `DSR` rules, while UDP traffic is handled per `SNAT` rules.
 

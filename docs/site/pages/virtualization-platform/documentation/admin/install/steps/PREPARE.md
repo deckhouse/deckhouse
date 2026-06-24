@@ -35,7 +35,9 @@ Before installing the virtualization platform, you need to plan its parameters:
    - The domain template for applications in this case will be `%s.<public wildcard domain of the cluster>`;
    - For test clusters, you can use a universal wildcard domain from the [sslip.io](https://sslip.io/) service.
 
-     > The domain used in the template must not coincide with the domain specified in the `clusterDomain` parameter. For example, if `clusterDomain: cluster.local` (the default value) is used, then `publicDomainTemplate` cannot be `%s.cluster.local`.
+     {% alert level="info" %}
+     The domain used in the template must not coincide with the domain specified in the `clusterDomain` parameter. For example, if `clusterDomain: cluster.local` (the default value) is used, then `publicDomainTemplate` cannot be `%s.cluster.local`.
+     {% endalert %}
 
 1. Choose the storage to be used:
    - You can select a storage system from the [supported list](../../../about/requirements.html#supported-storage-systems);

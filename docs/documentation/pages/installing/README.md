@@ -68,7 +68,9 @@ Required and optional objects/resources that may be needed in the installation c
 
 1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**required**): Initial [configuration parameters](../admin/configuration/) necessary to start DKP.
 
-   > Starting with DKP 1.75, use the ModuleConfig `deckhouse` to configure access to the DKP container registry. Configuring access with InitConfiguration (via `imagesRepo`, `registryDockerCfg`, `registryScheme`, and `registryCA` parameters) is considered a legacy method.
+   {% alert level="info" %}
+   Starting with DKP 1.75, use the ModuleConfig `deckhouse` to configure access to the DKP container registry. Configuring access with InitConfiguration (via `imagesRepo`, `registryDockerCfg`, `registryScheme`, and `registryCA` parameters) is considered a legacy method.
+   {% endalert %}
 
 1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration): General cluster parameters, such as Kubernetes (control plane components) version, network settings, CRI parameters, etc. **Required**, except when DKP is installed into an already existing Kubernetes cluster.
 
@@ -452,9 +454,7 @@ This sample script retrieves the IP address of the load balancer after DKP is in
 set -e
 set -o pipefail
 
-
 INGRESS_NAME="nginx"
-
 
 echo_err() { echo "$@" 1>&2; }
 
@@ -501,7 +501,6 @@ When installing a commercial edition of Deckhouse Kubernetes Platform from the o
 ```shell
 docker login -u license-token registry.deckhouse.io
 ```
-
 {% endalert %}
 
 The command to run the installer container from the public Deckhouse container registry:
@@ -652,7 +651,9 @@ Example of using a preflight skip flag:
       --preflight-skip-all-checks
   ```
 
-> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
+{% alert level="info" %}
+Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
+{% endalert %}
 
 {% endofftopic %}
 
@@ -728,7 +729,7 @@ spec:
         ca: <CA>
 ```
 
-{% offtopic title="Configuration of an external registry using InitConfiguration **(legacy method)**" %}
+{% offtopic title="Configuration of an external registry using InitConfiguration (legacy method)" %}
 
 Set the following parameters in `InitConfiguration`:
 
@@ -899,7 +900,9 @@ You can check the current status of versions in the release channels at [release
   - `<LICENSE_KEY>`: Deckhouse Kubernetes Platform license key.
   - `/home/user/d8-bundle`: Directory where the image packages will be placed. It will be created if it does not exist.
 
-  > If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
+  {% alert level="info" %}
+  If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
+  {% endalert %}
 
   Example command to download all DKP EE versions starting from version 1.59 (specify your license key):
 
@@ -1049,7 +1052,9 @@ If you need to install DKP with automatic updates disabled:
 
 1. Use the installer image tag corresponding to the desired version. For example, to install release `v1.44.3`, use the image `your.private.registry.com/deckhouse/install:v1.44.3`.
 1. Specify the appropriate version number in the [`deckhouse.devBranch`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).  
-   > **Do not specify** the [`deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+   {% alert level="info" %}
+   **Do not specify** the [`deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+   {% endalert %}
 
 If you want to disable automatic updates in an already running DKP installation (including patch updates), remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 

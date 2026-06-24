@@ -85,11 +85,13 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
   d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=
   ```
 
-  > **Важно**. В этом режиме не выполняется автоматический drain узла.
-  > При необходимости выполните drain вручную перед установкой аннотации.
-  >
-  > Чтобы избежать проблем при выполнении drain,
-  > всегда устанавливайте режим `Manual` для группы master-узлов.
+  {% alert level="info" %}
+  В этом режиме не выполняется автоматический drain узла.
+  При необходимости выполните drain вручную перед установкой аннотации.
+
+  Чтобы избежать проблем при выполнении drain,
+  всегда устанавливайте режим `Manual` для группы master-узлов.
+  {% endalert %}
 
 - `Automatic` — режим автоматического разрешения disruptive-обновлений.
   
@@ -183,7 +185,9 @@ metadata:
 
 Если включён Cluster API Provider Static (CAPS), в NodeGroup можно использовать секцию `staticInstances`. Это позволяет DVP автоматически подключать, настраивать и, при необходимости, отключать статические узлы на основе ресурсов StaticInstance и SSHCredentials.
 
-> В [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типами Static можно явно указать количество узлов в параметре `spec.staticInstances.count`. Это позволяет задать ожидаемое количество узлов — DVP использует это значение для контроля состояния и автоматизации.
+{% alert level="info" %}
+В [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типами Static можно явно указать количество узлов в параметре `spec.staticInstances.count`. Это позволяет задать ожидаемое количество узлов — DVP использует это значение для контроля состояния и автоматизации.
+{% endalert %}
 
 ## Запуск DVP на произвольном узле
 

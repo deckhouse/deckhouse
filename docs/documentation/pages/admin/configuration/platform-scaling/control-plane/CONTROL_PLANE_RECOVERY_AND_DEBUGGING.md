@@ -222,7 +222,9 @@ Example output when the operation is successful:
 Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 ```
 
-> If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+{% alert level="info" %}
+If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+{% endalert %}
 
 ### How to defragment etcd in a cluster with multiple master nodes
 
@@ -275,9 +277,11 @@ To defragment etcd in a cluster with multiple master nodes:
 
 1. Defragment the etcd nodes that are members of the etcd cluster one by one. Use the following command to defragment (where `NODE_NAME` is the name of the master node):
 
-   > Important: Defragment the leader last.
-   >
-   > Restoring etcd on a node after defragmentation may take some time. It is recommended to wait at least a minute before proceeding to defragment the next etcd node.
+   {% alert level="info" %}
+   Defragment the leader last.
+
+   Restoring etcd on a node after defragmentation may take some time. It is recommended to wait at least a minute before proceeding to defragment the next etcd node.
+   {% endalert %}
 
       ```bash
    d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
@@ -293,7 +297,9 @@ To defragment etcd in a cluster with multiple master nodes:
    Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    ```
 
-   > If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+   {% alert level="info" %}
+   If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+   {% endalert %}
 
 ## High availability
 

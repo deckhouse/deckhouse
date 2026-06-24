@@ -70,8 +70,10 @@ lang: ru
        user: ubuntu
      ```
 
-     > **Важно**. Поле `privateSSHKey` должно содержать приватный SSH-ключ, закодированный в формате Base64.
-     > Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
+     {% alert level="info" %}
+     Поле `privateSSHKey` должно содержать приватный SSH-ключ, закодированный в формате Base64.
+     Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
+     {% endalert %}
 
 1. Создать объект [StaticInstance](/modules/node-manager/cr.html#staticinstance) для каждого сервера:
 

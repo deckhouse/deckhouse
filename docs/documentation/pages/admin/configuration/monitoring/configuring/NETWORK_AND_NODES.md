@@ -43,7 +43,9 @@ spec:
     - host: youtube.com
 ```
 
-> The `name` field is used in Grafana to display related data. If the `name` field is not specified, the required `host` field is used.
+{% alert level="info" %}
+The `name` field is used in Grafana to display related data. If the `name` field is not specified, the required `host` field is used.
+{% endalert %}
 
 ## Cluster node monitoring
 

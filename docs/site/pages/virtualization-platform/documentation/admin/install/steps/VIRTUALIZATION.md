@@ -126,7 +126,6 @@ spec:
 ```
 
 {% alert level="info" %}
-
 When uploading large virtual machine images (especially over slow connections), it is recommended to increase the Ingress controller worker shutdown timeout. This prevents upload interruption during Ingress controller restart or update.
 
 Example:

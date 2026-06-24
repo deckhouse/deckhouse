@@ -116,13 +116,17 @@ d8 k get modulereleases
 
 Для отключения механизма обновления платформы, удалите в конфигурации модуля `deckhouse` параметр `.spec.settings.releaseChannel`. В этом случае платформа не проверяет обновления и обновление на patch-релизы не выполняется.
 
-> **Внимание.** Крайне не рекомендуется отключать автоматическое обновление. Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
+{% alert level="danger" %}
+Крайне не рекомендуется отключать автоматическое обновление. Это заблокирует обновления на patch-релизы, которые могут содержать исправления критических уязвимостей и ошибок.
+{% endalert %}
 
 ## Немедленное применение обновлений
 
 Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
-> В этом случае будут проигнорированы окна обновления, настройки [canary-release](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](/modules/deckhouse/configuration.html#parameters-update-mode). Обновление применится сразу после установки аннотации.
+{% alert level="info" %}
+В этом случае будут проигнорированы окна обновления, настройки [canary-release](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](/modules/deckhouse/configuration.html#parameters-update-mode). Обновление применится сразу после установки аннотации.
+{% endalert %}
 
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
 

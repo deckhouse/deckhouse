@@ -66,7 +66,9 @@ lang: ru
        user: ubuntu
      ```
 
-     > **Важно**. Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
+     {% alert level="info" %}
+     Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
+     {% endalert %}
 
 1. Создать объект [StaticInstance](/modules/node-manager/cr.html#staticinstance) для каждого сервера:
 

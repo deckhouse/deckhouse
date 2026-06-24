@@ -397,7 +397,9 @@ The following are used to manage the allocation and assignment of IP addresses:
 
 #### Example of assigning IP addresses to the cluster network
 
-> To allocate an address pool for a [cluster network](#creating-a-publicly-accessible-network-cluster), use the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) resource.
+{% alert level="info" %}
+To allocate an address pool for a [cluster network](#creating-a-publicly-accessible-network-cluster), use the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) resource.
+{% endalert %}
 
 To allocate a pool of addresses and assign them to network interfaces of pods connected to the cluster network, perform the following steps:
 
@@ -418,7 +420,9 @@ To allocate a pool of addresses and assign them to network interfaces of pods co
            - 203.0.113.10-203.0.113.200
    ```
 
-   > The [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) parameter is optional. If it is not specified, the entire CIDR from [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) is considered available (except for network/broadcast addresses, see the behavior of `/31` and `/32`).
+   {% alert level="info" %}
+   The [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) parameter is optional. If it is not specified, the entire CIDR from [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) is considered available (except for network/broadcast addresses, see the behavior of `/31` and `/32`).
+   {% endalert %}
 
 1. Enable IPAM on the network. To do this, specify the parameters of the lusterIPAddressPool created in the previous step in the [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) parameter of the ClusterNetwork resource:
 
@@ -664,7 +668,9 @@ To create an Underlay network in `Shared` mode, follow these steps:
    * `shared.sriov.enabled: true` enables SR-IOV on selected PFs.
    * `shared.sriov.numVFs: 8` creates 8 Virtual Functions per Physical Function.
 
-   > The `mode` and `autoBonding` fields are immutable once set. Plan your configuration carefully before creating the resource.
+   {% alert level="info" %}
+   The `mode` and `autoBonding` fields are immutable once set. Plan your configuration carefully before creating the resource.
+   {% endalert %}
 
 1. After creating the UnderlayNetwork, monitor the SR-IOV configuration status:
 

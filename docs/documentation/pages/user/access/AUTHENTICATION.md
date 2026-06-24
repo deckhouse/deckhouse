@@ -32,7 +32,9 @@ Example of DKP authentication interface with username and password input:
 
 ## Enabling Authentication in a Web Application
 
-> To enable authentication in an application, authentication must first be configured at the Deckhouse Kubernetes Platform level.
+{% alert level="info" %}
+To enable authentication in an application, authentication must first be configured at the Deckhouse Kubernetes Platform level.
+{% endalert %}
 
 DKP supports two ways of enabling authentication for an application, depending on whether the application is capable of handling authentication requests (i.e., acting as an OIDC client) or not. Both approaches are described below.
 

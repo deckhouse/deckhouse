@@ -321,7 +321,9 @@ metadata:
 `SubnetID` refers to the ID of the subnet where the internal listener for the Yandex LoadBalancer will be created.
 This allows you to control the load balancer’s network exposure and limit it to internal addresses only.
 
-> The default behavior (external or internal LB) depends on the cluster configuration. To explicitly choose the type, use the `yandex.cpi.flant.com/loadbalancer-external` annotation.
+{% alert level="info" %}
+The default behavior (external or internal LB) depends on the cluster configuration. To explicitly choose the type, use the `yandex.cpi.flant.com/loadbalancer-external` annotation.
+{% endalert %}
 
 #### Service annotations
 

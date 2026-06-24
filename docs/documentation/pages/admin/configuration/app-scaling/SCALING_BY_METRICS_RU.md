@@ -94,7 +94,9 @@ spec:
         averageValue: 10
 ```
 
-> При превышении (или падении ниже) заданного порога `averageValue: 10` система изменит число реплик `myapp` в диапазоне от 1 до 2
+{% alert level="info" %}
+При превышении (или падении ниже) заданного порога `averageValue: 10` система изменит число реплик `myapp` в диапазоне от 1 до 2
+{% endalert %}
 
 ### Настройка метрик через CustomPrometheusRules
 
@@ -120,7 +122,9 @@ spec:
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
 
-> Все метрики с префиксом `kube_adapter_metric_` автоматически регистрируются в Kubernetes API без необходимости создания CustomPrometheusRules. Это позволяет использовать уже существующие Prometheus-метрики для масштабирования без дополнительных конфигураций.
+{% alert level="info" %}
+Все метрики с префиксом `kube_adapter_metric_` автоматически регистрируются в Kubernetes API без необходимости создания CustomPrometheusRules. Это позволяет использовать уже существующие Prometheus-метрики для масштабирования без дополнительных конфигураций.
+{% endalert %}
 
 ### Работа с нестабильными метриками
 

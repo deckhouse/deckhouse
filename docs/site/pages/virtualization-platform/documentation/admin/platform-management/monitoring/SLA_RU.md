@@ -111,7 +111,9 @@ d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller
 d8 k -n d8-upmeter delete secret/basic-auth-status
 ```
 
-> **Внимание.** Параметры `auth.status.password` и `auth.webui.password` больше не поддерживаются.
+{% alert level="warning" %}
+Параметры `auth.status.password` и `auth.webui.password` больше не поддерживаются.
+{% endalert %}
 
 ## FAQ
 

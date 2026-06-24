@@ -40,8 +40,10 @@ This feature allows you to configure integration with a Vault server and use sec
    EOF
    ```
 
-   > Always use `bound_claims` to restrict access to the role. Otherwise, any JWT issued by the platform will be able to authenticate using this role.
-  
+   {% alert level="info" %}
+   Always use `bound_claims` to restrict access to the role. Otherwise, any JWT issued by the platform will be able to authenticate using this role.
+   {% endalert %}
+
 1. Create a policy:
 
    ```bash

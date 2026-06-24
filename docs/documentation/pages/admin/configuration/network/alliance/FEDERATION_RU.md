@@ -16,16 +16,20 @@ lang: ru
 
 * Каждый кластер должен иметь уникальное значение параметра [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) в ресурсе ClusterConfiguration. Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
 
-  > Значение `cluster.local` использовать нельзя, так как это зарезервированный псевдоним для домена локального кластера.
-  > Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` (Подробнее — [в документации Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+  {% alert level="info" %}
+  Значение `cluster.local` использовать нельзя, так как это зарезервированный псевдоним для домена локального кластера.
+  Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` (Подробнее — [в документации Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+  {% endalert %}
 
 * Требования к уникальности подсетей сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) при работе кластеров в федерации отсутствуют.
 
-  > При анализе трафика Istio использует:
-  > - для HTTP/HTTPS-запросов — заголовки;
-  > - для TCP-запросов — IP-адрес назначения и порт.
-  >
-  > Istio работает в режиме [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) — поды разных кластеров взаимодействуют друг с другом только через Istio ingress gateway. Прямое взаимодействие между подами разных кластеров не поддерживается.
+  {% alert level="info" %}
+  При анализе трафика Istio использует:
+  - для HTTP/HTTPS-запросов — заголовки;
+  - для TCP-запросов — IP-адрес назначения и порт.
+
+  Istio работает в режиме [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) — поды разных кластеров взаимодействуют друг с другом только через Istio ingress gateway. Прямое взаимодействие между подами разных кластеров не поддерживается.
+  {% endalert %}
 
 ### Общие принципы федерации
 
@@ -57,7 +61,9 @@ lang: ru
 * Каждый ресурс (Service), который считается публичным в рамках федерации, пометить лейблом `federation.istio.deckhouse.io/public-service: ""`.
   * В остальных кластерах из состава федерации, для каждого ресурса Service создадутся соответствующие ServiceEntry, указывающие на `ingressgateway` исходного кластера.
 
-> **Важно**. Убедитесь, что поле `name` в разделе `.spec.ports` ресурса Service заполнено для каждого порта, иначе могут быть проблемы в работе федерации.
+{% alert level="info" %}
+Убедитесь, что поле `name` в разделе `.spec.ports` ресурса Service заполнено для каждого порта, иначе могут быть проблемы в работе федерации.
+{% endalert %}
 
 <!-- перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#%D1%83%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%D0%BE-%D1%84%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B8%D0%B7-%D0%B4%D0%B2%D1%83%D1%85-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%BE%D0%B2-%D1%81-%D0%BF%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%D1%8E-custom-resource-istiofederation -->
 

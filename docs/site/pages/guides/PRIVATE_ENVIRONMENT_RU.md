@@ -203,7 +203,9 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 sudo mkdir -p /etc/docker/certs.d/harbor.example
 ```
 
-> Параметр `-p` указывает утилите `mkdir` создать родительские директории, если они отсутствуют (в данном случае — директорию `certs.d`).
+{% alert level="info" %}
+Параметр `-p` указывает утилите `mkdir` создать родительские директории, если они отсутствуют (в данном случае — директорию `certs.d`).
+{% endalert %}
 
 Скопируйте в неё созданные сертификаты:
 
@@ -270,7 +272,6 @@ https:
 #   enabled: true
 #   # put your cert and key files on dir
 #   dir: /etc/harbor/tls/internal
-
 
 # Uncomment external_url if you want to enable external proxy
 # And when it enabled the hostname will no longer used
@@ -892,7 +893,9 @@ $ ls -lh
 d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
-> Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
+{% alert level="info" %}
+Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
+{% endalert %}
 
 Архив будет распакован, после чего образы будут загружены в registry. Этот этап обычно выполняется быстрее, чем скачивание, так как работа идёт с локальным архивом. Как правило, он занимает около 15 минут.
 
@@ -1011,7 +1014,9 @@ Login Succeeded
    ssh -A ubuntu@<BASTION_IP>
    ```
 
-   > Обратите внимание: для успешного выполнения команды может понадобиться предварительно запустить ssh-agent, выполнив команду `ssh-add` на том компьютере, с которого будет запускаться команда.
+   {% alert level="info" %}
+   Обратите внимание: для успешного выполнения команды может понадобиться предварительно запустить ssh-agent, выполнив команду `ssh-add` на том компьютере, с которого будет запускаться команда.
+   {% endalert %}
 
    После этого выполните подключение к целевым серверам:
 
@@ -1025,7 +1030,9 @@ Login Succeeded
 <INTERNAL-IP-ADDRESS> harbor.example proxy.local
 ```
 
-> Не забудьте заменить `<INTERNAL-IP-ADDRESS>` на реальный внутренний IP-адрес ВМ с Harbor.
+{% alert level="info" %}
+Не забудьте заменить `<INTERNAL-IP-ADDRESS>` на реальный внутренний IP-адрес ВМ с Harbor.
+{% endalert %}
 
 ### Создание пользователя для master-узла
 

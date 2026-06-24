@@ -175,7 +175,9 @@ The instance will be created in the zone corresponding to this subnet.
 If you need to create a new subnet, specify the [`withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr) parameter.
 The NAT instance will be placed in this subnet.
 
-> One of the following parameters is required: `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR`.
+{% alert level="info" %}
+One of the following parameters is required: `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR`.
+{% endalert %}
 
 If [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid) is also specified,
 the NAT instance will be connected to that subnet via a secondary network interface.
@@ -531,7 +533,9 @@ To configure access, follow these steps:
      --public-address 178.154.226.159
    ```
 
-   > Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+   {% alert level="info" %}
+   Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+   {% endalert %}
 
    Ensure the IP address specified in `--public-address` is accessible from your network and is correct.
 

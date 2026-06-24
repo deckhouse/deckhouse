@@ -75,7 +75,10 @@ Deckhouse Kubernetes Platform поддерживает Online Resize PersistentV
 1. На узле, где находится под, выполните команду `d8 k cordon <имя_узла>`.
 1. Удалите под.
 1. Убедитесь, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
-   > Состояние `FileSystemResizePending` не является проблемой.
+   {% alert level="info" %}
+   Состояние `FileSystemResizePending` не является проблемой.
+   {% endalert %}
+
 1. На узле, где находится под, выполните команду `d8 k uncordon <имя_узла>`.
 
 ## Настройка Datastore

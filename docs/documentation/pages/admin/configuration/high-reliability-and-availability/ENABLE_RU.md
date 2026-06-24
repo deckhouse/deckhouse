@@ -124,14 +124,17 @@ lang: ru
 
    * Сохраните изменения.
 
-   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре `masterNodeGroup.instanceClass.externalIPAddresses` должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
-   >
-   > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
-   >
-   > ```yaml
-   > externalIPAddresses:
-   > - "Auto"
-   > ```
+   {% alert level="info" %}
+   Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре `masterNodeGroup.instanceClass.externalIPAddresses` должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+
+   Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
+
+   ```yaml
+   externalIPAddresses:
+   - "Auto"
+   ```
+
+   {% endalert %}
 
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
@@ -139,11 +142,13 @@ lang: ru
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST>
    ```
 
-   > **Важно**. Для **OpenStack** и **VK Cloud (OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом OpenStack.
-   >
-   > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе OpenStack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
-   >
-   > В случае, если диск `kubernetes-data` останется, при увеличении количества master-узлов могут возникнуть проблемы в работе etcd.
+   {% alert level="info" %}
+   Для **OpenStack** и **VK Cloud (OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом OpenStack.
+
+   Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе OpenStack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
+
+   В случае, если диск `kubernetes-data` останется, при увеличении количества master-узлов могут возникнуть проблемы в работе etcd.
+   {% endalert %}
 
 1. Проверьте очередь Deckhouse с помощью следующей команды и убедитесь, что отсутствуют ошибки:
 

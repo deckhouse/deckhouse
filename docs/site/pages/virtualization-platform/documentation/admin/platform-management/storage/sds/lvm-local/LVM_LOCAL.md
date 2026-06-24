@@ -253,7 +253,9 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-   > **Important.** In a [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) with `type: Thick`, you cannot use an LVMVolumeGroup that contains at least one thin pool.
+   {% alert level="info" %}
+   In a [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) with `type: Thick`, you cannot use an LVMVolumeGroup that contains at least one thin pool.
+   {% endalert %}
 
 1. Wait for the created LocalStorageClass resource to transition to the `Created` state:
 

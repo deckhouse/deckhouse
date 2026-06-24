@@ -653,8 +653,11 @@ Parameter description:
     Includes monitoring, authorization control, networking, and other essential components.
   - `Managed`: Set of modules for clusters managed by cloud providers (for example, Google Kubernetes Engine).
   - `Minimal`: Minimal set that includes only the current module.
-    > Note that basic modules (such as the CNI module) are not included in this set.
-    > Without basic modules, Deckhouse can only operate in an already deployed cluster.
+    {% alert level="info" %}
+    Note that basic modules (such as the CNI module) are not included in this set.
+    Without basic modules, Deckhouse can only operate in an already deployed cluster.
+    {% endalert %}
+
 - Sections containing edition names. Define module behavior in specified editions.
   Possible values: `be`, `ce`, `ee`, `se`, `se-plus`.
 

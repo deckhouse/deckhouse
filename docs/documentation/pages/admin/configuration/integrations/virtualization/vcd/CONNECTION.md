@@ -179,9 +179,11 @@ Example (cluster network `192.168.199.0/24`):
 
 In this case, you must configure Hairpin NAT for traffic from the `192.168.199.0/24` network that is sent to the external IP `194.117.83.19`, with translation to the internal Ingress address `192.168.199.251`. Apply Hairpin NAT rules (DNAT and SNAT if needed) to the **local interface** of the Edge Gateway, not to the Uplink.
 
-> Hairpin NAT configuration may be required for Edge Gateway based on NSX-V.
->
-> For NSX-T, the loopback scenario is often supported by default, but the actual behavior depends on the VMware Cloud Director configuration.
+{% alert level="info" %}
+Hairpin NAT configuration may be required for Edge Gateway based on NSX-V.
+
+For NSX-T, the loopback scenario is often supported by default, but the actual behavior depends on the VMware Cloud Director configuration.
+{% endalert %}
 
 ### Firewall setup
 
@@ -326,7 +328,9 @@ shutdown -P now
    * "User access": `Read/Write`
    * "Value": A single space
 
-   > The VCD UI may not save metadata with an empty value. A single space is used as a placeholder and does not affect functionality. The actual values will be populated automatically when virtual machines are created.
+   {% alert level="info" %}
+   The VCD UI may not save metadata with an empty value. A single space is used as a placeholder and does not affect functionality. The actual values will be populated automatically when virtual machines are created.
+   {% endalert %}
 
    ![Template setup, Guest Properties 3](../../../../images/cloud-provider-vcd/template/GuestProperties3.png)
 

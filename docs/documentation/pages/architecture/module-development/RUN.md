@@ -514,7 +514,9 @@ jobs:
 
 The `DMT_METRICS_URL` and `DMT_METRICS_TOKEN` variables are optional. If set, the DMT will send telemetry to the specified endpoint.
 
-> If the module resides in the `deckhouse` GitHub organization, these variables will be automatically populated from the configured secrets.
+{% alert level="info" %}
+If the module resides in the `deckhouse` GitHub organization, these variables will be automatically populated from the configured secrets.
+{% endalert %}
 
 A complete example of the configuration can be found in the [build_dev.yml](https://github.com/deckhouse/csi-nfs/blob/main/.github/workflows/build_dev.yml#L39C1-L42C62) file.
 

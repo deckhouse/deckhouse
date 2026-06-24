@@ -167,7 +167,9 @@ dhcpOptions:
 
 Если необходимо создать новую подсеть, укажите [параметр `withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr) — в ней будет размещён NAT-инстанс.
 
-> Обязателен один из параметров: `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`.
+{% alert level="info" %}
+Обязателен один из параметров: `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`.
+{% endalert %}
 
 Если также указан [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid), NAT-инстанс будет подключён к этой подсети через вторичный сетевой интерфейс.
 
@@ -494,7 +496,9 @@ spec:
      --public-address 178.154.226.159
    ```
 
-   > Замените здесь `<SSH_PUBLIC_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
+   {% alert level="info" %}
+   Замените здесь `<SSH_PUBLIC_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
+   {% endalert %}
 
    Убедитесь, что IP-адрес из параметра `--public-address` доступен из вашей сети и указан корректно.
 
@@ -505,7 +509,9 @@ spec:
      --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
 
-   > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+   {% alert level="info" %}
+   Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+   {% endalert %}
 
    Здесь:
 

@@ -29,7 +29,9 @@ To create a network for a specific project, use the [Network](/modules/sdn/cr.ht
      networkClass: my-network-class # The name of the NetworkClass obtained from the administrator.
    ```
 
-   > Static identification of the VLAN ID number from the pool assigned by the cluster or network administrator is supported. If the value of the `spec.vlan.id` field is not specified, the VLAN ID will be assigned dynamically.
+   {% alert level="info" %}
+   Static identification of the VLAN ID number from the pool assigned by the cluster or network administrator is supported. If the value of the `spec.vlan.id` field is not specified, the VLAN ID will be assigned dynamically.
+   {% endalert %}
 
 1. After creating the Network object you can check its status:
 
@@ -71,7 +73,9 @@ You can connect cluster networks and project networks to pods. To do this, use t
 
 Example of a pod manifest with two additional networks added (the cluster network `my-cluster-network` and the project network `my-network`):
 
-> The `ifName` field (optional) specifies the name of the TAP interface within the subnet. The `mac` field (optional) specifies the MAC address to be assigned to the TAP interface.
+{% alert level="info" %}
+The `ifName` field (optional) specifies the name of the TAP interface within the subnet. The `mac` field (optional) specifies the MAC address to be assigned to the TAP interface.
+{% endalert %}
 
 ```yaml
 apiVersion: v1
@@ -122,7 +126,9 @@ If multiple additional networks with IPAM enabled are connected to a single pod,
 
 ### Allocating a pool of IP addresses for the project network and enabling IPAM
 
-> To allocate a pool of addresses for the project network ([Network](/modules/sdn/cr.html#network)), create an [IPAddressPool](/modules/sdn/cr.html#ipaddresspool) resource **in the same namespace** as the project network (pods connected to the network).
+{% alert level="info" %}
+To allocate a pool of addresses for the project network ([Network](/modules/sdn/cr.html#network)), create an [IPAddressPool](/modules/sdn/cr.html#ipaddresspool) resource **in the same namespace** as the project network (pods connected to the network).
+{% endalert %}
 
 To allocate a pool of addresses and assign them to network interfaces of pods connected to the project network, perform the following steps:
 
@@ -147,7 +153,9 @@ To allocate a pool of addresses and assign them to network interfaces of pods co
              via: 192.168.10.1
    ```
 
-   > The [`spec.pools[].ranges`](/modules/sdn/cr.html#ipaddresspool-v1alpha1-spec-pools-ranges) parameter is optional. If it is not specified, the entire CIDR from [`spec.pools[].network`](/modules/sdn/cr.html#ipaddresspool-v1alpha1-spec-pools-network) is considered available (except for network/broadcast addresses, see the behavior of `/31` and `/32`).
+   {% alert level="info" %}
+   The [`spec.pools[].ranges`](/modules/sdn/cr.html#ipaddresspool-v1alpha1-spec-pools-ranges) parameter is optional. If it is not specified, the entire CIDR from [`spec.pools[].network`](/modules/sdn/cr.html#ipaddresspool-v1alpha1-spec-pools-network) is considered available (except for network/broadcast addresses, see the behavior of `/31` and `/32`).
+   {% endalert %}
 
 1. Enable IPAM on the network. To do this, specify the parameters of the IPAddressPool created in the previous step in the [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#network-v1alpha1-spec-ipam-ipaddresspoolref) parameter of the Network resource.
 

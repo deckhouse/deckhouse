@@ -109,12 +109,10 @@ provider:
 все узлы кластера были доступны напрямую.
 
 {% alert level="warning" %}
-
 - В данной конфигурации не поддерживается LoadBalancer. Это связано с тем, что в OpenStack нельзя заказать Floating IP для
   сети без роутера, соответственно, нельзя заказать балансировщик с Floating IP. Если заказывать internal loadbalancer, у которого
   virtual IP создается в публичной сети, он все равно доступен только с узлов кластера.
 - В данной конфигурации необходимо явно указывать название внутренней сети в `additionalNetworks` при создании [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере.
-
 {% endalert %}
 
 ![resources](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
@@ -513,8 +511,10 @@ spec:
 
 2. Подготовьте openrc-файл, который содержит credentials для обращения к API {{ site.data.admin.cloud-types.types[page.cloud_type].name }}.
 
-   > Интерфейс получения openrc-файла может отличаться в зависимости от провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }}. Если провайдер предоставляет
-   > стандартный интерфейс для {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, скачать openrc-файл можно [по инструкции](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
+   {% alert level="info" %}
+   Интерфейс получения openrc-файла может отличаться в зависимости от провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }}. Если провайдер предоставляет
+   стандартный интерфейс для {{ site.data.admin.cloud-types.types[page.cloud_type].name }}, скачать openrc-файл можно [по инструкции](https://docs.openstack.org/ocata/admin-guide/common/cli-set-environment-variables-using-openstack-rc.html#download-and-source-the-openstack-rc-file).
+   {% endalert %}
 
 3. Либо установите OpenStack-клиента [по инструкции](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html).
 
@@ -652,7 +652,9 @@ username = {{ nova_service_user_name }}
 
 {% if page.cloud_type != 'selectel' %}
 
-> При создании узлов с типом CloudEphemeral в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
+{% alert level="info" %}
+При создании узлов с типом CloudEphemeral в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
+{% endalert %}
 
 {% endif %}
 

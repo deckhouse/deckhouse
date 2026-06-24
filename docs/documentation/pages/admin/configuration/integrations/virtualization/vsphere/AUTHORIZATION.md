@@ -98,7 +98,6 @@ Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms,
    ```
 
 {% alert level="warning" %}
-
 After the virtual machine starts, the following services related to the packages installed during `cloud-init` preparation must be running:
 
 - `cloud-config.service`,

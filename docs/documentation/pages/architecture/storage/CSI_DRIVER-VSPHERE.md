@@ -57,7 +57,9 @@ The CSI driver consists of the following components:
 
 2. **Csi-node** (DaemonSet): Node Plugin running on all cluster nodes and responsible for local volume mount and unmount operations.
 
-   > **Warning.** The plugin has privileged access to the filesystem of each node. On Linux, this requires the `CAP_SYS_ADMIN` capability. This is necessary to perform mount operations and interact with block devices.
+   {% alert level="warning" %}
+   The plugin has privileged access to the filesystem of each node. On Linux, this requires the `CAP_SYS_ADMIN` capability. This is necessary to perform mount operations and interact with block devices.
+   {% endalert %}
 
    It consists of the following containers:
 

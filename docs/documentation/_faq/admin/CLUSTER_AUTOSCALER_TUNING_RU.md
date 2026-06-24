@@ -45,7 +45,10 @@ lang: ru
 Если в облачном кластере используется только одна группа узлов (например, только для заказа прерываемых узлов (spot, preemptible)) и при автоматическом масштабировании возникают проблемы с заказом таких узлов, выполните следующие действия:
 
 1. Создайте один или несколько объектов InstanceClass, которые будут использоваться при создании инстансов в кластере. В InstanceClass укажите типы узлов, отличающиеся от указанных в упомянутой выше группе.
-   > В DKP объекты InstanceClass различаются в зависимости от провайдера. Примеры: [AWSInstanceClass](/modules/cloud-provider-aws/cr.html#awsinstanceclass), [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass), [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+   {% alert level="info" %}
+   В DKP объекты InstanceClass различаются в зависимости от провайдера. Примеры: [AWSInstanceClass](/modules/cloud-provider-aws/cr.html#awsinstanceclass), [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass), [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+   {% endalert %}
+
 1. Создайте одну или несколько новых групп узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)). В параметре [`spec.cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) укажите созданные на предыдущем шаге объекты InstanceClass. В параметре [`spec.cloudInstances.priority`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-priority) задайте приоритет группы узлов.
 1. При необходимости измените параметры `max-node-provision-time`, `max-node-group-backoff-duration` и `initial-node-group-backoff-duration`, чтобы ускорить переключение на менее приоритетные группы.
 

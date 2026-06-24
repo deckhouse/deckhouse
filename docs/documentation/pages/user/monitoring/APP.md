@@ -55,8 +55,10 @@ For advanced configuration options, refer to [additional annotations](#additiona
    - `prometheus.deckhouse.io/port: port_number`: To specify the port.
    - `prometheus.deckhouse.io/tls: "true"`: If metrics collection will be over HTTPS.
 
-   > When specifying an annotation on a Service, you must use `targetPort` as the port value.
-   > That is, the port that is open and listened to by the application, not the Service port.
+   {% alert level="info" %}
+   When specifying an annotation on a Service, you must use `targetPort` as the port value.
+   That is, the port that is open and listened to by the application, not the Service port.
+   {% endalert %}
 
    - Example 1:
 

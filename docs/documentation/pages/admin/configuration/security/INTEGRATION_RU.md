@@ -233,7 +233,9 @@ d8 k label namespace kcs security.deckhouse.io/pod-policy=privileged
    - `Network Threat Protection (ID: 17)`;
    - `Web Control (ID: 26)`.
 
-   > В будущих версиях KESL список задач может отличаться.
+   {% alert level="info" %}
+   В будущих версиях KESL список задач может отличаться.
+   {% endalert %}
 
 1. Убедитесь, что ресурсы узлов соответствуют требованиям:
 

@@ -399,7 +399,9 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
 
 #### Пример выделения пула IP-адресов для кластерной сети
 
-> Чтобы выделить пул адресов для [кластерной сети](#создание-общедоступной-кластерной-сети), используйте ресурс [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool).
+{% alert level="info" %}
+Чтобы выделить пул адресов для [кластерной сети](#создание-общедоступной-кластерной-сети), используйте ресурс [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool).
+{% endalert %}
 
 Для выделения пула адресов, предназначенных для назначения на сетевые интерфейсы подов, подключаемых к кластерной сети, выполните следующие действия:
 
@@ -420,7 +422,9 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
            - 203.0.113.10-203.0.113.200
    ```
 
-   > Параметр [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) опционален. Если он не указан, доступным считается весь CIDR из [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) (за исключением network/broadcast адресов, см. поведение `/31` и `/32`).
+   {% alert level="info" %}
+   Параметр [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) опционален. Если он не указан, доступным считается весь CIDR из [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) (за исключением network/broadcast адресов, см. поведение `/31` и `/32`).
+   {% endalert %}
 
 1. Включите IPAM в сети. Для этого в параметре [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) ресурса ClusterNetwork укажите параметры созданного на предыдущем шаге ClusterIPAddressPool.
 
@@ -666,7 +670,9 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
    * `shared.sriov.enabled: true` включает SR-IOV на выбранных PF;
    * `shared.sriov.numVFs: 8` создает 8 Virtual Functions на каждый Physical Function.
 
-   > Поля `mode` и `autoBonding` неизменяемы после установки. Тщательно спланируйте конфигурацию перед созданием ресурса.
+   {% alert level="info" %}
+   Поля `mode` и `autoBonding` неизменяемы после установки. Тщательно спланируйте конфигурацию перед созданием ресурса.
+   {% endalert %}
 
 1. После создания UnderlayNetwork отслеживайте статус конфигурации SR-IOV:
 

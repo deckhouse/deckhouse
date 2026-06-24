@@ -80,7 +80,9 @@ relatedLinks:
 
 1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**обязательный**) — начальные [параметры конфигурации](../admin/configuration/), необходимые для запуска DKP.
 
-   > Начиная с версии DKP 1.75, используйте ModuleConfig `deckhouse` для настройки доступа к хранилищу образов DKP. Настройка доступа с помощью InitConfiguration (параметры `imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) считается устаревшим способом.
+   {% alert level="info" %}
+   Начиная с версии DKP 1.75, используйте ModuleConfig `deckhouse` для настройки доступа к хранилищу образов DKP. Настройка доступа с помощью InitConfiguration (параметры `imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) считается устаревшим способом.
+   {% endalert %}
 
 1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия Kubernetes (компонентов control plane кластера), сетевые настройки, параметры CRI и т. д. Является **обязательным**, кроме случая, когда DKP устанавливается в уже существующий кластер Kubernetes.
 
@@ -465,9 +467,7 @@ spec:
 set -e
 set -o pipefail
 
-
 INGRESS_NAME="nginx"
-
 
 echo_err() { echo "$@" 1>&2; }
 
@@ -666,7 +666,9 @@ dhctl bootstrap \
     --preflight-skip-all-checks
 ```
 
-> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+{% alert level="info" %}
+Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+{% endalert %}
 
 {% endofftopic %}
 
@@ -740,7 +742,7 @@ spec:
         ca: <CA>
 ```
 
-{% offtopic title="Настройка работы со сторонним хранилищем образов через InitConfiguration **(устаревший способ)**" %}
+{% offtopic title="Настройка работы со сторонним хранилищем образов через InitConfiguration (устаревший способ)" %}
 
 Установите следующие параметры в InitConfiguration:
 
@@ -913,7 +915,9 @@ echo "$MYRESULTSTRING"
   - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform;
   - `/home/user/d8-bundle` — директория, в которой будут расположены пакеты образов. Будет создана, если не существует.
 
-  > Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента ее остановки прошло не более суток.
+  {% alert level="info" %}
+  Если загрузка образов будет прервана, повторный вызов команды продолжит загрузку, если с момента ее остановки прошло не более суток.
+  {% endalert %}
 
   Пример команды для загрузки всех версий DKP EE, начиная с версии 1.59 (укажите лицензионный ключ):
 
@@ -1062,7 +1066,9 @@ echo "$MYRESULTSTRING"
 
 1. Используйте тег образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
 1. Укажите соответствующий номер версии в [параметре `deckhouse.devBranch`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
-   > **Не указывайте** [параметр `deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module-v1alpha1-properties-releasechannel) в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+   {% alert level="info" %}
+   **Не указывайте** [параметр `deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module-v1alpha1-properties-releasechannel) в [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+   {% endalert %}
 
 Если вы хотите отключить автоматические обновления для уже установленного DKP (включая обновления patch-релизов), удалите [параметр `releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 

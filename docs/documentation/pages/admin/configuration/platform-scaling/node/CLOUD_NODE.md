@@ -277,12 +277,10 @@ spec:
 #### Adding a root certificate to the host
 
 {% alert level="warning" %}
-
 - This example is for Ubuntu OS.  
   The method for adding certificates to the trust store may differ depending on the OS.  
   When adapting the script to another OS, adjust the `bundles` and `content` fields accordingly.
 - To use the certificate in `containerd`, you must restart the `containerd` service after adding the certificate.
-
 {% endalert %}
 
 ```yaml
@@ -716,7 +714,9 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
 
 1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource in the cluster. The value of `count` defines a number of `staticInstances` which fall under the `labelSelector` that will be added to the cluster. In this example it's `1`:
 
-   > The `labelSelector` field in the NodeGroup resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
+   {% alert level="info" %}
+   The `labelSelector` field in the NodeGroup resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
+   {% endalert %}
 
    ```shell
    d8 k create -f - <<EOF
@@ -742,7 +742,9 @@ This example shows how you can use filters in the [StaticInstance](/modules/node
 
 1. Create two [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources in the cluster (from this point on, use `d8 k` configured to manage the cluster):
 
-   > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
+   {% alert level="info" %}
+   The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new NodeGroup and move the static nodes into it by changing their labels.
+   {% endalert %}
 
    ```yaml
    apiVersion: deckhouse.io/v1

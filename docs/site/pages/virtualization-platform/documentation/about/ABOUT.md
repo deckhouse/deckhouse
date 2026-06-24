@@ -20,7 +20,9 @@ DVP is powered by [Deckhouse Kubernetes Platform](/products/kubernetes-platform/
 
   ![Creation of DKP clusters](/../../images/virtualization-platform/cases.dkp.png)
 
-> **Warning.** If you intend to use Deckhouse Virtualization Platform in a production environment, we recommend deploying it on physical (bare-metal) servers. Deploying Deckhouse Virtualization Platform on virtual machines is also possible, but in this case you must enable nested virtualization.
+{% alert level="warning" %}
+If you intend to use Deckhouse Virtualization Platform in a production environment, we recommend deploying it on physical (bare-metal) servers. Deploying Deckhouse Virtualization Platform on virtual machines is also possible, but in this case you must enable nested virtualization.
+{% endalert %}
 
 ## Architecture
 

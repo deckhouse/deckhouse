@@ -198,10 +198,12 @@ requirements:
     test: ">v0.22.1 !optional"
 ```
 
-> The following sections describes restrictions on the use of conditional module dependencies and provides examples of settings where:
->
-> - `prometheus` — the target module for which an conditional dependency is specified;
-> - `test` — a module that can be used in conjunction with the target module.
+{% alert level="info" %}
+The following sections describes restrictions on the use of conditional module dependencies and provides examples of settings where:
+
+- `prometheus` — the target module for which an conditional dependency is specified;
+- `test` — a module that can be used in conjunction with the target module.
+{% endalert %}
 
 #### Restrictions on enabling and disabling prometheus when there is an conditional dependency on test
 
@@ -244,7 +246,6 @@ If prometheus and test are included in the cluster, test can only be updated to 
 **Example:** The `prometheus` and `test` modules are included in the cluster + an conditional requirement `test: ‘=v0.22.1 !optional’` is set for `prometheus` + an attempt to update `test` to version `0.23.1` → `test` will not be updated because the required version does not meet the `requirements` for `prometheus`.
 
 {% alert level="warning" %}
-
 - Enabling or disabling modules may take longer because of extra extender checks.
 - Known limitation: during reconciliation the list of enabled modules may briefly be empty, which in rare cases lets an conditional dependency check pass incorrectly. If this happens, retry the operation.
 {% endalert %}

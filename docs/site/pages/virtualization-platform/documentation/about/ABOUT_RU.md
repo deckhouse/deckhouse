@@ -21,7 +21,9 @@ DVP работает на основе [Deckhouse Kubernetes Platform](/products
 
   ![ Создание кластеров DKP](../../../images/virtualization-platform/cases.dkp.ru.png)
 
-> **Внимание** Если вы планируете использовать Deckhouse Virtualization Platform в production-среде, рекомендуется разворачивать её на физических (bare-metal) серверах. Развертывание Deckhouse Virtualization Platform на виртуальных машинах также возможно, но в этом случае необходимо включить вложенную виртуализацию (nested virtualization).
+{% alert level="warning" %}
+Если вы планируете использовать Deckhouse Virtualization Platform в production-среде, рекомендуется разворачивать её на физических (bare-metal) серверах. Развертывание Deckhouse Virtualization Platform на виртуальных машинах также возможно, но в этом случае необходимо включить вложенную виртуализацию (nested virtualization).
+{% endalert %}
 
 ## Архитектура
 

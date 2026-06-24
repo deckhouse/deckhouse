@@ -159,8 +159,10 @@ There are three ways to restrict automatic updates in Deckhouse:
   In this case, DKP will remain at the specified version,
   and no information about newer available versions (DeckhouseRelease objects) will appear in the cluster.
   
-  > **Important**. This mode blocks the installation of patch releases,
-  > which may include critical security or bug fixes.
+  {% alert level="info" %}
+  This mode blocks the installation of patch releases,
+  which may include critical security or bug fixes.
+  {% endalert %}
 
   Example of pinning version `v1.66.3` for DKP EE
   and removing the `releaseChannel` parameter from the [`deckhouse`](/modules/deckhouse/) module configuration:

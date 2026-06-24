@@ -111,7 +111,9 @@ To generate a new password for the status page, you need to delete the secret:
 d8 k -n d8-upmeter delete secret/basic-auth-status
 ```
 
-> **Attention!** The `auth.status.password` and `auth.webui.password` parameters are no longer supported.
+{% alert level="warning" %}
+The `auth.status.password` and `auth.webui.password` parameters are no longer supported.
+{% endalert %}
 
 ## FAQ
 

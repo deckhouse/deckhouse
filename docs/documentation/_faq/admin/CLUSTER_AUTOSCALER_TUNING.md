@@ -45,7 +45,10 @@ To set the desired values for the `initial-node-group-backoff-duration`, `max-no
 If cloud cluster uses only one node group (for example, exclusively for ordering spot or preemptible nodes) and you encounter issues with ordering such nodes during automatic scaling, follow these steps:
 
 1. Create one or more InstanceClass objects to be used when creating instances in the cluster. In the InstanceClass, specify node types that differ from those listed in the group mentioned above.
-   > In DKP, InstanceClass objects vary depending on the provider. Examples: [AWSInstanceClass](/modules/cloud-provider-aws/cr.html#awsinstanceclass), [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass), [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+   {% alert level="info" %}
+   In DKP, InstanceClass objects vary depending on the provider. Examples: [AWSInstanceClass](/modules/cloud-provider-aws/cr.html#awsinstanceclass), [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass), [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+   {% endalert %}
+
 1. Create one or more new node groups ([NodeGroup](/modules/node-manager/cr.html#nodegroup)). In the [`spec.cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) parameter, specify the InstanceClass objects created in the previous step. In the [`spec.cloudInstances.priority`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-priority) parameter, set the priority of the node group.
 1. If necessary, modify the `max-node-provision-time`, `max-node-group-backoff-duration`, and `initial-node-group-backoff-duration` parameters to speed up switching to lower-priority groups.
 
