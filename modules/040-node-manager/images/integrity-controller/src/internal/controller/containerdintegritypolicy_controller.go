@@ -60,11 +60,11 @@ func (r *ContainerdIntegrityPolicyReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{}, fmt.Errorf("list matching namespaces: %w", err)
 	}
 
-	if slices.Equal(policy.Status.ProtectedNamespace, matchedNamespaces) {
+	if slices.Equal(policy.Status.ProtectedNamespaces, matchedNamespaces) {
 		return ctrl.Result{}, nil
 	}
 
-	policy.Status.ProtectedNamespace = matchedNamespaces
+	policy.Status.ProtectedNamespaces = matchedNamespaces
 	if err := r.Status().Update(ctx, policy); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update ContainerdIntegrityPolicy status: %w", err)
 	}
