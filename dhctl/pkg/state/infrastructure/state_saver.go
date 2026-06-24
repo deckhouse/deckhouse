@@ -17,7 +17,6 @@ package infrastructure
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	apiv1 "k8s.io/api/core/v1"
