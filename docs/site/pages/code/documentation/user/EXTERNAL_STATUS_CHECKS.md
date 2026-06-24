@@ -149,8 +149,8 @@ Timeout counting starts when Deckhouse Code sends the request to the external se
 
 Timeout values are selected in this order:
 
-1. The **Timeout minutes** value of the status check.
-1. The project-level **Status checks timeout** value.
+1. The "Timeout minutes" value of the status check.
+1. The project-level "Status checks timeout" value.
 
 A background worker checks pending responses every minute. When a response exceeds its timeout, Deckhouse Code changes its status to `failed` and records the reason as `Automatically closed after timeout`.
 
