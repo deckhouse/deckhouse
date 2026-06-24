@@ -1,0 +1,66 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+imageSpec:
+  config:
+    entrypoint: ["/integrity-containerd-configurator"]
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+  add: /integrity-containerd-configurator
+  to: /integrity-containerd-configurator
+  before: setup
+---
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  - hack
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/integrity-controller/src
+  to: /src/integrity-controller
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  - hack
+  - internal
+  - cmd
+  - config
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - api/**/*.go
+shell:
+  install:
+  - cd /src
+  - sed -i -e 's# ../../integrity-controller/src# /src/integrity-controller#g' go.mod
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /integrity-containerd-configurator cmd/main.go
+  - chown 64535:64535 /integrity-containerd-configurator
+  - chmod 0700 /integrity-containerd-configurator
