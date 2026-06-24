@@ -810,19 +810,19 @@ alerts:
         1. Check availability and status of cluster-autoscaler Pods:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get pods -l 'app in (cluster-autoscaler,cluster-autoscaler-mcm)'
            ```
 
         2. Verify that the cluster-autoscaler Deployment exists:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get deploy -l 'app in (cluster-autoscaler,cluster-autoscaler-mcm)'
            ```
 
         3. Check the Deployment's status:
 
            ```bash
-           d8 k -n d8-cloud-instance-manager describe deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager describe deploy <deployment-name>
            ```
       summary: |
         Cluster-autoscaler target is missing in Prometheus.
