@@ -131,10 +131,36 @@ type ModulePackageVersionStatusInstance struct {
 	Name string `json:"name,omitempty"`
 }
 
+// PackageDisableOptions describes the package's disable protection surfaced to the UI.
+type PackageDisableOptions struct {
+	// Whether confirmation is required to disable the package.
+	// +optional
+	Confirmation bool `json:"confirmation,omitempty"`
+
+	// Localized disable confirmation messages.
+	// +optional
+	Messages *PackageDisableMessages `json:"messages,omitempty"`
+}
+
+// PackageDisableMessages holds localized disable confirmation messages for the package.
+type PackageDisableMessages struct {
+	// Russian disable confirmation message.
+	// +optional
+	Ru string `json:"ru,omitempty"`
+
+	// English disable confirmation message.
+	// +optional
+	En string `json:"en,omitempty"`
+}
+
 type ModulePackageVersionStatusMetadata struct {
 	// Localized descriptions of the package.
 	// +optional
 	Description *PackageDescription `json:"description,omitempty"`
+
+	// Parameters of package disable protection.
+	// +optional
+	DisableOptions *PackageDisableOptions `json:"disableOptions,omitempty"`
 
 	// The category this package belongs to.
 	// +optional

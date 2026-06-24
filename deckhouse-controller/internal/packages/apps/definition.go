@@ -26,8 +26,7 @@ type Definition struct {
 	Version string `json:"version" yaml:"version"`
 	Stage   string `json:"stage" yaml:"stage"`
 
-	Requirements   Requirements   `json:"requirements" yaml:"requirements"`
-	DisableOptions DisableOptions `json:"disableOptions" yaml:"disableOptions"`
+	Requirements Requirements `json:"requirements" yaml:"requirements"`
 }
 
 // Requirements specifies dependencies required by the application.
@@ -65,12 +64,6 @@ type ModulesRequirements struct {
 type ModuleGroup struct {
 	Name    string                         `json:"name" yaml:"name"`
 	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
-}
-
-// DisableOptions configures application disablement behavior.
-type DisableOptions struct {
-	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
-	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
 // Constraints projects the application definition onto the scheduler input shape,
