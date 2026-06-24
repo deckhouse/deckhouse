@@ -479,6 +479,8 @@ properties:
                 type: array
                 description: |
                   List of TCP ports allowed for ingress traffic from all sources (both external IPs and all pods within the cluster).
+
+                  Can be used to expose any services that require unrestricted ingress access.
                 default: [22]
                 items:
                   type: integer
@@ -488,6 +490,8 @@ properties:
                 type: object
                 description: |
                   Additional labels to apply to all VM pods in the cluster (both master and worker nodes).
+
+                  Can be used to map existing NetworkPolicies in the parent cluster project to VM pods by label.
                 additionalProperties:
                   type: string
             required:
