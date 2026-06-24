@@ -16,11 +16,14 @@ limitations under the License.
 
 package main
 
+//nolint:goimports
 import (
 	"flag"
 	"os"
 
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
+	//nolint:goimports
+	//nolint:gci
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
