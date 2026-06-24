@@ -5,7 +5,7 @@ search: csi-scsi-generic, csi driver
 description: Architecture of the csi-scsi-generic CSI driver in Deckhouse Kubernetes Platform.
 ---
 
-The `csi-scsi-generic` CSI driver is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage volumes on SCSI-connected storage in the Deckhouse Kubernetes Platform (DKP). The CSI driver supports both iSCSI and Fibre Channel (FC) connection technologies.
+The `csi-scsi-generic` CSI driver is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage volumes on SCSI-connected storage systems in Deckhouse Kubernetes Platform (DKP). The CSI driver supports both iSCSI and Fibre Channel (FC) connection technologies.
 
 ## Driver architecture
 
