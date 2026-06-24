@@ -52,6 +52,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/cleanup"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/https"
+	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/master-endpoints"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
