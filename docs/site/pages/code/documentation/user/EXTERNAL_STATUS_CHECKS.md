@@ -248,10 +248,10 @@ Deckhouse Code records audit events for status check management and response cha
 
 | Audit event | Description |
 |-------------|-------------|
-| `external_status_check_created` | An external status check was created. |
-| `external_status_check_updated` | An external status check was updated. |
-| `external_status_check_destroyed` | An external status check was deleted. |
-| `external_status_check_response_updated` | A response was changed by an external callback, retry, request failure, or timeout. |
+| `external_status_check_created` | An external status check was created |
+| `external_status_check_updated` | An external status check was updated |
+| `external_status_check_destroyed` | An external status check was deleted |
+| `external_status_check_response_updated` | A response was changed by an external callback, retry, request failure, or timeout |
 
 ## Troubleshooting
 
