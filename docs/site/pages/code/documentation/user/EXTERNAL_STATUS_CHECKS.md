@@ -262,8 +262,8 @@ Check the following:
 
 Check the following:
 
-- The project-level **Status checks timeout** value.
-- The individual **Timeout minutes** value of the check.
+- The project-level "Status checks timeout" value.
+- The individual "Timeout minutes" value of the check.
 - The external service response time.
 - Whether the check should be retried after the external service is fixed.
 
