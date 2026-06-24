@@ -1,0 +1,45 @@
+{{- if .Values.nodeManager.internal.containerdIntegrityControllerEnabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: integrity-containerd-configurator
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-containerd-configurator")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:integrity-containerd-configurator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-containerd-configurator")) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - containerdintegritypolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - containerdintegritypolicies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:integrity-containerd-configurator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-containerd-configurator")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:integrity-containerd-configurator
+subjects:
+- kind: ServiceAccount
+  name: integrity-containerd-configurator
+  namespace: d8-cloud-instance-manager
+{{- end }}
