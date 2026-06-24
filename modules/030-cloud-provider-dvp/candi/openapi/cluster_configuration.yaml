@@ -586,7 +586,7 @@ apiVersions:
               description: |
                 List of TCP ports allowed for ingress traffic from all sources (both external IPs and all pods within the cluster).
 
-                Useful for exposing ports that must be reachable from a bastion host, whether it is an external VM or a pod running inside the parent cluster.
+                Can be used to expose any services that require unrestricted ingress access.
 
                 Set to an empty array to deny all such unrestricted ingress access.
               default: [22]
@@ -599,7 +599,7 @@ apiVersions:
               description: |
                 Additional labels to apply to all VM pods in the cluster (both master and worker nodes).
 
-                Useful for targeting VMs with pre-created NetworkPolicies in the parent cluster project.
+                Can be used to map existing NetworkPolicies in the parent cluster project to VM pods by label.
               additionalProperties:
                 type: string
           required:
