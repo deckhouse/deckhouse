@@ -158,7 +158,7 @@ If the request to the external service fails, Deckhouse Code changes the respons
 
 ## Merge request widget
 
-The **External status checks** widget is shown on the merge request page when the merge request has applicable external checks.
+The "External status checks" widget is shown on the merge request page when the merge request has applicable external checks.
 
 The widget shows:
 
