@@ -20,11 +20,11 @@ spec:
   - additionalPrinterColumns:
     - description: Label selector that defines which namespaces are protected by this policy.
       jsonPath: .spec.protectedNamespaces.matchLabels
-      name: MatchLabels
+      name: Match Labels
       type: string
     - description: Namespaces protected by this policy
       jsonPath: .status.protectedNamespace
-      name: ProtectedNamespaces
+      name: Protected Namespaces
       type: string
     - name: Age
       jsonPath: .metadata.creationTimestamp
