@@ -160,6 +160,10 @@ jobs:
     name: Release Requirements Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "release_requirements") | strings.Indent 4 }!}
 
+fuzz_smoke_regression:
+  name: Fuzz Smoke Regression
+{!{ tmpl.Exec "validation_template" (slice $ctx "fuzz_smoke") | strings.Indent 4 }!}
+
   pull_request_changes_validation:
     name: Pull Request Changes validation
     runs-on: self-slim
