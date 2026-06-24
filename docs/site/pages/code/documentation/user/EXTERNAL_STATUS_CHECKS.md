@@ -305,4 +305,4 @@ The URL is hidden if your role does not allow viewing external status check URLs
 
 ### Duplicate name or URL error
 
-A project cannot have two external status checks with the same **Service name** or **API to check** value. Use a unique value for each check.
+A project cannot have two external status checks with the same "Service name" or "API to check" value. Use a unique value for each check.
