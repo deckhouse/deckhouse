@@ -38,7 +38,6 @@
 // legacy form is recognised:
 //
 //	type ModuleSourceSpec struct {
-//		// +crd-enricher:raw:pattern=^(\d+h)?(\d+m)?(\d+s)?$
 //		// +crd-enricher:deckhouse:documentation:default=3m
 //		// +crd-enricher:deckhouse:documentation:examples=5m
 //		// +crd-enricher:deckhouse:documentation:examples=1h
