@@ -19,10 +19,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/flant/addon-operator/pkg/utils"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-openapi/spec"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/conv"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
@@ -292,7 +291,7 @@ func (s *Storage) InjectRegistryValue(registry registry.Remote) {
 	s.injectRegistrySpec(schema.TypeHelm)
 
 	if s.staticValues == nil {
-		s.staticValues = utils.Values{}
+		s.staticValues = addonutils.Values{}
 	}
 
 	s.staticValues["registry"] = &structpb.Struct{
@@ -324,7 +323,7 @@ func (s *Storage) injectRegistrySpec(schemaType schema.Type) {
 			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
 			Properties: map[string]spec.Schema{
 				"base": {
-					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}, MinLength: swag.Int64(1)},
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}, MinLength: conv.Pointer[int64](1)},
 				},
 				"dockercfg": {
 					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
