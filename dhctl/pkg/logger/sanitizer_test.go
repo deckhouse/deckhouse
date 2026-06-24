@@ -87,7 +87,7 @@ func TestSanitizeDescendsIntoGroups(t *testing.T) {
 
 	group = group[2].Value.Group()
 	if len(group) != 2 {
-		t.Fatalf("expected 3 children, got %d", len(group))
+		t.Fatalf("expected 2 children, got %d", len(group))
 	}
 	if group[0].Value.String() != `[FILTERED - "kind":"Secret"]` {
 		t.Fatalf("inner not redacted: %q", group[0].Value.String())
