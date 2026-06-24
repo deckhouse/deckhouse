@@ -95,7 +95,7 @@ To disable statistics collection, add the label `ingress.deckhouse.io/discard-me
 
 ## Control plane monitoring
 
-Control plane monitoring is a built-in capability of the [`control-plane-manager`](/modules/control-plane-manager/) module. It organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
+Control plane monitoring is provided by the [`control-plane-manager`](/modules/control-plane-manager/) module. It organizes secure metrics collection and provides a basic set of monitoring rules for the following cluster components:
 
 - kube-apiserver
 - kube-controller-manager
