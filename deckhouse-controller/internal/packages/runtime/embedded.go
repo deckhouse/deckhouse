@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"slices"
 
 	"github.com/ettle/strcase"
 	"github.com/goccy/go-yaml"
@@ -45,6 +46,13 @@ const (
 	// (e.g. "deckhouseEnabled"); it is stripped to recover the module name.
 	enabledSuffix = "Enabled"
 )
+
+
+// dummyModules are modules that should be skipped.
+var dummyModules = []string{
+	"000-common",
+	"007-registrypackages",
+}
 
 // loadEmbedded discovers embedded modules under embeddedDir and registers the
 // ones enabled by the bundle. It reads the bundle's enabled map, then for each
@@ -72,7 +80,7 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 	}
 
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !entry.IsDir() || slices.Contains(dummyModules, entry.Name()) {
 			continue
 		}
 
