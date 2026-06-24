@@ -16,6 +16,7 @@ html {
     @include mixins.bg-color(mixins.$white);
     transition: .2s ease-in-out;
     font-family: 'Onest', sans-serif;
+    font-weight: 300;
 
     &_float {
         @include mixins.box-shadow;
@@ -79,6 +80,25 @@ html {
         }
 
         .header__navigation-item {
+            &.current-menu-parent {
+                > a:after {
+                    margin-bottom: .125rem;
+                    margin-left: .3125rem;
+                    width: 8px;
+
+                    @include breakpoints.min-w(xl) {
+                        margin-left: .3rem;
+                        width: 10px;
+                    }
+
+                    @include breakpoints.min-w(xxl) {
+                        margin-left: .5rem;
+                        width: 12px;
+                        height: 8px;
+                    }
+                }
+            }
+
             &.active {
                 position: relative;
 
@@ -176,7 +196,7 @@ html {
                 
             > a {
                 position: relative;
-                font-size: 12px;
+                font-size: 11.9px;
 
                 @include breakpoints.min-w(xxl) {
                     font-size: 15px;
@@ -292,7 +312,6 @@ html {
         .menu-item-has-children {
             position: relative;
             display: inline-block;
-            cursor: pointer;
 
             > a {
                 pointer-events: none;
@@ -308,7 +327,7 @@ html {
                     content: '';
                     position: absolute;
                     right: 0;
-                    top: 5px;
+                    top: 6px;
                     width: 8px;
                     height: 5px;
                     background:url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") bottom / contain no-repeat ;
@@ -371,23 +390,19 @@ html {
             > a:after {
                 content: '';
                 display: inline-block;
-                margin-bottom: .125px;
-                margin-left: 5px;
-                width: 8px;
+                margin-left: 7px;
+                width: 10px;
                 height: 5px;
                 background:url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") bottom / contain no-repeat ;
                 transition: .15s;
 
                 @include breakpoints.min-w(xl) {
-                    margin-left: .3rem;
-                    width: 10px;
                     height: 7px;
+                    margin-left: .5rem;
                 }
 
                 @include breakpoints.min-w(xxl) {
-                    margin-left: .5rem;
-                    width: 12px;
-                    height: 8px;
+                    margin-bottom: .125rem;
                 }
 
                 @include breakpoints.max-w(l) {
@@ -465,7 +480,7 @@ html {
 
     &__buttons {
         display: flex;
-        gap: .65rem;
+        gap: .5rem;
 
         @include breakpoints.min-w(xxxl) {
             gap: 1rem;
@@ -505,7 +520,7 @@ html {
         width: .9rem;
         gap: .6rem;
         align-items: center;
-        font-weight: 500;
+        font-weight: 400;
         line-height: 1.5;
         text-transform: uppercase;
         text-decoration: none;
@@ -515,7 +530,7 @@ html {
         color: mixins.$primary-700;
 
         @include breakpoints.min-w(xl) {
-            width: 1.4rem;
+            width: 1.1rem;
             gap: .5rem;
         }
 
@@ -628,11 +643,18 @@ html {
             align-items: center;
             flex-direction: row;
             justify-content: space-between;
-            padding-right: 45px;
 
             @include breakpoints.min-w(l) {
                 gap: 1.25rem 2rem;
                 justify-content: flex-start;
+            }
+
+            @include breakpoints.max-w(l) {
+                padding-right: 52px;
+            }
+
+            @include breakpoints.max-w(s) {
+                padding-right: 40px;
             }
 
             @include breakpoints.max-w(xxs) {
@@ -648,29 +670,28 @@ html {
                 display: flex;
                 gap: 4px;
                 width: fit-content;
-                color: #5e6697;
-                font-size: 12px;
-                line-height: 13.8px;
+                color: #6e7084;
+                font-size: 12.25px;
 
                 &::after {
                     content: "";
                     position: absolute;
-                    right: -14px;
+                    right: -17px;
                     top: 6px;
                     background: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=");
                     background-repeat: no-repeat;
                     background-size: contain;
                     height: 6px;
                     transition: .3s;
-                    width: 9px;
-                }
-
-                &.rotated::after {
-                    transform: rotateX(180deg);
+                    width: 10px;
                 }
 
                 @include breakpoints.min-w(l) {
                     display: none;
+                }
+
+                @include breakpoints.max-w(s) {
+                    top: 4px;
                 }
 
                 @include breakpoints.max-w(xs) {
@@ -683,21 +704,23 @@ html {
             display: flex;
             gap: .75rem;
             align-items: center;
-            font-weight: 600;
+            font-weight: 400;
             color: mixins.$ntrl-800;
             font-size: 16px;
+            line-height: 1.15;
 
             @include breakpoints.min-w(xxl) {
                 font-size: 1.125rem;
             }
 
-            @include breakpoints.max-w(xs) {
+            @include breakpoints.max-w(m) {
                 font-size: 14px;
-                font-weight: 500;
             }
 
             svg {
+                min-width: 1.25rem;
                 width: 1.25rem;
+                height: 1.25rem;
 
                 @include breakpoints.min-w(xl) {
                     width: 1.5rem;
