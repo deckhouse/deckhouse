@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 19,
+  "version": 20,
   "statements": [
     {
       "vulnerability": {
@@ -342,8 +342,64 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал загрузки функциональности из недоверенных источников (CWE-829) pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator; установка пакетов выполняется только из доверенных источников на этапе сборки образа.",
       "timestamp": "2026-06-03T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd v1.7.29 транзитивна через werf/nelm и используется только на чтение OCI-артефактов из registry; CRI/runtime-функционал containerd, к которому относится уязвимость, не используется.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.5.2+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker является транзитивной, поступающей через цепочку werf (delivery-kit-sdk) и go-containerregistry; демон Docker Engine не запускается в составе deckhouse-controller, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.5.2+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker является транзитивной, поступающей через цепочку werf (delivery-kit-sdk) и go-containerregistry; демон Docker Engine не запускается в составе deckhouse-controller, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.5.2+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker является транзитивной, поступающей через цепочку werf (delivery-kit-sdk) и go-containerregistry; демон Docker Engine не запускается в составе deckhouse-controller, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-24T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-06-03T12:00:00Z"
+  "last_updated": "2026-06-24T12:00:00Z"
 }
