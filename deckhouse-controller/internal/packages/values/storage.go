@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ettle/strcase"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
@@ -68,7 +69,7 @@ func NewStorage(name string, staticValues addonutils.Values, settingsBytes, valu
 	}
 
 	s := &Storage{
-		name:          addonutils.ModuleNameToValuesKey(name),
+		name:          strcase.ToCamel(name),
 		staticValues:  staticValues,
 		schemaStorage: schemaStorage,
 	}
