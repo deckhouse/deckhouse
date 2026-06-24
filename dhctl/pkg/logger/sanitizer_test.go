@@ -67,11 +67,27 @@ func TestSanitizeDescendsIntoGroups(t *testing.T) {
 	in := slog.GroupAttrs("g",
 		slog.String("inner", `dump "kind":"Secret" end`),
 		slog.String("clean", "ok"),
+		slog.GroupAttrs("g",
+			slog.String("inner", `dump "kind":"Secret" end`),
+			slog.String("clean", "ok"),
+		),
 	)
 	out := Sanitize(nil, in)
+
 	group := out.Value.Group()
+	if len(group) != 3 {
+		t.Fatalf("expected 3 children, got %d", len(group))
+	}
+	if group[0].Value.String() != `[FILTERED - "kind":"Secret"]` {
+		t.Fatalf("inner not redacted: %q", group[0].Value.String())
+	}
+	if group[1].Value.String() != "ok" {
+		t.Fatalf("clean child altered: %q", group[1].Value.String())
+	}
+
+	group = group[2].Value.Group()
 	if len(group) != 2 {
-		t.Fatalf("expected 2 children, got %d", len(group))
+		t.Fatalf("expected 3 children, got %d", len(group))
 	}
 	if group[0].Value.String() != `[FILTERED - "kind":"Secret"]` {
 		t.Fatalf("inner not redacted: %q", group[0].Value.String())
