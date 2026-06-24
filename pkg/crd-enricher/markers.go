@@ -54,14 +54,17 @@ const examplesMarker = "examples"
 // into nested schema nodes.
 const rawMarkerPrefix = "raw:"
 
-// crdMarker is the type-level entity that configures CRD-level metadata that
-// controller-gen cannot express (labels, preserveUnknownFields) and switches
-// the document to the hand-curated deckhouse style. Its value is a YAML map,
-// for example:
+// crdMarker is the type-level entity that configures CRD-level settings that
+// controller-gen cannot express (preserveUnknownFields, the minimal style and
+// schema format stripping) and switches the document to the hand-curated
+// deckhouse style. Its value is a YAML map, for example:
 //
-//	+crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse}, preserveUnknownFields: false}
+//	+crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true}
 //
-// It is handled separately from the schema-level documentation entities.
+// Labels and annotations are not configured here: controller-gen emits them
+// natively from the +kubebuilder:metadata:labels and
+// +kubebuilder:metadata:annotations markers. It is handled separately from the
+// schema-level documentation entities.
 const crdMarker = "crd"
 
 // rootMarker is the controller-gen marker that designates a Go type as the

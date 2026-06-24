@@ -56,8 +56,12 @@
 //     valued simple entity becomes x-doc-<entity>);
 //   - raw:<key> — injects an arbitrary standard schema field named <key>
 //     directly (a dotted <key> walks into nested schema nodes);
-//   - crd — a type-level entity configuring CRD-level metadata (labels,
-//     preserveUnknownFields, …) and the curated deckhouse style.
+//   - crd — a type-level entity configuring CRD-level settings
+//     (preserveUnknownFields, the minimal style, schema format stripping) and
+//     the curated deckhouse style. CRD labels and annotations are not set here;
+//     they are emitted natively by controller-gen from the
+//     +kubebuilder:metadata:labels and +kubebuilder:metadata:annotations
+//     markers.
 //
 // Markers may be attached both to struct fields and to the struct types
 // themselves. Type-level markers are applied to the schema node of the type

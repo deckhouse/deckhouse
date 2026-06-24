@@ -49,7 +49,10 @@ var _ runtime.Object = (*ModuleConfig)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
-// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse}, preserveUnknownFields: false, minimal: true}
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true}
 
 // It displays module settings.
 // Defines a list of module settings versions.

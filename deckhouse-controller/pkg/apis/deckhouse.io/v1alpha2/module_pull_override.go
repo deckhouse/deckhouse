@@ -48,7 +48,10 @@ var _ runtime.Object = (*ModulePullOverride)(nil)
 // +kubebuilder:printcolumn:name="Updated",type="date",format="date-time",JSONPath=".status.updatedAt",description="When the module was last updated."
 // +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.message",description="Detailed description."
 // +kubebuilder:printcolumn:name="Rollback",type="string",JSONPath=".spec.rollback",description="Indicates whether the module release should be rollback after deleting mpo."
-// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse}, preserveUnknownFields: false, minimal: true, stripFormat: true}
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true, stripFormat: true}
 
 // Defines the resource configuration for downloading specific versions of Deckhouse modules.
 //

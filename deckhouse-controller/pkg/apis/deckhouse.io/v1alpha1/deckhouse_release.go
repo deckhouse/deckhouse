@@ -62,7 +62,9 @@ var DeckhouseReleaseGVK = schema.GroupVersionKind{
 // +kubebuilder:printcolumn:name="phase",type="string",JSONPath=".status.phase",description="Current release status.\n\nTypical values:\n\n- `Pending`: The release has been created but not applied yet (waiting for manual approval, update windows, canary release, or the minimal notification time).\n- `Deployed`: DKP has switched to the release version (module and component updates may continue asynchronously).\n- `Superseded`: The release is outdated and no longer used.\n- `Suspended`: The release has been canceled (typically before it was applied).\n- `Skipped`: The release was skipped because the requirements were not satisfied.\n\nFor more information about DKP and modules release statuses, refer to the [`deckhouse` module documentation](/modules/deckhouse/#deckhouse-releases-update)."
 // +kubebuilder:printcolumn:name="transitionTime",type="date",format="date-time",JSONPath=".status.transitionTime",description="When the release status was changed."
 // +kubebuilder:printcolumn:name="message",type="string",JSONPath=".status.message",description="Release status details."
-// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, module: deckhouse}, preserveUnknownFields: false, minimal: true, stripFormat: true}
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="module=deckhouse"
+// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true, stripFormat: true}
 
 // Determines the state and parameters for applying a specific release (version) of the Deckhouse Kubernetes Platform (DKP) in the cluster.
 //

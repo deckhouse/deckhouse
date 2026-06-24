@@ -62,7 +62,10 @@ var _ runtime.Object = (*ModulePullOverride)(nil)
 // +kubebuilder:deprecatedversion
 // +kubebuilder:printcolumn:name="Updated",type="date",format="date-time",JSONPath=".status.updatedAt",description="When the module was last updated."
 // +kubebuilder:printcolumn:name="msg",type="string",JSONPath=".status.message",description="Detailed description."
-// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse}, preserveUnknownFields: false, minimal: true, stripFormat: true}
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true, stripFormat: true}
 
 // Defines the configuration.
 type ModulePullOverride struct {

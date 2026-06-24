@@ -127,7 +127,10 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:printcolumn:name="Enabled",type="string",JSONPath=".status.conditions[?(@.type=='EnabledByModuleManager')].status",description="Module`s enabled status."
 // +kubebuilder:printcolumn:name="Disabled Message",type="string",JSONPath=".status.conditions[?(@.type=='EnabledByModuleManager')].message",priority=1,description="Module`s enabled information."
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='IsReady')].status",description="Module`s ready status."
-// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse}, preserveUnknownFields: false, minimal: true, stripFormat: [int32]}
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true, stripFormat: [int32]}
 
 // Describes the module's status in the cluster. The `Module` object is created automatically after configuring the [ModuleSource](#modulesource) and successfully completing synchronization.
 type Module struct {

@@ -40,7 +40,10 @@ var (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name="result",type="string",JSONPath=".status.result",description="Current render status."
-// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse}, preserveUnknownFields: false, minimal: true}
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true}
 
 // Defines the rendering configuration of the Deckhouse module documentation.
 //

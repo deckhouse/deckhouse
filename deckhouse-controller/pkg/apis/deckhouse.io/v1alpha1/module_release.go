@@ -89,7 +89,10 @@ var _ runtime.Object = (*ModuleRelease)(nil)
 // +kubebuilder:printcolumn:name="update policy",type="string",JSONPath=`.metadata.labels.modules\.deckhouse\.io/update-policy`,description="Associated update policy."
 // +kubebuilder:printcolumn:name="transitionTime",type="date",format="date-time",JSONPath=".status.transitionTime",description="When the release status was changed."
 // +kubebuilder:printcolumn:name="message",type="string",JSONPath=".status.message",description="Release status details."
-// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse}, preserveUnknownFields: false, minimal: true, stripFormat: true}
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true, stripFormat: true}
 
 // Defines the configuration for a Deckhouse release.
 //

@@ -233,9 +233,11 @@ func (e *Enricher) enrichCRD(crd map[string]any) {
 	}
 }
 
-// applyCRDMarkers configures CRD-level metadata that controller-gen cannot
-// emit and normalises the document to the hand-curated deckhouse style. It runs
-// when the root type carries an x-doc-crd marker.
+// applyCRDMarkers configures CRD-level settings that controller-gen cannot emit
+// and normalises the document to the hand-curated deckhouse style. It runs when
+// the root type carries an x-doc-crd marker. Labels and annotations are not
+// handled here: they are emitted natively by controller-gen through the
+// +kubebuilder:metadata:labels and +kubebuilder:metadata:annotations markers.
 func (e *Enricher) applyCRDMarkers(crd map[string]any, markers []marker) {
 	var config map[string]any
 	for _, m := range markers {
@@ -261,28 +263,6 @@ func (e *Enricher) applyCRDMarkers(crd map[string]any, markers []marker) {
 	if metadata == nil {
 		metadata = map[string]any{}
 		crd["metadata"] = metadata
-	}
-
-	if labels, ok := config["labels"].(map[string]any); ok && len(labels) > 0 {
-		target := childMap(metadata, "labels")
-		if target == nil {
-			target = map[string]any{}
-			metadata["labels"] = target
-		}
-		for k, v := range labels {
-			target[k] = v
-		}
-	}
-
-	if annotations, ok := config["annotations"].(map[string]any); ok && len(annotations) > 0 {
-		target := childMap(metadata, "annotations")
-		if target == nil {
-			target = map[string]any{}
-			metadata["annotations"] = target
-		}
-		for k, v := range annotations {
-			target[k] = v
-		}
 	}
 
 	spec := childMap(crd, "spec")

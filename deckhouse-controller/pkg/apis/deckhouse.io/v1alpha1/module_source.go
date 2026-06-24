@@ -62,7 +62,11 @@ var _ runtime.Object = (*ModuleSource)(nil)
 // +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.phase",description="The current phase."
 // +kubebuilder:printcolumn:name="sync",type="date",format="date-time",JSONPath=".status.syncTime",description="When the repository was synchronized."
 // +kubebuilder:printcolumn:name="msg",type="string",JSONPath=".status.message",description="The error message if exists."
-// +crd-enricher:deckhouse:documentation:crd={labels: {heritage: deckhouse, app.kubernetes.io/name: deckhouse, app.kubernetes.io/part-of: deckhouse, backup.deckhouse.io/cluster-config: "true"}, preserveUnknownFields: false, minimal: true, stripFormat: true}
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +kubebuilder:metadata:labels="backup.deckhouse.io/cluster-config=true"
+// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true, stripFormat: true}
 // +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: ModuleSource, metadata: {name: example}, spec: {registry: {repo: registry.example.io/modules-source, dockerCfg: "<base64 encoded credentials>"}}}
 
 // Defines the configuration of a source of Deckhouse modules.
