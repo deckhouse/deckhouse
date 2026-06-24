@@ -121,6 +121,7 @@ func handleSpawnEtcdDefragCPO(_ context.Context, input *go_hook.HookInput) error
 	cronSpec := input.Values.Get(etcdDefragScheduleInternalPath).String()
 	sched, err := cron.Parse("TZ=UTC " + cronSpec)
 	if err != nil {
+		// Normally this code can't be reached because the default cronSchedule is set in the compute_etcd_defrag.go hook
 		input.Logger.Warn("etcd defrag cronSchedule is invalid, skipping tick", "cronSchedule", cronSpec, "err", err)
 		return nil
 	}
