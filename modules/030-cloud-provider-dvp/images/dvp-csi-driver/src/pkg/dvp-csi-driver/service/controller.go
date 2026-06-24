@@ -187,7 +187,7 @@ func (c *ControllerService) DeleteVolume(
 
 	_, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
-		if errors.Is(err, dvpapi.ErrNotFound) {
+		if errors.Is(err, cloudprovider.DiskNotFound) || errors.Is(err, dvpapi.ErrNotFound) {
 			return &csi.DeleteVolumeResponse{}, nil
 		}
 		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while finding disk %v by id: %v", diskName, err)
@@ -393,7 +393,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 
 	disk, err := c.dvpCloudAPI.DiskService.GetDiskByName(ctx, volumeName)
 	if err != nil {
-		if errors.Is(err, dvpapi.ErrNotFound) {
+		if errors.Is(err, cloudprovider.DiskNotFound) || errors.Is(err, dvpapi.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "disk %v wasn't found", volumeName)
 		}
 		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while finding disk %v: %v", volumeName, err)
