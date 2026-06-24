@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
 
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
@@ -31,7 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func createMC(name string, settings map[string]interface{}) *config.ModuleConfig {
+func createMC(name string, settings map[string]any) *config.ModuleConfig {
 	mc := &config.ModuleConfig{}
 	mc.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   config.ModuleConfigGroup,
@@ -39,7 +38,7 @@ func createMC(name string, settings map[string]interface{}) *config.ModuleConfig
 		Kind:    config.ModuleConfigKind,
 	})
 	mc.SetName(name)
-	mc.Spec.Enabled = ptr.To(true)
+	mc.Spec.Enabled = new(true)
 	mc.Spec.Version = 1
 	mc.Spec.Settings = config.SettingsValues(settings)
 
@@ -55,7 +54,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 			config.ModuleConfigGVR: "ModuleConfigList",
 		})
 
-		mc := createMC("deckhouse", map[string]interface{}{
+		mc := createMC("deckhouse", map[string]any{
 			"bundle":         "Minimal",
 			"logLevel":       "Debug",
 			"releaseChannel": "Alpha",
@@ -108,7 +107,7 @@ func TestPrepareDeckhouseModuleConfig(t *testing.T) {
 			config.ModuleConfigGVR: "ModuleConfigList",
 		})
 
-		mc := createMC("deckhouse", map[string]interface{}{
+		mc := createMC("deckhouse", map[string]any{
 			"bundle": "Minimal",
 		})
 
@@ -156,8 +155,8 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 		https, found, err := unstructured.NestedMap(mc.Object, "spec", "settings", "modules", "https")
 		require.NoError(t, err)
 		require.True(t, found)
-		require.Equal(t, https, map[string]interface{}{
-			"customCertificate": map[string]interface{}{
+		require.Equal(t, https, map[string]any{
+			"customCertificate": map[string]any{
 				"secretName": "secret",
 			},
 		})
@@ -167,7 +166,7 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 		require.Contains(t, mc.Spec.Settings, "modules")
 		require.NotContains(t, mc.Spec.Settings["modules"], "https")
 		require.True(t, mc.Spec.Settings["highAvailability"].(bool))
-		require.Equal(t, mc.Spec.Settings["modules"].(map[string]interface{})["publicDomainTemplate"], "template")
+		require.Equal(t, mc.Spec.Settings["modules"].(map[string]any)["publicDomainTemplate"], "template")
 	}
 
 	t.Run("ModuleConfig global with https setting and another modules settings should remove https from mc and adds to result task with returning https to with resources tasks", func(t *testing.T) {
@@ -176,11 +175,11 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := createMC("global", map[string]interface{}{
+			mc := createMC("global", map[string]any{
 				"highAvailability": true,
-				"modules": map[string]interface{}{
-					"https": map[string]interface{}{
-						"customCertificate": map[string]interface{}{
+				"modules": map[string]any{
+					"https": map[string]any{
+						"customCertificate": map[string]any{
 							"secretName": "secret",
 						},
 					},
@@ -221,11 +220,11 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := createMC("global", map[string]interface{}{
+			mc := createMC("global", map[string]any{
 				"highAvailability": true,
-				"modules": map[string]interface{}{
-					"https": map[string]interface{}{
-						"customCertificate": map[string]interface{}{
+				"modules": map[string]any{
+					"https": map[string]any{
+						"customCertificate": map[string]any{
 							"secretName": "secret",
 						},
 					},
@@ -265,9 +264,9 @@ func TestPrepareGlobalModuleConfig(t *testing.T) {
 			config.ModuleConfigGVR: "ModuleConfigList",
 		})
 
-		mc := createMC("global", map[string]interface{}{
+		mc := createMC("global", map[string]any{
 			"highAvailability": true,
-			"modules": map[string]interface{}{
+			"modules": map[string]any{
 				"publicDomainTemplate": "template",
 			},
 		})

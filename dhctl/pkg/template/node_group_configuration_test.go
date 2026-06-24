@@ -42,11 +42,11 @@ spec:
     - "*"
 `
 
-	templateData := map[string]interface{}{
-		"nodeGroup": map[string]interface{}{
+	templateData := map[string]any{
+		"nodeGroup": map[string]any{
 			"name": "master",
 		},
-		"clusterBootstrap": map[string]interface{}{
+		"clusterBootstrap": map[string]any{
 			"clusterDomain": "cluster.local",
 		},
 	}
@@ -65,7 +65,7 @@ func TestPrepareNodeGroupConfigurationSteps_NoNGC(t *testing.T) {
 	templateController := NewTemplateController("")
 	t.Cleanup(templateController.Close)
 
-	err := prepareNodeGroupConfigurationSteps(context.Background(), templateController, "", map[string]interface{}{})
+	err := prepareNodeGroupConfigurationSteps(context.Background(), templateController, "", map[string]any{})
 	require.NoError(t, err)
 
 	stepsPath := filepath.Join(templateController.TmpDir, stepsDir)
@@ -91,7 +91,7 @@ spec:
     - "*"
 `
 
-	err := prepareNodeGroupConfigurationSteps(context.Background(), templateController, resourcesYAML, map[string]interface{}{})
+	err := prepareNodeGroupConfigurationSteps(context.Background(), templateController, resourcesYAML, map[string]any{})
 	require.NoError(t, err)
 
 	stepsPath := filepath.Join(templateController.TmpDir, stepsDir)

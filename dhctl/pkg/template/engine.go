@@ -27,7 +27,7 @@ import (
 
 type Engine struct {
 	Name string
-	Data map[string]interface{}
+	Data map[string]any
 }
 
 // Render
@@ -41,12 +41,12 @@ func (e Engine) initFunMap(t *template.Template) {
 	funcMap := FuncMap()
 
 	// include function isn't required in candi templates
-	funcMap["include"] = func(name string, data interface{}) (string, error) {
+	funcMap["include"] = func(name string, data any) (string, error) {
 		return "NotImplemented", nil
 	}
 
 	// Add the 'tpl' function here
-	funcMap["tpl"] = func(tpl string, vals map[string]interface{}) (string, error) {
+	funcMap["tpl"] = func(tpl string, vals map[string]any) (string, error) {
 		clone, err := t.Clone()
 		if err != nil {
 			return "", errors.Errorf("clone template failed: %v", err)
@@ -60,7 +60,7 @@ func (e Engine) initFunMap(t *template.Template) {
 	}
 
 	// Add the `required` function here so we can use lintMode
-	funcMap["required"] = func(warn string, val interface{}) (interface{}, error) {
+	funcMap["required"] = func(warn string, val any) (any, error) {
 		if val == nil {
 			return val, errors.Errorf("%s", warnWrap(warn))
 		} else if _, ok := val.(string); ok {

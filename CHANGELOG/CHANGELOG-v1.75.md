@@ -247,6 +247,7 @@
  - **[common]** Fixed CVE-2026-24051 in the CoreDNS image. [#18611](https://github.com/deckhouse/deckhouse/pull/18611)
  - **[common]** Fixed CVE-2026-33186 in the CoreDNS image. [#18722](https://github.com/deckhouse/deckhouse/pull/18722)
     CoreDNS pods will undergo a rolling restart.
+ - **[common]** Fixed CVE-2026-40898 in CoreDNS by updating the quic-go dependency. [#20768](https://github.com/deckhouse/deckhouse/pull/20768)
  - **[common]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[common]** Removed Python completely from the debug-container image as it is no longer needed, resolving corresponding CVEs, and silenced false positives for etcd binaries via VEX. [#18842](https://github.com/deckhouse/deckhouse/pull/18842)
@@ -365,6 +366,8 @@
     All Ingress-NGINX controller pods will be restated.
  - **[ingress-nginx]** Nelm fixes are backported. [#18632](https://github.com/deckhouse/deckhouse/pull/18632)
     All Ingress-NGINX controller pods will be restarted.
+ - **[ingress-nginx]** Nginx is updated to 1.30.3. [#20786](https://github.com/deckhouse/deckhouse/pull/20786)
+    All ingress-nginx pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19862](https://github.com/deckhouse/deckhouse/pull/19862)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20171](https://github.com/deckhouse/deckhouse/pull/20171)
@@ -589,6 +592,7 @@
  - **[istio]** Changed GO target version to 1.25. [#17981](https://github.com/deckhouse/deckhouse/pull/17981)
  - **[istio]** Changing the multi-network Istio documentation [#18591](https://github.com/deckhouse/deckhouse/pull/18591)
  - **[istio]** Fixed code in api-proxy and metadata-exporter images with linter recommendations. [#17763](https://github.com/deckhouse/deckhouse/pull/17763)
+ - **[istio]** Vex mitigation implementation [#20562](https://github.com/deckhouse/deckhouse/pull/20562)
  - **[istio]** Warning about the inability to use user 1337 for user applications [#18601](https://github.com/deckhouse/deckhouse/pull/18601)
  - **[istio]** added excludes for DMT lint [#19325](https://github.com/deckhouse/deckhouse/pull/19325)
  - **[istio]** changed vex CVE justifications in pilots images [#19583](https://github.com/deckhouse/deckhouse/pull/19583)

@@ -22,7 +22,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -79,7 +78,7 @@ func ParseConnectionConfig(
 
 	appendValidationError := func(msg string, docNumber int, gvk *schema.GroupVersionKind, obj *unstructured.Unstructured) {
 		err := Error{
-			Index:    ptr.To(docNumber),
+			Index:    new(docNumber),
 			Messages: []string{msg},
 		}
 
@@ -114,7 +113,7 @@ func ParseConnectionConfig(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Messages: []string{unmarshallError(err, "Unstructured", i)},
 			})
 			continue

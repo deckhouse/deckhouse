@@ -90,13 +90,13 @@ func testManifestsRendering(t *testing.T) {
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
 				data := getBaseTemplateData(version)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"webhookURL":        "https://webhook.example.com",
 					"oidcIssuerURL":     "https://oidc.example.com",
 					"oidcIssuerAddress": "192.168.1.100",
 				}
-				data["images"] = map[string]interface{}{
-					"controlPlaneManager": map[string]interface{}{
+				data["images"] = map[string]any{
+					"controlPlaneManager": map[string]any{
 						"etcd":                     "sha256:62c84f",
 						"kubeApiserver131":         "sha256:5db2b9",
 						"kubeApiserver132":         "sha256:b4b2b5",
@@ -106,12 +106,12 @@ func testManifestsRendering(t *testing.T) {
 						"kubeScheduler132":         "sha256:268cf6",
 					},
 				}
-				data["registry"] = map[string]interface{}{
+				data["registry"] = map[string]any{
 					"address": "registry.example.com",
 					"path":    "/deckhouse",
 				}
-				data["settings"] = map[string]interface{}{
-					"resourcesRequests": map[string]interface{}{
+				data["settings"] = map[string]any{
+					"resourcesRequests": map[string]any{
 						"milliCPU":    int64(1000),
 						"memoryBytes": int64(1073741824),
 					},
@@ -218,7 +218,7 @@ func testAPIServerConfiguration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Run("Webhook Configuration", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"webhookURL": "https://webhook.example.com",
 				}
 
@@ -250,7 +250,7 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("Authentication Webhook", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"authnWebhookURL":      "https://authn.example.com",
 					"authnWebhookCacheTTL": "10m",
 				}
@@ -274,9 +274,9 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("Audit Configuration - File Output", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"auditPolicy": "some-policy",
-					"auditLog": map[string]interface{}{
+					"auditLog": map[string]any{
 						"output": "File",
 						"path":   "/var/log/audit",
 					},
@@ -304,9 +304,9 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("Audit Configuration - Stdout Output", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"auditPolicy": "some-policy",
-					"auditLog": map[string]interface{}{
+					"auditLog": map[string]any{
 						"output": "Stdout",
 					},
 				}
@@ -325,7 +325,7 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("Audit Webhook", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"auditWebhookURL": "https://audit.example.com",
 				}
 
@@ -342,7 +342,7 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("OIDC Configuration", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"oidcIssuerURL": "https://oidc.example.com",
 				}
 
@@ -360,26 +360,26 @@ func testAPIServerConfiguration(t *testing.T) {
 			t.Run("Bind Address Configuration", func(t *testing.T) {
 				bindTests := []struct {
 					name         string
-					apiserver    map[string]interface{}
+					apiserver    map[string]any
 					nodeIP       string
 					expectedAddr string
 				}{
 					{
 						name: "Bind to wildcard",
-						apiserver: map[string]interface{}{
+						apiserver: map[string]any{
 							"bindToWildcard": true,
 						},
 						expectedAddr: "0.0.0.0",
 					},
 					{
 						name:         "Bind to nodeIP",
-						apiserver:    map[string]interface{}{},
+						apiserver:    map[string]any{},
 						nodeIP:       "192.168.1.100",
 						expectedAddr: "192.168.1.100",
 					},
 					{
 						name:         "Default bind address",
-						apiserver:    map[string]interface{}{},
+						apiserver:    map[string]any{},
 						expectedAddr: "127.0.0.1",
 					},
 				}
@@ -413,7 +413,7 @@ func testAPIServerConfiguration(t *testing.T) {
 
 			t.Run("ETCD Servers Configuration", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"etcdServers": []string{
 						"https://etcd1.example.com:2379",
 						"https://etcd2.example.com:2379",
@@ -443,7 +443,7 @@ func testAPIServerConfiguration(t *testing.T) {
 			t.Run("Secret Encryption", func(t *testing.T) {
 				data := getBaseTemplateData(tt.k8sVersion)
 				data["runType"] = "Runtime" // encryption is only added in runtime mode
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"secretEncryptionKey": "some-key",
 				}
 
@@ -486,7 +486,7 @@ func testClusterTypes(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(fmt.Sprintf("%s (v%s)", tt.name, version), func(t *testing.T) {
 				data := getBaseTemplateData(version)
-				data["clusterConfiguration"].(map[string]interface{})["clusterType"] = tt.clusterType
+				data["clusterConfiguration"].(map[string]any)["clusterType"] = tt.clusterType
 
 				result, err := renderFullManifests(data, "kube-controller-manager")
 				if err != nil {
@@ -598,8 +598,8 @@ func testServiceAccountConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Custom Service Account Issuer (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
-				"serviceAccount": map[string]interface{}{
+			data["apiserver"] = map[string]any{
+				"serviceAccount": map[string]any{
 					"issuer": "https://custom.issuer.com",
 				},
 			}
@@ -622,8 +622,8 @@ func testServiceAccountConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Additional API Issuers (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
-				"serviceAccount": map[string]interface{}{
+			data["apiserver"] = map[string]any{
+				"serviceAccount": map[string]any{
 					"issuer": "https://primary.issuer.com",
 					"additionalAPIIssuers": []string{
 						"https://additional1.issuer.com",
@@ -660,8 +660,8 @@ func testServiceAccountConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Additional API Audiences (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
-				"serviceAccount": map[string]interface{}{
+			data["apiserver"] = map[string]any{
+				"serviceAccount": map[string]any{
 					"issuer": "https://primary.issuer.com",
 					"additionalAPIAudiences": []string{
 						"https://audience1.com",
@@ -715,7 +715,7 @@ func testETCDConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Existing Cluster ETCD (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["etcd"] = map[string]interface{}{
+			data["etcd"] = map[string]any{
 				"existingCluster": true,
 			}
 
@@ -740,7 +740,7 @@ func testETCDConfiguration(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("ETCD with Quota (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["etcd"] = map[string]interface{}{
+			data["etcd"] = map[string]any{
 				"existingCluster":   true,
 				"quotaBackendBytes": "8589934592",
 			}
@@ -764,7 +764,7 @@ func testOptionalArguments(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Node Monitor Arguments (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["arguments"] = map[string]interface{}{
+			data["arguments"] = map[string]any{
 				"nodeMonitorPeriod":      30,
 				"nodeMonitorGracePeriod": 60,
 			}
@@ -787,7 +787,7 @@ func testOptionalArguments(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Pod Eviction Timeout (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["arguments"] = map[string]interface{}{
+			data["arguments"] = map[string]any{
 				"podEvictionTimeout":                  120,
 				"defaultUnreachableTolerationSeconds": 300,
 			}
@@ -815,25 +815,25 @@ func testPatchesRendering(t *testing.T) {
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
 				data := getBaseTemplateData(version)
-				data["apiserver"] = map[string]interface{}{
+				data["apiserver"] = map[string]any{
 					"webhookURL":        "https://webhook.example.com",
 					"oidcIssuerURL":     "https://oidc.example.com",
 					"oidcIssuerAddress": "192.168.1.100",
 				}
-				data["images"] = map[string]interface{}{
-					"controlPlaneManager": map[string]interface{}{
+				data["images"] = map[string]any{
+					"controlPlaneManager": map[string]any{
 						"kubeApiserverHealthcheck": "sha256:abcd1234",
 						"kubeApiserver131":         "sha256:efgh5678",
 						"kubeApiserver130":         "sha256:ijkl9012",
 						"kubeApiserver129":         "sha256:mnop3456",
 					},
 				}
-				data["registry"] = map[string]interface{}{
+				data["registry"] = map[string]any{
 					"address": "registry.example.com",
 					"path":    "/deckhouse",
 				}
-				data["settings"] = map[string]interface{}{
-					"resourcesRequests": map[string]interface{}{
+				data["settings"] = map[string]any{
+					"resourcesRequests": map[string]any{
 						"milliCPU":    int64(1000),
 						"memoryBytes": int64(1073741824),
 					},
@@ -869,7 +869,7 @@ func testEdgeCases(t *testing.T) {
 			data := getBaseTemplateData(version)
 			data["runType"] = "Runtime"
 			data["nodeIP"] = "192.168.1.100"
-			data["apiserver"] = map[string]interface{}{
+			data["apiserver"] = map[string]any{
 				"webhookURL":          "https://webhook.example.com",
 				"authnWebhookURL":     "https://authn.example.com",
 				"auditWebhookURL":     "https://audit.example.com",
@@ -882,23 +882,23 @@ func testEdgeCases(t *testing.T) {
 				"admissionPlugins": []string{
 					"CustomAdmissionPlugin",
 				},
-				"serviceAccount": map[string]interface{}{
+				"serviceAccount": map[string]any{
 					"issuer": "https://custom.issuer.com",
 					"additionalAPIIssuers": []string{
 						"https://additional.issuer.com",
 					},
 				},
 				"auditPolicy": "complex-policy",
-				"auditLog": map[string]interface{}{
+				"auditLog": map[string]any{
 					"output": "File",
 					"path":   "/var/log/audit",
 				},
 			}
-			data["etcd"] = map[string]interface{}{
+			data["etcd"] = map[string]any{
 				"existingCluster":   true,
 				"quotaBackendBytes": "8589934592",
 			}
-			data["arguments"] = map[string]interface{}{
+			data["arguments"] = map[string]any{
 				"nodeMonitorPeriod":                   45,
 				"nodeMonitorGracePeriod":              90,
 				"podEvictionTimeout":                  180,
@@ -984,11 +984,11 @@ func testEdgeCases(t *testing.T) {
 	}
 }
 
-func getBaseTemplateData(k8sVersion string) map[string]interface{} {
-	return map[string]interface{}{
+func getBaseTemplateData(k8sVersion string) map[string]any {
+	return map[string]any{
 		"nodeIP":  "127.0.0.1",
 		"runType": "ClusterBootstrap",
-		"clusterConfiguration": map[string]interface{}{
+		"clusterConfiguration": map[string]any{
 			"kubernetesVersion":       k8sVersion,
 			"clusterType":             "Static",
 			"serviceSubnetCIDR":       "10.222.0.0/16",
@@ -997,21 +997,21 @@ func getBaseTemplateData(k8sVersion string) map[string]interface{} {
 			"clusterDomain":           "cluster.local",
 			"encryptionAlgorithm":     "ECDSA-P256",
 		},
-		"k8s": map[string]interface{}{
-			k8sVersion: map[string]interface{}{
+		"k8s": map[string]any{
+			k8sVersion: map[string]any{
 				"patch": 1,
 			},
 		},
-		"registry": map[string]interface{}{
+		"registry": map[string]any{
 			"address": "registry.deckhouse.io",
 			"path":    "/deckhouse/ce",
 		},
-		"images": map[string]interface{}{},
+		"images": map[string]any{},
 	}
 }
 
 // Don't pass requestedManifests to get all manifests
-func renderFullManifests(data map[string]interface{}, requestedManifests ...string) (map[string]string, error) {
+func renderFullManifests(data map[string]any, requestedManifests ...string) (map[string]string, error) {
 	templatesPath := "/deckhouse/candi/control-plane"
 	manifests := make(map[string]string)
 
@@ -1080,7 +1080,7 @@ func testMissingCoverage(t *testing.T) {
 		t.Run(fmt.Sprintf("No NodeIP Configuration (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
 			delete(data, "nodeIP")
-			data["registry"] = map[string]interface{}{
+			data["registry"] = map[string]any{
 				"address": "registry.example.com",
 				"path":    "/deckhouse",
 			}
@@ -1108,12 +1108,12 @@ func testMissingCoverage(t *testing.T) {
 		t.Run(fmt.Sprintf("Manifests Without NodeIP (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
 			delete(data, "nodeIP")
-			data["images"] = map[string]interface{}{
-				"controlPlaneManager": map[string]interface{}{
+			data["images"] = map[string]any{
+				"controlPlaneManager": map[string]any{
 					"kubeApiserverHealthcheck": "sha256:abcd1234",
 				},
 			}
-			data["registry"] = map[string]interface{}{
+			data["registry"] = map[string]any{
 				"address": "registry.example.com",
 				"path":    "/deckhouse",
 			}
@@ -1137,8 +1137,8 @@ func testMissingCoverage(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Service Account Edge Cases (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
-				"serviceAccount": map[string]interface{}{
+			data["apiserver"] = map[string]any{
+				"serviceAccount": map[string]any{
 					"additionalAPIIssuers": []string{
 						"https://external.issuer.com",
 					},
@@ -1160,7 +1160,7 @@ func testMissingCoverage(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("ETCD Without Existing Cluster (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["etcd"] = map[string]interface{}{
+			data["etcd"] = map[string]any{
 				"existingCluster": false,
 			}
 
@@ -1179,7 +1179,7 @@ func testMissingCoverage(t *testing.T) {
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Audit Volume Mount Edge Cases (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
-			data["apiserver"] = map[string]interface{}{
+			data["apiserver"] = map[string]any{
 				"auditPolicy": "some-policy",
 			}
 
@@ -1225,7 +1225,7 @@ func testMissingCoverage(t *testing.T) {
 		t.Run(fmt.Sprintf("Bind Address Configuration (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
 			data["runType"] = "Runtime"
-			data["apiserver"] = map[string]interface{}{
+			data["apiserver"] = map[string]any{
 				"bindToWildcard": true,
 			}
 

@@ -55,17 +55,17 @@ type Logger interface {
 	LogProcessCtx(context.Context, string, string, func(context.Context) error) error
 	LogProcess(string, string, func() error) error
 
-	LogInfoF(format string, a ...interface{})
-	LogInfoLn(a ...interface{})
+	LogInfoF(format string, a ...any)
+	LogInfoLn(a ...any)
 
-	LogErrorF(format string, a ...interface{})
-	LogErrorLn(a ...interface{})
+	LogErrorF(format string, a ...any)
+	LogErrorLn(a ...any)
 
-	LogDebugF(format string, a ...interface{})
-	LogDebugLn(a ...interface{})
+	LogDebugF(format string, a ...any)
+	LogDebugLn(a ...any)
 
-	LogWarnF(format string, a ...interface{})
-	LogWarnLn(a ...interface{})
+	LogWarnF(format string, a ...any)
+	LogWarnLn(a ...any)
 
 	LogSuccess(string)
 	LogFail(string)
@@ -289,27 +289,27 @@ func (e *ExternalLogger) LogProcess(p, t string, run func() error) error {
 	return e.logger.Process(external.Process(p), t, run)
 }
 
-func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
+func (e *ExternalLogger) LogInfoF(format string, a ...any) {
 	e.logger.InfoFWithoutLn(format, a...)
 }
 
-func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
+func (e *ExternalLogger) LogInfoLn(a ...any) {
 	e.logger.InfoLn(a...)
 }
 
-func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
+func (e *ExternalLogger) LogErrorF(format string, a ...any) {
 	e.logger.ErrorF(format, a...)
 }
 
-func (e *ExternalLogger) LogErrorLn(a ...interface{}) {
+func (e *ExternalLogger) LogErrorLn(a ...any) {
 	e.logger.ErrorF("%v", a...)
 }
 
-func (e *ExternalLogger) LogDebugF(format string, a ...interface{}) {
+func (e *ExternalLogger) LogDebugF(format string, a ...any) {
 	e.logger.DebugF(format, a...)
 }
 
-func (e *ExternalLogger) LogDebugLn(a ...interface{}) {
+func (e *ExternalLogger) LogDebugLn(a ...any) {
 	e.logger.DebugF("%v", a...)
 }
 
@@ -325,11 +325,11 @@ func (e *ExternalLogger) LogFailRetry(l string) {
 	e.logger.FailRetry(l)
 }
 
-func (e *ExternalLogger) LogWarnLn(a ...interface{}) {
+func (e *ExternalLogger) LogWarnLn(a ...any) {
 	e.logger.WarnF("%s", a...)
 }
 
-func (e *ExternalLogger) LogWarnF(format string, a ...interface{}) {
+func (e *ExternalLogger) LogWarnF(format string, a ...any) {
 	e.logger.WarnFWithoutLn(format, a...)
 }
 
@@ -353,27 +353,27 @@ func Process(p, t string, run func() error) error {
 	return defaultLogger.LogProcess(p, t, run)
 }
 
-func InfoF(format string, a ...interface{}) {
+func InfoF(format string, a ...any) {
 	defaultLogger.LogInfoF(format, a...)
 }
 
-func InfoLn(a ...interface{}) {
+func InfoLn(a ...any) {
 	defaultLogger.LogInfoLn(a...)
 }
 
-func ErrorF(format string, a ...interface{}) {
+func ErrorF(format string, a ...any) {
 	defaultLogger.LogErrorF(format, a...)
 }
 
-func ErrorLn(a ...interface{}) {
+func ErrorLn(a ...any) {
 	defaultLogger.LogErrorLn(a...)
 }
 
-func DebugF(format string, a ...interface{}) {
+func DebugF(format string, a ...any) {
 	defaultLogger.LogDebugF(format, a...)
 }
 
-func DebugLn(a ...interface{}) {
+func DebugLn(a ...any) {
 	defaultLogger.LogDebugLn(a...)
 }
 
@@ -385,11 +385,11 @@ func Fail(l string) {
 	defaultLogger.LogFail(l)
 }
 
-func WarnF(format string, a ...interface{}) {
+func WarnF(format string, a ...any) {
 	defaultLogger.LogWarnF(format, a...)
 }
 
-func WarnLn(a ...interface{}) {
+func WarnLn(a ...any) {
 	defaultLogger.LogWarnLn(a...)
 }
 

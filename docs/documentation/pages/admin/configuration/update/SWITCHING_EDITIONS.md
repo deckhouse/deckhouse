@@ -167,7 +167,7 @@ What to consider before switching:
 
    1. Get the list of modules not supported in the desired DKP edition:
 
-      {{ check_new_modules | | regex_replace: "\n?<!REMOVE_FOR_CE>", "" | regex_replace: "<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "^", "      " }}
+      {{ check_new_modules | regex_replace: "\n?<!REMOVE_FOR_CE>", "" | regex_replace: "<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "^", "      " }}
 
 {{ disable_modules }}
 {% endtab %}

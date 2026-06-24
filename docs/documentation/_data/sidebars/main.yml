@@ -1630,6 +1630,10 @@ entries:
                 en: Containerized Data Importer (CDI)
                 ru: Containerized Data Importer (CDI)
               url: /architecture/virtualization/cdi.html
+            - title:
+                en: Auxiliary components
+                ru: Вспомогательные компоненты
+              url: /architecture/virtualization/auxiliary.html             
     - title:
         en: Reference
         ru: Справка

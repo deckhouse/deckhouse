@@ -127,7 +127,7 @@ func (r Resources) Less(i, j int) bool {
 	return firstOrder < secondOrder
 }
 
-func ParseResourcesContent(content string, data map[string]interface{}) (Resources, error) {
+func ParseResourcesContent(content string, data map[string]any) (Resources, error) {
 	if data != nil {
 		t := template.New("resource_render").Funcs(FuncMap())
 		t, err := t.Parse(content)
@@ -189,7 +189,7 @@ func (r Resources) String() string {
 	return strings.Join(s, ";")
 }
 
-func loadResources(path string, data map[string]interface{}) (Resources, error) {
+func loadResources(path string, data map[string]any) (Resources, error) {
 	fileContent, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading resources file: %v", err)
@@ -200,7 +200,7 @@ func loadResources(path string, data map[string]interface{}) (Resources, error) 
 	return ParseResourcesContent(content, data)
 }
 
-func ParseResources(path string, data map[string]interface{}) (Resources, error) {
+func ParseResources(path string, data map[string]any) (Resources, error) {
 	resources, err := loadResources(path, data)
 	if err != nil {
 		return nil, err
