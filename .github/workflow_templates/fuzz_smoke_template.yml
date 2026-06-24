@@ -1,0 +1,20 @@
+{!{/* Template for fuzz smoke regression job. */}!}
+{!{ define "fuzz_smoke_template" }!}
+needs:
+  - discover
+  - pull_request_info
+runs-on: self-slim
+steps:
+  {!{ tmpl.Exec "checkout_step" . | strings.Indent 2 }!}
+
+  - name: Restore diff artifact
+    uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+    with:
+      name: pr_diff
+
+  - name: Run fuzz smoke regression
+    env:
+      DIFF_PATH: ./pr.diff
+    run: |
+      ./.github/scripts/validation_run.sh ./testing/validate_fuzz_smoke.sh
+{!{- end -}!}
