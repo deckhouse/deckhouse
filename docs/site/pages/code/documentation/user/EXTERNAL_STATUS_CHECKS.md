@@ -88,7 +88,7 @@ For new merge request events, Deckhouse Code sends requests to the matching exte
 
 ## Branch scope
 
-The **Target branch** field defines which merge requests use the status check.
+The "Target branch" field defines which merge requests use the status check.
 
 | Scope | Description |
 |-------|-------------|
