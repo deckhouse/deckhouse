@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+DIFF_PATH="${DIFF_PATH:-${1:-}}"
+
 : "${DIFF_PATH:?DIFF_PATH is required}"
 : "${FUZZ_S3_BUCKET:?FUZZ_S3_BUCKET is required}"
+
+command -v aws >/dev/null || {
+  echo "aws cli is not installed"
+  exit 1
+}
 
 S3_BRANCH="${FUZZ_S3_BRANCH:-main}"
 
