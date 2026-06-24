@@ -50,3 +50,34 @@ shell:
   - mkdir /certs
   - mv *.crt /certs/
   - chmod +x /d8-ca-updater /install /uninstall
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/distroless" }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/ca-certificates
+  to: /ca-certificates
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/fuzz
+  to: /fuzz
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  beforeInstall:
+  - pm install python@3.12 gnu-glibc gnu-gcc-lib gnu-glibc-locale perl python-wheel coreutils curl llvm clang
+  - pip3 install -f file:///wheels --no-index cryptography==44.0.1
+  - pip3 install atheris
+  install:
+  - cd /fuzz
+  - python3 -m compileall .
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "d8-ca-updater-fuzz": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
