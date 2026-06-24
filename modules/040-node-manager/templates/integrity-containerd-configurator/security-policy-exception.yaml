@@ -7,6 +7,16 @@ metadata:
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-containerd-configurator")) | nindent 2 }}
 spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: Root permissions are required to write namespace configuration into /etc/containerd/integrity.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: Root permissions are required to write namespace configuration into /etc/containerd/integrity.
   volumes:
     types:
       allowedValues:
@@ -19,5 +29,5 @@ spec:
         - path: /etc/containerd/integrity
           readOnly: false
           metadata:
-            description: Access to /etc/containerd/integrity is required to write CA certificate and namespace configuration for containerd
+            description: Access to /etc/containerd/integrity is required to write namespace configuration for containerd.
 {{- end }}
