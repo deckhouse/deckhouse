@@ -36,11 +36,37 @@ const providerID = "dvp"
 const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
 const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
 const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
-const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 const globalValues = `
   clusterIsBootstrapped: true
   enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-dvp"]
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: DVP
+    clusterDomain: cluster.local
+    clusterType: Cloud
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.32"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
+  modules:
+    placement: {}
+  discovery:
+    d8SpecificNodeCountByRole:
+      worker: 1
+      master: 3
+    podSubnet: 10.0.1.0/16
+    kubernetesVersion: 1.32.1
+    clusterUUID: cluster
+`
+
+const globalValuesWithSnapshotController = `
+  clusterIsBootstrapped: true
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-dvp", "snapshot-controller"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -286,5 +312,52 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
 		})
 
+	})
+
+	Context("DVP without snapshot-controller", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
+			f.HelmRender()
+		})
+
+		It("VolumeSnapshotClass must not exist and StorageClasses must not have volumesnapshotclass annotation", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			vsc := f.KubernetesGlobalResource("VolumeSnapshotClass", "cloud-provider-dvp")
+			Expect(vsc.Exists()).To(BeFalse())
+
+			for _, scName := range []string{"1test", "ceph-pool-r2-csi-cephfs", "ceph-pool-r2-csi-rbd", "ceph-pool-r2-csi-rbd-immediate", "ceph-pool-r2-csi-rbd-immediate-feat", "linstor-thin-r1", "linstor-thin-r2", "sds-local-storage", "xxx"} {
+				sc := f.KubernetesGlobalResource("StorageClass", scName)
+				Expect(sc.Exists()).To(BeTrue())
+				Expect(sc.Field("metadata.annotations.storage\\.deckhouse\\.io/volumesnapshotclass").Exists()).To(BeFalse())
+			}
+		})
+	})
+
+	Context("DVP with snapshot-controller", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesWithSnapshotController)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderDvp", moduleValuesA)
+			f.HelmRender()
+		})
+
+		It("VolumeSnapshotClass must exist with correct fields and all StorageClasses must have volumesnapshotclass annotation", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			vsc := f.KubernetesGlobalResource("VolumeSnapshotClass", "cloud-provider-dvp")
+			Expect(vsc.Exists()).To(BeTrue())
+			Expect(vsc.Field("driver").String()).To(Equal("csi.dvp.deckhouse.io"))
+			Expect(vsc.Field("deletionPolicy").String()).To(Equal("Delete"))
+			Expect(vsc.Field("parameters.dvpRequiredConsistency").String()).To(Equal("true"))
+
+			for _, scName := range []string{"1test", "ceph-pool-r2-csi-cephfs", "ceph-pool-r2-csi-rbd", "ceph-pool-r2-csi-rbd-immediate", "ceph-pool-r2-csi-rbd-immediate-feat", "linstor-thin-r1", "linstor-thin-r2", "sds-local-storage", "xxx"} {
+				sc := f.KubernetesGlobalResource("StorageClass", scName)
+				Expect(sc.Exists()).To(BeTrue())
+				Expect(sc.Field("metadata.annotations.storage\\.deckhouse\\.io/volumesnapshotclass").String()).To(Equal("cloud-provider-dvp"))
+			}
+		})
 	})
 })
