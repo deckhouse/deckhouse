@@ -20,6 +20,7 @@ import (
 	"flag"
 	"os"
 
+	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -31,7 +32,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 	"integrity-containerd-configurator/internal/configwriter"
 	"integrity-containerd-configurator/internal/controller"
 )
