@@ -1,0 +1,23 @@
+{{- if and (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) .Values.nodeManager.internal.containerdIntegrityControllerEnabled }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: integrity-containerd-configurator
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "integrity-containerd-configurator")) | nindent 2 }}
+spec:
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          Allow the integrity-containerd-configurator daemon to use hostPath volumes for writing containerd integrity configuration.
+    hostPath:
+      allowedValues:
+        - path: /etc/containerd/integrity
+          readOnly: false
+          metadata:
+            description: Access to /etc/containerd/integrity is required to write CA certificate and namespace configuration for containerd
+{{- end }}
