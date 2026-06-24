@@ -36,13 +36,11 @@ type componentState struct {
 }
 
 func (s componentState) inSync() bool {
-	return s.intended.Config == s.actual.Config &&
-		(!s.component.HasPKI() || s.intended.PKI == s.actual.PKI) &&
-		s.intended.CA == s.actual.CA
+	return s.intended.Config == s.actual.Config && !s.certsChanged()
 }
 
 func (s componentState) certsChanged() bool {
-	return s.intended.PKI != s.actual.PKI || s.intended.CA != s.actual.CA
+	return (s.component.HasPKI() && s.intended.PKI != s.actual.PKI) || s.intended.CA != s.actual.CA
 }
 
 func (s componentState) needsConverge() bool {
@@ -56,10 +54,12 @@ func (s componentState) needsObserve() bool {
 	return s.lastObserve.IsZero() || time.Since(s.lastObserve) > constants.CertObserveInterval
 }
 
+// needsCertRenew reports whether a standalone cert renewal is needed: certs expire soon and no converge is already reissuing them
 func (s componentState) needsCertRenew() bool {
-	if s.certsChanged() {
-		return true
-	}
+	return s.certsExpireSoon() && !s.certsChanged()
+}
+
+func (s componentState) certsExpireSoon() bool {
 	return !s.certExpiry.IsZero() && time.Until(s.certExpiry) < constants.CertRenewalThreshold
 }
 
@@ -67,10 +67,13 @@ func (s componentState) needsSignatureRenew() bool {
 	if !constants.SignatureEnabled() || s.component != controlplanev1alpha1.OperationComponentKubeAPIServer {
 		return false
 	}
-	if s.actual.Config == "" {
-		return true
-	}
 	return !s.signatureExpiry.IsZero() && time.Until(s.signatureExpiry) < constants.SignatureRenewalThreshold
+}
+
+func (s componentState) needsSignatureBootstrap() bool {
+	return constants.SignatureEnabled() &&
+		s.component == controlplanev1alpha1.OperationComponentKubeAPIServer &&
+		s.actual.Config == ""
 }
 
 // computeComponentStates pairs intended (spec + global CA) with actual (status) per component, in a stable order.

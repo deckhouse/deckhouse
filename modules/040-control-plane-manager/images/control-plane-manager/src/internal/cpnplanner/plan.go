@@ -33,7 +33,12 @@ type Plan struct {
 }
 
 type StepBuilder interface {
-	Steps(s componentState, current []controlplanev1alpha1.ControlPlaneOperation) []controlplanev1alpha1.StepName
+	TargetSteps(s componentState) []TargetSteps
+}
+
+type TargetSteps struct {
+	Steps        []controlplanev1alpha1.StepName
+	HasDuplicate func(active *controlplanev1alpha1.ControlPlaneOperation) bool
 }
 
 func ComputePlan(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation, builder StepBuilder) Plan {
@@ -47,20 +52,15 @@ func ComputePlan(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlpl
 	}
 	node := nodeRef(cpn)
 	for _, s := range computeComponentStates(cpn) {
-		if op := componentOperation(node, s, current, builder); op != nil {
-			p.Create = append(p.Create, op)
+		for _, t := range builder.TargetSteps(s) {
+			if operations.HasActiveOperation(current, s.component, t.HasDuplicate) {
+				continue
+			}
+			p.Create = append(p.Create, operations.New(node, s.component, t.Steps, s.intended))
 		}
 	}
 	p.Delete = operations.ComputeOperationsToRotate(current, maxTerminalOperationsPerComponent)
 	return p
-}
-
-func componentOperation(node operations.NodeRef, s componentState, current []controlplanev1alpha1.ControlPlaneOperation, builder StepBuilder) *controlplanev1alpha1.ControlPlaneOperation {
-	steps := builder.Steps(s, current)
-	if len(steps) == 0 {
-		return nil
-	}
-	return operations.New(node, s.component, steps, s.intended, isObserveOnly(steps))
 }
 
 func OwnedOperations(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) []controlplanev1alpha1.ControlPlaneOperation {

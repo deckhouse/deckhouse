@@ -36,9 +36,9 @@ type NodeRef struct {
 	UID       types.UID
 }
 
-func New(node NodeRef, c controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName, intended controlplanev1alpha1.Checksums, approved bool) *controlplanev1alpha1.ControlPlaneOperation {
+func New(node NodeRef, c controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName, intended controlplanev1alpha1.Checksums) *controlplanev1alpha1.ControlPlaneOperation {
 	op := newOperation(node, c, steps)
-	if approved {
+	if op.IsObserveOnlyOperation() {
 		op.Spec.Approved = true
 	} else {
 		op.Spec.DesiredConfigChecksum = intended.Config
@@ -80,17 +80,4 @@ func generateName(op *controlplanev1alpha1.ControlPlaneOperation) string {
 		}
 	}
 	return name + "-"
-}
-
-func StepCoveredByActiveOperation(current []controlplanev1alpha1.ControlPlaneOperation, c controlplanev1alpha1.OperationComponent, step controlplanev1alpha1.StepName) bool {
-	for i := range current {
-		op := &current[i]
-		if op.IsTerminal() || op.Spec.Component != c {
-			continue
-		}
-		if op.HasStep(step) {
-			return true
-		}
-	}
-	return false
 }
