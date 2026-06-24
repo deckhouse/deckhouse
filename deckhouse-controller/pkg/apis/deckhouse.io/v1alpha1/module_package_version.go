@@ -138,8 +138,7 @@ type PackageDisableOptions struct {
 	Confirmation bool `json:"confirmation,omitempty"`
 
 	// Localized disable confirmation messages.
-	// +optional
-	Messages *PackageDisableMessages `json:"messages,omitempty"`
+	Messages PackageDisableMessages `json:"messages"`
 }
 
 // PackageDisableMessages holds localized disable confirmation messages for the package.

@@ -361,22 +361,13 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 // disableOptionsToCR projects parsed disable protection onto the CR shape,
 // returning nil when no disable protection is configured so the field omits cleanly.
 func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions {
-	if !opts.Confirmation && opts.Messages.Ru == "" && opts.Messages.En == "" {
-		return nil
-	}
-
-	out := &v1alpha1.PackageDisableOptions{
+	return &v1alpha1.PackageDisableOptions{
 		Confirmation: opts.Confirmation,
-	}
-
-	if opts.Messages.Ru != "" || opts.Messages.En != "" {
-		out.Messages = &v1alpha1.PackageDisableMessages{
+		Messages: v1alpha1.PackageDisableMessages{
 			Ru: opts.Messages.Ru,
 			En: opts.Messages.En,
-		}
+		},
 	}
-
-	return out
 }
 
 // requirementsToCR projects parsed package requirements onto the v1alpha1

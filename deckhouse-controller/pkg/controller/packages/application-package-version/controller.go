@@ -297,22 +297,13 @@ func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPa
 // returns nil when no disable protection is configured, so an empty block is not
 // surfaced on every package version.
 func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions {
-	if !opts.Confirmation && opts.Messages.Ru == "" && opts.Messages.En == "" {
-		return nil
-	}
-
-	out := &v1alpha1.PackageDisableOptions{
+	return &v1alpha1.PackageDisableOptions{
 		Confirmation: opts.Confirmation,
-	}
-
-	if opts.Messages.Ru != "" || opts.Messages.En != "" {
-		out.Messages = &v1alpha1.PackageDisableMessages{
+		Messages: v1alpha1.PackageDisableMessages{
 			Ru: opts.Messages.Ru,
 			En: opts.Messages.En,
-		}
+		},
 	}
-
-	return out
 }
 
 // setPackageMetadata projects parsed package metadata onto the ApplicationPackageVersion

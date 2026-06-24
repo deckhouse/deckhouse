@@ -179,6 +179,8 @@ spec:
                             description: Russian disable confirmation message.
                             type: string
                         type: object
+                    required:
+                    - messages
                     type: object
                   licensing:
                     description: Licensing information for different editions.

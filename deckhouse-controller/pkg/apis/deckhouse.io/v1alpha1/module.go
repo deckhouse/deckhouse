@@ -168,12 +168,14 @@ type ModuleEdition struct {
 	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
 }
 
+// ModuleDisableOptions configures module disable protection.
 type ModuleDisableOptions struct {
-	Confirmation bool                   `json:"confirmation" yaml:"confirmation"`
-	Message      string                 `json:"message" yaml:"message"`
-	Messages     *ModuleDisableMessages `json:"messages,omitempty" yaml:"messages,omitempty"`
+	Confirmation bool                  `json:"confirmation" yaml:"confirmation"`
+	Message      string                `json:"message" yaml:"message"`
+	Messages     ModuleDisableMessages `json:"messages" yaml:"messages"`
 }
 
+// ModuleDisableMessages holds localized disable confirmation messages for the module.
 type ModuleDisableMessages struct {
 	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
 	En string `json:"en,omitempty" yaml:"en,omitempty"`
