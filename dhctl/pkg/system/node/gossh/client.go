@@ -16,6 +16,7 @@ package gossh
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -34,6 +35,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+)
+
+var (
+	errSSHClientNeverStarted = errors.New("ssh client has not been started")
+	errSSHClientStopped      = errors.New("ssh client has been stopped")
 )
 
 func NewClient(ctx context.Context, session *session.Session, privKeys []session.AgentPrivateKey) *Client {
@@ -60,6 +66,9 @@ type Client struct {
 
 	stopChan chan struct{}
 	live     bool
+	stopGen  uint64
+	started  bool
+	stopped  bool
 
 	kubeProxies []*KubeProxy
 	sessionList []*ssh.Session
@@ -68,6 +77,7 @@ type Client struct {
 
 	ctx          context.Context
 	sessionMutex sync.Mutex
+	clientMutex  sync.RWMutex
 
 	silent bool
 }
@@ -100,6 +110,15 @@ func (s *Client) OnlyPreparePrivateKeys() error {
 }
 
 func (s *Client) Start() error {
+	return s.start(false, 0)
+}
+
+func (s *Client) start(automatic bool, expectedStopGen uint64) error {
+	stopGen, err := s.prepareStart(automatic, expectedStopGen)
+	if err != nil {
+		return err
+	}
+
 	if s.ctx != nil {
 		select {
 		case <-s.ctx.Done():
@@ -111,6 +130,10 @@ func (s *Client) Start() error {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
 
+	if !automatic {
+		s.resetForStart()
+	}
+
 	log.DebugLn("Starting go ssh client....")
 
 	if err := s.initSigners(); err != nil {
@@ -119,16 +142,20 @@ func (s *Client) Start() error {
 
 	var agentClient agent.ExtendedAgent
 	socket := os.Getenv("SSH_AUTH_SOCK")
+	var socketConn net.Conn
 	if socket != "" {
 		log.DebugLn("Dialing SSH agent unix socket...")
-		socketConn, err := net.Dial("unix", socket)
+		var err error
+		socketConn, err = net.Dial("unix", socket)
 		if err != nil {
 			return fmt.Errorf("Failed to open SSH_AUTH_SOCK: %v", err)
 		}
+		defer socketConn.Close()
 		agentClient = agent.NewClient(socketConn)
 	}
 
 	var bastionClient *ssh.Client
+	bastionClientOwned := false
 	var client *ssh.Client
 	if s.Settings.BastionHost != "" {
 		bastionConfig := &ssh.ClientConfig{}
@@ -180,6 +207,12 @@ func (s *Client) Start() error {
 		if err != nil {
 			return fmt.Errorf("Could not connect to %s", fullHost)
 		}
+		bastionClientOwned = true
+		defer func() {
+			if bastionClientOwned && bastionClient != nil {
+				_ = bastionClient.Close()
+			}
+		}()
 		log.DebugF("Connected successfully to bastion host %s\n", bastionAddr)
 	}
 
@@ -226,7 +259,6 @@ func (s *Client) Start() error {
 	if bastionClient == nil {
 		log.DebugLn("Try to direct connect host master host")
 
-		var err error
 		connectToHost := func() error {
 			if len(s.kubeProxies) == 0 {
 				s.Settings.ChoiceNewHost()
@@ -248,13 +280,8 @@ func (s *Client) Start() error {
 			return fmt.Errorf("Failed to connect to master host (last %s): %w", lastHost, err)
 		}
 
-		s.sshClient = client
-		s.live = true
-
-		if s.stopChan == nil {
-			stopCh := make(chan struct{})
-			s.stopChan = stopCh
-			go s.keepAlive()
+		if err = s.setConnectionState(stopGen, client, nil, nil, nil, true); err != nil {
+			return err
 		}
 
 		return nil
@@ -264,7 +291,6 @@ func (s *Client) Start() error {
 
 	var (
 		addr             string
-		err              error
 		targetClientConn ssh.Conn
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
@@ -284,6 +310,9 @@ func (s *Client) Start() error {
 		} else {
 			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
 		}
+		if err != nil {
+			_ = targetConn.Close()
+		}
 
 		return err
 	}
@@ -301,37 +330,33 @@ func (s *Client) Start() error {
 	clientConn = targetClientConn
 	client = ssh.NewClient(targetClientConn, targetNewChan, targetReqChan)
 
-	s.sshClient = client
-	s.BastionClient = bastionClient
-	s.NetConn = &targetConn
-	s.SSHConn = &clientConn
-	s.live = true
-
-	if s.stopChan == nil {
-		stopCh := make(chan struct{})
-		s.stopChan = stopCh
-		go s.keepAlive()
+	if err = s.setConnectionState(stopGen, client, &clientConn, &targetConn, bastionClient, true); err != nil {
+		return err
 	}
+	bastionClientOwned = false
 
 	return nil
 }
 
-func (s *Client) keepAlive() {
+func (s *Client) keepAlive(stopCh chan struct{}, stopGen uint64) {
 	defer log.DebugLn("keep-alive goroutine stopped")
 	errorsCount := 0
 	for {
 		select {
-		case <-s.stopChan:
+		case <-stopCh:
 			log.DebugLn("Stopping keep-alive goroutine.")
-			close(s.stopChan)
-			s.stopChan = nil
+			s.clientMutex.Lock()
+			if s.stopChan == stopCh {
+				s.stopChan = nil
+			}
+			s.clientMutex.Unlock()
 			return
 		default:
-			session, err := s.sshClient.NewSession()
+			session, err := s.NewSession()
 			if err != nil {
 				log.DebugF("Keep-alive to %s failed: %v\n", s.Settings.Host(), err)
 				if errorsCount > 3 {
-					s.restart()
+					s.restart(stopCh, stopGen)
 					return
 				}
 				errorsCount++
@@ -341,13 +366,14 @@ func (s *Client) keepAlive() {
 			if _, err := session.SendRequest("keepalive@openssh.com", false, nil); err != nil {
 				log.DebugF("Keep-alive failed: %v\n", err)
 				if errorsCount > 3 {
-					s.restart()
+					_ = session.Close()
+					s.restart(stopCh, stopGen)
 					return
 				}
 				errorsCount++
 			}
 			session.Close()
-			for _, sess := range s.sessionList {
+			for _, sess := range s.sessionsSnapshot() {
 				if sess != nil {
 					if _, err := sess.SendRequest("keepalive@openssh.com", false, nil); err != nil {
 						log.DebugF("Keep-alive for session failed: %v\n", err)
@@ -361,12 +387,216 @@ func (s *Client) keepAlive() {
 	}
 }
 
-func (s *Client) restart() {
-	s.live = false
-	s.stopChan = nil
+func (s *Client) restart(stopCh chan struct{}, expectedStopGen uint64) {
+	stopGen, ok := s.claimAutoRestart(stopCh, expectedStopGen)
+	if !ok {
+		return
+	}
+
+	s.setLive(false)
+	s.closeSessions()
+	s.closeConnections()
 	s.silent = true
-	_ = s.Start()
+	if err := s.start(true, stopGen); err != nil {
+		log.DebugF("SSH client restart failed: %v\n", err)
+	}
+}
+
+func (s *Client) closeSessions() {
+	log.DebugLn("closing sessions")
+	s.sessionMutex.Lock()
+	defer s.sessionMutex.Unlock()
+
+	for _, sess := range s.sessionList {
+		if sess != nil {
+			_ = sess.Signal(ssh.SIGKILL)
+			_ = sess.Close()
+		}
+	}
 	s.sessionList = nil
+}
+
+func (s *Client) closeConnections() {
+	s.clientMutex.Lock()
+	defer s.clientMutex.Unlock()
+
+	if s.sshClient != nil {
+		s.sshClient.Close()
+		s.sshClient = nil
+	}
+	if s.SSHConn != nil {
+		sshconn := *s.SSHConn
+		sshconn.Close()
+		s.SSHConn = nil
+	}
+	if s.NetConn != nil {
+		netconn := *s.NetConn
+		netconn.Close()
+		s.NetConn = nil
+	}
+	if s.BastionClient != nil {
+		s.BastionClient.Close()
+		s.BastionClient = nil
+	}
+	s.live = false
+}
+
+func (s *Client) resetForStart() {
+	if !s.hasPublishedConnection() {
+		return
+	}
+
+	log.DebugLn("closing existing SSH client before start")
+	s.stopKeepAlive()
+	s.closeSessions()
+	s.closeConnections()
+}
+
+func (s *Client) hasPublishedConnection() bool {
+	s.clientMutex.RLock()
+	defer s.clientMutex.RUnlock()
+
+	return s.live ||
+		s.stopChan != nil ||
+		s.sshClient != nil ||
+		s.SSHConn != nil ||
+		s.NetConn != nil ||
+		s.BastionClient != nil
+}
+
+func (s *Client) setConnectionState(
+	stopGen uint64,
+	client *ssh.Client,
+	sshConn *ssh.Conn,
+	netConn *net.Conn,
+	bastionClient *ssh.Client,
+	live bool,
+) error {
+	s.clientMutex.Lock()
+	defer s.clientMutex.Unlock()
+
+	if stopGen != s.stopGen {
+		if client != nil {
+			client.Close()
+		}
+		if sshConn != nil {
+			(*sshConn).Close()
+		}
+		if netConn != nil {
+			(*netConn).Close()
+		}
+		if bastionClient != nil {
+			bastionClient.Close()
+		}
+		return fmt.Errorf("ssh client start interrupted by stop")
+	}
+
+	s.sshClient = client
+	s.SSHConn = sshConn
+	s.NetConn = netConn
+	s.BastionClient = bastionClient
+	s.live = live
+	s.started = true
+
+	if live && s.stopChan == nil {
+		stopCh := make(chan struct{})
+		s.stopChan = stopCh
+		go s.keepAlive(stopCh, stopGen)
+	}
+
+	return nil
+}
+
+func (s *Client) prepareStart(automatic bool, expectedStopGen uint64) (uint64, error) {
+	s.clientMutex.Lock()
+	defer s.clientMutex.Unlock()
+
+	if automatic {
+		if s.stopped || s.stopGen != expectedStopGen {
+			return 0, fmt.Errorf("ssh client automatic restart was stopped")
+		}
+	} else {
+		s.stopped = false
+		s.stopGen++
+	}
+
+	return s.stopGen, nil
+}
+
+func (s *Client) claimAutoRestart(stopCh chan struct{}, expectedStopGen uint64) (uint64, bool) {
+	s.clientMutex.Lock()
+	defer s.clientMutex.Unlock()
+
+	if s.stopped || s.stopChan != stopCh || s.stopGen != expectedStopGen {
+		return 0, false
+	}
+
+	s.stopChan = nil
+	return expectedStopGen, true
+}
+
+func (s *Client) setLive(live bool) {
+	s.clientMutex.Lock()
+	defer s.clientMutex.Unlock()
+	s.live = live
+}
+
+func (s *Client) getSSHClient() (*ssh.Client, bool) {
+	s.clientMutex.RLock()
+	defer s.clientMutex.RUnlock()
+
+	if s.sshClient == nil || !s.live {
+		return nil, false
+	}
+
+	return s.sshClient, true
+}
+
+func (s *Client) snapshotSSHClient() (*ssh.Client, error) {
+	return s.snapshotSSHClientWithOptions(false)
+}
+
+func (s *Client) snapshotSSHClientWithOptions(allowStopped bool) (*ssh.Client, error) {
+	s.clientMutex.RLock()
+	defer s.clientMutex.RUnlock()
+
+	if s.stopped && !allowStopped {
+		return nil, errSSHClientStopped
+	}
+
+	if s.sshClient == nil || !s.live {
+		if !s.started {
+			return nil, errSSHClientNeverStarted
+		}
+		if s.stopped {
+			return nil, errSSHClientStopped
+		}
+		return nil, fmt.Errorf("ssh client is not connected")
+	}
+
+	return s.sshClient, nil
+}
+
+func (s *Client) NewSession() (*ssh.Session, error) {
+	return s.newSession(false)
+}
+
+func (s *Client) newSession(allowStopped bool) (*ssh.Session, error) {
+	sshClient, err := s.snapshotSSHClientWithOptions(allowStopped)
+	if err != nil {
+		return nil, err
+	}
+
+	return sshClient.NewSession()
+}
+
+func (s *Client) withSSHClient(fn func(*ssh.Client) error) error {
+	sshClient, err := s.snapshotSSHClient()
+	if err != nil {
+		return err
+	}
+
+	return fn(sshClient)
 }
 
 func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
@@ -406,6 +636,7 @@ func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientCo
 		c, chans, reqs, err = ssh.NewClientConn(tcpConn, addr, config)
 	}
 	if err != nil {
+		tcpConn.Close()
 		return nil, err
 	}
 
@@ -442,7 +673,7 @@ func (s *Client) KubeProxy() node.KubeProxy {
 
 // File is used to upload and download files and directories
 func (s *Client) File() node.File {
-	return NewSSHFile(s.sshClient)
+	return NewSSHFile(s)
 }
 
 // UploadScript is used to upload script and execute it on remote server
@@ -459,51 +690,35 @@ func (s *Client) Check() node.Check {
 
 // Stop the client
 func (s *Client) Stop() {
-	if s.sshClient == nil {
-		log.DebugLn("no SSH client found to stop. Exiting...")
-		return
-	}
 	log.DebugLn("SSH Client is stopping now")
+	s.clientMutex.Lock()
+	s.stopGen++
+	s.stopped = true
+	s.clientMutex.Unlock()
+
 	log.DebugLn("stopping kube proxies")
 	for _, p := range s.kubeProxies {
 		p.StopAll()
 	}
 	s.kubeProxies = nil
 
-	log.DebugLn("closing sessions")
-	for _, sess := range s.sessionList {
-		if sess != nil {
-			_ = sess.Signal(ssh.SIGKILL)
-			_ = sess.Close()
-		}
-	}
-	s.sessionList = nil
+	s.closeSessions()
 
 	// by starting kubeproxy on remote, there is one more process starts
 	// it cannot be killed by sending any signal to his parrent process
 	// so we need to use killall command to kill all this processes
-	log.DebugLn("stopping kube proxies on remote")
-	s.stopKubeproxy()
-	log.DebugLn("kube proxies on remote were stopped")
+	if _, ok := s.getSSHClient(); ok {
+		log.DebugLn("stopping kube proxies on remote")
+		s.stopKubeproxy()
+		log.DebugLn("kube proxies on remote were stopped")
+	} else {
+		log.DebugLn("no SSH client found to stop remote kube proxies. Skip.")
+	}
 
 	log.DebugLn("stopping keep-alive goroutine")
-	if s.stopChan != nil {
-		log.DebugLn("sendind message to stop keep-alive")
-		s.stopChan <- struct{}{}
-	}
+	s.stopKeepAlive()
 
-	s.sshClient.Close()
-	if s.SSHConn != nil {
-		sshconn := *s.SSHConn
-		sshconn.Close()
-	}
-	if s.NetConn != nil {
-		netconn := *s.NetConn
-		netconn.Close()
-	}
-	if s.BastionClient != nil {
-		s.BastionClient.Close()
-	}
+	s.closeConnections()
 	log.DebugLn("SSH Client is stopped")
 }
 
@@ -543,17 +758,49 @@ func (s *Client) Loop(fn node.SSHLoopHandler) error {
 }
 
 func (s *Client) GetClient() *ssh.Client {
+	s.clientMutex.RLock()
+	defer s.clientMutex.RUnlock()
+	if !s.live {
+		return nil
+	}
 	return s.sshClient
 }
 
+func (s *Client) stopKeepAlive() {
+	s.clientMutex.Lock()
+	defer s.clientMutex.Unlock()
+
+	if s.stopChan == nil {
+		return
+	}
+
+	log.DebugLn("sendind message to stop keep-alive")
+	close(s.stopChan)
+	s.stopChan = nil
+}
+
 func (s *Client) Live() bool {
+	s.clientMutex.RLock()
+	defer s.clientMutex.RUnlock()
 	return s.live
 }
 
 func (s *Client) RegisterSession(sess *ssh.Session) {
+	if sess == nil {
+		return
+	}
 	s.sessionMutex.Lock()
 	defer s.sessionMutex.Unlock()
 	s.sessionList = append(s.sessionList, sess)
+}
+
+func (s *Client) sessionsSnapshot() []*ssh.Session {
+	s.sessionMutex.Lock()
+	defer s.sessionMutex.Unlock()
+
+	sessions := make([]*ssh.Session, len(s.sessionList))
+	copy(sessions, s.sessionList)
+	return sessions
 }
 
 func (s *Client) UnregisterSession(sess *ssh.Session) {
@@ -572,7 +819,7 @@ func (s *Client) UnregisterSession(sess *ssh.Session) {
 }
 
 func (s *Client) stopKubeproxy() {
-	cmd := NewSSHCommand(s, "killall kubectl")
+	cmd := newSSHCommand(s, "killall kubectl", true)
 	cmd.Sudo(context.Background())
 	_ = cmd.Run(context.Background())
 }

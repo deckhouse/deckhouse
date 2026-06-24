@@ -23,6 +23,7 @@ import (
 	"strings"
 	"sync"
 
+	ssh "github.com/deckhouse/lib-gossh"
 	pkgerrors "github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -106,7 +107,12 @@ func (t *Tunnel) acceptTunnelConnection(id int, remoteAddress string, listener n
 			return
 		}
 
-		remoteConn, err := t.sshClient.GetClient().Dial("tcp", remoteAddress)
+		var remoteConn net.Conn
+		err = t.sshClient.withSSHClient(func(sshClient *ssh.Client) error {
+			var dialErr error
+			remoteConn, dialErr = sshClient.Dial("tcp", remoteAddress)
+			return dialErr
+		})
 		if err != nil {
 			e := fmt.Errorf("[%d] Cannot dial to %s: %s", id, remoteAddress, err.Error())
 			t.errorCh <- e
