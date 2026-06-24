@@ -15,6 +15,8 @@ steps:
   - name: Run fuzz smoke regression
     env:
       DIFF_PATH: ./pr.diff
+      FUZZ_S3_BUCKET: ${{ secrets.FUZZ_S3_BUCKET }}
+      FUZZ_S3_BRANCH: main
     run: |
       ./.github/scripts/validation_run.sh ./testing/validate_fuzz_smoke.sh
 {!{- end -}!}
