@@ -47,14 +47,15 @@ const maxSanitizeDepth = 100
 // Recursively processes groups. Skips control attributes (time, level, source, renderer markers).
 // Idempotent - already filtered values pass through unchanged.
 func Sanitize(_ []string, attr slog.Attr) slog.Attr {
-	if isControlAttr(attr.Key) {
-		return attr
-	}
 	return sanitizeWithDepth(attr, 0)
 }
 
 func sanitizeWithDepth(attr slog.Attr, depth int) slog.Attr {
 	if depth > maxSanitizeDepth {
+		return attr
+	}
+
+	if isControlAttr(attr.Key) {
 		return attr
 	}
 
