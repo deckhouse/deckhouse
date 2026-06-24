@@ -40,7 +40,7 @@ If the checkbox is cleared, external status checks are still shown in merge requ
 
 ### Status checks timeout
 
-The **Status checks timeout** field sets the default timeout for project status checks.
+The "Status checks timeout" field sets the default timeout for project status checks.
 
 Behavior:
 
