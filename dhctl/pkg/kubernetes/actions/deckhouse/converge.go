@@ -74,15 +74,15 @@ func getTasksForRunning(ctx context.Context, kubeCl *client.KubernetesClient, co
 	tasks := []actions.ManifestTask{
 		{
 			Name:     `Secret "d8-cluster-configuration"`,
-			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(clusterConfig) },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.SecretWithClusterConfig(clusterConfig) },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -92,17 +92,17 @@ func getTasksForRunning(ctx context.Context, kubeCl *client.KubernetesClient, co
 		},
 		{
 			Name: `ConfigMap "d8-cluster-uuid"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.ClusterUUIDConfigMap(clusterUUID)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).
 					Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				// NOTE: Uuid configmap uses "more careful" update task,
 				// NOTE: which will create configmap only if it does not exist,
 				// NOTE: or update configmap only if actual uuid in configmap does not match target uuid.
@@ -187,15 +187,15 @@ func (t *taskProviderForCluster) Cloud(ctx context.Context, metaConfig *config.M
 
 	return &actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "%s"`, secretName),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.SecretWithProviderClusterConfig(
 				providerClusterConfig, nil,
 			)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			return convergeManifestsCreateSecret(ctx, kubeCl, manifest, secretName)
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			return convergeManifestsPatchSecret(ctx, kubeCl, manifest, secretName)
 		},
 	}, nil
@@ -218,13 +218,13 @@ func (t *taskProviderForCluster) Static(ctx context.Context, metaConfig *config.
 
 	return &actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "%s"`, secretName),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.SecretWithStaticClusterConfig(staticClusterConfig)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			return convergeManifestsCreateSecret(ctx, kubeCl, manifest, secretName)
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			return convergeManifestsPatchSecret(ctx, kubeCl, manifest, secretName)
 		},
 	}, nil

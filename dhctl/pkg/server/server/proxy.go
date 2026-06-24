@@ -152,12 +152,10 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		log.Info("started new dhctl instance")
 
-		d.wg.Add(1)
-		go func() {
-			defer d.wg.Done()
+		d.wg.Go(func() {
 			exitErr := cmd.Wait()
 			log.Info("stopped dhctl instance", logger.Err(exitErr))
-		}()
+		})
 
 		conn, err := createDHCTLServerConnRetried(ctx, log, address)
 		if err != nil {

@@ -16,6 +16,8 @@ limitations under the License.
 
 package config
 
+import "maps"
+
 // ControlPlaneTemplateConfig is the data passed to control-plane template rendering.
 //
 // Settings holds ModuleConfig control-plane-manager spec.settings (authoritative source).
@@ -23,26 +25,24 @@ package config
 // Templates choose the source explicitly: `coalesce .settings.field .clusterConfiguration.field`.
 // ToMap is the only boundary with the Go template engine.
 type ControlPlaneTemplateConfig struct {
-	RunType    string                 `json:"runType"`
-	NodeIP     string                 `json:"nodeIP"`
-	NodeName   string                 `json:"nodeName"`
-	Registry   map[string]interface{} `json:"registry"`
-	Images     map[string]interface{} `json:"images"`
-	VersionMap map[string]interface{} `json:"-"`
+	RunType    string         `json:"runType"`
+	NodeIP     string         `json:"nodeIP"`
+	NodeName   string         `json:"nodeName"`
+	Registry   map[string]any `json:"registry"`
+	Images     map[string]any `json:"images"`
+	VersionMap map[string]any `json:"-"`
 
-	Settings             map[string]interface{} `json:"settings"`
-	ClusterConfiguration map[string]interface{} `json:"clusterConfiguration"`
+	Settings             map[string]any `json:"settings"`
+	ClusterConfiguration map[string]any `json:"clusterConfiguration"`
 }
 
 // ToMap is the only entry point into the Go template engine. It converts the typed struct
 // to a flat map so templates can access all fields uniformly. VersionMap keys (k8s version
 // data, image digests, etc.) are merged into the root. Explicit fields win over VersionMap
 // keys with the same name.
-func (c *ControlPlaneTemplateConfig) ToMap() map[string]interface{} {
-	m := make(map[string]interface{})
-	for k, v := range c.VersionMap {
-		m[k] = v
-	}
+func (c *ControlPlaneTemplateConfig) ToMap() map[string]any {
+	m := make(map[string]any)
+	maps.Copy(m, c.VersionMap)
 	m["runType"] = c.RunType
 	m["nodeIP"] = c.NodeIP
 	m["nodeName"] = c.NodeName

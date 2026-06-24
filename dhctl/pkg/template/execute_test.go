@@ -22,7 +22,7 @@ import (
 )
 
 func TestExecuteTemplate_DefineAndInclude(t *testing.T) {
-	var data map[string]interface{}
+	var data map[string]any
 
 	err := yaml.Unmarshal([]byte(`
 nodeIP: "127.0.0.1"

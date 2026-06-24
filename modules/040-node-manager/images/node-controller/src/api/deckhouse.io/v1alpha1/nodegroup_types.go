@@ -301,6 +301,10 @@ type KubeletSpec struct {
 	// ContainerLogMaxFiles specifies max log files
 	// +optional
 	ContainerLogMaxFiles *int32 `json:"containerLogMaxFiles,omitempty"`
+
+	// SeccompDefault enables RuntimeDefault seccomp profile by default
+	// +optional
+	SeccompDefault *bool `json:"seccompDefault,omitempty"`
 }
 
 // NodeGroupStatus defines the observed state of NodeGroup

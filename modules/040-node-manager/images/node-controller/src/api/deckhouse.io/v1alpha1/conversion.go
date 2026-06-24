@@ -211,6 +211,7 @@ func autoConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(in *NodeGroupSpec, out *v
 			RootDir:              in.Kubelet.RootDir,
 			ContainerLogMaxSize:  in.Kubelet.ContainerLogMaxSize,
 			ContainerLogMaxFiles: in.Kubelet.ContainerLogMaxFiles,
+			SeccompDefault:       in.Kubelet.SeccompDefault,
 		}
 	}
 
@@ -300,6 +301,7 @@ func autoConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in *v1.NodeGroupSpec, out
 			RootDir:              in.Kubelet.RootDir,
 			ContainerLogMaxSize:  in.Kubelet.ContainerLogMaxSize,
 			ContainerLogMaxFiles: in.Kubelet.ContainerLogMaxFiles,
+			SeccompDefault:       in.Kubelet.SeccompDefault,
 		}
 	}
 

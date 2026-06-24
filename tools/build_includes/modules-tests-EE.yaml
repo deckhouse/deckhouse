@@ -362,17 +362,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/340-monitoring-deckhouse
-  to: /deckhouse/modules/340-monitoring-deckhouse
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
   excludePaths:
@@ -1012,6 +1001,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   stageDependencies:
@@ -1054,11 +1048,6 @@
         - '**/*'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/_helper.tpl
-  to: /deckhouse/modules/380-metallb/templates/_helper.tpl
   stageDependencies:
     install:
         - '**/*'
