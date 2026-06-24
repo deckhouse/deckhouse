@@ -256,6 +256,19 @@ properties:
           hostPath:
             description: |
               Путь для хранения резервных копий etcd на master-узлах.
+      defrag:
+        description: |
+          Параметры дефрагментации etcd.
+        properties:
+          enabled:
+            description: |
+              Включение периодической дефрагментации etcd.
+
+              По умолчанию `true`, если в кластере три и более членов etcd (мастер-узлов ≥ 3 или мастер-узлов = 2 при наличии etcd-арбитра); в остальных случаях — `false`.
+              Явно заданное значение всегда имеет приоритет над вычисленным по умолчанию.
+          cronSchedule:
+            description: |
+              Расписание дефрагментации etcd в формате cron (UTC).
       maxDbSize:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) параметр.
