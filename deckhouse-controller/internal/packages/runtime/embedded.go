@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -33,6 +34,11 @@ const (
 	// holds embedded modules shipped with the controller.
 	embeddedDir = "modules"
 )
+
+var dummyModules = []string{
+	"000-common",
+	"007-registrypackages",
+}
 
 // loadEmbedded discovers embedded modules under embeddedDir, builds each one
 // from its on-disk config, wires the runtime's shared managers into it, and
@@ -52,7 +58,7 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 	}
 
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !entry.IsDir() || slices.Contains(dummyModules, entry.Name()) {
 			continue
 		}
 
