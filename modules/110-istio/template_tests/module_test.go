@@ -473,16 +473,22 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			jwksExtraRootCAV21 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x21x6")
+			jwksExtraRootCAV25 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x25x2")
 			jwksExtraRootCAV27 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x27x9")
 
 			Expect(iopV21.Exists()).To(BeTrue())
 			Expect(istioV25.Exists()).To(BeTrue())
+			Expect(jwksExtraRootCAV21.Exists()).To(BeTrue())
+			Expect(jwksExtraRootCAV25.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV27.Exists()).To(BeTrue())
 
 			deplV27 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27x9")
 
 			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(jwksExtraRootCAV21.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
+			Expect(jwksExtraRootCAV25.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(deplV27.Exists()).To(BeTrue())
 			Expect(deplV27.Field("spec.template.spec.containers.0.volumeMounts").String()).To(ContainSubstring(`"mountPath":"/cacerts"`))
