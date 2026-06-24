@@ -236,8 +236,8 @@ who is not a project member.
 To delete a check:
 
 1. Open the project.
-1. Go to **Settings** -> **Merge requests**.
-1. In **External status checks**, select **Delete** for the required check.
+1. Go to "Settings" → "Merge requests".
+1. In "External status checks", select "Delete" for the required check.
 1. Confirm the deletion.
 
 After deletion, the check no longer applies to project merge requests.
