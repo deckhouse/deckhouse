@@ -1,0 +1,70 @@
+package runtime
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"os"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
+)
+
+const (
+	// embeddedDir is the directory, relative to the working directory, that
+	// holds embedded modules shipped with the controller.
+	embeddedDir = "modules"
+)
+
+// loadEmbedded discovers embedded modules under embeddedDir, builds each one
+// from its on-disk config, wires the runtime's shared managers into it, and
+// registers the resulting modules in the runtime's module map.
+func (r *Runtime) loadEmbedded(ctx context.Context) error {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbedded")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", embeddedDir))
+
+	r.logger.Debug("load embedded modules", slog.String("path", embeddedDir))
+
+	entries, err := os.ReadDir(embeddedDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("read dir: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		r.logger.Debug("load embedded module", slog.String("name", entry.Name()))
+
+		conf, err := loader.LoadEmbeddedConf(ctx, embeddedDir+"/"+entry.Name(), r.logger)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("load embedded conf: %w", err)
+		}
+
+		conf.Patcher = r.objectPatcher
+		conf.ScheduleManager = r.scheduleManager
+		conf.KubeEventsManager = r.kubeEventsManager
+		conf.GlobalValuesGetter = r.global.GetValues
+
+		module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return fmt.Errorf("new module by config: %w", err)
+		}
+
+		r.mu.Lock()
+		r.modules[module.GetName()] = module
+		r.mu.Unlock()
+	}
+
+	return nil
+}

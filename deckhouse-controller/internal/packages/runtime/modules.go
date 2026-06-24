@@ -16,7 +16,6 @@ package runtime
 
 import (
 	"context"
-	"path/filepath"
 	"slices"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -112,9 +111,9 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
-	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
+	conf.GlobalValuesGetter = r.global.GetValues
 
-	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)
+	module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", status.NewError("LoadFailed", err)
