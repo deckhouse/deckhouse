@@ -80,7 +80,7 @@ spec:
             description: ContainerdIntegrityPolicyStatus defines the observed state
               of ContainerdIntegrityPolicy.
             properties:
-              protectedNamespace:
+              protectedNamespaces:
                 description: List of namespace names that match the protectedNamespaces
                   selector.
                 items:

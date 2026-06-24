@@ -40,7 +40,7 @@ type ProtectedNamespacesSelector struct {
 type ContainerdIntegrityPolicyStatus struct {
 	// List of namespace names that match the protectedNamespaces selector.
 	// +optional
-	ProtectedNamespace []string `json:"protectedNamespace,omitempty"`
+	ProtectedNamespaces []string `json:"protectedNamespaces,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -48,7 +48,7 @@ type ContainerdIntegrityPolicyStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:metadata:labels="heritage=deckhouse"
 // +kubebuilder:metadata:labels="module=node-manager"
-// +kubebuilder:printcolumn:name="ProtectedNamespaces",type="string",JSONPath=".status.protectedNamespace",description="Namespaces protected by this policy"
+// +kubebuilder:printcolumn:name="ProtectedNamespaces",type="string",JSONPath=".status.protectedNamespaces",description="Namespaces protected by this policy"
 
 // ContainerdIntegrityPolicy defines containerd image integrity policy for selected namespaces.
 type ContainerdIntegrityPolicy struct {
