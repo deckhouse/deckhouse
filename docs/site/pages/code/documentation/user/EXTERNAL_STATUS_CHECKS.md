@@ -223,7 +223,13 @@ Access to external status check information depends on your project role:
 | View the external service URL | **Developer** |
 | Retry a failed check | **Developer** |
 
-For internal projects, authenticated users who can read merge requests in the target project can also read status check responses.
+For projects with `internal` visibility, an authenticated user who is not marked as external
+can read external status check responses in the merge request page widget
+if they have read access to that merge request.
+
+The external check URL is shown only to users with permission to view external status check URLs
+(in standard roles, `Developer` or higher), so it is not shown to a regular user
+who is not a project member.
 
 ## Deleting an external status check
 
