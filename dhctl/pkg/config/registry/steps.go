@@ -64,9 +64,9 @@ func checkRegistryInitialization(ctx context.Context, kubeClient client.KubeClie
 		// New-arch readiness: require only that registry-init was applied (the PKI
 		// hook persisted the CA into registry-module-pki and set the is-applied
 		// annotation). Cache + agent readiness is verified earlier in the dhctl
-		// finalize sequence (WaitForCacheAndAgentReady), after which the temporary
-		// bootstrap cache is torn down (DeleteBootstrapCache); the legacy
-		// registry-state Ready condition is no longer consulted.
+		// finalize sequence (WaitForCacheReady -> DeleteBootstrapCache ->
+		// WaitForAgentReady), after which the temporary bootstrap cache is torn
+		// down; the legacy registry-state Ready condition is no longer consulted.
 		if err := checkInit(ctx, kubeClient); err != nil {
 			log.DebugF("Error while checking registry init: %v\n", err)
 			return ErrIsNotReady

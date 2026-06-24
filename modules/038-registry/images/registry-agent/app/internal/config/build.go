@@ -155,7 +155,7 @@ func Build(cfg RegistryConfig, opts Options) (containerd.DesiredState, []proxy.R
 
 		// proxy route.
 		if cacheOn {
-			routes = append(routes, proxy.Route{NS: e.Host, Mode: proxy.ModeCache, CacheURL: CacheURL})
+			routes = append(routes, proxy.Route{NS: e.Host, Mode: proxy.ModeCache, CacheURL: CacheURL, CacheCA: opts.ModuleCA})
 			continue
 		}
 		if e.Upstream == nil {

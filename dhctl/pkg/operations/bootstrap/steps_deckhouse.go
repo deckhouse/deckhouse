@@ -88,14 +88,22 @@ func InstallDeckhouse(
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
-		// Air-gap (NeedsSeed) only: wait for the module cache + agent to take over,
-		// then tear the temporary bootstrap cache down.
+		// Air-gap (NeedsSeed) only: hand over from the temporary bootstrap cache to
+		// the module cache + agent. Order matters — the bootstrap cache and the
+		// agent both bind the node's :5001 (hostNetwork), so they cannot coexist:
+		//   1. wait for registry-cache (pod-network) Ready — it serves the hostPath
+		//      the bootstrap cache filled, while the bootstrap cache still runs;
+		//   2. delete the bootstrap cache — frees the node's :5001;
+		//   3. wait for registry-agent (hostNetwork) Ready — now it can bind :5001.
 		if config.Registry.NeedsSeed() {
-			if err := registry_ops.WaitForCacheAndAgentReady(ctx, kubeCl); err != nil {
-				return fmt.Errorf("registry cache/agent not ready: %w", err)
+			if err := registry_ops.WaitForCacheReady(ctx, kubeCl); err != nil {
+				return fmt.Errorf("registry cache not ready: %w", err)
 			}
 			if err := registry_ops.DeleteBootstrapCache(ctx, kubeCl); err != nil {
 				return fmt.Errorf("delete bootstrap cache: %w", err)
+			}
+			if err := registry_ops.WaitForAgentReady(ctx, kubeCl); err != nil {
+				return fmt.Errorf("registry agent not ready: %w", err)
 			}
 		}
 

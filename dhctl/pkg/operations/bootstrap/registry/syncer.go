@@ -52,26 +52,36 @@ var (
 	}
 )
 
-// WaitForCacheAndAgentReady waits for the registry-cache and registry-agent
-// DaemonSets to have all desired pods Ready.
-func WaitForCacheAndAgentReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for registry-cache + registry-agent to become Ready", cacheReadyPollAttempts, cacheReadyPollWait).
+// WaitForCacheReady waits for the registry-cache DaemonSet to have all desired
+// pods Ready. registry-cache is pod-network (not hostNetwork), so it comes up
+// while the bootstrap cache still holds the node's :5001 — it serves from the
+// hostPath the bootstrap cache filled.
+func WaitForCacheReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Waiting for registry-cache to become Ready", cacheReadyPollAttempts, cacheReadyPollWait).
 		RunContext(ctx, func() error {
-			return checkCacheAndAgentReady(ctx, kubeCl)
+			return checkDaemonSetReady(ctx, kubeCl, "registry-cache")
 		})
 }
 
-func checkCacheAndAgentReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	for _, name := range []string{"registry-cache", "registry-agent"} {
-		ds, err := kubeCl.AppsV1().DaemonSets("d8-system").Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("get daemonset %s: %w", name, err)
-		}
-		if ds.Status.DesiredNumberScheduled < 1 || ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
-			return fmt.Errorf("%s not ready (desired=%d ready=%d)", name, ds.Status.DesiredNumberScheduled, ds.Status.NumberReady)
-		}
-	}
+// WaitForAgentReady waits for the registry-agent DaemonSet to have all desired
+// pods Ready. registry-agent is hostNetwork and binds the node's :5001, so it can
+// only start once the bootstrap cache (which holds 127.0.0.1:5001) is gone — call
+// this AFTER DeleteBootstrapCache.
+func WaitForAgentReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Waiting for registry-agent to become Ready", cacheReadyPollAttempts, cacheReadyPollWait).
+		RunContext(ctx, func() error {
+			return checkDaemonSetReady(ctx, kubeCl, "registry-agent")
+		})
+}
 
+func checkDaemonSetReady(ctx context.Context, kubeCl *client.KubernetesClient, name string) error {
+	ds, err := kubeCl.AppsV1().DaemonSets("d8-system").Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("get daemonset %s: %w", name, err)
+	}
+	if ds.Status.DesiredNumberScheduled < 1 || ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
+		return fmt.Errorf("%s not ready (desired=%d ready=%d)", name, ds.Status.DesiredNumberScheduled, ds.Status.NumberReady)
+	}
 	return nil
 }
 

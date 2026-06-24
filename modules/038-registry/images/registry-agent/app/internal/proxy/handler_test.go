@@ -17,6 +17,7 @@ limitations under the License.
 package proxy
 
 import (
+	"encoding/pem"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -59,6 +60,50 @@ func TestHandler_CachePassThrough(t *testing.T) {
 	if gotNS != "registry.d8-system.svc:5001" {
 		t.Fatalf("cache did not receive ns: %q", gotNS)
 	}
+}
+
+// TestHandler_CacheTLSVerifiesCA asserts the cache route forwards over HTTPS
+// trusting route.CacheCA: the cache serves a cert signed by its own (non-system)
+// CA, so with CacheCA set the proxy succeeds, and without it the TLS handshake
+// fails ("x509: certificate signed by unknown authority") → 502.
+func TestHandler_CacheTLSVerifiesCA(t *testing.T) {
+	cache := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "FROM-TLS-CACHE")
+	}))
+	defer cache.Close()
+
+	caPEM := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cache.Certificate().Raw}))
+
+	t.Run("with CacheCA -> 200", func(t *testing.T) {
+		router := NewRouter([]Route{{NS: "registry.d8-system.svc:5001", Mode: ModeCache, CacheURL: cache.URL, CacheCA: caPEM}})
+		h, err := NewHandler(router, stubAuth{ok: false})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v2/x/manifests/latest?ns=registry.d8-system.svc:5001", nil)
+		h.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", rr.Code)
+		}
+		if body, _ := io.ReadAll(rr.Result().Body); string(body) != "FROM-TLS-CACHE" {
+			t.Fatalf("body = %q, want FROM-TLS-CACHE", body)
+		}
+	})
+
+	t.Run("without CacheCA -> 502 (untrusted cert)", func(t *testing.T) {
+		router := NewRouter([]Route{{NS: "registry.d8-system.svc:5001", Mode: ModeCache, CacheURL: cache.URL}})
+		h, err := NewHandler(router, stubAuth{ok: false})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v2/x/manifests/latest?ns=registry.d8-system.svc:5001", nil)
+		h.ServeHTTP(rr, req)
+		if rr.Code != http.StatusBadGateway {
+			t.Fatalf("status = %d, want 502 (untrusted cache cert must fail)", rr.Code)
+		}
+	})
 }
 
 func TestHandler_DirectRequiresLocalAuth(t *testing.T) {

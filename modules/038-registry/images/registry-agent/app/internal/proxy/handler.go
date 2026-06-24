@@ -91,10 +91,19 @@ func (h *Handler) proxyCache(w http.ResponseWriter, r *http.Request, route Route
 		http.Error(w, "bad cache url", http.StatusInternalServerError)
 		return
 	}
+	// The cache serves HTTPS with a cert signed by the module CA, which is not in
+	// the system roots — trust route.CacheCA explicitly (else: x509 unknown
+	// authority). Empty CacheCA falls back to the default transport.
+	base, err := transportWithCA(route.CacheCA)
+	if err != nil {
+		http.Error(w, "bad cache ca", http.StatusInternalServerError)
+		return
+	}
 	rp := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
 			pr.SetURL(target)
 		},
+		Transport: base,
 	}
 	rp.ServeHTTP(w, r)
 }
