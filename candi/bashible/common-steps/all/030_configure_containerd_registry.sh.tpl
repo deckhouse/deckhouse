@@ -133,7 +133,7 @@ bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
 {{- end }}
 {{- if and $agentManaged (eq $host_name "registry.d8-system.svc:5001") }}
   {{- /* Pre-CNI bootstrap fallback for JOINING nodes */}}
-  {{- range $ep := .clusterMasterEndpoints }}
+  {{- range $ep := $.clusterMasterEndpoints }}
   [host."https://{{ $ep.address }}:5001"]
     capabilities = ["pull", "resolve"]
     skip_verify = true
