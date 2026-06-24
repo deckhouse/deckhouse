@@ -102,7 +102,7 @@ When the target branch changes, Deckhouse Code recalculates the applicable check
 
 ## HMAC shared secret
 
-If **HMAC Shared Secret** is set, Deckhouse Code adds the `X-Gitlab-Signature` header to requests sent to the external service.
+If "HMAC Shared Secret" is set, Deckhouse Code adds the `X-Gitlab-Signature` header to requests sent to the external service.
 
 The header value is an HMAC-SHA256 digest of the request body, generated with the shared secret.
 
