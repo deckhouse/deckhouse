@@ -291,7 +291,7 @@ Check the following:
 
 ### Retry is not available
 
-The **Retry** action is shown only when all of the following conditions are true:
+The "Retry" action is shown only when all of the following conditions are true:
 
 - The check has the `failed` status.
 - The check belongs to the current merge request `HEAD` SHA.
