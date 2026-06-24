@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.31.0
@@ -8,13 +7,10 @@ metadata:
 spec:
   version: v1.31.0
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.31.1
@@ -22,13 +18,10 @@ metadata:
 spec:
   version: v1.31.1
 status:
-  approved: false
-  message: ""
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.31.2
@@ -36,13 +29,10 @@ metadata:
 spec:
   version: v1.31.2
 status:
-  approved: false
-  message: ""
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -54,13 +44,10 @@ metadata:
 spec:
   version: v1.31.3
 status:
-  approved: false
-  message: ""
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.32.0
@@ -68,7 +55,6 @@ metadata:
 spec:
   version: v1.32.0
 status:
-  approved: false
   message: awaiting for Deckhouse v1.31.3 pod to be ready
   phase: Pending
   transitionTime: null

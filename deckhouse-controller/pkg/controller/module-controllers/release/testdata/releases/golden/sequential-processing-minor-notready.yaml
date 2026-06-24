@@ -10,17 +10,14 @@ metadata:
   resourceVersion: "999"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/team/foxtrot/modules
     scheme: HTTPS
 status:
-  message: ""
   modules:
   - name: upmeter
     policy: foxtrot-alpha
   modulesCount: 1
-  phase: ""
   syncTime: "2024-05-03T21:05:05Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -50,11 +47,8 @@ spec:
   version: 1.70.0
   weight: 950
 status:
-  approved: false
-  message: ""
   phase: Superseded
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -85,11 +79,8 @@ spec:
   version: 1.71.0
   weight: 950
 status:
-  approved: false
-  message: ""
   phase: Deployed
   pullDuration: 0s
-  size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -118,11 +109,9 @@ spec:
   version: 1.72.0
   weight: 950
 status:
-  approved: false
   message: awaiting for module v1.71.0 to be ready
   phase: Pending
   pullDuration: 0s
-  size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
 apiVersion: deckhouse.io/v1alpha1

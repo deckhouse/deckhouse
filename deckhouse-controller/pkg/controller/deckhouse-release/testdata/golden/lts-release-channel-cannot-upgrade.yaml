@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.60.1
@@ -8,13 +7,10 @@ metadata:
 spec:
   version: v1.60.1
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -26,13 +22,10 @@ metadata:
 spec:
   version: v1.65.6
 status:
-  approved: false
-  message: ""
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.76.7
@@ -40,7 +33,6 @@ metadata:
 spec:
   version: v1.76.7
 status:
-  approved: false
   message: minor version is greater than deployed v1.65.6 by 11, it's more than acceptable
     channel limitation
   phase: Pending

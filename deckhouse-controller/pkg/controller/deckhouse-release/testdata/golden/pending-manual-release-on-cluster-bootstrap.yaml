@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.45.0
@@ -9,12 +8,10 @@ spec:
   version: v1.45.0
 status:
   approved: true
-  message: ""
   phase: Deployed
   transitionTime: "2023-04-20T10:10:30Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -25,7 +22,6 @@ metadata:
 spec:
   version: v1.46.0
 status:
-  approved: false
   message: 'Release is waiting for the ''release.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
   transitionTime: "2023-05-20T10:10:10Z"

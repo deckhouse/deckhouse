@@ -10,15 +10,10 @@ metadata:
   resourceVersion: "999"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: prod.deckhouse.io/modules
     scheme: HTTPS
 status:
-  message: ""
-  modules: null
-  modulesCount: 0
-  phase: ""
   syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -49,8 +44,6 @@ spec:
   version: 1.3.10
   weight: 900
 status:
-  approved: false
-  message: ""
   phase: Pending
   pullDuration: 307.070601ms
   size: 3087774

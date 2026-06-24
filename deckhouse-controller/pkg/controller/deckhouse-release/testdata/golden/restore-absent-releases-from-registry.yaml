@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.57.3
@@ -8,13 +7,10 @@ metadata:
 spec:
   version: v1.57.3
 status:
-  approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -27,12 +23,9 @@ spec:
   changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.58.1
   version: v1.58.1
 status:
-  approved: false
-  message: ""
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -45,12 +38,9 @@ spec:
   changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.59.3
   version: v1.59.3
 status:
-  approved: false
-  message: ""
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -63,6 +53,4 @@ spec:
   changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.60.2
   version: v1.60.2
 status:
-  approved: false
-  message: ""
   transitionTime: null

@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.16.0
@@ -8,7 +7,5 @@ metadata:
 spec:
   version: v1.16.0
 status:
-  approved: false
-  message: ""
   phase: Deployed
   transitionTime: null

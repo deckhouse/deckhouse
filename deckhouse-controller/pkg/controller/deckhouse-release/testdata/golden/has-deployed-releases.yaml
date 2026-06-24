@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   creationTimestamp: "2023-02-22T11:22:01Z"
@@ -22,8 +21,6 @@ spec:
     k8s: 1.21.0
   version: v1.43.8
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: "2023-06-15T21:20:00Z"
 ---
@@ -49,8 +46,7 @@ spec:
     nodesMinimalOSVersionUbuntu: "18.04"
   version: v1.44.4
 status:
-  approved: false
-  message: ""
+  approved: true
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -82,12 +78,10 @@ spec:
   version: v1.45.11
 status:
   approved: true
-  message: ""
   phase: Superseded
   transitionTime: "2023-07-03T21:06:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   creationTimestamp: "2023-05-17T16:48:01Z"
@@ -109,7 +103,6 @@ spec:
     nodesMinimalOSVersionUbuntu: "18.04"
   version: v1.45.9
 status:
-  approved: false
   message: Skipped by cleanup hook
   phase: Skipped
   transitionTime: "2023-06-15T21:35:37Z"
@@ -133,6 +126,5 @@ spec:
   version: v1.46.10
 status:
   approved: true
-  message: ""
   phase: Deployed
   transitionTime: "2023-07-03T21:06:00Z"

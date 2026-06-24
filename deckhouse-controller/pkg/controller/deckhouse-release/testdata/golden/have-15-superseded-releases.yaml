@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.10
@@ -8,13 +7,10 @@ metadata:
 spec:
   version: v1.27.10
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.11
@@ -22,13 +18,10 @@ metadata:
 spec:
   version: v1.27.11
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.12
@@ -36,13 +29,10 @@ metadata:
 spec:
   version: v1.27.12
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.13
@@ -50,13 +40,10 @@ metadata:
 spec:
   version: v1.27.13
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.14
@@ -64,13 +51,10 @@ metadata:
 spec:
   version: v1.27.14
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.5
@@ -78,13 +62,10 @@ metadata:
 spec:
   version: v1.27.5
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.6
@@ -92,13 +73,10 @@ metadata:
 spec:
   version: v1.27.6
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.7
@@ -106,13 +84,10 @@ metadata:
 spec:
   version: v1.27.7
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.8
@@ -120,13 +95,10 @@ metadata:
 spec:
   version: v1.27.8
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.27.9
@@ -134,7 +106,5 @@ metadata:
 spec:
   version: v1.27.9
 status:
-  approved: false
-  message: ""
   phase: Superseded
   transitionTime: null

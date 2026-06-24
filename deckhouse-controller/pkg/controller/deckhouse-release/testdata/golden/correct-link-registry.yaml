@@ -17,13 +17,10 @@ spec:
     kubernetes: '>= 1.27'
   version: v1.15.0
 status:
-  approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -38,12 +35,9 @@ spec:
     kubernetes: '>= 1.27'
   version: v1.16.0
 status:
-  approved: false
-  message: ""
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -58,12 +52,9 @@ spec:
     kubernetes: '>= 1.27'
   version: v1.17.0
 status:
-  approved: false
-  message: ""
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -78,6 +69,4 @@ spec:
     kubernetes: '>= 1.27'
   version: v1.18.0
 status:
-  approved: false
-  message: ""
   transitionTime: null

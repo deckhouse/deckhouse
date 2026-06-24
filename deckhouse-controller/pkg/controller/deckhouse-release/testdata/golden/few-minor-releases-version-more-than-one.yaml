@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.31.0
@@ -8,13 +7,10 @@ metadata:
 spec:
   version: v1.31.0
 status:
-  approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.33.0
@@ -22,13 +18,11 @@ metadata:
 spec:
   version: v1.33.0
 status:
-  approved: false
   message: minor version is greater than deployed v1.31.0 by one
   phase: Pending
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.34.0
@@ -36,13 +30,11 @@ metadata:
 spec:
   version: v1.34.0
 status:
-  approved: false
   message: awaiting for v1.33.0 release to be deployed
   phase: Pending
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.35.0
@@ -50,7 +42,6 @@ metadata:
 spec:
   version: v1.35.0
 status:
-  approved: false
   message: awaiting for v1.33.0 release to be deployed
   phase: Pending
   transitionTime: null

@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.25.1
@@ -8,7 +7,6 @@ metadata:
 spec:
   version: v1.25.1
 status:
-  approved: false
   message: 'release update is blocked by alert "alert-eq": severity 4 exceeds threshold
     4'
   phase: Pending

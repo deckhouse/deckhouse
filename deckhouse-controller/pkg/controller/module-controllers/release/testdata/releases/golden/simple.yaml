@@ -10,19 +10,16 @@ metadata:
   resourceVersion: "999"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/team/foxtrot/modules
     scheme: HTTPS
 status:
-  message: ""
   modules:
   - name: mcplay
     policy: foxtrot-alpha
   - name: parca
     policy: foxtrot-alpha
   modulesCount: 2
-  phase: ""
   syncTime: "2024-05-03T21:05:05Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -56,11 +53,8 @@ spec:
   version: 1.4.3
   weight: 900
 status:
-  approved: false
-  message: ""
   phase: Deployed
   pullDuration: 0s
-  size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
 apiVersion: deckhouse.io/v1alpha1

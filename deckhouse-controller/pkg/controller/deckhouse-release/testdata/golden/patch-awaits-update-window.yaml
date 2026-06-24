@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.25.0
@@ -8,13 +7,10 @@ metadata:
 spec:
   version: v1.25.0
 status:
-  approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -25,13 +21,11 @@ metadata:
 spec:
   version: v1.25.1
 status:
-  approved: false
   message: Release is waiting for the update window until 18 Oct 2019 08:00 UTC
   phase: Pending
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.26.0
@@ -39,7 +33,6 @@ metadata:
 spec:
   version: v1.26.0
 status:
-  approved: false
   message: awaiting for v1.25.1 release to be deployed
   phase: Pending
   transitionTime: null

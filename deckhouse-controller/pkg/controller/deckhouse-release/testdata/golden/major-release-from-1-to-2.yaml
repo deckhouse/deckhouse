@@ -1,6 +1,5 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -11,13 +10,10 @@ metadata:
 spec:
   version: v1.31.0
 status:
-  approved: false
-  message: ""
   phase: Deployed
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
-approved: false
 kind: DeckhouseRelease
 metadata:
   name: v2.10.0
@@ -25,7 +21,6 @@ metadata:
 spec:
   version: v2.10.0
 status:
-  approved: false
   message: major version is greater than deployed v1.31.0
   phase: Pending
   transitionTime: null

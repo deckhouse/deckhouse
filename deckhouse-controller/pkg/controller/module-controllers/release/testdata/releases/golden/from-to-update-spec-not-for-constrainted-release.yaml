@@ -8,16 +8,13 @@ metadata:
   resourceVersion: "1000"
 spec:
   registry:
-    ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io
     scheme: HTTPS
 status:
-  message: ""
   modules:
   - name: demo
   modulesCount: 1
-  phase: ""
   syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -39,10 +36,8 @@ spec:
   weight: 900
 status:
   approved: true
-  message: ""
   phase: Deployed
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -64,11 +59,9 @@ spec:
   version: 1.68.0
   weight: 900
 status:
-  approved: false
   message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -93,7 +86,6 @@ status:
   message: awaiting for v1.68.0 release to be deployed
   phase: Pending
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -116,11 +108,9 @@ spec:
   version: 1.70.0
   weight: 900
 status:
-  approved: false
   message: awaiting for v1.68.0 release to be deployed
   phase: Pending
   pullDuration: 0s
-  size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
