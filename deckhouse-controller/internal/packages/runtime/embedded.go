@@ -99,6 +99,8 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 		conf.ScheduleManager = r.scheduleManager
 		conf.KubeEventsManager = r.kubeEventsManager
 		conf.GlobalValuesGetter = r.global.GetValues
+		// TODO(ipaqsa): set deckhouse version instead
+		conf.Definition.Version = "v2.0.0"
 
 		module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 		if err != nil {
