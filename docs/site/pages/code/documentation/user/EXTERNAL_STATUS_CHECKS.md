@@ -253,7 +253,7 @@ Deckhouse Code records audit events for status check management and response cha
 
 Check the following:
 
-- The **Status checks must succeed** checkbox is enabled.
+- The "Status checks must succeed" checkbox is enabled.
 - The check applies to the merge request target branch.
 - The external service sent `passed` for the current `HEAD` SHA.
 - The timeout did not expire before the external service callback.
