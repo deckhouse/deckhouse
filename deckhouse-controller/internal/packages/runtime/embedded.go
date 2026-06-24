@@ -20,8 +20,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"slices"
+	"strings"
 
 	"github.com/ettle/strcase"
 	"github.com/goccy/go-yaml"
@@ -46,7 +46,6 @@ const (
 	// (e.g. "deckhouseEnabled"); it is stripped to recover the module name.
 	enabledSuffix = "Enabled"
 )
-
 
 // dummyModules are modules that should be skipped.
 var dummyModules = []string{
