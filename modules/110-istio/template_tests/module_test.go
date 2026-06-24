@@ -329,6 +329,49 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
+	Context("Telemetry mesh defaults for operator-free control plane 1.27", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+		})
+
+		It("enables mesh metrics via defaultProviders and Telemetry d8-main by default", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring("defaultProviders"))
+			Expect(meshConfig).To(ContainSubstring("prometheus"))
+
+			telemetry := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(telemetry.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		})
+
+		It("keeps Telemetry API mode configuration when enabled", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring("defaultProviders"))
+			Expect(meshConfig).To(ContainSubstring("prometheus"))
+
+			telemetry := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(telemetry.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		})
+	})
+
 	Context("There are revisions to install, no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
