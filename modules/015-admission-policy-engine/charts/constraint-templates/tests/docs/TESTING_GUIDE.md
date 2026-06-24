@@ -847,9 +847,25 @@ opa version
 
 ### Testing external_data constraints
 
-Constraints that use `external_data` (e.g. `verify-image-signature`, `vulnerable-images`) **can** be tested with gator using the inventory-based mock pattern. The approach:
+Constraints that use `external_data` (e.g. `verify-image-signature`, `vulnerable-images`) **can** be tested with gator using the inventory-based mock pattern.
 
-1. **Rego template** includes an `isTest` parameter. When `isTest: true`, the template calls `external_data_from_inventory(provider, keys)` instead of the real `external_data` function. This helper reads mock responses from gator inventory objects.
+#### Automatic rewrite
+
+When `spec.externalData` is declared in the test matrix, the generator **automatically rewrites** `external_data()` calls in the rendered constraint-template Rego:
+
+- `external_data({"provider": "X", "keys": Y})` → `external_data_from_inventory("X", Y)`
+
+This means the **runtime Rego template keeps the real `external_data()` builtin** — you don't need to maintain a separate test-only version. The rewrite only affects the rendered test artifacts under `rendered/`.
+
+> **Manual override**: if you need full control over the test template, place a `constraint-template.gator.yaml` file next to the test matrix. It takes priority over the auto-rewrite.
+
+#### Setup steps
+
+1. **Rego template** must include:
+   - An `isTest` parameter in the CRD schema.
+   - An `is_test_mode` rule that checks `input.parameters.isTest`.
+   - An `external_data_from_inventory(provider, keys)` helper that reads mock data from `data.inventory`.
+   - A `get_data` dispatcher: calls `external_data_from_inventory` in test mode, `external_data` in production.
 
 2. **Constraint manifest** sets `parameters.isTest: true`:
 

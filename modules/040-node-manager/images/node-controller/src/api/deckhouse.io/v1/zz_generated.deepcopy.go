@@ -317,6 +317,11 @@ func (in *KubeletSpec) DeepCopyInto(out *KubeletSpec) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.SeccompDefault != nil {
+		in, out := &in.SeccompDefault, &out.SeccompDefault
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ResourceReservation != nil {
 		in, out := &in.ResourceReservation, &out.ResourceReservation
 		*out = new(ResourceReservationSpec)

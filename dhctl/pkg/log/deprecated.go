@@ -133,29 +133,29 @@ func (d *DummyLogger) LogProcess(_, t string, run func() error) error {
 	return err
 }
 
-func (d *DummyLogger) LogInfoF(format string, a ...interface{}) {
+func (d *DummyLogger) LogInfoF(format string, a ...any) {
 	fmt.Printf(format, a...)
 }
 
-func (d *DummyLogger) LogInfoLn(a ...interface{}) {
+func (d *DummyLogger) LogInfoLn(a ...any) {
 	fmt.Println(a...)
 }
 
-func (d *DummyLogger) LogErrorF(format string, a ...interface{}) {
+func (d *DummyLogger) LogErrorF(format string, a ...any) {
 	fmt.Printf(format, a...)
 }
 
-func (d *DummyLogger) LogErrorLn(a ...interface{}) {
+func (d *DummyLogger) LogErrorLn(a ...any) {
 	fmt.Println(a...)
 }
 
-func (d *DummyLogger) LogDebugF(format string, a ...interface{}) {
+func (d *DummyLogger) LogDebugF(format string, a ...any) {
 	if debugEnabled {
 		fmt.Printf(format, a...)
 	}
 }
 
-func (d *DummyLogger) LogDebugLn(a ...interface{}) {
+func (d *DummyLogger) LogDebugLn(a ...any) {
 	if debugEnabled {
 		fmt.Println(a...)
 	}
@@ -173,11 +173,11 @@ func (d *DummyLogger) LogFailRetry(l string) {
 	d.LogFail(l)
 }
 
-func (d *DummyLogger) LogWarnLn(a ...interface{}) {
+func (d *DummyLogger) LogWarnLn(a ...any) {
 	fmt.Println(a...)
 }
 
-func (d *DummyLogger) LogWarnF(format string, a ...interface{}) {
+func (d *DummyLogger) LogWarnF(format string, a ...any) {
 	fmt.Printf(format, a...)
 }
 
@@ -219,35 +219,35 @@ func (w *externalDummyLoggerWrapper) Process(p external.Process, title string, a
 	return w.parent.LogProcess(string(p), title, action)
 }
 
-func (w *externalDummyLoggerWrapper) InfoFWithoutLn(format string, a ...interface{}) {
+func (w *externalDummyLoggerWrapper) InfoFWithoutLn(format string, a ...any) {
 	w.parent.LogInfoF(format, a...)
 }
 
-func (w *externalDummyLoggerWrapper) InfoLn(a ...interface{}) {
+func (w *externalDummyLoggerWrapper) InfoLn(a ...any) {
 	w.parent.LogInfoLn(a...)
 }
 
-func (w *externalDummyLoggerWrapper) ErrorFWithoutLn(format string, a ...interface{}) {
+func (w *externalDummyLoggerWrapper) ErrorFWithoutLn(format string, a ...any) {
 	w.parent.LogErrorF(format, a...)
 }
 
-func (w *externalDummyLoggerWrapper) ErrorLn(a ...interface{}) {
+func (w *externalDummyLoggerWrapper) ErrorLn(a ...any) {
 	w.parent.LogErrorLn(a...)
 }
 
-func (w *externalDummyLoggerWrapper) DebugFWithoutLn(format string, a ...interface{}) {
+func (w *externalDummyLoggerWrapper) DebugFWithoutLn(format string, a ...any) {
 	w.parent.LogDebugF(format, a...)
 }
 
-func (w *externalDummyLoggerWrapper) DebugLn(a ...interface{}) {
+func (w *externalDummyLoggerWrapper) DebugLn(a ...any) {
 	w.parent.LogDebugLn(a...)
 }
 
-func (w *externalDummyLoggerWrapper) WarnFWithoutLn(format string, a ...interface{}) {
+func (w *externalDummyLoggerWrapper) WarnFWithoutLn(format string, a ...any) {
 	w.parent.LogWarnF(format, a...)
 }
 
-func (w *externalDummyLoggerWrapper) WarnLn(a ...interface{}) {
+func (w *externalDummyLoggerWrapper) WarnLn(a ...any) {
 	w.parent.LogWarnLn(a...)
 }
 

@@ -119,6 +119,7 @@ spec:
                   - `JoinEtcdCluster`: Joins a new member to the etcd cluster.
                   - `WaitPodReady`: Waits for the component static pod to become `Ready` after a restart.
                   - `CertObserve`: Collects the current certificate expiration dates for the component and publishes them to `status.observedState`.
+                  - `RenewSignature`: Re-issues the signature key for the kube-apiserver.
                 items:
                   description: |-
                     Name of a single step performed within an operation.
@@ -131,6 +132,7 @@ spec:
                   - JoinEtcdCluster
                   - WaitPodReady
                   - CertObserve
+                  - RenewSignature
                   type: string
                 minItems: 1
                 type: array

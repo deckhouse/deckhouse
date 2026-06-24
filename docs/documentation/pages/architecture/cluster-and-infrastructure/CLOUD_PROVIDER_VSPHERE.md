@@ -21,7 +21,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Cloud-provider-vsphere architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vsphere.png)
+![Cloud-provider-vsphere architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vsphere.png)
 
 ## Module components
 
@@ -49,7 +49,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-1. **CSI driver (vsphere)**: It is an implementation of the CSI driver for VMware vSphere. To study the `cloud-provider-vsphere` CSI driver architecture, refer to [the corresponding documentation](../infrastructure/csi-vsphere.html) section.
+1. **CSI driver (vsphere)**: It is an implementation of the CSI driver for VMware vSphere. To study the `cloud-provider-vsphere` CSI driver architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver-vsphere.html) section.
 
    CSI driver (vsphere) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)) sidecar container.
 

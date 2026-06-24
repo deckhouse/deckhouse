@@ -127,6 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         v.canvas.style.height = `${viewport.height}px`;
 
         // Render PDF page into canvas context
+
         let renderContext = {
           canvasContext: v.ctx,
           viewport: viewport

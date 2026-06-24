@@ -41,7 +41,7 @@ concurrency:
 jobs:
   close_dependabot_prs_for_forks:
     name: Autoclose Dependabot PRs for forks
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
     env:
       ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
@@ -81,6 +81,7 @@ jobs:
       labels: ${{ steps.pr_props.outputs.labels }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+      changes_node_controller: ${{ steps.changes.outputs.node_controller }}
 
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
@@ -285,6 +286,8 @@ jobs:
               - './ee/candi/**/openapi/*'
             not_markdown:
               - '!./**/*.md'
+            node_controller:
+              - './modules/040-node-manager/images/node-controller/**'
 
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
@@ -302,7 +305,7 @@ jobs:
     name: Prepare input for validation scripts
     needs:
       - pull_request_info
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     outputs:
       run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
@@ -362,7 +365,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_no_cyrillic == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     steps:
 
       # <template: checkout_step>
@@ -391,7 +394,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_doc_changes == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     steps:
 
       # <template: checkout_step>
@@ -540,6 +543,14 @@ jobs:
         with:
           name: pr_diff
 
+      - name: Validate spelling wordlist <-> dev_OPS.dic sync
+        env:
+          WORDLIST_PATH: tools/docs/spelling/wordlist
+          DICT_PATH: tools/docs/spelling/dictionaries/dev_OPS.dic
+          DIFF_PATH: ./pr.diff
+        run: |
+          ./tools/docs/spelling/validate_dictionary_sync.sh "${DIFF_PATH}"
+
        # <template: spellcheck_template>
       - name: Spell check
         run: |
@@ -553,7 +564,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_doc_reference == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     steps:
 
       # <template: checkout_step>
@@ -582,7 +593,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_copyright == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     steps:
 
       # <template: checkout_step>
@@ -611,7 +622,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_grafana_dashboard == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     steps:
 
       # <template: checkout_step>
@@ -640,7 +651,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_markdown == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     steps:
 
       # <template: checkout_step>
@@ -669,7 +680,7 @@ jobs:
       - discover
       - pull_request_info
     if: needs.discover.outputs.run_release_requirements == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     steps:
 
       # <template: checkout_step>
@@ -693,7 +704,7 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: "ubuntu-slim"
+    runs-on: self-slim
     needs:
       - discover
       - pull_request_info

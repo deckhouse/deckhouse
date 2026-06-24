@@ -99,7 +99,7 @@ func RegisterController(
 	}
 
 	r.status = status.NewService(r.client, packageRuntime.Status().GetStatus, r.logger)
-	r.status.Start(context.Background(), packageRuntime.Status().GetCh())
+	r.status.Start(context.Background(), packageRuntime.Status().Queue())
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).

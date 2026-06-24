@@ -21,7 +21,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`cloud-provider-huaweicloud`](/modules/cloud-provider-huaweicloud/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Cloud-provider-huaweicloud architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-huaweicloud.png)
+![Cloud-provider-huaweicloud architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-huaweicloud.png)
 
 ## Module components
 
@@ -59,7 +59,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-4. **CSI driver (huaweicloud)**: It is an implementation of the CSI driver for Huawei Cloud. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../infrastructure/csi-driver.html).
+4. **CSI driver (huaweicloud)**: It is an implementation of the CSI driver for Huawei Cloud. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../../storage/csi-drivers/csi-driver.html).
 
    CSI driver (huaweicloud) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
 

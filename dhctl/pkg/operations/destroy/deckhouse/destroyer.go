@@ -221,6 +221,16 @@ func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.Kubernete
 		return err
 	}
 
+	err = deckhouse.DeleteClusters(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForClustersDeletion(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
 	err = deckhouse.DeleteValidatingWebhookConfigurations(ctx, kubeCl)
 	if err != nil {
 		return err

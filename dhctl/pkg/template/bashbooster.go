@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-func RenderBashBooster(templatesDir string, data map[string]interface{}) (string, error) {
+func RenderBashBooster(templatesDir string, data map[string]any) (string, error) {
 	files, err := os.ReadDir(templatesDir)
 	if err != nil {
 		return "", fmt.Errorf("bashbooster read dir: %v", err)

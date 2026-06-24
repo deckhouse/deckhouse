@@ -185,7 +185,7 @@ func ParseConfigFromCluster(
 	var err error
 
 	return metaConfig, log.ProcessCtx(ctx, "common", "Get cluster configuration", func(ctx context.Context) error {
-		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 10, 5*time.Second).
+		return retry.NewLoop("Get cluster configuration from Kubernetes cluster", 50, 1*time.Second).
 			RunContext(ctx, func() error {
 				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
 				return err
@@ -204,7 +204,7 @@ func ParseConfigInCluster(
 		err        error
 	)
 
-	err = retry.NewSilentLoop("Get cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
+	err = retry.NewSilentLoop("Get cluster configuration from inside Kubernetes cluster", 25, 1*time.Second).
 		RunContext(ctx, func() error {
 			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
 			return err
@@ -381,9 +381,9 @@ func detectMergedDocuments(doc string) error {
 	// if we have multiple root-level apiVersion/kind fields
 	var rootLevelKinds []string
 	var rootLevelAPIVersions []string
-	lines := strings.Split(doc, "\n")
+	lines := strings.SplitSeq(doc, "\n")
 
-	for _, line := range lines {
+	for line := range lines {
 		trimmed := strings.TrimSpace(line)
 		// Skip comments and empty lines
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
@@ -395,13 +395,13 @@ func detectMergedDocuments(doc string) error {
 
 		// Only consider fields at root level (indent 0)
 		if leadingWhitespace == 0 {
-			if strings.HasPrefix(trimmed, "apiVersion:") {
-				apiVersionValue := strings.TrimSpace(strings.TrimPrefix(trimmed, "apiVersion:"))
+			if after, ok := strings.CutPrefix(trimmed, "apiVersion:"); ok {
+				apiVersionValue := strings.TrimSpace(after)
 				if apiVersionValue != "" {
 					rootLevelAPIVersions = append(rootLevelAPIVersions, apiVersionValue)
 				}
-			} else if strings.HasPrefix(trimmed, "kind:") {
-				kindValue := strings.TrimSpace(strings.TrimPrefix(trimmed, "kind:"))
+			} else if after, ok := strings.CutPrefix(trimmed, "kind:"); ok {
+				kindValue := strings.TrimSpace(after)
 				if kindValue != "" {
 					rootLevelKinds = append(rootLevelKinds, kindValue)
 				}

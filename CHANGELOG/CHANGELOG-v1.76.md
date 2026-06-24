@@ -82,6 +82,7 @@
  - **[deckhouse-controller]** Added a mechanism to migrate between CNI plugins (e.g., Flannel to Cilium) in a running cluster. [#16499](https://github.com/deckhouse/deckhouse/pull/16499)
  - **[deckhouse-controller]** Added credentials to the package repository. [#18264](https://github.com/deckhouse/deckhouse/pull/18264)
  - **[deckhouse-controller]** Added legacy (v1alpha1) PackageRepository module support with observability improvements. [#18522](https://github.com/deckhouse/deckhouse/pull/18522)
+ - **[deckhouse-controller]** Added mechanism for blocking deckhouse release if cluster have alerts with high severity. [#20741](https://github.com/deckhouse/deckhouse/pull/20741)
  - **[deckhouse-controller]** Prevented enabling multiple CNI modules simultaneously. [#18479](https://github.com/deckhouse/deckhouse/pull/18479)
  - **[deckhouse]** Add conditions summary to applications. [#20317](https://github.com/deckhouse/deckhouse/pull/20317)
  - **[deckhouse]** Add marketplace features. [#20178](https://github.com/deckhouse/deckhouse/pull/20178)
@@ -167,6 +168,7 @@
  - **[candi]** Fixed internal node IP discovery for static nodes in DVP clusters. [#18441](https://github.com/deckhouse/deckhouse/pull/18441)
  - **[candi]** fix cve node-manager and opentofu. [#19940](https://github.com/deckhouse/deckhouse/pull/19940)
  - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#18133](https://github.com/deckhouse/deckhouse/pull/18133)
+ - **[candi]** fix static node cleanup to wipe data on externally mounted volumes before unmounting, preventing stale data from causing re-bootstrap failures [#20758](https://github.com/deckhouse/deckhouse/pull/20758)
  - **[cert-manager]** Disable SecurityPolicyExceptions for cert-manager namespace [#19184](https://github.com/deckhouse/deckhouse/pull/19184)
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend  by bumping OpenTelemetry Go to v1.41.0 [#20250](https://github.com/deckhouse/deckhouse/pull/20250)
  - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18657](https://github.com/deckhouse/deckhouse/pull/18657)
@@ -247,6 +249,7 @@
  - **[deckhouse]** Bumped `shell-operator` to v1.15.3 and webhook-operator dependencies. [#19030](https://github.com/deckhouse/deckhouse/pull/19030)
  - **[deckhouse]** Ensure heritage label on d8-system namespace via hook. [#19134](https://github.com/deckhouse/deckhouse/pull/19134)
  - **[deckhouse]** Fix Scaled stuck Unknown on controller startup [#20467](https://github.com/deckhouse/deckhouse/pull/20467)
+ - **[deckhouse]** Fix package status deadlock via coalescing workqueue. [#20695](https://github.com/deckhouse/deckhouse/pull/20695)
  - **[deckhouse]** Fixed a race condition in ModuleConfig processing during startup. [#18280](https://github.com/deckhouse/deckhouse/pull/18280)
  - **[deckhouse]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
  - **[deckhouse]** Fixed module updates skipping patch releases when updating to a new minor version. [#19328](https://github.com/deckhouse/deckhouse/pull/19328)
@@ -292,6 +295,8 @@
     Geoproxy image will be restarted.
  - **[ingress-nginx]** Initial ingress store sync is  fixed. [#19031](https://github.com/deckhouse/deckhouse/pull/19031)
     All Ingress-NGINX controller pods will be restarted.
+ - **[ingress-nginx]** Nginx is updated to 1.30.3. [#20787](https://github.com/deckhouse/deckhouse/pull/20787)
+    All ingress-nginx pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19865](https://github.com/deckhouse/deckhouse/pull/19865)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20200](https://github.com/deckhouse/deckhouse/pull/20200)
@@ -356,6 +361,7 @@
     Operators can now detect degraded fencing states (quorum loss, API unreachability) through log levels and diagnostic fields without parsing log messages.
  - **[node-manager]** Include system labels in CAPI MachineDeployment capacity annotation for correct scale-from-zero behavior [#20387](https://github.com/deckhouse/deckhouse/pull/20387)
     On CAPI-based clusters (DVP, VCD, zVirt, Dynamix, HuaweiCloud), scale-from-zero now correctly handles pods with nodeSelector targeting system labels (node.deckhouse.io/group, node.deckhouse.io/type, node-role.kubernetes.io/<ng-name>). Previously such pods remained Pending indefinitely when NodeGroup had minPerZone=0. No user action required — the fix is applied automatically on upgrade.
+ - **[node-manager]** add rbac policies for persistantvolumes to manage from capi-controller-manager. [#20646](https://github.com/deckhouse/deckhouse/pull/20646)
  - **[node-manager]** caps fix inconsistent pending staticinstance [#18379](https://github.com/deckhouse/deckhouse/pull/18379)
  - **[node-manager]** deploy capi controller and webhooks before basic resources to prevent race condition during upgrades. [#18754](https://github.com/deckhouse/deckhouse/pull/18754)
  - **[node-manager]** fix Cluster Autoscaler RBAC for CAPI providers, add missing machinedeployments/scale to write rule and patch verb to ClusterRole. [#18818](https://github.com/deckhouse/deckhouse/pull/18818)

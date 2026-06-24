@@ -16,6 +16,7 @@ package options
 
 import (
 	"fmt"
+	"slices"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 )
@@ -53,12 +54,7 @@ func (o *PreflightOptions) IsCheckDisabled(name string) bool {
 	if o.SkipAll {
 		return true
 	}
-	for _, skip := range o.SkipChecks {
-		if skip == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(o.SkipChecks, name)
 }
 
 // Validate ensures every entry in SkipChecks matches a known check name.

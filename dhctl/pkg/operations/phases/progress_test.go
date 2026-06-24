@@ -25,7 +25,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
@@ -217,7 +216,7 @@ func TestProgressTracker_Complete(t *testing.T) {
 		if i <= 1 {
 			continue
 		}
-		lastPhases[i].Action = ptr.To(phases.ProgressActionSkip)
+		lastPhases[i].Action = new(phases.ProgressActionSkip)
 	}
 
 	expected := []phases.Progress{

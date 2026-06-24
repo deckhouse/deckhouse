@@ -39,7 +39,7 @@ import:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    env: 
+    env:
       PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"
     workingDir: "/opt/cni/bin"
     user: "1337:1337"
@@ -47,7 +47,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
@@ -60,8 +60,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
+  - pm install git binutils
   install:
   - cd /src/istio/
   - echo {{ $istioVersion }} > version
@@ -76,7 +75,7 @@ shell:
   - chown 1337:1337 /src/istio/out/istio-cni
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   install:

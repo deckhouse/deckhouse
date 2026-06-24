@@ -98,6 +98,7 @@ while [ "$patch_pending" = true ] ; do
     fi
 
     if d8-curl -sS --fail -x "" \
+      -o /dev/null \
       --max-time 10 \
       -XPATCH \
       -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \

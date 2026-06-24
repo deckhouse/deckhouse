@@ -13,6 +13,7 @@ additionalNamespaces:
   - d8-ingress-nginx
   - d8-observability
   - d8-operator-argo
+  - d8-neuvector
   - d8-operator-trivy
   - d8-payload-registry
   - d8-pod-reloader

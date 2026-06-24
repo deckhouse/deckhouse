@@ -130,7 +130,12 @@ spec:
 
 Парольная политика позволяет контролировать сложность пароля, ротацию и блокировку пользователей.
 
-Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`:
+Для настройки парольной политики используйте поле [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) в конфигурации модуля `user-authn`.
+
+Примеры политик:
+
+{% tabs Примеры парольных политик%}
+{% tab "Без пользовательских правил сложности" %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -151,15 +156,31 @@ spec:
         interval: "30d"
 ```
 
-Описание полей:
+{% endtab %}
+{% tab "С пользовательскими правилами сложности" %}
 
-- `complexityLevel` — уровень сложности пароля;
-- `passwordHistoryLimit` — число предыдущих паролей, которые хранит система, чтобы предотвратить их повторное использование;
-- `lockout` — настройки блокировки при превышении лимита неудачных попыток входа:
-  - `lockout.maxAttempts` — лимит неудачных попыток;
-  - `lockout.lockDuration` — длительность блокировки пользователя;
-- `rotation` — настройки ротации паролей:
-  - `rotation.interval` — период обязательной смены пароля.
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Custom
+      custom:
+        minLength: 10
+        specialCharacters: true
+        numbers: false
+        capitalized: true
+        repeatedChars: false
+      passwordHistoryLimit: 10
+```
+
+{% endtab %}
+{% endtabs %}
 
 ## Настройка двухфакторной аутентификации (2FA)
 
