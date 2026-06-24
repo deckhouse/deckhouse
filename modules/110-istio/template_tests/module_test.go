@@ -333,7 +333,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.versionMap", `
 "1.27":
   revision: "v1x27"
