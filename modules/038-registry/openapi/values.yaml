@@ -6,15 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      bootstrapMasterEndpoints:
-        type: array
-        default: [ ]
-        description: |-
-          Ready control-plane node InternalIPs (written by hooks/master-endpoints).
-          A joining node's containerd uses https://<ip>:5001 as a pre-CNI registry
-          fallback (the master's hostNetwork agent) until its own agent takes over.
-        items:
-          type: string
       customCertificateData:
         type: object
         properties:

@@ -42,12 +42,11 @@ type ConfigHosts struct {
 }
 
 type ConfigMirrorHost struct {
-	Host       string          `json:"host" yaml:"host"`
-	Scheme     string          `json:"scheme" yaml:"scheme"`
-	CA         string          `json:"ca,omitempty" yaml:"ca,omitempty"`
-	SkipVerify bool            `json:"skipVerify,omitempty" yaml:"skipVerify,omitempty"`
-	Auth       ConfigAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
-	Rewrites   []ConfigRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
+	Host     string          `json:"host" yaml:"host"`
+	Scheme   string          `json:"scheme" yaml:"scheme"`
+	CA       string          `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Auth     ConfigAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
+	Rewrites []ConfigRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
 }
 
 type ConfigAuth struct {
@@ -122,10 +121,9 @@ func (c Config) ToContext() Context {
 
 		for _, m := range hosts.Mirrors {
 			mirror := ContextMirrorHost{
-				Host:       m.Host,
-				Scheme:     m.Scheme,
-				CA:         m.CA,
-				SkipVerify: m.SkipVerify,
+				Host:   m.Host,
+				Scheme: m.Scheme,
+				CA:     m.CA,
 				Auth: ContextAuth{
 					Username: m.Auth.Username,
 					Password: m.Auth.Password,

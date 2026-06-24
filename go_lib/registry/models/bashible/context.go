@@ -43,12 +43,11 @@ type ContextHosts struct {
 }
 
 type ContextMirrorHost struct {
-	Host       string           `json:"host" yaml:"host"`
-	Scheme     string           `json:"scheme" yaml:"scheme"`
-	CA         string           `json:"ca,omitempty" yaml:"ca,omitempty"`
-	SkipVerify bool             `json:"skipVerify,omitempty" yaml:"skipVerify,omitempty"`
-	Auth       ContextAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
-	Rewrites   []ContextRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
+	Host     string           `json:"host" yaml:"host"`
+	Scheme   string           `json:"scheme" yaml:"scheme"`
+	CA       string           `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Auth     ContextAuth      `json:"auth,omitempty" yaml:"auth,omitempty"`
+	Rewrites []ContextRewrite `json:"rewrites,omitempty" yaml:"rewrites,omitempty"`
 }
 
 type ContextAuth struct {
@@ -133,12 +132,11 @@ func (c Context) ToMap() map[string]any {
 			}
 
 			mirrors = append(mirrors, map[string]any{
-				"host":       mirror.Host,
-				"scheme":     mirror.Scheme,
-				"ca":         mirror.CA,
-				"skipVerify": mirror.SkipVerify,
-				"auth":       auth,
-				"rewrites":   rewrites,
+				"host":     mirror.Host,
+				"scheme":   mirror.Scheme,
+				"ca":       mirror.CA,
+				"auth":     auth,
+				"rewrites": rewrites,
 			})
 		}
 		hosts[hostName] = map[string]any{

@@ -107,9 +107,10 @@ bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
 
   [host.{{ $mirror_host_with_scheme | quote }}]
     capabilities = ["pull", "resolve"]
-    {{- if or (eq $mirror.scheme "http") $mirror.skipVerify }}
+    {{- if eq $mirror.scheme "http" }}
     skip_verify = true
-    {{- else if and (eq $mirror.scheme "https") $mirror.ca }}
+    {{- end }}
+    {{- if and (eq $mirror.scheme "https") $mirror.ca }}
     ca = [{{ $mirror_ca_file_path | quote }}]
     {{- end }}
 
@@ -129,6 +130,14 @@ bb-sync-file "/etc/containerd/registry.d/{{ $host_name }}/hosts.toml" - << EOF
       regex = {{ .from | quote }}
       replace = {{ .to | quote }}
     {{- end }}
+{{- end }}
+{{- if and $agentManaged (eq $host_name "registry.d8-system.svc:5001") }}
+  {{- /* Pre-CNI bootstrap fallback for JOINING nodes */}}
+  {{- range $ep := .clusterMasterEndpoints }}
+  [host."https://{{ $ep.address }}:5001"]
+    capabilities = ["pull", "resolve"]
+    skip_verify = true
+  {{- end }}
 {{- end }}
 EOF
 

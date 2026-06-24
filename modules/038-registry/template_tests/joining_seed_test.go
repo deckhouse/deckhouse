@@ -125,54 +125,6 @@ var _ = Describe("Module :: registry :: helm template :: joining-node seed", fun
 		})
 	})
 
-	Context("phase New + cache enabled + master endpoints set", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("registry", joiningSeedBaseValues)
-			f.ValuesSet("registry.internal.takeover.phase", "New")
-			f.ValuesSet("registry.cache.enabled", true)
-			f.ValuesSet("registry.internal.bootstrapMasterEndpoints", []string{"10.0.0.1", "10.0.0.2"})
-			f.HelmRender()
-		})
-
-		It("inserts a skip_verify'd, RO-auth'd master mirror per endpoint between the agent and cache mirrors", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			s := f.KubernetesResource("Secret", "d8-system", "registry-bashible-config")
-			Expect(s.Exists()).To(BeTrue())
-
-			raw, err := base64.StdEncoding.DecodeString(s.Field("data.config").String())
-			Expect(err).ShouldNot(HaveOccurred())
-
-			var ctx map[string]interface{}
-			Expect(sigs_yaml.Unmarshal(raw, &ctx)).ShouldNot(HaveOccurred())
-
-			hosts := ctx["hosts"].(map[string]interface{})
-			hostEntry := hosts["registry.d8-system.svc:5001"].(map[string]interface{})
-			mirrors := hostEntry["mirrors"].([]interface{})
-			// agent (127.0.0.1) + 2 masters + cache.
-			Expect(mirrors).To(HaveLen(4))
-
-			byHost := map[string]map[string]interface{}{}
-			for _, m := range mirrors {
-				mm := m.(map[string]interface{})
-				byHost[mm["host"].(string)] = mm
-			}
-			Expect(byHost).To(HaveKey("10.0.0.1:5001"))
-			Expect(byHost).To(HaveKey("10.0.0.2:5001"))
-
-			for _, h := range []string{"10.0.0.1:5001", "10.0.0.2:5001"} {
-				mm := byHost[h]
-				Expect(mm["scheme"]).To(Equal("https"))
-				Expect(mm["skipVerify"]).To(BeTrue(), "master bootstrap mirror must skip_verify (cert SANs omit node IPs)")
-				Expect(mm["ca"]).To(BeEmpty(), "master mirror is skip_verify, carries no CA")
-				auth := mm["auth"].(map[string]interface{})
-				Expect(auth["username"]).To(Equal("ro"), "master mirror authenticates as ReadOnly")
-				Expect(auth["password"]).To(Equal("ro-pass"))
-			}
-		})
-	})
-
 	Context("phase New + cache disabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
