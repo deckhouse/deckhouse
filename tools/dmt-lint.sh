@@ -74,7 +74,15 @@ function structure_prepare {
 
       if [[ -f "${target_module_dir}/oss.yaml" && -f "${source_module_dir}/oss.yaml" ]]; then
         merged_oss_tmp=$(mktemp)
-        yq eval-all '. as $item ireduce ({}; . * $item)' "${target_module_dir}/oss.yaml" "${source_module_dir}/oss.yaml" > "${merged_oss_tmp}"
+        # Properly merge the two oss.yaml arrays into one via yq
+        yq eval-all '[.] | flatten' "${target_module_dir}/oss.yaml" "${source_module_dir}/oss.yaml" > "${merged_oss_tmp}"
+        # Check for duplicate object ids in the merged result
+        local dup_ids
+        dup_ids=$(yq -o=json '[.[].id] | group_by(.) | map(select(length > 1)[0])' "${merged_oss_tmp}")
+        if [[ -n "${dup_ids}" && "${dup_ids}" != "[]" ]]; then
+          echo "Error: duplicate oss object ids in module ${module_name}: ${dup_ids}"
+          exit 1
+        fi
       fi
 
       if [[ -d "${target_module_dir}" ]]; then
