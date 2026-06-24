@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"time"
 
