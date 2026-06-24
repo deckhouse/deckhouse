@@ -1231,6 +1231,8 @@ apiserver:
 				It("uses the top tier (per-component caps) at 1000 nodes", func() {
 					assertRequests(renderComponent(1000, 0, 0, 0, 0, "kube-apiserver\\.yaml\\.tpl"), "3000m", "12288Mi")
 					assertRequests(renderComponent(1000, 0, 0, 0, 0, "etcd\\.yaml\\.tpl"), "1500m", "4096Mi")
+					assertRequests(renderComponent(1000, 0, 0, 0, 0, "kube-controller-manager\\.yaml\\.tpl"), "300m", "1536Mi")
+					assertRequests(renderComponent(1000, 0, 0, 0, 0, "kube-scheduler\\.yaml\\.tpl"), "120m", "1024Mi")
 				})
 			})
 

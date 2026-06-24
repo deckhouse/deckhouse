@@ -64,7 +64,9 @@
   {{- if lt $nodesCount 10 -}}{{- $memory = 128 -}}
   {{- else if lt $nodesCount 25 -}}{{- $memory = 256 -}}
   {{- else if lt $nodesCount 100 -}}{{- $memory = 384 -}}
-  {{- else -}}{{- $memory = 512 -}}
+  {{- else if lt $nodesCount 250 -}}{{- $memory = 512 -}}
+  {{- else if lt $nodesCount 500 -}}{{- $memory = 768 -}}
+  {{- else -}}{{- $memory = 1024 -}}
   {{- end -}}
   {{- $memory = mul $memory 1048576 -}}
   {{- if $maxMemoryBytes -}}{{- $memory = min $memory (div (mul $maxMemoryBytes 10) 100) -}}{{- end -}}

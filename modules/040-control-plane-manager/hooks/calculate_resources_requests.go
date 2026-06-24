@@ -78,8 +78,8 @@ var controlPlaneAutoFootprint = []controlPlaneAutoFootprintTier{
 	{maxNodes: 25, milliCPU: 480, memoryMiB: 4352},
 	{maxNodes: 100, milliCPU: 1180, memoryMiB: 7808},
 	{maxNodes: 250, milliCPU: 2460, memoryMiB: 14464},
-	{maxNodes: 500, milliCPU: 4430, memoryMiB: 18432},
-	{maxNodes: 0, milliCPU: 4920, memoryMiB: 18432},
+	{maxNodes: 500, milliCPU: 4430, memoryMiB: 18688},
+	{maxNodes: 0, milliCPU: 4920, memoryMiB: 18944},
 }
 
 // autoControlPlaneFootprint returns the total CPU (millicpu) and memory (bytes)
