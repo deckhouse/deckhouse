@@ -103,7 +103,7 @@ type Runtime struct {
 
 	global *global.Module
 
-	grantResolver grants.Resolver // Resolves cluster resource grants for x-deckhouse-grant fields
+	grantResolver grants.Resolver // Resolves cluster resource grants for x-deckhouse-grantable-resource fields
 
 	mu       sync.RWMutex
 	packages *lifecycle.Store

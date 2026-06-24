@@ -81,7 +81,7 @@ type Application struct {
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
 
 	// grantResolver resolves per-project cluster resource grants for settings
-	// fields tagged with x-deckhouse-grant. Never nil (defaults to NoopResolver).
+	// fields tagged with x-deckhouse-grantable-resource. Never nil (defaults to NoopResolver).
 	grantResolver grants.Resolver
 
 	patcher           *objectpatch.ObjectPatcher
@@ -112,7 +112,7 @@ type Config struct {
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
 
-	// GrantResolver resolves cluster resource grants for x-deckhouse-grant
+	// GrantResolver resolves cluster resource grants for x-deckhouse-grantable-resource
 	// settings fields. When nil, grant defaulting/validation is disabled.
 	GrantResolver grants.Resolver
 }
@@ -312,7 +312,7 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 		return settingscheck.Result{}, err
 	}
 
-	// Validate x-deckhouse-grant fields against what the project may use.
+	// Validate x-deckhouse-grantable-resource fields against what the project may use.
 	// This is read-only: it must not mutate the running app's values.
 	if err := a.validateGrants(ctx, settings); err != nil {
 		return settingscheck.Result{}, err
@@ -341,8 +341,8 @@ func (a *Application) GetValues() addonutils.Values {
 }
 
 // ApplySettings applies settings values to application. Before persisting the
-// user config, it resolves x-deckhouse-grant defaults for the instance namespace
-// and injects them into empty fields.
+// user config, it resolves x-deckhouse-grantable-resource defaults for the
+// instance namespace and injects them into empty fields.
 func (a *Application) ApplySettings(settings addonutils.Values) error {
 	if err := a.resolveGrantDefaults(context.Background()); err != nil {
 		return err
@@ -351,10 +351,10 @@ func (a *Application) ApplySettings(settings addonutils.Values) error {
 	return a.values.ApplySettings(settings)
 }
 
-// resolveGrantDefaults resolves the per-project default for every x-deckhouse-grant
-// settings field and stores the results as dynamic defaults on the values storage.
-// Resources without an available default (multitenancy disabled, no catalog, or an
-// empty default) are skipped.
+// resolveGrantDefaults resolves the per-project default for every
+// x-deckhouse-grantable-resource settings field and stores the results as dynamic
+// defaults on the values storage. Resources without an available default
+// (multitenancy disabled, no catalog, or an empty default) are skipped.
 func (a *Application) resolveGrantDefaults(ctx context.Context) error {
 	refs, err := a.values.GrantRefs()
 	if err != nil {
@@ -381,9 +381,9 @@ func (a *Application) resolveGrantDefaults(ctx context.Context) error {
 	return a.values.SetDynamicDefaults(defaults)
 }
 
-// validateGrants rejects settings whose x-deckhouse-grant field carries a value
-// that is not available to the project. Resources without a resolved catalog are
-// skipped (the feature is inactive for them).
+// validateGrants rejects settings whose x-deckhouse-grantable-resource field
+// carries a value that is not available to the project. Resources without a
+// resolved catalog are skipped (the feature is inactive for them).
 func (a *Application) validateGrants(ctx context.Context, settings addonutils.Values) error {
 	refs, err := a.values.GrantRefs()
 	if err != nil {

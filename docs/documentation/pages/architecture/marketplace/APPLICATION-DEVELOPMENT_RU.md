@@ -118,7 +118,7 @@ requirements:
 - `config-values.yaml` (или `settings.yaml`) — схема для `Application.spec.settings` (пользовательская конфигурация).
 - `values.yaml` — схема для полного набора Helm-значений.
 
-### Подстановка значения из грантов на ресурсы кластера (`x-deckhouse-grant`)
+### Подстановка значения из грантов на ресурсы кластера (`x-deckhouse-grantable-resource`)
 
 Поле `settings` типа `type: string` можно связать с грантируемым ресурсом кластера, которым управляет
 [multitenancy-manager](../../../modules/multitenancy-manager/) (например, `StorageClass`). Когда поле связано:
@@ -126,7 +126,7 @@ requirements:
 - если пользователь оставил его пустым, в values подставляется имя ресурса, заданное как **дефолтное** для проекта;
 - если пользователь указал значение, оно проверяется по списку имён, **доступных** проекту, и отклоняется, если в списке его нет.
 
-Добавьте к полю расширение `x-deckhouse-grant` и сошлитесь на грантируемый ресурс по имени (имя
+Добавьте к полю расширение `x-deckhouse-grantable-resource` и сошлитесь на грантируемый ресурс по имени (имя
 `AvailableClusterResource` / `GrantableClusterResourceDefinition`, например `storageclasses`). GVK
 самого ресурса принадлежит определению гранта и здесь указывать **не нужно**.
 
@@ -136,15 +136,13 @@ type: object
 properties:
   storageClass:
     type: string
-    x-deckhouse-grant:
-      resource: storageclasses
+    x-deckhouse-grantable-resource: storageclasses
   postgres:
     type: object
     properties:
       storageClass:
         type: string
-        x-deckhouse-grant:
-          resource: postgresclasses
+        x-deckhouse-grantable-resource: postgresclasses
 ```
 
 Поведение:

@@ -27,16 +27,14 @@ type: object
 properties:
   storageClass:
     type: string
-    x-deckhouse-grant:
-      resource: storageclasses
+    x-deckhouse-grantable-resource: storageclasses
   postgres:
     type: object
     default: {}
     properties:
       storageClass:
         type: string
-        x-deckhouse-grant:
-          resource: postgresclasses
+        x-deckhouse-grantable-resource: postgresclasses
 `
 
 func TestDynamicDefaults(t *testing.T) {

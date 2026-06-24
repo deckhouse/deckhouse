@@ -98,8 +98,8 @@ func NewStorage(name string, staticValues addonutils.Values, settingsBytes, valu
 	return s, nil
 }
 
-// GrantRefs returns the x-deckhouse-grant references declared in the settings
-// schema. Returns nil when no settings schema or no such references exist.
+// GrantRefs returns the x-deckhouse-grantable-resource references declared in the
+// settings schema. Returns nil when no settings schema or no such references exist.
 func (s *Storage) GrantRefs() ([]schema.GrantRef, error) {
 	return s.schemaStorage.GrantRefs()
 }

@@ -31,8 +31,7 @@ type: object
 properties:
   storageClass:
     type: string
-    x-deckhouse-grant:
-      resource: storageclasses
+    x-deckhouse-grantable-resource: storageclasses
 `
 
 // stubResolver returns a fixed catalog regardless of namespace/resource.

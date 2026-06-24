@@ -117,7 +117,7 @@ The `openapi/` directory defines two schemas:
 - `config-values.yaml` (or `settings.yaml`) — the schema for `Application.spec.settings` (user-facing configuration).
 - `values.yaml` — the schema for the full set of Helm values.
 
-### Defaulting from cluster resource grants (`x-deckhouse-grant`)
+### Defaulting from cluster resource grants (`x-deckhouse-grantable-resource`)
 
 A `settings` field of `type: string` can be bound to a grantable cluster resource managed by the
 [multitenancy-manager](../../../modules/multitenancy-manager/) (for example a `StorageClass`). When the field is bound:
@@ -125,7 +125,7 @@ A `settings` field of `type: string` can be bound to a grantable cluster resourc
 - if the user leaves it empty, the project's **default** granted name is injected into the values;
 - if the user provides a value, it is checked against the names **available** to the project, and rejected otherwise.
 
-Add the `x-deckhouse-grant` extension to the field and reference the grantable resource by name (the
+Add the `x-deckhouse-grantable-resource` extension to the field and reference the grantable resource by name (the
 `AvailableClusterResource` / `GrantableClusterResourceDefinition` name, e.g. `storageclasses`). The
 underlying resource's GVK is owned by the grant definition and must **not** be specified here.
 
@@ -135,15 +135,13 @@ type: object
 properties:
   storageClass:
     type: string
-    x-deckhouse-grant:
-      resource: storageclasses
+    x-deckhouse-grantable-resource: storageclasses
   postgres:
     type: object
     properties:
       storageClass:
         type: string
-        x-deckhouse-grant:
-          resource: postgresclasses
+        x-deckhouse-grantable-resource: postgresclasses
 ```
 
 Behavior:

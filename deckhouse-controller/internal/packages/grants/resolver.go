@@ -14,8 +14,8 @@
 
 // Package grants resolves per-project cluster resource grants
 // (multitenancy-manager AvailableClusterResource) so that Application package
-// settings fields tagged with x-deckhouse-grant can be defaulted and validated
-// against what a project may use.
+// settings fields tagged with x-deckhouse-grantable-resource can be defaulted
+// and validated against what a project may use.
 package grants
 
 import (

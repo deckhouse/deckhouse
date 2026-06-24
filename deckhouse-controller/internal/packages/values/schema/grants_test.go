@@ -29,15 +29,13 @@ type: object
 properties:
   storageClass:
     type: string
-    x-deckhouse-grant:
-      resource: storageclasses
+    x-deckhouse-grantable-resource: storageclasses
   postgres:
     type: object
     properties:
       storageClass:
         type: string
-        x-deckhouse-grant:
-          resource: postgresclasses
+        x-deckhouse-grantable-resource: postgresclasses
   name:
     type: string
 `)
@@ -89,8 +87,7 @@ type: object
 properties:
   storageClass:
     type: integer
-    x-deckhouse-grant:
-      resource: storageclasses
+    x-deckhouse-grantable-resource: storageclasses
 `)
 		storage, err := NewStorage(settings, nil)
 		require.NoError(t, err)
@@ -106,13 +103,13 @@ type: object
 properties:
   storageClass:
     type: string
-    x-deckhouse-grant: {}
+    x-deckhouse-grantable-resource: ""
 `)
 		storage, err := NewStorage(settings, nil)
 		require.NoError(t, err)
 
 		_, err = storage.GrantRefs()
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "resource")
+		assert.Contains(t, err.Error(), "non-empty")
 	})
 }

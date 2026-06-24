@@ -15,7 +15,6 @@
 package schema
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/go-openapi/spec"
@@ -25,19 +24,10 @@ import (
 // cluster resource (see multitenancy-manager AvailableClusterResource). A field
 // carrying this extension is defaulted to the project's default granted name when
 // left empty, and its value is checked against the project's available names.
-const XGrant = "x-deckhouse-grant"
-
-// GrantExtension is the parsed value of an x-deckhouse-grant extension block.
-type GrantExtension struct {
-	// Resource is the name of the AvailableClusterResource (equals the
-	// GrantableClusterResourceDefinition name, e.g. "storageclasses") whose
-	// per-project catalog backs this field. The granted resource GVK is owned by
-	// the definition and is intentionally not referenced here.
-	Resource string `json:"resource"`
-}
+const XGrant = "x-deckhouse-grantable-resource"
 
 // GrantRef is a single field in a schema that references a grantable cluster
-// resource via the x-deckhouse-grant extension.
+// resource via the x-deckhouse-grantable-resource extension.
 type GrantRef struct {
 	// Path is the property path to the field, from the schema root, e.g.
 	// ["storageClass"] or ["postgres", "storageClass"].
@@ -46,8 +36,8 @@ type GrantRef struct {
 	Resource string
 }
 
-// GrantRefs returns all x-deckhouse-grant references declared in the settings
-// schema. It returns nil when no settings schema is registered.
+// GrantRefs returns all x-deckhouse-grantable-resource references declared in the
+// settings schema. It returns nil when no settings schema is registered.
 func (s *Storage) GrantRefs() ([]GrantRef, error) {
 	scheme := s.schemas[TypeSettings]
 	if scheme == nil {
@@ -58,8 +48,8 @@ func (s *Storage) GrantRefs() ([]GrantRef, error) {
 }
 
 // CollectGrantRefs walks the schema properties recursively and returns every
-// field that carries the x-deckhouse-grant extension. It validates that each such
-// field is of type string, returning an error otherwise.
+// field that carries the x-deckhouse-grantable-resource extension. It validates
+// that each such field is of type string and has a non-empty resource value.
 func CollectGrantRefs(s *spec.Schema) ([]GrantRef, error) {
 	if s == nil {
 		return nil, nil
@@ -77,14 +67,14 @@ func collectGrantRefs(s *spec.Schema, path []string, refs *[]GrantRef) error {
 	for name, prop := range s.Properties {
 		propPath := append(append([]string(nil), path...), name)
 
-		if ext, ok := extractGrantExtension(&prop); ok {
-			if ext.Resource == "" {
-				return fmt.Errorf("field %q: %s requires a non-empty 'resource'", joinPath(propPath), XGrant)
+		if resource, ok := extractGrantExtension(&prop); ok {
+			if resource == "" {
+				return fmt.Errorf("field %q: %s requires a non-empty value", joinPath(propPath), XGrant)
 			}
 			if !prop.Type.Contains("string") {
 				return fmt.Errorf("field %q: %s is only supported on 'type: string' fields", joinPath(propPath), XGrant)
 			}
-			*refs = append(*refs, GrantRef{Path: propPath, Resource: ext.Resource})
+			*refs = append(*refs, GrantRef{Path: propPath, Resource: resource})
 		}
 
 		if err := collectGrantRefs(&prop, propPath, refs); err != nil {
@@ -95,24 +85,24 @@ func collectGrantRefs(s *spec.Schema, path []string, refs *[]GrantRef) error {
 	return nil
 }
 
-// extractGrantExtension parses the x-deckhouse-grant extension value from s.
-// Returns ok=false when the extension is absent.
-func extractGrantExtension(s *spec.Schema) (GrantExtension, bool) {
+// extractGrantExtension reads the x-deckhouse-grantable-resource extension value
+// from s. Returns ok=false when the extension is absent.
+func extractGrantExtension(s *spec.Schema) (string, bool) {
 	if s == nil {
-		return GrantExtension{}, false
+		return "", false
 	}
 
 	raw, ok := s.Extensions[XGrant]
 	if !ok || raw == nil {
-		return GrantExtension{}, false
+		return "", false
 	}
 
-	tmpBytes, _ := json.Marshal(raw)
+	str, ok := raw.(string)
+	if !ok {
+		return "", false
+	}
 
-	var ext GrantExtension
-	_ = json.Unmarshal(tmpBytes, &ext)
-
-	return ext, true
+	return str, true
 }
 
 func joinPath(path []string) string {
