@@ -40,12 +40,21 @@ var sensitiveKeywords = []string{
 	`node-tf-state.json`,
 }
 
+const maxSanitizeDepth = 100
+
 // Sanitize is a slog.ReplaceAttr function.
 // It scans string values for sensitive keywords and replaces matches with [FILTERED - ...].
 // Recursively processes groups. Skips control attributes (time, level, source, renderer markers).
 // Idempotent - already filtered values pass through unchanged.
 func Sanitize(_ []string, attr slog.Attr) slog.Attr {
 	if isControlAttr(attr.Key) {
+		return attr
+	}
+	return sanitizeWithDepth(attr, 0)
+}
+
+func sanitizeWithDepth(attr slog.Attr, depth int) slog.Attr {
+	if depth > maxSanitizeDepth {
 		return attr
 	}
 
@@ -65,7 +74,7 @@ func Sanitize(_ []string, attr slog.Attr) slog.Attr {
 
 		cleaned := make([]slog.Attr, 0, len(group))
 		for _, child := range group {
-			cleaned = append(cleaned, Sanitize(nil, child))
+			cleaned = append(cleaned, sanitizeWithDepth(child, depth+1))
 		}
 
 		attr.Value = slog.GroupValue(cleaned...)
