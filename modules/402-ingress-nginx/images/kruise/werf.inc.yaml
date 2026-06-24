@@ -49,6 +49,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
+fromCacheVersion: "2026-06-11.4"
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
   add: /tmp/manager
