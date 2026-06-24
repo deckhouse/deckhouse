@@ -383,22 +383,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /modules/340-monitoring-deckhouse
-  to: /deckhouse/modules/340-monitoring-deckhouse
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
   excludePaths:
@@ -1083,6 +1067,11 @@
         - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
   stageDependencies:
     install:
         - '**/*'

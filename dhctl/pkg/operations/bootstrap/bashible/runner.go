@@ -238,8 +238,7 @@ func (r *Runner) attemptExecuteBundle(
 
 	_, err := bundleCmd.ExecuteBundle(ctx, parentDir, bundleDir)
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			return fmt.Errorf("bundle '%s' error: %w\nstderr: %s", bundleDir, err, string(ee.Stderr))
 		}
 
@@ -320,9 +319,8 @@ func (r *Runner) runCmd(ctx context.Context, cmd libcon.Command, desc string) er
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
-		var ee *exec.ExitError
 		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			logger.DebugF("'%s' got exit code: %d and stderr %s", desc, ee.ExitCode(), string(ee.Stderr))
 			if ee.ExitCode() == 255 {
 				return err

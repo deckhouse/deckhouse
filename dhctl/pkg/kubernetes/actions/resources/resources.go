@@ -119,7 +119,7 @@ func (c *Creator) createAll(ctx context.Context) error {
 
 	for indx, resource := range c.resources {
 		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s with index %% should be skipped from creation in the current iteration because the namespace does not exist", resource.String()))
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s with index %d should be skipped from creation in the current iteration because the namespace does not exist", resource.String(), indx))
 			continue
 		}
 
@@ -260,14 +260,14 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
-			Manifest: func() interface{} { return nil },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return nil },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(ctx, docCopy, metav1.CreateOptions{})
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				content, err := docCopy.MarshalJSON()
 				if err != nil {
 					return err

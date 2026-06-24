@@ -99,7 +99,7 @@ func (s *StateCache) Save(ctx context.Context, name string, content []byte) erro
 }
 
 // SaveStruct saves go struct into the cache as a blob
-func (s *StateCache) SaveStruct(ctx context.Context, name string, v interface{}) error {
+func (s *StateCache) SaveStruct(ctx context.Context, name string, v any) error {
 	b := new(bytes.Buffer)
 	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {
@@ -176,7 +176,7 @@ func (s *StateCache) Load(ctx context.Context, name string) ([]byte, error) {
 }
 
 // LoadStruct loads go struct from the cache
-func (s *StateCache) LoadStruct(ctx context.Context, name string, v interface{}) error {
+func (s *StateCache) LoadStruct(ctx context.Context, name string, v any) error {
 	d, err := s.Load(ctx, name)
 	if err != nil {
 		return fmt.Errorf("can't load struct for key %s: %v", name, err)
@@ -225,18 +225,18 @@ func (s *StateCache) Dir() string {
 // DummyCache is a cache implementation which saves nothing and nowhere
 type DummyCache struct{}
 
-func (d *DummyCache) Save(ctx context.Context, n string, c []byte) error            { return nil }
-func (d *DummyCache) SaveStruct(ctx context.Context, n string, v interface{}) error { return nil }
-func (d *DummyCache) InCache(ctx context.Context, n string) (bool, error)           { return false, nil }
-func (d *DummyCache) Clean(ctx context.Context)                                     {}
-func (d *DummyCache) CleanWithExceptions(ctx context.Context, e ...string)          {}
-func (d *DummyCache) Delete(ctx context.Context, n string)                          {}
-func (d *DummyCache) Load(ctx context.Context, n string) ([]byte, error)            { return nil, nil }
-func (d *DummyCache) LoadStruct(ctx context.Context, n string, v interface{}) error { return nil }
-func (d *DummyCache) GetPath(n string) string                                       { return "" }
-func (d *DummyCache) Iterate(context.Context, func(string, []byte) error) error     { return nil }
-func (d *DummyCache) NeedIntermediateSave() bool                                    { return false }
-func (d *DummyCache) Dir() string                                                   { return "" }
+func (d *DummyCache) Save(ctx context.Context, n string, c []byte) error        { return nil }
+func (d *DummyCache) SaveStruct(ctx context.Context, n string, v any) error     { return nil }
+func (d *DummyCache) InCache(ctx context.Context, n string) (bool, error)       { return false, nil }
+func (d *DummyCache) Clean(ctx context.Context)                                 {}
+func (d *DummyCache) CleanWithExceptions(ctx context.Context, e ...string)      {}
+func (d *DummyCache) Delete(ctx context.Context, n string)                      {}
+func (d *DummyCache) Load(ctx context.Context, n string) ([]byte, error)        { return nil, nil }
+func (d *DummyCache) LoadStruct(ctx context.Context, n string, v any) error     { return nil }
+func (d *DummyCache) GetPath(n string) string                                   { return "" }
+func (d *DummyCache) Iterate(context.Context, func(string, []byte) error) error { return nil }
+func (d *DummyCache) NeedIntermediateSave() bool                                { return false }
+func (d *DummyCache) Dir() string                                               { return "" }
 
 type TestCache struct {
 	Store map[string][]byte
@@ -280,7 +280,7 @@ func (d *TestCache) Load(ctx context.Context, n string) ([]byte, error) {
 	return d.Store[n], nil
 }
 
-func (d *TestCache) LoadStruct(ctx context.Context, n string, v interface{}) error {
+func (d *TestCache) LoadStruct(ctx context.Context, n string, v any) error {
 	data, err := d.Load(ctx, n)
 	if err != nil {
 		return fmt.Errorf("can't load struct for key %s: %v", n, err)
@@ -289,7 +289,7 @@ func (d *TestCache) LoadStruct(ctx context.Context, n string, v interface{}) err
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(v)
 }
 
-func (d *TestCache) SaveStruct(ctx context.Context, n string, v interface{}) error {
+func (d *TestCache) SaveStruct(ctx context.Context, n string, v any) error {
 	b := new(bytes.Buffer)
 	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {

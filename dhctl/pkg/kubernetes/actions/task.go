@@ -28,10 +28,10 @@ import (
 
 type ManifestTask struct {
 	Name       string
-	CreateFunc func(ctx context.Context, manifest interface{}) error
-	UpdateFunc func(ctx context.Context, manifest interface{}) error
-	Manifest   func() interface{}
-	PatchData  func() interface{}
+	CreateFunc func(ctx context.Context, manifest any) error
+	UpdateFunc func(ctx context.Context, manifest any) error
+	Manifest   func() any
+	PatchData  func() any
 	PatchFunc  func(ctx context.Context, patchData []byte) error
 }
 

@@ -56,8 +56,7 @@ func (c LocalhostDomainCheck) Run(ctx context.Context) error {
 	cmd := c.NodeInterface.UploadScript(file)
 	out, err := cmd.Execute(ctx)
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			return fmt.Errorf("Localhost domain resolving check failed: %w, %s", err, string(ee.Stderr))
 		}
 		return fmt.Errorf("Could not execute a script to check for localhost domain resolution: %w", err)

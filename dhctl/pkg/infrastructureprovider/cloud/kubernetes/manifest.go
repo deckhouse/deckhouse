@@ -27,7 +27,7 @@ func IsManifest(change plan.ChangeOp, kind string) bool {
 	return strings.EqualFold(extractManifestKind(change.After), kind)
 }
 
-func extractManifestKind(state map[string]interface{}) string {
+func extractManifestKind(state map[string]any) string {
 	ctx := context.Background()
 
 	v, ok := state["manifest"]

@@ -43,7 +43,7 @@ func GetCheckers(ctx context.Context, kubeCl *client.KubernetesClient, resources
 	errRes := &multierror.Error{}
 
 	checkers := make([]Checker, 0)
-	singleConstructors := make(map[string]interface{})
+	singleConstructors := make(map[string]any)
 
 	tryToAppendCheck := func(check Checker, err error) {
 		if err != nil {

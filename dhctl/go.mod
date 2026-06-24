@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse/dhctl
 
-go 1.25.8
+go 1.26.4
 
 require (
 	github.com/090809/oteljsonl v0.0.2

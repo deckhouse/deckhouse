@@ -1,6 +1,7 @@
 # WARNING!
-# Please evaluate to add changes to ee/cse/candi/openapi/cluster_configuration.yaml
-# After change this file!
+# if you change this file please evaluate to change files
+# /candi/openapi/cluster_configuration.yaml
+# /ee/cse/candi/openapi/cluster_configuration.yaml
 
 kind: ClusterConfiguration
 apiVersions:

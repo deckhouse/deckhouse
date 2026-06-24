@@ -201,8 +201,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		var stdout []byte
 		stdout, err = cmd.Execute(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				return fmt.Errorf("script '%s' error: %w\nstderr: %s", ScriptPath, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
@@ -264,8 +263,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 
 		stdout, err := cmd.ExecuteBundle(ctx, parentDir, bundleDir)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				return fmt.Errorf("bundle '%s' error: %w\nstderr: %s\n", bundleDir, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)

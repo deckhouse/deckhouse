@@ -55,8 +55,7 @@ func TestLoop_Run_BreakIfPredicate(t *testing.T) {
 }
 
 func TestLoop_RunContext_SuccessOnFirstAttempt(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	loop := NewLoop("test loop", 3, 10*time.Millisecond)
 	err := loop.RunContext(ctx, func() error {
@@ -66,8 +65,7 @@ func TestLoop_RunContext_SuccessOnFirstAttempt(t *testing.T) {
 }
 
 func TestLoop_RunContext_SuccessAfterRetries(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	attempt := 0
 	loop := NewLoop("test loop", 3, 10*time.Millisecond)

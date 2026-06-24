@@ -39,7 +39,7 @@ type RenderedTemplate struct {
 // RenderTemplatesDir renders each file in templatesDir.
 // Files are rendered separately, so no support for
 // libraries, like in Helm.
-func RenderTemplatesDir(ctx context.Context, templatesDir string, data map[string]interface{}, ignoreMap map[string]struct{}) ([]RenderedTemplate, error) {
+func RenderTemplatesDir(ctx context.Context, templatesDir string, data map[string]any, ignoreMap map[string]struct{}) ([]RenderedTemplate, error) {
 	files, err := os.ReadDir(templatesDir)
 	if os.IsNotExist(err) {
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Templates directory %q does not exist. Skipping...", templatesDir))
@@ -82,7 +82,7 @@ func RenderTemplatesDir(ctx context.Context, templatesDir string, data map[strin
 	return renders, nil
 }
 
-func RenderTemplate(name string, content []byte, data map[string]interface{}) (*RenderedTemplate, error) {
+func RenderTemplate(name string, content []byte, data map[string]any) (*RenderedTemplate, error) {
 	// render chart with prepared values
 	e := Engine{
 		Name: name,
@@ -125,7 +125,7 @@ func NewTemplateController(tmpDir string) *Controller {
 	return &Controller{TmpDir: tmpDir}
 }
 
-func (t *Controller) RenderAndSaveTemplates(ctx context.Context, fromDir, toDir string, data map[string]interface{}, ignoreMap map[string]struct{}) error {
+func (t *Controller) RenderAndSaveTemplates(ctx context.Context, fromDir, toDir string, data map[string]any, ignoreMap map[string]struct{}) error {
 	renderedTemplates, err := RenderTemplatesDir(ctx, fromDir, data, ignoreMap)
 	if err != nil {
 		return fmt.Errorf("render templates: %v", err)
@@ -139,7 +139,7 @@ func (t *Controller) RenderAndSaveTemplates(ctx context.Context, fromDir, toDir 
 	return nil
 }
 
-func (t *Controller) RenderBashBooster(fromDir, toDir string, data map[string]interface{}) error {
+func (t *Controller) RenderBashBooster(fromDir, toDir string, data map[string]any) error {
 	bashBooster, err := RenderBashBooster(fromDir, data)
 	if err != nil {
 		return fmt.Errorf("render bashboster: %v", err)

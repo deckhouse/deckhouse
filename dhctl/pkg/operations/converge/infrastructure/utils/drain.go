@@ -143,7 +143,7 @@ func isNodeUnreachable(node *corev1.Node) bool {
 
 // writer implements io.Writer interface as a pass-through for klog.
 type writer struct {
-	logFunc func(elems ...interface{})
+	logFunc func(elems ...any)
 }
 
 func (w writer) Write(p []byte) (int, error) {

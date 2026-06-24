@@ -22,7 +22,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 )
 
 func TestLoadDHCTLConfigSchema(t *testing.T) {
@@ -67,7 +66,7 @@ func TestParseConnectionConfig(t *testing.T) {
 			expected: &ConnectionConfig{
 				SSHConfig: &SSHConfig{
 					SSHUser:      "ubuntu",
-					SSHPort:      ptr.To(int32(22)),
+					SSHPort:      new(int32(22)),
 					SSHExtraArgs: "-vvv",
 					SSHAgentPrivateKeys: []SSHAgentPrivateKey{
 						{
@@ -80,7 +79,7 @@ func TestParseConnectionConfig(t *testing.T) {
 						},
 					},
 					SSHBastionHost: "158.160.111.65",
-					SSHBastionPort: ptr.To(int32(22)),
+					SSHBastionPort: new(int32(22)),
 					SSHBastionUser: "ubuntu",
 					SudoPassword:   "gfhjkm",
 					LegacyMode:     true,
@@ -105,7 +104,7 @@ func TestParseConnectionConfig(t *testing.T) {
 			expected: &ConnectionConfig{
 				SSHConfig: &SSHConfig{
 					SSHUser:      "ubuntu",
-					SSHPort:      ptr.To(int32(22)),
+					SSHPort:      new(int32(22)),
 					SSHExtraArgs: "-vvv",
 					SSHAgentPrivateKeys: []SSHAgentPrivateKey{
 						{
@@ -186,7 +185,6 @@ func TestParseConnectionConfig(t *testing.T) {
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
 			config, err := ParseConnectionConfig(context.Background(), tt.config, newStore, tt.opts...)
 			if tt.errContains == "" {

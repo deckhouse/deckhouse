@@ -62,8 +62,8 @@ func GenerateCertificate(serviceName, clusterDomain string, keyType CertKeyType,
 	}
 
 	var (
-		priv interface{}
-		pub  interface{}
+		priv any
+		pub  any
 		err  error
 	)
 	switch keyType {

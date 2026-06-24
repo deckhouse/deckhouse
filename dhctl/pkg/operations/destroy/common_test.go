@@ -231,7 +231,6 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 		},
 	})
 
-	minAvailable := intstr.FromString("25%")
 	pdb := policyv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -243,7 +242,7 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 					"app": "test",
 				},
 			},
-			MaxUnavailable: &minAvailable,
+			MaxUnavailable: new(intstr.FromString("25%")),
 		},
 	}
 	_, err = kubeCl.PolicyV1().PodDisruptionBudgets(pdb.GetNamespace()).Create(ctx, &pdb, metav1.CreateOptions{})
@@ -461,7 +460,6 @@ spec:
 		createdResources = append(createdResources, testAddDeckhouseStorageClass(t, ctx, kubeCl, sc.gvr, sc.resourceYAML))
 	}
 
-	reclame := corev1.PersistentVolumeReclaimDelete
 	scDefault := storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "default",
@@ -471,7 +469,7 @@ spec:
 		Parameters: map[string]string{
 			"type": "__DEFAULT__",
 		},
-		ReclaimPolicy: &reclame,
+		ReclaimPolicy: new(corev1.PersistentVolumeReclaimDelete),
 	}
 
 	_, err = kubeCl.StorageV1().StorageClasses().Create(ctx, &scDefault, metav1.CreateOptions{})

@@ -36,14 +36,14 @@ func RenderAndSavePreflightCheckPortsScript(ctx context.Context, globalOptions *
 	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check ports script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkPortsScriptPath)
 
-	return RenderAndSaveTemplate(ctx, "check_ports.sh", scriptPath, map[string]interface{}{})
+	return RenderAndSaveTemplate(ctx, "check_ports.sh", scriptPath, map[string]any{})
 }
 
 func RenderAndSavePreflightCheckDeckhouseUserScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
 	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check user script")
 	scriptPath := filepath.Join(globalOptions.CandiDir, "bashible", checkDeckhouseUserScriptPath)
 
-	return RenderAndSaveTemplate(ctx, "check_deckhouse_user.sh", scriptPath, map[string]interface{}{})
+	return RenderAndSaveTemplate(ctx, "check_deckhouse_user.sh", scriptPath, map[string]any{})
 }
 
 func RenderAndSavePreflightCheckLocalhostScript(ctx context.Context, globalOptions *options.GlobalOptions) (string, error) {
@@ -54,7 +54,7 @@ func RenderAndSavePreflightCheckLocalhostScript(ctx context.Context, globalOptio
 		ctx,
 		"check_localhost.sh",
 		scriptPath,
-		map[string]interface{}{},
+		map[string]any{},
 	)
 }
 
@@ -66,7 +66,7 @@ func RenderAndSavePreflightReverseTunnelOpenScript(ctx context.Context, url stri
 		ctx,
 		"check_reverse_tunnel_open.sh",
 		scriptPath,
-		map[string]interface{}{
+		map[string]any{
 			"url": url,
 		},
 	)
@@ -80,7 +80,7 @@ func RenderAndSaveKillReverseTunnelScript(ctx context.Context, host, port string
 		ctx,
 		"kill_reverse_tunnel.sh",
 		scriptPath,
-		map[string]interface{}{
+		map[string]any{
 			"host": host,
 			"port": port,
 		},
@@ -104,7 +104,7 @@ func RenderAndSavePreflightReverseTunnelReachableScript(ctx context.Context, url
 func RenderAndSavePreflightCheckScript(
 	ctx context.Context,
 	filename string,
-	params map[string]interface{},
+	params map[string]any,
 	globalOptions *options.GlobalOptions,
 ) (string, error) {
 	dhlog.FromContext(ctx).DebugContext(ctx, "Rendering check localhost script")

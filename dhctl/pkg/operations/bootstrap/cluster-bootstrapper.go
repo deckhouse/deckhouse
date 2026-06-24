@@ -178,7 +178,7 @@ type bootstrapContext struct {
 	bootstrapState          *State
 	nodeIP                  string
 	devicePath              string
-	resourcesTemplateData   map[string]interface{}
+	resourcesTemplateData   map[string]any
 	resourcesToCreateBefore template.Resources
 	resourcesToCreateAfter  template.Resources
 	installDeckhouseResult  *InstallDeckhouseResult
@@ -485,13 +485,13 @@ func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *boot
 			dhlog.FromContext(ctx).DebugContext(ctx, "Base infrastructure was created")
 			b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.BaseInfraSubPhaseBaseInfra)
 
-			var cloudDiscoveryData map[string]interface{}
+			var cloudDiscoveryData map[string]any
 			err = json.Unmarshal(baseOutputs.CloudDiscovery, &cloudDiscoveryData)
 			if err != nil {
 				return err
 			}
 
-			bctx.resourcesTemplateData = map[string]interface{}{
+			bctx.resourcesTemplateData = map[string]any{
 				"cloudDiscovery": cloudDiscoveryData,
 			}
 

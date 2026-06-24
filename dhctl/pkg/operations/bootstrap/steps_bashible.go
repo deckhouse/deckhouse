@@ -232,8 +232,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 		if err != nil {
 			stderr := ""
 
-			var exitErr *exec.ExitError
-			if errors.As(err, &exitErr) {
+			if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 				stderr = string(exitErr.Stderr)
 			}
 

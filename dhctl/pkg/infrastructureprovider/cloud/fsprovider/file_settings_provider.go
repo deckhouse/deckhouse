@@ -22,7 +22,6 @@ import (
 	"strings"
 	"sync"
 
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -121,18 +120,18 @@ func simpleFromMap(s any, terraformVersion, openTofuVersion string) (*settings.S
 	}
 
 	if set.UseOpenTofu() {
-		set.InfrastructureVersionVal = ptr.To(openTofuVersion)
+		set.InfrastructureVersionVal = new(openTofuVersion)
 	} else {
-		set.InfrastructureVersionVal = ptr.To(terraformVersion)
+		set.InfrastructureVersionVal = new(terraformVersion)
 	}
 
-	set.CloudNameVal = ptr.To(strings.ToLower(*set.CloudNameVal))
+	set.CloudNameVal = new(strings.ToLower(*set.CloudNameVal))
 
 	return &set, nil
 }
 
 func loadTerraformVersionFileSettings(ctx context.Context, filename string) (settingsStore, error) {
-	infrastructureProviders := make(map[string]interface{})
+	infrastructureProviders := make(map[string]any)
 
 	file, err := os.ReadFile(filename)
 	if err != nil {

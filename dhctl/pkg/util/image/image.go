@@ -215,7 +215,7 @@ func getHash(digest, dstPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("cannot open file %s: %w", path, err)
 	}
-	var hashs map[string]interface{}
+	var hashs map[string]any
 	err = json.Unmarshal(data, &hashs)
 	if err != nil {
 		return "", fmt.Errorf("unmarshalling json: %w", err)

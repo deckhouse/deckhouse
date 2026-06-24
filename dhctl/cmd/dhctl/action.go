@@ -79,8 +79,7 @@ func (i *actionIniter) Logger() *slog.Logger {
 }
 
 func (i *actionIniter) setParams(params actionIniterParams) *actionIniter {
-	paramsCopy := params
-	i.params = &paramsCopy
+	i.params = new(params)
 	return i
 }
 

@@ -146,7 +146,7 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 	})
 }
 
-func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, data map[string]interface{}) error {
+func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, data map[string]any) error {
 	doc := unstructured.Unstructured{}
 	doc.SetUnstructuredContent(data)
 
@@ -290,21 +290,22 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 				}
 			}
 
-			message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+			var message strings.Builder
+			fmt.Fprintf(&message, "Nodes Ready %d of %d\n", len(readyNodes), desiredReadyNodes)
 			for _, node := range nodes.Items {
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
 				}
-				message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
 
 			if len(readyNodes) >= desiredReadyNodes {
-				dhlog.FromContext(ctx).InfoContext(ctx, message)
+				dhlog.FromContext(ctx).InfoContext(ctx, message.String())
 				return nil
 			}
 
-			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message.String(), "\n"))
 		})
 }
 
@@ -347,26 +348,27 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 				}
 			}
 
-			message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+			var message strings.Builder
+			fmt.Fprintf(&message, "Nodes Ready %d of %v\n", len(readyNodes), desiredReadyNodes)
 			for _, node := range nodesList.Items {
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
 				}
-				message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
 
 			if len(readyNodes) >= desiredReadyNodes {
-				dhlog.FromContext(ctx).InfoContext(ctx, message)
+				dhlog.FromContext(ctx).InfoContext(ctx, message.String())
 				return nil
 			}
 
-			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message.String(), "\n"))
 		})
 }
 
-func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
-	nodeTemplates := make(map[string]map[string]interface{})
+func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]any, error) {
+	nodeTemplates := make(map[string]map[string]any)
 
 	err := retry.NewLoop("Get NodeGroups node template settings", 50, 1*time.Second).
 		RunContext(ctx, func() error {
@@ -376,9 +378,9 @@ func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient)
 			}
 
 			for _, group := range nodeGroups.Items {
-				var nodeTemplate map[string]interface{}
-				if spec, ok := group.Object["spec"].(map[string]interface{}); ok {
-					nodeTemplate, _ = spec["nodeTemplate"].(map[string]interface{})
+				var nodeTemplate map[string]any
+				if spec, ok := group.Object["spec"].(map[string]any); ok {
+					nodeTemplate, _ = spec["nodeTemplate"].(map[string]any)
 					// if we do not set node template in cluster provider configuration
 					// we get nil node template from config,
 					// but k8s always returns empty map (not nil)

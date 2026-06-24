@@ -81,8 +81,7 @@ func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Ou
 			OutFields: []string{k},
 		})
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 			}
 			if matchNoOutput(err.Error()) {
@@ -202,7 +201,7 @@ func CheckPipeline(
 type BaseInfrastructureDestructiveChanges struct {
 	plan.DestructiveChanges
 	OutputBrokenReason string           `json:"output_broken_reason,omitempty"`
-	OutputZonesChanged plan.ValueChange `json:"output_zones_changed,omitempty"`
+	OutputZonesChanged plan.ValueChange `json:"output_zones_changed"`
 }
 
 func CheckBaseInfrastructurePipeline(

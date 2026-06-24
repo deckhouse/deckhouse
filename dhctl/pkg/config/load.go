@@ -127,8 +127,8 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
-		pathsNoTrimmed := strings.Split(pathsStr, ",")
-		for _, p := range pathsNoTrimmed {
+		pathsNoTrimmed := strings.SplitSeq(pathsStr, ",")
+		for p := range pathsNoTrimmed {
 			paths = append(paths, strings.TrimSpace(p))
 		}
 	}
@@ -452,7 +452,7 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (bool, error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
-	var blank map[string]interface{}
+	var blank map[string]any
 
 	if options.strictUnmarshal {
 		err := yaml.UnmarshalStrict(*dataObj, &blank)
@@ -511,7 +511,7 @@ func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
 	conversion := s.conversionsStore.Get(mc.GetName())
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Starting conversion for module %s. Latest version: %d", mc.GetName(), conversion.LatestVersion()))
 	var err error
-	var conversed map[string]interface{}
+	var conversed map[string]any
 	if mc.Spec.Version < conversion.LatestVersion() {
 		set := &mc.Spec.Settings
 		unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(set)

@@ -155,17 +155,14 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	hasError := int32(0)
 	for _, saver := range s.saversDestinations {
 		svr := saver
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			err = svr.SaveState(ctx, outputs)
 			if err != nil {
 				dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Save intermediate state error: %v", err))
 				atomic.StoreInt32(&hasError, 1)
 				return
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

@@ -95,7 +95,7 @@ func parseResources(docs []string) ([]staticInstance, map[string]*v1alpha2.SSHCr
 			continue
 		}
 
-		var m map[string]interface{}
+		var m map[string]any
 		if err := yaml.Unmarshal([]byte(doc), &m); err != nil {
 			return nil, nil, fmt.Errorf("Cannot unmarshal YAML: %w", err)
 		}
