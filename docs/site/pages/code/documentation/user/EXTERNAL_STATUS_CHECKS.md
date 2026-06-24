@@ -284,7 +284,7 @@ If the timeout expires, the check becomes `failed`.
 
 Check the following:
 
-- The URL in **API to check**.
+- The URL in "API to check".
 - Network access from Deckhouse Code to the external service.
 - Whether the URL uses `http` or `https`.
 - The error text in the merge request widget.
