@@ -21,21 +21,29 @@ import (
 
 // markerPrefix namespaces every marker owned by the enricher. It is the single,
 // canonical root every enricher marker carries; no bare or legacy forms are
-// honoured. Two shapes are recognised:
+// honoured. Three shapes are recognised:
 //
-//	+crd-enricher:raw:<key>[=<value>]                       // raw schema injection
+//	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
+//	+crd-enricher:deckhouse:crd:<key>[=<value>]              // CRD-level setting
 //
 // The raw entity lives directly under the prefix because it injects a standard
 // schema field rather than deckhouse-specific documentation. The documentation
-// entities (crd, examples, deprecated, default) carry the extra
-// "deckhouse:documentation" sub-namespace. Both shapes are reduced to the bare
-// entity name during parsing so the rest of the enricher matches on it.
+// entities (examples, deprecated, default) carry the extra
+// "deckhouse:documentation" sub-namespace. The crd entity configures the CRD
+// rather than documenting a field, so it carries the shorter "deckhouse"
+// sub-namespace. Every shape is reduced to the bare entity name during parsing
+// so the rest of the enricher matches on it.
 const markerPrefix = "crd-enricher:"
 
 // docSubPrefix is the "deckhouse:documentation" sub-namespace stripped from the
 // documentation entities after markerPrefix. The raw entity does not carry it.
 const docSubPrefix = "deckhouse:documentation:"
+
+// deckhouseSubPrefix is the "deckhouse" sub-namespace stripped from the crd
+// entity after markerPrefix. It is shorter than docSubPrefix and must be tried
+// only after it, so that "deckhouse:documentation:" is not swallowed by it.
+const deckhouseSubPrefix = "deckhouse:"
 
 // docKeyPrefix is the schema-field prefix the rendered CRDs use for the simple
 // documentation entities: examples, deprecated and default render as
@@ -57,15 +65,27 @@ const rawMarkerPrefix = "raw:"
 // crdMarker is the type-level entity that configures CRD-level settings that
 // controller-gen cannot express (preserveUnknownFields, the minimal style and
 // schema format stripping) and switches the document to the hand-curated
-// deckhouse style. Its value is a YAML map, for example:
+// deckhouse style. Each setting is its own "crd:<key>=<value>" sub-entity, in
+// the kubebuilder marker style, for example:
 //
-//	+crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true}
+//	+crd-enricher:deckhouse:crd:preserveUnknownFields=false
+//	+crd-enricher:deckhouse:crd:minimal=true
+//	+crd-enricher:deckhouse:crd:stripFormat=true
 //
-// Labels and annotations are not configured here: controller-gen emits them
-// natively from the +kubebuilder:metadata:labels and
-// +kubebuilder:metadata:annotations markers. It is handled separately from the
-// schema-level documentation entities.
+// The value after "=" is parsed as YAML (so stripFormat=[int32] yields a list),
+// and a value-less sub-entity is treated as the boolean true. Labels and
+// annotations are not configured here: controller-gen emits them natively from
+// the +kubebuilder:metadata:labels and +kubebuilder:metadata:annotations
+// markers. It is handled separately from the schema-level documentation
+// entities.
 const crdMarker = "crd"
+
+// isCRDMarker reports whether a parsed marker name addresses the type-level crd
+// entity, either as the bare "crd" name or as a "crd:<key>" sub-entity. Such
+// markers feed applyCRDMarkers and must never leak into a schema node.
+func isCRDMarker(name string) bool {
+	return name == crdMarker || strings.HasPrefix(name, crdMarker+":")
+}
 
 // rootMarker is the controller-gen marker that designates a Go type as the
 // root object of a CRD. The enricher relies on it to know which types map to a
@@ -124,12 +144,16 @@ func parseMarkerLine(line string) (marker, bool) {
 	}
 
 	// Enricher markers are namespaced with markerPrefix; strip it and the
-	// optional "deckhouse:documentation" sub-namespace carried by the
-	// documentation entities so downstream code matches on the bare entity name
-	// (crd, raw:..., examples, …), and flag them as the enricher's own so they
-	// are told apart from other markers.
+	// optional entity sub-namespace so downstream code matches on the bare
+	// entity name (crd:..., raw:..., examples, …), and flag them as the
+	// enricher's own so they are told apart from other markers. The
+	// documentation entities carry "deckhouse:documentation:" and the crd entity
+	// carries the shorter "deckhouse:"; the longer one is tried first so it is
+	// not swallowed by the shorter one.
 	if rest, ok := strings.CutPrefix(m.name, markerPrefix); ok {
-		m.name = strings.TrimPrefix(rest, docSubPrefix)
+		rest = strings.TrimPrefix(rest, docSubPrefix)
+		rest = strings.TrimPrefix(rest, deckhouseSubPrefix)
+		m.name = rest
 		m.enricher = true
 	}
 

@@ -239,23 +239,31 @@ func (e *Enricher) enrichCRD(crd map[string]any) {
 // handled here: they are emitted natively by controller-gen through the
 // +kubebuilder:metadata:labels and +kubebuilder:metadata:annotations markers.
 func (e *Enricher) applyCRDMarkers(crd map[string]any, markers []marker) {
-	var config map[string]any
+	// Each CRD setting arrives as its own "crd:<key>=<value>" marker, mirroring
+	// the kubebuilder marker style. The values are collected into a single
+	// config map so the rest of the function can stay value-driven. A value-less
+	// marker (for example "crd:minimal") is treated as the boolean true.
+	config := map[string]any{}
 	for _, m := range markers {
-		if !m.isDoc() || m.name != crdMarker {
+		if !m.isDoc() {
 			continue
 		}
-		value, err := decodeValue(m.rawValue)
-		if err != nil {
-			e.warnings = append(e.warnings, err.Error())
+		key, ok := strings.CutPrefix(m.name, crdMarker+":")
+		if !ok {
 			continue
 		}
-		if m, ok := value.(map[string]any); ok {
-			config = m
-		} else {
-			config = map[string]any{}
+		var value any = true
+		if m.hasValue {
+			decoded, err := decodeValue(m.rawValue)
+			if err != nil {
+				e.warnings = append(e.warnings, err.Error())
+				continue
+			}
+			value = decoded
 		}
+		config[key] = value
 	}
-	if config == nil {
+	if len(config) == 0 {
 		return
 	}
 
@@ -512,9 +520,9 @@ func (e *Enricher) applyMarkers(schema map[string]any, markers []marker) {
 		if !m.isDoc() {
 			continue
 		}
-		// CRD-level metadata markers are handled separately and must not leak
-		// into the schema node.
-		if m.name == crdMarker {
+		// CRD-level markers are handled separately and must not leak into the
+		// schema node.
+		if isCRDMarker(m.name) {
 			continue
 		}
 

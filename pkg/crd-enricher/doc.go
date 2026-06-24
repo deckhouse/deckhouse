@@ -29,11 +29,13 @@
 //
 //	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
+//	+crd-enricher:deckhouse:crd:<key>[=<value>]              // CRD-level setting
 //
 // The raw entity injects a standard schema field and lives directly under the
-// prefix; the documentation entities (crd, examples, deprecated, default) carry
-// the extra "deckhouse:documentation" sub-namespace. No bare or legacy form is
-// recognised:
+// prefix; the documentation entities (examples, deprecated, default) carry the
+// extra "deckhouse:documentation" sub-namespace; the crd entity configures the
+// CRD itself and carries the shorter "deckhouse" sub-namespace. No bare or
+// legacy form is recognised:
 //
 //	type ModuleSourceSpec struct {
 //		// +crd-enricher:raw:pattern=^(\d+h)?(\d+m)?(\d+s)?$
@@ -56,12 +58,14 @@
 //     valued simple entity becomes x-doc-<entity>);
 //   - raw:<key> — injects an arbitrary standard schema field named <key>
 //     directly (a dotted <key> walks into nested schema nodes);
-//   - crd — a type-level entity configuring CRD-level settings
+//   - crd:<key> — a type-level entity configuring CRD-level settings
 //     (preserveUnknownFields, the minimal style, schema format stripping) and
-//     the curated deckhouse style. CRD labels and annotations are not set here;
-//     they are emitted natively by controller-gen from the
-//     +kubebuilder:metadata:labels and +kubebuilder:metadata:annotations
-//     markers.
+//     the curated deckhouse style. Each setting is its own "crd:<key>=<value>"
+//     marker in the kubebuilder style, for example
+//     "crd:preserveUnknownFields=false" or "crd:stripFormat=[int32]". CRD
+//     labels and annotations are not set here; they are emitted natively by
+//     controller-gen from the +kubebuilder:metadata:labels and
+//     +kubebuilder:metadata:annotations markers.
 //
 // Markers may be attached both to struct fields and to the struct types
 // themselves. Type-level markers are applied to the schema node of the type

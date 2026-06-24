@@ -92,7 +92,9 @@ var _ runtime.Object = (*ModuleRelease)(nil)
 // +kubebuilder:metadata:labels="heritage=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
-// +crd-enricher:deckhouse:documentation:crd={preserveUnknownFields: false, minimal: true, stripFormat: true}
+// +crd-enricher:deckhouse:crd:preserveUnknownFields=false
+// +crd-enricher:deckhouse:crd:minimal=true
+// +crd-enricher:deckhouse:crd:stripFormat=true
 
 // Defines the configuration for a Deckhouse release.
 //
