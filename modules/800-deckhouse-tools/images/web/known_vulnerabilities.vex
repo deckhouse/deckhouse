@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 18,
+  "version": 19,
   "statements": [
     {
       "vulnerability": {
@@ -535,8 +535,106 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость в github.com/in-toto/in-toto-golang v0.9.0 связана с верификацией supply-chain attestations (in-toto layout/link metadata) в составе цепочки cosign/sigstore. В рамках deckhouse-tools web недоверенные in-toto-аттестации не верифицируются — соответствующий исполняемый путь не вызывается, что исключает возможность эксплуатации.",
       "timestamp": "2026-06-03T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46680"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Использование github.com/containerd/containerd ограничено операциями с OCI-образами и манифестами, а не компонентами CRI или runtime, в которых проявляется уязвимость.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41567"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость github.com/docker/docker зафиксирована на версии v25.0.6; демон Docker Engine не запускается, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42306"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость github.com/docker/docker зафиксирована на версии v25.0.6; демон Docker Engine не запускается, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41568"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость github.com/docker/docker зафиксирована на версии v25.0.6; демон Docker Engine не запускается, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-45571"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Уязвимость github.com/go-git/go-git/v5 v5.16.2 проявляется при обработке вредоносных Git-данных из недоверенного источника, недостижимых в штатных операциях d8.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-45570"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Уязвимость github.com/go-git/go-git/v5 v5.16.2 проявляется при обработке вредоносных Git-данных из недоверенного источника, недостижимых в штатных операциях d8.",
+      "timestamp": "2026-06-24T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-w5pp-99ch-qj29"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Уязвимость github.com/go-git/go-git/v5 v5.16.2 проявляется при обработке вредоносных Git-данных из недоверенного источника, недостижимых в штатных операциях d8.",
+      "timestamp": "2026-06-24T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-06-03T12:00:00Z"
+  "last_updated": "2026-06-24T12:00:00Z"
 }

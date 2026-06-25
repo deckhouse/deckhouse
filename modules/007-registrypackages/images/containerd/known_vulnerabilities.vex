@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-0a7dee882b0213b53ce1f13791d223657afca21285b99e07e15b935fa0456093",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 10,
+  "version": 11,
   "statements": [
     {
       "vulnerability": {
@@ -140,10 +140,13 @@
       "products": [
         {
           "@id": "pkg:golang/github.com/containerd/containerd/v2"
+        },
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd"
         }
       ],
       "status": "fixed",
-      "status_notes": "Уязвимость CVE-2026-46680 не может быть эксплуатирована в рамках Deckhouse: используемая версия containerd v2.1.8 уже содержит необходимое исправление безопасности, устраняющее данную уязвимость. Уязвимый код, присутствовавший в более ранних версиях, отсутствует в используемой сборке.",
+      "status_notes": "Уязвимость CVE-2026-46680 не может быть эксплуатирована в рамках Deckhouse: используемые сборки containerd уже содержат необходимое исправление безопасности — v1.7.32 (ветка 1.7) и v2.1.8 (ветка 2.1). Уязвимый код, присутствовавший в более ранних версиях (1.7.30, 2.1.6), отсутствует в используемых сборках.",
       "timestamp": "2026-04-13T14:49:31.087251Z"
     },
     {
@@ -190,5 +193,5 @@
     }
   ],
   "timestamp": "2026-03-04T12:00:38Z",
-  "last_updated": "2026-06-18T12:31:00Z"
+  "last_updated": "2026-06-24T12:00:00Z"
 }
