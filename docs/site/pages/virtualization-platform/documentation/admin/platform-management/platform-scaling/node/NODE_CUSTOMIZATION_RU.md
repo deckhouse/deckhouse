@@ -163,8 +163,8 @@ rm /var/lib/bashible/configuration_checksum
 
 - [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — объединяет конфигурационные файлы containerd и **перезапускает** сервис. Размещение конфигурационных файлов зависит от CRI на узлах кластера:
 
-  - `/etc/containerd/conf.d/*.toml` — для сontainerd v1,
-  - `/etc/containerd/conf2.d/*.toml` — для сontainerd v2.
+  - `/etc/containerd/conf.d/*.toml` — для containerd v1,
+  - `/etc/containerd/conf2.d/*.toml` — для containerd v2.
   
   Следует учитывать, что директории с конфигурационными файлами не создаются автоматически. Файлы в них нужно добавлять в скриптах с приоритетом менее `32`.
 
@@ -421,6 +421,7 @@ Bashible на узлах объединяет конфигурацию container
 {% tabs containerd_version %}
 {% tab "Для containerd v1" %}
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -455,10 +456,12 @@ spec:
     - "worker"
   weight: 31
 ```
+
 {% endraw %}
 {% endtab %}
 {% tab "Для containerd v2" %}
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -495,6 +498,7 @@ spec:
     - "worker"
   weight: 31
 ```
+
 {% endraw %}
 {% endtab %}
 {% endtabs %}
