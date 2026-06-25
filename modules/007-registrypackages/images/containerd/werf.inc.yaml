@@ -97,6 +97,8 @@ shell:
   {{- $is_v2 := hasPrefix "2." $containerd_version }}
   {{- $major_version := index (splitList "-" $image_version) 0 }}
   {{- $runc_version := index $containerd2runc $containerd_version }}
+
+  {{- if $is_v2 }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/distroless" }}
@@ -110,9 +112,6 @@ import:
   - containerd-shim-runc-v1
   - containerd-shim-runc-v2
   - ctr
-  - install
-  - uninstall
-  - containerd.service
   before: install
 {{- if and (eq $.Env "CSE") $is_v2 }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
@@ -127,9 +126,13 @@ import:
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /scripts
+  includePaths:
+  - extension-release.containerd
+  - sysext-containerd.service
   stageDependencies:
     install:
-    - '**/*'
+    - extension-release.containerd
+    - sysext-containerd.service
 shell:
   beforeInstall:
   - pm install erofs-utils coreutils cryptsetup
@@ -143,6 +146,7 @@ shell:
   - export ROOTHASH=$(awk '/^Root hash:/ {print $3}' verity.txt)
   - cat containerd.erofs containerd.verity > /out/containerd.raw
   - printf '%s\n' "$ROOTHASH" > /out/containerd.raw.roothash
+  {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
@@ -176,6 +180,7 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
+  {{- if $is_v2 }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
@@ -194,6 +199,7 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
+  {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -201,9 +207,17 @@ fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
+  includePaths:
+  - containerd.service
+  - install_v1
+  - install_v2
+  - uninstall
   stageDependencies:
     install:
-    - '**/*'
+    - containerd.service
+    - install_v1
+    - install_v2
+    - uninstall
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/containerd/{{ $containerd_version }}
   to: /patches
   stageDependencies:
