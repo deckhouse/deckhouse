@@ -94,7 +94,7 @@ jobs:
       contents: read
       actions: read
       pull-requests: read
-    uses: ./.github/workflows/update-fuzzing-targets.yml
+    uses: ./.github/workflows/update-fuzz-targets.yml
     secrets: inherit
 
   build_tests:
