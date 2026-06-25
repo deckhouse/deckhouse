@@ -56,4 +56,4 @@ case "$kubernetes_version" in
 esac
 
 eval "$(kubectl-${kubectl_version} completion bash | sed 's/_get_comp_words_by_ref/_comp_get_words/g')"
-eval "$(deckhouse-controller --completion-script-bash | sed -e s/deckhouse/deckhouse-controller/g | sed 's/_get_comp_words_by_ref/_comp_get_words/g')"
+eval "$(deckhouse-controller --completion-script-bash | sed 's/_get_comp_words_by_ref/_comp_get_words/g')"
