@@ -14,4 +14,23 @@
 
 package main
 
-//go:generate go run .
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"dvp-tools/openapigen/bundle"
+)
+
+var (
+	moduleRoot = flag.String("module-root", "../..", "path to the cloud-provider-dvp module root")
+)
+
+func main() {
+	flag.Parse()
+
+	if err := bundle.GenerateBundle(*moduleRoot); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "generate bundle: %v\n", err)
+		os.Exit(1)
+	}
+}

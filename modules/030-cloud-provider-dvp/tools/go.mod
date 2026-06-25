@@ -1,6 +1,6 @@
 module dvp-tools
 
-go 1.25.8
+go 1.25.11
 
 require (
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg v0.0.0

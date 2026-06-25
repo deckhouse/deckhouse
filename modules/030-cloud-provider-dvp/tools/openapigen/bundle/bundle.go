@@ -25,16 +25,13 @@ import (
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/settings"
 )
 
-// moduleRoot is relative to CWD when the binary runs (modules/030-cloud-provider-dvp/tools/).
-const moduleRoot = ".."
-
 // GenerateBundle generates all OpenAPI specs for the cloud-provider-dvp module.
 // It writes:
 //   - openapi/config-values.yaml         (ModuleConfigSettings schema)
 //   - openapi/doc-ru-config-values.yaml  (ModuleConfigSettings ru descriptions)
 //   - crds/instance_class.yaml           (DVPInstanceClass CRD)
 //   - crds/doc-ru-instance_class.yaml    (DVPInstanceClass ru descriptions)
-func GenerateBundle() error {
+func GenerateBundle(moduleRoot string) error {
 	steps := []struct {
 		name string
 		path string
@@ -43,12 +40,16 @@ func GenerateBundle() error {
 		{
 			name: "config-values",
 			path: filepath.Join(moduleRoot, "openapi", "config-values.yaml"),
-			gen:  func() ([]byte, error) { return openapigen.GenerateDeckhouseOpenAPISchema(settings.ModuleConfigSettings{}) },
+			gen: func() ([]byte, error) {
+				return openapigen.GenerateDeckhouseOpenAPISchema(settings.ModuleConfigSettings{})
+			},
 		},
 		{
 			name: "doc-ru-config-values",
 			path: filepath.Join(moduleRoot, "openapi", "doc-ru-config-values.yaml"),
-			gen:  func() ([]byte, error) { return openapigen.GenerateDeckhouseDescriptionRu(settings.ModuleConfigSettings{}) },
+			gen: func() ([]byte, error) {
+				return openapigen.GenerateDeckhouseDescriptionRu(settings.ModuleConfigSettings{})
+			},
 		},
 		{
 			name: "instance_class CRD",
