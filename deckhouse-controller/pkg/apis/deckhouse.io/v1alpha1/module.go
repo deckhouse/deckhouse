@@ -170,9 +170,10 @@ type ModuleEdition struct {
 
 // ModuleDisableOptions configures module disable protection.
 type ModuleDisableOptions struct {
-	Confirmation bool                  `json:"confirmation" yaml:"confirmation"`
-	Message      string                `json:"message" yaml:"message"`
-	Messages     ModuleDisableMessages `json:"messages" yaml:"messages"`
+	Confirmation bool `json:"confirmation" yaml:"confirmation"`
+	// Deprecated: use Messages with localized ru/en fields instead.
+	Message  string                `json:"message" yaml:"message"`
+	Messages ModuleDisableMessages `json:"messages" yaml:"messages"`
 }
 
 // ModuleDisableMessages holds localized disable confirmation messages for the module.
