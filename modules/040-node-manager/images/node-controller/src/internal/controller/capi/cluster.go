@@ -18,7 +18,6 @@ package capi
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -303,16 +302,7 @@ func (r *ClusterReconciler) readClusterConfiguration(ctx context.Context) (*clus
 
 	raw, ok := secret.Data["cluster-configuration.yaml"]
 	if !ok {
-		rawStr, ok := secret.Data["cluster-configuration.yaml"]
-		if !ok {
-			return nil, fmt.Errorf("cluster-configuration secret missing cluster-configuration.yaml key")
-		}
-		decoded, err := base64.StdEncoding.DecodeString(string(rawStr))
-		if err != nil {
-			raw = rawStr
-		} else {
-			raw = decoded
-		}
+		return nil, fmt.Errorf("cluster-configuration secret missing cluster-configuration.yaml key")
 	}
 
 	cfg := &clusterConfiguration{}
