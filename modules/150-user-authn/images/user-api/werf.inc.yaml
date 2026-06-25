@@ -44,8 +44,7 @@ shell:
     - chmod 0700 user-api
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-fuzz
-from: builder/golang-alpine
-final: false
+from: {{ index $.Images "builder/golang-alpine" }}
 
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -62,13 +61,12 @@ secrets:
 
 shell:
   install:
-    - export GOPROXY=$(cat /run/secrets/GOPROXY)
-    - export CGO_ENABLED=1 GOOS=linux GOARCH=amd64
-
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64
     - cd /src
-
-    - go test ./pkg/api -run='^Fuzz' -v
+    - go test -list '^Fuzz' ./... | grep '^Fuzz' > /fuzz-targets.txt
+    - go test ./... -run '^Fuzz' -v
 
 imageSpec:
   config:
-    entrypoint: ["/src/fuzz.test"]
+    workingDir: /src
+    entrypoint: ["/bin/sh"]
