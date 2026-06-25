@@ -1,1 +1,6 @@
-jewfnwefnew
+go test fuzz v1
+string("Bearer 0")
+string("\"0000000000000000000000000000000000000000000000000000000000000000")
+string("0")
+string("local")
+bool(true)
