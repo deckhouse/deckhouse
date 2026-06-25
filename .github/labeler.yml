@@ -66,7 +66,6 @@ area/logs:
   - modules/462-loki/**
 
 area/monitoring:
-  - modules/200-operator-prometheus/**
   - modules/300-prometheus/**
   - modules/301-prometheus-metrics-adapter/**
   - modules/303-prometheus-pushgateway/**

@@ -77,7 +77,6 @@
 140-user-authz/                                                  @nabokihms @AlwxSin
 150-user-authn/                                                  @nabokihms @AlwxSin
 160-multitenancy-manager/                                        @nabokihms @AlwxSin
-200-operator-prometheus/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
 300-prometheus/                                                  @vladimirGuryanov @lazovskiy @maksimmadzhuga
 301-prometheus-*/                                                @vladimirGuryanov @lazovskiy @maksimmadzhuga
 302-vertical-pod-autoscaler/                                     @yalosev @ergoz

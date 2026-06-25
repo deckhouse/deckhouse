@@ -159,14 +159,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/300-prometheus/hooks
-  to: /deckhouse/modules/300-prometheus/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/301-prometheus-metrics-adapter/hooks
   to: /deckhouse/modules/301-prometheus-metrics-adapter/hooks
   excludePaths:
@@ -249,14 +241,6 @@
         - '**/*'
 - add: /modules/460-log-shipper/apis
   to: /deckhouse/modules/460-log-shipper/apis
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/462-loki/hooks
-  to: /deckhouse/modules/462-loki/hooks
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'

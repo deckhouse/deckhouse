@@ -341,44 +341,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/200-operator-prometheus
-  to: /deckhouse/modules/200-operator-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/300-prometheus
-  to: /deckhouse/modules/300-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/301-prometheus-metrics-adapter
   to: /deckhouse/modules/301-prometheus-metrics-adapter
   excludePaths:
@@ -552,25 +514,6 @@
         - '**/*'
 - add: /modules/460-log-shipper
   to: /deckhouse/modules/460-log-shipper
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/462-loki
-  to: /deckhouse/modules/462-loki
   excludePaths:
     - docs
     - README.md

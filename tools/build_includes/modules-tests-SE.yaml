@@ -285,28 +285,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/200-operator-prometheus
-  to: /deckhouse/modules/200-operator-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/300-prometheus
-  to: /deckhouse/modules/300-prometheus
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/301-prometheus-metrics-adapter
   to: /deckhouse/modules/301-prometheus-metrics-adapter
   excludePaths:
@@ -331,6 +309,17 @@
         - '**/*'
 - add: /modules/303-prometheus-pushgateway
   to: /deckhouse/modules/303-prometheus-pushgateway
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /modules/304-observability
+  to: /deckhouse/modules/304-observability
   excludePaths:
     - docs
     - README.md
@@ -419,17 +408,6 @@
         - '**/*'
 - add: /modules/460-log-shipper
   to: /deckhouse/modules/460-log-shipper
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/462-loki
-  to: /deckhouse/modules/462-loki
   excludePaths:
     - docs
     - README.md
