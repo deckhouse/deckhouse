@@ -1,0 +1,26 @@
+diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
+index 1111111..2222222 100644
+--- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
++++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
+@@ -88,6 +88,11 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+   };
+ 
+   handleLogout = () => {
++    if (authenticationConfig.strategy === AuthStrategy.header) {
++      window.location.assign('/logout');
++      return;
++    }
++
+     if (authenticationConfig.logoutEndpoint) {
+       API.logout()
+         .then(_ => {
+@@ -123,8 +128,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+   render() {
+     const { isDropdownOpen } = this.state;
+ 
+-    const canLogout =
+-      authenticationConfig.strategy !== AuthStrategy.anonymous && authenticationConfig.strategy !== AuthStrategy.header;
++    const canLogout = authenticationConfig.strategy !== AuthStrategy.anonymous;
+ 
+     const userDropdownItems = (
+       <DropdownItem key={'user_logout_option'} onClick={this.handleLogout} isDisabled={!canLogout}>

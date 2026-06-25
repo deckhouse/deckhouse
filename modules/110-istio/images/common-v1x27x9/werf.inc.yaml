@@ -22,10 +22,6 @@ git:
   tag: {{ $kialiVersion }}
   add: /
   to: /src/kiali
-- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
-  tag: {{ $kialiVersion }}
-  add: /static
-  to: /src/kiali/frontend/build
 shell:
   install:
   # istio
@@ -35,4 +31,19 @@ shell:
   # kiali
   - cd /src/kiali/
   - git apply --verbose /patches/001-kiali-gomod_gosum.patch
+  - git apply --verbose /patches/002-kiali-logout.patch
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-kiali-frontend-build-artifact
+from: {{ index $.Images "builder/node-alpine-22.16" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/kiali/frontend
+  to: /src/kiali/frontend
+  before: install
+shell:
+  install:
+  - cd /src/kiali/frontend
+  - yarn install --frozen-lockfile
+  - KIALI_ENV=production yarn run build
 {{- end }}

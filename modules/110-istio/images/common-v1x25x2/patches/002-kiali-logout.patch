@@ -1,0 +1,26 @@
+diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
+index 1111111..2222222 100644
+--- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
++++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
+@@ -105,6 +105,11 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+   };
+ 
+   handleLogout = (): void => {
++    if (authenticationConfig.strategy === AuthStrategy.header) {
++      window.location.assign('/logout');
++      return;
++    }
++
+     if (authenticationConfig.logoutEndpoint) {
+       API.logout()
+         .then(_ => {
+@@ -143,8 +148,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+     const clusterIsInSessionInfo = (cluster: string): boolean =>
+       this.props.session?.clusterInfo?.[cluster] !== undefined;
+ 
+-    const canLogout =
+-      authenticationConfig.strategy !== AuthStrategy.anonymous && authenticationConfig.strategy !== AuthStrategy.header;
++    const canLogout = authenticationConfig.strategy !== AuthStrategy.anonymous;
+ 
+     // We want to show a dropdown per cluster the user is not logged into yet.
+     // The clusters you are logged into are in session.clusterInfo and all
