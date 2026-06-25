@@ -1,0 +1,65 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0
+
+{!{- $workflowName              := "Update fuzzing targets" -}!}
+{!{- $enableWorkflowOnTestRepos := true -}!}
+
+{!{- $ctx := . }!}
+
+name: '{!{ $workflowName }!}'
+
+on:
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: read
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+{!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
+
+  build_fe:
+    name: Build FE
+    needs:
+      - git_info
+    env:
+      WERF_ENV: "FE"
+{!{ tmpl.Exec "build_template" (slice $ctx "main" "FE") | strings.Indent 4 }!}
+
+  update_fuzzing_targets:
+    name: Update fuzzing targets
+    needs:
+      - build_fe
+    runs-on: [self-hosted, regular]
+    steps:
+      - name: Download FE build report
+        uses: actions/download-artifact@v4
+        with:
+          name: build_report_FE
+          path: .
+
+      - name: Extract fuzzing images
+        run: |
+          jq -r '
+            .Images
+            | to_entries[]
+            | select(.key | endswith("-fuzz"))
+            | .key + " " + .value.DockerTag
+          ' images_tags_werf.json > fuzz-images.txt
+
+          echo "Discovered fuzz images:"
+          cat fuzz-images.txt
+
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
