@@ -20,10 +20,10 @@ import:
     add: /src
     to: /src/pushgateway
     before: install
-  - image: prometheus/prometheus-promu-artifact
-    add: /src/promu
-    to: /bin/promu
-    before: install
+#  - image: prometheus/prometheus-promu-artifact
+#    add: /src/promu
+#    to: /bin/promu
+#    before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:

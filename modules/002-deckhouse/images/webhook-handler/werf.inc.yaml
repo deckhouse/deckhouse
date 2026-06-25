@@ -10,10 +10,10 @@ import:
   add: /usr/bin/semver
   to: /usr/bin/semver
   before: setup
-- image: prometheus/prometheus
-  add: /bin/promtool
-  to: /usr/local/bin/promtool
-  before: setup
+#- image: prometheus/prometheus
+#  add: /bin/promtool
+#  to: /usr/local/bin/promtool
+#  before: setup
 - image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
   add: /label-converter
   to: /usr/local/bin/label-converter
