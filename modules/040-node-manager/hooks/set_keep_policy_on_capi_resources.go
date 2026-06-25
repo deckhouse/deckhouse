@@ -22,6 +22,8 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -65,8 +67,11 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 	for _, gvr := range capiResources {
 		list, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
-			input.Logger.Info("skipping resource", slog.String("resource", gvr.Resource), slog.Any("error", err))
-			continue
+			if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+				input.Logger.Info("skipping resource, not served", slog.String("resource", gvr.Resource), slog.Any("error", err))
+				continue
+			}
+			return fmt.Errorf("list %s: %w", gvr.Resource, err)
 		}
 
 		for _, item := range list.Items {
@@ -92,6 +97,20 @@ func setKeepPolicyOnCapiResources(_ context.Context, input *go_hook.HookInput, d
 				return fmt.Errorf("patch %s/%s: %w", gvr.Resource, item.GetName(), err)
 			}
 			input.Logger.Info("stamped keep policy", slog.String("resource", gvr.Resource), slog.String("name", item.GetName()))
+		}
+
+		verify, err := dynClient.Resource(gvr).Namespace(capiNamespace).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("verify list %s: %w", gvr.Resource, err)
+		}
+		for _, item := range verify.Items {
+			annotations := item.GetAnnotations()
+			if _, hasHelm := annotations["meta.helm.sh/release-name"]; !hasHelm {
+				continue
+			}
+			if annotations[helmResourcePolicyAnnotation] != "keep" {
+				return fmt.Errorf("keep policy not set on helm-managed %s/%s: refusing to proceed to avoid prune", gvr.Resource, item.GetName())
+			}
 		}
 	}
 
