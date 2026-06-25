@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -61,7 +62,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 const (

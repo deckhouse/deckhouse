@@ -22,9 +22,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 func TestValidateClusterPrefix(t *testing.T) {
