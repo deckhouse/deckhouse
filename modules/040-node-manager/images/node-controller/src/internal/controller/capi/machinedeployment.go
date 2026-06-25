@@ -229,10 +229,11 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			"apiVersion": "cluster.x-k8s.io/v1beta2",
 			"kind":       "MachineDeployment",
 			"metadata": map[string]interface{}{
-				"name":        mdName,
-				"namespace":   common.MachineNamespace,
-				"labels":      commonLabels,
-				"annotations": annotations,
+				"name":            mdName,
+				"namespace":       common.MachineNamespace,
+				"labels":          commonLabels,
+				"annotations":     annotations,
+				"ownerReferences": nodeGroupOwnerReference(ng),
 			},
 			"spec": map[string]interface{}{
 				"clusterName": cloudConfig.capiClusterName,
@@ -299,9 +300,10 @@ func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng 
 		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "MachineDeployment",
 		"metadata": map[string]interface{}{
-			"name":      mdName,
-			"namespace": common.MachineNamespace,
-			"labels":    commonLabels,
+			"name":            mdName,
+			"namespace":       common.MachineNamespace,
+			"labels":          commonLabels,
+			"ownerReferences": nodeGroupOwnerReference(ng),
 		},
 		"spec": map[string]interface{}{
 			"clusterName": "static",
@@ -520,6 +522,18 @@ func calculateReplicas(current, min, max int32) int32 {
 		return max
 	default:
 		return current
+	}
+}
+
+// nodeGroupOwnerReference makes GC cascade-delete the MachineDeployment when the NodeGroup is removed.
+func nodeGroupOwnerReference(ng *deckhousev1.NodeGroup) []interface{} {
+	return []interface{}{
+		map[string]interface{}{
+			"apiVersion": "deckhouse.io/v1",
+			"kind":       "NodeGroup",
+			"name":       ng.Name,
+			"uid":        string(ng.UID),
+		},
 	}
 }
 
