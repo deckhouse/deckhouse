@@ -913,6 +913,37 @@ alerts:
         Controller pod isn't running on node {{ $labels.node }}.
       severity: "6"
       markupFormat: markdown
+    - name: D8ControlPlaneMasterResourcesInsufficient
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The control-plane components (`kube-apiserver`, `etcd`, `kube-controller-manager`, `kube-scheduler`) are sized automatically by the number of nodes in the cluster, but the recommended requests for the current cluster size do not fit into the usable allocatable resources of the smallest master node.
+
+        Deckhouse caps the control-plane requests at {{`75%`}} of the smallest master's usable allocatable so other pods (CNI, CSI, monitoring, control-plane-manager) still fit. While this cap is in effect, control-plane components receive less CPU/memory than recommended for the cluster size, which may degrade control-plane performance under load.
+
+        **To resolve this, do one of the following:**
+
+        1. Increase the size (CPU/memory) of the master nodes to match the cluster scale. This is the recommended action.
+
+        2. If you intentionally run a smaller control plane, set explicit requests to silence the advisory and pin the values:
+
+           ```bash
+           d8 k patch mc control-plane-manager --type merge \
+             -p '{"spec":{"version":3,"settings":{"resourcesRequests":{"cpu":"<cpu>","memory":"<memory>"}}}}'
+           ```
+
+        Inspect current master allocatable and control-plane requests:
+
+        ```bash
+        d8 k get nodes -l node-role.kubernetes.io/control-plane -o custom-columns=NAME:.metadata.name,CPU:.status.allocatable.cpu,MEM:.status.allocatable.memory
+        d8 k -n kube-system get pods -l 'tier=control-plane' -o custom-columns=NAME:.metadata.name,CPU:.spec.containers[0].resources.requests.cpu,MEM:.spec.containers[0].resources.requests.memory
+        ```
+      summary: |
+        Master nodes are undersized for the cluster's control-plane resource requests.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ControlPlaneNodeMaintenanceModeEnabled
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
