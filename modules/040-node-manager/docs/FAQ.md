@@ -781,6 +781,7 @@ You can override the values of the parameters that are specified in the file `/e
 {% tabs containerd_version %}
 {% tab "For containerd v1" %}
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -815,10 +816,12 @@ spec:
     - "worker"
   weight: 31
 ```
+
 {% endraw %}
 {% endtab %}
 {% tab "For containerd v2" %}
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -855,6 +858,7 @@ spec:
     - "worker"
   weight: 31
 ```
+
 {% endraw %}
 {% endtab %}
 {% endtabs %}

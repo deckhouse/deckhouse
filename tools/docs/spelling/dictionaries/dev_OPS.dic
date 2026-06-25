@@ -1,4 +1,4 @@
-2716
+2721
 Автообновление
 Агрегирующий
 Актуализируйте
@@ -214,7 +214,6 @@
 виртуализированными
 виртуализованной
 включал
-внешниx
 внутренного
 внутрикластерное
 внутрикластерной
@@ -229,7 +228,6 @@
 высокодоступный
 высокодоступных
 высокоуровневой
-высокоуровневые
 высокоуровневыми
 высокоуровневых
 г
@@ -305,7 +303,6 @@
 засчет
 захеширован
 захешированном
-иcпользовать
 иммутабельный
 имплементацию
 инга
@@ -389,7 +386,6 @@
 контеинеризации
 контеинеризация
 контейнер
-контейнера
 контейнеризации
 контейнеризация
 контейнеризированных
@@ -553,6 +549,7 @@
 одностраничных
 однострочник
 одноузлового
+одноузловом
 опциональные
 опциональный
 опциональных
@@ -606,6 +603,7 @@
 перегенерация
 перегенерировать
 передеплоятся
+перезагрузится
 перезапускает
 перезапускается
 перезапускать
@@ -645,6 +643,7 @@
 пересоздайте
 пересоздастся
 пересоздаёт
+пересоздаётся
 переупорядочивание
 перехешируются
 пецификация
@@ -672,7 +671,6 @@
 подсеть
 подсетью
 подсетям
-подсетями
 подсетях
 покоммитное
 помотрим
@@ -733,7 +731,6 @@
 реверт
 регистри
 редиректить
-резолверы
 резолвинга
 резолвится
 реквест
@@ -874,6 +871,7 @@
 таймаутом
 таймауту
 таймауты
+тайминги
 таргетов
 тегирование
 тегирования
@@ -1098,7 +1096,6 @@ autoscalers
 autoscaling
 autounattend
 autoverification
-AvailableClusterResource
 Avi
 aws
 AWS
@@ -1262,8 +1259,6 @@ ClusterLoggingConfig
 ClusterName
 ClusterObservabilityAlert
 ClusterPodLoggingConfig
-ClusterResourceGrant
-ClusterResourceGrantPolicy
 ClusterRole
 ClusterRoleBinding
 clusterType
@@ -1385,6 +1380,7 @@ Datastreams
 DCGM
 DDTHH
 de
+debian
 Debian
 deckhouse
 Deckhouse
@@ -1573,6 +1569,7 @@ GCP
 GCPClusterConfiguration
 GCPInstanceClass
 GCPInstanceClasses
+gdm
 GeeseFS
 GELF
 Gemfile
@@ -1608,7 +1605,6 @@ GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
 Grafanas
-GrantableClusterResourceDefinition
 GraphQL
 Graylog
 grep
@@ -1835,6 +1831,7 @@ LetsEncrypt
 LFS
 libc
 lifecycle
+lightdm
 linkTitle
 linstor
 Linstor
@@ -2329,6 +2326,7 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
+sddm
 SDN
 sds
 Searchable
@@ -2379,6 +2377,7 @@ smokeMini
 snaphost
 Snapshotter
 SNAT
+softdog
 SomeRegion
 SonarQube
 Sonatype
@@ -2529,6 +2528,7 @@ TrustDomain
 tuf
 tunnelMode
 txt
+ubuntu
 Ubuntu
 UDP
 UEFI
@@ -2692,6 +2692,7 @@ worseness
 WSL
 www
 внешниx
+Xorg
 xz
 Yadro
 YadroStorageClass

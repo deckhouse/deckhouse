@@ -780,6 +780,7 @@ Bashible на узлах объединяет конфигурацию container
 {% tabs containerd_version %}
 {% tab "Для containerd v1" %}
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -814,10 +815,12 @@ spec:
     - "worker"
   weight: 31
 ```
+
 {% endraw %}
 {% endtab %}
 {% tab "Для containerd v2" %}
 {% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
@@ -854,6 +857,7 @@ spec:
     - "worker"
   weight: 31
 ```
+
 {% endraw %}
 {% endtab %}
 {% endtabs %}
