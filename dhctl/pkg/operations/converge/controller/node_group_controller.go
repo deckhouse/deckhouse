@@ -352,8 +352,7 @@ func (c *NodeGroupController) getSpec(ctx *context.Context, name string) (*confi
 	}
 	for _, terranodeGroup := range metaConfig.GetTerraNodeGroups() {
 		if terranodeGroup.Name == name {
-			cc := terranodeGroup
-			return &cc, nil
+			return new(terranodeGroup), nil
 		}
 	}
 

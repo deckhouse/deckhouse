@@ -282,17 +282,17 @@ func SaveNodeInfrastructureState(
 
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return manifests.SecretWithNodeInfrastructureState(nodeName, nodeGroup, tfState, settings)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -310,10 +310,10 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		return ErrNoInfrastructureState
 	}
 
-	getInfrastructureStateManifest := func() interface{} {
+	getInfrastructureStateManifest := func() any {
 		return manifests.SecretWithNodeInfrastructureState(nodeName, global.MasterNodeGroupName, tfState, nil)
 	}
-	getDevicePathManifest := func() interface{} {
+	getDevicePathManifest := func() any {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)
 	}
 
@@ -321,14 +321,14 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getInfrastructureStateManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -339,14 +339,14 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		{
 			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 			Manifest: getDevicePathManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*v1.Secret))
 				if err != nil {
 					return err
@@ -386,15 +386,15 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-cluster-terraform-state"`,
-		Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		Manifest: func() any { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.
 				CoreV1().Secrets("d8-system").
 				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
@@ -414,8 +414,8 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 		return err
 	}
 
-	patch, err := json.Marshal(map[string]interface{}{
-		"data": map[string]interface{}{
+	patch, err := json.Marshal(map[string]any{
+		"data": map[string]any{
 			"cloud-provider-discovery-data.json": outputs.CloudDiscovery,
 		},
 	})

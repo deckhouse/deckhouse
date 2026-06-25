@@ -60,7 +60,7 @@ func (p *CloudProviderGetterParams) getProvidersCache() (CloudProvidersCache, er
 		providersCache = defaultProvidersCache
 	}
 
-	logger.LogDebugF(providersCacheLogMessage)
+	logger.LogDebugF("%s", providersCacheLogMessage)
 
 	return providersCache, nil
 }
@@ -126,7 +126,7 @@ func (p *CloudProviderGetterParams) setVersionsContentProviderGetter(di *cloud.P
 		versionProviderGetter = p.VersionProviderGetter
 	}
 
-	logger.LogDebugF(logMessage)
+	logger.LogDebugF("%s", logMessage)
 	di.VersionsContentProviderGetter = versionProviderGetter
 
 	return nil

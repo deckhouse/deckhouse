@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -132,6 +133,15 @@ func newModuleCR(name string, availableSources []string, stage string) *v1alpha1
 			AvailableSources: availableSources,
 		},
 	}
+}
+
+// newModuleCRWithRequirements builds a Module CR that declares parent-module
+// requirements, to exercise the dependency extender fallback that reads them
+// from the Module CR when the extender itself has no registered constraints.
+func newModuleCRWithRequirements(name string, availableSources []string, stage string, parentModules map[string]string) *v1alpha1.Module {
+	m := newModuleCR(name, availableSources, stage)
+	m.Properties.Requirements = &v1alpha1.ModuleRequirements{ParentModules: parentModules}
+	return m
 }
 
 func newModuleConfigFull(name string, enabled *bool, source, updatePolicy string) *v1alpha1.ModuleConfig {
@@ -671,6 +681,282 @@ func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
 	}
 }
 
+// deckhouseConfigSchemaYAML is a minimal config-values schema with an immutable
+// rule for the bundle field. It deliberately mirrors the real rule from
+// modules/002-deckhouse/openapi/config-values.yaml so that the test reproduces
+// production webhook behaviour end-to-end.
+const deckhouseConfigSchemaYAML = `
+type: object
+properties:
+  bundle:
+    type: string
+    enum:
+      - Default
+      - Minimal
+      - Managed
+    default: Default
+x-deckhouse-validations:
+  - expression: "(has(oldSelf.bundle) ? oldSelf.bundle : 'Default') == (has(self.bundle) ? self.bundle : 'Default')"
+    message: "bundle is immutable"
+`
+
+// newModuleWithCELSchema creates a *moduletypes.Module whose GetBasicModule().GetSchemaStorage()
+// contains the supplied config-values schema with x-deckhouse-validations rules.
+// The schema is converted from YAML to JSON because addon-operator NewBasicModule expects JSON.
+func newModuleWithCELSchema(t *testing.T, name, schemaYAML string) *moduletypes.Module {
+	t.Helper()
+
+	configJSON, err := yaml.YAMLToJSON([]byte(schemaYAML))
+	require.NoError(t, err, "yaml->json for config schema of %q", name)
+
+	def := &moduletypes.Definition{Name: name}
+	mod, err := moduletypes.NewModule(def, nil, configJSON, nil, log.NewNop())
+	require.NoError(t, err, "create module %q with config schema", name)
+
+	return mod
+}
+
+// newModuleConfigWithSettings creates a ModuleConfig with spec.version and
+// spec.settings filled in. When settings is nil, spec.settings is left unset
+// so that spec.version == 0 is valid (no settings → no version required).
+// An empty (non-nil) map is explicitly set so that extractOldSettings treats it
+// as "settings present but no keys" — which is necessary for the CEL regression
+// tests that check the "bundle absent → effective Default" behaviour.
+func newModuleConfigWithSettings(name string, enabled *bool, version int, settings map[string]any) *v1alpha1.ModuleConfig {
+	cfg := newModuleConfig(name, enabled, nil)
+	cfg.Spec.Version = version
+	if settings != nil {
+		cfg.Spec.Settings = v1alpha1.MakeMappedFields(settings)
+	}
+
+	return cfg
+}
+
+// TestModuleConfigValidationHandler_CELTransition verifies that the admission
+// webhook correctly evaluates x-deckhouse-validations CEL transition rules
+// (those referencing oldSelf) during UPDATE operations.
+//
+// This is the end-to-end test for the
+// extractOldSettings → validateCELTransition → configSchema → cel.ValidateTransition
+func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
+	const moduleName = "deckhouse"
+
+	tests := []struct {
+		name        string
+		operation   string
+		newSettings map[string]any
+		newVersion  int
+		oldSettings map[string]any
+		oldVersion  int
+		// expectCheckEnabling is set when the operation causes an enabling
+		// transition so the dependency mock must expect a CheckEnabling call.
+		expectCheckEnabling bool
+		wantAllowed         bool
+		wantMessage         string
+		description         string
+	}{
+		{
+			name:        "UPDATE: changing immutable bundle field is rejected",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"bundle": "Minimal"},
+			newVersion:  1,
+			oldSettings: map[string]any{"bundle": "Default"},
+			oldVersion:  1,
+			wantAllowed: false,
+			wantMessage: "bundle is immutable",
+			description: "the webhook must reject a bundle change end-to-end via CEL transition rule",
+		},
+		{
+			name:        "UPDATE: keeping bundle unchanged is allowed",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"bundle": "Default"},
+			newVersion:  1,
+			oldSettings: map[string]any{"bundle": "Default"},
+			oldVersion:  1,
+			wantAllowed: true,
+			description: "no change to bundle — transition rule passes",
+		},
+		{
+			name:        "UPDATE: changing bundle from Default to Managed is rejected",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"bundle": "Managed"},
+			newVersion:  1,
+			oldSettings: map[string]any{"bundle": "Default"},
+			oldVersion:  1,
+			wantAllowed: false,
+			wantMessage: "bundle is immutable",
+			description: "any change to bundle value triggers the immutability rule",
+		},
+		{
+			name:                "CREATE: setting bundle skips CEL; request fails only due to missing Module CR",
+			operation:           "CREATE",
+			newSettings:         map[string]any{"bundle": "Minimal"},
+			newVersion:          1,
+			expectCheckEnabling: true,
+			wantAllowed:         false,
+			wantMessage:         "not found",
+			description:         "CEL transition rule is skipped on CREATE; rejection comes from the absent Module CR",
+		},
+		{
+			name:        "UPDATE: old config has no version — transition rule is skipped",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"bundle": "Minimal"},
+			newVersion:  1,
+			oldSettings: nil,
+			oldVersion:  0, // version == 0 → ExtractLatestSettings returns nil → CEL skipped
+			wantAllowed: true,
+			description: "old object without spec.version → extractOldSettings returns nil → CEL rules skipped",
+		},
+		{
+			// Regression test: when old settings are present but without an explicit
+			// bundle key, the CEL expression "(has(oldSelf.bundle) ? oldSelf.bundle : 'Default')"
+			// treats the effective old value as "Default". Setting bundle: Minimal must
+			// therefore be rejected because "Default" != "Minimal".
+			//
+			// Note: a non-empty map without "bundle" is used so that MakeMappedFields produces
+			// non-nil Settings — otherwise extractOldSettings returns nil and CEL is skipped entirely.
+			name:        "UPDATE: setting bundle when old config had no explicit bundle is rejected",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"bundle": "Minimal"},
+			newVersion:  1,
+			oldSettings: map[string]any{"logLevel": "Info"}, // non-empty, no bundle → Settings != nil → CEL runs → effective old bundle is "Default"
+			oldVersion:  1,
+			wantAllowed: false,
+			wantMessage: "bundle is immutable",
+			description: "old config without explicit bundle defaults to 'Default' via CEL expression; adding bundle: Minimal must be rejected",
+		},
+		{
+			name:        "UPDATE: old and new config both omit bundle — rule passes",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"logLevel": "Info"}, // non-empty, no bundle → CEL runs → effective "Default"
+			newVersion:  1,
+			oldSettings: map[string]any{"logLevel": "Info"}, // non-empty, no bundle → CEL runs → effective "Default"
+			oldVersion:  1,
+			wantAllowed: true,
+			description: "both sides default to 'Default' via CEL expression — no effective change, rule passes",
+		},
+		{
+			name:        "UPDATE: removing explicit bundle when it was Default is allowed",
+			operation:   "UPDATE",
+			newSettings: map[string]any{"logLevel": "Info"}, // non-empty, no bundle → CEL runs → effective "Default"
+			newVersion:  1,
+			oldSettings: map[string]any{"bundle": "Default"}, // explicit Default
+			oldVersion:  1,
+			wantAllowed: true,
+			description: "removing an explicit bundle Default is a no-op in effective value — allowed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newModuleWithCELSchema(t, moduleName, deckhouseConfigSchemaYAML),
+				},
+			}
+			manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
+
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+			if tt.expectCheckEnabling {
+				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
+			}
+
+			// conversion store is required so that validateCR / ExtractLatestSettings
+			// work correctly when spec.version > 0; nil valuesValidator skips the
+			// OpenAPI settings check — we only care about CEL here.
+			validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
+
+			// For UPDATE operations, a Module CR must be present in the fake client so
+			// that resolveModuleSource does not short-circuit before validateCELTransition
+			// is reached. For CREATE the CR is intentionally absent so that
+			// checkExperimentalFromModuleCR rejects the request with "not found".
+			var objs []client.Object
+			if tt.operation == "UPDATE" {
+				objs = append(objs, newModuleCR(moduleName, []string{}, ""))
+			}
+			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, objs...)
+
+			newCfg := newModuleConfigWithSettings(moduleName, boolPtr(true), tt.newVersion, tt.newSettings)
+
+			var oldCfg *v1alpha1.ModuleConfig
+			if tt.operation == "UPDATE" {
+				oldCfg = newModuleConfigWithSettings(moduleName, boolPtr(true), tt.oldVersion, tt.oldSettings)
+			}
+
+			review := newModuleConfigAdmissionReview(tt.operation, newCfg, oldCfg)
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed, "expected allowed: %s", tt.description)
+				return
+			}
+
+			require.False(t, resp.Allowed, "expected rejection: %s", tt.description)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage,
+				"rejection message should contain expected text: %s", tt.description)
+		})
+	}
+}
+
+// TestExtractOldSettings_SkipsWhenNoVersion verifies that extractOldSettings
+// (called inside validate() for every UPDATE) gracefully handles old objects
+// without spec.version by returning nil — which causes CEL transition rules to
+// be skipped rather than returning an error.
+func TestExtractOldSettings_SkipsWhenNoVersion(t *testing.T) {
+	const moduleName = "deckhouse"
+
+	storage := &fakeModuleStorage{
+		modules: map[string]*moduletypes.Module{
+			moduleName: newModuleWithCELSchema(t, moduleName, deckhouseConfigSchemaYAML),
+		},
+	}
+	manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
+	dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+	validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
+	handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator)
+
+	// old object has no spec.version and no spec.settings; ExtractLatestSettings
+	// must return nil, nil → CEL check is skipped
+	oldCfg := newModuleConfig(moduleName, boolPtr(true), nil)
+
+	// new object carries a bundle setting that would normally fire the immutability
+	// rule — but since old settings are nil the check must be skipped
+	newCfg := newModuleConfigWithSettings(moduleName, boolPtr(true), 1, map[string]any{"bundle": "Minimal"})
+
+	review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+	resp := callHandler(t, handler, review)
+
+	assert.True(t, resp.Allowed,
+		"UPDATE with old config lacking spec.version must be allowed (CEL skipped)")
+}
+
+// TestConfigSchema_ReturnsNilForUnknownModule verifies that when the module is
+// absent from moduleStorage (configSchema returns nil), validateCELTransition
+// gracefully skips CEL rules instead of returning an error.
+func TestConfigSchema_ReturnsNilForUnknownModule(t *testing.T) {
+	const moduleName = "unknown-cel-module"
+
+	// storage is empty — configSchema will return nil
+	storage := &fakeModuleStorage{modules: map[string]*moduletypes.Module{}}
+	manager := &fakeModuleManager{enabled: map[string]bool{moduleName: true}}
+	dependencyExtender := moduledependency.NewIExtenderMock(t)
+
+	validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
+	handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator)
+
+	newCfg := newModuleConfigWithSettings(moduleName, boolPtr(true), 1, map[string]any{"bundle": "Minimal"})
+	oldCfg := newModuleConfigWithSettings(moduleName, boolPtr(true), 1, map[string]any{"bundle": "Default"})
+
+	review := newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg)
+	resp := callHandler(t, handler, review)
+
+	// allowed: no schema found in storage, so CEL transition validation is skipped
+	assert.True(t, resp.Allowed,
+		"when configSchema returns nil for unknown module, CEL must be skipped and request allowed")
+}
+
 // TestModuleConfigValidationHandler_DeletePullOverride covers the DELETE guard
 // that forbids deleting a module config while a ModulePullOverride for the
 // module still exists.
@@ -911,6 +1197,125 @@ func TestModuleConfigValidationHandler_ExperimentalOnUpdate(t *testing.T) {
 				newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""),
 				newModuleConfigFull(moduleName, boolPtr(false), "", ""),
 			)
+
+			resp := callHandler(t, handler, review)
+
+			if tt.wantAllowed {
+				assert.True(t, resp.Allowed)
+				return
+			}
+
+			require.False(t, resp.Allowed)
+			require.NotNil(t, resp.Result)
+			assert.Contains(t, resp.Result.Message, tt.wantMessage)
+		})
+	}
+}
+
+// TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR covers the
+// fallback that enforces parent-module requirements read from the Module CR when
+// the dependency extender has no registered constraints for the module (the
+// extender only knows about modules whose module.yaml has been loaded from disk).
+func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing.T) {
+	const moduleName = "dependent-module"
+
+	requirements := map[string]string{"log-shipper": ">= 0.0.0", "loki": ">= 0.0.0"}
+
+	tests := []struct {
+		name             string
+		operation        string
+		newConfig        *v1alpha1.ModuleConfig
+		oldConfig        *v1alpha1.ModuleConfig
+		moduleCR         *v1alpha1.Module
+		enabledParents   map[string]bool
+		dependencyErr    error
+		wantAllowed      bool
+		wantMessage      string
+	}{
+		{
+			name:           "create: both required parents disabled is rejected from the Module CR",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{},
+			wantAllowed:    false,
+			wantMessage:    "depends on disabled module(s)",
+		},
+		{
+			name:           "create: one required parent disabled is rejected from the Module CR",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{"loki": true},
+			wantAllowed:    false,
+			wantMessage:    "depends on disabled module(s): log-shipper",
+		},
+		{
+			name:           "create: all required parents enabled is allowed",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
+			wantAllowed:    true,
+		},
+		{
+			name:           "update: both required parents enabled is allowed",
+			operation:      "UPDATE",
+			newConfig:      newModuleConfigFull(moduleName, boolPtr(true), "deckhouse", ""),
+			oldConfig:      newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
+			wantAllowed:    true,
+		},
+		{
+			name:           "module CR without requirements is allowed",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCR(moduleName, []string{"deckhouse"}, ""),
+			enabledParents: map[string]bool{},
+			wantAllowed:    true,
+		},
+		{
+			name:           "update: missing Module CR skips the dependency fallback and is allowed",
+			operation:      "UPDATE",
+			newConfig:      newModuleConfigFull(moduleName, boolPtr(true), "deckhouse", ""),
+			oldConfig:      newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			moduleCR:       nil,
+			enabledParents: map[string]bool{},
+			wantAllowed:    true,
+		},
+		{
+			name:           "extender rejection takes precedence over the Module CR fallback",
+			operation:      "CREATE",
+			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
+			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
+			dependencyErr:  fmt.Errorf("module %q depends on a disabled module", moduleName),
+			wantAllowed:    false,
+			wantMessage:    "depends on a disabled module",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &fakeModuleStorage{
+				modules: map[string]*moduletypes.Module{
+					moduleName: newStorageModule(t, moduleName, "", ""),
+				},
+			}
+			manager := &fakeModuleManager{enabled: tt.enabledParents}
+
+			dependencyExtender := moduledependency.NewIExtenderMock(t)
+			dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(tt.dependencyErr)
+
+			var objs []client.Object
+			if tt.moduleCR != nil {
+				objs = append(objs, tt.moduleCR)
+			}
+
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, objs...)
+
+			review := newModuleConfigAdmissionReview(tt.operation, tt.newConfig, tt.oldConfig)
 
 			resp := callHandler(t, handler, review)
 

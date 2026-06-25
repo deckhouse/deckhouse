@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -501,8 +502,7 @@ func (r *Runner) ShowPlan(ctx context.Context) ([]byte, error) {
 		PlanPath: r.GetPlanPath(),
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
@@ -660,8 +660,7 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure output for %q\n%v", output, err)
@@ -836,8 +835,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure plan for %q\n%v", planFile, err)
@@ -899,17 +897,14 @@ func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string)
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return false, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
-	for _, action := range result {
-		if action == "delete" {
-			return true, nil
-		}
+	if slices.Contains(result, "delete") {
+		return true, nil
 	}
 
 	return false, nil

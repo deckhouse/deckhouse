@@ -50,6 +50,7 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 
 	requirements.RemoveValue(isK8sVersionAutomaticKey)
 	requirements.RemoveValue(istioToK8sCompatibilityMapKey)
+	requirements.RemoveValue(installedVersionsValuesKey)
 	requirements.RemoveValue(minVersionValuesKey)
 	t.Run("requirement for k8s version pass", func(t *testing.T) {
 		requirements.SaveValue(isK8sVersionAutomaticKey, true)
@@ -67,6 +68,23 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 		var mapVersions = map[string][]string{"1.13": {"1.21", "1.20", "1.21"}}
 		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
 		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.22.0")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
+	t.Run("requirement for k8s version checks all installed versions", func(t *testing.T) {
+		requirements.SaveValue(isK8sVersionAutomaticKey, true)
+		requirements.SaveValue(installedVersionsValuesKey, []string{"1.25", "1.27"})
+		var mapVersions = map[string][]string{
+			"1.25": {"1.32", "1.33"},
+			"1.27": {"1.32", "1.33", "1.34"},
+		}
+		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
+		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.33.0")
+		assert.True(t, ok)
+		require.NoError(t, err)
+
+		ok, err = requirements.CheckRequirement(requirementDefaultK8sKey, "1.34.0")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})

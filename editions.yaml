@@ -78,7 +78,6 @@ editions:
   - descheduler
   - documentation
   - extended-monitoring
-  - ingress-nginx
   - istio
   - kube-dns
   - local-path-provisioner
@@ -86,9 +85,7 @@ editions:
   - loki
   - metallb
   - monitoring-custom
-  - monitoring-deckhouse
   - monitoring-kubernetes
-  - monitoring-kubernetes-control-plane
   - monitoring-ping
   - multitenancy-manager
   - namespace-configurator
