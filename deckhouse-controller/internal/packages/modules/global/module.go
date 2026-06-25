@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"sort"
 	"sync/atomic"
@@ -207,6 +208,80 @@ func (m *Module) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+}
+
+// GetHooksByBinding returns the global hooks registered for the given binding
+// type, sorted by order.
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.GlobalHook {
+	return m.hooks.GetHooksByBinding(binding)
+}
+
+// Start initializes the global hooks, runs the initial Kubernetes
+// synchronization, and executes the OnStartup and BeforeAll bindings.
+//
+// It must complete before any package is scheduled so global values are
+// populated by the time packages render. Calling Start again is a no-op.
+func (m *Module) Start(ctx context.Context) error {
+	if m.running.Load() {
+		return nil
+	}
+
+	m.InitializeHooks()
+
+	for _, hook := range m.hooks.GetHooksByBinding(shtypes.Schedule) {
+		hook.GetHookController().EnableScheduleBindings()
+	}
+
+	if err := m.syncKubernetesBindings(ctx); err != nil {
+		return fmt.Errorf("sync kubernetes bindings: %w", err)
+	}
+
+	if err := m.RunHooksByBinding(ctx, shtypes.OnStartup); err != nil {
+		return fmt.Errorf("run onStartup hooks: %w", err)
+	}
+
+	if err := m.RunHooksByBinding(ctx, addontypes.BeforeAll); err != nil {
+		return fmt.Errorf("run beforeAll hooks: %w", err)
+	}
+
+	return nil
+}
+
+// syncKubernetesBindings enables every Kubernetes hook binding, runs the
+// initial synchronization for the bindings that request it, and unlocks the
+// monitors so subsequent cluster events reach the hooks.
+func (m *Module) syncKubernetesBindings(ctx context.Context) error {
+	type syncUnit struct {
+		hook string
+		info hookcontroller.BindingExecutionInfo
+	}
+
+	var units []syncUnit
+	for _, hook := range m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent) {
+		name := hook.GetName()
+		err := hook.GetHookController().HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
+			units = append(units, syncUnit{hook: name, info: info})
+		})
+		if err != nil {
+			return fmt.Errorf("enable kubernetes bindings for hook %q: %w", name, err)
+		}
+	}
+
+	for _, unit := range units {
+		if unit.info.KubernetesBinding.ExecuteHookOnSynchronization {
+			if err := m.RunHookByName(ctx, unit.hook, unit.info.BindingContext); err != nil {
+				if !unit.info.AllowFailure {
+					return fmt.Errorf("run sync hook %q: %w", unit.hook, err)
+				}
+
+				m.logger.Warn("global sync hook failed", slog.String("hook", unit.hook), log.Err(err))
+			}
+		}
+
+		m.UnlockKubernetesMonitors(unit.hook, unit.info.KubernetesBinding.Monitor.Metadata.MonitorId)
+	}
+
+	return nil
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events

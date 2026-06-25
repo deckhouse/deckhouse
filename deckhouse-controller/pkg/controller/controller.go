@@ -365,7 +365,9 @@ func NewDeckhouseController(
 	if os.Getenv(envEnablePackageSystem) == "true" {
 		logger.Info("Package system controllers are enabled")
 
-		pkgRuntime.Run()
+		if err = pkgRuntime.Run(ctx); err != nil {
+			return nil, fmt.Errorf("run package runtime: %w", err)
+		}
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {

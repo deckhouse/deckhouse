@@ -197,6 +197,10 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		return nil, fmt.Errorf("load global conf: %w", err)
 	}
 
+	conf.Patcher = r.objectPatcher
+	conf.ScheduleManager = r.scheduleManager
+	conf.KubeEventsManager = r.kubeEventsManager
+
 	r.global, err = global.NewModuleByConfig(conf, r.logger)
 	if err != nil {
 		return nil, fmt.Errorf("new global module: %w", err)
@@ -558,10 +562,16 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
 }
 
-// Run starts the scheduler event loop in a background goroutine. It listens for
-// schedule and disable events from the scheduler and dispatches them to the
-// appropriate handler, driving the enable/disable lifecycle for all packages.
-func (r *Runtime) Run() {
+// Run starts global and then the scheduler event loop in a background
+// goroutine. Global hooks run synchronously first, before the event handler can
+// route events to them, so global values are ready before any package is
+// scheduled. The loop then dispatches schedule and disable events, driving the
+// enable/disable lifecycle for all packages.
+func (r *Runtime) Run(ctx context.Context) error {
+	if err := r.global.Start(ctx); err != nil {
+		return fmt.Errorf("start global: %w", err)
+	}
+
 	r.hookEventHandler.Start()
 	r.healthService.Start()
 
@@ -576,6 +586,8 @@ func (r *Runtime) Run() {
 			}
 		}
 	}()
+
+	return nil
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
