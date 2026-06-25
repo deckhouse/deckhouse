@@ -146,7 +146,7 @@ func NewManager(cfg *rest.Config, scheme *runtime.Scheme) (manager.Manager, erro
 	if err != nil {
 		return nil, fmt.Errorf("new manager: %w", err)
 	}
-	if err := register.SetupAll(mgr, "", 1, nil); err != nil {
+	if err := register.SetupAll(mgr, mgr.GetClient(), "", 1, nil); err != nil {
 		return nil, fmt.Errorf("setup controllers: %w", err)
 	}
 	return mgr, nil
