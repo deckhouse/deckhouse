@@ -1,17 +1,28 @@
+{{- $profiles := list "main" }}
+{{- if .Values.monitoringKubernetesControlPlane.internal.hasEtcdArbiterNode }}
+  {{- $profiles = append $profiles "etcd-arbiter" }}
+{{- end }}
+
+{{- range $profile := $profiles }}
+{{- $appLabel := "control-plane-proxy" }}
+{{- if ne $profile "main" }}
+  {{- $appLabel = printf "%s-%s" $appLabel $profile }}
+{{- end }}
 {{- if (.Values.global.enabledModules | has "prometheus") }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: control-plane-proxy
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy")) | nindent 2 }}
+  name: {{ $appLabel }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
 spec:
   selector:
-    app: control-plane-proxy
+    app: {{ $appLabel }}
   ports:
   - name: https-metrics
     port: 8080
     protocol: TCP
     targetPort: https-metrics
+{{- end }}
 {{- end }}

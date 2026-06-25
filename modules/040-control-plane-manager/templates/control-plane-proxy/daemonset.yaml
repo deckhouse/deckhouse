@@ -3,27 +3,37 @@ cpu: 10m
 memory: 15Mi
 {{- end }}
 
+{{- $profiles := list "main" }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
+  {{- $profiles = append $profiles "etcd-arbiter" }}
+{{- end }}
+
+{{- range $profile := $profiles }}
+  {{- $appLabel := "control-plane-proxy" }}
+  {{- if ne $profile "main" }}
+    {{- $appLabel = printf "%s-%s" $appLabel $profile }}
+  {{- end }}
 {{- if (.Values.global.enabledModules | has "prometheus") }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: control-plane-proxy
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy")) | nindent 2 }}
+  name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
-    name: control-plane-proxy
+    name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
   updatePolicy:
     updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: kube-rbac-proxy
       minAllowed:
-        {{- include "control_plane_proxy_resources" . | nindent 8 }}
+        {{- include "control_plane_proxy_resources" $ | nindent 8 }}
       maxAllowed:
         cpu: 20m
         memory: 30Mi
@@ -32,31 +42,36 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: control-plane-proxy
-  namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy")) | nindent 2 }}
+  name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
 spec:
   selector:
     matchLabels:
-      app: control-plane-proxy
+      app: {{ $appLabel }}
   template:
     metadata:
       labels:
-        app: control-plane-proxy
+        app: {{ $appLabel }}
     spec:
-      serviceAccountName: d8-control-plane-manager-control-plane-proxy
+      serviceAccountName: control-plane-proxy
       automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
-      {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | nindent 6 }}
+      {{- if eq $profile "main" }}
+      {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
+      {{- else }}
+      nodeSelector:
+        node.deckhouse.io/etcd-arbiter: ""
+      {{- end }}
+      {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
-        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
         args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4209"
           - "--v=2"
@@ -84,12 +99,15 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
+            {{- if eq $profile "main" }}
             - upstream: https://127.0.0.1:10257/metrics
               upstreamInsecureSkipVerify: true
               path: /controller-manager/metrics
             - upstream: https://127.0.0.1:10259/metrics
               upstreamInsecureSkipVerify: true
               path: /scheduler/metrics
+            {{- end }}
             - upstream: http://127.0.0.1:2381/metrics
               path: /etcd/metrics
+{{- end }}
 {{- end }}
