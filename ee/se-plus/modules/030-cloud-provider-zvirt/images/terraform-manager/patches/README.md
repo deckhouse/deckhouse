@@ -8,7 +8,7 @@ TODO: Add description
 
 ## 003-go-mod.patch
 
-update go.mod and up go version for cve fix
+Bump go.mod dependencies to fix known CVEs.
 
 ## 004-initialization_dns.patch
 

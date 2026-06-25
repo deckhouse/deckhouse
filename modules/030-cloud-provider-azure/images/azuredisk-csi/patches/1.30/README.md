@@ -1,3 +1,3 @@
 ### 001-go-mod.patch
 
-Fixes CVEs (bumps go mod)
+Bump go.mod dependencies to fix known CVEs.

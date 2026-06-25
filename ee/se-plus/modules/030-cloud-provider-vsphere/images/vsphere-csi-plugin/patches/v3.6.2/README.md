@@ -2,7 +2,7 @@
 
 ## 001-go-mod.patch
 
-Fixes CVEs by updating Go module dependencies.
+Bump go.mod dependencies to fix known CVEs.
 
 ## 002-replace-gofsutil.patch
 

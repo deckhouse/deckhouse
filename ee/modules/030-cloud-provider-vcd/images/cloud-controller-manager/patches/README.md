@@ -14,7 +14,7 @@ Update klog to klog/v2 in pkg/vcdsdk/vapp.go
 
 ### 003-go-mod.patch
 
-Update dependencies
+Bump go.mod dependencies to fix known CVEs.
 
 ### 004-klog.patch
 

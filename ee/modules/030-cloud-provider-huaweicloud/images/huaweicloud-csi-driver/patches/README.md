@@ -2,7 +2,7 @@
 
 ### 001-go-mod.patch
 
-Update dependencies
+Bump go.mod dependencies to fix known CVEs.
 
 ### 002-enterprise-project-id.patch
 

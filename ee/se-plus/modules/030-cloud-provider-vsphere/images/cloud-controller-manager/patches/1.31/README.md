@@ -32,4 +32,4 @@ This patch is for our case when we want to have a static Nodes in the cluster, m
 
 ## 001-go-mod.patch
 
-This patch fixes cve.
+Bump go.mod dependencies to fix known CVEs.

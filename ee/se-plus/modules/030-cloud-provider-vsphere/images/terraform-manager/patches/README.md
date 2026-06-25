@@ -2,4 +2,4 @@
 
 ## 001-go-mod.patch
 
-This patch fixes CVE.
+Bump go.mod dependencies to fix known CVEs.

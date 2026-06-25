@@ -12,14 +12,7 @@ Changes:
 
 ## 002-go-mod.patch
 
-Files:
-
-- go.mod
-- go.sum
-
-Changes:
-
-- Update dependencies.
+Bump go.mod dependencies to fix known CVEs.
 
 ## 003-metadata.patch
 
