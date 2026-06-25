@@ -19,11 +19,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"slices"
-	"strings"
 
-	"github.com/goccy/go-yaml"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -37,14 +34,6 @@ const (
 	// embeddedDir is the directory, relative to the working directory, that
 	// holds embedded modules shipped with the controller.
 	embeddedDir = "modules"
-
-	// bundleStaticFile is the static values file under embeddedDir whose
-	// "<module>Enabled" keys declare which embedded modules to load.
-	bundleStaticFile = "values.yaml"
-
-	// enabledSuffix is the suffix on bundle keys that flag a module as enabled
-	// (e.g. "deckhouseEnabled"); it is stripped to recover the module name.
-	enabledSuffix = "Enabled"
 
 	// embeddedLoadWorkers caps how many embedded modules are loaded
 	// concurrently in loadEmbedded.
@@ -127,34 +116,4 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// loadBundleEnabledMap reads the bundle static file under dir and returns a map
-// from camelCase module name to its enabled flag. It parses the YAML and keeps
-// only keys ending in enabledSuffix, stripping the suffix to recover the
-// camelCase module name (e.g. "nodeManagerEnabled" becomes "nodeManager"). The
-// keys stay camelCase to match the bundle's own format; callers convert a
-// module's name with strcase.ToCamel before looking it up.
-func loadBundleEnabledMap(dir string) (map[string]bool, error) {
-	bundleFile := filepath.Join(dir, bundleStaticFile)
-
-	content, err := os.ReadFile(bundleFile)
-	if err != nil {
-		return nil, fmt.Errorf("read bundle file: %w", err)
-	}
-
-	result := make(map[string]bool)
-
-	parsed := make(map[string]any)
-	if err := yaml.Unmarshal(content, &parsed); err != nil {
-		return nil, fmt.Errorf("unmarshal bundle file: %w", err)
-	}
-
-	for k, v := range parsed {
-		if before, ok := strings.CutSuffix(k, enabledSuffix); ok {
-			result[before] = v.(bool)
-		}
-	}
-
-	return result, nil
 }
