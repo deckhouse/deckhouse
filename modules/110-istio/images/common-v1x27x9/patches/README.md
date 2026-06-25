@@ -12,3 +12,7 @@ Fix Kiali CVE vulnerabilities
 
 Implement graceful transition for remote multicluster secrets. To prevent connectivity gaps during secret rotation, the old secret is no longer dismissed immediately. Instead, it remains active until the new secret is processed and all associated metadata is synced.
 Adopted upstream pr https://github.com/istio/istio/pull/58567.
+
+## 002-kiali-logout.patch
+
+Adds logout button in kiali

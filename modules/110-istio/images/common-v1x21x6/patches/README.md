@@ -4,9 +4,17 @@
 
 Fix Istio Operator healt status
 
+## 001-kiali-go-mod.patch
+
+Fix CVE
+
 ## 002-istio-gomod_gosum.patch
 
 Fix CVE
+
+## 002-kiali-logout.patch
+
+Adds logout button in kiali
 
 ## 003-istio-server_fmtText.patch
 
@@ -19,7 +27,3 @@ Fix use expfmt library in pilot-agent. This library used for format metrics.
 
 Implement graceful transition for remote multicluster secrets. To prevent connectivity gaps during secret rotation, the old secret is no longer dismissed immediately. Instead, it remains active until the new secret is processed and all associated metadata is synced.
 Adopted upstream pr https://github.com/istio/istio/pull/58567.
-
-## 001-kiali-go-mod.patch
-
-Fix CVE
