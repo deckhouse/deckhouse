@@ -92,6 +92,19 @@ rules:
   - apiGroups:
     - addons.cluster.x-k8s.io
     resources:
+    - clusterresourcesetbindings
+    - clusterresourcesets
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - addons.cluster.x-k8s.io
+    resources:
     - clusterresourcesets/finalizers
     - clusterresourcesets/status
     verbs:

@@ -101,6 +101,10 @@ internal:
     kind: DVPCloudDiscoveryData
     zones:
       - default
+  capdvpControllerManagerWebhookCert:
+    ca: dGVzdC1jYQ==
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
   storageClasses:
     - dvpStorageClass: 1test
       name: 1test
@@ -195,6 +199,17 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(capdvpDeployment.Exists()).To(BeTrue())
 			Expect(capdvpDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 			Expect(capdvpDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(capdvpDeployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--webhook-cert-path"))
+			Expect(capdvpDeployment.Field("spec.template.spec.volumes").String()).To(ContainSubstring("capdvp-webhook-tls"))
+
+			capdvpWebhookService := f.KubernetesResource("Service", moduleNamespace, "capdvp-webhook")
+			Expect(capdvpWebhookService.Exists()).To(BeTrue())
+
+			capdvpWebhookSecret := f.KubernetesResource("Secret", moduleNamespace, "capdvp-webhook-tls")
+			Expect(capdvpWebhookSecret.Exists()).To(BeTrue())
+
+			capdvpExtensionConfig := f.KubernetesGlobalResource("ExtensionConfig", "capdvp-extension-config")
+			Expect(capdvpExtensionConfig.Exists()).To(BeTrue())
 
 			capdvpVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "capdvp-controller-manager")
 			Expect(capdvpVPA.Exists()).To(BeTrue())

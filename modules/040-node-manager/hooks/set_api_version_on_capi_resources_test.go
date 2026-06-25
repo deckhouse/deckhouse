@@ -25,16 +25,16 @@ import (
 
 var _ = Describe("Modules :: node-manager :: hooks :: set_api_version_on_capi_resources ::", func() {
 	f := HookExecutionConfigInit(`{"nodeManager": {"internal": {}}}`, `{}`)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineDeployment", true)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachineSet", true)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Machine", true)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "MachinePool", true)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Cluster", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "MachineDeployment", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "MachineSet", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "Machine", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "MachinePool", true)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "Cluster", true)
 
 	Context("MachineDeployment", func() {
 		const machineDeployments = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: empty
@@ -46,7 +46,7 @@ spec:
         kind: HuaweiCloudMachineTemplate
         name: template-empty
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   name: ready
@@ -55,7 +55,7 @@ spec:
   template:
     spec:
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: HuaweiCloudMachineTemplate
         name: template-ready
 `
@@ -64,20 +64,20 @@ spec:
 			f.RunHook()
 		})
 
-		It("fills missing infrastructureRef apiVersion", func() {
+		It("fills missing infrastructureRef apiGroup", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			mdEmpty := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "empty")
 			mdReady := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "ready")
 
-			Expect(mdEmpty.Field("spec.template.spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
-			Expect(mdReady.Field("spec.template.spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(mdEmpty.Field("spec.template.spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
+			Expect(mdReady.Field("spec.template.spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
 		})
 	})
 
 	Context("MachineSet", func() {
 		const machineSets = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineSet
 metadata:
   name: empty
@@ -89,7 +89,7 @@ spec:
         kind: HuaweiCloudMachineTemplate
         name: template-empty
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineSet
 metadata:
   name: ready
@@ -98,7 +98,7 @@ spec:
   template:
     spec:
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: HuaweiCloudMachineTemplate
         name: template-ready
 `
@@ -107,20 +107,20 @@ spec:
 			f.RunHook()
 		})
 
-		It("fills missing infrastructureRef apiVersion", func() {
+		It("fills missing infrastructureRef apiGroup", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			msEmpty := f.KubernetesResource("MachineSet", "d8-cloud-instance-manager", "empty")
 			msReady := f.KubernetesResource("MachineSet", "d8-cloud-instance-manager", "ready")
 
-			Expect(msEmpty.Field("spec.template.spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
-			Expect(msReady.Field("spec.template.spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(msEmpty.Field("spec.template.spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
+			Expect(msReady.Field("spec.template.spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
 		})
 	})
 
 	Context("Machine", func() {
 		const machines = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   name: empty
@@ -130,14 +130,14 @@ spec:
     kind: HuaweiCloudMachine
     name: template-empty
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   name: ready
   namespace: d8-cloud-instance-manager
 spec:
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: HuaweiCloudMachine
     name: template-ready
 `
@@ -146,20 +146,20 @@ spec:
 			f.RunHook()
 		})
 
-		It("fills missing infrastructureRef apiVersion", func() {
+		It("fills missing infrastructureRef apiGroup", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			machineEmpty := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "empty")
 			machineReady := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "ready")
 
-			Expect(machineEmpty.Field("spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
-			Expect(machineReady.Field("spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(machineEmpty.Field("spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
+			Expect(machineReady.Field("spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
 		})
 	})
 
 	Context("MachinePool", func() {
 		const machinePools = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachinePool
 metadata:
   name: empty
@@ -171,7 +171,7 @@ spec:
         kind: HuaweiCloudMachineTemplate
         name: template-empty
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachinePool
 metadata:
   name: ready
@@ -180,7 +180,7 @@ spec:
   template:
     spec:
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: HuaweiCloudMachineTemplate
         name: template-ready
 `
@@ -189,20 +189,20 @@ spec:
 			f.RunHook()
 		})
 
-		It("fills missing infrastructureRef apiVersion", func() {
+		It("fills missing infrastructureRef apiGroup", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			mpEmpty := f.KubernetesResource("MachinePool", "d8-cloud-instance-manager", "empty")
 			mpReady := f.KubernetesResource("MachinePool", "d8-cloud-instance-manager", "ready")
 
-			Expect(mpEmpty.Field("spec.template.spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
-			Expect(mpReady.Field("spec.template.spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(mpEmpty.Field("spec.template.spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
+			Expect(mpReady.Field("spec.template.spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
 		})
 	})
 
 	Context("Cluster", func() {
 		const clusters = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
   name: empty-refs
@@ -215,18 +215,18 @@ spec:
     kind: DeckhouseControlPlane
     name: my-control-plane
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
   name: ready-refs
   namespace: d8-cloud-instance-manager
 spec:
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: DeckhouseCluster
     name: my-cluster
   controlPlaneRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: DeckhouseControlPlane
     name: my-control-plane
 `
@@ -235,15 +235,15 @@ spec:
 			f.RunHook()
 		})
 
-		It("fills missing infrastructureRef and controlPlaneRef apiVersion", func() {
+		It("fills missing infrastructureRef and controlPlaneRef apiGroup", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			clusterEmpty := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "empty-refs")
 			clusterReady := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "ready-refs")
 
-			Expect(clusterEmpty.Field("spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
-			Expect(clusterEmpty.Field("spec.controlPlaneRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
-			Expect(clusterReady.Field("spec.infrastructureRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
-			Expect(clusterReady.Field("spec.controlPlaneRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(clusterEmpty.Field("spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
+			Expect(clusterEmpty.Field("spec.controlPlaneRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
+			Expect(clusterReady.Field("spec.infrastructureRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
+			Expect(clusterReady.Field("spec.controlPlaneRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
 		})
 	})
 })
