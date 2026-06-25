@@ -469,10 +469,15 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 }
 
 func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, cloudConfig *cloudProviderConfig, ngName string) (string, error) {
+	gv, err := schema.ParseGroupVersion(cloudConfig.capiMachineTemplateAPIVersion)
+	if err != nil {
+		return "", fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
+	}
+
 	templateList := &unstructured.UnstructuredList{}
 	templateList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   strings.Split(cloudConfig.capiMachineTemplateAPIVersion, "/")[0],
-		Version: strings.Split(cloudConfig.capiMachineTemplateAPIVersion, "/")[1],
+		Group:   gv.Group,
+		Version: gv.Version,
 		Kind:    cloudConfig.capiMachineTemplateKind + "List",
 	})
 
