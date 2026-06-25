@@ -44,7 +44,7 @@ Horizontal Pod Autoscaler (HPA) — это механизм автоматиче
 
 ## Как включить или отключить HPA
 
-HPA не требует отдельного включения в DKP. Но, если необходимо маштабирование не только по метрикам по потреблению CPU и памяти подов, то необходимо включить модуль [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/). Как включить модуль [см. в документации](scaling-by-metrics.html#как-включить-prometheus-metrics-adapter).
+HPA не требует отдельного включения в DKP. Но, если необходимо масштабирование не только по метрикам по потреблению CPU и памяти подов, то необходимо включить модуль [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/). Как включить модуль [см. в документации](scaling-by-metrics.html#как-включить-prometheus-metrics-adapter).
 
 ## Настройка HPA
 
