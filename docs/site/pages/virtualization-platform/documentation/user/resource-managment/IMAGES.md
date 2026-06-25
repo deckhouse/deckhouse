@@ -223,49 +223,49 @@ How to create an image and store it in PVC in the web interface:
 
 An image stored in container registry has a certain format. Let's look at an example:
 
-First, download the image locally:
+1. Download the image locally:
 
-```bash
-curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
-```
+   ```bash
+   curl -L https://cloud-images.ubuntu.com/minimal/releases/noble/release/ubuntu-24.04-minimal-cloudimg-amd64.img -o ubuntu2404.img
+   ```
 
-Next, create a `Dockerfile` with the following contents:
+1. Create a `Dockerfile` with the following contents:
 
-```Dockerfile
-FROM scratch
-COPY ubuntu2204.img /disk/ubuntu2204.img
-```
+   ```Dockerfile
+   FROM scratch
+   COPY ubuntu2404.img /disk/ubuntu2404.img
+   ```
 
-Build the image and load it into the container registry. The example below uses docker.io as the container registry. you need to have a service account and a customized environment to run it.
+1. Build the container image. The example below uses [docker.com](https://www.docker.com/) as the container registry. You need an account on the service and a properly configured environment:
 
-```bash
-docker build -t docker.io/<username>/ubuntu2204:latest
-```
+   ```bash
+   docker build -t docker.io/<username>/ubuntu2404:latest
+   ```
 
-where `username` is the username specified when registering with docker.io.
+   where `username` is the username specified when registering with [docker.com](https://www.docker.com/).
 
-Load the created image into the container registry:
+1. Push the created image to the container registry:
 
-```bash
-docker push docker.io/<username>/ubuntu2204:latest
-```
+   ```bash
+   docker push docker.io/<username>/ubuntu2204:latest
+   ```
 
-To use this image, create a resource as an example:
+1. To use this image, create a resource as an example:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: VirtualImage
-metadata:
-  name: ubuntu-2204
-spec:
-  storage: ContainerRegistry
-  dataSource:
-    type: ContainerImage
-    containerImage:
-      image: docker.io/<username>/ubuntu2204:latest
-EOF
-```
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualImage
+   metadata:
+     name: ubuntu-2404
+   spec:
+     storage: ContainerRegistry
+     dataSource:
+       type: ContainerImage
+       containerImage:
+         image: docker.io/<username>/ubuntu2404:latest
+   EOF
+   ```
 
 How to create an image from Container Registry in the web interface:
 
@@ -275,7 +275,7 @@ How to create an image from Container Registry in the web interface:
 - Select "Upload data from container image" from the list.
 - In the form that opens, enter the image name in the "Image Name" field.
 - In the "Storage" field, select `ContainerRegistry`.
-- In the "Image in Container Registry" field, specify `docker.io/<username>/ubuntu2204:latest`.
+- In the "Image in Container Registry" field, specify `docker.io/<username>/ubuntu2404:latest`.
 - Click the "Create" button.
 - The image status is displayed at the top left, under the image name.
 
