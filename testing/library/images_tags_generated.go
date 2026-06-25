@@ -330,9 +330,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"logShipper": map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
-	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
-	},
 	"metallb": map[string]interface{}{
 		"l2lbController":    "imageHash-metallb-l2lbController",
 		"l2lbSpeaker":       "imageHash-metallb-l2lbSpeaker",
@@ -399,22 +396,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"openvpn":             "imageHash-openvpn-openvpn",
 		"ovpnAdmin":           "imageHash-openvpn-ovpnAdmin",
 		"pmacct":              "imageHash-openvpn-pmacct",
-	},
-	"operatorPrometheus": map[string]interface{}{
-		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
-		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
-	},
-	"prometheus": map[string]interface{}{
-		"alertmanager":                "imageHash-prometheus-alertmanager",
-		"alertsReceiver":              "imageHash-prometheus-alertsReceiver",
-		"grafanaDashboardProvisioner": "imageHash-prometheus-grafanaDashboardProvisioner",
-		"grafanaV10":                  "imageHash-prometheus-grafanaV10",
-		"memcached":                   "imageHash-prometheus-memcached",
-		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
-		"mimir":                       "imageHash-prometheus-mimir",
-		"prometheus":                  "imageHash-prometheus-prometheus",
-		"promxy":                      "imageHash-prometheus-promxy",
-		"trickster":                   "imageHash-prometheus-trickster",
 	},
 	"prometheusMetricsAdapter": map[string]interface{}{
 		"k8sPrometheusAdapter":   "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",

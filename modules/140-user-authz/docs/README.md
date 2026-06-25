@@ -343,9 +343,6 @@ read:
 read:
     - deckhouse.io/clusterlogdestinations
     - deckhouse.io/clusterloggingconfigs
-    - deckhouse.io/customprometheusrules
-    - deckhouse.io/grafanaadditionaldatasources
-    - deckhouse.io/grafanadashboarddefinitions
 read-write:
     - deckhouse.io/podloggingconfigs
 write:
@@ -486,10 +483,7 @@ write:
     - deckhouse.io/clusterpodmetrics
     - deckhouse.io/clusterservicemetrics
     - deckhouse.io/clusterstatefulsetmetrics
-    - deckhouse.io/customprometheusrules
     - deckhouse.io/deckhousereleases
-    - deckhouse.io/grafanaadditionaldatasources
-    - deckhouse.io/grafanadashboarddefinitions
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
