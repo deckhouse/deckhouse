@@ -14,7 +14,7 @@ title: "Модуль user-authz: FAQ"
 
 В текущей ролевой модели используйте параметры `namespaceSelector` или `limitNamespaces` (устарел) в кастомном ресурсе [ClusterAuthorizationRule](cr.html#clusterauthorizationrule).
 
-## Что, если два ClusterAuthorizationRules подходят для одного пользователя?
+## Что если два ClusterAuthorizationRules подходят для одного пользователя?
 
 В примере пользователь `jane.doe@example.com` состоит в группе `administrators`. Созданы два ClusterAuthorizationRules:
 

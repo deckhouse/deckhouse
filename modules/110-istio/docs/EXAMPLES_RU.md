@@ -737,7 +737,7 @@ spec:
 - При `telemetryAPI.enabled: false` и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — только прежний режим: `meshConfig.defaultConfig.tracing.zipkin` из [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector). OTLP требует режима Telemetry API.
 - При `telemetryAPI.enabled: true` и `tracing.enabled: true` модуль создаёт `deckhouse-tracing`, если заданы [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) `service` и `port`, или при [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (при одновременной настройке приоритет у OpenTelemetry). `defaultConfig.tracing` не заполняется; в `Telemetry` `d8-main` добавляется `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, по умолчанию `1.0`).
 
-Нестандартные провайдеры — через `Telemetry` с `selector` в неймспейсе приложения, не второй CR без селектора в `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). См. [настройку трассировки через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+Нестандартные провайдеры — через `Telemetry` с `selector` в неймспейсе приложения, не второй CR без селектора в `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). Подробнее — в [настройке трассировки через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
 #### Пример — Telemetry API + Jaeger через Zipkin
 

@@ -440,7 +440,7 @@ groups:
       en: |
         Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods if the cluster was deployed on DKP version starting from **1.71** (for clusters deployed on DKP versions up to **1.71**, see the note for ports `4299/UDP`, `8469/UDP`, and `8472/UDP`)
       ru: |
-        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами, если кластер был развернут на DKP, начиная с версии **1.71** (для кластеров, развернутых на DKP до версии **1.71**, см. примечание для портов `4299/UDP`, `8469/UDP` и `8472/UDP`)
+        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами, если кластер был развернут на DKP, начиная с версии **1.71** (для кластеров, развернутых на DKP до версии **1.71**, учитывайте примечание для портов `4299/UDP`, `8469/UDP` и `8472/UDP`)
   - ports: "4299"
     protocol: UDP
     description:

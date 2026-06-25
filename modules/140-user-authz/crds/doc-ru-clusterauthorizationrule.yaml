@@ -21,7 +21,7 @@ spec:
                     * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
 
                       **Важно!** Так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия;
-                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
+                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (об этих ограничениях написано ниже) продолжат работать.
                 portForwarding:
                   description: |
                     Разрешить/запретить выполнять `port-forward`.
@@ -35,11 +35,11 @@ spec:
                     **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
                 limitNamespaces:
                   description: |
-                    Список разрешенных namespace в формате регулярных выражений.
+                    Список разрешенных неймспейсов в формате регулярных выражений.
 
                     Политика:
                     * Если список указан, разрешаем доступ только по нему.
-                    * Если список не указан, считаем, что разрешено все, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+                    * Если список не указан, считаем, что разрешено все, кроме системных неймспейсов (описание `spec.allowAccessToSystemNamespaces` ниже).
 
                     **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
 
@@ -98,7 +98,7 @@ spec:
                     * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
 
                       **Важно!** Так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия;
-                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` (см. ниже) продолжат работать.
+                    * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` (подробнее — ниже) продолжат работать.
                 portForwarding:
                   description: |
                     Разрешить/запретить выполнять `port-forward`.
@@ -153,7 +153,7 @@ spec:
 
                     Политика:
                     * Если список указан, разрешаем доступ только по нему.
-                    * Если список не указан, считаем, что разрешено все, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+                    * Если список не указан, доступны все неймспейсы, кроме системных (описание `spec.allowAccessToSystemNamespaces` ниже).
 
                     **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
 
