@@ -896,6 +896,25 @@ alerts:
         The parameters specified in ModuleConfig of {{ $labels.cni }} do not match the ones that are actually being used in the cluster.
       severity: "5"
       markupFormat: markdown
+    - name: D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `monitoring-kubernetes-control-plane` module was merged into the `control-plane-manager` module, but its ModuleConfig still exists in the cluster and is no longer used.
+
+        Remove it manually:
+
+        ```bash
+        d8 k delete moduleconfig monitoring-kubernetes-control-plane
+        ```
+
+        If the ModuleConfig is deployed from an external source (e.g. a Git repository), make sure it is removed from there so it is not created again.
+      summary: |
+        Obsolete monitoring-kubernetes-control-plane ModuleConfig should be removed.
+      severity: "9"
+      markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -4964,9 +4983,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: K8SApiserverDown
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kubernetes.tpl
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kubernetes.tpl
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: No API servers are reachable, or they have all disappeared from service discovery.
       summary: |
@@ -4974,9 +4993,9 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8sCertificateExpiration
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kubernetes.tpl
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kubernetes.tpl
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than a day on node `{{$labels.component}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Locate the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
       summary: |
@@ -4984,9 +5003,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: K8sCertificateExpiration
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kubernetes.tpl
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kubernetes.tpl
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than 7 days on node `{{$labels.node}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Locate the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
       summary: |
@@ -4994,9 +5013,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: K8SControllerManagerTargetDown
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-controller-manager.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-controller-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: There is no running kube-controller-manager. As a result, deployments and replication controllers are not progressing.
       summary: |
@@ -5055,9 +5074,9 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8SSchedulerTargetDown
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-scheduler.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-scheduler.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         The Kubernetes scheduler is not running.
@@ -5079,9 +5098,9 @@ alerts:
       severity: "7"
       markupFormat: default
     - name: KubeEtcdHighFsyncDurations
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         In the last 15 minutes, the 99th percentile of the fsync duration for WAL files exceeded 0.5 seconds: {{ $value }}.
@@ -5095,9 +5114,9 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: KubeEtcdHighNumberOfLeaderChanges
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         There have been {{ $value }} leader re-elections for the etcd cluster member running on node `{{ $labels.node }}` in the last 10 minutes.
@@ -5112,9 +5131,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubeEtcdInsufficientMembers
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         The etcd cluster has too few members, increasing the risk of failure if another member becomes unavailable.
@@ -5125,9 +5144,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: KubeEtcdNoLeader
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         To resolve this issue, check the status of the etcd Pods:
@@ -5137,9 +5156,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: KubeEtcdTargetAbsent
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -5159,9 +5178,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubeEtcdTargetDown
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -7640,7 +7659,6 @@ modules-having-alerts:
     - monitoring-applications
     - monitoring-custom
     - monitoring-kubernetes
-    - monitoring-kubernetes-control-plane
     - monitoring-ping
     - multitenancy-manager
     - node-local-dns

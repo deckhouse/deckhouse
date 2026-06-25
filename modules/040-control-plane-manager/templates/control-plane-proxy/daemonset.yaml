@@ -3,13 +3,14 @@ cpu: 10m
 memory: 15Mi
 {{- end }}
 
+{{- if (.Values.global.enabledModules | has "prometheus") }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: control-plane-proxy
-  namespace: d8-monitoring
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy")) | nindent 2 }}
 spec:
   targetRef:
@@ -32,7 +33,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: control-plane-proxy
-  namespace: d8-monitoring
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy")) | nindent 2 }}
 spec:
   selector:
@@ -43,7 +44,7 @@ spec:
       labels:
         app: control-plane-proxy
     spec:
-      serviceAccountName: control-plane-proxy
+      serviceAccountName: d8-control-plane-manager-control-plane-proxy
       automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -91,3 +92,4 @@ spec:
               path: /scheduler/metrics
             - upstream: http://127.0.0.1:2381/metrics
               path: /etcd/metrics
+{{- end }}

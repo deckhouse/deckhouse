@@ -336,7 +336,6 @@ users:
   - system:serviceaccount:d8-monitoring:aggregating-proxy
   - system:serviceaccount:d8-monitoring:alertmanager-internal
   - system:serviceaccount:d8-monitoring:alerts-receiver
-  - system:serviceaccount:d8-monitoring:control-plane-proxy
   - system:serviceaccount:d8-monitoring:events-exporter
   - system:serviceaccount:d8-monitoring:extended-monitoring-exporter
   - system:serviceaccount:d8-monitoring:grafana
@@ -369,6 +368,7 @@ users:
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
   - system:serviceaccount:d8-user-authz:webhook
   - system:serviceaccount:kube-system:d8-control-plane-manager
+  - system:serviceaccount:kube-system:d8-control-plane-manager-control-plane-proxy
   - system:serviceaccount:kube-system:d8-kube-dns
   - system:serviceaccount:kube-system:d8-kube-proxy
   - system:serviceaccount:kube-system:d8-node-local-dns
@@ -839,7 +839,6 @@ rules:
       - system:serviceaccount:d8-monitoring:aggregating-proxy
       - system:serviceaccount:d8-monitoring:alertmanager-internal
       - system:serviceaccount:d8-monitoring:alerts-receiver
-      - system:serviceaccount:d8-monitoring:control-plane-proxy
       - system:serviceaccount:d8-monitoring:events-exporter
       - system:serviceaccount:d8-monitoring:extended-monitoring-exporter
       - system:serviceaccount:d8-monitoring:grafana
@@ -872,6 +871,7 @@ rules:
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
       - system:serviceaccount:d8-user-authz:webhook
       - system:serviceaccount:kube-system:d8-control-plane-manager
+      - system:serviceaccount:kube-system:d8-control-plane-manager-control-plane-proxy
       - system:serviceaccount:kube-system:d8-kube-dns
       - system:serviceaccount:kube-system:d8-kube-proxy
       - system:serviceaccount:kube-system:d8-node-local-dns
