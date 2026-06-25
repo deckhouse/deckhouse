@@ -36,6 +36,16 @@
     "external": "true",
     "path": "/modules/alb/"
   },
+  "ai-models": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/ai-models/stable/",
+    "tags": [
+      "ml/ai"
+    ]
+  },
   "cloud-provider-vsphere": {
     "editionFullyAvailable": [
       "se-plus",
