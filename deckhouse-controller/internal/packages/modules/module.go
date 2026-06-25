@@ -145,6 +145,9 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 		return nil, fmt.Errorf("build values storage: %v", err)
 	}
 
+	// TODO(ipaqsa): get rid of it after migration to module v2
+	m.values.InjectRegistryValue(cfg.Repository)
+
 	return m, nil
 }
 

@@ -20,8 +20,12 @@ import (
 	"sync"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag/conv"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
 // Storage manages package values with layering, patching, and schema validation.
@@ -273,4 +277,65 @@ func (s *Storage) validateSettings(values addonutils.Values) error {
 	}
 
 	return s.schemaStorage.ValidateTransition(schema.TypeSettings, s.name, validatableValues, oldValidatable)
+}
+
+// InjectRegistryValue sets the registry value in the static values
+// TODO(ipaqsa): get rid of it after migration to module v2
+func (s *Storage) InjectRegistryValue(registry registry.Remote) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// inject spec to values schema
+	s.injectRegistrySpec(schema.TypeSettings)
+	// inject spec to helm schema
+	s.injectRegistrySpec(schema.TypeHelm)
+
+	if s.staticValues == nil {
+		s.staticValues = addonutils.Values{}
+	}
+
+	s.staticValues["registry"] = &structpb.Struct{
+		Fields: map[string]*structpb.Value{
+			"base":      {Kind: &structpb.Value_StringValue{StringValue: registry.Repository}},
+			"dockercfg": {Kind: &structpb.Value_StringValue{StringValue: registry.DockerConfig}},
+			"scheme":    {Kind: &structpb.Value_StringValue{StringValue: registry.Scheme}},
+			"ca":        {Kind: &structpb.Value_StringValue{StringValue: registry.CA}},
+		},
+	}
+
+	_ = s.calculateResultValues()
+}
+
+// injectRegistrySpec mutates the module schema to add a strict-typed "registry" field
+func (s *Storage) injectRegistrySpec(schemaType schema.Type) {
+	scheme := s.schemaStorage.GetSchema(schemaType)
+	if scheme == nil {
+		return
+	}
+
+	if len(scheme.Properties) == 0 {
+		scheme.Properties = make(map[string]spec.Schema)
+	}
+
+	scheme.Properties["registry"] = spec.Schema{
+		SchemaProps: spec.SchemaProps{
+			Type:                 spec.StringOrArray{"object"},
+			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
+			Properties: map[string]spec.Schema{
+				"base": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}, MinLength: conv.Pointer[int64](1)},
+				},
+				"dockercfg": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+				"scheme": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+				"ca": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+			},
+			Required: []string{"base", "scheme"},
+		},
+	}
 }
