@@ -1311,6 +1311,8 @@ apiserver:
 				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(crb.Exists()).To(BeTrue())
 				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
+				// keep policy must always be present so a future hook-only migration cannot let Helm prune it.
+				Expect(crb.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
 				Expect(sup.Exists()).To(BeFalse())
