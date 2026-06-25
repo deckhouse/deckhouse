@@ -75,6 +75,12 @@ const (
 	helmReleaseNamespaceAnnotation = "meta.helm.sh/release-namespace"
 	cpmHelmReleaseName             = "control-plane-manager"
 	cpmHelmReleaseNamespace        = "d8-system"
+
+	// resource-policy: keep mirrors the template annotation so the live object always carries it,
+	// even right after the hook (re)creates it. This guards the eventual hook-only migration: when
+	// this CRB is dropped from the Helm template, Helm must not prune it (admin.conf would lose root).
+	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
+	helmResourcePolicyKeep       = "keep"
 )
 
 // kubeadmClusterAdminsBindingState keeps the moving pieces of the CRB we care about.
@@ -188,6 +194,7 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 						"annotations": map[string]string{
 							helmReleaseNameAnnotation:      cpmHelmReleaseName,
 							helmReleaseNamespaceAnnotation: cpmHelmReleaseNamespace,
+							helmResourcePolicyAnnotation:   helmResourcePolicyKeep,
 						},
 					},
 				},
@@ -204,7 +211,8 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 }
 
 // buildKubeadmClusterAdminsBinding renders the desired ClusterRoleBinding state.
-// Helm ownership metadata is included so that Helm can adopt the object on the next release run.
+// Helm ownership metadata is included so that Helm can adopt the object on the next release run,
+// and helm.sh/resource-policy: keep is set so Helm never prunes it (mirrors the template).
 func buildKubeadmClusterAdminsBinding(roleName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -221,6 +229,7 @@ func buildKubeadmClusterAdminsBinding(roleName string) *rbacv1.ClusterRoleBindin
 			Annotations: map[string]string{
 				helmReleaseNameAnnotation:      cpmHelmReleaseName,
 				helmReleaseNamespaceAnnotation: cpmHelmReleaseNamespace,
+				helmResourcePolicyAnnotation:   helmResourcePolicyKeep,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
