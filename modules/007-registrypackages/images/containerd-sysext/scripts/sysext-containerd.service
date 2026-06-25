@@ -26,7 +26,6 @@ ConditionPathExists=/run/etc/containerd/config.toml
 # up shims/runc via PATH, so prepend it here.
 Environment=PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-ExecStartPre=-/usr/sbin/modprobe overlay
 ExecStart=/opt/deckhouse/bin/containerd --config /run/etc/containerd/config.toml
 
 Type=notify
