@@ -566,6 +566,9 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /modules/340-extended-monitoring
   to: /deckhouse/modules/340-extended-monitoring
   excludePaths:
