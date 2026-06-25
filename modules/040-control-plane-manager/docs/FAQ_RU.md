@@ -65,7 +65,7 @@ spec:
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
 {% alert level="warning" %}
-Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
 {% endalert %}
 
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
@@ -136,7 +136,7 @@ spec:
 {% endalert %}
 
 {% alert level="warning" %}
-Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
 {% endalert %}
 
 1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
@@ -350,7 +350,7 @@ spec:
 {% endalert %}
 
 {% alert level="warning" %}
-Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).  
 {% endalert %}
 
 1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
