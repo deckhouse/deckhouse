@@ -1,6 +1,6 @@
 ---
 title: "The istio module: examples"
-description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, and control plane upgrades."
+description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, control plane upgrades, and automated data plane sidecar upgrades."
 ---
 
 ## Circuit Breaker
@@ -880,6 +880,8 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 {% alert level="warning" %}Upgrading to Istio 1.25 is only possible from version 1.21.{% endalert %}
 
+<span id="auto-upgrading-istio-data-plane"></span>
+
 ### Auto upgrading istio data-plane
 
 {% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
@@ -900,9 +902,9 @@ The `istio.deckhouse.io/auto-upgrade="true"` label must be set on the same entit
 * If sidecar injection is enabled at the workload or pod template level, for example with `sidecar.istio.io/inject="true"`, set `istio.deckhouse.io/auto-upgrade="true"` on the corresponding `Deployment`, `DaemonSet`, or `StatefulSet`.
 * A namespace with only the `istio.deckhouse.io/auto-upgrade="true"` label does not enable automatic upgrading for a workload if injection is configured only at the workload or pod template level.
 
-Automatic upgrading is supported only for `Deployment`, `DaemonSet`, and `StatefulSet` resources. `Job`, `CronJob`, standalone `Pod`, and custom controllers, including Kruise `AdvancedDaemonSet`, are not handled. If an ingress controller is managed by an `AdvancedDaemonSet`, the `istio.deckhouse.io/auto-upgrade="true"` label on that resource is ignored. Such ingress controllers must be upgraded manually according to the ingress operation procedure.
+Automatic upgrading is supported only for `Deployment`, `DaemonSet`, and `StatefulSet` resources. `Job`, `CronJob`, standalone `Pod`, and custom controllers, including Kruise `AdvancedDaemonSet`, are not handled. If an ingress controller is managed by an `AdvancedDaemonSet`, the `istio.deckhouse.io/auto-upgrade="true"` label on that resource is ignored. Upgrade such ingress controllers manually following the [Istio control plane upgrade](#upgrading-istio-control-plane) procedure and the [Ingress NGINX integration](#ingress-nginx) section.
 
-Use the `D8IstioActualDataPlaneVersionNotEqualDesired` and `D8IstioDataPlaneVersionMismatch` alerts to detect Pods whose current data-plane version differs from the desired version.
+Use the [`D8IstioDataPlaneVersionMismatch`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istiodataplaneversionmismatch) alert to detect Pods whose patch data-plane version differs from the control plane version — the scenario that automatic upgrading addresses. The [`D8IstioActualDataPlaneVersionNotEqualDesired`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactualdataplaneversionnotequaldesired) alert indicates a revision mismatch and usually requires changing namespace or Pod labels before sidecars can be updated.
 
 {% alert level="warning" %}
 Do not delete the old Istio control plane manually during an upgrade. The old `istiod` and related resources are removed automatically after there are no sidecars connected to the old revision left in the cluster. Manual deletion can break the regular upgrade automation.

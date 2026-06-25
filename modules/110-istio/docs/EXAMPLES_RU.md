@@ -1,6 +1,6 @@
 ---
 title: "Модуль istio: примеры"
-description: "Практические примеры использования модуля istio: маршрутизация, балансировка, авторизация, ingress, телеметрия и обновление control plane."
+description: "Практические примеры использования модуля istio: маршрутизация, балансировка, авторизация, ingress, телеметрия, обновление control plane и автоматическое обновление сайдкаров data plane."
 ---
 
 ## Circuit Breaker
@@ -882,6 +882,8 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 {% alert level="warning" %}Обновление до версии Istio 1.25 возможно только с версии 1.21.{% endalert %}
 
+<span id="auto-upgrading-istio-data-plane"></span>
+
 ### Автоматическое обновление data plane Istio
 
 {% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
@@ -890,24 +892,24 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 Автоматическое обновление срабатывает, когда у пода с istio-сайдкаром текущая версия data plane отличается от желаемой. Добавление версии в параметр [additionalVersions](configuration.html#parameters-additionalversions) само по себе не перезапускает прикладные поды. Обычно расхождение появляется в следующих случаях:
 
-* изменился параметр [globalVersion](configuration.html#parameters-globalversion) для namespace, где используется глобальная версия Istio (`istio-injection=enabled` или `istio.io/rev=default`);
+* изменился параметр [globalVersion](configuration.html#parameters-globalversion) для неймспейса, где используется глобальная версия Istio (`istio-injection=enabled` или `istio.io/rev=default`);
 * изменился лейбл `istio.io/rev` на `Namespace` или на поде;
-* обновилась patch-версия установленного control plane.
+* обновилась патч-версия установленного control plane.
 
-Перед перезапуском workload модуль проверяет, что соответствующий control plane установлен и готов к работе. Затем модуль добавляет или обновляет аннотацию `istio.deckhouse.io/full-version` в `spec.template.metadata.annotations`, а Kubernetes выполняет штатный rollout. В одном namespace модуль не начинает обновлять следующий workload, пока предыдущий обновляемый workload не готов.
+Перед перезапуском рабочей нагрузки модуль проверяет, что соответствующий control plane установлен и готов к работе. Затем модуль добавляет или обновляет аннотацию `istio.deckhouse.io/full-version` в `spec.template.metadata.annotations`, а Kubernetes выполняет штатный rollout. В одном неймспейсе модуль не начинает обновлять следующую рабочую нагрузку, пока предыдущая обновляемая рабочая нагрузка не готова.
 
-Лейбл `istio.deckhouse.io/auto-upgrade="true"` должен быть установлен на той же сущности, которая определяет использование Istio для workload:
+Лейбл `istio.deckhouse.io/auto-upgrade="true"` должен быть установлен на той же сущности, которая определяет использование Istio для рабочей нагрузки:
 
-* Если injection включён на уровне namespace с помощью `istio-injection=enabled`, `istio.io/rev=<REVISION>` или `istio.io/rev=default`, лейбл `istio.deckhouse.io/auto-upgrade="true"` можно установить на этот же `Namespace`.
-* Если sidecar включён на уровне workload или pod template, например с помощью `sidecar.istio.io/inject="true"`, установите `istio.deckhouse.io/auto-upgrade="true"` на соответствующий `Deployment`, `DaemonSet` или `StatefulSet`.
-* Namespace с одним только лейблом `istio.deckhouse.io/auto-upgrade="true"` не включает автоматическое обновление workload, если injection настроен только на уровне workload или pod template.
+* Если инъекция включена на уровне неймспейса с помощью `istio-injection=enabled`, `istio.io/rev=<REVISION>` или `istio.io/rev=default`, лейбл `istio.deckhouse.io/auto-upgrade="true"` можно установить на этот же `Namespace`.
+* Если сайдкар включён на уровне рабочей нагрузки или pod template, например с помощью `sidecar.istio.io/inject="true"`, установите `istio.deckhouse.io/auto-upgrade="true"` на соответствующий `Deployment`, `DaemonSet` или `StatefulSet`.
+* Неймспейс с одним только лейблом `istio.deckhouse.io/auto-upgrade="true"` не включает автоматическое обновление рабочей нагрузки, если инъекция настроена только на уровне рабочей нагрузки или pod template.
 
-Автоматическое обновление поддерживается только для ресурсов `Deployment`, `DaemonSet` и `StatefulSet`. Ресурсы `Job`, `CronJob`, отдельные `Pod` и кастомные контроллеры, в том числе Kruise `AdvancedDaemonSet`, не обрабатываются. Если ingress controller управляется через `AdvancedDaemonSet`, лейбл `istio.deckhouse.io/auto-upgrade="true"` на таком ресурсе будет проигнорирован. Такие ingress controllers нужно обновлять вручную по регламенту эксплуатации ingress.
+Автоматическое обновление поддерживается только для ресурсов `Deployment`, `DaemonSet` и `StatefulSet`. Ресурсы `Job`, `CronJob`, отдельные поды и кастомные контроллеры, в том числе Kruise `AdvancedDaemonSet`, не обрабатываются. Если ingress controller управляется через `AdvancedDaemonSet`, лейбл `istio.deckhouse.io/auto-upgrade="true"` на таком ресурсе будет проигнорирован. Обновляйте такие ingress controllers вручную по процедуре [обновления control plane Istio](#обновление-control-plane-istio) и в разделе [Ingress NGINX](#ingress-nginx).
 
-Для обнаружения подов, у которых текущая версия data plane отличается от желаемой, используйте алерты `D8IstioActualDataPlaneVersionNotEqualDesired` и `D8IstioDataPlaneVersionMismatch`.
+Для обнаружения подов, у которых патч-версия data plane отличается от версии control plane (сценарий, который закрывает автоматическое обновление), используйте алерт [`D8IstioDataPlaneVersionMismatch`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istiodataplaneversionmismatch). Алерт [`D8IstioActualDataPlaneVersionNotEqualDesired`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactualdataplaneversionnotequaldesired) сигнализирует о несовпадении ревизии Istio и обычно требует изменения лейблов неймспейса или пода перед обновлением сайдкаров.
 
 {% alert level="warning" %}
-Не удаляйте старый control plane Istio вручную во время обновления. Старый `istiod` и связанные с ним ресурсы удаляются автоматически после того, как в кластере не останется sidecar'ов, подключённых к старой ревизии. Ручное удаление может нарушить штатную автоматику обновления.
+Не удаляйте старый control plane Istio вручную во время обновления. Старый `istiod` и связанные с ним ресурсы удаляются автоматически после того, как в кластере не останется сайдкаров, подключённых к старой ревизии. Ручное удаление может нарушить штатную автоматику обновления.
 {% endalert %}
 
 ## Настройка ресурсов istio-proxy sidecar
