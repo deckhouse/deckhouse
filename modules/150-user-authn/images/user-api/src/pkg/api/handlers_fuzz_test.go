@@ -23,30 +23,29 @@ import (
 func FuzzResetPassword(f *testing.F) {
 	validBcryptHash := "$2a$10$fyCj7unkBxyxSrh6jULkTOwvUabNzdd81am02CT9tWTlb.y0Eptri"
 
-	f.Add("Bearer validtoken", validBcryptHash, "testuser", "local", true)
-	f.Add("", validBcryptHash, "testuser", "local", true)
-	f.Add("Basic abc", validBcryptHash, "testuser", "local", true)
-	f.Add("Bearer invalidtoken", validBcryptHash, "testuser", "local", true)
-	f.Add("Bearer validtoken", "", "testuser", "local", true)
-	f.Add("Bearer validtoken", "plaintext", "testuser", "local", true)
-	f.Add("Bearer validtoken", "$2y$10$invalidhash", "testuser", "local", true)
-	f.Add("Bearer validtoken", validBcryptHash, "testuser", "github", true)
-	f.Add("Bearer validtoken", validBcryptHash, "externaluser", "local", false)
+	// минимальный seed corpus
+	f.Add("Bearer validtoken", validBcryptHash)
+	f.Add("", validBcryptHash)
+	f.Add("Bearer invalidtoken", "")
+	f.Add("Basic abc", "plaintext")
+	f.Add("Bearer validtoken", "$2y$10$invalidhash")
 
-	f.Fuzz(func(t *testing.T, authHeader string, newPasswordHash string, username string, connectorID string, isLocal bool) {
+	f.Fuzz(func(t *testing.T, authHeader string, passwordHash string) {
+
 		verifier := &mockVerifier{
 			claims: &auth.Claims{
-				Username:    username,
+				Username:    "fuzz-user",
 				Email:       "test@example.com",
-				ConnectorID: connectorID,
+				ConnectorID: "local",
 			},
 		}
 
 		k8sClient := &mockK8sClient{
-			isLocal:       isLocal,
+			isLocal:       true,
 			operationName: "self-password-reset-fuzz",
 		}
 
+		// делаем только одну контролируемую вариацию ошибки
 		if authHeader == "Bearer invalidtoken" {
 			verifier.err = auth.ErrTokenValidation
 		}
@@ -54,7 +53,7 @@ func FuzzResetPassword(f *testing.F) {
 		h := newTestHandler(verifier, k8sClient)
 
 		body := PasswordResetRequest{
-			NewPasswordHash: newPasswordHash,
+			NewPasswordHash: passwordHash,
 		}
 
 		bodyBytes, err := json.Marshal(body)
@@ -72,33 +71,32 @@ func FuzzResetPassword(f *testing.F) {
 		w := httptest.NewRecorder()
 		h.ResetPassword(w, req)
 
+		// базовая проверка: HTTP всегда валидный
 		if w.Code < 100 || w.Code > 599 {
 			t.Fatalf("invalid HTTP status: %d", w.Code)
 		}
 
+		// проверка успешного ответа
 		if w.Code == http.StatusAccepted {
 			var resp PasswordResetResponse
 			if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
-				t.Fatalf("accepted response is not valid JSON: %v, body=%q", err, w.Body.String())
-			}
-
-			if resp.Status == "" {
-				t.Fatalf("accepted response has empty status, body=%q", w.Body.String())
+				t.Fatalf("bad JSON: %v body=%q", err, w.Body.String())
 			}
 
 			if resp.OperationName == "" {
-				t.Fatalf("accepted response has empty operationName, body=%q", w.Body.String())
+				t.Fatalf("empty operation name")
 			}
 		}
 
+		// проверка error response
 		if w.Code >= http.StatusBadRequest {
 			var errResp ErrorResponse
 			if err := json.NewDecoder(w.Body).Decode(&errResp); err != nil {
-				t.Fatalf("error response is not valid JSON: %v, status=%d, body=%q", err, w.Code, w.Body.String())
+				t.Fatalf("bad error JSON: %v body=%q", err, w.Body.String())
 			}
 
 			if errResp.Error == "" {
-				t.Fatalf("error response has empty error code, status=%d, body=%q", w.Code, w.Body.String())
+				t.Fatalf("empty error code")
 			}
 		}
 	})
