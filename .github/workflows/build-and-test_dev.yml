@@ -695,7 +695,7 @@ jobs:
     needs:
       - pull_request_info
       - build_fe
-    if: ${{ success() }}
+    if: ${{ needs.build_fe.result == 'success' && needs.pull_request_info.result == 'success' }}
     permissions:
       contents: read
       actions: read
