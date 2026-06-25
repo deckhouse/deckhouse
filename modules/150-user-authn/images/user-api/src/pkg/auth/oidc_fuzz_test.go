@@ -1,3 +1,19 @@
+package auth
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+)
+
 func FuzzOIDCVerifier_Verify(f *testing.F) {
 	// seed corpus (валидный JWT сценарий)
 
