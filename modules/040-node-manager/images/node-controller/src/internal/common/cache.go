@@ -45,13 +45,6 @@ func CacheOptions() (cache.Options, client.Options) {
 		"cluster.x-k8s.io/provider": "cluster-api",
 	})
 
-	// Cache Secrets in MachineNamespace that the controllers actually need:
-	//   - configuration-checksums      (app=bashible-apiserver)
-	//   - node-controller-webhook-tls  (app=node-controller)
-	//   - capi-webhook-tls             (app=capi-controller-manager)
-	// The webhook-tls secrets must be watched so crdmigration re-injects the
-	// caBundle after CA rotation. Bootstrap/data secrets have no "app" label and
-	// are therefore excluded by this set-based selector.
 	machineNSSecretReq, _ := labels.NewRequirement(
 		"app",
 		selection.In,
