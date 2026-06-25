@@ -42,7 +42,7 @@ concurrency:
 jobs:
   close_dependabot_prs_for_forks:
     name: Autoclose Dependabot PRs for forks
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     if: ${{ github.actor == 'dependabot[bot]' && github.repository != 'deckhouse/deckhouse' }}
     env:
       ENABLE_DEPENDABOT_IN_FORKS: ${{ secrets.ENABLE_DEPENDABOT_IN_FORKS }}
@@ -76,7 +76,7 @@ jobs:
     name: Prepare input for validation scripts
     needs:
       - pull_request_info
-    runs-on: ubuntu-24.04
+    runs-on: self-slim
     outputs:
       run_no_cyrillic: ${{ steps.check_labels.outputs.run_no_cyrillic }}
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
@@ -162,7 +162,7 @@ jobs:
 
   pull_request_changes_validation:
     name: Pull Request Changes validation
-    runs-on: "ubuntu-latest"
+    runs-on: self-slim
     needs:
       - discover
       - pull_request_info
@@ -215,19 +215,6 @@ jobs:
               throw(error);
             }
 
-  gitleaks_scan:
-    name: Secret scan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Run Gitleaks diff scan
-        uses: deckhouse/modules-actions/gitleaks@main
-        continue-on-error: true
-        with:
-          scan_mode: "diff"
-
 
 {!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}
@@ -237,7 +224,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-24.04
+runs-on: self-slim
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
@@ -262,7 +249,7 @@ needs:
   - discover
   - pull_request_info
 if: needs.discover.outputs.run_{!{ $type }!} == 'true'
-runs-on: ubuntu-24.04
+runs-on: self-slim
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
 
@@ -286,7 +273,7 @@ needs:
   - discover
   - pull_request_info
 if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
-runs-on: ubuntu-24.04
+runs-on: [self-hosted, regular]
 permissions:
   contents: read
   id-token: write
@@ -303,6 +290,14 @@ steps:
     uses: {!{ index (ds "actions") "actions/download-artifact" }!}
     with:
       name: pr_diff
+
+  - name: Validate spelling wordlist <-> dev_OPS.dic sync
+    env:
+      WORDLIST_PATH: tools/docs/spelling/wordlist
+      DICT_PATH: tools/docs/spelling/dictionaries/dev_OPS.dic
+      DIFF_PATH: ./pr.diff
+    run: |
+      ./tools/docs/spelling/validate_dictionary_sync.sh "${DIFF_PATH}"
 
    # <template: spellcheck_template>
   - name: Spell check

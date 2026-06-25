@@ -47,10 +47,10 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 
 	return actions.ManifestTask{
 		Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return mcUnstruct
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			if createMsg != "" {
 				log.InfoLn(createMsg)
 			}
@@ -72,12 +72,12 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 
 			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Create(ctx, m, metav1.CreateOptions{})
 			if err != nil {
-				log.DebugF("Do not create mc: %v\n", err)
+				log.DebugF("Not creating mc: %v\n", err)
 			}
 
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			// fake client does not support cache
 			if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
 				// need for invalidate cache
@@ -102,7 +102,7 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 				Dynamic().Resource(config.ModuleConfigGVR).
 				Update(ctx, newManifest, metav1.UpdateOptions{})
 			if err != nil {
-				log.InfoF("Do not updating mc: %v\n", err)
+				log.InfoF("Not updating mc: %v\n", err)
 			}
 
 			return err
@@ -122,7 +122,7 @@ func prepareModuleConfig(ctx context.Context, mc *config.ModuleConfig, res *Mani
 	}
 }
 
-func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, mcName string, value interface{}, field []string) error {
+func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, mcName string, value any, field []string) error {
 	log.DebugF("setSettingToModuleConfig for mc %s, field %v, value %v", mcName, field, value)
 
 	cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(ctx, mcName, metav1.GetOptions{})
@@ -150,12 +150,12 @@ func prepareDeckhouseMC(ctx context.Context, mc *config.ModuleConfig, res *Manif
 	// for preventing an updating deckhouse during bootstrap process
 	// for example, we are installing v1.66 tag but in release channel we have v1.67 tag
 
-	log.DebugLn("Found deckhouse mc. Try to prepare...")
+	log.DebugLn("Found deckhouse mc. Trying to prepare...")
 
 	releaseChannel := ""
 	releaseChannelRaw, hasReleaseChannelKey := mc.Spec.Settings["releaseChannel"]
 	if rc, ok := releaseChannelRaw.(string); hasReleaseChannelKey && ok {
-		log.DebugLn("Found releaseChannel in mc deckhouse. Remove it from mc")
+		log.DebugLn("Found releaseChannel in mc deckhouse. Removing it from mc")
 		// we need set releaseChannel after bootstrapping process done
 		// to prevent update during bootstrap
 		delete(mc.Spec.Settings, "releaseChannel")
@@ -163,7 +163,7 @@ func prepareDeckhouseMC(ctx context.Context, mc *config.ModuleConfig, res *Manif
 	}
 
 	if releaseChannel == "" {
-		log.DebugLn("Not found releaseChannel in mc deckhouse. Finish preparing")
+		log.DebugLn("releaseChannel not found in mc deckhouse. Finished preparing")
 		return
 	}
 
@@ -183,43 +183,43 @@ func prepareGlobalMC(ctx context.Context, mc *config.ModuleConfig, res *Manifest
 	// and deckhouse cannot found this secret and cloud permanent nodes will not bootstrap
 	// because deckhouse stuck in error and it cannot create manual-for-bootstrap secrets
 
-	log.DebugLn("Found global mc. Try to prepare...")
+	log.DebugLn("Found global mc. Trying to prepare...")
 
-	var httpsSettings map[string]interface{}
+	var httpsSettings map[string]any
 
 	modulesRaw, hasModules := mc.Spec.Settings["modules"]
 	if !hasModules {
-		log.DebugLn("Not found modules in global mc. Finish preparing")
+		log.DebugLn("modules not found in global mc. Finished preparing")
 		return
 	}
 
-	modules, ok := modulesRaw.(map[string]interface{})
+	modules, ok := modulesRaw.(map[string]any)
 	if !ok {
-		log.ErrorLn("modules is not map in global mc. Finish preparing")
+		log.ErrorLn("modules is not a map in global mc. Finished preparing")
 		return
 	}
 
 	HTTPSRaw, hasHTTPS := modules["https"]
 	if !hasHTTPS {
-		log.DebugLn("Not found https in global mc. Finish preparing")
+		log.DebugLn("https not found in global mc. Finished preparing")
 		return
 	}
 
-	httpsSettings, ok = HTTPSRaw.(map[string]interface{})
+	httpsSettings, ok = HTTPSRaw.(map[string]any)
 	if !ok {
-		log.ErrorLn("https is not map in global mc. Finish preparing")
+		log.ErrorLn("https is not a map in global mc. Finished preparing")
 		return
 	}
 
 	if httpsSettings == nil {
-		log.DebugLn("Not found httpsSettings in mc deckhouse. Finish preparing")
+		log.DebugLn("httpsSettings not found in mc deckhouse. Finished preparing")
 		return
 	}
 
-	log.DebugLn("Found https in global mc deckhouse. Remove it from mc")
+	log.DebugLn("Found https in global mc deckhouse. Removing it from mc")
 	delete(modules, "https")
 	if len(modules) == 0 {
-		log.DebugLn("modules in global mc is empty. Remove it from mc")
+		log.DebugLn("modules in global mc is empty. Removing it from mc")
 		delete(mc.Spec.Settings, "modules")
 	}
 

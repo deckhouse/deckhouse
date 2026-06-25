@@ -17,6 +17,7 @@ package log
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
@@ -80,6 +81,7 @@ type InteractiveLogger struct {
 
 	// channels for updating labels
 	phaseChan chan string
+	logChan   chan string
 
 	pbStarted bool
 }
@@ -87,10 +89,13 @@ type InteractiveLogger struct {
 func newInteractiveLogger(logger external.Logger, interactive bool) *InteractiveLogger {
 	// buffered chan to make sure we won't get stucked
 	phaseChan := make(chan string, 5)
+	// logs can appears really often, so wee need larger buffer
+	logChan := make(chan string, 100)
 	return &InteractiveLogger{
 		logger:      logger,
 		interactive: interactive,
 		phaseChan:   phaseChan,
+		logChan:     logChan,
 	}
 }
 
@@ -144,44 +149,70 @@ func (i *InteractiveLogger) LogProcess(p, t string, run func() error) error {
 
 	if i.pbStarted {
 		i.phaseChan <- t
+		i.logChan <- fmt.Sprintf("process started: %s", t)
 	}
 
 	if err := run(); err != nil {
 		return err
 	}
 
+	if i.pbStarted {
+		i.phaseChan <- t
+		i.logChan <- fmt.Sprintf("process finished: %s", t)
+	}
+
 	return nil
 }
 
-func (i *InteractiveLogger) LogInfoF(format string, a ...interface{}) {
+func (i *InteractiveLogger) LogInfoF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
+		if i.pbStarted {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
 	} else {
 		i.logger.InfoFWithoutLn(format, a...)
 	}
 }
 
-func (i *InteractiveLogger) LogInfoLn(a ...interface{}) {
+func (i *InteractiveLogger) LogInfoLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
+		if i.pbStarted {
+			i.logChan <- fmt.Sprintf("%s", a...)
+		}
 	} else {
 		i.logger.InfoLn(a...)
 	}
 }
 
-func (i *InteractiveLogger) LogErrorF(format string, a ...interface{}) {
-	i.logger.ErrorF(format, a...)
+func (i *InteractiveLogger) LogErrorF(format string, a ...any) {
+	if i.interactive {
+		i.logger.DebugF(format, a...)
+		if i.pbStarted {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
+	} else {
+		i.logger.ErrorF(format, a...)
+	}
 }
 
-func (i *InteractiveLogger) LogErrorLn(a ...interface{}) {
-	i.logger.ErrorF("%v", a...)
+func (i *InteractiveLogger) LogErrorLn(a ...any) {
+	if i.interactive {
+		i.logger.DebugLn(a...)
+		if i.pbStarted {
+			i.logChan <- fmt.Sprintf("%s", a...)
+		}
+	} else {
+		i.logger.ErrorF("%v", a...)
+	}
 }
 
-func (i *InteractiveLogger) LogDebugF(format string, a ...interface{}) {
+func (i *InteractiveLogger) LogDebugF(format string, a ...any) {
 	i.logger.DebugF(format, a...)
 }
 
-func (i *InteractiveLogger) LogDebugLn(a ...interface{}) {
+func (i *InteractiveLogger) LogDebugLn(a ...any) {
 	i.logger.DebugF("%v", a...)
 }
 
@@ -203,19 +234,25 @@ func (i *InteractiveLogger) LogFailRetry(l string) {
 	}
 }
 
-func (i *InteractiveLogger) LogWarnLn(a ...interface{}) {
-	if !i.interactive {
-		i.logger.WarnF("%s", a...)
-	} else {
+func (i *InteractiveLogger) LogWarnLn(a ...any) {
+	if i.interactive {
 		i.logger.DebugF("%v", a...)
+		if i.pbStarted {
+			i.logChan <- fmt.Sprintf("%s", a...)
+		}
+	} else {
+		i.logger.WarnF("%s", a...)
 	}
 }
 
-func (i *InteractiveLogger) LogWarnF(format string, a ...interface{}) {
-	if !i.interactive {
-		i.logger.WarnFWithoutLn(format, a...)
-	} else {
+func (i *InteractiveLogger) LogWarnF(format string, a ...any) {
+	if i.interactive {
 		i.logger.DebugF(format, a...)
+		if i.pbStarted {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
+	} else {
+		i.logger.WarnFWithoutLn(format, a...)
 	}
 }
 
@@ -229,6 +266,10 @@ func (i *InteractiveLogger) Write(content []byte) (int, error) {
 
 func (i *InteractiveLogger) GetPhaseChan() chan string {
 	return i.phaseChan
+}
+
+func (i *InteractiveLogger) GetLogChan() chan string {
+	return i.logChan
 }
 
 func getInteractiveLoggerWrapper(loggerType string, opts LoggerOptions, interactive bool) (*InteractiveLogger, error) {
@@ -301,6 +342,17 @@ func InteractiveWarnLn(a ...any) {
 	logger.WarnLn(a...)
 }
 
+func InteractiveWarnF(format string, a ...any) {
+	provider := ExternalLoggerProvider(defaultLogger)
+	logger := provider()
+	l, ok := logger.(*InteractiveLoggerWrapper)
+	if ok {
+		logger = l.logger
+	}
+
+	logger.WarnFWithoutLn(format, a...)
+}
+
 func InteractiveInfoF(format string, a ...any) {
 	provider := ExternalLoggerProvider(defaultLogger)
 	logger := provider()
@@ -321,6 +373,7 @@ type InteractiveLoggerWrapper struct {
 	interactive bool
 
 	phaseChan chan string
+	logChan   chan string
 }
 
 func (i *InteractiveLoggerWrapper) Process(p external.Process, t string, run func() error) error {
@@ -330,96 +383,128 @@ func (i *InteractiveLoggerWrapper) Process(p external.Process, t string, run fun
 
 	if isPbStarted() {
 		i.phaseChan <- t
+		i.logChan <- fmt.Sprintf("process started: %s", t)
 	}
 
 	if err := run(); err != nil {
 		return err
 	}
 
+	if isPbStarted() {
+		i.logChan <- fmt.Sprintf("process finished: %s", t)
+	}
+
 	return nil
 }
 
-func (i *InteractiveLoggerWrapper) InfoFWithoutLn(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) InfoFWithoutLn(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
 	} else {
 		i.logger.InfoFWithoutLn(format, a...)
 	}
 }
 
-func (i *InteractiveLoggerWrapper) InfoLn(a ...interface{}) {
+func (i *InteractiveLoggerWrapper) InfoLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf("%s", a...)
+		}
 	} else {
 		i.logger.InfoLn(a...)
 	}
 }
 
-func (i *InteractiveLoggerWrapper) InfoF(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) InfoF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
 	} else {
 		i.logger.InfoF(format, a...)
 	}
 }
 
-func (i *InteractiveLoggerWrapper) ErrorFWithoutLn(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) ErrorFWithoutLn(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
 	} else {
 		i.logger.ErrorFWithoutLn(format, a...)
 	}
 }
 
-func (i *InteractiveLoggerWrapper) ErrorLn(a ...interface{}) {
+func (i *InteractiveLoggerWrapper) ErrorLn(a ...any) {
 	if i.interactive {
 		i.logger.DebugLn(a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf("%s", a...)
+		}
 	} else {
 		i.logger.ErrorLn(a...)
 	}
 }
 
-func (i *InteractiveLoggerWrapper) ErrorF(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) ErrorF(format string, a ...any) {
 	if i.interactive {
 		i.logger.DebugF(format, a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
 	} else {
 		i.logger.ErrorF(format, a...)
 	}
 }
 
-func (i *InteractiveLoggerWrapper) DebugFWithoutLn(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) DebugFWithoutLn(format string, a ...any) {
 	i.logger.DebugFWithoutLn(format, a...)
 }
 
-func (i *InteractiveLoggerWrapper) DebugLn(a ...interface{}) {
+func (i *InteractiveLoggerWrapper) DebugLn(a ...any) {
 	i.logger.DebugLn(a...)
 }
 
-func (i *InteractiveLoggerWrapper) DebugF(format string, a ...interface{}) {
+func (i *InteractiveLoggerWrapper) DebugF(format string, a ...any) {
 	i.logger.DebugF(format, a...)
 }
 
-func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...interface{}) {
-	if !i.interactive {
-		i.logger.WarnFWithoutLn(format, a...)
-	} else {
+func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...any) {
+	if i.interactive {
 		i.logger.DebugFWithoutLn(format, a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
+	} else {
+		i.logger.WarnFWithoutLn(format, a...)
 	}
 }
 
-func (i *InteractiveLoggerWrapper) WarnLn(a ...interface{}) {
-	if !i.interactive {
-		i.logger.WarnLn(a...)
-	} else {
+func (i *InteractiveLoggerWrapper) WarnLn(a ...any) {
+	if i.interactive {
 		i.logger.DebugLn(a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf("%s", a...)
+		}
+	} else {
+		i.logger.WarnLn(a...)
 	}
 }
 
-func (i *InteractiveLoggerWrapper) WarnF(format string, a ...interface{}) {
-	if !i.interactive {
-		i.logger.WarnF(format, a...)
-	} else {
+func (i *InteractiveLoggerWrapper) WarnF(format string, a ...any) {
+	if i.interactive {
 		i.logger.DebugF(format, a...)
+		if isPbStarted() {
+			i.logChan <- fmt.Sprintf(format, a...)
+		}
+	} else {
+		i.logger.WarnF(format, a...)
 	}
 }
 
@@ -486,10 +571,10 @@ func isPbStarted() bool {
 	return started
 }
 
-func WithProgressBar() {
+func WithProgressBar(b bool) {
 	logger := GetDefaultLogger()
 	l, ok := logger.(*InteractiveLogger)
 	if ok {
-		l.pbStarted = true
+		l.pbStarted = b
 	}
 }

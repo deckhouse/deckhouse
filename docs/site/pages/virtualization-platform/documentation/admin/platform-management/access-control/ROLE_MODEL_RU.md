@@ -144,7 +144,10 @@ roleRef:
 - `d8:manage:networking:viewer`
 - `d8:manage:networking:manager`
 
-Подсистема роли ограничивает её действие всеми системными (начинающимися с `d8-` или `kube-`) пространствами имён кластера (подсистема `all`) или теми пространствами имён, в которых работают модули подсистемы (см. таблицу состава подсистем).
+Область действия роли зависит от того, к какой подсистеме она принадлежит:
+
+- Область действия ролей из подсистемы `all` — все системные (начинающиеся с `d8-` или `kube-`) неймспейсы кластера.
+- Область действия ролей из других подсистем — неймспейсы, в которых работают модули подсистемы (подробнее — в таблице состава подсистем), а также все cluster-wide объекты модулей подсистемы.
 
 Таблица состава подсистем ролевой модели.
 
@@ -192,6 +195,10 @@ roleRef:
 - Управлять доступом к *пользовательским* ресурсам модулей в рамках пространства имён.
 
   Например, использование роли `d8:use:role:manager` в `RoleBinding`, позволит удалять/создавать/редактировать ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig#podloggingconfig) в пространстве имён, но не даст доступа к cluster-wide-ресурсам [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig#clusterloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination#clusterlogdestination) модуля `log-shipper`, а также не даст возможность настраивать сам модуль `log-shipper`.
+
+{% alert level="warning" %}
+Обратите внимание на особенности настройки комбинированного доступа и совместного использования RoleBinding и ClusterAuthorizationRule (CAR) для одного и того же пользователя при включенном в кластере режиме мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)). Подробнее — в документации модуля [`user-authz`](/modules/user-authz/#rolebinding-car).
+{% endalert %}
 
 ### Список доступа для каждой роли модуля по умолчанию
 

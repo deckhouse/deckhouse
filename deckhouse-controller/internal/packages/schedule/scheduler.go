@@ -26,10 +26,6 @@ import (
 )
 
 const (
-	// packageGlobal is the sentinel node that all other nodes implicitly depend on.
-	// It acts as the root of the dependency graph and must complete before any scheduling begins.
-	packageGlobal = "global"
-
 	// FunctionalOrder is the Order value assigned to functional (non-critical) packages.
 	// It is higher than any critical package order, ensuring functional packages are
 	// scheduled only after all critical packages have been processed.
@@ -42,6 +38,11 @@ const (
 	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
 	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
 	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
+
+	// reasonDisabled is the status reason recorded when a node is explicitly
+	// disabled by an operator via [Scheduler.Disable], as opposed to losing
+	// eligibility through a failed checker.
+	reasonDisabled = "PackageDisabled"
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -58,6 +59,8 @@ type Scheduler struct {
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
+
+	onScheduleHook func(enabled []string)
 
 	pause atomic.Bool // When true, no state changes are processed
 }
@@ -90,6 +93,13 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 func WithDependencyGetter(getter dependency.Getter) Option {
 	return func(s *Scheduler) {
 		s.dependencyGetter = getter
+	}
+}
+
+// WithOnScheduleHook sets the hook to be called after scheduling is computed.
+func WithOnScheduleHook(hook func(enabled []string)) Option {
+	return func(s *Scheduler) {
+		s.onScheduleHook = hook
 	}
 }
 
@@ -167,6 +177,14 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 		}
 
 		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, deps))
+	}
+
+	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
+		checkers = append(checkers, dependency.NewAnyOfChecker(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	}
+
+	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
+		checkers = append(checkers, dependency.NewNoneOfChecker(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
 	}
 
 	if res := checker.Check(checkers...); !res.Enabled {
@@ -252,18 +270,42 @@ func (s *Scheduler) Complete(completed string) {
 		n.state = nodeStateActive
 	}
 
-	if completed == packageGlobal {
-		var enabled []string
-		for _, n := range s.compute() {
-			if n.name == packageGlobal || !n.status.Enabled {
-				continue
-			}
+	s.schedule()
+}
 
-			enabled = append(enabled, n.name)
-		}
+// Disable explicitly turns the named package off, forcing it disabled on every
+// subsequent scheduling pass regardless of its checker chain. A scheduling pass
+// runs immediately, cascade-disabling the node (and emitting an [EventDisable]
+// if it was previously enabled). It is a no-op if the package does not exist or
+// is already disabled.
+func (s *Scheduler) Disable(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-		s.send(Event{Kind: EventGlobalDone, Enabled: enabled})
+	n, ok := s.nodes[name]
+	if !ok || n.disabled {
+		return
 	}
+
+	n.disabled = true
+
+	s.schedule()
+}
+
+// Enable clears an explicit disable set by [Scheduler.Disable], allowing the
+// node's checker chain to govern eligibility again. A scheduling pass runs
+// immediately, re-scheduling the node if its checkers now pass. It is a no-op
+// if the package does not exist or is not explicitly disabled.
+func (s *Scheduler) Enable(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	n, ok := s.nodes[name]
+	if !ok || !n.disabled {
+		return
+	}
+
+	n.disabled = false
 
 	s.schedule()
 }
@@ -328,6 +370,12 @@ func (s *Scheduler) compute() []*node {
 	for _, n := range sorted {
 		current := n.status.Enabled
 		n.status = checker.Check(n.checkers...)
+		// An explicit operator disable is the final gate: it forces the node
+		// off even when every checker passes, but defers to the checker chain's
+		// more specific reason when that already disabled the node.
+		if n.disabled && n.status.Enabled {
+			n.status = checker.Result{Reason: reasonDisabled, Message: "package is explicitly disabled"}
+		}
 		if current == n.status.Enabled {
 			continue
 		}
@@ -343,13 +391,25 @@ func (s *Scheduler) compute() []*node {
 	}
 
 	// Disabled nodes have nothing to wait for — mark them active so they do
-	// not block higher-order nodes via canSchedule's order-tier gate. Nodes
-	// that later flip back to enabled are reset to idle by the loop above and
-	// go through normal scheduling from there.
+	// not block higher-order nodes via canSchedule's order-tier gate. This
+	// sweep is unconditional (not gated on a status flip), so nodes that are
+	// born disabled — never enabled to begin with — are parked active too.
+	// Nodes that later flip back to enabled are reset to idle by the loop
+	// above and go through normal scheduling from there.
 	for _, n := range sorted {
 		if n.state == nodeStateIdle && !n.status.Enabled {
 			n.state = nodeStateActive
 		}
+	}
+
+	if s.onScheduleHook != nil {
+		var enabled []string
+		for _, n := range sorted {
+			if n.status.Enabled {
+				enabled = append(enabled, n.name)
+			}
+		}
+		s.onScheduleHook(enabled)
 	}
 
 	return sorted

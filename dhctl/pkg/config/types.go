@@ -43,8 +43,8 @@ type OpenAPISchema struct {
 }
 
 type OpenAPISchemaVersion struct {
-	Version string      `json:"apiVersion"`
-	Schema  interface{} `json:"openAPISpec"`
+	Version string `json:"apiVersion"`
+	Schema  any    `json:"openAPISpec"`
 }
 
 type ClusterConfigCloudSpec struct {
@@ -57,21 +57,21 @@ type MasterNodeGroupSpec struct {
 }
 
 type TerraNodeGroupSpec struct {
-	Replicas     int                    `json:"replicas"`
-	Name         string                 `json:"name"`
-	NodeTemplate map[string]interface{} `json:"nodeTemplate"`
+	Replicas     int            `json:"replicas"`
+	Name         string         `json:"name"`
+	NodeTemplate map[string]any `json:"nodeTemplate"`
 }
 
 type DeckhouseClusterConfig struct {
-	ReleaseChannel    string                 `json:"releaseChannel,omitempty"` // Deprecated
-	DevBranch         string                 `json:"devBranch,omitempty"`
-	Bundle            string                 `json:"bundle,omitempty"`   // Deprecated
-	LogLevel          string                 `json:"logLevel,omitempty"` // Deprecated
-	ImagesRepo        string                 `json:"imagesRepo"`
-	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
-	RegistryCA        string                 `json:"registryCA,omitempty"`
-	RegistryScheme    string                 `json:"registryScheme,omitempty"`
-	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
+	ReleaseChannel    string         `json:"releaseChannel,omitempty"` // Deprecated
+	DevBranch         string         `json:"devBranch,omitempty"`
+	Bundle            string         `json:"bundle,omitempty"`   // Deprecated
+	LogLevel          string         `json:"logLevel,omitempty"` // Deprecated
+	ImagesRepo        string         `json:"imagesRepo"`
+	RegistryDockerCfg string         `json:"registryDockerCfg,omitempty"`
+	RegistryCA        string         `json:"registryCA,omitempty"`
+	RegistryScheme    string         `json:"registryScheme,omitempty"`
+	ConfigOverrides   map[string]any `json:"configOverrides"` // Deprecated
 }
 
 type ByClusterType[T any] interface {

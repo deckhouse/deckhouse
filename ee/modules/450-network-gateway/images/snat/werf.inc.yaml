@@ -1,31 +1,11 @@
-{{- $binaries := "/bin/grep /bin/sed /bin/sh" }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-final: false
-fromImage: common/relocate-artifact
-shell:
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "builder/distroless" }}
 git:
 - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/iptables-loop.py
   to: /iptables-loop.py
-{{- include "image mount points" $ }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
-  before: setup
-- from: {{ index $.Images "base/python-3.12" }}
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib/ld-musl-x86_64*
-  - usr/bin/python3*
-  - usr/lib/python3*
-  - usr/lib/libc.so
-  excludePaths:
-  - usr/lib/python3*/site-packages/pip-25.3*
+{{- include "image mount points" $ }}
+shell:
+  beforeInstall:
+  - pm install python@3.12 gnu-glibc grep sed coreutils bash

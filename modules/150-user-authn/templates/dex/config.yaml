@@ -24,6 +24,14 @@
   passwordPolicy:
     id: local
     complexityLevel: {{ .complexityLevel | quote }}
+    {{- if and (eq .complexityLevel "Custom") .custom }}
+    custom:
+      minLength: {{ .custom.minLength | default 8 }}
+      specialCharacters: {{ .custom.specialCharacters | default false }}
+      numbers: {{ .custom.numbers | default false }}
+      capitalized: {{ .custom.capitalized | default false }}
+      repeatedChars: {{ .custom.repeatedChars | default false }}
+    {{- end }}
     passwordHistoryLimit: {{ .passwordHistoryLimit }}
     {{- if .rotation }}
     rotation:

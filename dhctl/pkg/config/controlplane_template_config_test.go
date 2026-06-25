@@ -24,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 )
 
-func mustRawMessage(v interface{}) json.RawMessage {
+func mustRawMessage(v any) json.RawMessage {
 	b, err := json.Marshal(v)
 	if err != nil {
 		panic(err)
@@ -46,7 +46,7 @@ func newMetaConfig(t *testing.T, clusterConfig map[string]json.RawMessage, modul
 
 func baseClusterConfig() map[string]json.RawMessage {
 	return map[string]json.RawMessage{
-		"kubernetesVersion":       mustRawMessage("1.31"),
+		"kubernetesVersion":       mustRawMessage("1.32"),
 		"clusterDomain":           mustRawMessage("cluster.local"),
 		"serviceSubnetCIDR":       mustRawMessage("192.168.0.0/16"),
 		"podSubnetCIDR":           mustRawMessage("10.244.0.0/16"),
@@ -77,7 +77,7 @@ func TestConfigForControlPlaneTemplates_NoModuleConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "RSA-4096", cfg.ClusterConfiguration["encryptionAlgorithm"].(string))
-	require.Equal(t, "1.31", cfg.ClusterConfiguration["kubernetesVersion"].(string))
+	require.Equal(t, "1.32", cfg.ClusterConfiguration["kubernetesVersion"].(string))
 	require.Empty(t, cfg.Settings)
 }
 
@@ -85,7 +85,7 @@ func TestConfigForControlPlaneTemplates_ModuleConfigWins(t *testing.T) {
 	m := newMetaConfig(t, baseClusterConfig(), []*ModuleConfig{
 		newModuleConfig("control-plane-manager", SettingsValues{
 			"encryptionAlgorithm": "ECDSA-P256",
-			"resourcesRequests": map[string]interface{}{
+			"resourcesRequests": map[string]any{
 				"cpu":    "500m",
 				"memory": "512Mi",
 			},
@@ -96,7 +96,7 @@ func TestConfigForControlPlaneTemplates_ModuleConfigWins(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "ECDSA-P256", cfg.Settings["encryptionAlgorithm"])
-	rr, ok := cfg.Settings["resourcesRequests"].(map[string]interface{})
+	rr, ok := cfg.Settings["resourcesRequests"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, int64(500), rr["milliCPU"])
 	require.Equal(t, int64(512*1024*1024), rr["memoryBytes"])
@@ -117,7 +117,7 @@ func TestConfigForControlPlaneTemplates_KubernetesVersionAutomatic(t *testing.T)
 func TestConfigForControlPlaneTemplates_PartialResourcesRequests(t *testing.T) {
 	m := newMetaConfig(t, baseClusterConfig(), []*ModuleConfig{
 		newModuleConfig("control-plane-manager", SettingsValues{
-			"resourcesRequests": map[string]interface{}{
+			"resourcesRequests": map[string]any{
 				"cpu": "500m",
 				// memory not set
 			},
@@ -127,7 +127,7 @@ func TestConfigForControlPlaneTemplates_PartialResourcesRequests(t *testing.T) {
 	cfg, err := m.ConfigForControlPlaneTemplates("")
 	require.NoError(t, err)
 
-	rr, ok := cfg.Settings["resourcesRequests"].(map[string]interface{})
+	rr, ok := cfg.Settings["resourcesRequests"].(map[string]any)
 	require.True(t, ok)
 	require.Contains(t, rr, "milliCPU")
 	require.NotContains(t, rr, "memoryBytes")
@@ -136,7 +136,7 @@ func TestConfigForControlPlaneTemplates_PartialResourcesRequests(t *testing.T) {
 func TestConfigForControlPlaneTemplates_ToMap(t *testing.T) {
 	m := newMetaConfig(t, baseClusterConfig(), []*ModuleConfig{
 		newModuleConfig("control-plane-manager", SettingsValues{
-			"resourcesRequests": map[string]interface{}{
+			"resourcesRequests": map[string]any{
 				"cpu":    "1000m",
 				"memory": "1Gi",
 			},
@@ -149,6 +149,4 @@ func TestConfigForControlPlaneTemplates_ToMap(t *testing.T) {
 	tm := cfg.ToMap()
 	require.NotNil(t, tm["settings"])
 	require.NotNil(t, tm["clusterConfiguration"])
-	require.NotContains(t, tm, "resourcesRequestsMilliCpuControlPlane")
-	require.NotContains(t, tm, "resourcesRequestsMemoryControlPlane")
 }

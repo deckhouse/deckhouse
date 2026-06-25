@@ -10,26 +10,21 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
-  owner: 64535
-  group: 64535
   before: install
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kial-frontend-assets/static
   to: /opt/kiali/console
-  owner: 64535
-  group: 64535
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    user: "64535:64535"
+    user: "1000"
     workingDir: "/opt/kiali"
     entrypoint: ["/opt/kiali/kiali"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -42,8 +37,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git binutils
+  - pm install git binutils
   setup:
   - cd /src/kiali/
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0

@@ -66,7 +66,7 @@ func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
 	}
 
 	if newValue == 0 {
-		return fmt.Errorf("%w: got unacceptable .masterNodeGroup.replicas zero value", ErrValidationRuleFailed)
+		return fmt.Errorf("%w: the .masterNodeGroup.replicas zero value is not acceptable", ErrValidationRuleFailed)
 	}
 
 	if newValue < oldValue && newValue == 1 {
@@ -192,15 +192,15 @@ func ValidateSSHPublicKey(value json.RawMessage) error {
 	}
 
 	lines := strings.Split(string(data), "\n")
-	var base64Str string
+	var base64Str strings.Builder
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "----") || strings.Contains(line, ":") || line == "" {
 			continue
 		}
-		base64Str += line
+		base64Str.WriteString(line)
 	}
-	keyBytes, err := base64.StdEncoding.DecodeString(base64Str)
+	keyBytes, err := base64.StdEncoding.DecodeString(base64Str.String())
 	if err != nil {
 		return fmt.Errorf("%w: failed to decode base64 string: %w", ErrValidationRuleFailed, err)
 	}
@@ -209,5 +209,5 @@ func ValidateSSHPublicKey(value json.RawMessage) error {
 		return fmt.Errorf("%w: failed to parse public key: %w", ErrValidationRuleFailed, err)
 	}
 
-	return fmt.Errorf("%w: wrong public key format: please, convert it to openssh format using command like ssh-keygen -i -f key.ssh2 > key.pub", ErrValidationRuleFailed)
+	return fmt.Errorf("%w: wrong public key format: please convert it to openssh format using a command like ssh-keygen -i -f key.ssh2 > key.pub", ErrValidationRuleFailed)
 }

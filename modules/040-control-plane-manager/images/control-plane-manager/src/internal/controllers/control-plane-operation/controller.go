@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -81,6 +82,14 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	}
 	// Inject Reconciler-level deps into steps that need them.
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
+
+	if constants.SignatureEnabled() {
+		kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
+		if err != nil {
+			return fmt.Errorf("cannot create kube client for signature renewer: %w", err)
+		}
+		r.steps[controlplanev1alpha1.StepRenewSignature].(*renewSignatureStep).kubeClient = kubeClient
+	}
 
 	// harden admin kubeconfig perms and align root kubeconfig symlink during controller startup.
 	r.enforceNodePolicy(r.log)

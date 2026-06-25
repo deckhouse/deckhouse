@@ -6,7 +6,7 @@ index 548aeed3..c3ffcd57 100644
  module github.com/grafana/grafana
  
 -go 1.24.3
-+go 1.24.6
++go 1.25.10
  
  // Override docker/docker to avoid:
  // go: github.com/drone-runners/drone-runner-docker@v1.8.2 requires
@@ -230,7 +230,7 @@ index 29bfcb15..b5f952ba 100644
 +++ b/go.work
 @@ -1,4 +1,4 @@
 -go 1.24.3
-+go 1.24.6
++go 1.25.10
  
  use (
  	.

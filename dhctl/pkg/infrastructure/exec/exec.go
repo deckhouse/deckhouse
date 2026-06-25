@@ -17,6 +17,7 @@ package exec
 import (
 	"bufio"
 	"bytes"
+	"container/ring"
 	"context"
 	"fmt"
 	"io"
@@ -31,9 +32,40 @@ import (
 
 const HasChangesExitCode = 2
 
+// tailLines is the number of recent stdout/stderr lines we hold onto so we can
+// surface them when the subprocess exits non-zero and the unfiltered error
+// buffer turned out empty (e.g. tofu / provider printed the actual failure as
+// `[INFO]` or `[ERROR]` structured logs that infrastructureLogsMatcher diverts
+// to the debug log file only).
+const tailLines = 50
+
 // based on https://stackoverflow.com/a/43931246
 // https://regex101.com/r/qtIrSj/1
 var infrastructureLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERROR)\]\s+|Use TF_LOG=TRACE|there is no package|\-\-\-\-)`)
+
+// ringTail accumulates the last N lines fed to it. Used as a last-resort
+// context source when a subprocess crashes and we have nothing more specific.
+type ringTail struct {
+	r *ring.Ring
+}
+
+func newRingTail(n int) *ringTail { return &ringTail{r: ring.New(n)} }
+
+func (t *ringTail) Add(line string) {
+	t.r.Value = line
+	t.r = t.r.Next()
+}
+
+func (t *ringTail) String() string {
+	var b strings.Builder
+	t.r.Do(func(v any) {
+		if s, ok := v.(string); ok && s != "" {
+			b.WriteString(s)
+			b.WriteByte('\n')
+		}
+	})
+	return b.String()
+}
 
 func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (int, error) {
 	// Start infrastructure utility as a leader of the new process group to prevent
@@ -65,8 +97,12 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 
 	log.DebugLn(cmd.String())
 	var (
-		wg     sync.WaitGroup
-		errBuf bytes.Buffer
+		wg        sync.WaitGroup
+		errBuf    bytes.Buffer
+		stderrMu  sync.Mutex
+		stderrAll = newRingTail(tailLines)
+		stdoutMu  sync.Mutex
+		stdoutAll = newRingTail(tailLines)
 	)
 
 	wg.Add(2)
@@ -78,9 +114,17 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 		}
 
 		e := bufio.NewScanner(stderr)
+		// terraform / tofu can emit huge JSON-ish log lines (1+ MB) when TF_LOG is on; the
+		// default 64 KB scan buffer truncates them and bufio.Scanner returns an error,
+		// which currently silently kills this goroutine and leaves errBuf empty.
+		e.Buffer(make([]byte, 64*1024), 4*1024*1024)
 		for e.Scan() {
 			txt := e.Text()
 			log.DebugLn(txt)
+
+			stderrMu.Lock()
+			stderrAll.Add(txt)
+			stderrMu.Unlock()
 
 			if !isDebug {
 				if !infrastructureLogsMatcher.MatchString(txt) {
@@ -97,8 +141,13 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 		}
 
 		s := bufio.NewScanner(stdout)
+		s.Buffer(make([]byte, 64*1024), 4*1024*1024)
 		for s.Scan() {
-			logger.LogInfoLn(s.Text())
+			line := s.Text()
+			logger.LogInfoLn(line)
+			stdoutMu.Lock()
+			stdoutAll.Add(line)
+			stdoutMu.Unlock()
 		}
 	}()
 
@@ -115,9 +164,10 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != HasChangesExitCode {
 		logger.LogErrorF("Error while process exit code: %v\n", err)
-		err = fmt.Errorf("%s", errBuf.String())
 		if isDebug {
-			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search in the output above for an error")
+			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search the output above for an error")
+		} else {
+			err = buildExitError(exitCode, &errBuf, stderrAll, stdoutAll)
 		}
 	}
 
@@ -125,6 +175,31 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (
 		err = nil
 	}
 	return exitCode, err
+}
+
+// buildExitError constructs an error message that always carries SOME context
+// for the operator. Priority:
+//  1. The unfiltered stderr (lines that didn't match `infrastructureLogsMatcher`)
+//     — this is where tofu writes user-facing errors like "Error: ...".
+//  2. If empty, the tail of stderr (including filtered structured logs) — covers
+//     the case where a provider plugin crashed and printed only `[ERROR]` lines.
+//  3. If stderr was empty too (e.g. process died from a signal before logging),
+//     the tail of stdout — last visible progress before the crash.
+//
+// Always appends the exit code so failures coming through tofuCmd.Cancel
+// (SIGINT delivered by ctx cancel) are visibly tagged.
+func buildExitError(exitCode int, errBuf *bytes.Buffer, stderrAll, stdoutAll *ringTail) error {
+	body := strings.TrimSpace(errBuf.String())
+	if body == "" {
+		body = strings.TrimSpace(stderrAll.String())
+	}
+	if body == "" {
+		body = strings.TrimSpace(stdoutAll.String())
+	}
+	if body == "" {
+		body = "(no stderr/stdout captured before crash; rerun with --debug or check the debug log file)"
+	}
+	return fmt.Errorf("infrastructure utility exited with code %d:\n%s", exitCode, body)
 }
 
 func ReplaceHomeDirEnv(env []string, homeDir string) []string {

@@ -19,7 +19,7 @@ _on_containerd_config_changed() {
 
 
 migrate() {
-  bb-log-info "start containerd migration"
+  bb-log-info "Starting containerd migration"
   systemctl stop kubelet.service
   bb-flag-set kubelet-need-restart
   crictl ps -q | xargs -r crictl stop -t 0 && crictl ps -a -q | xargs -r crictl rm -f
@@ -34,12 +34,12 @@ migrate() {
   bb-flag-set reboot
   bb-flag-unset cntrd-major-version-changed
   bb-flag-unset disruption
-  bb-log-info "finish containerd migration"
+  bb-log-info "Finished containerd migration"
 }
 
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
 
-  {{- $max_concurrent_downloads := 3 }}
+  {{- $max_concurrent_downloads := 8 }}
   {{- if hasKey .nodeGroup.cri "containerd" }}
     {{- $max_concurrent_downloads = .nodeGroup.cri.containerd.maxConcurrentDownloads | default $max_concurrent_downloads }}
   {{- end }}
@@ -386,8 +386,7 @@ oom_score = 0
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $mirror.host }}".auth]
           {{- if (($mirror).auth).username }}
-          username = {{ $mirror.auth.username | quote }}
-          password = {{ $mirror.auth.password | default "" | quote }}
+          auth = {{ printf "%s:%s" ($mirror.auth.username) ($mirror.auth.password | default "") | b64enc | quote }}
           {{- else }}
           auth = {{ (($mirror).auth).auth | default "" | quote }}
           {{- end }}
@@ -462,13 +461,13 @@ check_additional_configs() {
     for path in ${full_conf_path}/*.toml; do
       if [ "$ctrd_version" = "v1" ]; then
         if bb-ctrd-v1-has-registry-fields "${path}"; then
-          >&2 echo "Failed to merge $path: contains custom registry fields; please configure them in /etc/containerd/registry.d"
+          >&2 echo "Failed to merge $path: it contains custom registry fields, configure them in /etc/containerd/registry.d instead"
           exit 1
         fi
       fi
       if [ "$ctrd_version" = "v2" ]; then
         if bb-ctrd-v2-has-registry-fields "${path}"; then
-          >&2 echo "Failed to merge $path: contains custom registry fields; please configure them in /etc/containerd/registry.d"
+          >&2 echo "Failed to merge $path: it contains custom registry fields, configure them in /etc/containerd/registry.d instead"
           exit 1
         fi
       fi

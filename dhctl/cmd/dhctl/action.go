@@ -67,8 +67,7 @@ func newActionIniter(opts *options.Options) *actionIniter {
 }
 
 func (i *actionIniter) setParams(params actionIniterParams) *actionIniter {
-	paramsCopy := params
-	i.params = &paramsCopy
+	i.params = new(params)
 	return i
 }
 
@@ -83,7 +82,7 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	}
 
 	if i.registerOnShutdown == nil {
-		return fmt.Errorf("Internal error: action initer not initialized. Did not pass register on shutdown")
+		return fmt.Errorf("Internal error: action initer not initialized. The register-on-shutdown callback was not passed")
 	}
 
 	tmpDir := i.params.tmpDirName
@@ -197,7 +196,7 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 		return "", fmt.Errorf("Tmp dir '%s' cannot be a system directory or user home %v", tmpDir, systemDirs)
 	}
 
-	const breakMsg = "DHCTL can cleanup it dir fully and it can break your system. Do you continue?"
+	const breakMsg = "DHCTL can clean up this directory completely, which can break your system. Do you want to continue?"
 	canceledByUser := fmt.Errorf("Operation cancelled by user")
 
 	inSystemDirs, inSystemDirsAll := fs.IsInSystemDirs(absPath)
@@ -206,7 +205,7 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 			return "", fmt.Errorf("Tmp dir '%s' cannot be in system directory %v", tmpDir, inSystemDirsAll)
 		}
 
-		msg := fmt.Sprintf("Passed tmp dir '%s' for dhctl in system dir '%v'. %s", tmpDir, inSystemDirsAll, breakMsg)
+		msg := fmt.Sprintf("The tmp dir '%s' passed to dhctl is inside a system dir '%v'. %s", tmpDir, inSystemDirsAll, breakMsg)
 		if !input.NewConfirmation().WithMessage(msg).Ask() {
 			return "", canceledByUser
 		}
@@ -214,10 +213,10 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 		osTmp := os.TempDir()
 		if absPath == osTmp {
 			if !input.IsTerminal() {
-				return "", fmt.Errorf("Tmp dir '%s' cannot be system tmp %v", tmpDir, osTmp)
+				return "", fmt.Errorf("Tmp dir '%s' cannot be the system tmp dir %v", tmpDir, osTmp)
 			}
 
-			msg := fmt.Sprintf("Passed tmp dir '%s' for dhctl is system tmp dir '%s'. %s", tmpDir, osTmp, breakMsg)
+			msg := fmt.Sprintf("The tmp dir '%s' passed to dhctl is the system tmp dir '%s'. %s", tmpDir, osTmp, breakMsg)
 			if !input.NewConfirmation().WithMessage(msg).Ask() {
 				return "", canceledByUser
 			}
@@ -345,12 +344,16 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	}
 
 	logPath := i.params.debugLogFilePath
+	p := logPath
 
 	if logPath == "" {
 		cmdStr := strings.Join(strings.Fields(commandName), "")
 		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
 		logPath = path.Join(tmpDir, logFile)
+		p = tmpDir
 	}
+
+	log.SetLoggerOpts(p, commandName)
 
 	outFile, err := os.Create(logPath)
 	if err != nil {
@@ -362,7 +365,7 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 		return nil, err
 	}
 
-	log.InfoF("Debug log file: %s\n", logPath)
+	log.InteractiveInfoF("Debug log file: %s\n", logPath)
 
 	i.logFileMutex.Lock()
 	defer i.logFileMutex.Unlock()
@@ -411,9 +414,18 @@ func (i *actionIniter) cleanupProgressbar() onShutdownFunc {
 			if err != nil {
 				log.WarnF("failed to stop progress bar printer: %v", err)
 			}
+
+			if err := pb.LogBox.Stop(); err != nil {
+				log.WarnF("failed to stop logbox: %v", err)
+			}
+
 			_, err = pb.MultiPrinter.Stop()
 			if err != nil {
 				log.WarnF("failed to stop multi printer: %v", err)
+			}
+
+			if pb.WriterFabric != nil {
+				pb.WriterFabric.Cleanup()
 			}
 		}
 	}

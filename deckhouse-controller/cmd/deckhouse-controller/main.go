@@ -22,7 +22,6 @@ import (
 	"runtime"
 	"strconv"
 
-	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
 	"github.com/flant/kube-client/klogtolog"
@@ -68,6 +67,10 @@ const (
 	AppDescription = "controller for Kubernetes platform from Flant"
 )
 
+// legacyBashCompletion is bound to the backward-compatibility flag
+// `--completion-script-bash` (see rootCmd setup in main).
+var legacyBashCompletion bool
+
 func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
@@ -86,21 +89,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Mirror cfg into the addon-operator / shell-operator package-level globals
-	// before registering debug sub-commands (queue, hook, global, module, raw).
-	// Those sub-commands bind --debug-unix-socket to ad_app.DebugUnixSocket /
-	// sh_app.DebugUnixSocket and dial them via DefaultClient(); without this
-	// bridge a CLI invocation like `deckhouse-controller queue list` defaults
-	// to /var/run/shell-operator/debug.socket while the running operator
-	// actually listens on cfg.Debug.UnixSocket (set by the DEBUG_UNIX_SOCKET
-	// env var in modules/002-deckhouse/templates/deployment.yaml). The `start`
-	// command flow also performs this bridge inside NewAddonOperator, but for
-	// non-start invocations NewAddonOperator never runs. This mirrors
-	// addon-operator's own cmd/addon-operator/main.go which does the same
-	// shapp.ApplyConfig(addon_operator.ShellOperatorConfig(cfg)) call before
-	// debug.DefineDebugCommands(rootCmd) below.
+	// Mirror cfg into addon-operator package-level globals and shell-operator's
+	// debug.DefaultSocketPath before registering debug sub-commands (queue,
+	// hook, global, module, raw).
+	//
+	// ad_app.ApplyConfig populates the addon-operator globals (ModulesDir,
+	// Namespace, etc.) so that debug commands defined by addon-operator can
+	// locate config paths. The `start` command flow also performs this bridge
+	// inside NewAddonOperator, but for non-start invocations (e.g.
+	// `deckhouse-controller queue list`) NewAddonOperator never runs.
+	//
+	// sh_debug.DefaultSocketPath is the CLI-side global that shell-operator's
+	// debug sub-commands (queue, hook, config, raw) bind --debug-unix-socket
+	// against. Without this assignment, those commands default to
+	// /var/run/shell-operator/debug.socket while the running operator actually
+	// listens on cfg.Debug.UnixSocket (set by the DEBUG_UNIX_SOCKET env var in
+	// modules/002-deckhouse/templates/deployment.yaml). This mirrors what
+	// addon-operator's own cmd/addon-operator/main.go does before
+	// sh_debug.DefineDebugCommands(rootCmd) below. In the `start` path,
+	// NewAddonOperator also assigns sh_debug.DefaultSocketPath, so the two
+	// assignments are idempotent.
 	ad_app.ApplyConfig(cfg)
-	sh_app.ApplyConfig(addonoperator.ShellOperatorConfig(cfg))
+	sh_debug.DefaultSocketPath = cfg.Debug.UnixSocket
 
 	logger := log.NewLogger()
 	log.SetDefault(logger)
@@ -110,11 +120,38 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   fileName,
 		Short: fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription),
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			// Backward-compatibility alias for the legacy kingpin flag
+			// `--completion-script-bash`, which was replaced by the cobra
+			// `completion bash` subcommand after the migration to cobra.
+			// External callers (and our own image's /etc/bashrc) still invoke
+			// `deckhouse-controller --completion-script-bash`, so keep emitting
+			// the bash completion script and exit early when the flag is set.
+			// Use GenBashCompletionV2 (with descriptions) so the output is
+			// byte-for-byte identical to the `completion bash` subcommand.
+			if legacyBashCompletion {
+				if err := cmd.Root().GenBashCompletionV2(os.Stdout, true); err != nil {
+					return err
+				}
+
+				os.Exit(0)
+			}
+
 			klogtolog.InitAdapter(cfg.Debug.KubernetesAPI, logger.Named("klog"))
 			stdliblogtolog.InitAdapter(logger)
+
 			return nil
 		},
+	}
+
+	// Legacy kingpin completion flag alias. Hidden from help output: the
+	// canonical interface is the `completion` subcommand, this only preserves
+	// backward compatibility for `--completion-script-bash`.
+	rootCmd.PersistentFlags().BoolVar(&legacyBashCompletion, "completion-script-bash", false,
+		"Generate the bash autocompletion script (alias for `completion bash`).")
+	if err := rootCmd.PersistentFlags().MarkHidden("completion-script-bash"); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to hide completion-script-bash flag: %v\n", err)
+		os.Exit(1)
 	}
 
 	rootCmd.AddCommand(&cobra.Command{
@@ -169,6 +206,25 @@ func main() {
 		dhctlOpts.Render.Editor = envOr("DECKHOUSE_EDITOR", "vim")
 		dhctlOpts.Kube.InCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
 		dhctlOpts.Global.TmpDir = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
+
+		// Pin the dhctl content directories to the deckhouse image layout
+		// (/deckhouse/...). The legacy kingpin entrypoint relied on
+		// dhctl/pkg/config package globals that defaulted to these absolute
+		// paths, so commands like `cluster-configuration` and
+		// `cloud-discovery-data` found their schemas under /deckhouse/candi.
+		// options.New() instead calls NewGlobalOptions(), which auto-detects
+		// these dirs relative to the current working directory and otherwise
+		// points them at a download dir under TmpDir (/tmp/dhctl/deckhouse/...).
+		// That directory does not exist in the deckhouse image, so config
+		// parsing failed with "init configuration index not found". Restore the
+		// previous behavior by setting the image paths explicitly.
+		dhctlOpts.Global.DeckhouseDir = options.DefaultDeckhouseDir
+		dhctlOpts.Global.CandiDir = options.DefaultCandiDir
+		dhctlOpts.Global.ModulesDir = options.DefaultModulesDir
+		dhctlOpts.Global.GlobalHooksModule = options.DefaultGlobalHooksModule
+		dhctlOpts.Global.InfrastructureVersions = options.DefaultInfrastructureVersions
+		dhctlOpts.Global.VersionMap = options.DefaultVersionMap
+		dhctlOpts.Global.NeedDownload = false
 
 		dhctlcli.RegisterCobraBridges(rootCmd, fileName, dhctlOpts)
 	}

@@ -29,6 +29,18 @@ spec:
 
 ## Configuring a provider
 
+### Checking provider connectivity
+
+The web UI  provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the hook to write the result to its status.
+
+The check verifies that:
+
+- the referenced [DexProvider](cr.html#dexprovider) exists and is enabled;
+- the in-cluster Dex discovery endpoint is reachable;
+- the external provider endpoint is reachable.
+
+For OIDC providers, the check also reads the discovery document and JWKS. For LDAP providers, it verifies TCP/TLS/StartTLS reachability and, when Kerberos is enabled, that the keytab Secret exists. The check does not perform a full login flow and does not validate a test user password.
+
 ### GitHub
 
 The example shows the provider's settings for integration with GitHub.
@@ -633,13 +645,45 @@ spec:
 
 Field description:
 
-* `complexityLevel`: Password complexity level.
+* `complexityLevel`: Password complexity level. One of `None`, `Low`, `Fair`, `Good`, `Excellent` or `Custom`.
+* `custom`: Custom complexity rules (used only with `complexityLevel: Custom`):
+  * `custom.minLength`: Minimum number of characters in a password.
+  * `custom.specialCharacters`: If `true`, require at least one special character.
+  * `custom.numbers`: If `true`, require at least one digit.
+  * `custom.capitalized`: If `true`, require at least one uppercase letter.
+  * `custom.repeatedChars`: If `true`, forbid more than 2 identical characters in a row.
 * `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
 * `lockout`: Lockout settings after exceeding the limit of failed login attempts:
   * `lockout.maxAttempts`: Limit of allowed failed login attempts.
   * `lockout.lockDuration`: User lockout duration.
 * `rotation`: Password rotation settings:
   * `rotation.interval`: Period for mandatory password change.
+
+Example with a custom complexity rules:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Custom
+      custom:
+        minLength: 10
+        specialCharacters: true
+        numbers: false
+        capitalized: true
+        repeatedChars: false
+      passwordHistoryLimit: 10
+```
+
+{% endraw %}
 
 ### Two-factor authentication (2FA)
 

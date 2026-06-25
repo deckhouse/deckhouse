@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -47,6 +48,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
@@ -67,11 +69,11 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
@@ -92,9 +94,9 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 			c := input.NewConfirmation()
 
-			approve := c.WithMessage(fmt.Sprintf("Do you want to release lock:\n\n%s", info)).Ask()
+			approve := c.WithMessage(fmt.Sprintf("Do you want to release the lock:\n\n%s", info)).Ask()
 			if !approve {
-				return fmt.Errorf("Don't confirm release lock")
+				return fmt.Errorf("Lock release was not confirmed")
 			}
 
 			return nil

@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -27,16 +26,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-)
-
-var (
-	candiDir         = "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
 )
 
 const (
@@ -47,12 +41,12 @@ const (
 type saveFromTo struct {
 	from        string
 	to          string
-	data        map[string]interface{}
+	data        map[string]any
 	ignorePaths map[string]struct{}
 }
 
-func logTemplatesData(name string, data map[string]interface{}) {
-	dataForLog := make(map[string]interface{})
+func logTemplatesData(name string, data map[string]any) {
+	dataForLog := make(map[string]any)
 	for k, v := range data {
 		switch k {
 		case "k8s", "bashible", "images":
@@ -74,7 +68,7 @@ func PrepareBundle(
 	nodeIP string,
 	devicePath string,
 	metaConfig *config.MetaConfig,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBundle")
 	defer span.End()
@@ -85,21 +79,14 @@ func PrepareBundle(
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
+	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, globalOptions); err != nil {
 		return err
 	}
 
 	if err := prepareNodeGroupConfigurationSteps(ctx, templateController, metaConfig.ResourcesYAML, bashibleData); err != nil {
 		return err
 	}
-
-	_, err = os.Stat(candiBashibleDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
 	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
@@ -110,19 +97,12 @@ func PrepareBundle(
 func PrepareBashibleBundle(
 	ctx context.Context,
 	templateController *Controller,
-	templateData map[string]interface{},
+	templateData map[string]any,
 	provider string,
 	devicePath string,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
-	_, err := os.Stat(candiBashibleDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 	saveInfo := make([]saveFromTo, 0)
 	saveInfo = append(saveInfo, saveFromTo{
 		from: candiBashibleDir,
@@ -143,7 +123,7 @@ func PrepareBashibleBundle(
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
+			from: filepath.Join(globalOptions.CandiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
 			to:   stepsDir,
 			data: templateData,
 		})
@@ -157,13 +137,13 @@ func PrepareBashibleBundle(
 	}
 
 	firstRunFileFlag := filepath.Join(templateController.TmpDir, bashibleDir, "first_run")
-	log.DebugF("Create %q\n", firstRunFileFlag)
+	log.DebugF("Creating %q\n", firstRunFileFlag)
 	if err := fs.CreateEmptyFile(firstRunFileFlag); err != nil {
 		return err
 	}
 
 	devicePathFile := filepath.Join(templateController.TmpDir, bashibleDir, "kubernetes_data_device_path")
-	log.InfoF("Create %q\n", devicePathFile)
+	log.InfoF("Creating %q\n", devicePathFile)
 
 	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }
@@ -248,17 +228,9 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	return nil
 }
 
-func PrepareControlPlaneManifests(templateController *Controller, cfg *config.ControlPlaneTemplateConfig, dc *directoryconfig.DirectoryConfig) error {
-	_, err := os.Stat(candiDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-	}
-
+func PrepareControlPlaneManifests(templateController *Controller, cfg *config.ControlPlaneTemplateConfig, globalOptions *options.GlobalOptions) error {
 	saveInfo := saveFromTo{
-		from: filepath.Join(candiDir, "control-plane"),
+		from: filepath.Join(globalOptions.CandiDir, "control-plane"),
 		to:   filepath.Join(bashibleDir, "control-plane"),
 		data: cfg.ToMap(),
 	}
@@ -267,15 +239,4 @@ func PrepareControlPlaneManifests(templateController *Controller, cfg *config.Co
 		return err
 	}
 	return nil
-}
-
-func InitGlobalVars(pwd string) {
-	candiDir = pwd + "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
-	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
-	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
-	checkDeckhouseUserScriptPath = candiBashibleDir + "/preflight/check_deckhouse_user.sh.tpl"
-	preflightScriptDirPath = candiBashibleDir + "/preflight/"
-	killReverseTunnelPath = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
-	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
 }

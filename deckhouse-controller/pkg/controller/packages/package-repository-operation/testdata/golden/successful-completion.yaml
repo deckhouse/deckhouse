@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/operation-trigger: manual
     packages.deckhouse.io/operation-type: Update
@@ -30,9 +29,11 @@ status:
     status: "True"
     type: Completed
   packages:
+    newVersionsOverall: 1
     processed:
     - foundVersions: 1
       name: v1.0.0
+      newVersions: 1
       type: Application
     processedOverall: 1
     total: 1
@@ -41,7 +42,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
@@ -64,7 +64,6 @@ status: {}
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
   resourceVersion: "3"
 spec:
@@ -77,10 +76,12 @@ status:
     reason: ScanSucceeded
     status: "True"
     type: LastScanSucceeded
+  lastChangeTime: "2025-10-31T12:00:00Z"
+  lastNewVersions: 1
+  lastScanTime: "2025-10-31T12:00:00Z"
   packages:
   - name: v1.0.0
     type: Application
   packagesCount: 1
   partialScanAvailable: false
   phase: Active
-  syncTime: "2025-10-31T12:00:00Z"

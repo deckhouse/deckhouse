@@ -12,11 +12,17 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - image: terraform-provider-kubernetes
   add: /terraform-provider-kubernetes
   to: /terraform-manager/terraform-provider-kubernetes
   before: setup
+shell:
+  install:
+  - set -e
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -41,7 +47,7 @@ shell:
   - rm -rf .git manifest/test/
 ---
 image: terraform-provider-kubernetes
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
@@ -52,9 +58,6 @@ import:
   to: /src
   before: install
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src

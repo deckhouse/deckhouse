@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sYAML "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -65,11 +64,11 @@ type ClusterConfig struct {
 func ValidateResources(configData string, opts ...ValidateOption) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateResources operation currently supported only in commander mode")
+		panic("ValidateResources operation is currently supported only in commander mode")
 	}
 
 	if k8sYAML.IsJSONBuffer([]byte(configData)) {
-		return errors.New("got json format, but expected yaml")
+		return errors.New("got JSON format, but expected YAML")
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
@@ -85,7 +84,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 		_, gvk, err := scheme.Codecs.UniversalDecoder().Decode(docData, nil, obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -103,7 +102,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -121,7 +120,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts ...ValidateOption) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateInitConfiguration operation currently supported only in commander mode")
+		panic("ValidateInitConfiguration operation is currently supported only in commander mode")
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
@@ -139,7 +138,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -170,7 +169,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -200,7 +199,7 @@ func ValidateClusterConfiguration(
 ) (ClusterConfig, error) {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateClusterConfiguration operation currently supported only in commander mode")
+		panic("ValidateClusterConfiguration operation is currently supported only in commander mode")
 	}
 
 	clusterConfigurationDocs := input.YAMLSplitRegexp.Split(strings.TrimSpace(clusterConfigData), -1)
@@ -219,7 +218,7 @@ func ValidateClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -253,7 +252,7 @@ func ValidateClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -299,7 +298,7 @@ func ValidateProviderSpecificClusterConfiguration(
 ) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateProviderSpecificClusterConfiguration operation currently supported only in commander mode")
+		panic("ValidateProviderSpecificClusterConfiguration operation is currently supported only in commander mode")
 	}
 
 	if clusterConfig.ClusterType == "Static" {
@@ -331,7 +330,7 @@ func ValidateProviderSpecificClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -361,7 +360,7 @@ func ValidateProviderSpecificClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -389,7 +388,7 @@ func ValidateStaticClusterConfiguration(
 ) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateStaticClusterConfiguration operation currently supported only in commander mode")
+		panic("ValidateStaticClusterConfiguration operation is currently supported only in commander mode")
 	}
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(staticClusterConfiguration), -1)
@@ -406,7 +405,7 @@ func ValidateStaticClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -436,7 +435,7 @@ func ValidateStaticClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    ptr.To(i),
+				Index:    new(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -470,7 +469,7 @@ func ValidateClusterSettingsChanges(
 ) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
-		panic("ValidateClusterSettingsChanges operation currently supported only in commander mode")
+		panic("ValidateClusterSettingsChanges operation is currently supported only in commander mode")
 	}
 
 	// todo: > bashible
@@ -649,6 +648,8 @@ const (
 	ErrKindChangesValidationFailed ErrorKind = iota + 1
 	ErrKindValidationFailed
 	ErrKindInvalidYAML
+	ErrKindCNIMismatch
+	ErrKindCNISettingsMismatch
 )
 
 func (k ErrorKind) String() string {
@@ -659,6 +660,10 @@ func (k ErrorKind) String() string {
 		return "ValidationFailed"
 	case ErrKindInvalidYAML:
 		return "InvalidYAML"
+	case ErrKindCNIMismatch:
+		return "CNIMismatch"
+	case ErrKindCNISettingsMismatch:
+		return "CNISettingsMismatch"
 	default:
 		return "unknown"
 	}
@@ -669,11 +674,29 @@ type ValidationError struct {
 	Errors []Error
 }
 
-func (v *ValidationError) Append(kind ErrorKind, e Error) {
-	if v.Kind < kind {
-		v.Kind = kind
+func (v *ValidationError) Append(reason ErrorKind, e Error) {
+	e.Reason = reason
+	// Top-level Kind stays in the pre-existing set {Changes, ValidationFailed,
+	// InvalidYAML}. Domain-specific reasons (CNI* and any future ones) are
+	// semantically a kind of validation failure and bucket to ValidationFailed
+	// at the top level. Per-Error Reason retains the precise kind.
+	top := reason
+	if top > ErrKindInvalidYAML {
+		top = ErrKindValidationFailed
+	}
+	if v.Kind < top {
+		v.Kind = top
 	}
 	v.Errors = append(v.Errors, e)
+}
+
+func (v *ValidationError) Merge(other *ValidationError) {
+	if other == nil {
+		return
+	}
+	for _, e := range other.Errors {
+		v.Append(e.Reason, e)
+	}
 }
 
 func (v *ValidationError) Error() string {
@@ -719,13 +742,17 @@ func (v *ValidationError) ErrorOrNil() error {
 	return v
 }
 
+// All fields are omitempty so domain-specific errors (e.g. CNI mismatch)
+// that lack a resource identity don't carry null/empty noise on the wire.
+// Consumers decode missing field == empty value (Go json, TS optional fields).
 type Error struct {
-	Index    *int
-	Group    string
-	Version  string
-	Kind     string
-	Name     string
-	Messages []string
+	Reason   ErrorKind `json:"Reason,omitempty"`
+	Index    *int      `json:"Index,omitempty"`
+	Group    string    `json:"Group,omitempty"`
+	Version  string    `json:"Version,omitempty"`
+	Kind     string    `json:"Kind,omitempty"`
+	Name     string    `json:"Name,omitempty"`
+	Messages []string  `json:"Messages,omitempty"`
 }
 
 type namedIndex struct {

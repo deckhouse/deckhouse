@@ -39,6 +39,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - daemonsetmetrics
   - deploymentmetrics
   - ingressmetrics
   - podmetrics
@@ -63,6 +64,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - clusterdaemonsetmetrics
   - clusterdeploymentmetrics
   - clusteringressmetrics
   - clusterpodmetrics

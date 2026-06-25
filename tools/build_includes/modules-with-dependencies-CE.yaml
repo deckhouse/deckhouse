@@ -143,6 +143,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/039-registry-packages-proxy/hooks
+  to: /deckhouse/modules/039-registry-packages-proxy/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/040-control-plane-manager/hooks
   to: /deckhouse/modules/040-control-plane-manager/hooks
   excludePaths:
@@ -289,22 +297,6 @@
         - '**/*'
 - add: /modules/400-descheduler/hooks
   to: /deckhouse/modules/400-descheduler/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/402-ingress-nginx/hooks
-  to: /deckhouse/modules/402-ingress-nginx/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/402-ingress-nginx/requirements
-  to: /deckhouse/modules/402-ingress-nginx/requirements
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'

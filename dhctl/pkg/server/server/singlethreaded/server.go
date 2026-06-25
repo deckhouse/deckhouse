@@ -107,13 +107,13 @@ func Serve(ctx context.Context, params settings.ServerSingleshotParams) error {
 
 	// init services
 	dhctlService := dhctl.New(dhctl.ServiceParams{
-		PodName:           podName,
-		PodNamespace:      podNamespace,
-		CacheDir:          cacheDir,
-		SchemaStore:       config.NewSchemaStore(params.DownloadDirConfig),
-		TmpDir:            params.TmpDir,
-		IsDebug:           false,
-		DownloadDirConfig: params.DownloadDirConfig,
+		PodName:       podName,
+		PodNamespace:  podNamespace,
+		CacheDir:      cacheDir,
+		SchemaStore:   config.NewSchemaStore(params.GlobalOptions),
+		TmpDir:        params.TmpDir,
+		IsDebug:       false,
+		GlobalOptions: params.GlobalOptions,
 	})
 
 	// register services

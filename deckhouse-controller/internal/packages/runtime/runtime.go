@@ -42,7 +42,9 @@ import (
 	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
@@ -97,6 +99,8 @@ type Runtime struct {
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
+
+	global *global.Module
 
 	mu       sync.RWMutex
 	packages *lifecycle.Store
@@ -184,6 +188,22 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		QueueService:      r.queueService,
 	}, r.logger)
 
+	conf, err := loader.LoadGlobalConf(context.Background(), r.logger)
+	if err != nil {
+		return nil, fmt.Errorf("load global conf: %w", err)
+	}
+
+	r.global, err = global.NewModuleByConfig(conf, r.logger)
+	if err != nil {
+		return nil, fmt.Errorf("new global module: %w", err)
+	}
+
+	if err := r.loadEmbedded(context.Background()); err != nil {
+		return nil, fmt.Errorf("load embedded: %w", err)
+	}
+
+	r.status.NewStatus(r.global.GetName())
+
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
 	}
@@ -192,7 +212,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 }
 
 // registerDebugServer starts a Unix socket HTTP server exposing debug endpoints
-// for package state introspection (/packages/dump, /packages/queues/dump, /packages/render/{name}).
+// for package state introspection (/packages/dump, /packages/global/dump, /packages/queues/dump, /packages/render/{name}).
 func (r *Runtime) registerDebugServer(socketPath string) error {
 	r.debugServer = debug.NewServer(r.logger)
 	if err := r.debugServer.Start(socketPath); err != nil {
@@ -208,6 +228,13 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 		} else {
 			w.Write(r.Dump()) //nolint:errcheck
 		}
+	})
+
+	r.debugServer.Register(http.MethodGet, "/packages/global/dump", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+
+		w.Write(r.DumpGlobal()) //nolint:errcheck
 	})
 
 	r.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, req *http.Request) {
@@ -497,7 +524,6 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 			return cli.Get(context.Background(), kclient.ObjectKey{Name: name}, module)
 		})
-
 		if err != nil {
 			return nil
 		}
@@ -515,7 +541,13 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		return version
 	}
 
+	onScheduleHook := func(enabled []string) {
+		r.logger.Info("enabled packages", "packages", enabled)
+		r.global.SetEnabledModules(enabled)
+	}
+
 	r.scheduler = schedule.NewScheduler(
+		schedule.WithOnScheduleHook(onScheduleHook),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
@@ -601,11 +633,11 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.status.SetConditionFalse(name, status.ConditionRequirementsMet, reason, msg)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.logger))
 	}
 }
 
@@ -639,6 +671,9 @@ func (r *Runtime) Stop() {
 
 	// Close scheduler event channel
 	r.scheduler.Stop()
+
+	// Stop reflecting status to CRs (unblocks the status consumer loop)
+	r.status.Shutdown()
 }
 
 // PreservePackage identifies one installed Package instance to preserve during Cleanup.

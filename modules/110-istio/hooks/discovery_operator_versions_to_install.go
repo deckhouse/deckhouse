@@ -22,33 +22,21 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 )
 
 const (
-	minVersionValuesKey = "istio:minimalVersion"
-	istioNamespace      = "d8-istio"
+	istioNamespace = "d8-istio"
 )
-
-var sailIstioGVR = schema.GroupVersionResource{
-	Group:    "sailoperator.io",
-	Version:  "v1",
-	Resource: "istios",
-}
 
 type IstioOperatorCrdInfo struct {
 	Name     string
@@ -87,15 +75,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("discovery"),
 	// Relies on hook discovery_versions_to_install.go (Order: 5) and must run before hooks deprecated_versions_monitoring.go and compatibility_version_istio_k8s_monitoring.go (Order: 10)
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 9},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:              "istiooperators",
-			ApiVersion:        "install.istio.io/v1alpha1",
-			Kind:              "IstioOperator",
-			FilterFunc:        applyIstioOperatorFilter,
-			NamespaceSelector: lib.NsSelector(),
-		},
-	},
 }, dependency.WithExternalDependencies(operatorRevisionsToInstallDiscovery))
 
 func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -104,24 +83,13 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
-	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
-	for _, versionResult := range versionsToInstallResult {
-		operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
-	}
-
-	for iopInfo, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdInfo](input.Snapshots.Get("istiooperators")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'istiooperators' snapshot: %w", err)
-		}
-
-		iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
-		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
-			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
+	var versionsToInstall = input.Values.Get("istio.internal.versionsToInstall").Array()
+	for _, versionResult := range versionsToInstall {
+		version := versionResult.String()
+		if !versionMap.DoesVersionSupportOperator(version) {
 			continue
 		}
-		if !lib.Contains(operatorVersionsToInstall, iopVer) {
-			operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
-		}
+		operatorVersionsToInstall = append(operatorVersionsToInstall, version)
 	}
 
 	k8sClient, err := dc.GetK8sClient()
@@ -129,7 +97,38 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 		return err
 	}
 
-	istios, err := k8sClient.Dynamic().Resource(sailIstioGVR).Namespace(istioNamespace).List(context.TODO(), metav1.ListOptions{})
+	iops, err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioNamespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		// The CRD can be absent on operator-free control planes; this is expected.
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		for _, iop := range iops.Items {
+			infoAny, err := applyIstioOperatorFilter(&iop)
+			if err != nil {
+				return fmt.Errorf("cannot parse IstioOperator %q: %w", iop.GetName(), err)
+			}
+			iopInfo, ok := infoAny.(IstioOperatorCrdInfo)
+			if !ok {
+				return fmt.Errorf("unexpected IstioOperator filter result type for %q", iop.GetName())
+			}
+
+			iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
+			if !versionMap.IsRevisionSupported(iopInfo.Revision) {
+				unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
+				continue
+			}
+			if !versionMap.DoesVersionSupportOperator(iopVer) {
+				continue
+			}
+			if !lib.Contains(operatorVersionsToInstall, iopVer) {
+				operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
+			}
+		}
+	}
+
+	istios, err := k8sClient.Dynamic().Resource(istioGVR).Namespace(istioNamespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		// The CRD can be absent on old control planes; this is expected.
 		if !k8serrors.IsNotFound(err) {
@@ -151,6 +150,9 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 				unsupportedRevisions = append(unsupportedRevisions, istioInfo.Revision)
 				continue
 			}
+			if !versionMap.DoesVersionSupportOperator(istioVer) {
+				continue
+			}
 			if !lib.Contains(operatorVersionsToInstall, istioVer) {
 				operatorVersionsToInstall = append(operatorVersionsToInstall, istioVer)
 			}
@@ -164,23 +166,6 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 
 	sort.Strings(operatorVersionsToInstall)
 	input.Values.Set("istio.internal.operatorVersionsToInstall", operatorVersionsToInstall)
-
-	// Getting minVersion
-	var minVersion *semver.Version
-	for _, version := range operatorVersionsToInstall {
-		versionSemver, err := semver.NewVersion(version)
-		if err != nil {
-			return err
-		}
-		if minVersion == nil || versionSemver.LessThan(minVersion) {
-			minVersion = versionSemver
-		}
-	}
-	if minVersion == nil {
-		requirements.RemoveValue(minVersionValuesKey)
-	} else {
-		requirements.SaveValue(minVersionValuesKey, fmt.Sprintf("%d.%d", minVersion.Major(), minVersion.Minor()))
-	}
 
 	return nil
 }

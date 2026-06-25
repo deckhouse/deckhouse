@@ -6,7 +6,6 @@ import:
   add: /admission-controller
   to: /admission-controller
   before: setup
-git:  
 {{- include "image mount points" . }}  
 imageSpec:
   config:

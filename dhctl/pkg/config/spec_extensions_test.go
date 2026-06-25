@@ -21,10 +21,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestRulesExtension_sshPrivateKey(t *testing.T) {
-	newStore := newSchemaStore(nil, []string{"/tmp"})
+	newStore := newSchemaStore(&options.New().Global, []string{"/tmp"})
 
 	err := newStore.upload([]byte(`
 kind: TestKind
@@ -110,11 +112,8 @@ key: |
 	}
 
 	for name, tt := range tests {
-		tt := tt
 		t.Run(name, func(t *testing.T) {
-			content := []byte(tt.content)
-
-			_, err := newStore.Validate(&content, ValidateOptionValidateExtensions(true))
+			_, err := newStore.Validate(new([]byte(tt.content)), ValidateOptionValidateExtensions(true))
 			if tt.errContains == "" {
 				require.NoError(t, err)
 			} else {

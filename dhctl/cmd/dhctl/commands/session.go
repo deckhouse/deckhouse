@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
@@ -43,6 +44,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
 		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
@@ -57,7 +59,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return fmt.Errorf("Not enough flags were provided to perform the operation.\nUse dhctl session --help to get available flags.")
 		}
 
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -74,7 +76,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		apiServerURL := fmt.Sprintf("http://localhost:%s", apiServerPort)
 		if err := localKubeConfig(apiServerURL); err != nil {
-			return fmt.Errorf("error save kubeconfig: %v", err)
+			return fmt.Errorf("save kubeconfig: %v", err)
 		}
 
 		sigChan := make(chan os.Signal, 1)

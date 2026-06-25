@@ -53,6 +53,7 @@ d8 k get po -n d8-virtualization
 
 {% offtopic title="Пример вывода..." %}
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                         READY   STATUS    RESTARTS      AGE
 cdi-apiserver-858786896d-rsfjw               3/3     Running   0             10m
@@ -71,6 +72,8 @@ vm-route-forge-288z7                         1/1     Running   0             10m
 vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endofftopic %}
 
@@ -175,16 +178,17 @@ spec:
   #...
   settings:
     virtualImages:
-      allowedStorageClassNames:
-      - sc-1
-      - sc-2
+      allowedStorageClassSelector:
+        matchNames:
+        - sc-1
+        - sc-2
       defaultStorageClassName: sc-1
 ```
 
 Здесь:
 
-- `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualImage, которые можно явно указать в спецификации ресурса;
-- `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualImage, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+- `matchNames` (опционально) — список допустимых StorageClass для создания [VirtualImage](/modules/virtualization/cr.html#virtualimage), которые можно явно указать в спецификации ресурса;
+- `defaultStorageClassName` (опционально) — StorageClass, используемый по умолчанию при создании [VirtualImage](/modules/virtualization/cr.html#virtualimage), если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
 
 ### Настройки классов хранения для дисков
 
@@ -197,16 +201,17 @@ spec:
   #...
   settings:
     virtualDisks:
-      allowedStorageClassNames:
-      - sc-1
-      - sc-2
+      allowedStorageClassSelector:
+        matchNames:
+          - sc-1
+          - sc-2
       defaultStorageClassName: sc-1
 ```
 
 Здесь:
 
-- `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualDisk, которые можно явно указать в спецификации ресурса;
-- `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualDisk, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+- `matchNames` (опционально) — список допустимых StorageClass для создания [VirtualImage](/modules/virtualization/cr.html#virtualimage), которые можно явно указать в спецификации ресурса;
+- `defaultStorageClassName` (опционально) — StorageClass, используемый по умолчанию при создании [VirtualImage](/modules/virtualization/cr.html#virtualimage), если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
 
 ### Настройка аудита событий безопасности
 

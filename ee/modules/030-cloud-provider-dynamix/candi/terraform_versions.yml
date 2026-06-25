@@ -1,4 +1,4 @@
-opentofu: 1.9.4
+opentofu: 1.12.0
 decort:
   namespace: terraform-provider-decort
   cloudName: Dynamix

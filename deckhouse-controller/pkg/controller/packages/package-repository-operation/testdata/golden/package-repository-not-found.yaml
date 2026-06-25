@@ -2,7 +2,6 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
-  creationTimestamp: null
   labels:
     packages.deckhouse.io/operation-trigger: manual
     packages.deckhouse.io/operation-type: Update
@@ -35,12 +34,11 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: existing-repo
   resourceVersion: "1"
 spec:
   registry:
     repo: registry.example.com/test
 status:
+  lastNewVersions: 0
   partialScanAvailable: false
-  syncTime: null

@@ -35,7 +35,7 @@ spec:
               For the ServiceWithHealthchecks load balancers you create to work, the following conditions must be met:
 
               * The network policy of the custom project in which the ServiceWithHealthchecks will be created must include a rule allowing incoming traffic from all pods in the `d8-service-with-healthchecks` namespace:
-  
+
                 ```yaml
                 ingress:
                 - from:
@@ -649,22 +649,40 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               endpointStatuses:
-                description: Current service state
+                description: |-
+                  Current service state.
                 items:
                   properties:
                     failedProbes:
+                      description: |-
+                        List of probes that failed during the last check.
                       items:
                         type: string
                       type: array
                     nodeName:
+                      description: |-
+                        The node where the pod is running.
                       type: string
                     podName:
+                      description: |-
+                        The name of the pod being checked.
                       type: string
                     probesSuccessful:
+                      description: |-
+                        Indicates whether all custom ServiceWithHealthchecks probes were successful.
                       type: boolean
                     ready:
+                      description: |-
+                        Indicates whether the pod passed standard Kubernetes readiness probes.
                       type: boolean
+                    lastTransitionTime:
+                      description: |-
+                        The time when the probe state last transitioned from one status to another.
+                      type: string
+                      format: date-time
                     lastProbeTime:
+                      description: |-
+                        The time when the pod was last probed (updated based on verboseStatus configuration).
                       type: string
                       format: date-time
                   required:
@@ -675,16 +693,22 @@ spec:
                 - podName
                 x-kubernetes-list-type: map
               healthcheckCondition:
+                description: |-
+                  Summary of health checks.
                 properties:
-                  activeNodeName:
-                    type: string
                   endpoints:
+                    description: |-
+                      Total number of endpoints targeted by the health checks.
                     format: int32
                     type: integer
                   observedGeneration:
+                    description: |-
+                      The most recent generation observed by the controller.
                     format: int64
                     type: integer
                   readyEndpoints:
+                    description: |-
+                      Number of endpoints that successfully passed the health checks.
                     format: int32
                     type: integer
                 type: object

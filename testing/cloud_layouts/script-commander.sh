@@ -271,10 +271,9 @@ function prepare_environment() {
     ZVIRT_USERNAME="${LAYOUT_ZVIRT_USERNAME}"
     ZVIRT_PASSWORD="${LAYOUT_ZVIRT_PASSWORD}"
     ssh_user="altlinux"
-    bastion_host="31.184.210.185"
-    bastion_user="e2e-user"
-    bastion_port="8022"
-    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+    bastion_host="185.120.186.151"
+    bastion_user="ubuntu"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}"
 
     values="{
       \"branch\": \"${DEV_BRANCH}\",
@@ -289,7 +288,6 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
-      \"sshBastionPort\": \"${bastion_port}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
@@ -981,10 +979,13 @@ function wait_alerts_resolve() {
   "D8IstioPodsWithoutIstioSidecar" # Expected behaviour in clusters that start too quickly, and tests do start quickly
   "LoadAverageHigh" # Pointless, as test servers have minimal resources
   "SecurityEventsDetected" # This is normal for e2e tests
-  "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
-  "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
+  "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters
+  "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters
   "CertmanagerCertificateChallengePending" # This is normal for e2e tests
   "D8ObsoletePublishAPIinUserAuthn" # Temporary while publish api is migrated between MCs
+  "D8SignatureErrorsDetected" # by default signatures not enabled for etcd keys
+  "CertmanagerCertificateChallengeStuck" # This is normal for e2e tests
+  "D8NodeLocalDNSKubeforwardRequestLatencyP95High" # Doesn't work with closed clusters
   )
 
   # Alerts

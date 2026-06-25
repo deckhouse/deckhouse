@@ -19,11 +19,14 @@ GOFUMPT_VERSION=0.1.1
 PROTOC_VERSION = 25.2
 PROTOC_GEN_GO_VERSION = 1.32
 PROTOC_GEN_GO_GROC_VERSION = 1.3
+GOTESTSUM_VERSION = 1.13.0
 
 # Build versions
 GOARCH=amd64
 
 TEST_PACKAGES := $(shell go list ./...)
+
+GOTESTSUM = bin/gotestsum
 
 DHCTL_BIN_NAME=bin/dhctl
 MINGET_EMBED_PATH=pkg/minget/embed/minget
@@ -50,6 +53,14 @@ endif
 
 ifndef RPP_SIGN_CHECK
 	RPP_SIGN_CHECK = false
+endif
+
+ifndef EDITION
+	EDITION = FE
+endif
+
+ifndef EE_EDITIONS
+	EE_EDITIONS = EE,FE,CSE
 endif
 
 # Set platform for deps
@@ -91,6 +102,10 @@ bin/gofumpt:
 	@mkdir -p bin
 	curl -sLo "bin/gofumpt" https://github.com/mvdan/gofumpt/releases/download/v$(GOFUMPT_VERSION)/gofumpt_v$(GOFUMPT_VERSION)_$(OS)_$(GOARCH)
 	@chmod +x "./bin/gofumpt"
+
+bin/gotestsum:
+	@mkdir -p bin
+	GOBIN=$(abspath bin/) go install gotest.tools/gotestsum@v$(GOTESTSUM_VERSION)
 
 .PHONY: bin/protoc
 bin/protoc:
@@ -141,8 +156,16 @@ prepare-minget:
 		chmod +x $(MINGET_EMBED_PATH); \
 	fi
 
+define BUILD_VARIABLES
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.Edition=$(EDITION) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.CommaSeparatedEEEditions=$(EE_EDITIONS) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)
+endef
+
 build: check-vars prepare-minget
-	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app/options.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' $(BUILD_VARIABLES)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build/test/check-digests:
 	@if [ ! -f "$(DEV_IMAGES_DIGESTS)" ]; then \
@@ -154,28 +177,28 @@ build/test: DHCTL_BIN_NAME = bin/dhctl-linux-amd64-test
 build/test: ADDITIONAL_BUILD_ARGS = -tags dev
 build/test: check-vars build/test/check-digests build
 
-test: check-vars
+test: check-vars bin/gotestsum
 	@echo "Tests that need external prerequisites (cloud-providers candi tree, /dhctl-tests, docker) auto-skip when those are missing."
 	@echo " - cloud-provider tests run only when /dhctl-tests + /deckhouse are populated; force-skip with DHCTL_SKIP_PROVIDER_TEST=true."
 	@echo " - gossh tests run only when docker is reachable; force-skip with DHCTL_SKIP_GOSSH_TEST=true."
 	@echo " - schema-driven tests (config/destroy/check/...) run only when /deckhouse/candi exists; override with DHCTL_TEST_CANDI_DIR."
-	go test -v -p 1 $(TEST_PACKAGES)
+	$(GOTESTSUM) -- -v -p 1 $(TEST_PACKAGES)
 
-test-skip-cloud-providers: check-vars
-	DHCTL_SKIP_PROVIDER_TEST=true go test -v -p 1 $(TEST_PACKAGES)
+test-skip-cloud-providers: check-vars bin/gotestsum
+	DHCTL_SKIP_PROVIDER_TEST=true $(GOTESTSUM) -- -v -p 1 $(TEST_PACKAGES)
 
-test-skip-gossh: check-vars
-	DHCTL_SKIP_DOCKER_TEST=true go test -v -p 1 $(TEST_PACKAGES)
+test-skip-gossh: check-vars bin/gotestsum
+	DHCTL_SKIP_DOCKER_TEST=true $(GOTESTSUM) -- -v -p 1 $(TEST_PACKAGES)
 
 check-cloud-providers-vars:
 	@[ "${YANDEX_CLOUD_CONFIG}" ] || ( echo "YANDEX_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with yandex without-nat layout"; exit 1 )
 	@[ "${GCP_CLOUD_CONFIG}" ] || ( echo "GCP_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with gcp without-nat layout"; exit 1 )
 
-test-cloud-providers: check-vars check-cloud-providers-vars
-	go test -v -p 1 ./pkg/infrastructureprovider/...
+test-cloud-providers: check-vars check-cloud-providers-vars bin/gotestsum
+	$(GOTESTSUM) -- -v -p 1 ./pkg/infrastructureprovider/...
 
-test-race: check-vars
-	go test -race -p 1 $(TEST_PACKAGES)
+test-race: check-vars bin/gotestsum
+	$(GOTESTSUM) -- -race -p 1 $(TEST_PACKAGES)
 
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy
@@ -192,8 +215,8 @@ fmt:
 	gofumpt -l -w -extra .
 	golangci-lint run ./... -c .golangci.yaml --fix
 
-ci:
-	./hack/coverage.sh
+ci: bin/gotestsum
+	GOTESTSUM=$(abspath $(GOTESTSUM)) ./hack/coverage.sh
 
 devenv:
 	./hack/devenv/start.sh

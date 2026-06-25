@@ -32,24 +32,24 @@ spec:
                         Формат - строка, содержащая единицу времени в часах и минутах: 30m, 1h, 2h30m, 24h.
                     namespaceSelector:
                       description: |
-                        Задаёт фильтр по пространствам имен.
+                        Задаёт фильтр по неймспейсам.
 
                         Фильтр может использовать какой-то один способ задания условия из трех доступных (параметры `matchNames`, `excludeNames`, `labelSelector`).
                       properties:
                         matchNames:
-                          description: Список пространств имен, с подов которого нужно собирать логи.
+                          description: Список неймспейсов, с подов которого нужно собирать логи.
                         excludeNames:
-                          description: Список пространств имен, с подов которого нужно исключить сбор логов.
+                          description: Список неймспейсов, с подов которого нужно исключить сбор логов.
                         labelSelector:
                           description: |
-                            Фильтр по лейблам пространств имен, с которых нужно собирать логи.
+                            Фильтр по лейблам неймспейсов, с которых нужно собирать логи.
 
-                            Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            Подробнее про выражения можно узнать [в документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           properties:
                             matchLabels:
-                              description: Список лейблов, которые должно иметь пространство имен, чтобы подпадать под условие фильтра.
+                              description: Список лейблов, которые должен иметь неймспейс, чтобы подпадать под условие фильтра.
                             matchExpressions:
-                              description: Список выражений для лейблов, которые должно иметь пространство имен, чтобы подпадать под условие фильтра.
+                              description: Список выражений для лейблов, которые должен иметь неймспейс, чтобы подпадать под условие фильтра.
                               items:
                                 properties:
                                   key:
@@ -62,7 +62,7 @@ spec:
                       description: |
                         Задаёт фильтр по лейблам пода.
 
-                        Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        Подробнее про выражения можно узнать [в документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
                           description: Список лейблов, которые должен иметь под, чтобы подпадать под условие фильтра.
@@ -205,20 +205,20 @@ spec:
                         Формат - строка, содержащая единицу времени в часах и минутах: 30m, 1h, 2h30m, 24h.
                     namespaceSelector:
                       description: |
-                        Задаёт фильтр по пространствам имен.
+                        Задаёт фильтр по неймспейсам.
 
-                        Фильтр использует параметр `labelSelector` для определения пространств имен, из которых должны собираться логи.
+                        Фильтр использует параметр `labelSelector` для определения неймспейсов, из которых должны собираться логи.
                       properties:
                         labelSelector:
                           description: |
-                            Фильтр по лейблам пространств имен, с которых нужно собирать логи.
+                            Фильтр по лейблам неймспейсов, с которых нужно собирать логи.
 
-                            Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                            Подробнее про выражения можно узнать [в документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           properties:
                             matchLabels:
-                              description: Список лейблов, которые должно иметь пространство имен, чтобы подпадать под условие фильтра.
+                              description: Список лейблов, которые должен иметь неймспейс, чтобы подпадать под условие фильтра.
                             matchExpressions:
-                              description: Список выражений для лейблов, которые должно иметь пространство имен, чтобы подпадать под условие фильтра.
+                              description: Список выражений для лейблов, которые должен иметь неймспейс, чтобы подпадать под условие фильтра.
                               items:
                                 properties:
                                   key:
@@ -231,7 +231,7 @@ spec:
                       description: |
                         Задаёт фильтр по лейблам пода.
 
-                        Подробнее про выражения можно узнать [в документации](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+                        Подробнее про выражения можно узнать [в документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                       properties:
                         matchLabels:
                           description: Список лейблов, которые должен иметь под, чтобы подпадать под условие фильтра.

@@ -186,6 +186,7 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 
 Пример вывода (размер БД etcd на узле указывается в колонке `DB SIZE`):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -197,6 +198,8 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Как выполнить дефрагментацию etcd узла в кластере с одним master-узлом
 
@@ -235,12 +238,15 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
    etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
    etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
    etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Определите master-узел — лидер. Для этого обратитесь к любому поду etcd и получите список узлов — участников кластера etcd с помощью команды (где `NODE_NAME` — имя master-узла):
 
@@ -254,6 +260,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
    Пример вывода (у лидера в колонке `IS LEADER` будет значение `true`):
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -265,6 +272,8 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Поочередно выполните дефрагментацию etcd узлов — участников etcd кластера. Для дефрагментации используйте команду (здесь `NODE_NAME` — имя master-узла):
 

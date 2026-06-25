@@ -176,7 +176,7 @@ Avoid using Helm-only helpers like `toYaml` here.
     - if only scalar `version` is present: returns it (condition is ignored)
 
   Typical usage:
-    {{- $ver := include "get_oss_version_by_id_and_condition" (list "example-service" (dict "k8s" "1.31") $) -}}
+    {{- $ver := include "get_oss_version_by_id_and_condition" (list "example-service" (dict "k8s" "1.32") $) -}}
 */}}
 {{- define "get_oss_version_by_id_and_condition" -}}
   {{- $id := index . 0 -}}
@@ -433,7 +433,7 @@ Avoid using Helm-only helpers like `toYaml` here.
   Example oss.yaml:
     - id: example-service
       versions:
-        - condition: {k8s: ["1.31", "1.32"]}
+        - condition: {k8s: ["1.32"]}
           version: 1.2.1
         - condition: {k8s: ["1.33"]}
           version: 1.2.2

@@ -65,7 +65,7 @@ The following describes the conversion of a single-master cluster into a multi-m
 > It is important to have an odd number of masters to ensure a quorum.
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
@@ -135,7 +135,7 @@ The steps described below must be performed from the first in order of the maste
 {% endalert %}
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
@@ -346,7 +346,7 @@ The following steps must be performed starting from the first master node (`mast
 {% endalert %}
 
 {% alert level="warning" %}
-If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/products/stronghold/documentation/admin/backups/overview/) before making any changes.
 {% endalert %}
 
 1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
@@ -512,8 +512,9 @@ This method may be necessary if the `--force-new-cluster` option doesn't restore
 1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
 1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
@@ -711,16 +712,16 @@ The control-plane-manager module maintains several kubeconfig files on master no
 
 | File | Identity | Purpose |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for kubeadm internals (join, renewal). With the [user-authz](/modules/user-authz/) module enabled, RBAC uses `user-authz:cluster-admin` plus an additional ClusterRole; with `user-authz` disabled, the group is bound to the built-in `cluster-admin` role. |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for control-plane-manager operations (kubeconfig renewal, cluster administration). With the [user-authz](/modules/user-authz/) module enabled, RBAC uses `user-authz:cluster-admin` plus an additional ClusterRole; with `user-authz` disabled, the group is bound to the built-in `cluster-admin` role. |
 | `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (`system:masters` group) | Break-glass emergency credential. Bypasses RBAC entirely. Restrict access to this file to trusted recovery scenarios. |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Used by kube-controller-manager. |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Used by kube-scheduler. |
 
 ### RBAC-based admin access
 
-Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the RBAC binding objects for `kubeadm:cluster-admins`.
+`admin.conf` is generated with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the RBAC binding objects for `kubeadm:cluster-admins`.
 
-When the [user-authz](/modules/user-authz/) module is **disabled**, Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
+When the [user-authz](/modules/user-authz/) module is **disabled**, Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a standard Kubernetes cluster without extra RBAC).
 
 When **user-authz** is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second RBAC binding adds the ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
 
@@ -746,7 +747,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     rootKubeconfigSymlink: false
@@ -780,7 +781,7 @@ This credential bypasses all RBAC checks. Use it only as a last resort and restr
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -825,7 +826,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -844,7 +845,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -904,7 +905,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
@@ -975,8 +976,9 @@ Follow these steps to restore a single-master cluster on master node:
 1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl` using the command:
@@ -1012,13 +1014,17 @@ Follow these steps to restore a single-master cluster on master node:
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
+1. Copy or move the [`etcd-backup.snapshot`](#how-to-manually-backup-etcd) file to the current user's (root) home directory:
+
+   ```shell
+   cp /path/to/backup/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
+
 1. Clean the etcd directory.
 
    ```shell
    rm -rf /var/lib/etcd
    ```
-
-1. Put the etcd backup to `~/etcd-backup.snapshot` file.
 
 1. Restore the etcd database.
 
@@ -1333,7 +1339,7 @@ When there is 5-10% (random value from the range) of time left before the certif
 
 ### Certificates lifetime
 
-By default, lifetime of certificates is 1 year (8760 hours). If necessary, this value can be changed using `--cluster-signing-duration` argument in `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. But to ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour.
+By default, lifetime of certificates is 1 year (8760 hours).
 
 {% alert level="warning" %}
 If the client certificate lifetime has expired, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node will be marked as `NotReady` and recreated.
@@ -1356,22 +1362,21 @@ Kubelet handles server certificates using the following logic:
 
 ## How to manually update control plane component certificates?
 
-There may be a situation when the cluster's master nodes are powered off for an extended period. During this time, the control plane component certificates may expire. After the nodes are powered back on, the certificates will not update automatically and must be renewed manually.
+There may be a situation when the cluster's master nodes are powered off for an extended period. During this time, the control plane component certificates may expire.
 
-Control plane component certificates are updated using the `kubeadm` utility.
-To update the certificates, do the following on each master node:
+**Automatic renewal (normal operation)**: `control-plane-manager` monitors certificate expiry and automatically renews control-plane certificates when they are within 30 days of their expiry date. No manual action is required while the cluster is running.
 
-1. Find the `kubeadm` utility on the master node and create a symbolic link using the following command:
+**When nodes come back online after extended downtime**: Once the master nodes start and the Kubernetes API becomes available, `control-plane-manager` detects expired or soon-to-expire certificates and creates renewal operations automatically. To confirm that renewal has completed, check that the cert-renewal `ControlPlaneOperation` objects show `Phase=OperationCompleted`:
 
-   ```shell
-   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
-   ```
+```shell
+d8 k get cpo -o wide
+```
 
-2. Update the certificates:
+The `ControlPlaneNode` object's `CERTIFICATES` column also shows `True` once all certificates are healthy:
 
-   ```shell
-   kubeadm certs renew all
-   ```
+```shell
+d8 k get cpn
+```
 
 ## How do I protect sensitive fields in custom resources?
 
@@ -1391,7 +1396,7 @@ To enable field protection, do the following:
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      enabled: true
      settings:
        apiserver:
@@ -1415,3 +1420,160 @@ To enable field protection, do the following:
 | Audit log masking | Values of sensitive fields are replaced with `"******"` in all audit events, regardless of RBAC permissions and audit level. |
 
 A complete configuration example and results are available in the [Examples](examples.html#protecting-resources-with-sensitive-fields) section.
+
+<!--- Hidden because the feature is currently available in CSE Lite and CSE Pro only.
+
+## How to verify the integrity control mechanism for data stored in etcd?
+
+{% alert level="warning" %}
+The integrity control of the data stored in etcd is available only in the EE edition.
+{% endalert %}
+
+### Verifying the format of data stored in etcd
+
+To verify the format of data stored in etcd, create a test object and retrieve its contents using `etcdctl`.
+
+The following commands should be executed from a master node of the cluster.
+
+1. Create a test object:
+
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
+
+1. Retrieve the contents of the secret using `etcdctl`:
+
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
+
+   Command output examples:
+
+   - Integrity control mode [`Enforce` or `Migrate`](configuration.html#parameters-apiserver-signature):
+
+     ```console
+     /registry/secrets/default/test-secret
+     {"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
+     ```
+
+   - Integrity control mode [`Rollback`](configuration.html#parameters-apiserver-signature):
+
+     ```console
+     /registry/secrets/default/test-secret
+     k8s
+     v1Secret
+     test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
+     kubectl-createUpdatevFieldsV1:,
+     *{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
+     foobarOpaque"
+     ```
+
+   - Secret encryption enabled ([`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled)), integrity control mode [`Rollback`](configuration.html#parameters-apiserver-signature):
+
+     ```console
+     /registry/secrets/default/test-secret
+     k8s:enc:aescbc:v1:secretbox: <binary data>
+     ```
+
+### Verifying the prohibition of processing data with an invalid signature
+
+To verify the mechanism that rejects processing of data with an invalid signature, modify the value of the `signature` field.
+
+The following commands should be executed from a master node of the cluster.
+
+1. Create a test object:
+
+   ```bash
+   d8 k create secret generic test-secret --from-literal=foo=bar
+   ```
+
+1. Retrieve the contents of the secret using `etcdctl`:
+
+   ```bash
+   ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+   $ETCDCTL_PATH get /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/
+   ```
+
+1. Change the `signature` field in the secret:
+
+   ```bash
+   etcdctl put /registry/secrets/default/test-secret \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ \
+     '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
+   ```
+
+1. Retrieve the contents of the secret:
+
+   ```bash
+   d8 k get secret test-secret 
+   ```
+
+   Example output (only in the [`Enforce`](configuration.html#parameters-apiserver-signature) integrity control mode, which allows working only with records that have a valid signature):
+
+   ```console
+   Error from server (InternalError): Internal error occurred: bad signature, record rejected
+   ```
+
+#### Verifying audit log event recording
+
+When an invalid or missing signature is detected, information about it is recorded in the Kubernetes audit log regardless of the selected integrity control mode.
+
+To view the audit log records, run the following command:
+
+```bash
+jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+```
+
+Example output:
+
+```console
+{
+  "kind": "Event",
+  "apiVersion": "audit.k8s.io/v1",
+  "level": "Metadata",
+  "auditID": "57e0ed6c-6ed4-40cd-81a9-13c656220d83",
+  "stage": "ResponseComplete",
+  "requestURI": "/api/v1/namespaces/default/secrets?limit=500",
+  "verb": "list",
+  "user": {
+    "username": "kubernetes-admin",
+    "groups": [
+      "kubeadm:cluster-admins",
+      "system:authenticated"
+    ]
+  },
+  "sourceIPs": [
+    "10.112.0.10"
+  ],
+  "userAgent": "kubectl/v1.31.13 (linux/amd64) kubernetes/0000000",
+  "objectRef": {
+    "resource": "secrets",
+    "namespace": "default",
+    "apiVersion": "v1"
+  },
+  "responseStatus": {
+    "metadata": {},
+    "code": 200
+  },
+  "requestReceivedTimestamp": "2025-10-02T16:21:35.325764Z",
+  "stageTimestamp": "2025-10-02T16:21:35.328644Z",
+  "annotations": {
+    "authorization.k8s.io/decision": "allow",
+    "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"kubeadm:cluster-admins\" of ClusterRole \"cluster-admin\" to Group \"kubeadm:cluster-admins\"",
+    "deckhouse.io/signature": "Absent signature"
+  }
+}
+```
+--->

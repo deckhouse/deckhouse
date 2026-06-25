@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ettle/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -45,15 +46,17 @@ const (
 	// digestsFile is the JSON file mapping image names to their content-addressable digests.
 	digestsFile = "images_digests.json"
 
+	// embeddedDir is the directory, relative to the process working directory,
+	// that holds embedded modules and their shared images_digests.json.
+	embeddedDir = "modules"
+
 	// globalPath is the relative directory containing global hook definitions and values.
 	// LoadGlobalConf expects this path to exist relative to the process working directory.
 	globalPath = "global-hooks"
 )
 
-var (
-	// ErrPackageNotFound is returned when the requested package directory doesn't exist
-	ErrPackageNotFound = errors.New("package not found")
-)
+// ErrPackageNotFound is returned when the requested package directory doesn't exist
+var ErrPackageNotFound = errors.New("package not found")
 
 // LoadAppConf loads an application package from the given directory on the filesystem.
 // The directory name must follow the "namespace.name" convention (e.g., "default.my-app").
@@ -188,7 +191,7 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		return nil, fmt.Errorf("convert module definition: %w", err)
 	}
 
-	digests, err := loadDigests(moduleDir)
+	digests, err := loadEmbeddedDigests(def.Name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load digests: %w", err)
@@ -408,8 +411,9 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 	var requirements dto.Requirements
 	if def.Requirements != nil {
 		requirements = dto.Requirements{
-			Kubernetes: def.Requirements.Kubernetes,
-			Deckhouse:  def.Requirements.Deckhouse,
+			Kubernetes: dto.VersionConstraint{Constraint: def.Requirements.Kubernetes},
+			Deckhouse:  dto.VersionConstraint{Constraint: def.Requirements.Deckhouse},
+			Modules:    legacyModuleRequirements(def.Requirements.ParentModules),
 		}
 	}
 
@@ -440,6 +444,44 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 		Weight:   int(def.Weight),
 		Critical: def.Critical,
 	}, nil
+}
+
+// legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
+// conditional (skippable if the parent module is absent). See
+// go_lib/dependency/extenders/moduledependency for the original parser.
+const legacyOptionalSuffix = "!optional"
+
+// legacyModuleRequirements projects the legacy module.yaml ParentModules map onto the
+// new dto.ModulesRequirements shape. A constraint ending in "!optional" maps to a
+// conditional dependency; the suffix is stripped from the constraint string.
+func legacyModuleRequirements(parentModules map[string]string) dto.ModulesRequirements {
+	if len(parentModules) == 0 {
+		return dto.ModulesRequirements{}
+	}
+
+	var (
+		mandatory   []dto.ModuleDependency
+		conditional []dto.ModuleDependency
+	)
+
+	for name, constraint := range parentModules {
+		raw, optional := strings.CutSuffix(constraint, legacyOptionalSuffix)
+		dep := dto.ModuleDependency{
+			Name:       name,
+			Constraint: strings.TrimSpace(raw),
+		}
+
+		if optional {
+			conditional = append(conditional, dep)
+		} else {
+			mandatory = append(mandatory, dep)
+		}
+	}
+
+	return dto.ModulesRequirements{
+		Mandatory:   mandatory,
+		Conditional: conditional,
+	}
 }
 
 // loadModuleDefinition reads and parses the legacy module.yaml file from the package directory.
@@ -480,6 +522,34 @@ func loadDigests(packageDir string) (map[string]string, error) {
 	}
 
 	return digests, nil
+}
+
+// loadEmbeddedDigests reads the shared images_digests.json under embeddedDir and
+// returns the digest map for the given module. The embedded digests file nests
+// per-module maps keyed by the module's CamelCase name, so the lookup converts
+// packageName accordingly. Returns nil without error if the file is absent or
+// holds no entry for the module (digests are optional).
+func loadEmbeddedDigests(packageName string) (map[string]string, error) {
+	path := filepath.Join(embeddedDir, digestsFile)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("read file '%s': %w", path, err)
+	}
+
+	digests := make(map[string]map[string]string)
+	if err = json.Unmarshal(content, &digests); err != nil {
+		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
+	}
+
+	if packageDigests, ok := digests[strcase.ToCamel(packageName)]; ok {
+		return packageDigests, nil
+	}
+
+	return nil, nil
 }
 
 // getModuleVersion returns the version of the package at moduleDir.

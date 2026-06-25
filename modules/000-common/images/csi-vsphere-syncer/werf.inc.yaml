@@ -42,11 +42,12 @@ shell:
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
+  - sed -i '\#crypto/tls/fipsonly#d' pkg/syncer/admissionhandler/cnscsi_admissionhandler.go
   - rm -rf vendor
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}

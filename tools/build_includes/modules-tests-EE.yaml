@@ -362,30 +362,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/340-monitoring-deckhouse
-  to: /deckhouse/modules/340-monitoring-deckhouse
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-monitoring-kubernetes
   to: /deckhouse/modules/340-monitoring-kubernetes
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-kubernetes-control-plane
-  to: /deckhouse/modules/340-monitoring-kubernetes-control-plane
   excludePaths:
     - docs
     - README.md
@@ -408,17 +386,6 @@
         - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/402-ingress-nginx
-  to: /deckhouse/modules/402-ingress-nginx
   excludePaths:
     - docs
     - README.md
@@ -804,6 +771,16 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/modules/040-control-plane-manager/openapi/config-values.yaml
+  to: /deckhouse/modules/040-control-plane-manager/openapi/config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/openapi/doc-ru-config-values.yaml
+  to: /deckhouse/modules/040-control-plane-manager/openapi/doc-ru-config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   excludePaths:
@@ -929,6 +906,28 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/templates/waypoint-controller
+  to: /deckhouse/modules/110-istio/templates/waypoint-controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/ztunnel
+  to: /deckhouse/modules/110-istio/templates/ztunnel
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
   excludePaths:
@@ -950,6 +949,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/doc-ru-waypointinstance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/crds/istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
   stageDependencies:
@@ -960,8 +964,23 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/crds/waypointinstance.yaml
+  to: /deckhouse/modules/110-istio/crds/waypointinstance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
   stageDependencies:
     install:
         - '**/*'
@@ -1007,11 +1026,6 @@
         - '**/*'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/_helper.tpl
-  to: /deckhouse/modules/380-metallb/templates/_helper.tpl
   stageDependencies:
     install:
         - '**/*'

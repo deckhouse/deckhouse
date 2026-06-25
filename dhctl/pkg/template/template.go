@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]interface{}) (string, error) {
+func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]any) (string, error) {
 	fileContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		return "", fmt.Errorf("loading %s: %v", templatePath, err)
@@ -41,7 +41,7 @@ func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]int
 		}
 		cnt := res.Bytes()
 		content = string(cnt)
-		log.DebugF("Render and save template content:\n%s", content)
+		log.DebugF("Rendering and saving template content:\n%s", content)
 	}
 
 	outFile, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("*-%s", outFileName))
@@ -51,7 +51,7 @@ func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]int
 
 	defer func() {
 		if err := outFile.Close(); err != nil {
-			log.ErrorF("Cannot close rendered %s %s:%v", outFileName, outFile.Name(), err)
+			log.ErrorF("Cannot close rendered %s %s: %v", outFileName, outFile.Name(), err)
 		}
 	}()
 

@@ -27,7 +27,7 @@ func DefineControlPlaneFlags(cmd *kingpin.CmdClause, o *options.ControlPlaneOpti
 		Required().
 		StringVar(&o.Hostname)
 
-	ipFlag := cmd.Flag("control-plane-node-ip", "Control plane node ip to check").
+	ipFlag := cmd.Flag("control-plane-node-ip", "Control plane node IP to check").
 		Envar(configEnvName("CONTROL_PLANE_NODE_IP"))
 
 	if ipRequired {

@@ -35,13 +35,13 @@ import (
 )
 
 const (
-	destroyApprovalsMessage = `You will be asked for approve multiple times.
-If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
+	destroyApprovalsMessage = `You will be asked for approval multiple times.
+If you understand what you are doing, you can use the flag "--yes-i-am-sane-and-i-understand-what-i-am-doing" to skip approvals.
 `
 	destroyCacheErrorMessage = `Create cache:
 	Error: %v
 
-	Probably that Kubernetes cluster was already deleted.
+	The Kubernetes cluster was probably already deleted.
 	If you want to continue, please delete the cache folder manually.
 `
 )
@@ -70,11 +70,13 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if !opts.Global.SanityCheck {
-			logger.LogWarnLn(destroyApprovalsMessage)
+			log.InteractiveWarnLn(destroyApprovalsMessage)
 
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
-				return fmt.Errorf("Cleanup cluster resources disallow")
+				return fmt.Errorf("Cluster resource cleanup was not approved")
 			}
 		}
 
@@ -93,15 +95,14 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		destroyerParams := &destroy.Params{
-			SSHProvider:     sshProvider,
-			KubeProvider:    kubeProvider,
-			StateCache:      cache.Global(),
-			SkipResources:   opts.Destroy.SkipResources,
-			LoggerProvider:  log.SimpleLoggerProvider(logger),
-			IsDebug:         opts.Global.IsDebug,
-			TmpDir:          opts.Global.TmpDir,
-			DirectoryConfig: opts.DirConfig(),
-			Options:         opts,
+			SSHProvider:    sshProvider,
+			KubeProvider:   kubeProvider,
+			StateCache:     cache.Global(),
+			SkipResources:  opts.Destroy.SkipResources,
+			LoggerProvider: log.SimpleLoggerProvider(logger),
+			IsDebug:        opts.Global.IsDebug,
+			TmpDir:         opts.Global.TmpDir,
+			Options:        opts,
 		}
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {

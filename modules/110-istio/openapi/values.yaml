@@ -39,8 +39,9 @@ properties:
       istioToK8sCompatibilityMap:
         type: object
         default:
-          "1.21": ["1.31", "1.32", "1.33", "1.34", "1.35"]
-          "1.25": ["1.31", "1.32", "1.33", "1.34", "1.35"]
+          "1.21": ["1.32", "1.33", "1.34", "1.35", "1.36"]
+          "1.25": ["1.32", "1.33", "1.34", "1.35", "1.36"]
+          "1.27": ["1.32", "1.33", "1.34", "1.35", "1.36"]
         additionalProperties:
           type: array
           items:
@@ -231,13 +232,13 @@ properties:
                   description: |
                     The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
                 tolerations:
                   type: array
                   description: |
                     The same as `spec.tolerations` for the Kubernetes pod.
 
-                    Use [automatic](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                    Use [automatic](/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
                   items:
                     type: object
                     properties:

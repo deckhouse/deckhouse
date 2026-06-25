@@ -1,0 +1,284 @@
+{!{ define "av_semver_regexp" }!}^v?[0-9]+.[0-9]+.[0-9]+${!{ end }!}
+
+{!{ define "av_scan_step" }!}
+- name: Run {!{ .container_name }!} scan
+  id: scan
+  {!{- if .only_images_expr }!}
+  env:
+    # `ONLY_IMAGES` comes from needs.changed_images.outputs.changed_compact
+    # (JSON array of "<module>.<image>" keys). Wired here for PR runs of both
+    # drweb-scan and kaspersky-scan when their templates are called with
+    # `withChangedImages: true` (see security-scan-images.yml). In weekly /
+    # release runs the templates pass empty `only_images_expr`, so this env
+    # block is omitted and the Go scanner falls back to full-scan.
+    # Empty value / "[]" is treated by the Go scanner as full-scan, so the
+    # bash side does not need to branch on it.
+    ONLY_IMAGES: {!{ .only_images_expr }!}
+  {!{- end }!}
+  run: |
+    registry_image_path=/sys/deckhouse-oss
+    ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
+    if [ -z "${ref}" ]; then
+      ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
+    fi
+    ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
+    SCAN_TIME=$(date '+%s')
+    SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
+    if [[ "${ref}" =~ {!{ tmpl.Exec "av_semver_regexp" . }!} ]]; then
+      echo "registry read"
+      edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
+      SCAN_ID+="-${edition}"
+      registry_image_path="/deckhouse/${edition}"
+      registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+    elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+      echo "registry stage"
+      registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
+    else
+      echo "registry dev"
+      registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+    fi
+    CONTAINER_NAME=registry_{!{ .container_name }!}
+    GID=$(id -g)
+    SCAN_ID+="-$CONTAINER_NAME"
+    SCAN_DIR=/opt/actions-runners/scans/{!{ .container_name }!}
+    echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
+    echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
+    echo $CONTAINER_NAME
+    {!{- if .only_images_expr }!}
+    echo "----------------------------------------------"
+    if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
+      keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
+      echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the {!{ .container_name }!} scanner."
+      jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+    else
+      echo "📋 Full-scan: ONLY_IMAGES is empty (no delta in this PR)."
+    fi
+    echo "----------------------------------------------"
+    {!{- end }!}
+    docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
+      scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+    # Drop container-uid ownership so the host-side Upload/Cleanup steps below
+    # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
+    # touch the bind-mounted scan artifacts under the runner's UID (this step
+    # came from main's runner-side refactor that removed `docker cp`).
+    docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
+
+    if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
+      THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+      ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+      if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+        echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+        exit 1
+      elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
+        echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
+        exit 1
+      else
+        echo "✅ No threats detected ($THREAT_COUNT)"
+      fi
+    else
+      echo "⚠️ The scan results file was not found"
+      exit 1
+    fi
+
+    echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
+
+- name: Upload scan artifacts
+  if: github.repository == 'deckhouse/deckhouse' && always()
+  uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+  with:
+    name: {!{ .container_name }!}-scan-results-${{ steps.scan.outputs.scan_id }}
+    path: ${{ steps.scan.outputs.scan_dir }}/${{ steps.scan.outputs.scan_id }}
+    retention-days: 5
+
+- name: Cleanup scan results on runner
+  if: always()
+  env:
+    SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+    SCAN_DIR: ${{ steps.scan.outputs.scan_dir }}
+  run: |
+    if [ -z "${SCAN_ID}" ]; then
+      echo "scan_id is empty, nothing to clean up"
+      exit 0
+    fi
+    if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
+      rm -rf ${SCAN_DIR}/${SCAN_ID} || true
+    fi
+{!{ end }!}
+
+{!{ define "drweb_scan_job" }!}
+{!{ $ctx := . -}!}
+{!{ $withChangedImages := false -}!}
+{!{ if coll.Has $ctx "withChangedImages" -}!}
+{!{   $withChangedImages = (index $ctx "withChangedImages") -}!}
+{!{ end -}!}
+# <template: drweb_scan_job>
+drweb-scan:
+  name: Dr.Web Scan ${{ matrix.branch }}
+  runs-on: [self-hosted, antivirus]
+  if: github.repository == 'deckhouse/deckhouse'
+{!{- if $withChangedImages }!}
+  # PR mode: filter scanned images by the changed_images diff (delta-only scan).
+  needs: [get-tags, changed_images]
+{!{- else }!}
+  # Weekly/release mode: no changed_images upstream; full-scan every matrix entry.
+  needs: [get-tags]
+{!{- end }!}
+  strategy:
+    matrix:
+      branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+    fail-fast: false
+  permissions:
+    id-token: write
+  outputs:
+    scan_id: ${{ steps.scan.outputs.scan_id }}
+  steps:
+    {!{- $secrets := slice -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_STAGE_REGISTRY_HOST" ) $secrets -}!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
+
+    {!{- $args := dict
+        "container_name"      "drweb"
+        "scan_path"           "drweb"
+        "only_images_expr"    ""
+    -}!}
+{!{- if $withChangedImages -}!}
+    {!{- $args = dict
+        "container_name"      "drweb"
+        "scan_path"           "drweb"
+        "only_images_expr"    "${{ needs.changed_images.outputs.changed_compact }}"
+    -}!}
+{!{- end }!}
+    {!{ tmpl.Exec "av_scan_step" $args | strings.Indent 4 }!}
+# </template: drweb_scan_job>
+{!{ end }!}
+
+{!{ define "kaspersky_scan_job" }!}
+{!{ $ctx := . -}!}
+{!{ $withChangedImages := false -}!}
+{!{ if coll.Has $ctx "withChangedImages" -}!}
+{!{   $withChangedImages = (index $ctx "withChangedImages") -}!}
+{!{ end -}!}
+# <template: kaspersky_scan_job>
+kaspersky-scan:
+  name: Kaspersky Scan ${{ matrix.branch }}
+  runs-on: [self-hosted, antivirus]
+  if: github.repository == 'deckhouse/deckhouse'
+{!{- if $withChangedImages }!}
+  # PR mode: filter scanned images by the changed_images diff (delta-only scan).
+  needs: [get-tags, changed_images]
+{!{- else }!}
+  # Weekly/release mode: no changed_images upstream; full-scan every matrix entry.
+  needs: [get-tags]
+{!{- end }!}
+  strategy:
+    matrix:
+      branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+    fail-fast: false
+  permissions:
+    id-token: write
+  outputs:
+    scan_id: ${{ steps.scan.outputs.scan_id }}
+  steps:
+    {!{- $secrets := slice -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_STAGE_REGISTRY_HOST" ) $secrets -}!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
+
+    {!{- $args := dict
+        "container_name"    "kaspersky"
+        "scan_path"         "antivirus"
+        "only_images_expr"  ""
+    -}!}
+{!{- if $withChangedImages -}!}
+    {!{- $args = dict
+        "container_name"    "kaspersky"
+        "scan_path"         "antivirus"
+        "only_images_expr"  "${{ needs.changed_images.outputs.changed_compact }}"
+    -}!}
+{!{- end }!}
+    {!{ tmpl.Exec "av_scan_step" $args | strings.Indent 4 }!}
+# </template: kaspersky_scan_job>
+{!{ end }!}
+
+{!{ define "set_security_antivirus_requirement_status" }!}
+# <template: set_security_antivirus_requirement_status>
+set_security_antivirus_requirement_status:
+  name: Set commit status after antivirus scan run
+  runs-on: "self-slim"
+  needs: [drweb-scan, kaspersky-scan]
+  if: ${{ always() }}
+  permissions:
+    contents: read
+    pull-requests: write
+  steps:
+    - name: Install GitHub CLI
+      uses: deckhouse/modules-actions/gh@v15
+    - name: Auth with GitHub CLI
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+    - name: Set PR Label
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GH_REPO: ${{ github.repository }}
+        DRWEB: ${{ needs.drweb-scan.result }}
+        KASPERSKY: ${{ needs.kaspersky-scan.result }}
+      run: |
+        echo "PR Number: $PR_NUMBER | Dr.Web: $DRWEB | Kaspersky: $KASPERSKY"
+        if [ "$DRWEB" == "success" ] && [ "$KASPERSKY" == "success" ]; then
+          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+        elif [ "$DRWEB" == "skipped" ] && [ "$KASPERSKY" == "skipped" ]; then
+          gh pr edit "$PR_NUMBER" --remove-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+        else
+          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/failed" --remove-label "security/antivirus/success"
+        fi
+# </template: set_security_antivirus_requirement_status>
+{!{- end -}!}
+
+{!{ define "antivirus_notify_failure_job" }!}
+# <template: antivirus_notify_failure_job>
+notify-failure:
+  name: Send failure notification
+  runs-on: [self-hosted, regular]
+  needs: [drweb-scan, kaspersky-scan]
+  if: always() && (needs.drweb-scan.result == 'failure' || needs.kaspersky-scan.result == 'failure')
+  permissions:
+    id-token: write
+  steps:
+    {!{- $secrets := slice -}!}
+    {!{- $secrets = append ( slice "projects/data/b050f3bd-733f-4746-9640-9df80d484074/n8n_jobs_fails_url" "N8N_LOOP_NOTIFIER_URL" "N8N_LOOP_NOTIFIER_URL" ) $secrets -}!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
+
+    - name: Check which jobs failed
+      id: check-failures
+      run: |
+        FAILED_JOBS=""
+        if [[ "${{ needs.drweb-scan.result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS• Dr.Web Scan\n"
+        fi
+        if [[ "${{ needs.kaspersky-scan.result }}" == "failure" ]]; then
+          FAILED_JOBS="$FAILED_JOBS• Kaspersky Scan\n"
+        fi
+
+        echo "failed_jobs=${FAILED_JOBS}" >> $GITHUB_OUTPUT
+        echo "Failed jobs:"
+        echo "${FAILED_JOBS}"
+
+    - name: Send notification
+      run: |
+        workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+        MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
+        MESSAGE+="**Failed jobs:**\n"
+        MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
+        PR_NUMBER="${{ github.event.pull_request.number }}"
+        if [ -n "$PR_NUMBER" ]; then
+          pr_url="https://github.com/${{ github.repository }}/pull/${PR_NUMBER}"
+          MESSAGE+="**PR:** [#${PR_NUMBER}]($pr_url)\n"
+        fi
+        MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
+
+        curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
+          -H "Content-Type: application/json" \
+          --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"
+# </template: antivirus_notify_failure_job>
+{!{ end }!}

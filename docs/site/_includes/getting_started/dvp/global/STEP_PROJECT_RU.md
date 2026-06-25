@@ -7,13 +7,13 @@
 {% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac.yml.inc{% endcapture %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
 
-Дождитесь создания пространства имён. Чтобы убедиться в том, что оно создалось, используйте команду:
+Дождитесь создания неймспейса. Чтобы убедиться в том, что он создался, используйте команду:
 
 ```shell
 d8 k get ns test-project
 ```
 
-Создайте администратора проекта и свяжите его с ролью `d8:use:role:admin` в созданном ранее пространстве имён.
+Создайте администратора проекта и свяжите его с ролью `d8:use:role:admin` в созданном ранее неймспейсе.
 Для этого используйте команду (в примере используется пользователь `test-user@deckhouse.io`, измените его, если необходимо):
 
 {% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/project-rbac-user.yml.inc{% endcapture %}
@@ -138,10 +138,13 @@ d8 k get vm -o wide
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME   PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 vm     Running   1       100%           1Gi      False          False   True         virtlab-pt-1   10.66.10.19   6m18s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Подключитесь к виртуальной машине, введите логин (в примере — `test-user`) и пароль:
 

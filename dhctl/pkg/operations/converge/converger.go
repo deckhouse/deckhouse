@@ -24,7 +24,6 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -58,10 +57,9 @@ type Params struct {
 	InfrastructureContext *infrastructure.Context
 	ProviderGetter        infrastructure.CloudProviderGetter
 
-	TmpDir          string
-	Logger          log.Logger
-	IsDebug         bool
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 
 	NoSwitchToNodeUser bool
 
@@ -114,7 +112,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 
 	if !c.CommanderMode {
 		if c.CacheID == "" {
-			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+			return fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")
 		}
 
 		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{Cache: c.Options.Cache})
@@ -142,6 +140,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.Params.ProviderGetter,
 			Logger:                 c.Logger,
+			Opts:                   &c.Options.Global,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
@@ -151,6 +150,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.Params.ProviderGetter,
 			Logger:                 c.Logger,
+			Opts:                   &c.Options.Global,
 		})
 	}
 
@@ -182,7 +182,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, nil, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
-		DownloadDir:   c.Options.Global.DownloadDir,
+		GlobalOptions: &c.Options.Global,
 		Logger:        c.Logger,
 		DisableSwitch: true,
 	})
@@ -216,7 +216,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	if !c.CommanderMode {
 		if c.CacheID == "" {
-			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+			return nil, fmt.Errorf("Incorrect cache identity. You need to pass --ssh-host, --kube-client-from-cluster, or --kubeconfig")
 		}
 
 		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{Cache: c.Options.Cache})
@@ -265,7 +265,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.ProviderGetter,
 			Logger:                 c.Logger,
-			DirectoryConfig:        c.DirectoryConfig,
+			Opts:                   &c.Options.Global,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
@@ -275,7 +275,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.ProviderGetter,
 			Logger:                 c.Logger,
-			DirectoryConfig:        c.DirectoryConfig,
+			Opts:                   &c.Options.Global,
 		})
 	}
 
@@ -380,7 +380,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
-		DownloadDir:   c.Options.Global.DownloadDir,
+		GlobalOptions: &c.Options.Global,
 		Logger:        c.Logger,
 		IsDebug:       c.IsDebug,
 		DisableSwitch: c.NoSwitchToNodeUser,
@@ -402,7 +402,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}
 
 	if needAutomaticTofuMigrationForCommander {
-		log.WarnF("Need migrate to opentofu. Switch to migrator\n")
+		log.WarnF("Need to migrate to opentofu. Switching to migrator\n")
 		err = r.RunConvergeMigration(convergeCtx, true)
 	} else {
 		err = r.RunConverge(convergeCtx)
@@ -432,7 +432,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, checkInterval time.Duration) error {
 	if c.Options == nil || c.Options.AutoConverge.RunningNodeName == "" {
-		return fmt.Errorf("Need to pass running node name. It is may taints infrastructure state while converge")
+		return fmt.Errorf("Need to pass the running node name. It may taint the infrastructure state during converge")
 	}
 
 	convergeCtx := convergectx.NewContext(context.Background(), convergectx.Params{
@@ -442,6 +442,7 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 		ChangeParams:           c.Params.ChangesSettings,
 		Logger:                 c.Logger,
 		ProviderGetter:         c.ProviderGetter,
+		Opts:                   &c.Options.Global,
 	})
 
 	metaConfig, err := convergeCtx.MetaConfig()
@@ -476,10 +477,10 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 	c.Options.Bootstrap.DeckhouseTimeout = 1 * time.Hour
 
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
-		TmpDir:      c.TmpDir,
-		DownloadDir: c.Options.Global.DownloadDir,
-		Logger:      c.Logger,
-		IsDebug:     c.IsDebug,
+		TmpDir:        c.TmpDir,
+		GlobalOptions: &c.Options.Global,
+		Logger:        c.Logger,
+		IsDebug:       c.IsDebug,
 	})
 
 	convergeCtx.SetClientSwitcher(switcher)

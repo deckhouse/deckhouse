@@ -4,7 +4,6 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/release-exists
   name: foxtrot-kube-unsuitable
@@ -29,7 +28,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/metrics-registered
   labels:
@@ -68,7 +66,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
-  creationTimestamp: null
   name: parca-kube-unsuitable
   resourceVersion: "1000"
 properties: {}

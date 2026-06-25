@@ -3,7 +3,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2025-09-05"
 import:
 - from: {{ index $.Images "tools/coreutils" }}
   add: /
@@ -31,7 +30,6 @@ import:
   add: /relocate
   to: /relocate
   before: setup
-git:
 {{- include "image mount points" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact

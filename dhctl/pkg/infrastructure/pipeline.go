@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -80,8 +81,7 @@ func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Ou
 			OutFields: []string{k},
 		})
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 			}
 			if matchNoOutput(err.Error()) {
@@ -109,7 +109,8 @@ func ApplyPipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
-	extractFn func(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error),
+	globalOptions *options.GlobalOptions,
+	extractFn func(ctx context.Context, r RunnerInterface, globalOptions *options.GlobalOptions) (*PipelineOutputs, error),
 ) (*PipelineOutputs, error) {
 	var extractedData *PipelineOutputs
 
@@ -127,14 +128,18 @@ func ApplyPipeline(
 		}
 		span.AddEvent("Plan done")
 
-		defer func() { extractedData, err = extractFn(ctx, r) }()
+		defer func() {
+			if err == nil {
+				extractedData, err = extractFn(ctx, r, globalOptions)
+			}
+		}()
 
 		if err := r.Apply(ctx); err != nil {
 			return err
 		}
 		span.AddEvent("Apply done")
 
-		extractedData, err = extractFn(ctx, r)
+		extractedData, err = extractFn(ctx, r, globalOptions)
 		span.AddEvent("Extracted data")
 
 		return err
@@ -202,13 +207,14 @@ func CheckPipeline(
 type BaseInfrastructureDestructiveChanges struct {
 	plan.DestructiveChanges
 	OutputBrokenReason string           `json:"output_broken_reason,omitempty"`
-	OutputZonesChanged plan.ValueChange `json:"output_zones_changed,omitempty"`
+	OutputZonesChanged plan.ValueChange `json:"output_zones_changed"`
 }
 
 func CheckBaseInfrastructurePipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
+	globalOptions *options.GlobalOptions,
 ) (int, plan.Plan, *BaseInfrastructureDestructiveChanges, error) {
 	isChange := plan.HasNoChanges
 
@@ -240,7 +246,7 @@ func CheckBaseInfrastructurePipeline(
 			return nil
 		}
 
-		info, err := GetBaseInfraResult(ctx, r)
+		info, err := GetBaseInfraResult(ctx, r, globalOptions)
 		if err != nil {
 			isChange = plan.HasDestructiveChanges
 			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
@@ -324,13 +330,13 @@ func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error 
 	)
 }
 
-func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func GetBaseInfraResult(ctx context.Context, r RunnerInterface, globalOptions *options.GlobalOptions) (*PipelineOutputs, error) {
 	cloudDiscovery, err := r.GetInfrastructureOutput(ctx, "cloud_discovery_data")
 	if err != nil {
 		return nil, err
 	}
 
-	schemaStore := config.NewSchemaStore(nil)
+	schemaStore := config.NewSchemaStore(globalOptions)
 	_, err = schemaStore.Validate(&cloudDiscovery)
 	if err != nil {
 		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)
@@ -351,7 +357,7 @@ func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutput
 	}, nil
 }
 
-func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func GetMasterNodeResult(ctx context.Context, r RunnerInterface, _ *options.GlobalOptions) (*PipelineOutputs, error) {
 	masterIPAddressForSSH, err := getStringOrIntOutput(ctx, r, masterSSHIPOutputKey)
 	if err != nil {
 		return nil, err
@@ -419,7 +425,7 @@ func GetMasterNodeResultNoStrict(ctx context.Context, r RunnerInterface) (*Pipel
 	return res, nil
 }
 
-func OnlyState(_ context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func OnlyState(_ context.Context, r RunnerInterface, _ *options.GlobalOptions) (*PipelineOutputs, error) {
 	tfState, err := r.GetState()
 	if err != nil {
 		return nil, err
@@ -493,7 +499,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 
 	skipMessage := func(f string, args ...any) string {
 		m := fmt.Sprintf(f, args...)
-		return fmt.Sprintf("Skip debug plan for %s: %s", targetsStr, m)
+		return fmt.Sprintf("Skipping debug plan for %s: %s", targetsStr, m)
 	}
 
 	skipDebug := func(f string, args ...any) {
@@ -519,19 +525,19 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	}
 
 	if len(targets) == 0 {
-		skipDebug("pass empty targets with env %s", targetsEnv)
+		skipDebug("got empty targets from env %s", targetsEnv)
 		return
 	}
 
 	if destroy {
-		skipInfo("no out destroy plan, because it is produce only destroy changes")
+		skipInfo("no debug plan output for destroy, because it produces only destroy changes")
 		return
 	}
 
 	executorStep := string(r.GetStep())
 
 	if debugPlanStep != executorStep {
-		skipInfo("passed step %s not match with executor step %s", debugPlanStep, executorStep)
+		skipInfo("passed step %s does not match executor step %s", debugPlanStep, executorStep)
 		return
 	}
 
@@ -562,7 +568,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 
 	for target, output := range results {
 		fullPretty, forTarget := extractChangesStrings(target, output)
-		log.DebugF("Full debug output plan for %s:\n%s\n", targetStr(target), fullPretty)
+		log.DebugF("Full debug plan output for %s:\n%s\n", targetStr(target), fullPretty)
 		log.InfoF("Changes in plan for %s:\n%s\n", targetStr(target), forTarget)
 	}
 }
@@ -592,13 +598,13 @@ func extractChanges(target string, mapOut map[string]any) string {
 
 	changes, ok := changesRaw.([]any)
 	if !ok {
-		return fmt.Sprintf("Plan resource_changes key is not []any it is %T", changesRaw)
+		return fmt.Sprintf("Plan resource_changes key is not []any, it is %T", changesRaw)
 	}
 
 	for i, changeRaw := range changes {
 		change, ok := changeRaw.(map[string]any)
 		if !ok {
-			msg := fmt.Sprintf("Plan resource_changes key index %d for %s is not map[string]any it is %T", i, target, changesRaw)
+			msg := fmt.Sprintf("Plan resource_changes key index %d for %s is not map[string]any, it is %T", i, target, changesRaw)
 			log.DebugF("%s\n", msg)
 			continue
 		}
@@ -612,7 +618,7 @@ func extractChanges(target string, mapOut map[string]any) string {
 
 		addressStr, ok := address.(string)
 		if !ok {
-			msg := fmt.Sprintf("Plan resource_changes key index %d for %s address is not string it is %T", i, target, address)
+			msg := fmt.Sprintf("Plan resource_changes key index %d for %s address is not a string, it is %T", i, target, address)
 			log.DebugF("%s\n", msg)
 			continue
 		}

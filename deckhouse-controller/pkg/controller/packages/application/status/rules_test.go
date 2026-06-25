@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,18 @@ func withExternalCondition(cond string, status metav1.ConditionStatus, reason st
 func withVersionChanged() mappingOption {
 	return func(state *condmap.State) {
 		state.Updating = true
+	}
+}
+
+func withSuccessfulApply() []mappingOption {
+	return []mappingOption{
+		withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, "RequirementsMet"),
+		withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+		withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionTrue, "Loaded"),
+		withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "Configured"),
+		withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksProcessed"),
+		withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "ManifestsApplied"),
+		withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Scaled"),
 	}
 }
 
@@ -111,21 +123,16 @@ func runTestCases(t *testing.T, cases []testCase) {
 func TestInstalledRule(t *testing.T) {
 	cases := []testCase{
 		{
-			name: "true when Scaled and no version change",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
-			},
+			name: "true when apply is complete",
+			opts: withSuccessfulApply(),
 			expected: map[string]*expectedCondition{
 				// True conditions carry no reason — emit() drops it.
 				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
 			},
 		},
 		{
-			name: "true on first install regardless of Updating flag",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
-				withVersionChanged(),
-			},
+			name: "true on first install regardless of Updating flag when apply is complete",
+			opts: append(withSuccessfulApply(), withVersionChanged()),
 			expected: map[string]*expectedCondition{
 				// mapInstalled does not gate on Updating; stickiness happens via external state.
 				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
@@ -168,6 +175,15 @@ func TestInstalledRule(t *testing.T) {
 			},
 		},
 		{
+			name: "absent while manifests are still applying",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: nil,
+			},
+		},
+		{
 			name: "sticky - not in result when already true externally",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "PreviouslyInstalled"),
@@ -187,46 +203,55 @@ func TestUpdateInstalledRule(t *testing.T) {
 	cases := []testCase{
 		{
 			name: "true when Scaled and version changed",
-			opts: []mappingOption{
+			opts: append(withSuccessfulApply(),
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 				withVersionChanged(),
-			},
+			),
 			expected: map[string]*expectedCondition{
 				ConditionUpdateInstalled: {status: metav1.ConditionTrue, reason: ConditionUpdateInstalled},
 			},
 		},
 		{
 			name: "absent when not installed",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
+			opts: append(withSuccessfulApply(),
 				withVersionChanged(),
-			},
+			),
 			expected: map[string]*expectedCondition{
 				ConditionUpdateInstalled: nil,
 			},
 		},
 		{
 			name: "true when healthy after rollback (no version change)",
-			opts: []mappingOption{
+			opts: append(withSuccessfulApply(),
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				// In a real rollback scenario, UpdateInstalled was set to False during the failed update
 				withExternalCondition(ConditionUpdateInstalled, metav1.ConditionFalse, "UpdateFailed"),
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
-			},
+			),
 			expected: map[string]*expectedCondition{
 				ConditionUpdateInstalled: {status: metav1.ConditionTrue, reason: ConditionUpdateInstalled},
 			},
 		},
 		{
 			name: "absent after fresh install with no updates",
-			opts: []mappingOption{
+			opts: append(withSuccessfulApply(),
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 				// No UpdateInstalled in external state = no update ever happened
-			},
+			),
 			expected: map[string]*expectedCondition{
 				ConditionUpdateInstalled: nil, // Should not be present for fresh installs
+			},
+		},
+		{
+			name: "applying over a failed update refreshes the stale failure",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				// Previous update failed at manifests; the new version is now re-applying.
+				withExternalCondition(ConditionUpdateInstalled, metav1.ConditionFalse, "ManifestsApplyFailed"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionUpdateInstalled: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonApplyingManifests)},
 			},
 		},
 	}
@@ -275,6 +300,32 @@ func TestReadyRule(t *testing.T) {
 				ConditionReady: {status: metav1.ConditionTrue, reason: ConditionReady},
 			},
 		},
+		{
+			name: "applying over a failed update refreshes the stale failure",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withExternalCondition(ConditionReady, metav1.ConditionFalse, "ManifestsApplyFailed"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionReady: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonApplyingManifests)},
+			},
+		},
+		{
+			name: "applying does not flap a healthy update still serving",
+			opts: []mappingOption{
+				// Healthy update: the previous version still serves (Ready=True),
+				// so the apply window must leave it untouched, not flap it to False.
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withExternalCondition(ConditionReady, metav1.ConditionTrue, ConditionReady),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionReady: nil,
+			},
+		},
 	}
 
 	runTestCases(t, cases)
@@ -292,8 +343,27 @@ func TestScaledRule(t *testing.T) {
 			},
 		},
 		{
-			name: "false when Scaled is false",
+			name: "absent during first install when Scaled is false",
 			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Degraded"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: nil,
+			},
+		},
+		{
+			name: "absent during first install when Scaled is false with Reconciling reason",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Reconciling"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: nil,
+			},
+		},
+		{
+			name: "false when installed app health monitor reports Degraded",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Degraded"),
 			},
 			expected: map[string]*expectedCondition{
@@ -301,21 +371,44 @@ func TestScaledRule(t *testing.T) {
 			},
 		},
 		{
-			name: "false when Scaled is false with Reconciling reason",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Reconciling"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionScaled: {status: metav1.ConditionFalse, reason: "Reconciling"},
-			},
-		},
-		{
-			name: "unknown when internal Scaled is absent",
+			name: "absent during first install when internal Scaled is absent",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "RequirementsNotMet"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionScaled: {status: metav1.ConditionUnknown, reason: ""},
+				ConditionScaled: nil,
+			},
+		},
+		{
+			name: "absent during first install failure even if internal Scaled is true",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionFalse, "HooksFailed"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Scaled"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: nil,
+			},
+		},
+		{
+			name: "unknown with hook reason when update hook failure stops the new version",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionFalse, "HookInitializationFailed"),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: {status: metav1.ConditionUnknown, reason: "HookInitializationFailed"},
+			},
+		},
+		{
+			name: "false with manifest reason when update manifest apply fails",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, "boom"),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
 			},
 		},
 	}
@@ -390,6 +483,18 @@ func TestManagedRule(t *testing.T) {
 				ConditionManaged: {status: metav1.ConditionTrue, reason: ConditionManaged},
 			},
 		},
+		{
+			name: "applying over a failed update refreshes the stale failure",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withExternalCondition(ConditionManaged, metav1.ConditionFalse, "ManifestsApplyFailed"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionManaged: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonApplyingManifests)},
+			},
+		},
 	}
 
 	runTestCases(t, cases)
@@ -441,6 +546,19 @@ func TestConfigurationAppliedRule(t *testing.T) {
 				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
 			},
 		},
+		{
+			name: "applying over a failed update refreshes the stale failure",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withExternalCondition(ConditionConfigurationApplied, metav1.ConditionFalse, "ManifestsApplyFailed"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonApplyingManifests)},
+			},
+		},
 	}
 
 	runTestCases(t, cases)
@@ -473,10 +591,9 @@ func TestDependencyDisabled(t *testing.T) {
 			opts: runningInternals,
 			expected: map[string]*expectedCondition{
 				// Installed overrides stickiness — the user must see the app stopped being installed.
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionReady:     {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				// Scaled mirrors its internal condition (True here) — the health monitor is its sole writer.
-				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
+				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionScaled:               {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				// UpdateInstalled is silent — the dependency-disabled state is the dominant signal.
@@ -489,7 +606,7 @@ func TestDependencyDisabled(t *testing.T) {
 			expected: map[string]*expectedCondition{
 				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
 				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
+				ConditionScaled:               {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				ConditionUpdateInstalled:      nil,
@@ -502,10 +619,9 @@ func TestDependencyDisabled(t *testing.T) {
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionReady:     {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				// Scaled goes Unknown when its internal condition is absent — health monitor hasn't reported yet.
-				ConditionScaled:               {status: metav1.ConditionUnknown, reason: ""},
+				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionScaled:               nil,
 				ConditionConfigurationApplied: nil,
 				ConditionManaged:              nil,
 				ConditionUpdateInstalled:      nil,

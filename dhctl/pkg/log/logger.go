@@ -18,6 +18,10 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
+	"path"
+	"strings"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
@@ -33,7 +37,13 @@ var (
 	defaultLogger Logger = newExternalLogger(external.NewDummyLogger(false))
 	emptyLogger   Logger = newExternalLogger(external.NewSilentLogger())
 	debugEnabled  bool
+	loggerOpts    logOpts
 )
+
+type logOpts struct {
+	LoggerPath string
+	Operation  string
+}
 
 const (
 	ProcessPreflight = "preflight"
@@ -45,17 +55,17 @@ type Logger interface {
 	LogProcessCtx(context.Context, string, string, func(context.Context) error) error
 	LogProcess(string, string, func() error) error
 
-	LogInfoF(format string, a ...interface{})
-	LogInfoLn(a ...interface{})
+	LogInfoF(format string, a ...any)
+	LogInfoLn(a ...any)
 
-	LogErrorF(format string, a ...interface{})
-	LogErrorLn(a ...interface{})
+	LogErrorF(format string, a ...any)
+	LogErrorLn(a ...any)
 
-	LogDebugF(format string, a ...interface{})
-	LogDebugLn(a ...interface{})
+	LogDebugF(format string, a ...any)
+	LogDebugLn(a ...any)
 
-	LogWarnF(format string, a ...interface{})
-	LogWarnLn(a ...interface{})
+	LogWarnF(format string, a ...any)
+	LogWarnLn(a ...any)
 
 	LogSuccess(string)
 	LogFail(string)
@@ -96,6 +106,13 @@ func InitLogger(loggerType string, interactive bool) error {
 
 func SetDebugEnabled(enabled bool) {
 	debugEnabled = enabled
+}
+
+func SetLoggerOpts(path, op string) {
+	loggerOpts = logOpts{
+		LoggerPath: path,
+		Operation:  op,
+	}
 }
 
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions, interactive bool) {
@@ -272,27 +289,27 @@ func (e *ExternalLogger) LogProcess(p, t string, run func() error) error {
 	return e.logger.Process(external.Process(p), t, run)
 }
 
-func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
+func (e *ExternalLogger) LogInfoF(format string, a ...any) {
 	e.logger.InfoFWithoutLn(format, a...)
 }
 
-func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
+func (e *ExternalLogger) LogInfoLn(a ...any) {
 	e.logger.InfoLn(a...)
 }
 
-func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
+func (e *ExternalLogger) LogErrorF(format string, a ...any) {
 	e.logger.ErrorF(format, a...)
 }
 
-func (e *ExternalLogger) LogErrorLn(a ...interface{}) {
+func (e *ExternalLogger) LogErrorLn(a ...any) {
 	e.logger.ErrorF("%v", a...)
 }
 
-func (e *ExternalLogger) LogDebugF(format string, a ...interface{}) {
+func (e *ExternalLogger) LogDebugF(format string, a ...any) {
 	e.logger.DebugF(format, a...)
 }
 
-func (e *ExternalLogger) LogDebugLn(a ...interface{}) {
+func (e *ExternalLogger) LogDebugLn(a ...any) {
 	e.logger.DebugF("%v", a...)
 }
 
@@ -308,11 +325,11 @@ func (e *ExternalLogger) LogFailRetry(l string) {
 	e.logger.FailRetry(l)
 }
 
-func (e *ExternalLogger) LogWarnLn(a ...interface{}) {
+func (e *ExternalLogger) LogWarnLn(a ...any) {
 	e.logger.WarnF("%s", a...)
 }
 
-func (e *ExternalLogger) LogWarnF(format string, a ...interface{}) {
+func (e *ExternalLogger) LogWarnF(format string, a ...any) {
 	e.logger.WarnFWithoutLn(format, a...)
 }
 
@@ -336,27 +353,27 @@ func Process(p, t string, run func() error) error {
 	return defaultLogger.LogProcess(p, t, run)
 }
 
-func InfoF(format string, a ...interface{}) {
+func InfoF(format string, a ...any) {
 	defaultLogger.LogInfoF(format, a...)
 }
 
-func InfoLn(a ...interface{}) {
+func InfoLn(a ...any) {
 	defaultLogger.LogInfoLn(a...)
 }
 
-func ErrorF(format string, a ...interface{}) {
+func ErrorF(format string, a ...any) {
 	defaultLogger.LogErrorF(format, a...)
 }
 
-func ErrorLn(a ...interface{}) {
+func ErrorLn(a ...any) {
 	defaultLogger.LogErrorLn(a...)
 }
 
-func DebugF(format string, a ...interface{}) {
+func DebugF(format string, a ...any) {
 	defaultLogger.LogDebugF(format, a...)
 }
 
-func DebugLn(a ...interface{}) {
+func DebugLn(a ...any) {
 	defaultLogger.LogDebugLn(a...)
 }
 
@@ -368,11 +385,11 @@ func Fail(l string) {
 	defaultLogger.LogFail(l)
 }
 
-func WarnF(format string, a ...interface{}) {
+func WarnF(format string, a ...any) {
 	defaultLogger.LogWarnF(format, a...)
 }
 
-func WarnLn(a ...interface{}) {
+func WarnLn(a ...any) {
 	defaultLogger.LogWarnLn(a...)
 }
 
@@ -399,7 +416,7 @@ func ExternalLoggerProvider(logger Logger) external.LoggerProvider {
 		l = ext.logger
 	} else {
 		i := logger.(*InteractiveLogger)
-		wrapper := &InteractiveLoggerWrapper{logger: i.logger, interactive: i.interactive, phaseChan: i.phaseChan}
+		wrapper := &InteractiveLoggerWrapper{logger: i.logger, interactive: i.interactive, phaseChan: i.phaseChan, logChan: i.logChan}
 		return external.SimpleLoggerProvider(wrapper)
 	}
 
@@ -425,4 +442,25 @@ func GetSilentLogger() Logger {
 		}
 		return defaultLogger.(*InteractiveLogger).NewSilentLogger()
 	}
+}
+
+func NewLogToFile(prefix string) (Logger, error) {
+	cmdStr := strings.Join([]string{loggerOpts.Operation, prefix}, "-")
+	logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+	logPath := path.Join(loggerOpts.LoggerPath, logFile)
+
+	outFile, err := os.Create(logPath)
+	if err != nil {
+		return nil, err
+	}
+
+	bufSize := 1024
+	logger := ExternalLoggerProvider(emptyLogger)()
+
+	tee, err := external.WrapWithTeeLogger(logger, outFile, bufSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExternalLogger{logger: tee}, nil
 }

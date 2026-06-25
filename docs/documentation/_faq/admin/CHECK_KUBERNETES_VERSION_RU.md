@@ -13,6 +13,7 @@ d8 k get nodes
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   STATUS   ROLES                  AGE    VERSION
 frontend-0             Ready    frontend               118d   v1.31.9
@@ -24,3 +25,5 @@ system-1               Ready    system                 118d   
 worker-0               Ready    worker                 37d    v1.31.9
 worker-1               Ready    worker                 19d    v1.31.9
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

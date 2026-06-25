@@ -26,7 +26,7 @@ can_load_erofs() {
 }
 
 
-# CVE-2025-37999 impacts Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6
+# CVE-2025-37999 impacts Linux kernels 6.12.0 to 6.12.28 and 6.14.0 to 6.14.6
 is_kernel_erofs_cve_vulnerable() {
   local full_kv=$(uname -r)
 
@@ -127,7 +127,7 @@ function set_labels() {
 
     ((retries++))
     if [[ $retries -ge $MAX_RETRIES ]]; then
-      bb-log-error "can't set containerd-v2-not-supported label or error annotation on Node."
+      bb-log-error "Failed to set containerd-v2-unsupported label or error annotation on node after $MAX_RETRIES retries"
       return 1
     fi
     sleep 5
@@ -144,26 +144,26 @@ function fail_fast() {
     echo "$errs" | jq -c '.[]' | while read err; do
         err=$(echo $err | sed 's/"//g')
         if [ "$err" == "systemd" ]; then
-          bb-log-error "minimum required version of systemd ${MIN_SYSTEMD}"
+          bb-log-error "systemd ${MIN_SYSTEMD} or newer is required for containerd v2"
         fi
 
         if [ "$err" == "kernel" ]; then
-          bb-log-error "minimum required version of kernel ${MIN_KERNEL}"
+          bb-log-error "Linux kernel ${MIN_KERNEL} or newer is required for containerd v2"
         fi
 
         if [ "$err" == "cgroupv2" ]; then
-          bb-log-error "required cgroupv2 support"
+          bb-log-error "cgroup v2 support is required for containerd v2"
         fi
 
         if [ "$err" == "erofs" ]; then
-          bb-log-error "required erofs kernel module"
+          bb-log-error "erofs kernel module is required for containerd v2"
         fi
 
         if [ "$err" == "kernel_cve_2025_37999" ]; then
-          bb-log-error "Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6 have issues with EROFS functionality (CVE-2025-37999). Kernel upgrade required to proceed."
+          bb-log-error "Linux kernels 6.12.0 to 6.12.28 and 6.14.0 to 6.14.6 are affected by CVE-2025-37999 in EROFS. Upgrade the kernel before enabling containerd v2."
         fi
     done
-    bb-log-error "containerd V2 is not supported"
+    bb-log-error "containerd v2 is not supported on this node"
     exit 1
   fi
 }

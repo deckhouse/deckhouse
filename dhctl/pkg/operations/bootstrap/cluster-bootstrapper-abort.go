@@ -64,7 +64,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
-		b.DirectoryConfig,
+		&b.Options.Global,
 	)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
-		DownloadDir:      b.Options.Global.DownloadDir,
+		GlobalOptions:    &b.Options.Global,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           b.logger,
 		IsDebug:          b.IsDebug,
@@ -97,7 +97,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 	defer func() {
-		_ = b.PhasedExecutionContext.Finalize(ctx, stateCache)
+		if err := b.PhasedExecutionContext.Finalize(ctx, stateCache); err != nil {
+			b.Logger.LogWarnF("failed to finalize phased execution context: %v\n", err)
+		}
 	}()
 
 	hasUUID, err := stateCache.InCache(ctx, "uuid")
@@ -106,11 +108,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	if !hasUUID {
-		if b.CommanderMode {
-			log.InfoF("No UUID found in the cache, will exit now\n")
-			return nil
-		}
-		return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
+		return b.commanderModeAction(
+			func() error {
+				log.InfoF("No UUID found in the cache, will exit now\n")
+				return nil
+			},
+			func() error {
+				return fmt.Errorf("No UUID found in the cache. Perhaps the cluster was already bootstrapped.")
+			},
+		)
 	}
 
 	err = log.ProcessCtx(ctx, "common", "Get cluster UUID from the cache", func(ctx context.Context) error {
@@ -134,7 +140,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	err = log.ProcessCtx(ctx, "common", "Choice abort type", func(ctx context.Context) error {
+	err = log.ProcessCtx(ctx, "common", "Choose abort type", func(ctx context.Context) error {
 		ok, err := bootstrapState.IsManifestsCreated(ctx)
 		if err != nil {
 			return err
@@ -156,7 +162,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				LoggerProvider:    loggerProvider,
 
 				TmpDir:        b.TmpDir,
-				DownloadDir:   b.Options.Global.DownloadDir,
+				GlobalOptions: &b.Options.Global,
 				IsDebug:       b.IsDebug,
 				CommanderMode: b.CommanderMode,
 				SSHUser:       b.Options.SSH.User,
@@ -165,12 +171,12 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				return err
 			}
 
-			logMsg := "Deckhouse installation was not started before. Abort from cache"
+			logMsg := "Deckhouse installation has not started yet. Aborting from cache"
 			if forceAbortFromCache {
 				logMsg = "Force aborting from cache"
 			}
 
-			log.InfoLn(logMsg)
+			b.logger.LogInfoLn(logMsg)
 
 			return nil
 		}
@@ -180,7 +186,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          b.Options.Destroy.SkipResources,
 			InfrastructureContext:  b.InfrastructureContext,
-			DirectoryConfig:        b.DirectoryConfig,
 			SSHProvider:            sshProvider,
 			KubeProvider:           b.KubeProvider,
 			Options:                b.Options,
@@ -208,7 +213,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			return err
 		}
 
-		log.InfoLn("Deckhouse installation was started before. Destroy cluster")
+		b.logger.LogInfoLn("Deckhouse installation has already started. Destroying cluster")
 		return nil
 	})
 	if err != nil {
@@ -218,7 +223,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	if metaConfig.IsStatic() {
-		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
+		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
 		if err != nil {
 			return err
 		}

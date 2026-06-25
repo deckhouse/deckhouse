@@ -85,10 +85,10 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 
 		allPassedHosts := ""
 		if len(apiserverHosts) > 0 {
-			strings.Join(apiserverHosts, ",")
+			allPassedHosts = strings.Join(apiserverHosts, ",")
 		}
 
-		err := retry.NewSilentLoop(name, 45, 5*time.Second).RunContext(ctx, func() error {
+		err := retry.NewSilentLoop(name, 225, 1*time.Second).RunContext(ctx, func() error {
 			if nodeGroupName == global.MasterNodeGroupName {
 				logger.LogInfoF("Waiting while all API-server endpoints '%s' will be available in bootstrap secret\n", allPassedHosts)
 			}
@@ -146,11 +146,11 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 	})
 }
 
-func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, logger log.Logger, data map[string]interface{}) error {
+func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, logger log.Logger, data map[string]any) error {
 	doc := unstructured.Unstructured{}
 	doc.SetUnstructuredContent(data)
 
-	return retry.NewLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 45, 15*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Create NodeGroup %q", nodeGroupName), 600, 1*time.Second).
 		WithLogger(logger).
 		RunContext(ctx, func() error {
 			res, err := kubeCl.Dynamic().
@@ -192,7 +192,7 @@ func GetNodeGroupDirect(ctx context.Context, kubeCl *client.KubernetesClient, no
 
 func GetNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string) (*unstructured.Unstructured, error) {
 	var ng *unstructured.Unstructured
-	err := retry.NewSilentLoop(fmt.Sprintf("Get NodeGroup %q", nodeGroupName), 45, 15*time.Second).
+	err := retry.NewSilentLoop(fmt.Sprintf("Get NodeGroup %q", nodeGroupName), 600, 1*time.Second).
 		RunContext(ctx, func() error {
 			var err error
 			ng, err = GetNodeGroupDirect(ctx, kubeCl, nodeGroupName)
@@ -218,7 +218,7 @@ func GetNodeGroups(ctx context.Context, kubeCl *client.KubernetesClient) ([]unst
 }
 
 func UpdateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, ng *unstructured.Unstructured) error {
-	err := retry.NewLoop(fmt.Sprintf("Update node template in NodeGroup %q", nodeGroupName), 45, 15*time.Second).
+	err := retry.NewLoop(fmt.Sprintf("Update node template in NodeGroup %q", nodeGroupName), 600, 1*time.Second).
 		BreakIf(errors.IsConflict).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.Dynamic().
@@ -236,7 +236,10 @@ func UpdateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 }
 
 func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for Node %s to become Ready", nodeName), 100, 20*time.Second).
+	// Poll every 1s: kubelet flips Node.Status.Ready in one tick once CNI signals
+	// itself initialised, so coarse 20s polling adds a full polling-cycle of dead
+	// time after the transition. Total budget unchanged (2000 × 1s = ~33 min).
+	return retry.NewLoop(fmt.Sprintf("Waiting for Node %s to become Ready", nodeName), 2000, 1*time.Second).
 		RunContext(ctx, func() error {
 			node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 			if err != nil {
@@ -263,7 +266,7 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 
 func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupsMap map[string]int) error {
 	ngsName := slices.Collect(maps.Keys(nodeGroupsMap))
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeGroups %v to become Ready", ngsName), 100, 20*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Waiting for NodeGroups %v to become Ready", ngsName), 2000, 1*time.Second).
 		RunContext(ctx, func() error {
 			desiredReadyNodes := 0
 			for _, countNodes := range nodeGroupsMap {
@@ -288,26 +291,27 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 				}
 			}
 
-			message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+			var message strings.Builder
+			fmt.Fprintf(&message, "Nodes Ready %d of %d\n", len(readyNodes), desiredReadyNodes)
 			for _, node := range nodes.Items {
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
 				}
-				message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
 
 			if len(readyNodes) >= desiredReadyNodes {
-				log.InfoLn(message)
+				log.InfoLn(message.String())
 				return nil
 			}
 
-			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message.String(), "\n"))
 		})
 }
 
 func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient, nodes []string, checker hook.NodeChecker) error {
-	return retry.NewLoop("Waiting for nodes to become Ready", 100, 20*time.Second).
+	return retry.NewLoop("Waiting for nodes to become Ready", 2000, 1*time.Second).
 		RunContext(ctx, func() error {
 			desiredReadyNodes := len(nodes)
 			var nodesList corev1.NodeList
@@ -331,7 +335,7 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 								var err error
 								ready, err = checker.IsReady(ctx, node.Name)
 								if err != nil {
-									log.InfoF("While doing check '%s' node %s has error: %v\n", checker.Name(), node.Name, err)
+									log.InfoF("While performing check '%s', node %s returned an error: %v\n", checker.Name(), node.Name, err)
 								} else if !ready {
 									log.InfoF("Node %s is ready but %s is not ready\n", node.Name, checker.Name())
 								}
@@ -345,28 +349,29 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 				}
 			}
 
-			message := fmt.Sprintf("Nodes Ready %v of %v\n", len(readyNodes), desiredReadyNodes)
+			var message strings.Builder
+			fmt.Fprintf(&message, "Nodes Ready %d of %v\n", len(readyNodes), desiredReadyNodes)
 			for _, node := range nodesList.Items {
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
 				}
-				message += fmt.Sprintf("* %s | %s\n", node.Name, condition)
+				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
 
 			if len(readyNodes) >= desiredReadyNodes {
-				log.InfoLn(message)
+				log.InfoLn(message.String())
 				return nil
 			}
 
-			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message.String(), "\n"))
 		})
 }
 
-func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {
-	nodeTemplates := make(map[string]map[string]interface{})
+func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]any, error) {
+	nodeTemplates := make(map[string]map[string]any)
 
-	err := retry.NewLoop("Get NodeGroups node template settings", 10, 5*time.Second).
+	err := retry.NewLoop("Get NodeGroups node template settings", 50, 1*time.Second).
 		RunContext(ctx, func() error {
 			nodeGroups, err := kubeCl.Dynamic().Resource(nodeGroupResource).List(ctx, metav1.ListOptions{})
 			if err != nil {
@@ -374,9 +379,9 @@ func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient)
 			}
 
 			for _, group := range nodeGroups.Items {
-				var nodeTemplate map[string]interface{}
-				if spec, ok := group.Object["spec"].(map[string]interface{}); ok {
-					nodeTemplate, _ = spec["nodeTemplate"].(map[string]interface{})
+				var nodeTemplate map[string]any
+				if spec, ok := group.Object["spec"].(map[string]any); ok {
+					nodeTemplate, _ = spec["nodeTemplate"].(map[string]any)
 					// if we do not set node template in cluster provider configuration
 					// we get nil node template from config,
 					// but k8s always returns empty map (not nil)
@@ -396,7 +401,7 @@ func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient)
 }
 
 func DeleteNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Delete Node %s", nodeName), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Delete Node %s", nodeName), 450, 1*time.Second).
 		RunContext(ctx, func() error {
 			err := kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
 			if errors.IsNotFound(err) {
@@ -408,7 +413,7 @@ func DeleteNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName s
 }
 
 func DeleteNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string) error {
-	return retry.NewLoop(fmt.Sprintf("Delete NodeGroup %s", nodeGroupName), 45, 10*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Delete NodeGroup %s", nodeGroupName), 450, 1*time.Second).
 		RunContext(ctx, func() error {
 			err := kubeCl.Dynamic().Resource(nodeGroupResource).Delete(ctx, nodeGroupName, metav1.DeleteOptions{})
 			if errors.IsNotFound(err) {
@@ -438,7 +443,7 @@ func requestNodeExists(ctx context.Context, kubeCl *client.KubernetesClient, nod
 
 func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, logger log.Logger) (bool, error) {
 	exists := false
-	err := retry.NewLoop(fmt.Sprintf("Checking node exists %s", nodeName), 5, 2*time.Second).
+	err := retry.NewLoop(fmt.Sprintf("Checking node exists %s", nodeName), 10, 1*time.Second).
 		WithLogger(logger).
 		RunContext(ctx, func() error {
 			var err error
@@ -449,7 +454,7 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	return exists, err
 }
 
-var getMasterNodesIPsDefaultOpts = retry.AttemptsWithWaitOpts(5, 5*time.Second)
+var getMasterNodesIPsDefaultOpts = retry.AttemptsWithWaitOpts(25, 1*time.Second)
 
 func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, loopParams retry.Params) ([]NodeIP, error) {
 	selector, err := kubernetes.GetMasterNodeGroupLabelSelector()

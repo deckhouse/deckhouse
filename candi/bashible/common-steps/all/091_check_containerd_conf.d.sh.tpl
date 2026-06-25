@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# bashible: parallel-group=light-labels
+
 set_containerd_config_label() {
   local label_name="$1"
   local conf_dir="$2"

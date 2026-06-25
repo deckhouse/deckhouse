@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -120,45 +119,176 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		Order: schedule.FunctionalOrder,
 	}
 	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
-		var err error
+		reqs := apv.Status.PackageMetadata.Requirements
 
-		// Parse the minimum Kubernetes version constraint (e.g. ">=1.28").
-		var kubernetesConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Kubernetes) > 0 {
-			if kubernetesConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Kubernetes); err != nil {
-				return fmt.Errorf("parse kubernetes requirement: %w", err)
-			}
+		// Parse the minimum Kubernetes version constraint (e.g. ">= 1.28").
+		kubernetesConstraint, err := parsePackageConstraint(reqs.Kubernetes)
+		if err != nil {
+			return fmt.Errorf("parse kubernetes requirement: %w", err)
 		}
 
 		constraints.Kubernetes = kubernetesConstraint
 
-		// Parse the minimum Deckhouse version constraint (e.g. ">=1.60").
-		var deckhouseConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Deckhouse) > 0 {
-			if deckhouseConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Deckhouse); err != nil {
-				return fmt.Errorf("parse deckhouse requirement: %w", err)
-			}
+		// Parse the minimum Deckhouse version constraint (e.g. ">= 1.60").
+		deckhouseConstraint, err := parsePackageConstraint(reqs.Deckhouse)
+		if err != nil {
+			return fmt.Errorf("parse deckhouse requirement: %w", err)
 		}
 
 		constraints.Deckhouse = deckhouseConstraint
 
-		// Parse module dependency constraints. Each module requirement may have an
-		// "!optional" suffix indicating the dependency is not mandatory.
+		// Parse module dependency constraints. Mandatory entries must be present;
+		// conditional entries (formerly the "!optional" suffix) are skippable;
+		// anyOf groups require ≥1 installed member that satisfies its constraint;
+		// noneOf groups require zero installed members that match their constraints.
+		// A name listed in both mandatory and conditional is rejected — silently
+		// letting conditional overwrite mandatory would weaken the requirement
+		// without telling the user.
 		modules := make(map[string]schedule.Dependency)
-		for module, rawConstraint := range apv.Status.PackageMetadata.Requirements.Modules {
-			raw, optional := strings.CutSuffix(rawConstraint, "!optional")
-			constraint, err := semver.NewConstraint(raw)
-			if err != nil {
-				return fmt.Errorf("parse module requirement '%s': %w", module, err)
+		var anyOfGroups []schedule.AnyOfGroup
+		var noneOfGroups []schedule.NoneOfGroup
+		if reqs.Modules != nil {
+			for _, dep := range reqs.Modules.Mandatory {
+				constraint, err := parsePackageDependencyConstraint(dep.Constraint)
+				if err != nil {
+					return fmt.Errorf("parse mandatory module requirement '%s': %w", dep.Name, err)
+				}
+
+				modules[dep.Name] = schedule.Dependency{
+					Constraint: constraint,
+					Optional:   false,
+				}
+			}
+			for _, dep := range reqs.Modules.Conditional {
+				if _, ok := modules[dep.Name]; ok {
+					return fmt.Errorf("parse conditional module requirement '%s': also listed as mandatory", dep.Name)
+				}
+
+				if len(dep.Constraint) == 0 {
+					return fmt.Errorf("parse conditional module requirement '%s': constraint is required", dep.Name)
+				}
+
+				constraint, err := parsePackageDependencyConstraint(dep.Constraint)
+				if err != nil {
+					return fmt.Errorf("parse conditional module requirement '%s': %w", dep.Name, err)
+				}
+
+				modules[dep.Name] = schedule.Dependency{
+					Constraint: constraint,
+					Optional:   true,
+				}
 			}
 
-			modules[module] = schedule.Dependency{
-				Constraint: constraint,
-				Optional:   optional,
+			anyOfGroups = make([]schedule.AnyOfGroup, 0, len(reqs.Modules.AnyOf))
+			seenAnyOfNames := make(map[string]struct{}, len(reqs.Modules.AnyOf))
+			for i, group := range reqs.Modules.AnyOf {
+				if len(group.Name) == 0 {
+					return fmt.Errorf("parse anyOf group [%d]: name is required", i)
+				}
+
+				if _, dup := seenAnyOfNames[group.Name]; dup {
+					return fmt.Errorf("parse anyOf group '%s': duplicate group name", group.Name)
+				}
+
+				seenAnyOfNames[group.Name] = struct{}{}
+
+				if len(group.Modules) == 0 {
+					return fmt.Errorf("parse anyOf group '%s': at least one member is required", group.Name)
+				}
+
+				members := make(map[string]*semver.Constraints, len(group.Modules))
+				for _, m := range group.Modules {
+					if len(m.Name) == 0 {
+						return fmt.Errorf("parse anyOf group '%s': member name is required", group.Name)
+					}
+
+					if _, dup := members[m.Name]; dup {
+						return fmt.Errorf("parse anyOf group '%s': duplicate member '%s'", group.Name, m.Name)
+					}
+
+					if existing, clash := modules[m.Name]; clash {
+						bucket := "mandatory"
+						if existing.Optional {
+							bucket = "conditional"
+						}
+
+						return fmt.Errorf("parse anyOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
+					}
+
+					constraint, err := parsePackageDependencyConstraint(m.Constraint)
+					if err != nil {
+						return fmt.Errorf("parse anyOf group '%s' member '%s': %w", group.Name, m.Name, err)
+					}
+
+					members[m.Name] = constraint
+				}
+
+				anyOfGroups = append(anyOfGroups, schedule.AnyOfGroup{
+					Name:    group.Name,
+					Members: members,
+				})
+			}
+
+			noneOfGroups = make([]schedule.NoneOfGroup, 0, len(reqs.Modules.NoneOf))
+			seenNoneOfNames := make(map[string]struct{}, len(reqs.Modules.NoneOf))
+			for i, group := range reqs.Modules.NoneOf {
+				if len(group.Name) == 0 {
+					return fmt.Errorf("parse noneOf group [%d]: name is required", i)
+				}
+
+				if _, dup := seenNoneOfNames[group.Name]; dup {
+					return fmt.Errorf("parse noneOf group '%s': duplicate group name", group.Name)
+				}
+
+				seenNoneOfNames[group.Name] = struct{}{}
+
+				if len(group.Modules) == 0 {
+					return fmt.Errorf("parse noneOf group '%s': at least one member is required", group.Name)
+				}
+
+				members := make(map[string]*semver.Constraints, len(group.Modules))
+				for _, m := range group.Modules {
+					if len(m.Name) == 0 {
+						return fmt.Errorf("parse noneOf group '%s': member name is required", group.Name)
+					}
+
+					if _, dup := members[m.Name]; dup {
+						return fmt.Errorf("parse noneOf group '%s': duplicate member '%s'", group.Name, m.Name)
+					}
+
+					if existing, clash := modules[m.Name]; clash {
+						bucket := "mandatory"
+						if existing.Optional {
+							bucket = "conditional"
+						}
+
+						return fmt.Errorf("parse noneOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
+					}
+
+					for _, ag := range anyOfGroups {
+						if _, clash := ag.Members[m.Name]; clash {
+							return fmt.Errorf("parse noneOf group '%s' member '%s': also listed in anyOf group '%s'", group.Name, m.Name, ag.Name)
+						}
+					}
+
+					constraint, err := parsePackageDependencyConstraint(m.Constraint)
+					if err != nil {
+						return fmt.Errorf("parse noneOf group '%s' member '%s': %w", group.Name, m.Name, err)
+					}
+
+					members[m.Name] = constraint
+				}
+
+				noneOfGroups = append(noneOfGroups, schedule.NoneOfGroup{
+					Name:    group.Name,
+					Members: members,
+				})
 			}
 		}
 
 		constraints.Dependencies = modules
+		constraints.AnyOf = anyOfGroups
+		constraints.NoneOf = noneOfGroups
 	}
 
 	// Delegate to the manager which checks the parsed constraints against the
@@ -196,4 +326,24 @@ func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app *v1alpha1.
 
 	values := addonutils.Values{app.Spec.PackageName: app.Spec.Settings.GetMap()}
 	return storage.ValidateConfigValues(app.Spec.PackageName, values)
+}
+
+// parsePackageConstraint parses the optional semver expression on a PackageConstraint,
+// returning a nil *semver.Constraints when the wrapper is nil or its constraint is empty.
+func parsePackageConstraint(c *v1alpha1.VersionConstraint) (*semver.Constraints, error) {
+	if c == nil {
+		return nil, nil
+	}
+
+	return parsePackageDependencyConstraint(c.Constraint)
+}
+
+// parsePackageDependencyConstraint parses a raw semver expression, treating an empty
+// string as "no constraint" rather than an error.
+func parsePackageDependencyConstraint(raw string) (*semver.Constraints, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	return semver.NewConstraint(raw)
 }

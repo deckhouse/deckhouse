@@ -90,6 +90,7 @@ func NewTmpCleaner(params ClearTmpParams) TmpCleaner {
 
 	suffixesForSkip := []string{
 		".log",
+		".jsonl", // OpenTelemetry trace files written by pkg/telemetry/exporters.go
 	}
 
 	if !params.RemoveTombStone {
@@ -306,6 +307,6 @@ func remove(fullPath string, logger log.Logger, msg string) {
 	logger.LogDebugF("%s: '%s'\n", msg, fullPath)
 	err := os.Remove(fullPath)
 	if err != nil && !os.IsNotExist(err) {
-		logger.LogInfoF("%s % did not success'%s': %v\n", cleanupErrorPrefix, msg, fullPath, err)
+		logger.LogInfoF("%s %s did not success'%s': %v\n", cleanupErrorPrefix, msg, fullPath, err)
 	}
 }

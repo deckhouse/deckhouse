@@ -17,8 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -30,22 +33,28 @@ func main() {
 	handler := proxy.New()
 
 	rootCmd := &cobra.Command{
-		Use:   "basic-auth-proxy",
-		Short: "Basic auth proxy for Kubernetes API Server",
-		Long:  `Basic auth proxy for Kubernetes API Server`,
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("--------------------------------")
-			fmt.Println("[ Starting Basic auth proxy ]")
-			fmt.Println("--------------------------------")
-			handler.Run()
+		Use:           "basic-auth-proxy",
+		Short:         "Basic auth proxy for Kubernetes API Server",
+		Args:          cobra.NoArgs,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			out := cmd.OutOrStdout()
+			fmt.Fprintln(out, "--------------------------------")
+			fmt.Fprintln(out, "[ Starting Basic auth proxy ]")
+			fmt.Fprintln(out, "--------------------------------")
+
+			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			return handler.Run(ctx)
 		},
 	}
 
 	rootCmd.PersistentFlags().StringVar(&handler.ListenAddress, "listen", ":7332", "listen address and port")
 	rootCmd.PersistentFlags().StringVar(&handler.CertPath, "cert-path", "/some/cert/path", "directory with client.crt and client.key files")
 	rootCmd.PersistentFlags().StringVar(&handler.KubernetesAPIServerURL, "api-server-url", "https://kubernetes.default", "Kubernetes api server URL")
-	rootCmd.PersistentFlags().DurationVar(&handler.AuthCacheTTL, "auth-cache-ttl", 10*time.Second, "Crowd auth cache TTL")
-	rootCmd.PersistentFlags().DurationVar(&handler.GroupsCacheTTL, "groups-cache-ttl", 2*time.Minute, "Crowd groups cache TTL")
+	rootCmd.PersistentFlags().DurationVar(&handler.AuthCacheTTL, "auth-cache-ttl", 10*time.Second, "Authentication cache TTL (applies to negative results)")
+	rootCmd.PersistentFlags().DurationVar(&handler.GroupsCacheTTL, "groups-cache-ttl", 2*time.Minute, "Groups cache TTL (applies to successful authentication results)")
 
 	rootCmd.PersistentFlags().StringVar(&handler.CrowdBaseURL, "crowd-base-url", "", "URL of Atlassian Crowd")
 	rootCmd.PersistentFlags().StringVar(&handler.CrowdApplicationLogin, "crowd-application-login", "", "login of Atlassian Crowd application")
@@ -66,8 +75,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&handler.LDAPClientSecret, "ldap-client-secret", "", "clientSecret of LDAP OIDC application")
 	rootCmd.PersistentFlags().StringArrayVar(&handler.LDAPScopes, "ldap-scope", nil, "Scopes passed from LDAP OIDC provider settings")
 
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Printf("starting basic auth proxy error: %s", err)
+	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
+		fmt.Fprintf(rootCmd.ErrOrStderr(), "basic-auth-proxy: %v\n", err)
 		os.Exit(1)
 	}
 }

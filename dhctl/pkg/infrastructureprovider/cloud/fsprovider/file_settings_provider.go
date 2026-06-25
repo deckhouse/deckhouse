@@ -22,7 +22,6 @@ import (
 	"strings"
 	"sync"
 
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -69,7 +68,7 @@ func loadOrGetStore(logger log.Logger, infraVersionsFile string) (settingsStore,
 
 	fileToSettingsStore[infraVersionsFile] = store
 
-	logger.LogDebugF("Providers settings store for terraform versions file %s loaded from file and add to cache\n", infraVersionsFile)
+	logger.LogDebugF("Providers settings store for terraform versions file %s loaded from file and added to cache\n", infraVersionsFile)
 
 	return store, nil
 }
@@ -121,18 +120,18 @@ func simpleFromMap(s any, terraformVersion, openTofuVersion string) (*settings.S
 	}
 
 	if set.UseOpenTofu() {
-		set.InfrastructureVersionVal = ptr.To(openTofuVersion)
+		set.InfrastructureVersionVal = new(openTofuVersion)
 	} else {
-		set.InfrastructureVersionVal = ptr.To(terraformVersion)
+		set.InfrastructureVersionVal = new(terraformVersion)
 	}
 
-	set.CloudNameVal = ptr.To(strings.ToLower(*set.CloudNameVal))
+	set.CloudNameVal = new(strings.ToLower(*set.CloudNameVal))
 
 	return &set, nil
 }
 
 func loadTerraformVersionFileSettings(filename string, logger log.Logger) (settingsStore, error) {
-	infrastructureProviders := make(map[string]interface{})
+	infrastructureProviders := make(map[string]any)
 
 	file, err := os.ReadFile(filename)
 	if err != nil {
@@ -181,7 +180,7 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 
 	for name, rawSettings := range infrastructureProviders {
 		if _, ok := noneProviderKeys[name]; ok {
-			logger.LogDebugF("Found not provider name key %s\n", name)
+			logger.LogDebugF("Found non-provider-name key %s\n", name)
 			continue
 		}
 

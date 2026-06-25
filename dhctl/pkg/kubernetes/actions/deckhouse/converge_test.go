@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -94,7 +93,7 @@ func TestStaticClusterClusterManifestConverge(t *testing.T) {
 	require.NotEqual(t, kubeVersionBefore, kubeVersionAfter)
 
 	paramsBefore := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -103,7 +102,7 @@ internalNetworkCIDRs:
 `),
 	}
 	paramsAfter := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionAfter)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionAfter),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -181,11 +180,11 @@ func TestCloudClusterManifestConverge(t *testing.T) {
 	require.NotEqual(t, kubeVersionBefore, kubeVersionAfter)
 
 	paramsBefore := commander.CommanderModeParams{
-		ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+		ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 		ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 	}
 	paramsAfter := commander.CommanderModeParams{
-		ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionAfter)),
+		ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionAfter),
 		ProviderClusterConfigurationData: []byte(`
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
@@ -281,10 +280,10 @@ func TestErrorConvergeManifests(t *testing.T) {
 
 	staticClusterConvergeParams := testConvergeManifestsParams{
 		commanderStateBefore: commander.CommanderModeParams{
-			ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+			ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		},
 		commanderStateAfter: commander.CommanderModeParams{
-			ClusterConfigurationData: []byte(fmt.Sprintf(clusterConfigurationStaticTmp, kubeVersionBefore)),
+			ClusterConfigurationData: fmt.Appendf(nil, clusterConfigurationStaticTmp, kubeVersionBefore),
 		},
 	}
 
@@ -295,11 +294,11 @@ func TestErrorConvergeManifests(t *testing.T) {
 
 	yandexClusterConvergeParams := testConvergeManifestsParams{
 		commanderStateBefore: commander.CommanderModeParams{
-			ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+			ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 			ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 		},
 		commanderStateAfter: commander.CommanderModeParams{
-			ClusterConfigurationData:         []byte(fmt.Sprintf(clusterConfigurationYandexTmp, kubeVersionBefore)),
+			ClusterConfigurationData:         fmt.Appendf(nil, clusterConfigurationYandexTmp, kubeVersionBefore),
 			ProviderClusterConfigurationData: []byte(clusterConfigurationYandexBeforeValid),
 		},
 	}
@@ -524,15 +523,11 @@ func testCreateConvergeManifestTest(t *testing.T, p testConvergeManifestsParams)
 
 func testCreateMetaConfigForConvergeManifests(t *testing.T, ctx context.Context, params commander.CommanderModeParams, clusterUUID string) *config.MetaConfig {
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		configData,
 		config.DummyPreparatorProvider(),
-		dc,
+		nil,
 	)
 
 	require.NoError(t, err)

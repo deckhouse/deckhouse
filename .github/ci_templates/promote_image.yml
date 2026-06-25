@@ -8,7 +8,6 @@
     {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
     {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
     {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
-{!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
@@ -26,7 +25,7 @@
     set -euo pipefail
 
     REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
-    IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+    IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
     STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
     PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
@@ -61,7 +60,7 @@
     # CE/EE/FE -> ce/ee/fe
     REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
 
-    IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+    IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
     STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
     PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"

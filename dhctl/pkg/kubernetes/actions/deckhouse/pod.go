@@ -62,8 +62,7 @@ func GetPod(ctx context.Context, kubeCl *client.KubernetesClient, leaderElection
 	}
 
 	if len(pods.Items) == 1 {
-		pod := pods.Items[0]
-		return &pod, nil
+		return new(pods.Items[0]), nil
 	}
 
 	return getLeaderElectionLeaseHolderPod(ctx, kubeCl, leaderElectionLeaseName, pods)
@@ -103,8 +102,7 @@ func getLeaderElectionLeaseHolderPod(
 
 	for _, pod := range pods.Items {
 		if pod.Name == strings.Split(*lease.Spec.HolderIdentity, ".")[0] {
-			podCopy := pod
-			return &podCopy, nil
+			return new(pod), nil
 		}
 	}
 

@@ -38,7 +38,7 @@ func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCo
 	title := fmt.Sprintf("Node %s readiness check", nodeName)
 	var lastErr error
 
-	err := retry.NewLoop(title, 30, 10*time.Second).RunContext(ctx, func() error {
+	err := retry.NewLoop(title, 300, 1*time.Second).RunContext(ctx, func() error {
 		for _, check := range checkers {
 			err := log.ProcessCtx(ctx, sourceCommandName, check.Name(), func(ctx context.Context) error {
 				isReady, err := check.IsReady(ctx, nodeName)
@@ -61,7 +61,7 @@ func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCo
 		return nil
 	})
 	if err != nil {
-		return false, fmt.Errorf("Node %s is not ready. last error: %v/%v", nodeName, err, lastErr)
+		return false, fmt.Errorf("Node %s is not ready. Last error: %v/%v", nodeName, err, lastErr)
 	}
 
 	return true, nil

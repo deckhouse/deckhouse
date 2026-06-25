@@ -19,9 +19,14 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ettle/strcase"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag/conv"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
 // Storage manages package values with layering, patching, and schema validation.
@@ -68,7 +73,7 @@ func NewStorage(name string, staticValues addonutils.Values, settingsBytes, valu
 	}
 
 	s := &Storage{
-		name:          addonutils.ModuleNameToValuesKey(name),
+		name:          strcase.ToCamel(name),
 		staticValues:  staticValues,
 		schemaStorage: schemaStorage,
 	}
@@ -241,14 +246,25 @@ func (s *Storage) openapiDefaultsTransformer(schemaType schema.Type) transformer
 }
 
 // validateValues validates values against the values OpenAPI schema.
+// Previously merged result values are passed as the old state so that
+// x-deckhouse-validations transition rules (rules referencing oldSelf) can
+// catch attempts to mutate immutable fields via values patches.
 func (s *Storage) validateValues(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
-	return s.schemaStorage.Validate(schema.TypeValues, s.name, validatableValues)
+	var oldValidatable addonutils.Values
+	if s.resultValues != nil {
+		oldValidatable = addonutils.Values{s.name: s.resultValues}
+	}
+
+	return s.schemaStorage.ValidateTransition(schema.TypeValues, s.name, validatableValues, oldValidatable)
 }
 
 // validateConfigValues validates values against the config OpenAPI schema.
 // Returns error if values are provided but no config schema is defined.
+// Previously stored user settings are passed as the old state so that
+// x-deckhouse-validations transition rules (rules referencing oldSelf) can
+// implement immutability and other update-time invariants on ModuleConfig.
 func (s *Storage) validateSettings(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
@@ -256,5 +272,71 @@ func (s *Storage) validateSettings(values addonutils.Values) error {
 		return errors.New("config schema is not defined but config values were provided")
 	}
 
-	return s.schemaStorage.Validate(schema.TypeSettings, s.name, validatableValues)
+	var oldValidatable addonutils.Values
+	if s.settings != nil {
+		oldValidatable = addonutils.Values{s.name: s.settings}
+	}
+
+	return s.schemaStorage.ValidateTransition(schema.TypeSettings, s.name, validatableValues, oldValidatable)
+}
+
+// InjectRegistryValue sets the registry value in the static values
+// TODO(ipaqsa): get rid of it after migration to module v2
+func (s *Storage) InjectRegistryValue(registry registry.Remote) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// inject spec to values schema
+	s.injectRegistrySpec(schema.TypeSettings)
+	// inject spec to helm schema
+	s.injectRegistrySpec(schema.TypeHelm)
+
+	if s.staticValues == nil {
+		s.staticValues = addonutils.Values{}
+	}
+
+	s.staticValues["registry"] = &structpb.Struct{
+		Fields: map[string]*structpb.Value{
+			"base":      {Kind: &structpb.Value_StringValue{StringValue: registry.Repository}},
+			"dockercfg": {Kind: &structpb.Value_StringValue{StringValue: registry.DockerConfig}},
+			"scheme":    {Kind: &structpb.Value_StringValue{StringValue: registry.Scheme}},
+			"ca":        {Kind: &structpb.Value_StringValue{StringValue: registry.CA}},
+		},
+	}
+
+	_ = s.calculateResultValues()
+}
+
+// injectRegistrySpec mutates the module schema to add a strict-typed "registry" field
+func (s *Storage) injectRegistrySpec(schemaType schema.Type) {
+	scheme := s.schemaStorage.GetSchema(schemaType)
+	if scheme == nil {
+		return
+	}
+
+	if len(scheme.Properties) == 0 {
+		scheme.Properties = make(map[string]spec.Schema)
+	}
+
+	scheme.Properties["registry"] = spec.Schema{
+		SchemaProps: spec.SchemaProps{
+			Type:                 spec.StringOrArray{"object"},
+			AdditionalProperties: &spec.SchemaOrBool{Allows: false},
+			Properties: map[string]spec.Schema{
+				"base": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}, MinLength: conv.Pointer[int64](1)},
+				},
+				"dockercfg": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+				"scheme": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+				"ca": {
+					SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"string"}},
+				},
+			},
+			Required: []string{"base", "scheme"},
+		},
+	}
 }

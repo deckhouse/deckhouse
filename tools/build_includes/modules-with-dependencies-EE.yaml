@@ -143,6 +143,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/039-registry-packages-proxy/hooks
+  to: /deckhouse/modules/039-registry-packages-proxy/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/040-control-plane-manager/hooks
   to: /deckhouse/modules/040-control-plane-manager/hooks
   excludePaths:
@@ -295,22 +303,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/402-ingress-nginx/hooks
-  to: /deckhouse/modules/402-ingress-nginx/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/402-ingress-nginx/requirements
-  to: /deckhouse/modules/402-ingress-nginx/requirements
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/460-log-shipper/hooks
   to: /deckhouse/modules/460-log-shipper/hooks
   excludePaths:
@@ -409,14 +401,6 @@
         - '**/*'
 - add: /ee/se/modules/380-metallb/hooks
   to: /deckhouse/modules/380-metallb/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/se/modules/380-metallb/requirements
-  to: /deckhouse/modules/380-metallb/requirements
   excludePaths:
     - '**/*_test.go'
     - '**/*.sh'

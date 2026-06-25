@@ -24,7 +24,6 @@ const providerID = "vcd"
 const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
 const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
 const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
-const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 // fake *-crd modules are required for backward compatibility with lib_helm library
 // TODO: remove fake crd modules
@@ -40,7 +39,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -51,7 +50,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.31.0
+    kubernetesVersion: 1.32.0
     clusterUUID: cluster
 `
 
@@ -64,13 +63,10 @@ const moduleValuesA = `
       providerDiscoveryData:
         kind: VCDCloudProviderDiscoveryData
         apiVersion: deckhouse.io/v1
-        zones:
-        - default
-      discoveryData:
-        kind: VCDCloudProviderDiscoveryData
-        apiVersion: deckhouse.io/v1
         vcdInstallationVersion: "10.4.2"
         vcdAPIVersion: "37.2"
+        zones:
+        - default
       providerClusterConfiguration:
         apiVersion: deckhouse.io/v1
         kind: VCDClusterConfiguration
@@ -126,15 +122,12 @@ const moduleValuesB = `
       providerDiscoveryData:
         kind: VCDCloudProviderDiscoveryData
         apiVersion: deckhouse.io/v1
-        zones:
-        - default
-      discoveryData:
-        kind: VCDCloudProviderDiscoveryData
-        apiVersion: deckhouse.io/v1
         vcdInstallationVersion: "10.4.2"
         vcdAPIVersion: "37.2"
         loadBalancer:
           enabled: false
+        zones:
+        - default
       providerClusterConfiguration:
         apiVersion: deckhouse.io/v1
         kind: VCDClusterConfiguration
@@ -168,15 +161,12 @@ const moduleValuesC = `
       providerDiscoveryData:
         kind: VCDCloudProviderDiscoveryData
         apiVersion: deckhouse.io/v1
-        zones:
-        - default
-      discoveryData:
-        kind: VCDCloudProviderDiscoveryData
-        apiVersion: deckhouse.io/v1
         vcdInstallationVersion: "10.4.2"
         vcdAPIVersion: "37.2"
         loadBalancer:
           enabled: true
+        zones:
+        - default
       providerClusterConfiguration:
         apiVersion: deckhouse.io/v1
         kind: VCDClusterConfiguration
@@ -265,7 +255,6 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 			Expect(providerSpecificRegistrationSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("v1rtual-app"))))
 			Expect(providerSpecificRegistrationSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("rsa-aaaa"))))
 
-
 			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
 			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeFalse())
 
@@ -273,7 +262,7 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeTrue())
 			providerSpecificBashibleBootstrapSecretData := providerSpecificBashibleBootstrapSecret.Field("data").Map()
 			Expect(len(providerSpecificBashibleBootstrapSecretData) >= 1).To(BeTrue())
-			Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0 ).To(BeTrue())
+			Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0).To(BeTrue())
 
 			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
 			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
@@ -414,7 +403,7 @@ spec:
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller
 - --v=4`))
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.volumeMounts").String()).To(MatchYAML(`
 - mountPath: /etc/cloud
@@ -493,12 +482,6 @@ spec:
 - port: 443
   protocol: TCP
   targetPort: webhook-server`))
-
-			capcdMutatingWebhook := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "capcd-mutating-webhook")
-			Expect(capcdMutatingWebhook.Exists()).To(BeTrue())
-
-			capcdValidatingWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "capcd-validating-webhook")
-			Expect(capcdValidatingWebhook.Exists()).To(BeTrue())
 
 			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "csi-controller")
 			Expect(csiControllerDeployment.Exists()).To(BeTrue())
@@ -684,7 +667,7 @@ node-role.deckhouse.io/control-plane: ""`))
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller
 - --v=4
 `))
 		})
@@ -711,7 +694,7 @@ node-role.deckhouse.io/control-plane: ""`))
 - --cloud-provider=vmware-cloud-director
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers=cloud-node,cloud-node-lifecycle,service
+- --controllers=cloud-node-controller,cloud-node-lifecycle-controller,service-lb-controller
 - --v=4
 `))
 		})
@@ -950,6 +933,49 @@ node-role.deckhouse.io/control-plane: ""`))
 			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
 			Expect(icmDeployment.Exists()).To(BeTrue())
 			Expect(icmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+		})
+	})
+
+	Context("VCD :: infra-controller-manager HA pod anti-affinity", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesA)
+			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", true)
+			f.HelmRender()
+		})
+
+		It("must set required pod anti-affinity on HA clusters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
+			Expect(icmDeployment.Exists()).To(BeTrue())
+			Expect(icmDeployment.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
+podAntiAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+  - labelSelector:
+      matchLabels:
+        app: infra-controller-manager
+    topologyKey: kubernetes.io/hostname
+`))
+		})
+	})
+
+	Context("VCD :: infra-controller-manager non-HA affinity", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesA)
+			f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", false)
+			f.HelmRender()
+		})
+
+		It("must not set pod anti-affinity on single-master clusters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
+			Expect(icmDeployment.Exists()).To(BeTrue())
+			Expect(icmDeployment.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 		})
 	})
 })

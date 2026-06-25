@@ -31,4 +31,6 @@ const (
 	InfrastructureStateBackupLabelKey = "dhctl.deckhouse.io/state-backup"
 
 	ConfigsNS = "kube-system"
+
+	SSHEnvsPrefix = "DHCTL_CLI_"
 )

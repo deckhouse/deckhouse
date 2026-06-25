@@ -3,7 +3,9 @@ layout: default
 ---
 <!--#include virtual="/includes/banner.html" -->
 <div class="container">
-  {%- include nav-breadcrumbs.html %}
+  {%- unless page.breadcrumbs == false %}
+    {%- include nav-breadcrumbs.html %}
+  {%- endunless %}
   <div class="layout-sidebar">
     {%- unless page.toc == false %}
     {%- include toc.html %}

@@ -1,0 +1,247 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ca-safe-to-evict-yandex
+spec:
+  description: |
+    Verifies that cluster-autoscaler correctly handles the safe-to-evict annotation
+    on a Yandex Cloud (MCM) cluster. Scales up a node from zero, creates a standalone
+    pod with safe-to-evict: "true", removes the workload, and asserts that scale-down
+    proceeds (the standalone pod does not block it).
+  concurrent: false
+  steps:
+    - name: assert-cluster-autoscaler-exists
+      try:
+        - description: Check cluster-autoscaler deployment has ready replicas
+          assert:
+            file: ../common/asserts/assert-ca-exists.yaml
+      cleanup:
+        - description: Wait until all test nodes are removed (runs last in cleanup chain)
+          script:
+            timeout: 15m
+            content: |
+              set -eu
+              for i in $(seq 1 90); do
+                NODES=$(kubectl get nodes -l app=e2e-autoscaler-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$NODES" -eq 0 ]; then
+                  exit 0
+                fi
+                sleep 10
+              done
+              echo "Timed out waiting for test nodes removal"
+              exit 1
+            check:
+              ($error == null): true
+
+    - name: assert-ca-uses-mcm-provider
+      try:
+        - description: Check CA container args contain 'mcm'
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              CA_ARGS=$(kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager \
+                -o jsonpath='{.spec.template.spec.containers[0].args}')
+              echo "$CA_ARGS" | grep -q "mcm"
+            check:
+              ($error == null): true
+
+    - name: assert-yandexinstanceclass-worker-exists
+      try:
+        - description: Assert YandexInstanceClass worker resource exists
+          assert:
+            file: ../common/asserts/assert-yandex-instanceclass.yaml
+
+    - name: cleanup-leftover-resources
+      try:
+        - description: Delete leftover NodeGroup e2e-safe-to-evict
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-safe-to-evict
+        - description: Delete leftover YandexInstanceClass e2e-worker-small
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: YandexInstanceClass
+              name: e2e-worker-small
+        - description: Delete leftover blocking pod
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: v1
+              kind: Pod
+              name: e2e-blocking-pod
+
+    - name: restart-cluster-autoscaler
+      try:
+        - description: Rollout restart and wait for readiness
+          script:
+            timeout: 180s
+            content: |
+              set -eu
+              kubectl rollout restart deployment cluster-autoscaler -n d8-cloud-instance-manager
+              kubectl rollout status deployment cluster-autoscaler -n d8-cloud-instance-manager --timeout=120s
+            check:
+              ($error == null): true
+
+    - name: wait-for-ca-initialization
+      try:
+        - description: Sleep 15s for CA initialization
+          sleep:
+            duration: 15s
+
+    - name: create-e2e-worker-small-instanceclass
+      try:
+        - description: Clone YandexInstanceClass 'worker' as 'e2e-worker-small' with reduced specs
+          script:
+            timeout: 60s
+            content: |
+              set -eu
+              kubectl get yandexinstanceclass worker -o json | \
+                jq '{
+                  apiVersion: .apiVersion,
+                  kind: .kind,
+                  metadata: { name: "e2e-worker-small" },
+                  spec: (.spec | .cores = 2 | .memory = 4096 | .diskSizeGB = 30)
+                }' | kubectl apply -f -
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete YandexInstanceClass e2e-worker-small
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: YandexInstanceClass
+              name: e2e-worker-small
+
+    - name: apply-nodegroup
+      try:
+        - description: Apply NodeGroup e2e-safe-to-evict manifest
+          apply:
+            file: ../common/manifests/nodegroup-safe-to-evict-yandex.yaml
+      cleanup:
+        - description: Delete NodeGroup e2e-safe-to-evict
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-safe-to-evict
+
+    - name: apply-deployment
+      try:
+        - description: Apply Deployment to trigger scale-up
+          apply:
+            file: ../common/manifests/deployment-safe-to-evict.yaml
+      cleanup:
+        - description: Delete e2e-nginx Deployment
+          delete:
+            ref:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: e2e-nginx
+
+    - name: wait-for-deckhouse-processing
+      try:
+        - description: Sleep 30s for Deckhouse reconciliation
+          sleep:
+            duration: 30s
+
+    - name: assert-pods-running
+      try:
+        - description: Assert Deployment has 1 ready replica (node scaled up)
+          assert:
+            file: ../common/asserts/assert-deployment-ready-1.yaml
+      catch:
+        - description: Collect test namespace events on failure
+          events: {}
+        - description: Collect d8-cloud-instance-manager events on failure
+          events:
+            namespace: d8-cloud-instance-manager
+        - description: Collect CA logs on failure
+          podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=cluster-autoscaler
+
+    - name: apply-blocking-pod
+      try:
+        - description: Create standalone pod with safe-to-evict annotation
+          apply:
+            file: ../common/manifests/pod-blocking-safe-to-evict.yaml
+      cleanup:
+        - description: Delete blocking pod
+          script:
+            timeout: 30s
+            content: |
+              kubectl delete pod -n "$NAMESPACE" e2e-blocking-pod --ignore-not-found
+            check:
+              ($error == null): true
+
+    - name: wait-for-blocking-pod-running
+      try:
+        - description: Wait for blocking pod to be scheduled and running
+          script:
+            timeout: 120s
+            content: |
+              set -eu
+              for i in $(seq 1 24); do
+                PHASE=$(kubectl get pod -n "$NAMESPACE" e2e-blocking-pod \
+                  -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+                if [ "$PHASE" = "Running" ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "Timed out waiting for blocking pod to be Running"
+              exit 1
+            check:
+              ($error == null): true
+
+    - name: delete-deployment-trigger-scale-down
+      try:
+        - description: Delete the Deployment to make the node underutilized
+          delete:
+            ref:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: e2e-nginx
+
+    - name: assert-scale-down-completes
+      try:
+        - description: Wait for node to be removed (scale-down despite standalone pod)
+          script:
+            timeout: 1200s
+            content: |
+              set -eu
+              for i in $(seq 1 120); do
+                NODES=$(kubectl get nodes -l app=e2e-autoscaler-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$NODES" -eq 0 ]; then
+                  echo "Scale-down completed: node removed despite standalone pod presence"
+                  exit 0
+                fi
+                sleep 10
+              done
+              echo "Timed out waiting for scale-down (node still present after 20 min)"
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Collect CA logs on failure
+          podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=cluster-autoscaler
+        - description: Show remaining nodes
+          script:
+            timeout: 30s
+            content: |
+              kubectl get nodes -l app=e2e-autoscaler-test -o wide 2>/dev/null || true
+              kubectl get pods -n "$NAMESPACE" -o wide 2>/dev/null || true
+
+    - name: assert-no-test-nodes
+      try:
+        - description: Assert no nodes exist with label app=e2e-autoscaler-test
+          error:
+            file: ../common/asserts/assert-no-test-nodes.yaml

@@ -26,15 +26,23 @@ var skipDocRe = regexp.MustCompile(`doc-ru-.+\.y[a]?ml$|_RU\.md$|\.ru\.md$|_ru\.
 var skipI18NRe = regexp.MustCompile(`/i18n/`)
 var skipSelfRe = regexp.MustCompile(`no_cyrillic(_test)?.go$`)
 
+var skipFiles = map[string]struct{}{
+	"modules/040-control-plane-manager/hooks/audit_policy.go":    {}, // The code contains a description in Russian and English in the body of each object. This is necessary for autodoc.
+	"tools/audit_policy/templates/short_block_ru.gotmpl":         {}, // Gotemplate for autodoc, contain russian text
+	"tools/audit_policy/templates/detailed_rules_page_ru.gotmpl": {}, // Gotemplate for autodoc, contain russian text
+}
+
 func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (exitCode int) {
 	fmt.Printf("Run 'no cyrillic' validation ...\n")
 
 	exitCode = 0
+	var titleErr, descErr string
 	if title != "" {
 		fmt.Printf("Check title ... ")
 		msg, hasCyr := checkCyrillicLetters(title)
 		if hasCyr {
-			fmt.Printf("ERROR\n%s\n", msg)
+			fmt.Printf("ERROR\n")
+			titleErr = msg
 			exitCode = 1
 		} else {
 			fmt.Printf("OK\n")
@@ -44,11 +52,19 @@ func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (
 		fmt.Printf("Check description ... ")
 		msg, hasCyr := checkCyrillicLetters(description)
 		if hasCyr {
-			fmt.Printf("ERROR\n%s\n", msg)
+			fmt.Printf("ERROR\n")
+			descErr = msg
 			exitCode = 1
 		} else {
 			fmt.Printf("OK\n")
 		}
+	}
+
+	if titleErr != "" {
+		fmt.Printf("\nTitle errors:\n%s\n", titleErr)
+	}
+	if descErr != "" {
+		fmt.Printf("\nDescription errors:\n%s\n", descErr)
 	}
 
 	fmt.Printf("Check new and updated lines ... ")
@@ -83,6 +99,11 @@ func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (
 
 			if skipSelfRe.MatchString(fileName) {
 				msgs.Add(NewSkip(fileName, "self"))
+				continue
+			}
+
+			if _, ok := skipFiles[fileName]; ok {
+				msgs.Add(NewSkip(fileName, "excluded file"))
 				continue
 			}
 

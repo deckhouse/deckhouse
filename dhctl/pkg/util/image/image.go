@@ -108,7 +108,7 @@ func RegistryConfigFromDockerConfig(dc *dockerConfig, scheme, registry string) (
 
 	_, ok := dc.Auths[baseRegistry]
 	if !ok {
-		return nil, fmt.Errorf("docker config doesn't contains %s registry credentials", registry)
+		return nil, fmt.Errorf("docker config doesn't contain %s registry credentials", registry)
 	}
 	rc := &RegistryConfig{
 		scheme:   scheme,
@@ -215,7 +215,7 @@ func getHash(digest, dstPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("cannot open file %s: %w", path, err)
 	}
-	var hashs map[string]interface{}
+	var hashs map[string]any
 	err = json.Unmarshal(data, &hashs)
 	if err != nil {
 		return "", fmt.Errorf("unmarshalling json: %w", err)
@@ -263,7 +263,7 @@ func saveHash(digest, hash, dstPath string) error {
 	return nil
 }
 
-func pullImage(ref name.Reference, opts []remote.Option, digest, dstPath, cacheDir string) (v1.Image, error) {
+func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, digest, dstPath, cacheDir string, showProgress bool) (v1.Image, error) {
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
 	}
@@ -274,7 +274,7 @@ func pullImage(ref name.Reference, opts []remote.Option, digest, dstPath, cacheD
 	}
 	cached := cache.Image(img, layersCache)
 
-	checksum, err := saveImageAsTarGz(ref.String(), filepath.Join(dstPath, digest), cached)
+	checksum, err := saveImageAsTarGz(ctx, ref.String(), filepath.Join(dstPath, digest), cached, showProgress)
 	if err != nil {
 		return cached, fmt.Errorf("saving tar.gz: %w", err)
 	}
@@ -302,7 +302,7 @@ func getEstimatedTarSize(img v1.Image) (int64, error) {
 	return total, nil
 }
 
-func saveImageAsTarGz(imageRef string, outPath string, img v1.Image) (string, error) {
+func saveImageAsTarGz(_ context.Context, imageRef string, outPath string, img v1.Image, showProgress bool) (string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return "", fmt.Errorf("parsing image reference %q: %w", imageRef, err)
@@ -310,7 +310,8 @@ func saveImageAsTarGz(imageRef string, outPath string, img v1.Image) (string, er
 
 	var bar *mpb.Bar
 	var p *mpb.Progress
-	if input.IsTerminal() {
+	needToShow := input.IsTerminal() && showProgress
+	if needToShow {
 		total, err := getEstimatedTarSize(img)
 		if err != nil {
 			return "", fmt.Errorf("getting image size %q: %w", imageRef, err)
@@ -335,7 +336,7 @@ func saveImageAsTarGz(imageRef string, outPath string, img v1.Image) (string, er
 	hasher := sha256.New()
 	multiWriter := io.MultiWriter(tmpTar, hasher)
 	proxyWriter := multiWriter
-	if input.IsTerminal() {
+	if needToShow {
 		proxyWriter = bar.ProxyWriter(multiWriter)
 	}
 	if err := tarball.Write(ref, img, proxyWriter); err != nil {
@@ -343,7 +344,7 @@ func saveImageAsTarGz(imageRef string, outPath string, img v1.Image) (string, er
 		return "", fmt.Errorf("writing tarball: %w", err)
 	}
 	tmpTar.Close()
-	if input.IsTerminal() {
+	if needToShow {
 		p.Wait()
 	}
 	checksum := hex.EncodeToString(hasher.Sum(nil))
@@ -370,14 +371,14 @@ func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remot
 	return opts, nil
 }
 
-func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir string, regConfig RegistryConfig) error {
+func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir string, regConfig RegistryConfig, showProgress bool) error {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return fmt.Errorf("parsing image reference %q: %w", imageRef, err)
 	}
 
 	imgName := ref.Identifier()
-	img, err := tryToRestoreLocalImage(destDir, imgName)
+	img, err := tryToRestoreLocalImage(imgName, destDir)
 	if err == nil {
 		return extractImage(img, destDir)
 	}
@@ -394,7 +395,7 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	}
 	log.DebugF("hash: %s\n", desc.Digest.String())
 
-	img, err = pullImage(ref, opts, desc.Digest.String(), destDir, cacheDir)
+	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), destDir, cacheDir, showProgress)
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", imageRef, err)
 	}

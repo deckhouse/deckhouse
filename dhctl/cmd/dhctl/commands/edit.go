@@ -36,7 +36,7 @@ func connectionFlags(parent *kingpin.CmdClause, opts *options.Options) {
 }
 
 func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, secret, dataKey string) *kingpin.CmdClause {
-	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
+	cmd := parent.Command(name, fmt.Sprintf("Edit %s in the Kubernetes cluster.", name))
 	app.DefineEditorConfigFlags(cmd, &opts.Render)
 	app.DefineSanityFlags(cmd, &opts.Global)
 
@@ -60,11 +60,11 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
@@ -79,7 +79,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			name, "kube-system", secret, dataKey, map[string]string{
 				"name": name,
 			},
-			opts.DirConfig(),
+			&opts.Global,
 			operations.EditOptions{
 				Editor:      opts.Render.Editor,
 				TmpDir:      opts.Global.TmpDir,

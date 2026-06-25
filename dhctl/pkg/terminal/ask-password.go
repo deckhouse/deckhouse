@@ -45,10 +45,10 @@ func AskPassword(prompt string) ([]byte, error) {
 	fd := int(os.Stdin.Fd())
 
 	if !terminal.IsTerminal(fd) {
-		return nil, fmt.Errorf("stdin is not a terminal, error reading password")
+		return nil, fmt.Errorf("stdin is not a terminal, cannot read password")
 	}
 
-	log.InfoF(prompt)
+	log.InfoF("%s", prompt)
 	data, err := terminal.ReadPassword(fd)
 	log.InfoLn()
 
@@ -87,7 +87,7 @@ func readPassword(prompt string) ([]byte, error) {
 	if !terminal.IsTerminal(fd) {
 		data, err = io.ReadAll(os.Stdin)
 	} else {
-		log.InfoF(prompt)
+		log.InfoF("%s", prompt)
 		data, err = terminal.ReadPassword(fd)
 	}
 

@@ -1128,6 +1128,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs ul p, .docs ol p {
     font-size: 14px;
+    line-height: 1.5;
 
     @include breakpoints.max-w(s) {
       font-size: 13px;
@@ -1187,7 +1188,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
   border-radius: 6px;
   position: absolute;
   left: -15px;
-  top: 7px;
+  top: 8px;
 
   @include breakpoints.max-w(xs) {
     width: 5px;
@@ -1310,7 +1311,9 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
+  &:not(.tabs__item) {
     padding-bottom: 0;
+  }
 }
 
 .docs .resources ul li .resources__prop_description + p,
@@ -1427,8 +1430,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs:not(.docs--modules) h4,
 .docs:not(.docs--modules) h5,
 .docs:not(.docs--modules) h6 {
+    position: relative;
     margin-bottom: 30px;
     margin-top: 30px;
+    padding-right: 21px;
 
     @include breakpoints.max-w(l) {
         margin-bottom: 20px;
@@ -1438,6 +1443,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     @include breakpoints.max-w(xs) {
       margin-bottom: 15px;
       margin-top: 15px;
+    }
+
+    a.anchorjs-link {
+      position: absolute;
+      bottom: 7px;
     }
 }
 
@@ -1509,7 +1519,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs h3 {
-  width: max-content;
   max-width: 100%;
   font-size: 21px;
   font-weight: 600;
@@ -1659,6 +1668,22 @@ a.comparison-table__module-proprietaryOkmeter::after {
       @include breakpoints.max-w(xl) {
         padding-right: 50px;
       }
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 36px;
+        background-color: #F6F7F8;
+        border-right: 1px solid #C4CAD4;
+        color: #A7B0BE;
+
+        @include breakpoints.max-w(xl) {
+          width: 35px;
+        }
+      }
     }
 }
 
@@ -1684,22 +1709,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
     @include breakpoints.max-w(xs) {
       font-size: 11px;
-    }
-
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 36px;
-        background-color: #F6F7F8;
-        border-right: 1px solid #C4CAD4;
-        color: #A7B0BE;
-
-        @include breakpoints.max-w(xl) {
-          width: 35px;
-        }
     }
 
     &:has(.language-tree) {
@@ -1806,6 +1815,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
         .table__small {
           box-shadow: none;
+        }
+
+        img {
+          max-width: max-content;
         }
     }
 }
@@ -2010,6 +2023,16 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs img {
     max-width: 100%;
+
+    &.image-scheme {
+      @include breakpoints.min-w(m) {
+        max-width: 80%;
+      }
+
+      @include breakpoints.min-w(l) {
+        max-width: 60%;
+      }
+    }
 }
 
 .docs .clickable-header {
@@ -2023,10 +2046,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-weight: normal;
     line-height: 1;
     padding-left: 0.375em;
-
-    &::after {
-      display: inline-block;
-    }
 }
 
 .docs .btn {
@@ -2195,6 +2214,31 @@ ul .resources__prop_name.deprecated {
 }
 
 .pdf-slider {
+  &__small {
+    .pdf-slider__canvas {
+      @include breakpoints.min-w(m) {
+        width: 80% !important;
+        max-width: 80%;
+        height: 100% !important;
+      }
+
+      @include breakpoints.min-w(l) {
+        width: 70% !important;
+        max-width: 70%;
+      }
+    }
+
+    .pdf-slider__nav {
+      @include breakpoints.min-w(m) {
+        max-width: calc(80% + 2px);
+      }
+      
+      @include breakpoints.min-w(l) {
+        max-width: calc(70% + 2px);
+      }
+    }
+  }
+
   &__canvas {
     border: 1px solid rgba(241, 243, 244, .949);
   }

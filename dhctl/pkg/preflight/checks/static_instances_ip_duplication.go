@@ -52,17 +52,17 @@ func (c StaticInstancesIPDuplicationCheck) Run(ctx context.Context) error {
 	instances := make(map[string]string)
 
 	for _, doc := range documents {
-		var result map[string]interface{}
+		var result map[string]any
 		err := yaml.Unmarshal([]byte(doc), &result)
 		if err != nil {
 			return fmt.Errorf("cannot unmarshal YAML: %v", err)
 		}
 
 		if result["kind"] == "StaticInstance" {
-			meta := result["metadata"].(map[string]interface{})
+			meta := result["metadata"].(map[string]any)
 			name := meta["name"].(string)
 
-			spec := result["spec"].(map[string]interface{})
+			spec := result["spec"].(map[string]any)
 			address := spec["address"].(string)
 
 			instName, ok := instances[address]

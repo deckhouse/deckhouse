@@ -23,14 +23,14 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type LocalhostDomainCheck struct {
 	NodeInterface libcon.Interface
-	dc            *directoryconfig.DirectoryConfig
+	globalOptions *options.GlobalOptions
 }
 
 const LocalhostDomainCheckName preflight.CheckName = "resolve-localhost"
@@ -48,7 +48,7 @@ func (LocalhostDomainCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c LocalhostDomainCheck) Run(ctx context.Context) error {
-	file, err := template.RenderAndSavePreflightCheckLocalhostScript(c.dc)
+	file, err := template.RenderAndSavePreflightCheckLocalhostScript(c.globalOptions)
 	if err != nil {
 		return err
 	}
@@ -56,8 +56,7 @@ func (c LocalhostDomainCheck) Run(ctx context.Context) error {
 	cmd := c.NodeInterface.UploadScript(file)
 	out, err := cmd.Execute(ctx)
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			return fmt.Errorf("Localhost domain resolving check failed: %w, %s", err, string(ee.Stderr))
 		}
 		return fmt.Errorf("Could not execute a script to check for localhost domain resolution: %w", err)
@@ -67,8 +66,8 @@ func (c LocalhostDomainCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func LocalhostDomain(nodeInterface libcon.Interface, dc *directoryconfig.DirectoryConfig) preflight.Check {
-	check := LocalhostDomainCheck{NodeInterface: nodeInterface, dc: dc}
+func LocalhostDomain(nodeInterface libcon.Interface, globalOptions *options.GlobalOptions) preflight.Check {
+	check := LocalhostDomainCheck{NodeInterface: nodeInterface, globalOptions: globalOptions}
 	return preflight.Check{
 		Name:        LocalhostDomainCheckName,
 		Description: check.Description(),

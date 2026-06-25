@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libcon_config "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -154,6 +155,7 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 		loggerProvider := log.NonInteractiveLoggerProvider()
 		sett.WithLogger(loggerProvider)
 		parser := libcon_config.NewFlagsParser(sett)
+		parser.WithEnvsPrefix(global.SSHEnvsPrefix)
 		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
 		flags, err := parser.InitFlags(fset)
 		if err != nil {

@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,9 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -47,7 +49,7 @@ func prepareDeckhouseDeploymentForUpdate(
 	manifestForUpdate *appsv1.Deployment,
 ) (*appsv1.Deployment, error) {
 	resDeployment := manifestForUpdate
-	err := retry.NewSilentLoop("get deployment", 10, 3*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("get deployment", 30, 1*time.Second).RunContext(ctx, func() error {
 		currentManifestInCluster, err := kubeCl.AppsV1().
 			Deployments(manifestForUpdate.GetNamespace()).
 			Get(ctx, manifestForUpdate.GetName(), metav1.GetOptions{})
@@ -79,14 +81,14 @@ func controllerDeploymentTask(
 ) actions.ManifestTask {
 	return actions.ManifestTask{
 		Name: `Deployment "deckhouse"`,
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return CreateDeckhouseDeploymentManifest(cfg)
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			_, err := kubeCl.AppsV1().Deployments("d8-system").Create(ctx, manifest.(*appsv1.Deployment), metav1.CreateOptions{})
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			preparedManifest, err := prepareDeckhouseDeploymentForUpdate(ctx, kubeCl, cfg, manifest.(*appsv1.Deployment))
 			if err != nil {
 				return err
@@ -105,7 +107,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 ) (*actions.ManifestTask, error) {
 	deckhouseDeploymentPresent := false
 
-	err := retry.NewLoop("Get deckhouse manifest", 10, 5*time.Second).RunContext(ctx, func() error {
+	err := retry.NewLoop("Get deckhouse manifest", 50, 1*time.Second).RunContext(ctx, func() error {
 		_, err := kubeCl.AppsV1().Deployments("d8-system").Get(ctx, "deckhouse", metav1.GetOptions{})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
@@ -130,7 +132,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 
 	return &actions.ManifestTask{
 		Name: `ConfigMap "deckhouse-bootstrap-lock"`,
-		Manifest: func() interface{} {
+		Manifest: func() any {
 			return &apiv1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ConfigMap",
@@ -142,7 +144,7 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 				},
 			}
 		},
-		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest any) error {
 			cm := manifest.(*apiv1.ConfigMap)
 
 			_, err := kubeCl.
@@ -150,14 +152,14 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 				Create(ctx, cm, metav1.CreateOptions{})
 			return err
 		},
-		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest any) error {
 			return nil
 		},
 	}, nil
 }
 
 func UnlockDeckhouseQueueAfterCreatingModuleConfigs(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Unlock Deckhouse controller queue", 15, 5*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Unlock Deckhouse controller queue", 75, 1*time.Second).RunContext(ctx, func() error {
 		err := kubeCl.CoreV1().ConfigMaps("d8-system").
 			Delete(ctx, "deckhouse-bootstrap-lock", metav1.DeleteOptions{})
 
@@ -202,8 +204,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `Admin ClusterRole "cluster-admin"`,
-			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRole() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseAdminClusterRole() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoles().
 					Get(ctx, manifest.(*rbacv1.ClusterRole).GetName(), metav1.GetOptions{})
@@ -217,7 +219,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoles().
 					Update(ctx, manifest.(*rbacv1.ClusterRole), metav1.UpdateOptions{})
@@ -227,8 +229,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `ClusterRoleBinding "deckhouse"`,
-			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRoleBinding() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseAdminClusterRoleBinding() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoleBindings().
 					Get(ctx, manifest.(*rbacv1.ClusterRoleBinding).GetName(), metav1.GetOptions{})
@@ -242,7 +244,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					RbacV1().ClusterRoleBindings().
 					Update(ctx, manifest.(*rbacv1.ClusterRoleBinding), metav1.UpdateOptions{})
@@ -252,8 +254,8 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name:     `ServiceAccount "deckhouse"`,
-			Manifest: func() interface{} { return manifests.DeckhouseServiceAccount() },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.DeckhouseServiceAccount() },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ServiceAccounts("d8-system").
 					Get(ctx, manifest.(*apiv1.ServiceAccount).GetName(), metav1.GetOptions{})
@@ -267,7 +269,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ServiceAccounts("d8-system").
 					Update(ctx, manifest.(*apiv1.ServiceAccount), metav1.UpdateOptions{})
@@ -277,7 +279,7 @@ func CreateDeckhouseManifests(
 		},
 		{
 			Name: `ConfigMap "install-data"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return &apiv1.ConfigMap{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ConfigMap",
@@ -292,7 +294,7 @@ func CreateDeckhouseManifests(
 					},
 				}
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				cm := manifest.(*apiv1.ConfigMap)
 
 				_, err := kubeCl.
@@ -301,7 +303,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				cm := manifest.(*apiv1.ConfigMap)
 
 				_, err := kubeCl.
@@ -392,8 +394,8 @@ func CreateDeckhouseManifests(
 	if len(cfg.InfrastructureState) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-terraform-state"`,
-			Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -409,7 +411,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -420,13 +422,13 @@ func CreateDeckhouseManifests(
 	}
 
 	for nodeName, tfState := range cfg.NodesInfrastructureState {
-		getManifest := func() interface{} {
+		getManifest := func() any {
 			return manifests.SecretWithNodeInfrastructureState(nodeName, "master", tfState, nil)
 		}
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -443,7 +445,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -456,8 +458,8 @@ func CreateDeckhouseManifests(
 	if len(cfg.ClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-configuration"`,
-			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			Manifest: func() any { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -473,7 +475,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
@@ -486,12 +488,12 @@ func CreateDeckhouseManifests(
 	if len(cfg.ProviderClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "d8-provider-cluster-configuration"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.SecretWithProviderClusterConfig(
 					cfg.ProviderClusterConfig, cfg.CloudDiscovery,
 				)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -507,7 +509,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*apiv1.Secret))
 				if err != nil {
 					return err
@@ -530,10 +532,10 @@ func CreateDeckhouseManifests(
 	if len(cfg.StaticClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "d8-static-cluster-configuration"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.SecretWithStaticClusterConfig(cfg.StaticClusterConfig)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Secrets("kube-system").
 					Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
@@ -549,7 +551,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				data, err := json.Marshal(manifest.(*apiv1.Secret))
 				if err != nil {
 					return err
@@ -572,17 +574,17 @@ func CreateDeckhouseManifests(
 	if len(cfg.UUID) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `ConfigMap "d8-cluster-uuid"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.ClusterUUIDConfigMap(cfg.UUID)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).
 					Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().ConfigMaps(manifests.ClusterUUIDCmNamespace).
 					Update(ctx, manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
@@ -599,10 +601,10 @@ func CreateDeckhouseManifests(
 	if cfg.KubeDNSAddress != "" {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Service "kube-dns"`,
-			Manifest: func() interface{} {
+			Manifest: func() any {
 				return manifests.KubeDNSService(cfg.KubeDNSAddress)
 			},
-			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Services("kube-system").
 					Get(ctx, manifest.(*apiv1.Service).GetName(), metav1.GetOptions{})
@@ -622,7 +624,7 @@ func CreateDeckhouseManifests(
 
 				return err
 			},
-			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest any) error {
 				_, err := kubeCl.
 					CoreV1().Services("kube-system").
 					Update(ctx, manifest.(*apiv1.Service), metav1.UpdateOptions{})
@@ -663,19 +665,64 @@ func CreateDeckhouseManifests(
 	}
 
 	err = log.ProcessCtx(ctx, "default", "Create Manifests", func(ctx context.Context) error {
-		for _, task := range tasks {
-			err := retry.NewSilentLoop(task.Name, 60, 5*time.Second).RunContext(
+		if len(tasks) == 0 {
+			return nil
+		}
+
+		// The first task is the d8-system Namespace; everything else (RBAC,
+		// SAs, ConfigMaps, ModuleConfigs, the controller Deployment, etc.) is
+		// either cluster-scoped or namespace-scoped to d8-system. Run the
+		// Namespace serially first, then fan out the remaining tasks through
+		// errgroup. Tasks use Get-then-Create or simple Create-or-Update flows
+		// and target distinct API resources, so they are independent.
+		// Retry interval was 5s, which dominates the create-manifests phase
+		// whenever a task hits a transient error (e.g. ModuleConfig CRD not yet
+		// installed by the deckhouse Deployment that is being applied in
+		// parallel). The total deadline stays the same (60 attempts × 1s = 60s
+		// per task) but the loop reacts to the CRD appearing in ~1s instead of
+		// dead-waiting 5s.
+		runTask := func(task actions.ManifestTask) error {
+			return retry.NewSilentLoop(task.Name, 600, 1*time.Second).RunContext(
 				ctx,
 				func() error {
 					return task.CreateOrUpdate(ctx)
 				},
 			)
-			if err != nil {
-				return err
-			}
 		}
 
-		return nil
+		if err := runTask(tasks[0]); err != nil {
+			return err
+		}
+
+		rest := tasks[1:]
+		if len(rest) == 0 {
+			return nil
+		}
+
+		// Cap concurrency to avoid hammering the freshly-bootstrapped
+		// apiserver with too many parallel writes.
+		const maxParallel = 8
+		eg, egCtx := errgroup.WithContext(ctx)
+		eg.SetLimit(maxParallel)
+
+		var logMu sync.Mutex
+		for i := range rest {
+			task := rest[i]
+			eg.Go(func() error {
+				if egCtx.Err() != nil {
+					return egCtx.Err()
+				}
+				if err := runTask(task); err != nil {
+					logMu.Lock()
+					log.ErrorF("manifest task %q failed: %v\n", task.Name, err)
+					logMu.Unlock()
+					return err
+				}
+				return nil
+			})
+		}
+
+		return eg.Wait()
 	})
 	if err != nil {
 		return nil, err
@@ -715,7 +762,7 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 					return nil
 				}
 
-				time.Sleep(5 * time.Second)
+				time.Sleep(1 * time.Second)
 			}
 		}
 	})
@@ -744,7 +791,7 @@ func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) *appsv1.D
 }
 
 func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 45, 5*time.Second).
+	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 225, 1*time.Second).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.Discovery().ServerVersion()
 			if err == nil {

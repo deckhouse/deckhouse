@@ -50,6 +50,55 @@ jobs:
       SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev" "FE") | strings.Indent 4 }!}
 
+  # Run the image-based security scans (CVE / rootless / antivirus) as a
+  # reusable workflow right after Build FE has produced the deckhouse-oss
+  # image and the build_report_FE artifact. The called workflow runs as part
+  # of THIS workflow's run, so its jobs (including
+  # `security_scan_images_required`) appear natively on the PR's "Checks" tab
+  # and can be required by branch protection — no commit-status plumbing
+  # needed.
+  #
+  # Re-run: re-running this build workflow re-executes the image scans with
+  # a fresh `github.run_id`. There is no independent re-run entry point for
+  # the called workflow (and that is intentional — the scan results are
+  # bound to the artifacts of this specific Build run).
+  security_scan_images:
+    name: Security scan images
+    needs:
+      - pull_request_info
+      - build_fe
+    if: ${{ success() }}
+    # The called workflow declares its own `permissions:` at workflow level;
+    # the caller job must be at least as permissive (calling-job permissions
+    # are the UPPER BOUND for any nested job's permissions). In particular,
+    # the nested `changed_images` job requests `actions: read` to list the
+    # PR's earlier build-and-test_dev runs via the API (baseline lookup) —
+    # omitting it here makes GitHub reject the whole workflow with:
+    #   "nested job '<name>' is requesting 'actions: read', but is only
+    #    allowed 'actions: none'".
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+      actions: read
+    uses: ./.github/workflows/security-scan-images.yml
+    secrets: inherit
+
+  build_tests:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Build tests image
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "build_tests_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+  go_generate:
+    name: Go Generate
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "go_generate_template" (slice $ctx) | strings.Indent 4 }!}
+
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
   build_{!{$werfEnv}!}:
     name: Build {!{$werfEnv}!}
@@ -108,16 +157,6 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
-  security_scan_images:
-    name: Security scan images
-    if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
-    runs-on: [self-hosted, large]
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
-
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests
@@ -125,6 +164,14 @@ jobs:
       - git_info
       - pull_request_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
+
+  tests_node_controller:
+    if: ${{ needs.pull_request_info.outputs.changes_node_controller == 'true' }}
+    name: Tests node-controller
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "tests_node_controller_envtest_template" (slice $ctx) | strings.Indent 4 }!}
 
   tests_python_webhooks:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -147,27 +194,19 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
-
-  golangci_lint:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
-    name: GolangCI Lint
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
+      - build_tests
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_tests") | strings.Indent 4 }!}
 
   golint:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Go Lint Warning
-    continue-on-error: true
     needs:
       - git_info
       - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "golint" "build_fe") | strings.Indent 4 }!}
+      - build_tests
+    env:
+      DIFF_BASE: ${{ github.event.pull_request.base.sha }}
+{!{ tmpl.Exec "tests_template" (slice $ctx "golint_diff" "build_tests") | strings.Indent 4 }!}
 
   openapi_test_cases:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -175,8 +214,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
+      - build_tests
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_tests") | strings.Indent 4 }!}
 
   validators:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -184,8 +223,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
+      - build_tests
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_tests") | strings.Indent 4 }!}
 
   set_e2e_requirement_status:
     # if previous jobs were failed we do not need set status, because checks will be failed
@@ -199,10 +238,11 @@ jobs:
       - build_{!{$werfEnv}!}{!{ end }!}
       - validators
       - openapi_test_cases
-      - golangci_lint
+      - golint
+      - go_generate
       - dhctl_tests
       - tests
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Set commit status after e2e run

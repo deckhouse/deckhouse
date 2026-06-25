@@ -44,11 +44,8 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
-  WERF_VERSION: "v2.63.1"
+  WERF_VERSION: "v2.72.1"
   WERF_ENV: "FE"
-  WERF_TELEMETRY: "1"
-  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   REGISTRY_PATH: "sys/deckhouse-oss"
@@ -79,7 +76,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -154,7 +151,7 @@ jobs:
   # </template: git_info_job>
   detect_editions:
     name: Detect editions
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     outputs:
       BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
       BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}
@@ -185,7 +182,7 @@ jobs:
 
   check_branch_name:
     name: Check branch name
-    runs-on: ubuntu-latest
+    runs-on: self-slim
     steps:
 
     # <template: checkout_step>
@@ -219,7 +216,7 @@ jobs:
   # <template: check_changelog_template>
   check_changelog:
     name: Check changelog
-    runs-on: "ubuntu-latest"
+    runs-on: "self-slim"
     steps:
 
       # <template: checkout_step>
@@ -299,7 +296,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -345,20 +341,20 @@ jobs:
       # </template: login_stage_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
+      - name: Install werf-dk CLI
         run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -403,25 +399,14 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -434,15 +419,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          VAULT_KEY: "dh-2025-aug-ec"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -502,11 +486,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
-          d8-build dk build \
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -563,7 +547,7 @@ jobs:
 
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json
+        run: rm images_tags_werf.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -632,7 +616,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -678,20 +661,20 @@ jobs:
       # </template: login_stage_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
+      - name: Install werf-dk CLI
         run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -736,25 +719,14 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -767,15 +739,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          VAULT_KEY: "dh-2025-aug-ec"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -835,11 +806,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
-          d8-build dk build \
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -896,7 +867,7 @@ jobs:
 
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json
+        run: rm images_tags_werf.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -966,7 +937,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1012,20 +982,20 @@ jobs:
       # </template: login_stage_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
+      - name: Install werf-dk CLI
         run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1070,25 +1040,14 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1101,15 +1060,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          VAULT_KEY: "dh-2025-aug-ec"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1169,11 +1127,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
-          d8-build dk build \
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1230,7 +1188,7 @@ jobs:
 
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json
+        run: rm images_tags_werf.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -1300,7 +1258,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1346,20 +1303,20 @@ jobs:
       # </template: login_stage_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
+      - name: Install werf-dk CLI
         run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1404,25 +1361,14 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1435,15 +1381,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          VAULT_KEY: "dh-2025-aug-ec"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1503,11 +1448,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
-          d8-build dk build \
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1564,7 +1509,7 @@ jobs:
 
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json
+        run: rm images_tags_werf.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -1634,7 +1579,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -1680,20 +1624,20 @@ jobs:
       # </template: login_stage_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
+      - name: Install werf-dk CLI
         run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1738,25 +1682,14 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1769,15 +1702,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          VAULT_KEY: "dh-2025-aug-ec"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -1837,11 +1769,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
-          d8-build dk build \
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1898,7 +1830,7 @@ jobs:
 
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json
+        run: rm images_tags_werf.json || true
 
       # <template: send_fail_report>
       - name: Send fail report
@@ -1968,7 +1900,6 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
@@ -2014,20 +1945,20 @@ jobs:
       # </template: login_stage_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
+      - name: Install werf-dk CLI
         run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -2072,25 +2003,14 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
         env:
-          WERF_PARALLEL_TASKS_LIMIT: 3
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          WERF_DOCKER_REGISTRY_DEBUG: 1
+          WERF_TELEMETRY: "1"
+          WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -2103,15 +2023,14 @@ jobs:
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
           OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          VAULT_ADDR: "https://seguro.flant.com"
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          VAULT_KEY: "dh-2025-aug-ec"
+          TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -2171,11 +2090,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
-          d8-build dk build \
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -2232,7 +2151,7 @@ jobs:
 
       - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm images_tags_werf.json
+        run: rm images_tags_werf.json || true
 
       # <template: send_fail_report>
       - name: Send fail report

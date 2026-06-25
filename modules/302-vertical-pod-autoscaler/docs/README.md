@@ -9,14 +9,15 @@ Also, VPA can recommend values for resource requests and limits without updating
 
 VPA has the following operating modes:
 
-- `"Auto"` (default) — currently the `Auto` and `Recreate` modes do the same thing. However, when [Pod in-place resource update](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates) appears in Kubernetes, this mode will do exactly that.
-- `"Recreate"` — the mode allows VPA to change resources of running pods (restart them while running). In case of one pod running (`replicas: 1`), this will lead to the service being unavailable during the restart. In this mode, VPA does not recreate pods that were created without a controller.
-- `"Initial"` — VPA modifies Pod resources only when Pods are started (but not during operation).
-- `"Off"` — VPA does not take any action to update the resource requests for the running containers. In this case, if VPA is running in this mode, you can see what resource values it recommends (`d8 k describe vpa <vpa-name>`).
+- `InPlaceOrRecreate`: A default mode. Available in Kubernetes 1.33 and later. VPA attempts to update Pod resources without recreating the Pod. If in-place resource updates are not possible, VPA recreates the Pod similarly to the `Recreate` mode.
+- `Recreate`: The mode allows VPA to change resources of running pods (restart them while running). In case of one pod running (`replicas: 1`), this will lead to the service being unavailable during the restart. In this mode, VPA does not recreate pods that were created without a controller.
+- `Initial`: VPA modifies Pod resources only when Pods are started (but not during operation).
+- `Auto`: A deprecated mode. It will no longer be supported in future DKP versions. Use one of the supported operating modes instead.
+- `Off`: VPA does not take any action to update the resource requests for the running containers. In this case, if VPA is running in this mode, you can see what resource values it recommends (`d8 k describe vpa <vpa-name>`).
 
 VPA limitations:
 
-- Updating the resources of running Pods is currently experimental. The Pod is recreated each time VPA updates its `resource requests`. The Pod can be scheduled to another node.
+- When using modes that allow Pod recreation, VPA may recreate a Pod if its `resource requests` cannot be updated in place. The new Pod can be scheduled to another node.
 - VPA **should not be used concurrently with CPU and memory-based [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)**. However, you can use VPA together with HPA for custom/external metrics.
 - VPA notices almost all `out-of-memory` events, but that does not guarantee its response.
 - VPA performance has not been tested for huge clusters.

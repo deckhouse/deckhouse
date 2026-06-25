@@ -21,8 +21,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 func TestGetCloudApiURLFromMetaConfig(t *testing.T) {
@@ -68,7 +68,6 @@ func TestGetCloudApiURLFromMetaConfig(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			s := require.New(t)
 			clusterConfigYAML := `
@@ -78,11 +77,7 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce
 `
-			dc := &directoryconfig.DirectoryConfig{
-				DownloadDir:      "/tmp",
-				DownloadCacheDir: "/tmp/cache",
-			}
-			metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfigYAML, config.DummyPreparatorProvider(), dc)
+			metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfigYAML, config.DummyPreparatorProvider(), &options.New().Global)
 			s.NoError(err)
 			metaConfig.ProviderName = tt.providerName
 			metaConfig.ProviderClusterConfig = map[string]json.RawMessage{

@@ -27,7 +27,7 @@ func prepareNodeGroupConfigurationSteps(
 	ctx context.Context,
 	templateController *Controller,
 	resourcesYAML string,
-	templateData map[string]interface{},
+	templateData map[string]any,
 ) error {
 	ngc, err := config.ParseInternalBootstrapNodeGroupConfiguration(ctx, resourcesYAML)
 	if err != nil {

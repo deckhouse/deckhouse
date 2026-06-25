@@ -49,10 +49,10 @@ type ComponentStatus struct {
 	// +optional
 	Checksums Checksums `json:"checksums,omitempty"`
 
-	// CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+	// CertificatesExpirationTime maps each component certificate file name to its NotAfter timestamp.
 	// Populated by the CertObserve step.
 	// +optional
-	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
+	CertificatesExpirationTime map[string]metav1.Time `json:"certificatesExpirationTime,omitempty"`
 
 	// LastCertObserveTime is the time of the last successful CertObserve step for the component.
 	// +optional
@@ -178,7 +178,7 @@ type ControlPlaneNodeStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName=cpn
+// +kubebuilder:resource:scope=Namespaced,shortName=cpn
 // +kubebuilder:printcolumn:name="ETCD",type="string",JSONPath=".status.conditions[?(@.type=='EtcdReady')].status",description="Etcd ready"
 // +kubebuilder:printcolumn:name="APISERVER",type="string",JSONPath=".status.conditions[?(@.type=='APIServerReady')].status",description="API server ready"
 // +kubebuilder:printcolumn:name="CONTROLLERMANAGER",type="string",JSONPath=".status.conditions[?(@.type=='ControllerManagerReady')].status",description="Controller manager ready"

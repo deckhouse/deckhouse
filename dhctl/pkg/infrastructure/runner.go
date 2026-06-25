@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -438,21 +439,21 @@ func (r *Runner) Apply(ctx context.Context) error {
 			return err
 		}
 		if skip {
-			r.logger.LogInfoLn("Skip infrastructure apply.")
+			r.logger.LogInfoLn("Skipping infrastructure apply.")
 			return nil
 		}
 
 		if !govalue.IsNil(r.stateChecker) {
 			err = r.logger.LogProcessCtx(ctx, "default", "infrastructure state check before apply...", func(ctx context.Context) error {
 				if r.statePath == "" {
-					log.InfoF("Infrastructure state path is empty. Skip infrastructure state check.\n")
+					log.InfoF("Infrastructure state path is empty. Skipping infrastructure state check.\n")
 					return nil
 				}
 
 				st, err := os.ReadFile(r.statePath)
 				if err != nil {
 					if os.IsNotExist(err) {
-						log.DebugF("File %s with state not found, Probably call apply with new resource. Skip check.\n", r.statePath)
+						log.DebugF("State file %s not found, probably applying with a new resource. Skipping check.\n", r.statePath)
 						return nil
 					}
 					return err
@@ -501,8 +502,7 @@ func (r *Runner) ShowPlan(ctx context.Context) ([]byte, error) {
 		PlanPath: r.GetPlanPath(),
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
@@ -574,7 +574,7 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 
 	if destroy {
 		log.InfoF(
-			"Skip getting debug plan for destroy: passed step %s; executor step %s; target '%s'\n",
+			"Skipping debug plan for destroy: passed step %s; executor step %s; target '%s'\n",
 			step,
 			executorStep,
 			target,
@@ -584,7 +584,7 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 
 	if step != executorStep || target == "" {
 		log.InfoF(
-			"Skip getting debug plan for: passed step %s; executor step %s; target '%s'\n",
+			"Skipping debug plan: passed step %s; executor step %s; target '%s'\n",
 			step,
 			executorStep,
 			target,
@@ -642,7 +642,7 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 	}
 
 	if r.statePath == "" {
-		return nil, fmt.Errorf("No state found, try to run infastructure apply first")
+		return nil, fmt.Errorf("No state found, try running infrastructure apply first")
 	}
 
 	var result []byte
@@ -660,8 +660,7 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure output for %q\n%v", output, err)
@@ -676,7 +675,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 	}
 
 	if r.statePath == "" {
-		return fmt.Errorf("No state found, try to run infrastructure apply first")
+		return fmt.Errorf("No state found, try running infrastructure apply first")
 	}
 
 	if r.changeSettings.AutoDismissChanges {
@@ -698,7 +697,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 		return 0, err
 	})
 	if err != nil {
-		return fmt.Errorf("Cannot prepare terrafrom destroy plan: %w", err)
+		return fmt.Errorf("Cannot prepare terraform destroy plan: %w", err)
 	}
 
 	if !r.changeSettings.AutoApprove {
@@ -807,7 +806,7 @@ func (r *Runner) Stop() {
 
 func (r *Runner) execInfrastructureUtility(ctx context.Context, executor func(ctx context.Context) (int, error)) (int, error) {
 	if r.checkInfrastructureUtilityIsRunning() {
-		return 0, fmt.Errorf("Infrastructure utility have been already executed.")
+		return 0, fmt.Errorf("Infrastructure utility has already been executed.")
 	}
 
 	r.switchInfrastructureUtilityIsRunning()
@@ -836,8 +835,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return nil, fmt.Errorf("Can't get infrastructure plan for %q\n%v", planFile, err)
@@ -899,17 +897,14 @@ func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string)
 		return 0, nil
 	})
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
 		}
 		return false, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
-	for _, action := range result {
-		if action == "delete" {
-			return true, nil
-		}
+	if slices.Contains(result, "delete") {
+		return true, nil
 	}
 
 	return false, nil

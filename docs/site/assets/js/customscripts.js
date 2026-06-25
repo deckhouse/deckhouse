@@ -38,7 +38,33 @@ document.addEventListener("DOMContentLoaded", function () {
    */
   if ((typeof anchors !== 'undefined') && (typeof anchors.add !== 'undefined') && (window.anchors_disabled != true)) {
     anchors.add('h2,h3,h4,h5');
-    anchors.add('.anchored');
+    // Skip adding anchors to .anchored elements (CRD properties) on CR/CRD pages —
+    // they already have id/data-anchor-id set in HTML, and running anchors.add()
+    // on 10k+ elements causes multi-second style recalculations.
+    if (!document.querySelector('meta[name="page:anchors-skip-props"]')) {
+      anchors.add('.anchored');
+    } else {
+      // Lightweight replacement for AnchorJS on CR/CRD pages.
+      // Instead of iterating all 10k+ elements upfront, inject one <a> per element
+      // lazily on mouseenter via a single delegated listener.
+      document.addEventListener('mouseenter', function (e) {
+        if (!(e.target instanceof Element)) return;
+        const propName = e.target.closest('.resources__prop_name.anchored');
+        if (!propName || propName.querySelector('.anchorjs-link')) return;
+        const id = propName.id || propName.getAttribute('data-anchor-id');
+        if (!id) return;
+        const base = window.location.pathname + window.location.search;
+        const a = document.createElement('a');
+        a.className = 'anchorjs-link';
+        a.setAttribute('aria-label', 'Anchor');
+        a.setAttribute('data-anchorjs-icon', (typeof anchors !== 'undefined') ? anchors.options.icon : '');
+        a.style.font = '1em/1 anchorjs-icons';
+        a.style.paddingLeft = '0.375em';
+        a.style.display = 'inline';
+        a.href = base + '#' + id;
+        propName.appendChild(a);
+      }, true);
+    }
   }
 });
 
