@@ -690,6 +690,19 @@ jobs:
     uses: ./.github/workflows/security-scan-images.yml
     secrets: inherit
 
+  update_fuzzing_targets:
+    name: Update fuzzing targets
+    needs:
+      - pull_request_info
+      - build_fe
+    if: ${{ success() }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    uses: ./.github/workflows/update-fuzzing-targets.yml
+    secrets: inherit
+
   build_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Build tests image
@@ -879,6 +892,7 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
     # </template: build_tests_template>
+
 
   go_generate:
     name: Go Generate
