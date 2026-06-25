@@ -156,6 +156,13 @@ rules:
 		Expect(crb.Field(`metadata.annotations.meta\.helm\.sh/release-namespace`).String()).To(Equal("d8-system"))
 	}
 
+	// expectKeepPolicy guards the hook-only migration: any object the hook writes must carry
+	// helm.sh/resource-policy: keep so Helm never prunes it once the CRB leaves the template.
+	expectKeepPolicy := func(f *HookExecutionConfig) {
+		crb := f.KubernetesGlobalResource("ClusterRoleBinding", "kubeadm:cluster-admins")
+		Expect(crb.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+	}
+
 	// ── user-authz disabled: binding must always stay on cluster-admin (kubeadm-default) ──
 	Context("user-authz disabled and not bootstrapped, no CRB", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOffNotBootstrapped, "")
@@ -166,6 +173,7 @@ rules:
 		It("creates the binding pointing to cluster-admin and publishes target=cluster-admin, supplement=false", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
+			expectKeepPolicy(f)
 			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})
@@ -288,6 +296,7 @@ rules:
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
 			expectHelmOwnership(f)
+			expectKeepPolicy(f)
 			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})

@@ -131,7 +131,7 @@ func selectImageLayer(image v1.Image, flatten bool) (v1.Layer, error) {
 	})
 }
 
-func (c *DefaultClient) ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string) (string, error) {
+func (c *DefaultClient) ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string, platform *v1.Platform) (string, error) {
 	repo := config.Repository
 	if path != "" {
 		repo = fmt.Sprintf("%s/%s", repo, path)
@@ -160,7 +160,48 @@ func (c *DefaultClient) ResolveTag(ctx context.Context, log log.Logger, config *
 		return "", err
 	}
 
+	// For a multi-platform image index, resolve to the per-platform child manifest
+	// digest. The downstream cache is keyed by manifest digest, so returning the
+	// shared index digest would make platforms collide on one cache entry.
+	if platform != nil && desc.MediaType.IsIndex() {
+		idx, err := desc.ImageIndex()
+		if err != nil {
+			return "", err
+		}
+
+		return childDigestForPlatform(idx, platform)
+	}
+
 	return desc.Digest.String(), nil
+}
+
+// childDigestForPlatform returns the digest of the index child manifest matching
+// platform.
+//
+// Walking the index manually (instead of remote.Image + WithPlatform)
+// lets us return ErrPackageNotFound for an absent platform, which the handler maps
+// to a clean 404 rather than a generic error.
+func childDigestForPlatform(idx v1.ImageIndex, platform *v1.Platform) (string, error) {
+	manifest, err := idx.IndexManifest()
+	if err != nil {
+		return "", err
+	}
+
+	for _, m := range manifest.Manifests {
+		if m.Platform == nil {
+			continue
+		}
+		if m.Platform.OS != platform.OS || m.Platform.Architecture != platform.Architecture {
+			continue
+		}
+		if platform.Variant != "" && m.Platform.Variant != platform.Variant {
+			continue
+		}
+
+		return m.Digest.String(), nil
+	}
+
+	return "", ErrPackageNotFound
 }
 
 func (c *DefaultClient) ListTags(ctx context.Context, log log.Logger, config *ClientConfig, path string) ([]string, error) {

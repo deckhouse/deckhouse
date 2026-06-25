@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
@@ -33,16 +34,23 @@ const (
 	// embeddedDir is the directory, relative to the working directory, that
 	// holds embedded modules shipped with the controller.
 	embeddedDir = "modules"
+
+	// embeddedLoadWorkers caps how many embedded modules are loaded
+	// concurrently in loadEmbedded.
+	embeddedLoadWorkers = 8
 )
 
+// dummyModules are modules that should be skipped.
 var dummyModules = []string{
 	"000-common",
 	"007-registrypackages",
 }
 
-// loadEmbedded discovers embedded modules under embeddedDir, builds each one
-// from its on-disk config, wires the runtime's shared managers into it, and
-// registers the resulting modules in the runtime's module map.
+// loadEmbedded discovers embedded modules under embeddedDir and registers the
+// ones enabled by the bundle. It reads the bundle's enabled map, then for each
+// module directory builds the module from its on-disk config, wires the
+// runtime's shared managers into it, and stores it in the runtime's module map.
+// Modules not marked enabled in the bundle are skipped.
 func (r *Runtime) loadEmbedded(ctx context.Context) error {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbedded")
 	defer span.End()
@@ -57,33 +65,54 @@ func (r *Runtime) loadEmbedded(ctx context.Context) error {
 		return fmt.Errorf("read dir: %w", err)
 	}
 
+	// Each module is independent: load its config, wire the runtime's shared
+	// managers, build it and store it. Run them concurrently and let the first
+	// failure cancel the rest.
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(embeddedLoadWorkers)
+
 	for _, entry := range entries {
 		if !entry.IsDir() || slices.Contains(dummyModules, entry.Name()) {
 			continue
 		}
 
-		r.logger.Debug("load embedded module", slog.String("name", entry.Name()))
+		g.Go(func() error {
+			// Bail out early if another module already failed (errgroup cancels
+			// ctx) or the caller cancelled, before doing any work.
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 
-		conf, err := loader.LoadEmbeddedConf(ctx, embeddedDir+"/"+entry.Name(), r.logger)
-		if err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("load embedded conf: %w", err)
-		}
+			r.logger.Debug("load embedded module", slog.String("name", entry.Name()))
 
-		conf.Patcher = r.objectPatcher
-		conf.ScheduleManager = r.scheduleManager
-		conf.KubeEventsManager = r.kubeEventsManager
-		conf.GlobalValuesGetter = r.global.GetValues
+			conf, err := loader.LoadEmbeddedConf(ctx, embeddedDir+"/"+entry.Name(), r.logger)
+			if err != nil {
+				return fmt.Errorf("load embedded conf: %w", err)
+			}
 
-		module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
-		if err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("new module by config: %w", err)
-		}
+			conf.Patcher = r.objectPatcher
+			conf.ScheduleManager = r.scheduleManager
+			conf.KubeEventsManager = r.kubeEventsManager
+			conf.GlobalValuesGetter = r.global.GetValues
+			// TODO(ipaqsa): set deckhouse version instead
+			conf.Definition.Version = "v0.0.0"
 
-		r.mu.Lock()
-		r.modules[module.GetName()] = module
-		r.mu.Unlock()
+			module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
+			if err != nil {
+				return fmt.Errorf("new module by config: %w", err)
+			}
+
+			r.mu.Lock()
+			r.modules[module.GetName()] = module
+			r.mu.Unlock()
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
 
 	return nil

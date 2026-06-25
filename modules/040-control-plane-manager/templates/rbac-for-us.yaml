@@ -293,6 +293,11 @@ subjects:
   Main kubeadm:cluster-admins binding: target ClusterRole comes from the hook (see top of file).
   Helm SSA cannot mutate roleRef (immutable), so the actual Delete+Create on role flip is done
   by reconcile_kubeadm_cluster_admins_binding hook before Helm runs; Helm here only adopts.
+
+  helm.sh/resource-policy: keep guarantees Helm never prunes this binding. It guards the future
+  migration to hook-only ownership: once this block is dropped from the template, Helm leaves the
+  live object in place (instead of deleting it), so there is no window where kubeadm:cluster-admins
+  has no binding and admin.conf loses root access. The hook remains the single source of truth.
 */}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -300,6 +305,8 @@ kind: ClusterRoleBinding
 metadata:
   name: kubeadm:cluster-admins
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  annotations:
+    helm.sh/resource-policy: keep
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

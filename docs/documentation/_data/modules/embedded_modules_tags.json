@@ -173,10 +173,6 @@
     "observability",
     "ssdlc"
   ],
-  "monitoring-kubernetes-control-plane": [
-    "observability",
-    "ssdlc"
-  ],
   "monitoring-ping": [
     "observability",
     "network",
