@@ -2,10 +2,15 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
   name: dvpinstanceclasses.deckhouse.io
 spec:
   group: deckhouse.io
   names:
+    categories:
+    - cloudinstanceclasses
     kind: DVPInstanceClass
     listKind: DVPInstanceClassList
     plural: dvpinstanceclasses
@@ -37,16 +42,21 @@ spec:
           spec:
             properties:
               additionalDisks:
-                description: Parameters for additional virtual machine disks.
+                description: |
+                  Параметры дополнительных дисков виртуальной машины.
+
+                  Каждый элемент массива описывает отдельный дополнительный диск.
+                  Для каждого диска необходимо задать параметры `size` и `storageClass`.
                 items:
                   properties:
                     size:
-                      description: Size of the disk.
+                      description: |
+                        Размер дополнительного диска.
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       type: string
                     storageClass:
-                      description: Name of the existing StorageClass that will be
-                        used to create the disk.
+                      description: |
+                        Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
                       type: string
                   required:
                   - size
@@ -57,96 +67,103 @@ spec:
                 description: Specifies settings for the etcd data disk.
                 properties:
                   size:
-                    description: Size of the disk.
+                    description: |
+                      Размер дополнительного диска.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     type: string
                   storageClass:
-                    description: Name of the existing StorageClass that will be used
-                      to create the disk.
+                    description: |
+                      Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
                     type: string
                 required:
                 - size
                 - storageClass
                 type: object
               rootDisk:
-                description: Specifies settings for the root disk of the virtual machine.
+                description: |
+                  Указывает настройки для корневого диска виртуальной машины.
                 properties:
                   image:
-                    description: Image parameters that will be used to create the
-                      virtual machine's root disk.
+                    description: |
+                      Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
                     properties:
                       kind:
-                        description: The kind of the image source.
+                        description: |
+                          Тип источника изображения.
                         enum:
                         - ClusterVirtualImage
                         - VirtualImage
                         - VirtualDisk
                         type: string
                       name:
-                        description: |-
-                          The name of the image that will be used to create the root disk.
-
-                          > The installation requires Linux OS images with cloud-init pre-installed.
+                        description: |
+                          Имя образа, который будет использоваться для создания корневого диска.
+                          > Для установки требуются образы ОС Linux с предустановленным cloud-init.
                         type: string
                     required:
                     - kind
                     - name
                     type: object
                   size:
-                    description: Root disk size.
+                    description: |
+                      Размер корневого диска.
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     type: string
                   storageClass:
-                    description: |-
-                      The name of the existing StorageClass will be used to create the virtual machine's root disk.
+                    description: |
+                      Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
 
-                      If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
+                      Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
                     type: string
                 required:
                 - image
                 - size
                 type: object
               virtualMachine:
-                description: |-
-                  Virtual machine settings for the created node.
+                description: |
+                  Настройки виртуальной машины для созданного узла.
 
-                  > The `runPolicy: AlwaysOnUnlessStoppedManually` policy is used for virtual machines of nodes.
-                  > This allows the virtual machine to be stopped manually (for example, for maintenance) without triggering an automatic restart.
+                  > Для виртуальных машин узлов используется политика запуска `runPolicy: AlwaysOnUnlessStoppedManually`.
+                  > Это позволяет вручную останавливать ВМ (например, для обслуживания) без принудительного автозапуска.
                 properties:
                   additionalAnnotations:
                     additionalProperties:
                       type: string
-                    description: Additional annotations for a virtual machine resource.
+                    description: |
+                      Дополнительные аннотации для ресурса виртуальной машины.
                     type: object
                   additionalLabels:
                     additionalProperties:
                       type: string
-                    description: Additional labels for a virtual machine resource.
+                    description: |
+                      Дополнительные метки для ресурса виртуальной машины.
                     type: object
                   bootloader:
                     default: EFI
-                    description: |-
-                      Defines a bootloader for the virtual machine.
+                    description: |
+                      Определяет загрузчик для виртуальной машины.
 
-                      * `BIOS`: Use BIOS.
-                      * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
-                      * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot support.
+                      * `BIOS` — используется BIOS;
+                      * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
+                      * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
                     enum:
                     - BIOS
                     - EFI
                     - EFIWithSecureBoot
                     type: string
                   cpu:
-                    description: CPU settings for the virtual machine.
+                    description: |
+                      Настройки процессора для виртуальной машины.
                     properties:
                       coreFraction:
                         default: 100%
-                        description: Guaranteed share of CPU fraction that will be
-                          allocated to the virtual machine.
+                        description: |
+                          Процент гарантированной доли CPU, которая будет выделена виртуальной машине.
                         pattern: ^100%$|^[1-9][0-9]?%$
                         type: string
                       cores:
-                        description: Number of CPU cores for the virtual machine.
+                        description: |
+                          Количество ядер процессора для виртуальной машины.
                         format: int32
                         minimum: 1
                         type: integer
@@ -155,15 +172,15 @@ spec:
                     type: object
                   liveMigrationPolicy:
                     default: PreferForced
-                    description: |-
-                      Live migration policy for the virtual machine.
+                    description: |
+                      Политика живой миграции виртуальной машины.
 
-                      * `Manual`: Migration is controlled manually.
-                      * `Never`: Migration is disabled.
-                      * `AlwaysSafe`: Always use safe migration (may fail if VM has a high rate of memory changes).
-                      * `PreferSafe`: Prefer safe migration, fallback to forced if needed.
-                      * `AlwaysForced`: Always use forced migration with VM slowdown.
-                      * `PreferForced`: Prefer forced migration (recommended for master nodes due to high memory activity).
+                      * `Manual` — миграция управляется вручную;
+                      * `Never` — миграция отключена;
+                      * `AlwaysSafe` — всегда использовать безопасную миграцию (может не сработать при высокой скорости изменений памяти ВМ);
+                      * `PreferSafe` — предпочитать безопасную миграцию, переключаться на forced при необходимости;
+                      * `AlwaysForced` — всегда использовать forced-миграцию с замедлением ВМ;
+                      * `PreferForced` — предпочитать forced-миграцию (рекомендуется для master-узлов из-за высокой активности памяти).
                     enum:
                     - Manual
                     - Never
@@ -173,20 +190,21 @@ spec:
                     - PreferForced
                     type: string
                   memory:
-                    description: Specifies the memory settings for the virtual machine.
+                    description: |
+                      Определяет параметры памяти для виртуальной машины.
                     properties:
                       size:
-                        description: Amount of memory resources allowed for the virtual
-                          machine.
+                        description: |
+                          Количество ресурсов памяти, разрешенных для виртуальной машины.
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         type: string
                     required:
                     - size
                     type: object
                   nodeSelector:
-                    description: |-
-                      Allows a virtual machine to be assigned to specified DVP nodes.
-                      [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) as in the `spec.nodeSelector` parameter for Kubernetes Pods.
+                    description: |
+                      Позволяет назначить виртуальную машину на указанные узлы DVP.
+                      [Аналогично](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) параметру `spec.nodeSelector` в Kubernetes Pods.
                     properties:
                       nodeSelectorTerms:
                         description: Required. A list of node selector terms. The
@@ -274,19 +292,18 @@ spec:
                     type: object
                     x-kubernetes-map-type: atomic
                   priorityClassName:
-                    description: '[The same](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/)
-                      as in the `spec.priorityClassName` parameter for Kubernetes
-                      Pods.'
+                    description: |
+                      [Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) параметру `spec.priorityClassName` в Kubernetes Pods.
                     type: string
                   runPolicy:
                     default: AlwaysOnUnlessStoppedManually
-                    description: |-
-                      Virtual machine run policy.
+                    description: |
+                      Политика запуска виртуальной машины.
 
-                      * `AlwaysOn`: The virtual machine should always be running.
-                      * `AlwaysOff`: The virtual machine should always be stopped.
-                      * `Manual`: The virtual machine state is controlled manually.
-                      * `AlwaysOnUnlessStoppedManually`: The virtual machine can be stopped manually (for example, for maintenance), but it will automatically start after a host reboot.
+                      * `AlwaysOn` — виртуальная машина всегда должна быть запущена;
+                      * `AlwaysOff` — виртуальная машина всегда должна быть остановлена;
+                      * `Manual` — состояние виртуальной машины управляется вручную;
+                      * `AlwaysOnUnlessStoppedManually` — виртуальную машину можно остановить вручную (например, для обслуживания), но она автоматически запустится после перезагрузки хоста.
                     enum:
                     - AlwaysOn
                     - AlwaysOff
@@ -294,9 +311,9 @@ spec:
                     - AlwaysOnUnlessStoppedManually
                     type: string
                   tolerations:
-                    description: |-
-                      Allows setting tolerations for virtual machines for a DVP node.
-                      [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the `spec.tolerations` parameter in Kubernetes Pods.
+                    description: |
+                      Позволяет задать tolerations для виртуальных машин на узле DVP.
+                      [Аналогично](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) параметру `spec.tolerations` в Kubernetes Pods.
                     items:
                       description: |-
                         The pod this Toleration is attached to tolerates any taint that matches
@@ -337,10 +354,10 @@ spec:
                       type: object
                     type: array
                   virtualMachineClassName:
-                    description: |-
-                      The name of the VirtualMachineClass.
+                    description: |
+                      Имя VirtualMachineClass.
 
-                      Intended for centralized configuration of preferred virtual machine parameters. It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
+                      Ресурс VirtualMachineClass предназначен для централизованной конфигурации предпочтительных параметров виртуальных машин. Он позволяет задавать инструкции CPU, политики конфигурации ресурсов CPU и памяти для виртуальных машин, а также устанавливать соотношения этих ресурсов.
                     type: string
                 required:
                 - cpu

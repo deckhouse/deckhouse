@@ -153,7 +153,9 @@ type NodesParameters struct {
 	// Static IP addresses to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
 	// For example, if 3 replicas are specified and the IP addresses provided are: ip1, ip2, and ip3, then ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
 	// > These addresses must belong to the address range specified in the virtualization module configuration in the `virtualMachineCIDRs` parameter.
-	// +deckhouse:ru:description:value="Необходимо описать позже"
+	// +deckhouse:ru:description:value="Статические IP-адреса, назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно совпадать с количеством создаваемых реплик — каждый IP-адрес будет назначен отдельной реплике."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="> Эти адреса должны принадлежать диапазону адресов, заданному в конфигурации модуля виртуализации в параметре `virtualMachineCIDRs`."
 	// +deckhouse:validation:AdditionalProperties:items:Pattern=`^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$`
 	// +optional
 	IPAddresses map[string][]string `json:"ipAddresses,omitempty"`
