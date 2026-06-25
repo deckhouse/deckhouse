@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -57,6 +58,7 @@ const (
 func RegisterController(runtimeManager manager.Manager,
 	mm moduleManager,
 	loader *moduleloader.Loader,
+	edition *d8edition.Edition,
 	dc dependency.Container,
 	logger *log.Logger) error {
 	r := &reconciler{
@@ -66,6 +68,7 @@ func RegisterController(runtimeManager manager.Manager,
 		loader:              loader,
 		moduleManager:       mm,
 		dependencyContainer: dc,
+		edition:             edition,
 	}
 
 	r.init.Add(1)
@@ -97,6 +100,7 @@ type reconciler struct {
 	log                 *log.Logger
 	dependencyContainer dependency.Container
 	moduleManager       moduleManager
+	edition             *d8edition.Edition
 }
 
 type moduleManager interface {
@@ -184,8 +188,15 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	// module must be enabled
-	if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+	// the module must be enabled — explicitly by a ModuleConfig or by the bundle default
+	enabled := module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue)
+	// no ModuleConfig yet (the condition is absent or unknown) — fall back to the bundle default
+	if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
+		module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
+		enabled = module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle)
+	}
+
+	if !enabled {
 		r.log.Debug("module is disabled, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleDisabled {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled

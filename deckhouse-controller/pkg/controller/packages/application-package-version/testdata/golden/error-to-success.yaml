@@ -24,6 +24,11 @@ status:
     description:
       en: Test package
       ru: Ru Test package
+    disableOptions:
+      confirmation: true
+      messages:
+        en: EN disable message
+        ru: RU disable message
     stage: Preview
 ---
 apiVersion: deckhouse.io/v1alpha1

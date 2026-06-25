@@ -69,7 +69,6 @@ area/monitoring:
   - modules/200-operator-prometheus/**
   - modules/300-prometheus/**
   - modules/301-prometheus-metrics-adapter/**
-  - modules/303-prometheus-pushgateway/**
   - modules/340-extended-monitoring/**
   - modules/340-monitoring-*/**
   - modules/500-okmeter/**

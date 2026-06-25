@@ -167,6 +167,10 @@ type ApplicationPackageVersionStatusMetadata struct {
 	// +optional
 	Description *PackageDescription `json:"description,omitempty"`
 
+	// Parameters of package disable protection.
+	// +optional
+	DisableOptions *PackageDisableOptions `json:"disableOptions,omitempty"`
+
 	// The category this package belongs to.
 	// +optional
 	Category string `json:"category,omitempty"`

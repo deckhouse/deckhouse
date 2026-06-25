@@ -262,28 +262,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"docsBuilder": "imageHash-documentation-docsBuilder",
 		"web":         "imageHash-documentation-web",
 	},
-	"extendedMonitoring": map[string]interface{}{
-		"eventsExporter":             "imageHash-extendedMonitoring-eventsExporter",
-		"extendedMonitoringExporter": "imageHash-extendedMonitoring-extendedMonitoringExporter",
-		"imageAvailabilityExporter":  "imageHash-extendedMonitoring-imageAvailabilityExporter",
-		"x509CertificateExporter":    "imageHash-extendedMonitoring-x509CertificateExporter",
-	},
-	"ingressNginx": map[string]interface{}{
-		"controller112":         "imageHash-ingressNginx-controller112",
-		"controller114":         "imageHash-ingressNginx-controller114",
-		"controller115":         "imageHash-ingressNginx-controller115",
-		"failoverCleaner":       "imageHash-ingressNginx-failoverCleaner",
-		"geoproxy":              "imageHash-ingressNginx-geoproxy",
-		"init":                  "imageHash-ingressNginx-init",
-		"iptablesWrapperInit":   "imageHash-ingressNginx-iptablesWrapperInit",
-		"kruise":                "imageHash-ingressNginx-kruise",
-		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",
-		"kubeRbacProxy":         "imageHash-ingressNginx-kubeRbacProxy",
-		"nginxExporter":         "imageHash-ingressNginx-nginxExporter",
-		"protobufExporter":      "imageHash-ingressNginx-protobufExporter",
-		"proxyFailover":         "imageHash-ingressNginx-proxyFailover",
-		"proxyFailoverIptables": "imageHash-ingressNginx-proxyFailoverIptables",
-	},
 	"istio": map[string]interface{}{
 		"allianceHealthcheck": "imageHash-istio-allianceHealthcheck",
 		"apiProxy":            "imageHash-istio-apiProxy",
@@ -419,9 +397,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"prometheusMetricsAdapter": map[string]interface{}{
 		"k8sPrometheusAdapter":   "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",
 		"prometheusReverseProxy": "imageHash-prometheusMetricsAdapter-prometheusReverseProxy",
-	},
-	"prometheusPushgateway": map[string]interface{}{
-		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
 	},
 	"registry": map[string]interface{}{
 		"dockerAuth":          "imageHash-registry-dockerAuth",

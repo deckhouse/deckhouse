@@ -41,6 +41,11 @@ properties:
         - ["nn2wezldn5xgm2lhfvtwk3tfojqxi33sfuymx4u44scceizf"]
         items:
           type: string
+      kubeconfigPublishAPIEncodedName:
+        type: string
+        default: ""
+        x-examples:
+        - "nn2wezldn5xgm2lhfvyhkytmnfzwqllbobu4x4u44scceizf"
       discoveredDexClusterIP:
         type: string
       discoveredDexCA:

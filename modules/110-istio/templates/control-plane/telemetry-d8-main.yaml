@@ -1,4 +1,6 @@
 {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict }}
+{{- $globalVersionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
+{{- $operatorFreeControlPlane := not (get $globalVersionInfo "supportsOperator") }}
 ---
 apiVersion: telemetry.istio.io/v1alpha1
 kind: Telemetry
@@ -11,7 +13,7 @@ spec:
   - disabled: false
     providers:
     - name: d8-main
-{{- if $telemetryAPI.enabled }}
+{{- if or $telemetryAPI.enabled $operatorFreeControlPlane }}
   metrics:
   - providers:
     - name: prometheus

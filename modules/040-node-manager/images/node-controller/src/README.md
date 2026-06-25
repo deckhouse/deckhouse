@@ -498,11 +498,61 @@ kubectl set image deployment/node-controller-manager \
 
 ## Testing
 
-### Unit Tests
+Two levels **envtest** integration tests run the controller in a real manager against a real
+kube-apiserver and assert object state, **unit** tests cover pure logic. Each controller has a
+`Test<Name>ControllerEnvtest` suite (skipped automatically if the envtest binaries are absent).
+
+### Running
 
 ```bash
-go test ./internal/webhook/... -v
-go test ./internal/controller/... -v
+make test          # unit + every envtest suite, whole module, with coverage
+                   # (downloads the envtest k8s binaries via setup-envtest the first time)
+make test-envtest  # just the envtest suites, each run live; ENVTEST_DEBUG / ENVTEST_LOGS below
+
+# a single suite (fast iteration); --bin-dir $(pwd)/bin makes setup-envtest return an ABSOLUTE path:
+make envtest   # once, to download the binaries into ./bin
+KUBEBUILDER_ASSETS="$(bin/setup-envtest use 1.34.1 --bin-dir $(pwd)/bin -p path)" \
+  go test ./internal/controller/draining -run DrainingControllerEnvtest -v -ginkgo.v
+```
+
+> envtest is a **real** kube-apiserver + etcd, but with **no kubelet, controller-manager, GC or
+> scheduler**. `KUBEBUILDER_ASSETS` must be an **absolute** path to the binaries (a relative one
+> fails with `fork/exec bin/k8s/.../etcd: no such file or directory` because `go test`'s working
+> dir is the package dir). `make test` / `make test-envtest` set it for you.
+
+### Inspecting a running envtest test with real kubectl
+
+The envtest apiserver only lives for the duration of the suite, so to poke it by hand you pause a
+spec. `testenv.PauseForKubectl` writes an admin kubeconfig to `/tmp/envtest.kubeconfig` and blocks:
+
+1. Add the pause where you want to look — or focus the ready-made debug spec in
+   `internal/controller/instance/e2e_debug_test.go` (change `XIt` to `FIt`):
+
+   ```go
+   testenv.PauseForKubectl(GinkgoWriter, testEnv, cfg, 5*time.Minute)
+   ```
+
+2. Run the suite (`make test-envtest`, or the single-suite command above).
+
+3. While it is paused, in **another terminal**:
+
+   ```bash
+   KUBECONFIG=/tmp/envtest.kubeconfig kubectl get instances,nodes,machines.cluster.x-k8s.io -A
+   ```
+
+   It's a real apiserver — `apply`/`patch`/`delete` work too. For a non-blocking grab of the
+   kubeconfig (e.g. in `BeforeSuite`) use `testenv.WriteKubeconfig(testEnv, cfg, path)`.
+
+### Debug output
+
+| Flag | Effect |
+| --- | --- |
+| `ENVTEST_LOGS=1` | print the controller's own logs during the suite |
+| `ENVTEST_DEBUG=1` | after each spec, dump cluster state as **real `kubectl get … -o wide`** output (Nodes + the NodeGroup/Instance/Machine CRs that the suite installed) via `testenv.KubectlDumpNodeObjects` — works in every suite |
+| `-ginkgo.v` | per-spec names + `By(...)` steps (already enabled by `make test-envtest`) |
+
+```bash
+ENVTEST_LOGS=1 ENVTEST_DEBUG=1 make test-envtest
 ```
 
 ## Deployment
