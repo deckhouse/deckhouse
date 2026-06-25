@@ -1,5 +1,5 @@
 {{- $profiles := list "main" }}
-{{- if .Values.monitoringKubernetesControlPlane.internal.hasEtcdArbiterNode }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
 {{- end }}
 
@@ -8,7 +8,7 @@
 {{- if ne $profile "main" }}
   {{- $appLabel = printf "%s-%s" $appLabel $profile }}
 {{- end }}
-{{- if (.Values.global.enabledModules | has "prometheus") }}
+{{- if ($.Values.global.enabledModules | has "prometheus") }}
 ---
 apiVersion: v1
 kind: Service

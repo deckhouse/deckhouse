@@ -13,7 +13,7 @@ memory: 15Mi
   {{- if ne $profile "main" }}
     {{- $appLabel = printf "%s-%s" $appLabel $profile }}
   {{- end }}
-{{- if (.Values.global.enabledModules | has "prometheus") }}
+{{- if ($.Values.global.enabledModules | has "prometheus") }}
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1

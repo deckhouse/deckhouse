@@ -8,7 +8,7 @@
 {{- if ne $profile "main" }}
   {{- $appLabel = printf "%s-%s" $appLabel $profile }}
 {{- end }}
-{{- if (.Values.global.enabledModules | has "prometheus") }}
+{{- if ($.Values.global.enabledModules | has "prometheus") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
