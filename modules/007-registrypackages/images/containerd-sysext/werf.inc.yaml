@@ -8,7 +8,7 @@
   {{- $major_version := index (splitList "-" $image_version) 0 }}
   {{- $runc_version := index $containerd2runc $containerd_version }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/distroless" }}
 final: false
 import:
@@ -55,10 +55,10 @@ shell:
   - cat containerd.erofs containerd.verity > /out/containerd.raw
   - printf '%s\n' "$ROOTHASH" > /out/containerd.raw.roothash
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /out
   to: /
   includePaths:
