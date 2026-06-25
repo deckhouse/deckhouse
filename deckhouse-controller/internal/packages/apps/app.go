@@ -340,45 +340,9 @@ func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 
-// ApplySettings applies settings values to application. Before persisting the
-// user config, it resolves x-deckhouse-grantable-resource defaults for the
-// instance namespace and injects them into empty fields.
+// ApplySettings applies settings values to application.
 func (a *Application) ApplySettings(settings addonutils.Values) error {
-	if err := a.resolveGrantDefaults(context.Background()); err != nil {
-		return err
-	}
-
 	return a.values.ApplySettings(settings)
-}
-
-// resolveGrantDefaults resolves the per-project default for every
-// x-deckhouse-grantable-resource settings field and stores the results as dynamic
-// defaults on the values storage. Resources without an available default
-// (multitenancy disabled, no catalog, or an empty default) are skipped.
-func (a *Application) resolveGrantDefaults(ctx context.Context) error {
-	refs, err := a.values.GrantRefs()
-	if err != nil {
-		return fmt.Errorf("collect grant refs: %w", err)
-	}
-	if len(refs) == 0 {
-		return nil
-	}
-
-	catalogs, err := a.resolveCatalogs(ctx, refs)
-	if err != nil {
-		return err
-	}
-
-	defaults := make([]values.DynamicDefault, 0, len(refs))
-	for _, ref := range refs {
-		catalog := catalogs[ref.Resource]
-		if !catalog.Found || catalog.Default == "" {
-			continue
-		}
-		defaults = append(defaults, values.DynamicDefault{Path: ref.Path, Value: catalog.Default})
-	}
-
-	return a.values.SetDynamicDefaults(defaults)
 }
 
 // validateGrants rejects settings whose x-deckhouse-grantable-resource field

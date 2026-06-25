@@ -58,41 +58,6 @@ func newTestApp(t *testing.T, resolver grants.Resolver) *Application {
 	}
 }
 
-func TestResolveGrantDefaults(t *testing.T) {
-	t.Run("injects project default into empty field", func(t *testing.T) {
-		app := newTestApp(t, stubResolver{catalog: grants.Catalog{
-			Found:     true,
-			Default:   "ssd",
-			Available: []string{"ssd", "hdd"},
-		}})
-
-		require.NoError(t, app.resolveGrantDefaults(context.Background()))
-		require.NoError(t, app.values.ApplySettings(addonutils.Values{}))
-
-		assert.Equal(t, "ssd", app.values.GetValues()["storageClass"])
-	})
-
-	t.Run("skips when catalog has no default", func(t *testing.T) {
-		app := newTestApp(t, stubResolver{catalog: grants.Catalog{Found: true}})
-
-		require.NoError(t, app.resolveGrantDefaults(context.Background()))
-		require.NoError(t, app.values.ApplySettings(addonutils.Values{}))
-
-		_, present := app.values.GetValues()["storageClass"]
-		assert.False(t, present)
-	})
-
-	t.Run("skips when feature inactive", func(t *testing.T) {
-		app := newTestApp(t, grants.NoopResolver{})
-
-		require.NoError(t, app.resolveGrantDefaults(context.Background()))
-		require.NoError(t, app.values.ApplySettings(addonutils.Values{}))
-
-		_, present := app.values.GetValues()["storageClass"]
-		assert.False(t, present)
-	})
-}
-
 func TestValidateGrants(t *testing.T) {
 	app := newTestApp(t, stubResolver{catalog: grants.Catalog{
 		Found:     true,
