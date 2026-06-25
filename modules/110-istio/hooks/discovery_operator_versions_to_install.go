@@ -22,7 +22,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,15 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 )
 
 const (
-	minVersionValuesKey = "istio:minimalVersion"
-	istioNamespace      = "d8-istio"
+	istioNamespace = "d8-istio"
 )
 
 type IstioOperatorCrdInfo struct {
@@ -86,8 +83,8 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 
 	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
-	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
-	for _, versionResult := range versionsToInstallResult {
+	var versionsToInstall = input.Values.Get("istio.internal.versionsToInstall").Array()
+	for _, versionResult := range versionsToInstall {
 		version := versionResult.String()
 		if !versionMap.DoesVersionSupportOperator(version) {
 			continue
@@ -169,23 +166,6 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 
 	sort.Strings(operatorVersionsToInstall)
 	input.Values.Set("istio.internal.operatorVersionsToInstall", operatorVersionsToInstall)
-
-	// Getting minVersion
-	var minVersion *semver.Version
-	for _, version := range operatorVersionsToInstall {
-		versionSemver, err := semver.NewVersion(version)
-		if err != nil {
-			return err
-		}
-		if minVersion == nil || versionSemver.LessThan(minVersion) {
-			minVersion = versionSemver
-		}
-	}
-	if minVersion == nil {
-		requirements.RemoveValue(minVersionValuesKey)
-	} else {
-		requirements.SaveValue(minVersionValuesKey, fmt.Sprintf("%d.%d", minVersion.Major(), minVersion.Minor()))
-	}
 
 	return nil
 }

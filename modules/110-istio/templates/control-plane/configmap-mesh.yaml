@@ -3,6 +3,9 @@
   {{- if not (get $versionInfo "supportsOperator") }}
   {{- $revision := get $versionInfo "revision" }}
   {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+  {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict }}
+  {{- $globalVersionInfo := get $.Values.istio.internal.versionMap $.Values.istio.internal.globalVersion }}
+  {{- $operatorFreeControlPlane := not (get $globalVersionInfo "supportsOperator") }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -32,6 +35,11 @@ data:
   mesh: |-
     rootNamespace: d8-{{ $.Chart.Name }}
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+    {{- if or $telemetryAPI.enabled $operatorFreeControlPlane }}
+    defaultProviders:
+      metrics:
+      - prometheus
+    {{- end }}
     extensionProviders:
     - envoyFileAccessLog:
         path: /dev/stdout
@@ -44,7 +52,10 @@ data:
             {{ $key }}: {{ $value | toJson }}
           {{- end }}
         {{- end }}
-      name: main-access-log-format
+      name: d8-main
+    {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
+    {{- include "istioTracingProvider" $ | nindent 4 }}
+    {{- end }}
 {{- include "istioUserExtensionProviders" $ | nindent 4 }}
     discoverySelectors:
     - matchExpressions:
@@ -66,11 +77,15 @@ data:
         ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
         PROXY_CONFIG_XDS_AGENT: "true"
       holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
-    {{- if $.Values.istio.tracing.enabled }}
+    {{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
+    {{- with $.Values.istio.tracing.collector.zipkin }}
+    {{- with .address }}
       tracing:
         sampling: {{ $.Values.istio.tracing.sampling }}
         zipkin:
-          address: {{ $.Values.istio.tracing.collector.zipkin.address }}
+          address: {{ . | quote }}
+    {{- end }}
+    {{- end }}
     {{- end }}
     {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
     caCertificates:
