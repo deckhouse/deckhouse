@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -44,6 +45,20 @@ func CacheOptions() (cache.Options, client.Options) {
 		"cluster.x-k8s.io/provider": "cluster-api",
 	})
 
+	// Cache Secrets in MachineNamespace that the controllers actually need:
+	//   - configuration-checksums      (app=bashible-apiserver)
+	//   - node-controller-webhook-tls  (app=node-controller)
+	//   - capi-webhook-tls             (app=capi-controller-manager)
+	// The webhook-tls secrets must be watched so crdmigration re-injects the
+	// caBundle after CA rotation. Bootstrap/data secrets have no "app" label and
+	// are therefore excluded by this set-based selector.
+	machineNSSecretReq, _ := labels.NewRequirement(
+		"app",
+		selection.In,
+		[]string{"bashible-apiserver", "node-controller", "capi-controller-manager"},
+	)
+	machineNSSecretSelector := labels.NewSelector().Add(*machineNSSecretReq)
+
 	cacheOpts := cache.Options{
 		DefaultTransform: func(obj interface{}) (interface{}, error) {
 			stripNodeHeavyFields(obj)
@@ -56,9 +71,7 @@ func CacheOptions() (cache.Options, client.Options) {
 			&corev1.Secret{}: {
 				Namespaces: map[string]cache.Config{
 					MachineNamespace: {
-						FieldSelector: fields.SelectorFromSet(fields.Set{
-							"metadata.name": ConfigurationChecksumsSecretName,
-						}),
+						LabelSelector: machineNSSecretSelector,
 					},
 					"kube-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{
