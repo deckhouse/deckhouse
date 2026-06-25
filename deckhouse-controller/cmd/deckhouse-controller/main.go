@@ -69,6 +69,10 @@ const (
 	AppDescription = "controller for Kubernetes platform from Flant"
 )
 
+// legacyBashCompletion is bound to the backward-compatibility flag
+// `--completion-script-bash` (see rootCmd setup in main).
+var legacyBashCompletion bool
+
 func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
@@ -111,11 +115,38 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   fileName,
 		Short: fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription),
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			// Backward-compatibility alias for the legacy kingpin flag
+			// `--completion-script-bash`, which was replaced by the cobra
+			// `completion bash` subcommand after the migration to cobra.
+			// External callers (and our own image's /etc/bashrc) still invoke
+			// `deckhouse-controller --completion-script-bash`, so keep emitting
+			// the bash completion script and exit early when the flag is set.
+			// Use GenBashCompletionV2 (with descriptions) so the output is
+			// byte-for-byte identical to the `completion bash` subcommand.
+			if legacyBashCompletion {
+				if err := cmd.Root().GenBashCompletionV2(os.Stdout, true); err != nil {
+					return err
+				}
+
+				os.Exit(0)
+			}
+
 			klogtolog.InitAdapter(cfg.Debug.KubernetesAPI, logger.Named("klog"))
 			stdliblogtolog.InitAdapter(logger)
+
 			return nil
 		},
+	}
+
+	// Legacy kingpin completion flag alias. Hidden from help output: the
+	// canonical interface is the `completion` subcommand, this only preserves
+	// backward compatibility for `--completion-script-bash`.
+	rootCmd.PersistentFlags().BoolVar(&legacyBashCompletion, "completion-script-bash", false,
+		"Generate the bash autocompletion script (alias for `completion bash`).")
+	if err := rootCmd.PersistentFlags().MarkHidden("completion-script-bash"); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to hide completion-script-bash flag: %v\n", err)
+		os.Exit(1)
 	}
 
 	rootCmd.AddCommand(&cobra.Command{
