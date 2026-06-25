@@ -6,6 +6,7 @@ memory: 25Mi
 cpu: 10m
 memory: 25Mi
 {{- end }}
+{{- $securityPolicyExceptionEnabled := and (.Values.global.enabledModules | has "admission-policy-engine-crd") (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -57,6 +58,9 @@ spec:
     metadata:
       labels:
         app: node-exporter
+        {{- if $securityPolicyExceptionEnabled }}
+        security.deckhouse.io/security-policy-exception: node-exporter
+        {{- end }}
       name: node-exporter
       annotations:
         container.apparmor.security.beta.kubernetes.io/node-exporter: "unconfined"
@@ -126,7 +130,7 @@ spec:
 {{- end }}
       - image: {{ include "helm_lib_module_image" (list . "kubeletEvictionThresholdsExporter") }}
         name: kubelet-eviction-thresholds-exporter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         env:
         - name: MY_NODE_NAME
           valueFrom:

@@ -1,0 +1,63 @@
+{{- if and (.Values.global.enabledModules | has "admission-policy-engine-crd") (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: node-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-exporter")) | nindent 2 }}
+spec:
+  securityContext:
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_TIME
+        drop:
+          - ALL
+      metadata:
+        description: |
+          node-exporter requires SYS_TIME capability for NTP checks.
+    appArmorProfile:
+      allowedValues:
+        - unconfined
+      metadata:
+        description: |
+          node-exporter and kubelet-eviction-thresholds-exporter require unconfined AppArmor profile.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          node-exporter runs in host network namespace to expose node metrics endpoint.
+    hostPID:
+      allowedValue: true
+      metadata:
+        description: |
+          node-exporter reads host process information.
+    hostPorts:
+      - port: 4206
+        protocol: TCP
+        metadata:
+          description: HTTPS endpoint exposed via kube-rbac-proxy.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          node-exporter requires hostPath mounts for host filesystem and textfile collectors.
+    hostPath:
+      allowedValues:
+        - path: /var/run/node-exporter-textfile
+          readOnly: true
+          metadata:
+            description: Read node-exporter textfile metrics.
+        - path: /
+          readOnly: true
+          metadata:
+            description: Read host root filesystem for collectors.
+        - path: /etc/containerd
+          readOnly: false
+          metadata:
+            description: Access containerd configuration for eviction thresholds exporter.
+{{- end }}

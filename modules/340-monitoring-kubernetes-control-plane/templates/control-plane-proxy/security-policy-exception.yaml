@@ -1,0 +1,21 @@
+{{- if and (.Values.global.enabledModules | has "admission-policy-engine-crd") (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: control-plane-proxy
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-proxy")) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          control-plane-proxy scrapes local control-plane components via host network namespace.
+    hostPorts:
+      - port: 4209
+        protocol: TCP
+        metadata:
+          description: HTTPS endpoint exposed via kube-rbac-proxy.
+{{- end }}
