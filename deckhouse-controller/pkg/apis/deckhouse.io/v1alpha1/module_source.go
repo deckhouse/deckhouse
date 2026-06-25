@@ -66,9 +66,9 @@ var _ runtime.Object = (*ModuleSource)(nil)
 // +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
 // +kubebuilder:metadata:labels="backup.deckhouse.io/cluster-config=true"
-// +crd-enricher:deckhouse:crd:preserveUnknownFields=false
-// +crd-enricher:deckhouse:crd:minimal=true
-// +crd-enricher:deckhouse:crd:stripFormat=true
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
+// +crd-enricher:crd:stripFormat=true
 // +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: ModuleSource, metadata: {name: example}, spec: {registry: {repo: registry.example.io/modules-source, dockerCfg: "<base64 encoded credentials>"}}}
 
 // Defines the configuration of a source of Deckhouse modules.

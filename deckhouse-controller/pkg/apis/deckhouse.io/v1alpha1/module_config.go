@@ -68,9 +68,9 @@ var _ runtime.Object = (*ModuleConfig)(nil)
 // +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
 // +kubebuilder:metadata:labels="backup.deckhouse.io/cluster-config=true"
-// +crd-enricher:deckhouse:crd:preserveUnknownFields=false
-// +crd-enricher:deckhouse:crd:minimal=true
-// +crd-enricher:deckhouse:crd:stripFormat=true
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
+// +crd-enricher:crd:stripFormat=true
 // +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: ModuleConfig, metadata: {name: module-1}, spec: {enabled: true, settings: {}, version: 1}}
 
 // Defines the configuration of the Deckhouse Kubernetes Platform module (module parameters). The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).

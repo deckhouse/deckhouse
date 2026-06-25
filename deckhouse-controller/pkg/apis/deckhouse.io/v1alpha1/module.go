@@ -130,9 +130,9 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:metadata:labels="heritage=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
-// +crd-enricher:deckhouse:crd:preserveUnknownFields=false
-// +crd-enricher:deckhouse:crd:minimal=true
-// +crd-enricher:deckhouse:crd:stripFormat=[int32]
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
+// +crd-enricher:crd:stripFormat=[int32]
 
 // Describes the module's status in the cluster. The `Module` object is created automatically after configuring the [ModuleSource](#modulesource) and successfully completing synchronization.
 type Module struct {

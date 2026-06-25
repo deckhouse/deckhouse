@@ -43,8 +43,8 @@ var (
 // +kubebuilder:metadata:labels="heritage=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
 // +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
-// +crd-enricher:deckhouse:crd:preserveUnknownFields=false
-// +crd-enricher:deckhouse:crd:minimal=true
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
 
 // Defines the rendering configuration of the Deckhouse module documentation.
 //

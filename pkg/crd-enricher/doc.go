@@ -29,7 +29,7 @@
 //
 //	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
-//	+crd-enricher:deckhouse:crd:<key>[=<value>]              // CRD-level setting
+//	+crd-enricher:crd:<key>[=<value>]                        // CRD-level setting
 //	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
 // The raw entity injects a standard schema field and lives directly under the

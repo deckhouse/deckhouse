@@ -25,25 +25,26 @@ import (
 //
 //	+crd-enricher:raw:<key>[=<value>]                        // raw schema injection
 //	+crd-enricher:deckhouse:documentation:<entity>[=<value>] // documentation entity
-//	+crd-enricher:deckhouse:crd:<key>[=<value>]              // CRD-level setting
+//	+crd-enricher:crd:<key>[=<value>]                        // CRD-level setting
 //	+crd-enricher:deckhouse:sensitive-data                   // sensitive field flag
 //
 // The raw entity lives directly under the prefix because it injects a standard
 // schema field rather than deckhouse-specific documentation. The documentation
 // entities (examples, deprecated, default) carry the extra
-// "deckhouse:documentation" sub-namespace. The crd and sensitive-data entities
-// configure the CRD or its schema rather than documenting a field, so they
-// carry the shorter "deckhouse" sub-namespace. Every shape is reduced to the
-// bare entity name during parsing so the rest of the enricher matches on it.
+// "deckhouse:documentation" sub-namespace. The sensitive-data entity configures
+// the schema and carries the shorter "deckhouse" sub-namespace. The crd entity
+// lives directly under the prefix (no sub-namespace). Every shape is reduced to
+// the bare entity name during parsing so the rest of the enricher matches on it.
 const markerPrefix = "crd-enricher:"
 
 // docSubPrefix is the "deckhouse:documentation" sub-namespace stripped from the
 // documentation entities after markerPrefix. The raw entity does not carry it.
 const docSubPrefix = "deckhouse:documentation:"
 
-// deckhouseSubPrefix is the "deckhouse" sub-namespace stripped from the crd
-// entity after markerPrefix. It is shorter than docSubPrefix and must be tried
-// only after it, so that "deckhouse:documentation:" is not swallowed by it.
+// deckhouseSubPrefix is the "deckhouse" sub-namespace stripped from the
+// sensitive-data entity after markerPrefix. It is shorter than docSubPrefix and
+// must be tried only after it, so that "deckhouse:documentation:" is not
+// swallowed by it. The crd entity does not carry this sub-namespace.
 const deckhouseSubPrefix = "deckhouse:"
 
 // docKeyPrefix is the schema-field prefix the rendered CRDs use for the simple
@@ -69,9 +70,9 @@ const rawMarkerPrefix = "raw:"
 // deckhouse style. Each setting is its own "crd:<key>=<value>" sub-entity, in
 // the kubebuilder marker style, for example:
 //
-//	+crd-enricher:deckhouse:crd:preserveUnknownFields=false
-//	+crd-enricher:deckhouse:crd:minimal=true
-//	+crd-enricher:deckhouse:crd:stripFormat=true
+//	+crd-enricher:crd:preserveUnknownFields=false
+//	+crd-enricher:crd:minimal=true
+//	+crd-enricher:crd:stripFormat=true
 //
 // The value after "=" is parsed as YAML (so stripFormat=[int32] yields a list),
 // and a value-less sub-entity is treated as the boolean true. The
@@ -93,7 +94,7 @@ func isCRDMarker(name string) bool {
 
 // sensitiveDataMarker is the schema-level entity that flags a field (or an
 // object/array subtree) as sensitive. It lives under the "deckhouse"
-// sub-namespace, like crd:
+// sub-namespace:
 //
 //	// +crd-enricher:deckhouse:sensitive-data
 //	Token string `json:"token"`
@@ -169,9 +170,10 @@ func parseMarkerLine(line string) (marker, bool) {
 	// optional entity sub-namespace so downstream code matches on the bare
 	// entity name (crd:..., raw:..., examples, …), and flag them as the
 	// enricher's own so they are told apart from other markers. The
-	// documentation entities carry "deckhouse:documentation:" and the crd entity
+	// documentation entities carry "deckhouse:documentation:" and sensitive-data
 	// carries the shorter "deckhouse:"; the longer one is tried first so it is
-	// not swallowed by the shorter one.
+	// not swallowed by the shorter one. The crd entity lives directly under the
+	// prefix (no sub-namespace) and passes through both strips unchanged.
 	if rest, ok := strings.CutPrefix(m.name, markerPrefix); ok {
 		rest = strings.TrimPrefix(rest, docSubPrefix)
 		rest = strings.TrimPrefix(rest, deckhouseSubPrefix)

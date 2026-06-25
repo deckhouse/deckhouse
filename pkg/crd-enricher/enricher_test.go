@@ -35,8 +35,8 @@ func TestParseMarkerLine(t *testing.T) {
 		{"value with equals", "+crd-enricher:raw:pattern=a=b", marker{name: "raw:pattern", rawValue: "a=b", hasValue: true, enricher: true}, true},
 		{"whitespace", "  +crd-enricher:deckhouse:documentation:default = 3m  ", marker{name: "default", rawValue: "3m", hasValue: true, enricher: true}, true},
 		{"examples", "+crd-enricher:deckhouse:documentation:examples=5m", marker{name: "examples", rawValue: "5m", hasValue: true, enricher: true}, true},
-		{"crd subkey", "+crd-enricher:deckhouse:crd:minimal=true", marker{name: "crd:minimal", rawValue: "true", hasValue: true, enricher: true}, true},
-		{"crd subkey flag", "+crd-enricher:deckhouse:crd:minimal", marker{name: "crd:minimal", enricher: true}, true},
+		{"crd subkey", "+crd-enricher:crd:minimal=true", marker{name: "crd:minimal", rawValue: "true", hasValue: true, enricher: true}, true},
+		{"crd subkey flag", "+crd-enricher:crd:minimal", marker{name: "crd:minimal", enricher: true}, true},
 		{"sensitive-data", "+crd-enricher:deckhouse:sensitive-data", marker{name: "sensitive-data", enricher: true}, true},
 		{"raw", "+crd-enricher:raw:pattern=^a$", marker{name: "raw:pattern", rawValue: "^a$", hasValue: true, enricher: true}, true},
 	}

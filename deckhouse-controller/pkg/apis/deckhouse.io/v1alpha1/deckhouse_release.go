@@ -64,9 +64,9 @@ var DeckhouseReleaseGVK = schema.GroupVersionKind{
 // +kubebuilder:printcolumn:name="message",type="string",JSONPath=".status.message",description="Release status details."
 // +kubebuilder:metadata:labels="heritage=deckhouse"
 // +kubebuilder:metadata:labels="module=deckhouse"
-// +crd-enricher:deckhouse:crd:preserveUnknownFields=false
-// +crd-enricher:deckhouse:crd:minimal=true
-// +crd-enricher:deckhouse:crd:stripFormat=true
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
+// +crd-enricher:crd:stripFormat=true
 
 // Determines the state and parameters for applying a specific release (version) of the Deckhouse Kubernetes Platform (DKP) in the cluster.
 //
