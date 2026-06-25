@@ -699,6 +699,9 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /modules/460-log-shipper
   to: /deckhouse/modules/460-log-shipper
   excludePaths:
