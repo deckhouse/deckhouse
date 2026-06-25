@@ -696,12 +696,36 @@ jobs:
       - pull_request_info
       - build_fe
     if: ${{ needs.build_fe.result == 'success' && needs.pull_request_info.result == 'success' }}
+    runs-on: [self-hosted, regular]
     permissions:
       contents: read
       actions: read
       pull-requests: read
-    uses: ./.github/workflows/update-fuzz-targets.yml
-    secrets: inherit
+    steps:
+      - name: Download FE build report
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: build_report_FE
+          path: .
+
+      - name: Extract fuzzing images
+        run: |
+          jq -r '
+            .Images
+            | to_entries[]
+            | select(.key | endswith("-fuzz"))
+            | .key + " " + .value.DockerTag
+          ' images_tags_werf.json > fuzz-images.txt
+
+          echo "Discovered fuzz images:"
+          cat fuzz-images.txt
+
+      - name: Upload fuzzing images list
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: fuzz-images
+          path: fuzz-images.txt
+          retention-days: 14
 
   build_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
