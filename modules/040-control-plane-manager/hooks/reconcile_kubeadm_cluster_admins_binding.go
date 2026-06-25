@@ -66,11 +66,21 @@ const (
 	clusterIsBootstrappedValuePath    = "global.clusterIsBootstrapped"
 	kubeadmTargetRoleNameValuePath    = "controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName"
 	kubeadmSupplementEnabledValuePath = "controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled"
+
+	// Helm ownership keys. Helm refuses to adopt a resource that lacks all three; without them
+	// the control-plane-manager release fails on every converge on pre-v1.76 clusters.
+	helmManagedByLabel             = "app.kubernetes.io/managed-by"
+	helmManagedByValue             = "Helm"
+	helmReleaseNameAnnotation      = "meta.helm.sh/release-name"
+	helmReleaseNamespaceAnnotation = "meta.helm.sh/release-namespace"
+	cpmHelmReleaseName             = "control-plane-manager"
+	cpmHelmReleaseNamespace        = "d8-system"
 )
 
-// kubeadmClusterAdminsBindingState keeps the only moving piece of the CRB — the target role.
+// kubeadmClusterAdminsBindingState keeps the moving pieces of the CRB we care about.
 type kubeadmClusterAdminsBindingState struct {
-	RoleRefName string `json:"roleRefName"`
+	RoleRefName      string `json:"roleRefName"`
+	HasHelmOwnership bool   `json:"hasHelmOwnership"`
 }
 
 // userAuthzClusterAdminCRState is just a presence marker (snapshot length > 0 == role exists).
@@ -83,7 +93,13 @@ func filterKubeadmClusterAdminsBinding(obj *unstructured.Unstructured) (go_hook.
 	if err := sdk.FromUnstructured(obj, &crb); err != nil {
 		return nil, fmt.Errorf("convert ClusterRoleBinding %s: %w", obj.GetName(), err)
 	}
-	return kubeadmClusterAdminsBindingState{RoleRefName: crb.RoleRef.Name}, nil
+	hasHelm := crb.Labels[helmManagedByLabel] == helmManagedByValue &&
+		crb.Annotations[helmReleaseNameAnnotation] == cpmHelmReleaseName &&
+		crb.Annotations[helmReleaseNamespaceAnnotation] == cpmHelmReleaseNamespace
+	return kubeadmClusterAdminsBindingState{
+		RoleRefName:      crb.RoleRef.Name,
+		HasHelmOwnership: hasHelm,
+	}, nil
 }
 
 func filterUserAuthzClusterAdminCR(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -158,6 +174,26 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 
 	current := bindingSnaps[len(bindingSnaps)-1]
 	if current.RoleRefName == desiredRoleName {
+		if !current.HasHelmOwnership {
+			// Pre-v1.76 clusters have this CRB without Helm ownership metadata.
+			// Helm refuses to adopt a resource that lacks all three keys and the release fails.
+			// Patch them in before Helm runs so it can take ownership cleanly.
+			logger.Info("patching helm ownership metadata onto clusterrolebinding")
+			input.PatchCollector.PatchWithMerge(
+				map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"labels": map[string]string{
+							helmManagedByLabel: helmManagedByValue,
+						},
+						"annotations": map[string]string{
+							helmReleaseNameAnnotation:      cpmHelmReleaseName,
+							helmReleaseNamespaceAnnotation: cpmHelmReleaseNamespace,
+						},
+					},
+				},
+				rbacv1.SchemeGroupVersion.String(), "ClusterRoleBinding", "", kubeadmClusterAdminsBindingName,
+			)
+		}
 		return nil
 	}
 
@@ -168,8 +204,7 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 }
 
 // buildKubeadmClusterAdminsBinding renders the desired ClusterRoleBinding state.
-// Labels are intentionally minimal (only heritage/module): Helm SSA reconciles its full label set
-// on the next pass and we deliberately do not imitate Helm-managed metadata here.
+// Helm ownership metadata is included so that Helm can adopt the object on the next release run.
 func buildKubeadmClusterAdminsBinding(roleName string) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -179,8 +214,13 @@ func buildKubeadmClusterAdminsBinding(roleName string) *rbacv1.ClusterRoleBindin
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeadmClusterAdminsBindingName,
 			Labels: map[string]string{
-				"heritage": "deckhouse",
-				"module":   "control-plane-manager",
+				"heritage":         "deckhouse",
+				"module":           "control-plane-manager",
+				helmManagedByLabel: helmManagedByValue,
+			},
+			Annotations: map[string]string{
+				helmReleaseNameAnnotation:      cpmHelmReleaseName,
+				helmReleaseNamespaceAnnotation: cpmHelmReleaseNamespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
