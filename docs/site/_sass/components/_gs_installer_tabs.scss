@@ -1,89 +1,4 @@
-.installer-carousel {
-  margin: 20px auto;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.installer-carousel__viewport {
-  overflow: hidden;
-  width: 100%;
-  max-width: 100%;
-  touch-action: pan-y;
-}
-
-.installer-carousel__track {
-  display: flex;
-  transition: transform 0.35s ease;
-  will-change: transform;
-}
-
-.installer-carousel__slide {
-  flex: 0 0 100%;
-  min-width: 0;
-  padding: 0 8px;
-  box-sizing: border-box;
-}
-
-.installer-carousel__figure {
-  margin: 0;
-}
-
-.installer-carousel__slide img {
-  display: block;
-  max-width: 100%;
-  width: auto;
-  height: auto;
-  margin: 0 auto;
-  border: 1px solid #E7E9F5;
-}
-
-.installer-carousel__caption {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 24px;
-  color: #00122C;
-}
-
-.installer-carousel__nav {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 64px;
-  margin-top: 12px;
-}
-
-.installer-carousel__counter {
-  min-width: 7em;
-  text-align: center;
-  font-size: 14px;
-  line-height: 1.2;
-  color: #555;
-  user-select: none;
-}
-
-.installer-carousel__prev,
-.installer-carousel__next {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 38px;
-  border-radius: 9px;
-  color: #0064FF;
-  font-size: 20px;
-  border: none;
-  background: none;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-}
+@use 'components/common/_breakpoints.scss';
 
 .installer-carousel {
   margin: 20px auto;
@@ -91,87 +6,261 @@
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
-}
 
-.installer-carousel__viewport {
-  overflow: hidden;
-  width: 100%;
-  max-width: 100%;
-  touch-action: pan-y;
-  border-radius: 8px;
-  background: #FFF;
-  box-shadow: 0 2.881px 8.643px 0.96px rgba(59, 66, 109, 0.15);
-}
-
-.installer-carousel__track {
-  display: flex;
-  transition: transform 0.35s ease;
-  will-change: transform;
-}
-
-.installer-carousel__slide {
-  flex: 0 0 100%;
-  min-width: 0;
-  padding: 32px;
-  box-sizing: border-box;
-}
-
-.installer-carousel__figure {
-  margin: 0;
-}
-
-.installer-carousel__slide img {
-  display: block;
-}
-
-.installer-carousel__nav {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 64px;
-  margin-top: 12px;
-}
-
-.installer-carousel__pagination {
-  display: flex;
-  align-items: center;
-  justify-content: end;
-  gap: 16px;
-  min-width: 304px;
-  user-select: none;
-  color: #222A5D;
-  font-size: 16px;
-  font-weight: 400;
-
-  .installer-carousel__page {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 38px;
-    border: none;
+  &__viewport {
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    touch-action: pan-y;
     border-radius: 8px;
-    background: none;
-    cursor: pointer;
+    background: #FFF;
 
-    &:hover:not(.is-active) {
-      color: #0066ff;
-    }
-
-    &.is-active {
-      color: #FFF;
-      font-weight: 600;
-      background: #408BFF;
-      cursor: default;
+    @include breakpoints.min-w(m) {
+      box-shadow: 0 2.881px 8.643px 0.96px rgba(59, 66, 109, 0.15);
     }
   }
 
-  .installer-carousel__ellipsis {
+  &__track {
+    display: flex;
+    transition: transform 0.35s ease;
+    will-change: transform;
+  }
+
+  &__slide {
+    flex: 0 0 100%;
+    min-width: 0;
+    box-sizing: border-box;
+
+    @include breakpoints.min-w(m) {
+      padding: 18px;
+    }
+
+    @include breakpoints.min-w(l) {
+      padding: 32px;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      width: auto;
+      height: auto;
+      margin: 0 auto;
+      border: 1px solid #E7E9F5;
+    }
+  }
+
+  &__figure {
+    margin: 0;
+  }
+
+  &__caption {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 24px;
+    letter-spacing: 0.3px;
+    color: #00122C;
+
+    @include breakpoints.max-w(m) {
+      margin-top: 10px;
+    }
+
+    @include breakpoints.max-w(s) {
+      margin-top: 5px;
+      font-size: 12px;
+    }
+  }
+
+  &__nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 64px;
+    margin-top: 12px;
+
+    @include breakpoints.max-w(xl) {
+      gap: 50px;
+    }
+
+    @include breakpoints.max-w(l) {
+      gap: 40px;
+    }
+
+    @include breakpoints.max-w(m) {
+      gap: 30px;
+    }
+
+    @include breakpoints.max-w(s) {
+      gap: 20px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      gap: 16px;
+    }
+  }
+
+  &__counter {
+    min-width: 7em;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.2;
+    color: #555;
+    user-select: none;
+  }
+
+  &__prev, &__next {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 48px;
     height: 38px;
+    border-radius: 9px;
+    color: #0064FF;
+    font-size: 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+
+    @include breakpoints.max-w(xl) {
+      width: 44px;
+    }
+
+    @include breakpoints.max-w(l) {
+      width: 38px;
+      height: 34px;
+    }
+
+    @include breakpoints.max-w(m) {
+      width: 34px;
+      height: 30px;
+    }
+
+    @include breakpoints.max-w(s) {
+      width: 30px;
+      height: 26px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      width: 28px;
+      height: 24px;
+    }
+
+    &:disabled {
+      color: #969DC4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  }
+
+  &__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: end;
+    gap: 16px;
+    user-select: none;
+    color: #222A5D;
+    font-size: 16px;
+    font-weight: 400;
+
+    @include breakpoints.max-w(xl) {
+      font-size: 14px;
+    }
+
+    @include breakpoints.max-w(l) {
+      gap: 12px;
+    }
+
+    @include breakpoints.max-w(m) {
+      gap: 10px;
+    }
+
+    @include breakpoints.max-w(s) {
+      font-size: 12px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      gap: 8px;
+    }
+
+    &--page {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 38px;
+      border: none;
+      border-radius: 8px;
+      background: none;
+      cursor: pointer;
+
+      @include breakpoints.max-w(xl) {
+        width: 44px;
+      }
+
+      @include breakpoints.max-w(l) {
+        width: 38px;
+        height: 34px;
+      }
+
+      @include breakpoints.max-w(m) {
+        width: 34px;
+        height: 30px;
+      }
+
+      @include breakpoints.max-w(s) {
+        width: 30px;
+        height: 26px;
+      }
+
+      @include breakpoints.max-w(xs) {
+        width: 28px;
+        height: 24px;
+      }
+
+      &:hover:not(.is-active) {
+        color: #0066ff;
+      }
+
+      &.is-active {
+        color: #FFF;
+        font-weight: 600;
+        background: #408BFF;
+        cursor: default;
+      }
+    }
+
+    &--ellipsis {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 38px;
+
+      @include breakpoints.max-w(xl) {
+        width: 44px;
+      }
+
+      @include breakpoints.max-w(l) {
+        width: 38px;
+        height: 34px;
+      }
+
+      @include breakpoints.max-w(m) {
+        width: 34px;
+        height: 30px;
+      }
+
+      @include breakpoints.max-w(s) {
+        width: 30px;
+        height: 26px;
+      }
+
+      @include breakpoints.max-w(xs) {
+        width: 28px;
+        height: 24px;
+      }
+    }
   }
 }
 
