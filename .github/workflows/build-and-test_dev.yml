@@ -3022,7 +3022,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:0402dc491bceed2957bab097564d629cfa2047c7fd0f20f7111c96dd834e89fe"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:e3ce5d01ca717933f9f9e232bb39e0699fae86b4ef0da4520ee251cc4be956b8"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -3137,7 +3137,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run node-controller tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:0402dc491bceed2957bab097564d629cfa2047c7fd0f20f7111c96dd834e89fe"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:e3ce5d01ca717933f9f9e232bb39e0699fae86b4ef0da4520ee251cc4be956b8"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
