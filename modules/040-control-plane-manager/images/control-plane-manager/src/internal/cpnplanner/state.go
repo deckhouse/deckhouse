@@ -54,9 +54,8 @@ func (s componentState) needsObserve() bool {
 	return s.lastObserve.IsZero() || time.Since(s.lastObserve) > constants.CertObserveInterval
 }
 
-// needsCertRenew reports whether a standalone cert renewal is needed: certs expire soon and no converge is already reissuing them
 func (s componentState) needsCertRenew() bool {
-	return s.certsExpireSoon() && !s.certsChanged()
+	return s.certsExpireSoon() && !s.needsConverge()
 }
 
 func (s componentState) certsExpireSoon() bool {

@@ -46,7 +46,7 @@ func (VirtualStepBuilder) TargetSteps(s componentState) []TargetSteps {
 }
 
 func convergeSteps(s componentState) []controlplanev1alpha1.StepName {
-	return pipeline(s, s.certsChanged(), s.needsSignatureBootstrap())
+	return pipeline(s, s.certsChanged() || s.certsExpireSoon(), s.needsSignatureBootstrap())
 }
 
 func certRenewalSteps(s componentState) []controlplanev1alpha1.StepName {
