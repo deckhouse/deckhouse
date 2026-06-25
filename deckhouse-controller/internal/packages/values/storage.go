@@ -85,6 +85,12 @@ func NewStorage(name string, staticValues addonutils.Values, settingsBytes, valu
 	return s, nil
 }
 
+// GrantRefs returns the x-deckhouse-grantable-resource references declared in the
+// settings schema. Returns nil when no settings schema or no such references exist.
+func (s *Storage) GrantRefs() ([]schema.GrantRef, error) {
+	return s.schemaStorage.GrantRefs()
+}
+
 // GetValuesChecksum returns a checksum of the final merged values.
 // Used to detect when values have changed (e.g., for triggering hook reruns).
 func (s *Storage) GetValuesChecksum() string {
@@ -202,7 +208,7 @@ func (s *Storage) ApplyValuesPatch(patch addonutils.ValuesPatch) error {
 }
 
 // calculateResultValues merges all value layers and applies patches.
-// Layer order: static -> config schema defaults -> user config -> values schema defaults -> patches
+// Layer order: static -> config schema defaults -> dynamic defaults -> user config -> values schema defaults -> patches
 func (s *Storage) calculateResultValues() error {
 	merged := mergeLayers(
 		addonutils.Values{},

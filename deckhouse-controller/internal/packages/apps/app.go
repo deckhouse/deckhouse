@@ -44,9 +44,11 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -78,6 +80,10 @@ type Application struct {
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
 
+	// grantResolver resolves per-project cluster resource grants for settings
+	// fields tagged with x-deckhouse-grantable-resource. Never nil (defaults to NoopResolver).
+	grantResolver grants.Resolver
+
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
@@ -105,6 +111,10 @@ type Config struct {
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	// GrantResolver resolves cluster resource grants for x-deckhouse-grantable-resource
+	// settings fields. When nil, grant defaulting/validation is disabled.
+	GrantResolver grants.Resolver
 }
 
 // NewAppByConfig creates a new Application instance with the specified configuration.
@@ -133,6 +143,10 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.patcher = cfg.Patcher
 	a.scheduleManager = cfg.ScheduleManager
 	a.kubeEventsManager = cfg.KubeEventsManager
+	a.grantResolver = cfg.GrantResolver
+	if a.grantResolver == nil {
+		a.grantResolver = grants.NoopResolver{}
+	}
 	a.logger = logger
 
 	parsed, err := semver.NewVersion(a.definition.Version)
@@ -298,6 +312,12 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 		return settingscheck.Result{}, err
 	}
 
+	// Validate x-deckhouse-grantable-resource fields against what the project may use.
+	// This is read-only: it must not mutate the running app's values.
+	if err := a.validateGrants(ctx, settings); err != nil {
+		return settingscheck.Result{}, err
+	}
+
 	// apply defaults from config values spec
 	settings = a.values.ApplySettingsDefaults(settings)
 
@@ -320,9 +340,89 @@ func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 
-// ApplySettings applies settings values to application
+// ApplySettings applies settings values to application.
 func (a *Application) ApplySettings(settings addonutils.Values) error {
 	return a.values.ApplySettings(settings)
+}
+
+// validateGrants rejects settings whose x-deckhouse-grantable-resource field
+// carries a value that is not available to the project. Resources without a
+// resolved catalog are skipped (the feature is inactive for them).
+func (a *Application) validateGrants(ctx context.Context, settings addonutils.Values) error {
+	refs, err := a.values.GrantRefs()
+	if err != nil {
+		return fmt.Errorf("collect grant refs: %w", err)
+	}
+	if len(refs) == 0 {
+		return nil
+	}
+
+	catalogs, err := a.resolveCatalogs(ctx, refs)
+	if err != nil {
+		return err
+	}
+
+	for _, ref := range refs {
+		catalog := catalogs[ref.Resource]
+		if !catalog.Found {
+			continue
+		}
+
+		value, ok := stringAtPath(settings, ref.Path)
+		if !ok || value == "" {
+			continue
+		}
+
+		if !catalog.IsAvailable(value) {
+			return fmt.Errorf("field %q: %q is not available to this project for resource %q (available: %v)",
+				strings.Join(ref.Path, "."), value, ref.Resource, catalog.Available)
+		}
+	}
+
+	return nil
+}
+
+// resolveCatalogs resolves the catalog for every distinct resource referenced by
+// refs, deduplicating resolver calls.
+func (a *Application) resolveCatalogs(ctx context.Context, refs []schema.GrantRef) (map[string]grants.Catalog, error) {
+	catalogs := make(map[string]grants.Catalog)
+	for _, ref := range refs {
+		if _, done := catalogs[ref.Resource]; done {
+			continue
+		}
+
+		catalog, err := a.grantResolver.Resolve(ctx, a.namespace, ref.Resource)
+		if err != nil {
+			return nil, fmt.Errorf("resolve grant %q: %w", ref.Resource, err)
+		}
+
+		catalogs[ref.Resource] = catalog
+	}
+
+	return catalogs, nil
+}
+
+// stringAtPath returns the string value at path in values, or ok=false if the
+// path is missing or the leaf is not a string.
+func stringAtPath(values addonutils.Values, path []string) (string, bool) {
+	var cur map[string]interface{} = values
+	for i, key := range path {
+		v, ok := cur[key]
+		if !ok {
+			return "", false
+		}
+		if i == len(path)-1 {
+			str, isStr := v.(string)
+			return str, isStr
+		}
+		next, isMap := v.(map[string]interface{})
+		if !isMap {
+			return "", false
+		}
+		cur = next
+	}
+
+	return "", false
 }
 
 // GetSettings returns the effective settings: user config merged with

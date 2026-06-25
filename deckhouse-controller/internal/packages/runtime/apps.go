@@ -141,6 +141,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.GrantResolver = r.grantResolver
 
 	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {
