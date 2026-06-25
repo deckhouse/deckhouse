@@ -56,6 +56,8 @@ final: true
 
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src
+    to: /src
     before: install
 
 mount:
