@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "prometheus") }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -11,7 +12,7 @@ spec:
       heritage: deckhouse
   namespaceSelector:
     matchNames:
-    - d8-monitoring
+    - kube-system
   endpoints:
   - scheme: https
     port: https-metrics
@@ -70,3 +71,4 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+{{- end }}

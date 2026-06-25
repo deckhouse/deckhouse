@@ -13,7 +13,13 @@ linters-settings:
         - "properties.encryptionAlgorithm"
   container:
     exclude-rules:
+      controller-security-context:
+        - kind: DaemonSet
+          name: control-plane-proxy
       resources:
+        - kind: DaemonSet
+          name: control-plane-proxy
+          container: kube-rbac-proxy
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-etcd
@@ -27,6 +33,8 @@ linters-settings:
           name: d8-control-plane-manager
           container: image-holder-kube-apiserver
       security-context:
+        - kind: DaemonSet
+          name: control-plane-proxy
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-etcd

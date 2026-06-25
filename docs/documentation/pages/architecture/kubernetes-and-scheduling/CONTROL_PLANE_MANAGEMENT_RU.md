@@ -110,18 +110,16 @@ description: Архитектура и функции модуля control-plane
 
 ## Мониторинг control plane кластера
 
-Мониторинг control plane кластера осуществляется с помощью модуля [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/), который обеспечивает безопасный сбор метрик и предоставляет базовый набор правил мониторинга следующих компонентов кластера:
+Модуль осуществляет мониторинг control plane кластера, обеспечивая безопасный сбор метрик и предоставляя базовый набор правил мониторинга следующих компонентов кластера:
 
 * **kube-apiserver**;
 * **kube-controller-manager**;
 * **kube-scheduler**;
 * **etcd**.
 
-Подробнее с настройками `monitoring-kubernetes-control-plane` можно ознакомиться в [документации модуля](/modules/monitoring-kubernetes-control-plane/).
+### Компоненты сбора метрик control plane
 
-### Компоненты модуля monitoring-kubernetes-control-plane
-
-Модуль состоит из одного компонента:
+За сбор метрик control plane отвечает один компонент:
 
 1. **control-plane-proxy** (DaemonSet) — запускается на всех master-узлах кластера и состоит из одного контейнера:
 
@@ -141,8 +139,8 @@ description: Архитектура и функции модуля control-plane
 
 С **control-plane-proxy** взаимодействует **prometheus-main** для сбора метрик компонентов control plane.
 
-Взаимодействие модуля `monitoring-kubernetes-control-plane` с control plane кластера изображено на приведенной выше схеме архитектуры модуля `control-plane-manager`.
+Взаимодействие компонента control-plane-proxy с control plane кластера изображено на приведенной выше схеме архитектуры модуля.
 
 ### Сбор метрик с kube-apiserver
 
-Метрики **kube-apiserver** собираются **prometheus-main** напрямую. Модуль [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) добавляет правила сбора этих метрик в конфигурацию **prometheus-main**.
+Метрики **kube-apiserver** собираются **prometheus-main** напрямую. Модуль `control-plane-manager` добавляет правила сбора этих метрик в конфигурацию **prometheus-main**.
