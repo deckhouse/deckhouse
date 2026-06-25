@@ -439,7 +439,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cfssl165":                        "imageHash-registrypackages-cfssl165",
 		"containerd1732":                  "imageHash-registrypackages-containerd1732",
 		"containerd224":                   "imageHash-registrypackages-containerd224",
-		"containerdSysext224":             "imageHash-registrypackages-containerdSysext224",
+		"containerdSysextSysext224":       "imageHash-registrypackages-containerdSysextSysext224",
 		"crictl132":                       "imageHash-registrypackages-crictl132",
 		"crictl133":                       "imageHash-registrypackages-crictl133",
 		"crictl134":                       "imageHash-registrypackages-crictl134",
