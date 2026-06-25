@@ -27,9 +27,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 type CloudProviderVars = proto.CloudProviderVars

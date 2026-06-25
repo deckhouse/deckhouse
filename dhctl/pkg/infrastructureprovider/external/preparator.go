@@ -27,10 +27,11 @@ import (
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 type Preparator struct {

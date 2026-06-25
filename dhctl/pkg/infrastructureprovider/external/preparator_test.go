@@ -23,8 +23,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 func fixtureValidator(t *testing.T, script string) string {

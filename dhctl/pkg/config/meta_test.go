@@ -29,9 +29,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestGetDNSAddress(t *testing.T) {

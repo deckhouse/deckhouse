@@ -21,10 +21,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
-
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 const (

@@ -21,13 +21,14 @@ import (
 
 	"github.com/name212/govalue"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 type DhctlOperation = string

@@ -22,10 +22,11 @@ import (
 
 	"github.com/name212/govalue"
 
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 type clientProvider func(pcc map[string]json.RawMessage, l log.Logger) (cloudClient, error)

@@ -79,4 +79,3 @@ func TestValidateResources_EmptyPayload_NoError(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, resp.Err)
 }
-

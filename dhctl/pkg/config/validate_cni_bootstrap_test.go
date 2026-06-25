@@ -195,4 +195,3 @@ func TestCNIMismatchReasonToErrorKind(t *testing.T) {
 	require.Equal(t, ErrKindCNISettingsMismatch, cniMismatchReasonToErrorKind(CNIBootstrapMismatchReasonDifferentSettings))
 	require.Equal(t, ErrKindValidationFailed, cniMismatchReasonToErrorKind(CNIBootstrapMismatchReasonNone))
 }
-
