@@ -96,7 +96,6 @@ func (g *CRDGenerator) GenerateYAML(meta CRDMeta, versions []VersionSpec) ([]byt
 	if err != nil {
 		return nil, fmt.Errorf("serialize CRD to raw map: %w", err)
 	}
-
 	if g.cfg.EnableDeckhouseMarkers {
 		reg := g.cfg.DeckhouseRegistry
 		if reg == nil {
@@ -106,7 +105,10 @@ func (g *CRDGenerator) GenerateYAML(meta CRDMeta, versions []VersionSpec) ([]byt
 			}
 		}
 
-		rootByPkg := buildRootByPkgMap(versions)
+		rootByPkg, err := buildRootByPkgMap(versions)
+		if err != nil {
+			return nil, fmt.Errorf("build roor value by package basename: %w", err)
+		}
 
 		versionsRaw := crdRawVersions(crdRaw)
 		for i, versionRaw := range versionsRaw {
@@ -118,7 +120,7 @@ func (g *CRDGenerator) GenerateYAML(meta CRDMeta, versions []VersionSpec) ([]byt
 
 			root, ok := rootByPkg[versionName]
 			if !ok {
-				root = versions[0].Root
+				return nil, fmt.Errorf("version not found: version %q not found in roots", versionName)
 			}
 
 			rootSchemaMap := crdVersionOpenAPISchema(vMap)
@@ -260,14 +262,19 @@ func versionSpecRoots(versions []VersionSpec) []any {
 	return roots
 }
 
-// buildRootByPkgMap maps package name → root value for each version.
-func buildRootByPkgMap(versions []VersionSpec) map[string]any {
+// buildRootByPkgMap maps package basename → root value for each version.
+// Returns an error if two versions resolve to the same basename (ambiguous mapping).
+func buildRootByPkgMap(versions []VersionSpec) (map[string]any, error) {
 	m := make(map[string]any, len(versions))
 	for _, v := range versions {
 		pkgPath := reflectPkgPath(v.Root)
-		m[pkgPathToName(pkgPath)] = v.Root
+		name := pkgPathToName(pkgPath)
+		if _, exists := m[name]; exists {
+			return nil, fmt.Errorf("ambiguous version mapping for version %q", name)
+		}
+		m[name] = v.Root
 	}
-	return m
+	return m, nil
 }
 
 // crdRawVersions returns the versions slice from a raw CRD map.
@@ -320,8 +327,8 @@ func GenerateCRD(versions []VersionSpec) ([]byte, error) {
 	return gen.GenerateYAML(CRDMeta{}, versions)
 }
 
-// GenerateCRDDescriptionRu generates a CRD-shaped ru-description overlay YAML,
-// containing only description fields derived from deckhouse ru:description markers.
+// GenerateCRDDescriptionRu generates a full Kubernetes CRD YAML (identical structure to GenerateCRD),
+// but with description fields populated from deckhouse ru:description markers instead of English.
 func GenerateCRDDescriptionRu(versions []VersionSpec) ([]byte, error) {
 	reg, err := markers.BuildDeckhouseDescriptionRuOpenAPIMarkerRegistry()
 	if err != nil {

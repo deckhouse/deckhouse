@@ -177,7 +177,7 @@ func openAPIMarkerSchemaObjectCustomizerFn(bind map[string]pkgMarkers) openapi3g
 			}
 
 			for schemaName, field := range schema.Properties {
-				fieldRef, err := typeMarker.getFieldRefByJsonTag(schemaName)
+				fieldRef, err := typeMarker.getFieldRefByJSONTag(schemaName)
 				if err != nil {
 					return fmt.Errorf("type '%s': %w", name, err)
 				}
@@ -219,7 +219,7 @@ func applyMarkerValuesToSchema(schema *openapi3.Schema, mv ctmarkers.MarkerValue
 	return nil
 }
 
-func (t *typeMarkers) getFieldRefByJsonTag(jname string) (*fieldRef, error) {
+func (t *typeMarkers) getFieldRefByJSONTag(jname string) (*fieldRef, error) {
 	result := make([]fieldRef, 0)
 	for _, field := range t.fields {
 		if field.jsonName == jname {

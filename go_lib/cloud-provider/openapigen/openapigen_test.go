@@ -6,10 +6,14 @@ import (
 	"testing"
 
 	crdmodelv1alpha1 "openapigen/internal/test/crdmodel/v1alpha1"
+	ambigv1alpha1a "openapigen/internal/test/dupversion/a/v1alpha1"
+	ambigv1alpha1b "openapigen/internal/test/dupversion/b/v1alpha1"
 	"openapigen/internal/test/instanceclass"
+	missingv1alpha1 "openapigen/internal/test/missingversion/v1alpha2"
 	"openapigen/internal/test/module"
 	multiv1 "openapigen/internal/test/multiversioncrd/v1"
 	multiv1alpha1 "openapigen/internal/test/multiversioncrd/v1alpha1"
+	rucrdv1alpha1 "openapigen/internal/test/rucrd/v1alpha1"
 	"openapigen/internal/test/usermodel"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -70,6 +74,13 @@ var multiVersionCRDGoldenPath = filepath.Join(
 	testModelsPath,
 	"multiversioncrd",
 	"multiversion_crd.golden.yaml",
+)
+
+var ruCRDRuOverlayGoldenPath = filepath.Join(
+	testModelsPath,
+	"rucrd",
+	"v1alpha1",
+	"rucrd_ru_overlay.golden.yaml",
 )
 
 var _ = Describe("SchemaGenerator", func() {
@@ -214,6 +225,47 @@ var _ = Describe("OpenAPIGen", func() {
 			want, err := os.ReadFile(multiVersionCRDGoldenPath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(MatchYAML(want))
+		})
+
+		It("returns error when version mapping is ambiguous", func() {
+			_, err := GenerateCRD([]VersionSpec{
+				{Root: &ambigv1alpha1a.MultiVersionResource{}},
+				{Root: &ambigv1alpha1b.MultiVersionResource{}},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("ambiguous version mapping"))
+		})
+
+		It("returns error when version is not found in roots", func() {
+			_, err := GenerateCRD([]VersionSpec{{Root: &missingv1alpha1.MultiVersionResource{}}})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("version not found"))
+		})
+
+	})
+
+	Describe("GenerateCRDDescriptionRu", func() {
+		It("returns full CRD with Russian descriptions", func() {
+			got, err := GenerateCRDDescriptionRu([]VersionSpec{{Root: &rucrdv1alpha1.RUCRDResource{}}})
+			Expect(err).NotTo(HaveOccurred())
+
+			if _, statErr := os.Stat(ruCRDRuOverlayGoldenPath); os.IsNotExist(statErr) {
+				err = os.MkdirAll(filepath.Dir(ruCRDRuOverlayGoldenPath), 0755)
+				Expect(err).NotTo(HaveOccurred())
+				err = os.WriteFile(ruCRDRuOverlayGoldenPath, got, 0644)
+				Expect(err).NotTo(HaveOccurred())
+				return
+			}
+
+			want, err := os.ReadFile(ruCRDRuOverlayGoldenPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(MatchYAML(want))
+
+			var m map[string]any
+			err = yaml.Unmarshal(got, &m)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m).To(HaveKey("apiVersion"))
+			Expect(m).To(HaveKey("spec"))
 		})
 	})
 })
