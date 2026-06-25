@@ -34,6 +34,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -49,6 +50,9 @@ import (
 const (
 	engineCAPI = "CAPI"
 	engineMCM  = "MCM"
+
+	// mdCleanupFinalizer holds the NodeGroup until its MachineDeployments are deleted.
+	mdCleanupFinalizer = "node-manager.deckhouse.io/capi-md-cleanup"
 )
 
 func init() {
@@ -91,6 +95,20 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, fmt.Errorf("get NodeGroup: %w", err)
 	}
 
+	if !ng.DeletionTimestamp.IsZero() {
+		if err := r.cleanupMachineDeployments(ctx, ng.Name); err != nil {
+			return ctrl.Result{}, err
+		}
+		if err := r.removeFinalizer(ctx, ng); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if err := r.ensureFinalizer(ctx, ng); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	switch ng.Spec.NodeType {
 	case deckhousev1.NodeTypeCloudEphemeral:
 		switch ng.Status.Engine {
@@ -115,6 +133,71 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *MachineDeploymentReconciler) ensureFinalizer(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+	if controllerutil.ContainsFinalizer(ng, mdCleanupFinalizer) {
+		return nil
+	}
+	updated := ng.DeepCopy()
+	controllerutil.AddFinalizer(updated, mdCleanupFinalizer)
+	if err := r.Client.Patch(ctx, updated, client.MergeFrom(ng)); err != nil {
+		return fmt.Errorf("add finalizer to NodeGroup %s: %w", ng.Name, err)
+	}
+	*ng = *updated
+	return nil
+}
+
+func (r *MachineDeploymentReconciler) removeFinalizer(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+	if !controllerutil.ContainsFinalizer(ng, mdCleanupFinalizer) {
+		return nil
+	}
+	updated := ng.DeepCopy()
+	controllerutil.RemoveFinalizer(updated, mdCleanupFinalizer)
+	if err := r.Client.Patch(ctx, updated, client.MergeFrom(ng)); err != nil {
+		return fmt.Errorf("remove finalizer from NodeGroup %s: %w", ng.Name, err)
+	}
+	*ng = *updated
+	return nil
+}
+
+// cleanupMachineDeployments deletes the CAPI and MCM MachineDeployments belonging to the NodeGroup.
+// The actual node drain is driven asynchronously by capi/caps-controller-manager via their own
+// finalizers, so this only issues the deletes and returns — the NodeGroup is not held waiting for it.
+func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string) error {
+	logger := log.FromContext(ctx)
+
+	gvks := []schema.GroupVersionKind{
+		{Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeploymentList"},
+		{Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeploymentList"},
+	}
+
+	for _, gvk := range gvks {
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+		if err := r.Client.List(ctx, list,
+			client.InNamespace(common.MachineNamespace),
+			client.MatchingLabels{"node-group": ngName},
+		); err != nil {
+			if client.IgnoreNotFound(err) == nil {
+				continue
+			}
+			return fmt.Errorf("list %s for NodeGroup %s: %w", gvk.Kind, ngName, err)
+		}
+
+		for i := range list.Items {
+			md := &list.Items[i]
+			if !md.GetDeletionTimestamp().IsZero() {
+				continue
+			}
+			if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
+				return fmt.Errorf("delete MachineDeployment %s: %w", md.GetName(), err)
+			}
+			logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
+		}
+	}
+
+	return nil
 }
 
 func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
@@ -229,11 +312,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 			"apiVersion": "cluster.x-k8s.io/v1beta2",
 			"kind":       "MachineDeployment",
 			"metadata": map[string]interface{}{
-				"name":            mdName,
-				"namespace":       common.MachineNamespace,
-				"labels":          commonLabels,
-				"annotations":     annotations,
-				"ownerReferences": nodeGroupOwnerReference(ng),
+				"name":        mdName,
+				"namespace":   common.MachineNamespace,
+				"labels":      commonLabels,
+				"annotations": annotations,
 			},
 			"spec": map[string]interface{}{
 				"clusterName": cloudConfig.capiClusterName,
@@ -300,10 +382,9 @@ func (r *MachineDeploymentReconciler) reconcileStaticMD(ctx context.Context, ng 
 		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "MachineDeployment",
 		"metadata": map[string]interface{}{
-			"name":            mdName,
-			"namespace":       common.MachineNamespace,
-			"labels":          commonLabels,
-			"ownerReferences": nodeGroupOwnerReference(ng),
+			"name":      mdName,
+			"namespace": common.MachineNamespace,
+			"labels":    commonLabels,
 		},
 		"spec": map[string]interface{}{
 			"clusterName": "static",
@@ -522,18 +603,6 @@ func calculateReplicas(current, min, max int32) int32 {
 		return max
 	default:
 		return current
-	}
-}
-
-// nodeGroupOwnerReference makes GC cascade-delete the MachineDeployment when the NodeGroup is removed.
-func nodeGroupOwnerReference(ng *deckhousev1.NodeGroup) []interface{} {
-	return []interface{}{
-		map[string]interface{}{
-			"apiVersion": "deckhouse.io/v1",
-			"kind":       "NodeGroup",
-			"name":       ng.Name,
-			"uid":        string(ng.UID),
-		},
 	}
 }
 
