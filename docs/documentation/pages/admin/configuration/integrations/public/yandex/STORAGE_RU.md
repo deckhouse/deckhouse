@@ -296,7 +296,7 @@ DKP автоматически подписывается на Kubernetes-объ
 
 Эти ресурсы предоставляют Kubernetes-сервисам с типом LoadBalancer возможность принимать входящий трафик из интернета или внутренних сетей в зависимости от настроек.
 
-Подробнее об архитектуре см. в [в документации Kubernetes Cloud Controller Manager for Yandex Cloud](https://github.com/flant/yandex-cloud-controller-manager).
+Подробнее об архитектуре — в [документации Kubernetes Cloud Controller Manager for Yandex Cloud](https://github.com/flant/yandex-cloud-controller-manager).
 
 ### Внутренний LoadBalancer
 

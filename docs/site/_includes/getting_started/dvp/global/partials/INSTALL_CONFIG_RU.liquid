@@ -27,7 +27,7 @@
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
 Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью указания `nodeSelector`/`tolerations` в параметре `configOverrides.deckhouse` конфигурации установки. Также, вы можете перечислить необходимые taint'ы узлов кластера в массиве `configOverrides.global.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие `toleration` своим компонентам.
 
-> Пример указания `nodeSelector`/`tolerations` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> Пример указания `nodeSelector`/`tolerations` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, так как у вас будут другие значения):
 > ```yaml
 > deckhouse:
 >   configOverrides:

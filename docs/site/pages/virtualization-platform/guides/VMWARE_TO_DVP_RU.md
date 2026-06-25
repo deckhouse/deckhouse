@@ -314,7 +314,7 @@ default     uploaded-disk    Ready   10Gi       1m
 | ESXi Host               | Node                                                                                                                                                          | Физический сервер                |
 | vCenter                 | Kubernetes API                                                                                                                                                | Управление кластером             |
 
-Подробнее о подключении ВМ к сетям см. [«Сети виртуальных машин»](/products/virtualization-platform/documentation/admin/platform-management/network/vm-network.html).
+Подробнее о подключении ВМ к сетям — в [«Сети виртуальных машин»](/products/virtualization-platform/documentation/admin/platform-management/network/vm-network.html).
 
 ### Пример VirtualMachine
 
@@ -345,7 +345,7 @@ EOF
 
 Для Windows укажите `osType: Windows`.
 
-Если исходная ВМ в VMware загружалась через UEFI, добавьте `bootloader: EFI` (см. таблицу параметров ниже).
+Если исходная ВМ в VMware загружалась через UEFI, добавьте `bootloader: EFI` (таблица параметров ниже).
 
 Если в кластере настроены дополнительные сети и модуль SDN, к основной сети можно добавить интерфейсы:
 
@@ -388,7 +388,7 @@ NAME    PHASE     NODE           IPADDRESS     AGE
 my-vm   Running   virtlab-pt-2   10.66.10.12   2m
 ```
 
-При фазе `Pending` или ошибках запуска используйте `d8 k describe vm my-vm`, последовательную консоль `d8 v console my-vm` (см. раздел [«Подключение к ВМ»](#подключение-к-вм) ниже) и журналы компонентов виртуализации в кластере.
+При фазе `Pending` или ошибках запуска используйте `d8 k describe vm my-vm`, последовательную консоль `d8 v console my-vm` (подробности — в разделе [«Подключение к ВМ»](#подключение-к-вм) ниже) и журналы компонентов виртуализации в кластере.
 
 ### Подключение к ВМ
 

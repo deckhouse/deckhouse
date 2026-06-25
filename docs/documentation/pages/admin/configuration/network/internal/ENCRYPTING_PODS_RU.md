@@ -144,7 +144,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    ...
    ```
 
-1. Создайте пространство без лейбла `istio-injection=enabled` и выполните запрос к сервису `webserver.test-istio-mtls` (т.е. выполняется запрос из пода, который не является участником mesh-сети):
+1. Создайте пространство без лейбла `istio-injection=enabled` и выполните запрос к сервису `webserver.test-istio-mtls` (запрос выполняется из пода, который не является участником mesh-сети):
 
    ```bash
    d8 k create namespace test-istio-mtls-without-injection

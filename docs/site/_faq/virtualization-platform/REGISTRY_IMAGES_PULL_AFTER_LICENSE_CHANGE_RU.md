@@ -64,4 +64,4 @@ lang: ru
    d8 k delete -f containerd-dvcr-remove-old-config.yaml
    ```
 
-Подробнее о миграции см. в статье [Миграция container runtime на containerd v2](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/migrating.html).
+Подробнее о миграции — в статье [Миграция container runtime на containerd v2](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/migrating.html).

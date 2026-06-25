@@ -423,7 +423,7 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
    ```
 
    {% alert level="info" %}
-   Параметр [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) опционален. Если он не указан, доступным считается весь CIDR из [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) (за исключением network/broadcast адресов, см. поведение `/31` и `/32`).
+   Параметр [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) опционален. Если он не указан, доступным считается весь CIDR из [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) (за исключением network/broadcast адресов; поведение для `/31` и `/32`).
    {% endalert %}
 
 1. Включите IPAM в сети. Для этого в параметре [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) ресурса ClusterNetwork укажите параметры созданного на предыдущем шаге ClusterIPAddressPool.
@@ -529,7 +529,7 @@ spec:
   nodeType: Static
 ```
 
-Для получения дополнительной информации см.:
+Дополнительная информация:
 
 * [topologyManager.enabled](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager-enabled);
 * [topologyManager.policy](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager-policy).

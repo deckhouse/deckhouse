@@ -107,7 +107,7 @@ mounts:
 
 Если к виртуальной машине подключены дополнительные сети, их необходимо настроить вручную через cloud-init: конфигурационные файлы создаются в `write_files`, применение настроек — в `runcmd`.
 
-Подробнее о подключении дополнительных сетей к виртуальной машине см. в разделе [Дополнительные сетевые интерфейсы](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#дополнительные-сетевые-интерфейсы).
+Подробнее о подключении дополнительных сетей к виртуальной машине — в разделе [Дополнительные сетевые интерфейсы](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#дополнительные-сетевые-интерфейсы).
 
 ##### Для systemd-networkd
 

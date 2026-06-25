@@ -21,4 +21,4 @@ Deckhouse Kubernetes Platform предоставляет возможность 
   Уменьшение размеров блочного устройства не поддерживается.
   {% endalert %}
 
-- Синхронизация состояния [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) с реальным состоянием узла: создание новых групп томов согласно [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), расширение существующих при изменении `desiredCapacity` и удаление группы при удалении ресурса. Подробные примеры работы см. в разделе [Примеры работы с LVMVolumeGroup](./usage.html#работа-с-ресурсами-lvmvolumegroup).
+- Синхронизация состояния [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) с реальным состоянием узла: создание новых групп томов согласно [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), расширение существующих при изменении `desiredCapacity` и удаление группы при удалении ресурса. Подробные примеры работы — в разделе [Примеры работы с LVMVolumeGroup](./usage.html#работа-с-ресурсами-lvmvolumegroup).

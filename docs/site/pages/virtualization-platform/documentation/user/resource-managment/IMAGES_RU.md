@@ -46,7 +46,7 @@ lang: ru
 - vdi
 
 {% alert level="info" %}
-При миграции ВМ из VMware см. [руководство по переносу](/products/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp.html).
+При миграции ВМ из VMware используйте [руководство по переносу](/products/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp.html).
 Диски из vSphere обычно требуют предварительной подготовки гостевой ОС (например, через утилиту virt-v2v).
 Прямой импорт VMDK без подготовки часто приводит к проблемам при запуске ВМ.
 {% endalert %}
