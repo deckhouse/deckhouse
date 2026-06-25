@@ -293,6 +293,19 @@ func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPa
 	})
 }
 
+// disableOptionsToCR projects parsed disable protection onto the CR shape. It
+// returns nil when no disable protection is configured, so an empty block is not
+// surfaced on every package version.
+func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions {
+	return &v1alpha1.PackageDisableOptions{
+		Confirmation: opts.Confirmation,
+		Messages: v1alpha1.PackageDisableMessages{
+			Ru: opts.Messages.Ru,
+			En: opts.Messages.En,
+		},
+	}
+}
+
 // setPackageMetadata projects parsed package metadata onto the ApplicationPackageVersion
 // status. It overwrites Status.PackageMetadata with the stage, localized descriptions,
 // runtime requirements, and changelog extracted from the package image, then delegates
@@ -309,7 +322,8 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 			Ru: meta.definition.Descriptions.Ru,
 			En: meta.definition.Descriptions.En,
 		},
-		Requirements: requirementsToCR(meta.definition.Requirements),
+		DisableOptions: disableOptionsToCR(meta.definition.DisableOptions),
+		Requirements:   requirementsToCR(meta.definition.Requirements),
 		Changelog: &v1alpha1.PackageChangelog{
 			Features: meta.changelog.Features,
 			Fixes:    meta.changelog.Fixes,

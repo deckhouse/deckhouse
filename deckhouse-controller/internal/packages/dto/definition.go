@@ -123,8 +123,14 @@ type ModuleGroup struct {
 
 // DisableOptions configures package disablement behavior.
 type DisableOptions struct {
-	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
-	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
+	Confirmation bool            `json:"confirmation" yaml:"confirmation"`             // Whether confirmation is required to disable
+	Messages     DisableMessages `json:"messages,omitempty" yaml:"messages,omitempty"` // Localized messages to display when disabling
+}
+
+// DisableMessages holds localized disable confirmation text for the package.
+type DisableMessages struct {
+	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
+	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
 // Convert converts application definition to application domain model.
@@ -169,7 +175,10 @@ func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 		Stage:   d.Stage,
 		DisableOptions: apps.DisableOptions{
 			Confirmation: d.DisableOptions.Confirmation,
-			Message:      d.DisableOptions.Message,
+			Messages: apps.DisableMessages{
+				Ru: d.DisableOptions.Messages.Ru,
+				En: d.DisableOptions.Messages.En,
+			},
 		},
 		Requirements: apps.Requirements{
 			Kubernetes: kubernetesConstraint,
@@ -240,7 +249,10 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 		Stage:    d.Stage,
 		DisableOptions: modules.DisableOptions{
 			Confirmation: d.DisableOptions.Confirmation,
-			Message:      d.DisableOptions.Message,
+			Messages: modules.DisableMessages{
+				Ru: d.DisableOptions.Messages.Ru,
+				En: d.DisableOptions.Messages.En,
+			},
 		},
 		Requirements: modules.Requirements{
 			Kubernetes: kubernetesConstraint,

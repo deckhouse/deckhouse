@@ -417,14 +417,6 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 		}
 	}
 
-	var disableOpts dto.DisableOptions
-	if def.DisableOptions != nil {
-		disableOpts = dto.DisableOptions{
-			Confirmation: def.DisableOptions.Confirmation,
-			Message:      def.DisableOptions.Message,
-		}
-	}
-
 	var descriptions dto.Descriptions
 	if def.Descriptions != nil {
 		descriptions = dto.Descriptions{
@@ -435,11 +427,10 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 
 	return &dto.ModuleDefinition{
 		Definition: dto.Definition{
-			Name:           def.Name,
-			Stage:          def.Stage,
-			Descriptions:   descriptions,
-			Requirements:   requirements,
-			DisableOptions: disableOpts,
+			Name:         def.Name,
+			Stage:        def.Stage,
+			Descriptions: descriptions,
+			Requirements: requirements,
 		},
 		Weight:   int(def.Weight),
 		Critical: def.Critical,

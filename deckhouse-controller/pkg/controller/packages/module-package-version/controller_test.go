@@ -120,6 +120,11 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 const testModuleV2YAML = `name: test-module
 descriptions:
   en: Test module
+disable:
+  confirmation: true
+  messages:
+    ru: "RU disable message"
+    en: "EN disable message"
 stage: GA
 type: Module
 version: "1.0.0"
