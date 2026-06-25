@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 {{- if eq .runType "Normal" }}
-label_value={{ .cri | lower }}
+label_value={{ (.cri | default .nodeGroup.cri.type) | lower }}
 
 mkdir -p /var/lib/node_labels/
 echo "node.deckhouse.io/cri-type=${label_value}" > /var/lib/node_labels/cri-type
