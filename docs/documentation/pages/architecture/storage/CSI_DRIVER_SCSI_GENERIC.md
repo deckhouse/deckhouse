@@ -5,7 +5,7 @@ search: csi-scsi-generic, csi driver
 description: Architecture of the csi-scsi-generic CSI driver in Deckhouse Kubernetes Platform.
 ---
 
-The `csi-scsi-generic` CSI driver is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage volumes on SCSI-connected storage systems in Deckhouse Kubernetes Platform (DKP).
+The `csi-scsi-generic` CSI driver is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage volumes on SCSI-connected storage systems in Deckhouse Kubernetes Platform (DKP). The CSI driver supports both iSCSI and Fibre Channel (FC) connection technologies.
 
 ## Driver architecture
 
@@ -45,7 +45,7 @@ The `csi-scsi-generic` CSI driver consists of the following components:
 
      * **Attacher** ([external-attacher](https://github.com/kubernetes-csi/external-attacher)): Monitors VolumeAttachment resources after a pod is scheduled to a node.
 
-     * **Resizer** ([external-resizer](https://github.com/kubernetes-csi/external-resizer)): Watches updates to PersistentVolumeClaim resources and expands volumes using the `ControllerExpandVolume` RPC method when a user requests additional storage for a PVC, and the driver supports the `EXPAND_VOLUME` capability.
+     * **Resizer** ([external-resizer](https://github.com/kubernetes-csi/external-resizer)): Watches updates to PersistentVolumeClaim resources and expands volumes using the `ControllerExpandVolume` RPC method when a user requests additional storage for a PVC, and the driver supports the `EXPAND_VOLUME` capability. The controller doesn't expand the Logical Unit Number (LUN) size in the storage system, but updates information in the cluster metadata.
 
      * [**Livenessprobe**](https://github.com/kubernetes-csi/livenessprobe): Monitors the health of the CSI driver through the `Probe` RPC from the Identity Service and exposes the HTTP endpoint `/healthz`, which is checked by [kubelet](../../kubernetes-and-scheduling/kubelet.html). If *livenessProbe* fails, kubelet restarts the csi-controller pod.
 
