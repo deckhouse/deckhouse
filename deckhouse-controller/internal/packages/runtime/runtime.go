@@ -25,7 +25,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
@@ -559,7 +558,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 // Run starts the scheduler event loop in a background goroutine. It listens for
 // schedule and disable events from the scheduler and dispatches them to the
 // appropriate handler, driving the enable/disable lifecycle for all packages.
-func (r *Runtime) Run(moduleSettings map[string]addonutils.Values) {
+func (r *Runtime) Run() {
 	r.hookEventHandler.Start()
 	r.healthService.Start()
 
