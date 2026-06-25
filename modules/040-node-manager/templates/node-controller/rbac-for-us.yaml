@@ -4,6 +4,9 @@ kind: ServiceAccount
 metadata:
   name: node-controller
   namespace: d8-cloud-instance-manager
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 automountServiceAccountToken: false
 ---
@@ -12,6 +15,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:node-manager:node-controller
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 rules:
 # NodeGroups - full access for status updates
@@ -245,6 +251,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:node-manager:node-controller
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -259,6 +268,9 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:node-manager:node-controller:rbac-proxy
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
