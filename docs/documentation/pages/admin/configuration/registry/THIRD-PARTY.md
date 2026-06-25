@@ -98,3 +98,5 @@ To switch the cluster to use an external registry, follow these steps:
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
+If you need to add configurations for an additional image repository, refer to the section [“Adding a Configuration for an Additional Registry”](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-customization.html#adding-a-configuration-for-an-additional-registry).

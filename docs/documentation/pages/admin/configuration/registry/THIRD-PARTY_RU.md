@@ -104,3 +104,5 @@ lang: ru
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
+Если требуется добавить конфигурации для дополнительного хранилища образов, воспользуйтесь разделом [«Добавление конфигурации для дополнительного registry»](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-customization.html#добавление-конфигурации-для-дополнительного-registry).

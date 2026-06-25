@@ -1,10 +1,10 @@
 ---
-title: "Архитектура режимов взаимодействия с хранилищем образов"
+title: "Архитектура режимов управления настройками хранилища образов"
 permalink: ru/architecture/deckhouse/registry-modes.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform поддерживает несколько режимов взаимодействия с хранилищем образов контейнеров.
+Deckhouse Kubernetes Platform поддерживает несколько режимов управления хранилищем образов контейнеров.
 
 ## Архитектура режима Direct
 
@@ -17,7 +17,7 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](../../images/registry-module/direct-ru.png)
 
-Подробнее о режиме `Direct` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP»](../../admin/configuration/registry/managing-interaction.html).
+Подробнее о режиме `Direct` — в разделе [«Управление настройками хранилища образов компонентов платформы в кластере, полностью управляемом DKP»](../../admin/configuration/registry/managing-interaction.html).
 
 ## Архитектура режима Proxy
 
@@ -36,7 +36,7 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 <!--- Source: mermaid code from docs/internal/PROXY.md --->
 ![proxy](../../images/registry-module/proxy-ru.png)
 
-Подробнее о режиме `Proxy` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP»](../../admin/configuration/registry/managing-interaction.html).
+Подробнее о режиме `Proxy` — в разделе [«Управление настройками хранилища образов компонентов платформы в кластере, полностью управляемом DKP»](../../admin/configuration/registry/managing-interaction.html).
 
 ## Архитектура режима Local
 
@@ -57,4 +57,4 @@ Deckhouse Kubernetes Platform поддерживает несколько реж
 <!--- Source: mermaid code from docs/internal/LOCAL.md --->
 ![local](../../images/registry-module/local-ru.png)
 
-Подробнее о режиме `Local` — в разделе [«Управление настройками взаимодействия с хранилищем образов в кластере, полностью управляемом DKP»](../../admin/configuration/registry/managing-interaction.html).
+Подробнее о режиме `Local` — в разделе [«Управление настройками хранилища образов компонентов платформы в кластере, полностью управляемом DKP»](../../admin/configuration/registry/managing-interaction.html).

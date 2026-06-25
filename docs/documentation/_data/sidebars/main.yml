@@ -22,33 +22,21 @@ entries:
                 ru: Описание
               url: /admin/configuration/
             - title:
-                en: Registry
-                ru: Хранилище образов контейнеров
+                en: DKP components registry
+                ru: Хранилище образов компонентов DKP
               folders:
                 - title:
                     en: Overview
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: DKP settings
-                    ru: Настройки DKP
-                  folders:
-                  - title:
-                      en: Settings in a DKP-managed cluster
-                      ru: Настройки в кластере, управляемом DKP
-                    url: /admin/configuration/registry/managing-interaction.html
-                  - title:
-                      en: Settings in a Managed Kubernetes cluster
-                      ru: Настройки в Managed Kubernetes кластере
-                    url: /admin/configuration/registry/third-party.html
+                    en: Settings in a DKP-managed cluster
+                    ru: Настройки в кластере, управляемом DKP
+                  url: /admin/configuration/registry/managing-interaction.html
                 - title:
-                    en: Custom registry
-                    ru: Пользовательское хранилище
-                  folders:
-                  - title:
-                      en: Custom registry (payload-registry module)
-                      ru: Пользовательское хранилище (модуль payload-registry)
-                    url: /admin/configuration/registry/payload-registry.html
+                    en: Settings in a Managed Kubernetes cluster
+                    ru: Настройки в Managed Kubernetes кластере
+                  url: /admin/configuration/registry/third-party.html
             - title:
                 en: IAM
                 ru: IAM
@@ -1287,10 +1275,6 @@ entries:
                 ru: Обзор
               url: /architecture/deckhouse/
             - title:
-                en: Architecture of registry interaction modes
-                ru: Архитектура режимов взаимодействия с хранилищем образов
-              url: /architecture/deckhouse/registry-modes.html
-            - title:
                 en: Web interface modules
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
@@ -1298,10 +1282,6 @@ entries:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
-            - title:
-                en: Direct mode of registry module
-                ru: Режим Direct модуля registry
-              url: /architecture/deckhouse/registry-direct-mode.html
         - title:
             en: Kubernetes & Scheduling subsystem
             ru: Подсистема Kubernetes & Scheduling
