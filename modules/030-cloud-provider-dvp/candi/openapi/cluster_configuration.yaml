@@ -584,11 +584,11 @@ apiVersions:
             ingressPorts:
               type: array
               description: |
-                List of TCP ports allowed for ingress traffic from all sources (both external IPs and all pods within the cluster).
+                List of virtual machine TCP ports for which ingress traffic will be allowed from any source: external IP addresses and any pods in the parent cluster.
 
-                Can be used to expose any services that require unrestricted ingress access.
+                Can be used to expose services that need to accept inbound TCP traffic from any source.
 
-                Set to an empty array to deny all such unrestricted ingress access.
+                To disable this unrestricted ingress access, specify an empty array. In this case, access to VMs can be configured separately using custom NetworkPolicy resources that select VM pods by labels from the additionalVMLabels parameter.
               default: [22]
               items:
                 type: integer
@@ -597,9 +597,9 @@ apiVersions:
             additionalVMLabels:
               type: object
               description: |
-                Additional labels to apply to all VM pods in the cluster (both master and worker nodes).
+                Additional labels that will be added to all virtual machine pods in the created cluster: both master and worker nodes.
 
-                Can be used to map existing NetworkPolicies in the parent cluster project to VM pods by label.
+                This parameter can be used to allow existing or custom NetworkPolicy resources in the parent cluster to select VM pods by these labels. For example, you can add a label to VM pods and allow access to them only from a bastion pod or another trusted source.
               additionalProperties:
                 type: string
           required:
