@@ -127,8 +127,10 @@ func main() {
 			// External callers (and our own image's /etc/bashrc) still invoke
 			// `deckhouse-controller --completion-script-bash`, so keep emitting
 			// the bash completion script and exit early when the flag is set.
+			// Use GenBashCompletionV2 (with descriptions) so the output is
+			// byte-for-byte identical to the `completion bash` subcommand.
 			if legacyBashCompletion {
-				if err := cmd.Root().GenBashCompletion(os.Stdout); err != nil {
+				if err := cmd.Root().GenBashCompletionV2(os.Stdout, true); err != nil {
 					return err
 				}
 				os.Exit(0)
