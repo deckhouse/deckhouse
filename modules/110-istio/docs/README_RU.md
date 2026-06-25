@@ -252,7 +252,7 @@ Istio работает в режиме [multi-network](https://istio.io/latest/d
 #### Общие принципы федерации
 
 - Федерация требует установления взаимного доверия между кластерами. Соответственно, для установления федерации нужно в кластере A сделать кластер Б доверенным и, аналогично, в кластере Б сделать кластер А доверенным. Это достигается взаимным обменом корневыми сертификатами.
-- Для прикладной эксплуатации федерации необходимо также обменяться информацией о публичных сервисах. Чтобы опубликовать сервис bar из кластера Б в кластере А, необходимо в кластере А создать ресурс ServiceEntry, который описывает публичный адрес ingress-gateway кластера Б.
+- Для прикладной эксплуатации федерации необходимо также обменяться информацией о публичных сервисах. Это можно сделать с помощью ресурса `ServiceEntry`. `ServiceEntry` описывает публичный адрес `ingressgateway` кластера Б, чтобы сервисы кластера A могли обращаться к сервису `bar` в кластере Б.
 
 <div data-presentation="presentations/federation_common_principles_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1EI2MQMuVCGACnLNBXMGVDNJVhwU3vJYtVcHhrWfjLDc/ --->
@@ -276,12 +276,53 @@ Istio работает в режиме [multi-network](https://istio.io/latest/d
 
 - В каждом кластере создать набор ресурсов `IstioFederation`, которые описывают все остальные кластеры.
   - После успешного автосогласования между кластерами, в ресурсе `IstioFederation` заполнятся разделы `status.metadataCache.public` и `status.metadataCache.private` служебными данными, необходимыми для работы федерации.
-- Каждый ресурс (сервис), который считается публичным в рамках федерации, пометить лейблом `federation.istio.deckhouse.io/public-service: ""`.
-  - В кластерах из состава федерации, для каждого сервиса создадутся соответствующие ServiceEntry, ведущие на ingressgateway оригинального кластера.
+- Каждый ресурс `Service`, который считается публичным в рамках федерации, пометить лейблом `federation.istio.deckhouse.io/public-service: ""`.
+  - В кластерах из состава федерации, для каждого такого `Service` создадутся соответствующие `ServiceEntry` и `DestinationRule`, ведущие на `ingressgateway` оригинального кластера.
+  - Метка должна быть с пустым значением. Другие ресурсы (`Deployment`, `Pod`, `VirtualService` и т. п.) для публикации сервиса в федерации помечать не нужно.
 
 {% alert level="warning" %}
-В разделе `.spec.ports` этих сервисов у каждого порта должно быть заполнено поле `name`.
+Для публикации в федерации не поддерживаются сервисы типа `ExternalName`, сервисы без `.spec.ports` и сервисы с портами без поля `name`.
+
+Имя каждого порта должно начинаться с поддерживаемого Istio префикса: `http`, `http2`, `https`, `tcp`, `tls`, `grpc` или `grpc-web`. По имени порта модуль определяет протокол в генерируемом `ServiceEntry`; если префикс не распознан, порт будет обработан как TCP.
 {% endalert %}
+
+Пример публичного сервиса:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews
+  namespace: bookinfo
+  labels:
+    federation.istio.deckhouse.io/public-service: ""
+spec:
+  selector:
+    app: reviews
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+```
+
+Диагностика публикации сервисов в федерации:
+
+```shell
+# Проверить, какие Service помечены как публичные в локальном кластере.
+d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
+
+# Проверить состояние обмена метаданными с удаленными кластерами.
+d8 k get istiofederation
+d8 k get istiofederation <name> -o jsonpath='{.status.conditions}'
+
+# Проверить, что удаленный кластер передал список своих публичных сервисов.
+d8 k get istiofederation <name> -o jsonpath='{.status.metadataCache.private.publicServices}'
+
+# Проверить, что по полученным метаданным созданы маршруты в локальном кластере.
+d8 k -n d8-istio get serviceentry,destinationrule
+```
+
+В `status.conditions` ресурса `IstioFederation` должны перейти в `True` условия `PublicMetadataExchangeReady`, `PrivateMetadataExchangeReady` и `DataplaneConnectionReady`. Если обмен метаданными не работает, проверьте alert `D8IstioFederationMetadataEndpointDoesntWork` и доступность `spec.metadataEndpoint` удаленного кластера.
 
 ### Мультикластер
 
