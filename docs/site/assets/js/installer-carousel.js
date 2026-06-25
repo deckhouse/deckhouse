@@ -36,19 +36,20 @@
       var windowStart;
       var windowEnd;
 
-      if (cur <= 2) {
+      if (cur <= 3) {
         windowStart = 1;
         windowEnd = Math.min(3, total);
-      } else if (cur >= total - 1) {
+      } else if (cur >= total - 2) {
+        windowStart = total - 2;
         windowEnd = total;
-        windowStart = cur - 1;
       } else {
-        windowStart = cur - 1;
-        windowEnd = cur + 1;
+        windowStart = cur - 2;
+        windowEnd = cur;
       }
 
       var items = [];
-      if (cur >= total - 1 && windowStart > 1) {
+      if (cur >= total - 2 && windowStart > 1) {
+        items.push(1);
         items.push('ellipsis');
       }
       for (var p = windowStart; p <= windowEnd; p++) {
@@ -89,7 +90,7 @@
         var item = items[i];
         if (item === 'ellipsis') {
           var ellipsis = document.createElement('span');
-          ellipsis.className = 'installer-carousel__ellipsis';
+          ellipsis.className = 'installer-carousel__pagination--ellipsis';
           ellipsis.setAttribute('aria-hidden', 'true');
           ellipsis.textContent = '...';
           paginationEl.appendChild(ellipsis);
@@ -98,7 +99,7 @@
 
         var pageBtn = document.createElement('button');
         pageBtn.type = 'button';
-        pageBtn.className = 'installer-carousel__page';
+        pageBtn.className = 'installer-carousel__pagination--page';
         pageBtn.textContent = String(item);
         pageBtn.setAttribute('data-page', String(item));
         if (item === index + 1) {
@@ -146,7 +147,7 @@
     }
     if (paginationEl) {
       paginationEl.addEventListener('click', function (e) {
-        var btn = e.target.closest('.installer-carousel__page');
+        var btn = e.target.closest('.installer-carousel__pagination--page');
         if (!btn || btn.classList.contains('is-active')) {
           return;
         }
