@@ -690,30 +690,6 @@ jobs:
     uses: ./.github/workflows/security-scan-images.yml
     secrets: inherit
 
-update_fuzzing_targets:
-  name: Update fuzzing targets
-  needs:
-    - build_fe
-  runs-on: [self-hosted, regular]
-
-  steps:
-    - name: Download FE build report
-      uses: actions/download-artifact@v4.1.8
-      with:
-        name: build_report_FE
-        path: .
-
-    - name: Extract fuzzing images
-      run: |
-        jq -r '
-          .Images
-          | to_entries[]
-          | select(.key | endswith("-fuzz"))
-          | .key + " " + .value.DockerTag
-        ' images_tags_werf.json > fuzz-images.txt
-
-        cat fuzz-images.txt
-
   build_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Build tests image
@@ -2768,6 +2744,29 @@ update_fuzzing_targets:
           svacer_import_user: "${{ steps.secrets.outputs.SVACER_IMPORT_USER }}"
           svacer_import_password: "${{ steps.secrets.outputs.SVACER_IMPORT_PASSWORD }}"
           svace_analyze_ssh_private_key: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
+
+  update_fuzzing_targets:
+    name: Update fuzzing targets
+    runs-on: [self-hosted, regular]
+    needs:
+      - build_fe
+    steps:
+      - name: Download FE build report
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: build_report_FE
+          path: .
+
+      - name: Extract fuzzing images
+        run: |
+          jq -r '
+            .Images
+            | to_entries[]
+            | select(.key | endswith("-fuzz"))
+            | .key + " " + .value.DockerTag
+          ' images_tags_werf.json > fuzz-images.txt
+
+          cat fuzz-images.txt
 
   doc_web_build:
     name: Doc web build
