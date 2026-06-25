@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.22.5-0.20260625100234-678f03fce2f5
+	github.com/flant/addon-operator v1.23.0
 	github.com/flant/kube-client v1.9.0
-	github.com/flant/shell-operator v1.19.6-0.20260625100009-031f33469b99
+	github.com/flant/shell-operator v1.20.0
 	github.com/go-openapi/spec v0.22.1
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -68,6 +68,7 @@ require (
 	github.com/gammazero/deque v1.1.0
 	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-logr/logr v1.4.3
+	github.com/go-openapi/swag/conv v0.26.0
 	github.com/go-openapi/swag/loading v0.26.0
 	github.com/go-openapi/swag/yamlutils v0.26.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
@@ -118,7 +119,6 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-openapi/swag v0.26.0 // indirect
 	github.com/go-openapi/swag/cmdutils v0.26.0 // indirect
-	github.com/go-openapi/swag/conv v0.26.0 // indirect
 	github.com/go-openapi/swag/fileutils v0.26.0 // indirect
 	github.com/go-openapi/swag/jsonname v0.26.0 // indirect
 	github.com/go-openapi/swag/jsonutils v0.26.0 // indirect
