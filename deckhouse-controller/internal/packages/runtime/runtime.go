@@ -198,6 +198,10 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		return nil, fmt.Errorf("new global module: %w", err)
 	}
 
+	if err := r.loadEmbedded(context.Background()); err != nil {
+		return nil, fmt.Errorf("load embedded: %w", err)
+	}
+
 	r.status.NewStatus(r.global.GetName())
 
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
