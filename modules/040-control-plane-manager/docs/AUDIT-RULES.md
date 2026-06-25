@@ -330,10 +330,7 @@ users:
   - system:serviceaccount:d8-monitoring:aggregating-proxy
   - system:serviceaccount:d8-monitoring:alertmanager-internal
   - system:serviceaccount:d8-monitoring:alerts-receiver
-  - system:serviceaccount:d8-monitoring:events-exporter
-  - system:serviceaccount:d8-monitoring:extended-monitoring-exporter
   - system:serviceaccount:d8-monitoring:grafana
-  - system:serviceaccount:d8-monitoring:image-availability-exporter
   - system:serviceaccount:d8-monitoring:kube-state-metrics
   - system:serviceaccount:d8-monitoring:loki
   - system:serviceaccount:d8-monitoring:monitoring-ping
@@ -341,7 +338,6 @@ users:
   - system:serviceaccount:d8-monitoring:oom-kills-exporter
   - system:serviceaccount:d8-monitoring:prometheus
   - system:serviceaccount:d8-monitoring:trickster
-  - system:serviceaccount:d8-monitoring:x509-certificate-exporter
   - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
   - system:serviceaccount:d8-openvpn:openvpn
   - system:serviceaccount:d8-operator-prometheus:operator-prometheus
@@ -826,10 +822,7 @@ rules:
       - system:serviceaccount:d8-monitoring:aggregating-proxy
       - system:serviceaccount:d8-monitoring:alertmanager-internal
       - system:serviceaccount:d8-monitoring:alerts-receiver
-      - system:serviceaccount:d8-monitoring:events-exporter
-      - system:serviceaccount:d8-monitoring:extended-monitoring-exporter
       - system:serviceaccount:d8-monitoring:grafana
-      - system:serviceaccount:d8-monitoring:image-availability-exporter
       - system:serviceaccount:d8-monitoring:kube-state-metrics
       - system:serviceaccount:d8-monitoring:loki
       - system:serviceaccount:d8-monitoring:monitoring-ping
@@ -837,7 +830,6 @@ rules:
       - system:serviceaccount:d8-monitoring:oom-kills-exporter
       - system:serviceaccount:d8-monitoring:prometheus
       - system:serviceaccount:d8-monitoring:trickster
-      - system:serviceaccount:d8-monitoring:x509-certificate-exporter
       - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
       - system:serviceaccount:d8-openvpn:openvpn
       - system:serviceaccount:d8-operator-prometheus:operator-prometheus
