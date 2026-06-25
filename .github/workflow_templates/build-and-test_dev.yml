@@ -18,11 +18,17 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  pull_request_target:
-     types:
+  pull_request:
+    types:
       - opened
-      - synchronize
       - reopened
+      - synchronize
+
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 
