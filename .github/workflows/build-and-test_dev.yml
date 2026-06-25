@@ -879,7 +879,17 @@ jobs:
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
     # </template: build_tests_template>
+      - name: Update fuzzing targets
+        run: |
+          jq -r '
+            .Images
+            | to_entries[]
+            | select(.key | endswith("-fuzz"))
+            | .key + " " + .value.DockerTag
+          ' images_tags_werf.json > fuzz-images.txt
 
+          echo "Discovered fuzz images:"
+          cat fuzz-images.txt
 
   go_generate:
     name: Go Generate
