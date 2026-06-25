@@ -133,11 +133,13 @@ func main() {
 				if err := cmd.Root().GenBashCompletionV2(os.Stdout, true); err != nil {
 					return err
 				}
+
 				os.Exit(0)
 			}
 
 			klogtolog.InitAdapter(cfg.Debug.KubernetesAPI, logger.Named("klog"))
 			stdliblogtolog.InitAdapter(logger)
+
 			return nil
 		},
 	}
