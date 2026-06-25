@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -77,8 +78,8 @@ const (
 	// cliImagesPathPrefix is the URL prefix served on the standard proxy mux for
 	// deckhouse-cli (and plugin) downloads. Paths under it look like:
 	//
-	//   /v1/images/<image>/tags                 -> list tags
-	//   /v1/images/<image>/tags/<tag>           -> download OCI image tar.gz
+	//   /v1/images/<image>/tags               -> list tags
+	//   /v1/images/<image>/images/<version>   -> download OCI image tar.gz
 	//
 	// where <image> must match the allowlist (deckhouse-cli or deckhouse-cli/plugins/<plugin>).
 	// kube-rbac-proxy (the standard sidecar listening on :4219) gates /v1/images/* with its
@@ -283,9 +284,9 @@ func (p *Proxy) Serve(cfg *Config) {
 //
 // Two URL shapes are supported under /v1/images/<image>/:
 //
-//	GET /v1/images/<image>/tags                 -> JSON list of available tags
-//	GET /v1/images/<image>/tags/<tag>           -> stream OCI image tar.gz
-//	                                                as application/x-gzip
+//	GET /v1/images/<image>/tags               -> JSON list of available tags
+//	GET /v1/images/<image>/images/<version>   -> stream OCI image tar.gz
+//	                                              as application/x-gzip
 //
 // <image> must match the deckhouse-cli allowlist (deckhouse-cli or
 // deckhouse-cli/plugins/<plugin>); other paths return 404.
@@ -554,7 +555,7 @@ type cliAction int
 const (
 	cliActionUnknown cliAction = iota
 	cliActionListTags
-	cliActionPullTag
+	cliActionPullImage
 )
 
 type cliTagsResponse struct {
@@ -563,7 +564,7 @@ type cliTagsResponse struct {
 }
 
 func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
-	imagePath, action, tag, err := parseCLIPath(r.URL.Path)
+	imagePath, action, ref, err := parseCLIPath(r.URL.Path)
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -578,8 +579,8 @@ func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	switch action {
 	case cliActionListTags:
 		h.handleListTags(w, r, imagePath)
-	case cliActionPullTag:
-		h.handlePullTag(w, r, imagePath, tag)
+	case cliActionPullImage:
+		h.handlePullImage(w, r, imagePath, ref)
 	default:
 		http.NotFound(w, r)
 	}
@@ -643,7 +644,7 @@ func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imag
 	_, _ = w.Write(body)
 }
 
-func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, imagePath, tag string) {
+func (h *cliHandler) handlePullImage(w http.ResponseWriter, r *http.Request, imagePath, version string) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -651,21 +652,29 @@ func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, image
 
 	clientIP := getRequestIP(r)
 	logger := h.proxy.logger
-	logger.Infof("CLI pull image %q tag %q from client %s", imagePath, tag, clientIP)
+
+	platform, err := parsePlatformQuery(r)
+	if err != nil {
+		logger.Errorf("CLI pull image %q version %q from client %s: invalid platform: %v", imagePath, version, clientIP, err)
+		http.Error(w, "invalid platform", http.StatusBadRequest)
+		return
+	}
+
+	logger.Infof("CLI pull image %q version %q platform %q from client %s", imagePath, version, platformString(platform), clientIP)
 
 	cfg, ok := h.cliClientConfig(w, logger)
 	if !ok {
 		return
 	}
 
-	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, tag)
+	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, version, platform)
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
-			http.Error(w, "tag not found", http.StatusNotFound)
+			http.Error(w, "version not found", http.StatusNotFound)
 			return
 		}
-		logger.Errorf("resolve tag %q for %q: %v", tag, imagePath, err)
-		http.Error(w, "failed to resolve tag", http.StatusBadGateway)
+		logger.Errorf("resolve version %q for %q: %v", version, imagePath, err)
+		http.Error(w, "failed to resolve version", http.StatusBadGateway)
 		return
 	}
 
@@ -700,7 +709,7 @@ func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, image
 	}
 
 	w.Header().Set("Content-Type", "application/x-gzip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s.tar.gz"`, fileBase, tag))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s.tar.gz"`, fileBase, version))
 	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("ETag", `"`+manifestDigest+`"`)
@@ -715,50 +724,85 @@ func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, image
 	}
 }
 
+// parsePlatformQuery reads the optional ?platform=<os>-<arch> selector a CLI
+// client attaches to a pull. Absent -> nil, which keeps the legacy single-manifest
+// behavior (the registry default platform). The dash separator keeps the value a
+// single unescaped URL token; go-containerregistry's Platform uses os/arch, so we
+// build it directly. A malformed value is an error so the handler answers 400
+// instead of silently serving the wrong architecture.
+func parsePlatformQuery(r *http.Request) (*v1.Platform, error) {
+	raw := r.URL.Query().Get("platform")
+	if raw == "" {
+		return nil, nil
+	}
+
+	parts := strings.Split(raw, "-")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil, fmt.Errorf("platform %q is not <os>-<arch>", raw)
+	}
+
+	return &v1.Platform{OS: parts[0], Architecture: parts[1]}, nil
+}
+
+// platformString renders a platform for logs ("any" when none was requested).
+func platformString(p *v1.Platform) string {
+	if p == nil {
+		return "any"
+	}
+
+	return p.String()
+}
+
 // parseCLIPath splits an HTTP path of the form
 //
 //	/v1/images/<image-path>/tags
-//	/v1/images/<image-path>/tags/<tag>
+//	/v1/images/<image-path>/images/<version>
 //
-// into its components. <image-path> may contain slashes; the split anchors on the final
-// /tags segment.
+// into its components. <image-path> may contain slashes; the split anchors on the
+// action segment, taking its last occurrence so a plugin named after a segment word
+// is not misparsed. The returned third value is the version (empty for a tags list).
 func parseCLIPath(urlPath string) (string, cliAction, string, error) {
 	if !strings.HasPrefix(urlPath, cliImagesPathPrefix) {
 		return "", cliActionUnknown, "", errors.New("not a CLI path")
 	}
-	// rest is the part of the path after the /v1/images/ prefix
-	rest := strings.TrimPrefix(urlPath, cliImagesPathPrefix)
-	rest = strings.Trim(rest, "/")
+
+	rest := strings.Trim(strings.TrimPrefix(urlPath, cliImagesPathPrefix), "/")
 	if rest == "" {
 		return "", cliActionUnknown, "", errors.New("missing image path")
 	}
 
-	const sep = "/tags"
-	idx := strings.LastIndex(rest, sep)
-	if idx < 0 {
-		return "", cliActionUnknown, "", errors.New("missing tags segment")
-	}
-
-	// imagePath is the part of the path before the tags segment
-	imagePath := rest[:idx]
-	if imagePath == "" {
-		return "", cliActionUnknown, "", errors.New("empty image path")
-	}
-
-	// suffix is the part of the path after the tags segment
-	suffix := rest[idx+len(sep):]
-	switch {
-	case suffix == "" || suffix == "/":
-		return imagePath, cliActionListTags, "", nil
-	case strings.HasPrefix(suffix, "/"):
-		tag := strings.Trim(suffix[1:], "/")
-		if tag == "" || strings.Contains(tag, "/") {
-			return "", cliActionUnknown, "", errors.New("invalid tag")
+	if imagePath, ok := strings.CutSuffix(rest, "/tags"); ok {
+		if imagePath == "" {
+			return "", cliActionUnknown, "", errors.New("empty image path")
 		}
-		return imagePath, cliActionPullTag, tag, nil
-	default:
-		return "", cliActionUnknown, "", errors.New("unexpected path suffix")
+		return imagePath, cliActionListTags, "", nil
 	}
+
+	if imagePath, version, ok := cutCLIActionSegment(rest, "images"); ok {
+		return imagePath, cliActionPullImage, version, nil
+	}
+
+	return "", cliActionUnknown, "", errors.New("unexpected path suffix")
+}
+
+// cutCLIActionSegment splits rest of the form "<image-path>/<segment>/<value>" into
+// (imagePath, value, true). It anchors on the LAST "/<segment>/" so a plugin whose
+// name equals the segment word is not confused. value must be a single non-empty,
+// slash-free path component.
+func cutCLIActionSegment(rest, segment string) (string, string, bool) {
+	marker := "/" + segment + "/"
+	idx := strings.LastIndex(rest, marker)
+	if idx <= 0 {
+		return "", "", false
+	}
+
+	imagePath := rest[:idx]
+	value := rest[idx+len(marker):]
+	if value == "" || strings.Contains(value, "/") {
+		return "", "", false
+	}
+
+	return imagePath, value, true
 }
 
 // isAllowedCLIImagePath enforces the allowlist:
@@ -893,7 +937,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, cfg *regis
 	// Icons are immutable for a given manifest digest, so cache aggressively
 	// downstream. Content-Type and the filename extension come from which
 	// file we actually found inside the OCI image (see iconCandidates).
-	// ETag mirrors what cliHandler.handlePullTag does so the header surface
+	// ETag mirrors what cliHandler.handlePullImage does so the header surface
 	// is consistent between routes.
 	w.Header().Set("Content-Type", cand.contentType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.%s"`, packageName, cand.ext))
@@ -950,7 +994,7 @@ func (p *Proxy) resolveLatestVersion(w http.ResponseWriter, r *http.Request, cfg
 }
 
 func (p *Proxy) resolveManifestDigest(w http.ResponseWriter, r *http.Request, cfg *registry.ClientConfig, imagePath, version string) (string, bool) {
-	manifestDigest, err := p.registryClient.ResolveTag(r.Context(), p.logger, cfg, imagePath, version)
+	manifestDigest, err := p.registryClient.ResolveTag(r.Context(), p.logger, cfg, imagePath, version, nil)
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "tag not found", http.StatusNotFound)

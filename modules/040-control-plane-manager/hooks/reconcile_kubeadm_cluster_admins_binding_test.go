@@ -31,12 +31,16 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: reconcile_kubeadm
 		valuesUserAuthzOnNotBootstrapped  = `{"global": {"enabledModules": ["user-authz"], "clusterIsBootstrapped": false}, "controlPlaneManager":{"internal": {}}}`
 		valuesUserAuthzOnBootstrapped     = `{"global": {"enabledModules": ["user-authz"], "clusterIsBootstrapped": true}, "controlPlaneManager":{"internal": {}}}`
 
+		// pre-v1.76: heritage:deckhouse only, no Helm ownership — triggers migration patch.
 		crbCurrentClusterAdmin = `
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kubeadm:cluster-admins
+  labels:
+    heritage: deckhouse
+    module: control-plane-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -52,6 +56,54 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kubeadm:cluster-admins
+  labels:
+    heritage: deckhouse
+    module: control-plane-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:cluster-admin
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+`
+
+		// v1.76+: full Helm ownership present — true no-op, no patch needed.
+		crbClusterAdminWithHelmLabels = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+  labels:
+    heritage: deckhouse
+    module: control-plane-manager
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: control-plane-manager
+    meta.helm.sh/release-namespace: d8-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+`
+
+		crbUserAuthzClusterAdminWithHelmLabels = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+  labels:
+    heritage: deckhouse
+    module: control-plane-manager
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: control-plane-manager
+    meta.helm.sh/release-namespace: d8-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -95,6 +147,13 @@ rules:
 	expectInternalDecision := func(f *HookExecutionConfig, targetRole string, supplementEnabled bool) {
 		Expect(f.ValuesGet(targetRolePath).String()).To(Equal(targetRole))
 		Expect(f.ValuesGet(supplementEnabledPath).Bool()).To(Equal(supplementEnabled))
+	}
+
+	expectHelmOwnership := func(f *HookExecutionConfig) {
+		crb := f.KubernetesGlobalResource("ClusterRoleBinding", "kubeadm:cluster-admins")
+		Expect(crb.Field(`metadata.labels.app\.kubernetes\.io/managed-by`).String()).To(Equal("Helm"))
+		Expect(crb.Field(`metadata.annotations.meta\.helm\.sh/release-name`).String()).To(Equal("control-plane-manager"))
+		Expect(crb.Field(`metadata.annotations.meta\.helm\.sh/release-namespace`).String()).To(Equal("d8-system"))
 	}
 
 	// ── user-authz disabled: binding must always stay on cluster-admin (kubeadm-default) ──
@@ -215,6 +274,50 @@ rules:
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "user-authz:cluster-admin")
 			expectInternalDecision(f, "user-authz:cluster-admin", true)
+		})
+	})
+
+	// ── Helm ownership migration: CRB exists without Helm labels ──
+	Context("user-authz disabled, CRB on cluster-admin WITHOUT Helm labels (pre-v1.76 state)", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOffBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin))
+			f.RunHook()
+		})
+		It("patches Helm ownership onto the existing CRB without changing roleRef", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "cluster-admin")
+			expectHelmOwnership(f)
+			expectInternalDecision(f, "cluster-admin", false)
+		})
+	})
+
+	Context("user-authz enabled+bootstrapped, CRB on user-authz:cluster-admin WITHOUT Helm labels (pre-v1.76 state)", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbUserAuthzClusterAdminWithHelmLabels + userAuthzClusterAdminCR))
+			f.RunHook()
+		})
+		It("is a true no-op: roleRef correct, Helm labels already present — no patch emitted", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "user-authz:cluster-admin")
+			expectHelmOwnership(f)
+			expectInternalDecision(f, "user-authz:cluster-admin", true)
+		})
+	})
+
+	// ── True no-op: CRB already carries Helm labels ──
+	Context("user-authz disabled, CRB on cluster-admin WITH Helm labels already", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOffBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbClusterAdminWithHelmLabels))
+			f.RunHook()
+		})
+		It("is a true no-op: roleRef correct and Helm labels already present", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "cluster-admin")
+			expectHelmOwnership(f)
+			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})
 

@@ -896,6 +896,25 @@ alerts:
         The parameters specified in ModuleConfig of {{ $labels.cni }} do not match the ones that are actually being used in the cluster.
       severity: "5"
       markupFormat: markdown
+    - name: D8ControlPlaneManagerObsoleteMonitoringKubernetesControlPlaneModuleConfig
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        The `monitoring-kubernetes-control-plane` module was merged into the `control-plane-manager` module, but its ModuleConfig still exists in the cluster and is no longer used.
+
+        Remove it manually:
+
+        ```bash
+        d8 k delete moduleconfig monitoring-kubernetes-control-plane
+        ```
+
+        If the ModuleConfig is deployed from an external source (e.g. a Git repository), make sure it is removed from there so it is not created again.
+      summary: |
+        Obsolete monitoring-kubernetes-control-plane ModuleConfig should be removed.
+      severity: "9"
+      markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -2639,39 +2658,6 @@ alerts:
       summary: |
         Terraform state must be migrated to OpenTofu.
       severity: "4"
-      markupFormat: markdown
-    - name: D8NginxIngressKruiseControllerPodIsRestartingTooOften
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        {{ $value }} Kruise controller restarts detected in the last hour.
-
-        Excessive Kruise controller restarts indicate that something is wrong. Normally, it should be up and running all the time.
-
-        Steps to resolve:
-
-        1. Check events associated with `kruise-controller-manager` in the `d8-ingress-nginx` namespace. Look for issues related to node failures or memory shortages (OOM events):
-
-           ```bash
-           d8 k -n d8-ingress-nginx get events | grep kruise-controller-manager
-           ```
-
-        2. Analyze the controller's pod descriptions to identify restarted containers and possible causes. Pay attention to exit codes and other details:
-
-           ```bash
-           d8 k -n d8-ingress-nginx describe pod -lapp=kruise,control-plane=controller-manager
-           ```
-
-        3. In case the `kruise` container has restarted, get a list of relevant container logs to identify any meaningful errors:
-
-           ```bash
-           d8 k -n d8-ingress-nginx logs -lapp=kruise,control-plane=controller-manager -c kruise
-           ```
-      summary: |
-        Too many Kruise controller restarts detected.
-      severity: "8"
       markupFormat: markdown
     - name: D8NodeCgroupV2NotSupported
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
@@ -4464,19 +4450,6 @@ alerts:
         File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are exhausting soon.
       severity: "4"
       markupFormat: default
-    - name: GeoIPDownloadErrorDetectedFromMaxMind
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        The component `{{ $labels.job }}` (pod `{{ $labels.pod }}`) failed to download the GeoIP database
-        from MaxMind for edition `{{ $labels.edition }}`.
-        If this issue persists, investigate network connectivity or database availability.
-      summary: |
-        GeoIP DB download error in {{ $labels.job }} (pod {{ $labels.pod }}), edition {{ $labels.edition }}.
-      severity: "4"
-      markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
       moduleUrl: 300-prometheus
@@ -4618,9 +4591,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: K8SApiserverDown
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kubernetes.tpl
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kubernetes.tpl
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: No API servers are reachable, or they have all disappeared from service discovery.
       summary: |
@@ -4628,9 +4601,9 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8sCertificateExpiration
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kubernetes.tpl
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kubernetes.tpl
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than a day on node `{{$labels.component}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Locate the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
       summary: |
@@ -4638,9 +4611,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: K8sCertificateExpiration
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kubernetes.tpl
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kubernetes.tpl
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: "Some clients are connecting to {{$labels.component}} with certificates that will expire in less than 7 days on node `{{$labels.node}}`.\n\nTo check control plane certificates, use kubeadm:\n\n1. Install kubeadm using the following command:\n   \n   ```bash\n   apt install kubeadm=1.24.*\n   ```\n\n2. Check certificates:\n\n   ```bash\n   kubeadm alpha certs check-expiration\n   ```\n\nTo check kubelet certificates, do the following on each node:\n\n1. Check kubelet configuration:\n\n   ```bash\n   ps aux \\\n     | grep \"/usr/bin/kubelet\" \\\n     | grep -o -e \"--kubeconfig=\\S*\" \\\n     | cut -f2 -d\"=\" \\\n     | xargs cat\n   ```\n\n2. Locate the `client-certificate` or `client-certificate-data` field.\n3. Check certificate expiration using OpenSSL.\n\nNote that there are no tools to find other stale kubeconfig files.\nConsider enabling the `control-plane-manager` module for advanced debugging.\n"
       summary: |
@@ -4648,9 +4621,9 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: K8SControllerManagerTargetDown
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-controller-manager.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-controller-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: There is no running kube-controller-manager. As a result, deployments and replication controllers are not progressing.
       summary: |
@@ -4709,9 +4682,9 @@ alerts:
       severity: "3"
       markupFormat: default
     - name: K8SSchedulerTargetDown
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-scheduler.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-scheduler.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         The Kubernetes scheduler is not running.
@@ -4733,9 +4706,9 @@ alerts:
       severity: "7"
       markupFormat: default
     - name: KubeEtcdHighFsyncDurations
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         In the last 15 minutes, the 99th percentile of the fsync duration for WAL files exceeded 0.5 seconds: {{ $value }}.
@@ -4749,9 +4722,9 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: KubeEtcdHighNumberOfLeaderChanges
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         There have been {{ $value }} leader re-elections for the etcd cluster member running on node `{{ $labels.node }}` in the last 10 minutes.
@@ -4766,9 +4739,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubeEtcdInsufficientMembers
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         The etcd cluster has too few members, increasing the risk of failure if another member becomes unavailable.
@@ -4779,9 +4752,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: KubeEtcdNoLeader
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         To resolve this issue, check the status of the etcd Pods:
@@ -4791,9 +4764,9 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: KubeEtcdTargetAbsent
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -4813,9 +4786,9 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubeEtcdTargetDown
-      sourceFile: modules/340-monitoring-kubernetes-control-plane/monitoring/prometheus-rules/kube-etcd3.yaml
-      moduleUrl: 340-monitoring-kubernetes-control-plane
-      module: monitoring-kubernetes-control-plane
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/kube-etcd3.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
       edition: ce
       description: |
         Steps to troubleshoot:
@@ -5666,234 +5639,6 @@ alerts:
       summary: |
         NAT instance {{ $labels.name }} is in a deprecated availability zone.
       severity: "9"
-      markupFormat: markdown
-    - name: NginxIngressConfigTestFailed
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        The configuration test (`nginx -t`) for the `{{ $labels.controller }}` Ingress controller in the `{{ $labels.controller_namespace }}` namespace has failed.
-
-        Steps to resolve:
-
-        1. Check the controller logs:
-
-           ```bash
-           d8 k -n {{ $labels.controller_namespace }} logs {{ $labels.controller_pod }} -c controller
-           ```
-
-        2. Find the most recently created Ingress in the cluster:
-
-           ```bash
-           d8 k get ingress --all-namespaces --sort-by="metadata.creationTimestamp"
-           ```
-
-        3. Check for errors in the `configuration-snippet` or `server-snippet` annotations.
-      summary: |
-        Configuration test failed on Ingress NGINX {{ $labels.controller_namespace }}/{{ $labels.controller }}.
-      severity: "4"
-      markupFormat: markdown
-    - name: NginxIngressDaemonSetNotUpToDate
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        Deckhouse has detected {{ .Value }} outdated pods in Ingress NGINX DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
-
-        Steps to resolve:
-
-        1. Check the DaemonSet's status:
-
-           ```bash
-           d8 k -n {{ $labels.namespace }} get ads {{ $labels.daemonset }}
-           ```
-
-        2. Analyze the DaemonSet's description:
-
-           ```bash
-           d8 k -n {{ $labels.namespace }} describe ads {{ $labels.daemonset }}
-           ```
-
-        3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match
-        `Current Number of Nodes Scheduled`, check the 'nodeSelector' and 'toleration' settings of the corresponding Ingress NGINX Controller and compare them to the 'labels' and 'taints' settings of the relevant nodes.
-      summary: |
-        There were {{ .Value }} outdated pods in Ingress NGINX DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} over the last 20 minutes.
-      severity: "9"
-      markupFormat: markdown
-    - name: NginxIngressDaemonSetReplicasUnavailable
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        Deckhouse has detected that there are no available replicas remaining in Ingress NGINX DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
-
-        List of unavailable pods:
-
-        ```text
-        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_phase{namespace=\"%s\", phase!~\"Running|Succeeded\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
-        ```
-
-        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
-
-        ```bash
-        d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-        ```
-      summary: |
-        No available replicas remaining in Ingress NGINX DaemonSet {{$labels.namespace}}/{{$labels.daemonset}}.
-      severity: "4"
-      markupFormat: markdown
-    - name: NginxIngressDaemonSetReplicasUnavailable
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        Deckhouse has detected that some replicas of Ingress NGINX DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
-
-        Current number: {{ .Value }} unavailable replica(s).
-
-        List of unavailable pods:
-
-        ```text
-        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_phase{namespace=\"%s\", phase!~\"Running|Succeeded\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
-        ```
-
-        If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
-
-        ```bash
-        d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-        ```
-      summary: |
-        Some replicas of Ingress NGINX DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
-      severity: "6"
-      markupFormat: markdown
-    - name: NginxIngressMaxMindAccountIDNotSet
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        The controller **"{{ $labels.controller_name }}"** downloads the GeoIP database using the legacy flow because `spec.geoIP2.maxmindAccountID` is not set.
-        This fallback is less reliable and may be throttled by MaxMind. Specify both `maxmindAccountID` and `maxmindLicenseKey`
-        in the corresponding `ingressnginxcontroller` resource to use the official GeoIP update client.
-      summary: |
-        MaxMind Account ID is missing for the Ingress NGINX Controller &quot;{{ $labels.controller_name }}&quot;.
-      severity: "6"
-      markupFormat: markdown
-    - name: NginxIngressPodIsRestartingTooOften
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        {{ $value }} Ingress NGINX Controller restarts detected in the last hour.
-
-        Excessive Ingress NGINX restarts indicate that something is wrong. Normally, it should be up and running all the time.
-      summary: |
-        Too many Ingress NGINX restarts detected.
-      severity: "4"
-      markupFormat: markdown
-    - name: NginxIngressPodsReportConfigurationHashDrift
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        The `{{ $labels.controller }}` Ingress NGINX Controller pods report different configuration hashes.
-        It can result in inconsistent processing of incoming requests.
-
-        To diagnose the issue, follow these steps:
-
-        1. Make sure that the pods of `{{ $labels.controller }}` Ingress NGINX Controller are not being updated at the moment. During an update, pods of a single controller may report different config hashes for some time.
-
-           ```bash
-           d8 k -n {{ $labels.namespace }} get pod -l app=controller,name={{ $labels.controller }}
-           ```
-
-        2. Check the associated metrics `nginx_ingress_controller_config_hash{namespace="d8-ingress-nginx", controller="{{ $labels.controller }}"}` manually to find the outliers.
-
-        3. Check the controller logs for any configuration errors resulting in the configuration drift across the pods:
-
-           ```bash
-           d8 k -n {{ $labels.namespace }} logs -l app=controller,name={{ $labels.controller }} -c controller --tail=10000
-           ```
-      summary: |
-        Ingress NGINX Controller pods report different configuration hashes.
-      severity: "4"
-      markupFormat: markdown
-    - name: NginxIngressProtobufExporterHasErrors
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        Deckhouse has detected that the Ingress NGINX sidecar container with `protobuf_exporter` has {{ $labels.type }} errors.
-
-        To resolve the issue, check the Ingress controller's logs:
-
-        ```bash
-        d8 k -n d8-ingress-nginx logs $(d8 k -n d8-ingress-nginx get pods -l app=controller,name={{ $labels.controller }} -o wide | grep {{ $labels.node }} | awk '{print $1}') -c protobuf-exporter
-        ```
-      summary: |
-        The Ingress NGINX sidecar container with protobuf_exporter has {{ $labels.type }} errors.
-      severity: "8"
-      markupFormat: markdown
-    - name: NginxIngressSslExpired
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/propagated-ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        The SSL certificate for {{ $labels.host }} in the `{{ $labels.namespace }}` namespace has expired.
-
-        To verify the certificate, run the following command:
-
-        ```bash
-        d8 k -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
-        ```
-
-        The site at `https://{{ $labels.host }}` is not accessible.
-      summary: |
-        Certificate has expired.
-      severity: "4"
-      markupFormat: markdown
-    - name: NginxIngressSslWillExpire
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/propagated-ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        The SSL certificate for {{ $labels.host }} in the `{{ $labels.namespace }}` namespace will expire in less than two weeks.
-
-        To verify the certificate, run the following command:
-
-        ```bash
-        d8 k -n {{ $labels.namespace }} get secret {{ $labels.secret_name }} -o json | jq -r '.data."tls.crt" | @base64d' | openssl x509 -noout -alias -subject -issuer -dates
-        ```
-      summary: |
-        Certificate is expiring soon.
-      severity: "5"
-      markupFormat: markdown
-    - name: NginxIngressValidationIsDisabled
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        Validation is disabled to reduce load on the master nodes, as it requires additional resources.
-        To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
-        from the `ingressnginxcontroller` resource.
-
-        To find which `IngressNginxController` resources have the annotation, use the following command:
-        ```shell
-        d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq -r '.items[] | select(.metadata.annotations."network.deckhouse.io/ingress-nginx-validation-suspended" != null) | "\(.metadata.name)"'
-        ```
-      summary: |
-        Warning: Ingress resource validation in the Ingress NGINX Controller is currently disabled.
-      severity: "4"
       markupFormat: markdown
     - name: NodeConntrackTableFull
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
@@ -7285,7 +7030,6 @@ modules-having-alerts:
     - deckhouse
     - documentation
     - extended-monitoring
-    - ingress-nginx
     - istio
     - kube-dns
     - log-shipper
@@ -7294,7 +7038,6 @@ modules-having-alerts:
     - monitoring-applications
     - monitoring-custom
     - monitoring-kubernetes
-    - monitoring-kubernetes-control-plane
     - monitoring-ping
     - multitenancy-manager
     - node-local-dns

@@ -311,12 +311,6 @@ users:
   - system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge
   - system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer
   - system:serviceaccount:d8-descheduler:descheduler
-  - system:serviceaccount:d8-ingress-nginx:failover-cleaner
-  - system:serviceaccount:d8-ingress-nginx:geoproxy
-  - system:serviceaccount:d8-ingress-nginx:ingress-nginx
-  - system:serviceaccount:d8-ingress-nginx:kruise
-  - system:serviceaccount:d8-ingress-nginx:validator
-  - system:serviceaccount:d8-ingress-nginx:validator-full
   - system:serviceaccount:d8-istio:alliance-healthcheck
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
@@ -336,7 +330,6 @@ users:
   - system:serviceaccount:d8-monitoring:aggregating-proxy
   - system:serviceaccount:d8-monitoring:alertmanager-internal
   - system:serviceaccount:d8-monitoring:alerts-receiver
-  - system:serviceaccount:d8-monitoring:control-plane-proxy
   - system:serviceaccount:d8-monitoring:events-exporter
   - system:serviceaccount:d8-monitoring:extended-monitoring-exporter
   - system:serviceaccount:d8-monitoring:grafana
@@ -369,6 +362,7 @@ users:
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
   - system:serviceaccount:d8-user-authz:webhook
   - system:serviceaccount:kube-system:d8-control-plane-manager
+  - system:serviceaccount:kube-system:d8-control-plane-manager-control-plane-proxy
   - system:serviceaccount:kube-system:d8-kube-dns
   - system:serviceaccount:kube-system:d8-kube-proxy
   - system:serviceaccount:kube-system:d8-node-local-dns
@@ -436,7 +430,6 @@ namespaces:
   - d8-cni-simple-bridge
   - d8-csi-vsphere
   - d8-descheduler
-  - d8-ingress-nginx
   - d8-istio
   - d8-keepalived
   - d8-local-path-provisioner
@@ -814,12 +807,6 @@ rules:
       - system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge
       - system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer
       - system:serviceaccount:d8-descheduler:descheduler
-      - system:serviceaccount:d8-ingress-nginx:failover-cleaner
-      - system:serviceaccount:d8-ingress-nginx:geoproxy
-      - system:serviceaccount:d8-ingress-nginx:ingress-nginx
-      - system:serviceaccount:d8-ingress-nginx:kruise
-      - system:serviceaccount:d8-ingress-nginx:validator
-      - system:serviceaccount:d8-ingress-nginx:validator-full
       - system:serviceaccount:d8-istio:alliance-healthcheck
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter
@@ -839,7 +826,6 @@ rules:
       - system:serviceaccount:d8-monitoring:aggregating-proxy
       - system:serviceaccount:d8-monitoring:alertmanager-internal
       - system:serviceaccount:d8-monitoring:alerts-receiver
-      - system:serviceaccount:d8-monitoring:control-plane-proxy
       - system:serviceaccount:d8-monitoring:events-exporter
       - system:serviceaccount:d8-monitoring:extended-monitoring-exporter
       - system:serviceaccount:d8-monitoring:grafana
@@ -872,6 +858,7 @@ rules:
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
       - system:serviceaccount:d8-user-authz:webhook
       - system:serviceaccount:kube-system:d8-control-plane-manager
+      - system:serviceaccount:kube-system:d8-control-plane-manager-control-plane-proxy
       - system:serviceaccount:kube-system:d8-kube-dns
       - system:serviceaccount:kube-system:d8-kube-proxy
       - system:serviceaccount:kube-system:d8-node-local-dns
@@ -931,7 +918,6 @@ rules:
       - d8-cni-simple-bridge
       - d8-csi-vsphere
       - d8-descheduler
-      - d8-ingress-nginx
       - d8-istio
       - d8-keepalived
       - d8-local-path-provisioner

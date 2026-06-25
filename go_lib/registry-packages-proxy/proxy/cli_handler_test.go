@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -51,13 +52,16 @@ func TestParseCLIPath(t *testing.T) {
 		wantErr    bool
 	}{
 		{url: "/v1/images/deckhouse-cli/tags", wantImg: "deckhouse-cli", wantAction: cliActionListTags},
-		{url: "/v1/images/deckhouse-cli/tags/v1.0.1", wantImg: "deckhouse-cli", wantAction: cliActionPullTag, wantTag: "v1.0.1"},
+		{url: "/v1/images/deckhouse-cli/images/v1.0.1", wantImg: "deckhouse-cli", wantAction: cliActionPullImage, wantTag: "v1.0.1"},
 		{url: "/v1/images/deckhouse-cli/plugins/tags", wantImg: "deckhouse-cli/plugins", wantAction: cliActionListTags},
 		{url: "/v1/images/deckhouse-cli/plugins/foo/tags", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionListTags},
-		{url: "/v1/images/deckhouse-cli/plugins/foo/tags/v2", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionPullTag, wantTag: "v2"},
+		{url: "/v1/images/deckhouse-cli/plugins/foo/images/v2", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionPullImage, wantTag: "v2"},
+		// A plugin named after the action word must still parse (anchor on the last segment).
+		{url: "/v1/images/deckhouse-cli/plugins/images/images/v1.0.0", wantImg: "deckhouse-cli/plugins/images", wantAction: cliActionPullImage, wantTag: "v1.0.0"},
 		{url: "/v1/images/", wantErr: true},
 		{url: "/v1/images/just-image", wantErr: true},
-		{url: "/v1/images/img/tags/with/slashes", wantErr: true},
+		{url: "/v1/images/deckhouse-cli/images", wantErr: true},
+		{url: "/v1/images/deckhouse-cli/images/with/slash", wantErr: true},
 	}
 
 	for _, tc := range cases {
@@ -110,6 +114,8 @@ type fakeCLIRegistryClient struct {
 	mu                  sync.Mutex
 	tags                map[string][]string
 	tagToManifestDigest map[string]string
+	platformDigests     map[string]string
+	lastPlatform        string
 	packageBody         []byte
 	layerDigest         string
 
@@ -136,13 +142,19 @@ func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *
 	return tags, nil
 }
 
-func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, tag string) (string, error) {
+func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, tag string, platform *v1.Platform) (string, error) {
 	atomic.AddInt32(&f.resolveTagCalls, 1)
 	if f.resolveTagErr != nil {
 		return "", f.resolveTagErr
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if platform != nil {
+		f.lastPlatform = platform.String()
+		if d, ok := f.platformDigests[path+":"+tag+":"+platform.String()]; ok {
+			return d, nil
+		}
+	}
 	d, ok := f.tagToManifestDigest[path+":"+tag]
 	if !ok {
 		return "", registry.ErrPackageNotFound
@@ -321,7 +333,7 @@ func TestCLIHandler_DisallowedImagePath(t *testing.T) {
 	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.listTagsCalls))
 }
 
-func TestCLIHandler_PullTag_HappyPathAndCache(t *testing.T) {
+func TestCLIHandler_PullImage_HappyPathAndCache(t *testing.T) {
 	const payload = "hello, world"
 	fake := &fakeCLIRegistryClient{
 		tagToManifestDigest: map[string]string{
@@ -339,7 +351,7 @@ func TestCLIHandler_PullTag_HappyPathAndCache(t *testing.T) {
 	defer srv.Close()
 
 	// First request: cache miss, registry consulted.
-	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/tags/v1.0.1")
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/images/v1.0.1")
 	require.NoError(t, err)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -363,7 +375,7 @@ func TestCLIHandler_PullTag_HappyPathAndCache(t *testing.T) {
 	}, cliEventuallyTimeout, cliEventuallyInterval)
 
 	// Second request: should be served from cache, registry GetPackage NOT called again.
-	resp2, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/tags/v1.0.1")
+	resp2, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/images/v1.0.1")
 	require.NoError(t, err)
 	body2, err := io.ReadAll(resp2.Body)
 	require.NoError(t, err)
@@ -375,7 +387,7 @@ func TestCLIHandler_PullTag_HappyPathAndCache(t *testing.T) {
 	assert.GreaterOrEqual(t, atomic.LoadInt32(&cache.hits), int32(1))
 }
 
-func TestCLIHandler_PullTag_NotFound(t *testing.T) {
+func TestCLIHandler_PullImage_NotFound(t *testing.T) {
 	fake := &fakeCLIRegistryClient{
 		tagToManifestDigest: map[string]string{},
 	}
@@ -386,13 +398,13 @@ func TestCLIHandler_PullTag_NotFound(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/tags/v99.99.99")
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/images/v99.99.99")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
-func TestCLIHandler_PullTag_BadGatewayOnRegistryError(t *testing.T) {
+func TestCLIHandler_PullImage_BadGatewayOnRegistryError(t *testing.T) {
 	fake := &fakeCLIRegistryClient{
 		resolveTagErr: errors.New("boom"),
 	}
@@ -403,8 +415,75 @@ func TestCLIHandler_PullTag_BadGatewayOnRegistryError(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/tags/v1.0.0")
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/images/v1.0.0")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+}
+
+func TestCLIHandler_PullImage_PlatformSelectsChildDigest(t *testing.T) {
+	const payload = "platform-specific binary"
+	fake := &fakeCLIRegistryClient{
+		platformDigests: map[string]string{
+			"deckhouse-cli:v1.0.1:linux/amd64": "sha256:aaaaamd64",
+			"deckhouse-cli:v1.0.1:linux/arm64": "sha256:bbbbarm64",
+		},
+		packageBody: []byte(payload),
+		layerDigest: "layer123",
+	}
+	cache := newCLIMemCache()
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, cache)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	// arm64: the proxy resolves the arm64 child digest and stamps it as the ETag.
+	// The CLI sends os-arch (dash); the proxy maps it to the OCI os/arch platform.
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/images/v1.0.1?platform=linux-arm64")
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, `"sha256:bbbbarm64"`, resp.Header.Get("ETag"))
+	assert.Equal(t, "linux/arm64", fake.lastPlatform)
+
+	// amd64: a different child digest.
+	resp, err = http.Get(srv.URL + "/v1/images/deckhouse-cli/images/v1.0.1?platform=linux-amd64")
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, `"sha256:aaaaamd64"`, resp.Header.Get("ETag"))
+
+	// Different platforms resolved to different digests, so the cache holds two
+	// distinct entries - one platform can never serve another's bytes.
+	require.Eventually(t, func() bool {
+		_, r1, e1 := cache.Get("sha256:aaaaamd64")
+		_, r2, e2 := cache.Get("sha256:bbbbarm64")
+		if e1 == nil && e2 == nil {
+			_ = r1.Close()
+			_ = r2.Close()
+			return true
+		}
+		return false
+	}, cliEventuallyTimeout, cliEventuallyInterval)
+}
+
+func TestCLIHandler_PullImage_InvalidPlatform(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		tagToManifestDigest: map[string]string{"deckhouse-cli:v1.0.1": "sha256:deadbeef"},
+	}
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	// Not an <os>-<arch> pair: the handler answers 400 and never consults the registry.
+	resp, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/images/v1.0.1?platform=linux-amd64-v8-oops")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.resolveTagCalls))
 }

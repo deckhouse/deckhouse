@@ -75,11 +75,59 @@ func TestDefaultClient_ResolveTag(t *testing.T) {
 		Scheme:     "http",
 	}
 
-	got, err := c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "v1.0.1")
+	got, err := c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "v1.0.1", nil)
 	require.NoError(t, err)
 	assert.Equal(t, wantDigest, got)
 
-	_, err = c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "missing-tag")
+	_, err = c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "missing-tag", nil)
+	require.ErrorIs(t, err, ErrPackageNotFound)
+}
+
+func TestDefaultClient_ResolveTag_Platform(t *testing.T) {
+	host := newTestRegistry(t)
+
+	amd64, err := random.Image(256, 1)
+	require.NoError(t, err)
+	arm64, err := random.Image(256, 1)
+	require.NoError(t, err)
+
+	idx := mutate.AppendManifests(empty.Index,
+		mutate.IndexAddendum{Add: amd64, Descriptor: v1.Descriptor{Platform: &v1.Platform{OS: "linux", Architecture: "amd64"}}},
+		mutate.IndexAddendum{Add: arm64, Descriptor: v1.Descriptor{Platform: &v1.Platform{OS: "linux", Architecture: "arm64"}}},
+	)
+
+	ref, err := name.NewTag(host+"/deckhouse/deckhouse-cli:v2.0.0", name.WeakValidation)
+	require.NoError(t, err)
+	require.NoError(t, v1remote.WriteIndex(ref, idx))
+
+	indexDigest, err := idx.Digest()
+	require.NoError(t, err)
+	amd64Digest, err := amd64.Digest()
+	require.NoError(t, err)
+	arm64Digest, err := arm64.Digest()
+	require.NoError(t, err)
+	require.NotEqual(t, amd64Digest.String(), arm64Digest.String())
+
+	c := &DefaultClient{}
+	cfg := &ClientConfig{Repository: host + "/deckhouse", Scheme: "http"}
+
+	// A requested platform resolves to that child manifest, not the index.
+	got, err := c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "v2.0.0", &v1.Platform{OS: "linux", Architecture: "arm64"})
+	require.NoError(t, err)
+	assert.Equal(t, arm64Digest.String(), got)
+
+	// Different platforms resolve to different child digests (so the cache can never collide).
+	got, err = c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "v2.0.0", &v1.Platform{OS: "linux", Architecture: "amd64"})
+	require.NoError(t, err)
+	assert.Equal(t, amd64Digest.String(), got)
+
+	// No platform requested -> the index digest itself (legacy behavior).
+	got, err = c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "v2.0.0", nil)
+	require.NoError(t, err)
+	assert.Equal(t, indexDigest.String(), got)
+
+	// A platform absent from the index is a clean not-found.
+	_, err = c.ResolveTag(context.Background(), testLogger{}, cfg, "deckhouse-cli", "v2.0.0", &v1.Platform{OS: "windows", Architecture: "amd64"})
 	require.ErrorIs(t, err, ErrPackageNotFound)
 }
 
