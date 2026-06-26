@@ -1,4 +1,4 @@
-{{- $date := "2026-06-26" }}
+{{- $date := "2025-06-26-1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
@@ -12,7 +12,7 @@ import:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/lib*.so
+  - usr/lib/lib*.so*
   excludePaths:
   - usr/lib/python*/site-packages/pip-25.3*
   - usr/lib/python*/test
