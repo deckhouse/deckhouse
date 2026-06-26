@@ -47,16 +47,18 @@ type TargetOperation struct {
 }
 
 func ComputePlan(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation, builder OperationBuilder) Plan {
-	status := ComputeStatusReport(cpn, current)
+	computedStatus := ComputeStatusReport(cpn, current)
 	var p Plan
-	if !equality.Semantic.DeepEqual(cpn.Status, status) {
-		p.Status = &status
+	if !equality.Semantic.DeepEqual(cpn.Status, computedStatus) {
+		p.Status = &computedStatus
 	}
 	if IsMaintenanceMode(cpn) {
 		return p
 	}
-	node := nodeRef(cpn)
-	for _, s := range computeComponentStates(cpn) {
+	planned := cpn.DeepCopy()
+	planned.Status = computedStatus
+	node := nodeRef(planned)
+	for _, s := range computeComponentStates(planned) {
 		for _, t := range builder.Targets(s) {
 			if operations.HasActiveOperation(current, s.component, t.HasDuplicate) {
 				continue
