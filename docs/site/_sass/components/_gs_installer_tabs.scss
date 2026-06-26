@@ -149,6 +149,18 @@
     background: none;
     cursor: pointer;
 
+    @include breakpoints.max-w(l) {
+      font-size: 18px;
+    }
+
+    @include breakpoints.max-w(s) {
+      font-size: 16px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      font-size: 14px;
+    }
+
     &:disabled {
       color: #969DC4;
       cursor: not-allowed;
