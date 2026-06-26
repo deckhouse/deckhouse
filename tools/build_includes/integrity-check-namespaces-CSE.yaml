@@ -36,6 +36,7 @@ namespaces_for_integrity:
     - d8-sds-node-configurator
     - d8-secrets-store-integration
     - d8-service-with-healthchecks
+    - d8-security-events-manager
     - d8-snapshot-controller
     - d8-static-routing-manager
     - d8-storage-volume-data-manager
