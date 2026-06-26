@@ -29,11 +29,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 )
 
-// eventSource is a loaded package whose hooks can be triggered by live Kubernetes
-// or schedule events: it exposes its hooks for routing and the operations the
-// hookrun task needs to execute them. Both applications and the global module
-// satisfy it.
-type eventSource interface {
+// hookProvider is a loaded package — an application or the global module — that
+// supplies the hooks the kube/schedule event router triggers: the router asks it
+// for the hooks bound to an event and builds a hookrun task for each match.
+type hookProvider interface {
 	GetName() string
 	GetValuesChecksum() string
 	RunHookByName(ctx context.Context, hook string, bctx []bctx.BindingContext) error
@@ -65,7 +64,7 @@ func (r *Runtime) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 
 // routeKubeEvent appends a hookrun task to res for every Kubernetes hook of src
 // that matches the event.
-func (r *Runtime) routeKubeEvent(ctx context.Context, src eventSource, kubeEvent shkubetypes.KubeEvent, res map[string][]queue.Task) {
+func (r *Runtime) routeKubeEvent(ctx context.Context, src hookProvider, kubeEvent shkubetypes.KubeEvent, res map[string][]queue.Task) {
 	for _, hook := range src.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 		hookCtrl := hook.GetHookController()
 
@@ -118,7 +117,7 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 
 // routeScheduleEvent appends a hookrun task to res for every schedule hook of src
 // whose crontab matches.
-func (r *Runtime) routeScheduleEvent(ctx context.Context, src eventSource, crontab string, res map[string][]queue.Task) {
+func (r *Runtime) routeScheduleEvent(ctx context.Context, src hookProvider, crontab string, res map[string][]queue.Task) {
 	for _, hook := range src.GetHooksByBinding(shtypes.Schedule) {
 		hookCtrl := hook.GetHookController()
 
