@@ -54,8 +54,8 @@ type Module struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
-	// initialized tracks whether hook controllers have been built, so the global
-	// run task does not re-initialize them on every reschedule.
+	// initialized tracks whether hook controllers have been built, so the Enable
+	// task skips re-initialization on every reschedule.
 	initialized atomic.Bool
 
 	patcher           *objectpatch.ObjectPatcher
@@ -220,16 +220,10 @@ func (m *Module) HooksInitialized() bool {
 	return m.initialized.Load()
 }
 
-// GetHooksByBinding returns the global hooks for the binding type as the minimal
-// ControllableHook view, so the shared Enable task can drive global like any
-// package.
+// GetHooksByBinding returns the global hooks for the binding as the ControllableHook
+// view, so the shared Enable task can drive global like any package.
 func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
-	stored := m.hooks.GetHooksByBinding(binding)
-	res := make([]hooks.ControllableHook, 0, len(stored))
-	for _, hook := range stored {
-		res = append(res, hook)
-	}
-	return res
+	return hooks.ToControllable(m.hooks.GetHooksByBinding(binding))
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events

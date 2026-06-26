@@ -55,6 +55,15 @@ type ControllableHook interface {
 	GetHookController() *controller.HookController
 }
 
+// ToControllable adapts a slice of concrete hooks to the ControllableHook view.
+func ToControllable[H ControllableHook](in []H) []ControllableHook {
+	out := make([]ControllableHook, len(in))
+	for i, h := range in {
+		out[i] = h
+	}
+	return out
+}
+
 // Storage provides thread-safe storage for hooks with multiple access patterns.
 // It maintains two indices:
 //   - byName: Fast lookup by hook name (O(1))
