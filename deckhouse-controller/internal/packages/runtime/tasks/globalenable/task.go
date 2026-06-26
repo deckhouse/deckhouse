@@ -76,28 +76,41 @@ func (t *task) Execute(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Execute")
 	defer span.End()
 
+	// DEBUG: temporary demo logging — remove before merge.
+	t.logger.Info("DEBUG globalenable: start", slog.Bool("hooks_initialized", t.pkg.HooksInitialized()))
+
 	if !t.pkg.HooksInitialized() {
 		t.pkg.InitializeHooks()
 	}
 
-	for _, hook := range t.pkg.GetHooksByBinding(shtypes.Schedule) {
+	scheduleHooks := t.pkg.GetHooksByBinding(shtypes.Schedule)
+	for _, hook := range scheduleHooks {
 		hook.GetHookController().EnableScheduleBindings()
 	}
+	t.logger.Info("DEBUG globalenable: schedule bindings enabled", slog.Int("count", len(scheduleHooks)))
 
 	if err := t.syncKubernetesBindings(ctx); err != nil {
 		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
 		return fmt.Errorf("sync kubernetes bindings: %w", err)
 	}
+	t.logger.Info("DEBUG globalenable: kubernetes bindings synced",
+		slog.Int("count", len(t.pkg.GetHooksByBinding(shtypes.OnKubernetesEvent))))
 
+	t.logger.Info("DEBUG globalenable: running onStartup hooks",
+		slog.Int("count", len(t.pkg.GetHooksByBinding(shtypes.OnStartup))))
 	if err := t.pkg.RunHooksByBinding(ctx, shtypes.OnStartup); err != nil {
 		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
 		return fmt.Errorf("run onStartup hooks: %w", err)
 	}
 
+	t.logger.Info("DEBUG globalenable: running beforeAll hooks",
+		slog.Int("count", len(t.pkg.GetHooksByBinding(addontypes.BeforeAll))))
 	if err := t.pkg.RunHooksByBinding(ctx, addontypes.BeforeAll); err != nil {
 		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
 		return fmt.Errorf("run beforeAll hooks: %w", err)
 	}
+
+	t.logger.Info("DEBUG globalenable: done")
 
 	return nil
 }

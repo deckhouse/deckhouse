@@ -629,6 +629,8 @@ func (r *Runtime) schedulePackage(name string) {
 	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
 	if name == r.global.GetName() {
+		// DEBUG: temporary demo logging — remove before merge.
+		r.logger.Info("DEBUG global: scheduling globalenable task")
 		r.queueService.Enqueue(ctx, name, taskglobalenable.NewTask(r.global, r.status, r.logger), onDone)
 		return
 	}
