@@ -63,7 +63,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	return r.reconcileOperation(ctx, operation)
 }
 
-// reconcileStartedAt (In-place reconciliation on metadata): stamp the start annotation once.
 func (r *reconciler) reconcileStartedAt(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) error {
 	if operation.Annotations[constants.OperationStartedAtAnnotationKey] != "" {
 		return nil
@@ -79,7 +78,9 @@ func (r *reconciler) reconcileStartedAt(ctx context.Context, operation *controlp
 	return r.patchOperation(ctx, operation, base)
 }
 
-func (r *reconciler) reconcileOperation(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (reconcile.Result, error) {
+func (r *reconciler) reconcileOperation(
+	ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation,
+) (reconcile.Result, error) {
 	if needed, reason := r.operationExecutor.NeedsExecution(ctx, operation); !needed {
 		return r.reconcileAbandonedOperation(ctx, operation, reason)
 	}
@@ -95,7 +96,11 @@ func (r *reconciler) reconcileOperation(ctx context.Context, operation *controlp
 	}
 }
 
-func (r *reconciler) reconcileAbandonedOperation(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation, reason string) (reconcile.Result, error) {
+func (r *reconciler) reconcileAbandonedOperation(
+	ctx context.Context,
+	operation *controlplanev1alpha1.ControlPlaneOperation,
+	reason string,
+) (reconcile.Result, error) {
 	base := operation.DeepCopy()
 	applyAbandonedOperation(operation, reason)
 	return reconcile.Result{}, r.patchOperationStatus(ctx, operation, base)
@@ -112,7 +117,11 @@ func applyAbandonedOperation(operation *controlplanev1alpha1.ControlPlaneOperati
 	)
 }
 
-func (r *reconciler) reconcileFailedOperation(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation, result operations.OperationResult) (reconcile.Result, error) {
+func (r *reconciler) reconcileFailedOperation(
+	ctx context.Context,
+	operation *controlplanev1alpha1.ControlPlaneOperation,
+	result operations.OperationResult,
+) (reconcile.Result, error) {
 	base := operation.DeepCopy()
 	applyStepResults(operation, result.StepResults)
 	applyOperationFailed(operation, result.Message)
@@ -134,7 +143,11 @@ func applyOperationFailed(operation *controlplanev1alpha1.ControlPlaneOperation,
 	)
 }
 
-func (r *reconciler) reconcileInProgressOperation(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation, result operations.OperationResult) (reconcile.Result, error) {
+func (r *reconciler) reconcileInProgressOperation(
+	ctx context.Context,
+	operation *controlplanev1alpha1.ControlPlaneOperation,
+	result operations.OperationResult,
+) (reconcile.Result, error) {
 	base := operation.DeepCopy()
 	applyStepResults(operation, result.StepResults)
 	applyOperationInProgress(operation, result.Message)
@@ -156,7 +169,11 @@ func applyOperationInProgress(operation *controlplanev1alpha1.ControlPlaneOperat
 	)
 }
 
-func (r *reconciler) reconcileCompletedOperation(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation, result operations.OperationResult) (reconcile.Result, error) {
+func (r *reconciler) reconcileCompletedOperation(
+	ctx context.Context,
+	operation *controlplanev1alpha1.ControlPlaneOperation,
+	result operations.OperationResult,
+) (reconcile.Result, error) {
 	base := operation.DeepCopy()
 	applyStepResults(operation, result.StepResults)
 	applyOperationCompleted(operation)
@@ -187,7 +204,11 @@ func applyStepResults(operation *controlplanev1alpha1.ControlPlaneOperation, res
 	}
 }
 
-func applyStepFailed(operation *controlplanev1alpha1.ControlPlaneOperation, name controlplanev1alpha1.StepName, errorMessage string) {
+func applyStepFailed(
+	operation *controlplanev1alpha1.ControlPlaneOperation,
+	name controlplanev1alpha1.StepName,
+	errorMessage string,
+) {
 	setCondition(
 		operation,
 		controlplanev1alpha1.StepConditionType(name),
@@ -197,7 +218,11 @@ func applyStepFailed(operation *controlplanev1alpha1.ControlPlaneOperation, name
 	)
 }
 
-func applyStepInProgress(operation *controlplanev1alpha1.ControlPlaneOperation, name controlplanev1alpha1.StepName, message string) {
+func applyStepInProgress(
+	operation *controlplanev1alpha1.ControlPlaneOperation,
+	name controlplanev1alpha1.StepName,
+	message string,
+) {
 	setCondition(
 		operation,
 		controlplanev1alpha1.StepConditionType(name),
@@ -207,7 +232,11 @@ func applyStepInProgress(operation *controlplanev1alpha1.ControlPlaneOperation, 
 	)
 }
 
-func applyStepCompleted(operation *controlplanev1alpha1.ControlPlaneOperation, name controlplanev1alpha1.StepName, message string) {
+func applyStepCompleted(
+	operation *controlplanev1alpha1.ControlPlaneOperation,
+	name controlplanev1alpha1.StepName,
+	message string,
+) {
 	setCondition(
 		operation,
 		controlplanev1alpha1.StepConditionType(name),
@@ -217,7 +246,9 @@ func applyStepCompleted(operation *controlplanev1alpha1.ControlPlaneOperation, n
 	)
 }
 
-func (r *reconciler) getOperation(ctx context.Context, namespacedName types.NamespacedName) (*controlplanev1alpha1.ControlPlaneOperation, error) {
+func (r *reconciler) getOperation(
+	ctx context.Context, namespacedName types.NamespacedName,
+) (*controlplanev1alpha1.ControlPlaneOperation, error) {
 	operation := &controlplanev1alpha1.ControlPlaneOperation{}
 	err := r.client.Get(ctx, namespacedName, operation)
 	return operation, err
