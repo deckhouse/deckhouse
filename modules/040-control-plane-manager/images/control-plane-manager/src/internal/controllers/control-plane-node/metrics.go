@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/cpnplanner"
 )
 
 const (
@@ -65,7 +66,7 @@ func (m *metrics) syncMaintenanceModeMetrics(cpn *controlplanev1alpha1.ControlPl
 	}
 
 	value := 0.0
-	if isMaintenanceMode(cpn) {
+	if cpnplanner.IsMaintenanceMode(cpn) {
 		value = 1.0
 	}
 

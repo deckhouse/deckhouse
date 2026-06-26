@@ -14,30 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package virtualcontrolplanenode
+package controlplanenode
 
 import (
 	"context"
-	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 	"control-plane-manager/internal/cpnplanner"
+	"control-plane-manager/internal/operations"
 )
-
-const requeueInterval = 5 * time.Minute
 
 type reconciler struct {
 	client client.Client
 	// apiReader is an uncached reader used to confirm, right before creating an operation, that the previous reconcile of the same node did not already create it.
-	apiReader   client.Reader
-	scheme      *runtime.Scheme
-	stepBuilder cpnplanner.StepBuilder
+	apiReader        client.Reader
+	scheme           *runtime.Scheme
+	operationBuilder cpnplanner.OperationBuilder
+	metrics          *metrics
+	log              *log.Logger
 }
 
 var _ reconcile.Reconciler = (*reconciler)(nil)
@@ -45,15 +48,20 @@ var _ reconcile.Reconciler = (*reconciler)(nil)
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
 	if err := r.client.Get(ctx, req.NamespacedName, cpn); err != nil {
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			r.metrics.deleteMaintenanceModeMetrics(req.Name)
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, err
 	}
+	defer r.metrics.syncMaintenanceModeMetrics(cpn)
 
 	current, err := r.listOperationsForNode(ctx, cpn)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	plan := cpnplanner.ComputePlan(cpn, current, r.stepBuilder)
+	plan := cpnplanner.ComputePlan(cpn, current, r.operationBuilder)
 
 	if err := r.reconcileStatus(ctx, cpn, plan.Status); err != nil {
 		return reconcile.Result{}, err
@@ -77,16 +85,20 @@ func (r *reconciler) reconcileStatus(ctx context.Context, cpn *controlplanev1alp
 	return r.patchStatus(ctx, cpn, base)
 }
 
-func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, planned []*controlplanev1alpha1.ControlPlaneOperation) error {
+func (r *reconciler) reconcileOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, planned []cpnplanner.PlannedOperation) error {
 	if len(planned) == 0 {
 		return nil
 	}
+	// re-check the dedup against a strongly-consistent uncached read so this CPN's previous reconcile does not create the same operation twice before the watch catches up
 	fresh, err := r.listOperationsForNodeUncached(ctx, cpn)
 	if err != nil {
 		return err
 	}
-	for _, op := range cpnplanner.ComputePlan(cpn, fresh, r.stepBuilder).Create {
-		if err := r.createOperation(ctx, cpn, op); err != nil {
+	for _, p := range planned {
+		if operations.HasActiveOperation(fresh, p.Op.Spec.Component, p.HasDuplicate) {
+			continue
+		}
+		if err := r.createOperation(ctx, cpn, p.Op); err != nil {
 			return err
 		}
 	}

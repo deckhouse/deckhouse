@@ -36,20 +36,23 @@ type NodeRef struct {
 	UID       types.UID
 }
 
-func New(node NodeRef, c controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName, intended controlplanev1alpha1.Checksums) *controlplanev1alpha1.ControlPlaneOperation {
-	op := newOperation(node, c, steps)
-	if op.IsObserveOnlyOperation() {
-		op.Spec.Approved = true
-	} else {
-		op.Spec.DesiredConfigChecksum = intended.Config
-		op.Spec.DesiredPKIChecksum = intended.PKI
-		op.Spec.DesiredCAChecksum = intended.CA
-	}
+func NewOperation(node NodeRef, c controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName, intended controlplanev1alpha1.Checksums) *controlplanev1alpha1.ControlPlaneOperation {
+	op := baseOperation(node, c, steps)
+	op.Spec.DesiredConfigChecksum = intended.Config
+	op.Spec.DesiredPKIChecksum = intended.PKI
+	op.Spec.DesiredCAChecksum = intended.CA
 	op.GenerateName = generateName(op)
 	return op
 }
 
-func newOperation(node NodeRef, component controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName) *controlplanev1alpha1.ControlPlaneOperation {
+func NewApprovedOperation(node NodeRef, c controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName) *controlplanev1alpha1.ControlPlaneOperation {
+	op := baseOperation(node, c, steps)
+	op.Spec.Approved = true
+	op.GenerateName = generateName(op)
+	return op
+}
+
+func baseOperation(node NodeRef, component controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName) *controlplanev1alpha1.ControlPlaneOperation {
 	return &controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: node.Namespace,

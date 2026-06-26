@@ -16,8 +16,8 @@ limitations under the License.
 
 package cpnplanner
 
-type VirtualOperationBuilder struct{}
+type NormalOperationBuilder struct{}
 
-func (VirtualOperationBuilder) Targets(s componentState) []TargetOperation {
+func (NormalOperationBuilder) Targets(s componentState) []TargetOperation {
 	return targets(s)
 }

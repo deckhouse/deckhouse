@@ -28,20 +28,25 @@ const maxTerminalOperationsPerComponent = 5
 
 type Plan struct {
 	Status *controlplanev1alpha1.ControlPlaneNodeStatus
-	Create []*controlplanev1alpha1.ControlPlaneOperation
+	Create []PlannedOperation
 	Delete []*controlplanev1alpha1.ControlPlaneOperation
 }
 
-type StepBuilder interface {
-	TargetSteps(s componentState) []TargetSteps
-}
-
-type TargetSteps struct {
-	Steps        []controlplanev1alpha1.StepName
+type PlannedOperation struct {
+	Op           *controlplanev1alpha1.ControlPlaneOperation
 	HasDuplicate func(active *controlplanev1alpha1.ControlPlaneOperation) bool
 }
 
-func ComputePlan(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation, builder StepBuilder) Plan {
+type OperationBuilder interface {
+	Targets(s componentState) []TargetOperation
+}
+
+type TargetOperation struct {
+	HasDuplicate func(active *controlplanev1alpha1.ControlPlaneOperation) bool
+	Build        func(node operations.NodeRef) *controlplanev1alpha1.ControlPlaneOperation
+}
+
+func ComputePlan(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlplanev1alpha1.ControlPlaneOperation, builder OperationBuilder) Plan {
 	status := ComputeStatusReport(cpn, current)
 	var p Plan
 	if !equality.Semantic.DeepEqual(cpn.Status, status) {
@@ -52,11 +57,14 @@ func ComputePlan(cpn *controlplanev1alpha1.ControlPlaneNode, current []controlpl
 	}
 	node := nodeRef(cpn)
 	for _, s := range computeComponentStates(cpn) {
-		for _, t := range builder.TargetSteps(s) {
+		for _, t := range builder.Targets(s) {
 			if operations.HasActiveOperation(current, s.component, t.HasDuplicate) {
 				continue
 			}
-			p.Create = append(p.Create, operations.New(node, s.component, t.Steps, s.intended))
+			p.Create = append(p.Create, PlannedOperation{
+				Op:           t.Build(node),
+				HasDuplicate: t.HasDuplicate,
+			})
 		}
 	}
 	p.Delete = operations.ComputeOperationsToRotate(current, maxTerminalOperationsPerComponent)
