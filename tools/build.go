@@ -47,15 +47,6 @@ const (
 
 var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
 
-// externalCloudProviders are shipped as external OCI bundles that dhctl
-// downloads at runtime (bootstrap and the auto-converger, which is the same
-// dhctl). Their candi/terraform-modules must NOT be baked into installer,
-// candi or converger images. Keep in sync with the external-provider list in
-// .werf/defines/installer.tmpl.
-var externalCloudProviders = map[string]struct{}{
-	"dvp": {},
-}
-
 var workDir = cwd()
 
 var testsExcludes = []string{
@@ -305,11 +296,6 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 		}
 
 		cloudProviderName := extractCloudProviderName(file)
-
-		// External providers are downloaded by dhctl at runtime, not baked.
-		if _, external := externalCloudProviders[cloudProviderName]; external {
-			return
-		}
 
 		addEntries = append(addEntries, addEntry{
 			Add:               strings.TrimPrefix(candiPath, workDir),
