@@ -24,6 +24,7 @@ metadata:
 spec:
   version: v1.71.5
 status:
+  approved: false
   phase: Suspended
   transitionTime: null
 ---
@@ -36,6 +37,7 @@ metadata:
 spec:
   version: v1.71.7
 status:
+  approved: false
   phase: Pending
   transitionTime: null
 ---
@@ -48,6 +50,7 @@ metadata:
 spec:
   version: v1.72.10
 status:
+  approved: false
   message: awaiting for v1.71.7 release to be deployed
   phase: Pending
   transitionTime: null
@@ -61,6 +64,7 @@ metadata:
 spec:
   version: v1.72.5
 status:
+  approved: false
   phase: Suspended
   transitionTime: null
 ---

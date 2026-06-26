@@ -15,6 +15,7 @@ metadata:
 spec:
   version: v1.15.0
 status:
+  approved: false
   phase: Deployed
   transitionTime: null
 ---
@@ -29,5 +30,6 @@ metadata:
 spec:
   version: v1.16.0
 status:
+  approved: false
   phase: Pending
   transitionTime: null

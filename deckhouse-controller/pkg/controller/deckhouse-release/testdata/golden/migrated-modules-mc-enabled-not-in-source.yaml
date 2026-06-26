@@ -23,6 +23,7 @@ spec:
     migratedModules: enabled-module-not-found
   version: v1.50.0
 status:
+  approved: false
   message: migrated module 'enabled-module-not-found' not found in any ModuleSource
     registry
   phase: Pending

@@ -8,6 +8,7 @@ metadata:
 spec:
   version: v1.31.0
 status:
+  approved: false
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -20,6 +21,7 @@ metadata:
 spec:
   version: v1.31.1
 status:
+  approved: false
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -32,6 +34,7 @@ metadata:
 spec:
   version: v1.31.2
 status:
+  approved: false
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -48,6 +51,7 @@ metadata:
 spec:
   version: v1.31.3
 status:
+  approved: false
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -60,6 +64,7 @@ metadata:
 spec:
   version: v1.32.0
 status:
+  approved: false
   message: awaiting for Deckhouse v1.31.3 pod to be ready
   phase: Pending
   transitionTime: null

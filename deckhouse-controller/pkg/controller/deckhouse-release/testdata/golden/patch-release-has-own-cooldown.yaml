@@ -15,6 +15,7 @@ metadata:
 spec:
   version: v1.15.0
 status:
+  approved: false
   phase: Deployed
   transitionTime: null
 ---
@@ -32,4 +33,5 @@ spec:
   changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.16.2
   version: v1.16.2
 status:
+  approved: false
   transitionTime: null

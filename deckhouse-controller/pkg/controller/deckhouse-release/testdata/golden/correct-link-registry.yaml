@@ -17,6 +17,7 @@ spec:
     kubernetes: '>= 1.27'
   version: v1.15.0
 status:
+  approved: false
   phase: Deployed
   transitionTime: null
 ---
@@ -36,6 +37,7 @@ spec:
     kubernetes: '>= 1.27'
   version: v1.16.0
 status:
+  approved: false
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -54,6 +56,7 @@ spec:
     kubernetes: '>= 1.27'
   version: v1.17.0
 status:
+  approved: false
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -72,4 +75,5 @@ spec:
     kubernetes: '>= 1.27'
   version: v1.18.0
 status:
+  approved: false
   transitionTime: null

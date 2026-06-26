@@ -22,6 +22,7 @@ spec:
     k8s: 1.21.0
   version: v1.43.8
 status:
+  approved: false
   phase: Superseded
   transitionTime: "2023-06-15T21:20:00Z"
 ---
@@ -47,7 +48,7 @@ spec:
     nodesMinimalOSVersionUbuntu: "18.04"
   version: v1.44.4
 status:
-  approved: true
+  approved: false
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -105,6 +106,7 @@ spec:
     nodesMinimalOSVersionUbuntu: "18.04"
   version: v1.45.9
 status:
+  approved: false
   message: Skipped by cleanup hook
   phase: Skipped
   transitionTime: "2023-06-15T21:35:37Z"

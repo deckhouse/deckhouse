@@ -232,7 +232,8 @@ type DeckhouseReleaseStatus struct {
 	// +kubebuilder:validation:Enum=Pending;Deployed;Outdated;Suspended;Superseded;Skipped
 	Phase string `json:"phase,omitempty"`
 	// The status of the release's readiness for deployment. It makes sense only for Manual updates (`update.mode: Manual`).
-	Approved bool `json:"approved,omitempty"`
+	// +optional
+	Approved bool `json:"approved"`
 	// Time of release status change.
 	TransitionTime metav1.Time `json:"transitionTime,omitempty"`
 	// Detailed status or error message.

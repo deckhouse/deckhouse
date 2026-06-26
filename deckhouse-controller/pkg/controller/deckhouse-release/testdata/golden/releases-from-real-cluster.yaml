@@ -26,6 +26,7 @@ spec:
     k8s: 1.19.0
   version: v1.30.17
 status:
+  approved: false
   message: Skipped by cleanup hook
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"

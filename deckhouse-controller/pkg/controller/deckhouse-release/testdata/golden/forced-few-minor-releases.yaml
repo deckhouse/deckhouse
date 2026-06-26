@@ -8,6 +8,7 @@ metadata:
 spec:
   version: v1.31.0
 status:
+  approved: false
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -20,6 +21,7 @@ metadata:
 spec:
   version: v1.32.0
 status:
+  approved: false
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -32,6 +34,7 @@ metadata:
 spec:
   version: v1.33.0
 status:
+  approved: false
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -44,6 +47,7 @@ metadata:
 spec:
   version: v1.34.0
 status:
+  approved: false
   phase: Skipped
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -60,6 +64,7 @@ metadata:
 spec:
   version: v1.35.0
 status:
+  approved: false
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
 ---

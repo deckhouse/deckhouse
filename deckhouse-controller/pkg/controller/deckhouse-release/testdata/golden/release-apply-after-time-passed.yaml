@@ -8,6 +8,7 @@ metadata:
 spec:
   version: v1.25.0
 status:
+  approved: false
   phase: Superseded
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -25,6 +26,7 @@ spec:
   applyAfter: "2001-11-11T23:23:23Z"
   version: v1.25.1
 status:
+  approved: false
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
 ---
