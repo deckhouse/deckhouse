@@ -395,6 +395,7 @@ func (i *Attacher) check(
 			TmpDir:                i.Params.TmpDir,
 			IsDebug:               i.Params.IsDebug,
 			Embedded:              true,
+			Options:               i.Params.Options,
 		})
 
 		checker.SetExternalPhasedContext(i.PhasedExecutionContext)

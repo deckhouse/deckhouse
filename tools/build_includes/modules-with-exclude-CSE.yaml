@@ -417,25 +417,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/340-extended-monitoring
-  to: /deckhouse/modules/340-extended-monitoring
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-monitoring-custom
   to: /deckhouse/modules/340-monitoring-custom
   excludePaths:
@@ -474,65 +455,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/340-monitoring-kubernetes-control-plane
-  to: /deckhouse/modules/340-monitoring-kubernetes-control-plane
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-ping
-  to: /deckhouse/modules/340-monitoring-ping
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/402-ingress-nginx
-  to: /deckhouse/modules/402-ingress-nginx
   excludePaths:
     - docs
     - README.md

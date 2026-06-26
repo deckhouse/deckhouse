@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -53,10 +52,6 @@ internal:
 			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").String()).To(MatchJSON(`["1.1"]`))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.1"))
 		})
 	})
 
@@ -107,10 +102,6 @@ spec:
 		It("Should count all namespaces and revisions properly", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8"}))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.2"))
 		})
 	})
 
@@ -161,10 +152,6 @@ spec:
 		It("Should include versions from Istio resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8"}))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.2"))
 		})
 	})
 
@@ -224,10 +211,6 @@ spec:
 		It("Should return errors", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
 			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x0,v1x9]"))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.2"))
 		})
 	})
 
@@ -252,10 +235,6 @@ internal:
 		It("Should include only operator-supported versions", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.25"))
 		})
 	})
 
@@ -286,9 +265,6 @@ spec:
 		It("Should not add operator-free version from CRD", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(BeEmpty())
-
-			_, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeFalse())
 		})
 	})
 
@@ -310,37 +286,6 @@ internal:
 		It("Should keep only known operator-supported versions", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.25"))
-		})
-	})
-
-	Context("All operator-free versions clear minimal version", func() {
-		BeforeEach(func() {
-			values := `
-internal:
-  versionMap:
-    "1.27":
-        revision: "v1x27"
-        supportsOperator: false
-    "1.28":
-        revision: "v1x28"
-        supportsOperator: false
-  versionsToInstall: ["1.27", "1.28"]
-`
-			f.ValuesSetFromYaml("istio", []byte(values))
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.RunHook()
-		})
-
-		It("Should keep operatorVersionsToInstall empty and remove requirement", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(BeEmpty())
-
-			_, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeFalse())
 		})
 	})
 })

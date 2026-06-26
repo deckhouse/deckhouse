@@ -242,14 +242,16 @@ func TestUpdateInstalledRule(t *testing.T) {
 			},
 		},
 		{
-			name: "absent while manifests are still applying",
+			name: "applying over a failed update refreshes the stale failure",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				// Previous update failed at manifests; the new version is now re-applying.
+				withExternalCondition(ConditionUpdateInstalled, metav1.ConditionFalse, "ManifestsApplyFailed"),
 				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
 				withVersionChanged(),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionUpdateInstalled: nil,
+				ConditionUpdateInstalled: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonApplyingManifests)},
 			},
 		},
 	}
@@ -296,6 +298,32 @@ func TestReadyRule(t *testing.T) {
 			},
 			expected: map[string]*expectedCondition{
 				ConditionReady: {status: metav1.ConditionTrue, reason: ConditionReady},
+			},
+		},
+		{
+			name: "applying over a failed update refreshes the stale failure",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withExternalCondition(ConditionReady, metav1.ConditionFalse, "ManifestsApplyFailed"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionReady: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonApplyingManifests)},
+			},
+		},
+		{
+			name: "applying does not flap a healthy update still serving",
+			opts: []mappingOption{
+				// Healthy update: the previous version still serves (Ready=True),
+				// so the apply window must leave it untouched, not flap it to False.
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withExternalCondition(ConditionReady, metav1.ConditionTrue, ConditionReady),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionReady: nil,
 			},
 		},
 	}
@@ -455,6 +483,18 @@ func TestManagedRule(t *testing.T) {
 				ConditionManaged: {status: metav1.ConditionTrue, reason: ConditionManaged},
 			},
 		},
+		{
+			name: "applying over a failed update refreshes the stale failure",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withExternalCondition(ConditionManaged, metav1.ConditionFalse, "ManifestsApplyFailed"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionManaged: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonApplyingManifests)},
+			},
+		},
 	}
 
 	runTestCases(t, cases)
@@ -504,6 +544,19 @@ func TestConfigurationAppliedRule(t *testing.T) {
 			},
 			expected: map[string]*expectedCondition{
 				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
+			},
+		},
+		{
+			name: "applying over a failed update refreshes the stale failure",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withExternalCondition(ConditionConfigurationApplied, metav1.ConditionFalse, "ManifestsApplyFailed"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonApplyingManifests)},
 			},
 		},
 	}

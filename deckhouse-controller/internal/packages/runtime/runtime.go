@@ -41,6 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
 	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
@@ -102,6 +103,8 @@ type Runtime struct {
 
 	global *global.Module
 
+	grantResolver grants.Resolver // Resolves cluster resource grants for x-deckhouse-grantable-resource fields
+
 	mu       sync.RWMutex
 	packages *lifecycle.Store
 	apps     map[string]*apps.Application
@@ -136,6 +139,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 
 	// Initialize foundational services
 	r.addonModuleManager = moduleManager
+	r.grantResolver = grants.NewResolver(cli)
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
@@ -196,6 +200,10 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.global, err = global.NewModuleByConfig(conf, r.logger)
 	if err != nil {
 		return nil, fmt.Errorf("new global module: %w", err)
+	}
+
+	if err := r.loadEmbedded(context.Background()); err != nil {
+		return nil, fmt.Errorf("load embedded: %w", err)
 	}
 
 	r.status.NewStatus(r.global.GetName())

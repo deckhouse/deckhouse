@@ -2695,14 +2695,14 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:0402dc491bceed2957bab097564d629cfa2047c7fd0f20f7111c96dd834e89fe"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:e3ce5d01ca717933f9f9e232bb39e0699fae86b4ef0da4520ee251cc4be956b8"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777 -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sleep infinity)
+          CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sleep infinity)
           docker exec ${CONTAINER_ID} pm install git
           docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
           docker rm -f ${CONTAINER_ID}
@@ -2933,7 +2933,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make ci
+          docker run -w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec ${TESTS_IMAGE_NAME} make ci
     # </template: tests_template>
 
   golint:
@@ -3056,7 +3056,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"
     # </template: tests_template>
 
   openapi_test_cases:
@@ -3174,7 +3174,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
+          docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
 
   security_scan_images:
@@ -3381,7 +3381,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
+          docker run -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
 
   doc_pdf_build:

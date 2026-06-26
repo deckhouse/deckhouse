@@ -2,7 +2,7 @@
 # <template: unit_run_args>
 setup_cmd: 'pm install git'
 args: 'sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777 -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 exec_options: '-u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse'
 # </template: unit_run_args>
 {!{- end -}!}
@@ -10,7 +10,7 @@ exec_options: '-u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse'
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
 args: 'make ci'
-docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec'
 # </template: dhctl_run_args>
 {!{- end -}!}
 
@@ -23,21 +23,21 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
 {!{ define "golint_diff_run_args" }!}
 # <template: golint_diff_run_args>
 args: 'sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint'
 # </template: golint_diff_run_args>
 {!{- end -}!}
 
 {!{ define "openapi_test_cases_run_args" }!}
 # <template: openapi_test_cases_run_args>
 args: 'ginkgo -vet=off ./testing/openapi_cases/'
-docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg'
 # </template: openapi_test_cases_run_args>
 {!{- end -}!}
 
 {!{ define "validators_run_args" }!}
 # <template: validators_run_args>
 args: 'go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
-docker_options: '-w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg'
 # </template: validators_run_args>
 {!{- end -}!}
 
@@ -170,7 +170,7 @@ steps:
       echo "⚓️ 🏎 [$(date -u)] Run node-controller tests (unit + envtest)..."
       # GOFLAGS=-buildvcs=false: the tests don't need a git stamp, so go won't shell out to git —
       # this lets us skip installing git into the image (saves ~30s/run) and the safe.directory dance.
-      CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-mod-cache-node-controller:/go/pkg -v ~/envtest-assets:/envtest-assets -v ~/go-build-cache-node-controller:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
+      CONTAINER_ID=$(docker run -d -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-mod-cache-node-controller:/go/pkg -v ~/envtest-assets:/envtest-assets -v ~/go-build-cache-node-controller:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
       docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets GOTESTFMT_CI=github"
       docker rm -f ${CONTAINER_ID}
 # </template: tests_node_controller_envtest_template>

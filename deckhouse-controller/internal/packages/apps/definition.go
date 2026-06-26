@@ -69,8 +69,14 @@ type ModuleGroup struct {
 
 // DisableOptions configures application disablement behavior.
 type DisableOptions struct {
-	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
-	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
+	Confirmation bool            `json:"confirmation" yaml:"confirmation"`
+	Messages     DisableMessages `json:"messages,omitempty" yaml:"messages,omitempty"`
+}
+
+// DisableMessages holds localized disable confirmation messages for the application.
+type DisableMessages struct {
+	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
+	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
 // Constraints projects the application definition onto the scheduler input shape,

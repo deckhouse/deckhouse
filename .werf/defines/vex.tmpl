@@ -40,6 +40,7 @@ secrets:
   env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
   env: REGISTRY_PASSWORD
+{{- if eq $isVault true }}
 {{- if ne $werfSignKey "" }}
 - id: VAULT_ADDR
   env: VAULT_ADDR
@@ -51,7 +52,7 @@ secrets:
   env: WERF_VAULT_AUTH_JWT
 - id: TRANSIT_SECRET_ENGINE_PATH
   env: TRANSIT_SECRET_ENGINE_PATH
-{{- else if $isVault }}
+{{- else }}
 - id: VAULT_ADDR
   env: VAULT_ADDR
 - id: VAULT_KEY
@@ -60,14 +61,16 @@ secrets:
   env: VAULT_ROLE
 - id: TRANSIT_SECRET_ENGINE_PATH
   env: TRANSIT_SECRET_ENGINE_PATH
+{{- if eq $actionsIdToken "" }}
+- id: VAULT_JWT
+  env: VAULT_ID_TOKEN
+{{- end }}
+{{- end }}
 {{- if ne $actionsIdToken "" }}
 - id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
   env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
 - id: ACTIONS_ID_TOKEN_REQUEST_URL
   env: ACTIONS_ID_TOKEN_REQUEST_URL
-{{- else }}
-- id: VAULT_JWT
-  env: VAULT_ID_TOKEN
 {{- end }}
 {{- end }}
 git:
