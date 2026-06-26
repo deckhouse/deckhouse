@@ -3,4 +3,4 @@
   to: /deckhouse/candi/cloud-providers/dvp
   stageDependencies:
     install:
-      - '**/*'
+        - '**/*'

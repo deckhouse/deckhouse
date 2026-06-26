@@ -13,7 +13,7 @@
   to: /deckhouse/candi/cloud-providers/dvp
   stageDependencies:
     install:
-      - '**/*'
+        - '**/*'
 - add: /modules/030-cloud-provider-gcp/candi
   to: /deckhouse/candi/cloud-providers/gcp
   stageDependencies:
