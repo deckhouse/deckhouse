@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 )
 
@@ -134,7 +135,7 @@ func (w *Writer) Apply(config *DesiredConfig) error {
 
 	nsToml := RenderNsToml(config.Namespaces, config.CACerts)
 	nsTomlPath := filepath.Join(w.ConfigDir, NsTomlFileName)
-	if err := writeFileAtomic(nsTomlPath, []byte(nsToml), 0o644); err != nil {
+	if err := pkiutil.WriteFileAtomically(nsTomlPath, []byte(nsToml), 0o644); err != nil {
 		return fmt.Errorf("write ns.toml: %w", err)
 	}
 
@@ -147,35 +148,4 @@ func (w *Writer) removeConfig() error {
 		return fmt.Errorf("remove %q: %w", path, err)
 	}
 	return nil
-}
-
-func writeFileAtomic(path string, data []byte, mode os.FileMode) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-
-	tmpFile, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmpFile.Name()
-
-	cleanup := func() {
-		_ = tmpFile.Close()
-		_ = os.Remove(tmpPath)
-	}
-	defer cleanup()
-
-	if err := tmpFile.Chmod(mode); err != nil {
-		return err
-	}
-	if _, err := tmpFile.Write(data); err != nil {
-		return err
-	}
-	if err := tmpFile.Close(); err != nil {
-		return err
-	}
-
-	return os.Rename(tmpPath, path)
 }
