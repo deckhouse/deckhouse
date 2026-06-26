@@ -113,10 +113,6 @@
     "web ui",
     "ssdlc"
   ],
-  "extended-monitoring": [
-    "observability",
-    "ssdlc"
-  ],
   "ingress-nginx": [
     "network",
     "balancing",
@@ -175,10 +171,6 @@
     "ssdlc"
   ],
   "monitoring-kubernetes": [
-    "observability",
-    "ssdlc"
-  ],
-  "monitoring-kubernetes-control-plane": [
     "observability",
     "ssdlc"
   ],

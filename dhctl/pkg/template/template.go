@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]interface{}) (string, error) {
+func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]any) (string, error) {
 	fileContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		return "", fmt.Errorf("loading %s: %v", templatePath, err)

@@ -192,15 +192,15 @@ func ValidateSSHPublicKey(value json.RawMessage) error {
 	}
 
 	lines := strings.Split(string(data), "\n")
-	var base64Str string
+	var base64Str strings.Builder
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "----") || strings.Contains(line, ":") || line == "" {
 			continue
 		}
-		base64Str += line
+		base64Str.WriteString(line)
 	}
-	keyBytes, err := base64.StdEncoding.DecodeString(base64Str)
+	keyBytes, err := base64.StdEncoding.DecodeString(base64Str.String())
 	if err != nil {
 		return fmt.Errorf("%w: failed to decode base64 string: %w", ErrValidationRuleFailed, err)
 	}

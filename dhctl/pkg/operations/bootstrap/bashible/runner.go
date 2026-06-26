@@ -145,7 +145,18 @@ func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
 					return err
 				}
 
-				*resPointer = strings.TrimSpace(string(content))
+				contentStr := strings.TrimSpace(string(content))
+
+				// TODO handle in lib-connection
+				// Sudo-wrapped commands prefix their stdout with the SUDO-SUCCESS marker;
+				// strip everything up to and including the last occurrence so we keep only
+				// the actual file payload. For non-sudo paths the marker is absent and
+				// output stays untouched.
+				if idx := strings.LastIndex(contentStr, "SUDO-SUCCESS"); idx >= 0 {
+					contentStr = contentStr[idx+len("SUDO-SUCCESS"):]
+				}
+
+				*resPointer = contentStr
 				return nil
 			})
 
@@ -153,6 +164,8 @@ func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
 			return nil, err
 		}
 	}
+
+	logger.DebugF("Got node info %+v", res)
 
 	return &res, nil
 }
@@ -238,8 +251,7 @@ func (r *Runner) attemptExecuteBundle(
 
 	_, err := bundleCmd.ExecuteBundle(ctx, parentDir, bundleDir)
 	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			return fmt.Errorf("bundle '%s' error: %w\nstderr: %s", bundleDir, err, string(ee.Stderr))
 		}
 
@@ -320,9 +332,8 @@ func (r *Runner) runCmd(ctx context.Context, cmd libcon.Command, desc string) er
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
-		var ee *exec.ExitError
 		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
-		if errors.As(err, &ee) {
+		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 			logger.DebugF("'%s' got exit code: %d and stderr %s", desc, ee.ExitCode(), string(ee.Stderr))
 			if ee.ExitCode() == 255 {
 				return err

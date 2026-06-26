@@ -192,6 +192,8 @@ type Kubelet struct {
 
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
 
+	SeccompDefault bool `json:"seccompDefault,omitempty"`
+
 	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
 
 	TopologyManager KubeletTopologyManager `json:"topologyManager"`

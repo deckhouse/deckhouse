@@ -33,14 +33,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/workqueue"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
 	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
@@ -52,6 +55,7 @@ import (
 	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
+	taskglobalrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/globalrun"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -96,11 +100,14 @@ type Runtime struct {
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
 	debugServer *debug.Server       // Unix socket debug API
 
+	crdService        *crd.Service                        // Installs CRDs from package paths
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
 
 	global *global.Module
+
+	grantResolver grants.Resolver // Resolves cluster resource grants for x-deckhouse-grantable-resource fields
 
 	mu       sync.RWMutex
 	packages *lifecycle.Store
@@ -136,6 +143,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 
 	// Initialize foundational services
 	r.addonModuleManager = moduleManager
+	r.grantResolver = grants.NewResolver(cli)
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
@@ -164,6 +172,11 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
+	}
+
+	// Build CRD service with its own client
+	if err := r.buildCRDService(); err != nil {
+		return nil, fmt.Errorf("build crd service: %w", err)
 	}
 
 	// Build Health service with its own client
@@ -196,6 +209,10 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.global, err = global.NewModuleByConfig(conf, r.logger)
 	if err != nil {
 		return nil, fmt.Errorf("new global module: %w", err)
+	}
+
+	if err := r.loadEmbedded(context.Background()); err != nil {
+		return nil, fmt.Errorf("load embedded: %w", err)
 	}
 
 	r.status.NewStatus(r.global.GetName())
@@ -413,6 +430,24 @@ func (r *Runtime) buildNelmService() error {
 	return nil
 }
 
+// buildCRDService creates a Kubernetes client used to apply CRDs that packages
+// bundle under their crds/ directory. The service runs before hooks and Helm so
+// that custom resources referenced by later pipeline stages already exist.
+func (r *Runtime) buildCRDService() error {
+	client := klient.New(klient.WithLogger(r.logger.Named("crd-installer-client")))
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithMetricPrefix("packages_crd_installer_")
+
+	if err := client.Init(); err != nil {
+		return fmt.Errorf("initialize crd installer client: %w", err)
+	}
+
+	r.crdService = crd.NewService(client, r.logger)
+
+	return nil
+}
+
 // buildHealthService creates the workload-health service that drives ConditionScaled.
 //
 // The service watches workloads tagged with the health.LabelKey package label and
@@ -537,13 +572,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		return version
 	}
 
-	onScheduleHook := func(enabled []string) {
-		r.logger.Info("enabled packages", "packages", enabled)
-		r.global.SetEnabledModules(enabled)
-	}
-
 	r.scheduler = schedule.NewScheduler(
-		schedule.WithOnScheduleHook(onScheduleHook),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
@@ -561,6 +590,13 @@ func (r *Runtime) Run() {
 		for event := range r.scheduler.Ch() {
 			switch event.Kind {
 			case schedule.EventSchedule:
+				if event.Name == "global" {
+					// global is the scheduler's order-0 barrier: it ensures the enabled
+					// modules' CRDs and publishes global values, then completes to release
+					// the modules waiting behind it.
+					r.scheduleGlobal(event.Enabled)
+					continue
+				}
 				r.schedulePackage(event.Name)
 			case schedule.EventDisable:
 				r.disablePackage(event.Name, event.Reason, event.Message)
@@ -568,6 +604,42 @@ func (r *Runtime) Run() {
 			}
 		}
 	}()
+}
+
+// scheduleGlobal runs the global node's work whenever the scheduler schedules it
+// via the globalrun task: ensure the CRDs of every enabled module, then publish
+// the enabled set and the resulting GVK capabilities into global values. The
+// scheduler holds every module behind global (canSchedule barrier), so this runs
+// before any module and modules render against a complete capability set.
+//
+// The globalrun task (and its per-module EnsureCRDs subtasks) runs under global's
+// EventSchedule context, mirroring how schedulePackage scopes a package's tasks:
+// rescheduling global renews that context and cancels the in-flight run. onDone
+// completes the global node, unblocking the modules waiting behind it.
+func (r *Runtime) scheduleGlobal(enabled []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, r.global.GetName())
+	if ctx == nil {
+		return
+	}
+
+	onDone := queue.WithOnDone(func() {
+		r.scheduler.Complete("global")
+	})
+
+	// Resolve the loaded module packages now, under r.mu, so the task body never
+	// reaches back into runtime internals.
+	enabledModules := make([]taskglobalrun.Module, 0, len(enabled))
+	for _, name := range enabled {
+		if pkg := r.modules[name]; pkg != nil {
+			enabledModules = append(enabledModules, pkg)
+		}
+	}
+
+	task := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.queueService, r.status, r.logger)
+	r.queueService.Enqueue(ctx, "global", task, onDone)
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
@@ -709,9 +781,14 @@ func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
 }
 
-// Status returns package status service for external access
-func (r *Runtime) Status() *status.Service {
-	return r.status
+// GetStatus returns package status.
+func (r *Runtime) GetStatus(name string) status.Status {
+	return r.status.GetStatus(name)
+}
+
+// GetStatusQueue returns the status queue for external access
+func (r *Runtime) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.Queue()
 }
 
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.

@@ -2,7 +2,7 @@
 # <template: unit_run_args>
 setup_cmd: 'pm install git'
 args: 'sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 exec_options: '-u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse'
 # </template: unit_run_args>
 {!{- end -}!}
@@ -10,7 +10,7 @@ exec_options: '-u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse'
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
 args: 'make ci'
-docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg --tmpfs /tmp:mode=1777,exec'
 # </template: dhctl_run_args>
 {!{- end -}!}
 
@@ -23,21 +23,21 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
 {!{ define "golint_diff_run_args" }!}
 # <template: golint_diff_run_args>
 args: 'sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint'
 # </template: golint_diff_run_args>
 {!{- end -}!}
 
 {!{ define "openapi_test_cases_run_args" }!}
 # <template: openapi_test_cases_run_args>
 args: 'ginkgo -vet=off ./testing/openapi_cases/'
-docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-v ${{github.workspace}}:/deckhouse -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg'
 # </template: openapi_test_cases_run_args>
 {!{- end -}!}
 
 {!{ define "validators_run_args" }!}
 # <template: validators_run_args>
 args: 'go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...'
-docker_options: '-w /deckhouse -v ~/go-pkg-cache:/go/pkg'
+docker_options: '-w /deckhouse --tmpfs /tmp:mode=1777,exec -v ~/go-pkg-cache:/go/pkg'
 # </template: validators_run_args>
 {!{- end -}!}
 
@@ -125,6 +125,55 @@ steps:
       docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
 {!{- end }!}
 # </template: tests_before_build_template>
+{!{- end -}!}
+
+{!{ define "tests_node_controller_envtest_template" }!}
+# <template: tests_node_controller_envtest_template>
+{!{- $ctx := index . 0 }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
+  - name: Run node-controller tests
+    env:
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang") | quote }!}
+    run: |
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "⚓️ 📥 [$(date -u)] Pull base golang image..."
+      docker pull ${TESTS_IMAGE_NAME}
+      # Persistent on-runner caches, created up front so the bind mounts are owned by the runner
+      # user (Docker would otherwise create a missing host path as root, making it unwritable
+      # in-container):
+      #   envtest-assets                 - kubebuilder assets (etcd, kube-apiserver, kubectl) + setup-envtest + gotestfmt
+      #   go-build-cache-node-controller - GOCACHE, so test binaries are not recompiled from scratch every run
+      #   go-mod-cache-node-controller   - GOMODCACHE (dedicated, not the shared ~/go-pkg-cache which root
+      #                                    jobs populate with root-owned entries that break our non-root tool installs)
+      mkdir -p ~/envtest-assets ~/go-build-cache-node-controller ~/go-mod-cache-node-controller
+      # On-runner cache status — MISS means this run will download/recompile (debugging aid;
+      # emitted as GitHub annotations so a cold runner is easy to spot).
+      for entry in "envtest-assets|$HOME/envtest-assets/k8s" "setup-envtest|$HOME/envtest-assets/setup-envtest" "gotestfmt|$HOME/envtest-assets/gotestfmt" "go-build|$HOME/go-build-cache-node-controller" "go-mod|$HOME/go-mod-cache-node-controller"; do
+        name="${entry%%|*}"; path="${entry#*|}";
+        if [ -e "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ]; then
+          echo "::notice::cache HIT  ${name}";
+        else
+          echo "::warning::cache MISS ${name} — will download/recompile";
+        fi;
+      done
+      echo "⚓️ 🏎 [$(date -u)] Run node-controller tests (unit + envtest)..."
+      # GOFLAGS=-buildvcs=false: the tests don't need a git stamp, so go won't shell out to git —
+      # this lets us skip installing git into the image (saves ~30s/run) and the safe.directory dance.
+      CONTAINER_ID=$(docker run -d -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-mod-cache-node-controller:/go/pkg -v ~/envtest-assets:/envtest-assets -v ~/go-build-cache-node-controller:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
+      docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets GOTESTFMT_CI=github"
+      docker rm -f ${CONTAINER_ID}
+# </template: tests_node_controller_envtest_template>
 {!{- end -}!}
 
 {!{ define "tests_webhooks_template" }!}

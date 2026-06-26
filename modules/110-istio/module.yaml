@@ -1,7 +1,6 @@
 name: istio
 stage: General Availability
 subsystems:
-  - infrastructure
   - networking
 namespace: d8-istio
 descriptions:

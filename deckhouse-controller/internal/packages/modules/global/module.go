@@ -336,3 +336,28 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
 	}
 }
+
+// SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks, into .global.discovery.apiVersions values
+func (m *Module) SetCapabilities(apiVersions []string) {
+	if len(apiVersions) == 0 {
+		return
+	}
+
+	// keep apiVersions sorted to prevent helm rollout on each restart
+	sort.Strings(apiVersions)
+	data, _ := json.Marshal(apiVersions)
+
+	// backward compatibility: set apiVersions to .global.discovery.apiVersions
+	// TODO(ipaqsa): get rid of it further and add Capabilities field
+	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
+		{
+			Op:    "add",
+			Path:  "/discovery/apiVersions",
+			Value: data,
+		},
+	}}
+
+	if err := m.values.ApplyValuesPatch(patch); err != nil {
+		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
+	}
+}

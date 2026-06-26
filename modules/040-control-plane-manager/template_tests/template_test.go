@@ -387,6 +387,44 @@ apiserver:
 		})
 	})
 
+	Context("Control plane metrics scrape stack", func() {
+		Context("With prometheus module enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.HelmRender()
+			})
+
+			It("should render control-plane-proxy stack, ServiceMonitors and scraper role", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Service", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceAccount", "kube-system", "d8-control-plane-manager-control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "control-plane-proxy").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeTrue())
+
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:scraper").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:control-plane-manager:control-plane-proxy:rbac-proxy").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("Prometheus module disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `[]`)
+				f.HelmRender()
+			})
+
+			It("should not render the scrape stack", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("DaemonSet", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceMonitor", "d8-monitoring", "kube-apiserver").Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:control-plane-manager:scraper").Exists()).To(BeFalse())
+			})
+		})
+	})
+
 	Context("Prometheus rules", func() {
 		assertSpecDotGroupsArray := func(rule object_store.KubeObject, length int) {
 			Expect(rule.Exists()).To(BeTrue())
@@ -1311,6 +1349,8 @@ apiserver:
 				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(crb.Exists()).To(BeTrue())
 				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
+				// keep policy must always be present so a future hook-only migration cannot let Helm prune it.
+				Expect(crb.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
 				Expect(sup.Exists()).To(BeFalse())

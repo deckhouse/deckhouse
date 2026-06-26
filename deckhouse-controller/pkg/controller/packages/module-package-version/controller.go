@@ -332,7 +332,8 @@ func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.Module
 			Ru: pd.Descriptions.Ru,
 			En: pd.Descriptions.En,
 		},
-		Requirements: requirementsToCR(pd.Requirements),
+		DisableOptions: disableOptionsToCR(pd.DisableOptions),
+		Requirements:   requirementsToCR(pd.Requirements),
 	}
 }
 
@@ -354,6 +355,18 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 
 	if def.Requirements != nil {
 		mpv.Status.PackageMetadata.Requirements = legacyRequirementsToCR(def.Requirements)
+	}
+}
+
+// disableOptionsToCR projects parsed disable protection onto the CR shape,
+// returning nil when no disable protection is configured so the field omits cleanly.
+func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions {
+	return &v1alpha1.PackageDisableOptions{
+		Confirmation: opts.Confirmation,
+		Messages: v1alpha1.PackageDisableMessages{
+			Ru: opts.Messages.Ru,
+			En: opts.Messages.En,
+		},
 	}
 }
 
