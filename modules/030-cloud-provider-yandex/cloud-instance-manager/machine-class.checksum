@@ -30,6 +30,9 @@
 {{- if hasKey .nodeGroup.instanceClass "additionalLabels" -}}
   {{- $_ := set $options "additionalLabels" .nodeGroup.instanceClass.additionalLabels -}}
 {{- end -}}
+{{- if hasKey .nodeGroup.instanceClass "networkType" -}}
+  {{- $_ := set $options "networkType" .nodeGroup.instanceClass.networkType -}}
+{{- end -}}
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}
