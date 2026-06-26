@@ -18,7 +18,7 @@ Deckhouse Kubernetes Platform (DKP) позволяет управлять без
 Эти политики дополняют друг друга. Если для одного неймспейса применены несколько политик, выполняется валидация объектов по каждой из них. Если будет нарушена хотя бы одна политика, объект не будет создан.
 {% endalert %}
 
-Помимо политик, которые запрещают использование параметров, отличных от разрешённых, существуют ресурсы для точечных исключений из политик — [`SecurityPolicyException`](#SecurityPolicyException). Они позволяют переопределять проверки для отдельных подов без изменения всех политик, применённых к неймспейсу.
+Помимо политик, которые запрещают использование параметров, не соответствующих заданным требованиям, модуль поддерживает [ресурс SecurityPolicyException](#исключения-из-политик-безопасности), который позволяет создавать точечные исключения из проверок политик безопасности. С помощью этого ресурса можно разрешить использование отдельных параметров для конкретных подов или контейнеров, не изменяя политики безопасности, действующие для всего неймспейса.
 
 ## Особенности отображения сообщений о неудачной валидации объектов
 
@@ -498,69 +498,73 @@ spec:
 
 ## Исключения из политик безопасности
 
-<span id="securitypolicyexception"></span>
+[SecurityPolicyException](/modules/admission-policy-engine/cr.html#securitypolicyexception) — это ресурс, позволяющий создавать точечные исключения из проверок политик безопасности для отдельных подов и контейнеров. Он позволяет не отключать проверки для всего неймспейса, а описывать только необходимые исключения из конкретного правила для пода или контейнера.
 
-`SecurityPolicyException` — это механизм точечных исключений из проверок политик безопасности для отдельных подов и контейнеров. Он позволяет не исключать весь неймспейс из проверок, а описывать только необходимые разрешения для конкретного пода или контейнера внутри пода.
+### Добавление исключений
 
-Исключения описываются ресурсом [`SecurityPolicyException`](/modules/admission-policy-engine/cr.html#securitypolicyexception).
+Чтобы добавить исключения для пода или контейнера, выполните следующее:
 
-### Как работает механизм
+1. Создайте объект [SecurityPolicyException](/modules/admission-policy-engine/cr.html#securitypolicyexception), описав необходимые исключения.
 
-1. Создайте объект `SecurityPolicyException` с нужными разрешениями в `spec`.
-   Рекомендуется сразу документировать причину каждого исключения в поле `metadata` соответствующего правила (например, `metadata.description`) — это упрощает аудит и сопровождение.
-2. На под (обычно через `spec.template.metadata.labels` в `Deployment`/`StatefulSet`/`DaemonSet`) добавьте ссылку на исключение:
-   - `security.deckhouse.io/security-policy-exception: <exception-name>` — исключение для пода в целом (pod-level);
-   - `security.deckhouse.io/security-policy-exception.container.<container-name>: <exception-name>` — исключение для конкретного контейнера (container-level).
+   Рекомендуется документировать причину каждого исключения в поле `metadata` соответствующего правила (например, `metadata.description`). Это упрощает последующие аудит и сопровождение.
+
+2. В шаблоне пода (обычно через поле `spec.template.metadata.labels` ресурса Deployment, StatefulSet или DaemonSet) укажите один следующих лейблов со ссылкой на исключение:
+   - `security.deckhouse.io/security-policy-exception: <exception-name>` — исключение для всего пода;
+   - `security.deckhouse.io/security-policy-exception.container.<container-name>: <exception-name>` — исключение для конкретного контейнера.
 
 Приоритет выбора исключения для контейнера:
 
-- сначала `security.deckhouse.io/security-policy-exception.container.<container-name>`;
-- если метка для конкретного контейнера отсутствует — используется исключение из `security.deckhouse.io/security-policy-exception`.
+1. Сначала проверяется лейбл `security.deckhouse.io/security-policy-exception.container.<container-name>`.
+1. Если лейбл для конкретного контейнера отсутствует, используется исключение из `security.deckhouse.io/security-policy-exception`.
 
 {% alert level="warning" %}
-Если для контейнера задана метка для конкретного контейнера, но она указывает на невалидный/несуществующий объект `SecurityPolicyException`, она всё равно имеет приоритет над общей меткой и может привести к запрету размещения пода.
+Если для контейнера задан отдельный лейбл, но он указывает на несуществующий или некорректный объект SecurityPolicyException, он всё равно имеет приоритет над общим лейблом и может привести к запрету размещения пода.
 {% endalert %}
 
-### Пример
+### Пример конфигурации
 
 Для примера рассмотрим под, которому требуется:
 
-1. Разрешение на использование `hostNetwork` всему поду.
-2. Разрешение на `privileged` только для контейнера с именем `sample-init`.
+- разрешение на использование настройки [`hostNetwork`](../../../user/security/pod-settings.html#hostnetwork) всему поду;
+- разрешение на использование настройки [`privileged`](../../../user/security/pod-settings.html#privileged) только для контейнера `sample-init`.
 
-Без использования `SecurityPolicyException` для таких параметров обычно пришлось бы ослаблять политику безопасности для более широкого набора подов.
+Без использования ресурса SecurityPolicyException для разрешения этих параметров потребовалось бы создать пользовательскую политику безопасности, допускающую их использование для всех подов в кластере.
 
-При использовании `SecurityPolicyException` достаточно создать следующие ресурсы:
+При использовании SecurityPolicyException достаточно создать следующие ресурсы:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: SecurityPolicyException
-metadata:
-  name: allow-hostnetwork-pod
-spec:
-  network:
-    hostNetwork:
-      allowedValue: true
-      metadata:
-        description: >-
-          Pod requires host network mode for node-level network diagnostics.
-```
+- Исключение для разрешения параметра `hostNetwork`:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: SecurityPolicyException
-metadata:
-  name: allow-privileged-init-container
-spec:
-  securityContext:
-    privileged:
-      allowedValue: true
-      metadata:
-        description: >-
-          Container init requires privileged mode to access host-level networking features.
-```
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: SecurityPolicyException
+  metadata:
+    name: allow-hostnetwork-pod
+  spec:
+    network:
+      hostNetwork:
+        allowedValue: true
+        metadata:
+          description: >-
+            Pod requires host network mode for node-level network diagnostics.
+  ```
 
-И выставить метки для применения ресурсов на создаваемых подах:
+- Исключение для разрешения параметра `privileged` в контейнере `sample-init`:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: SecurityPolicyException
+  metadata:
+    name: allow-privileged-init-container
+  spec:
+    securityContext:
+      privileged:
+        allowedValue: true
+        metadata:
+          description: >-
+            Container init requires privileged mode to access host-level networking features.
+  ```
+
+После этого необходимо добавить соответствующие лейблы в шаблоне пода:
 
 ```yaml
 apiVersion: apps/v1
@@ -571,7 +575,9 @@ spec:
   template:
     metadata:
       labels:
+        # Общее исключение, применяемое ко всему поду.
         security.deckhouse.io/security-policy-exception: allow-hostnetwork-pod
+        # Исключение для контейнера sample-init.
         security.deckhouse.io/security-policy-exception.container.sample-init: allow-privileged-init-container
     spec:
       hostNetwork: true
