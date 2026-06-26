@@ -95,14 +95,6 @@ type OpenAPIV3Schema struct {
 	// a toggle in the web console UI.
 	// +optional
 	XUIAdvanced bool `json:"x-deckhouse-ui-advanced,omitempty"`
-
-	// x-required-for-helm declares field names that the Helm chart rendering
-	// step treats as required even when they are not marked required in the
-	// OpenAPI schema. This extension is consumed by the schema transformer
-	// and promoted into the standard required array for Helm schemas.
-	// +optional
-	// +listType=atomic
-	XRequiredForHelm []string `json:"x-required-for-helm,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema
