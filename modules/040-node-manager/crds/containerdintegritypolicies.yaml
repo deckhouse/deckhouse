@@ -23,7 +23,7 @@ spec:
       name: Match Labels
       type: string
     - description: Namespaces protected by this policy
-      jsonPath: .status.protectedNamespace
+      jsonPath: .status.protectedNamespaces
       name: Protected Namespaces
       type: string
     - name: Age
