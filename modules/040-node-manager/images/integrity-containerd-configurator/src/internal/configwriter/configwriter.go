@@ -26,7 +26,9 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	//nolint: gci
 	"github.com/go-logr/logr"
+	//nolint: gci
 	//nolint: goimports
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 
