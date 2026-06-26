@@ -39,6 +39,17 @@ git:
     - go.mod
     - go.sum
     - api/**/*.go
+- add: /{{ $.ModulePath }}go_lib/controlplane
+  to: /go_lib/controlplane
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - go.mod
+    - go.sum
 shell:
   install:
   - cd /src
@@ -51,6 +62,10 @@ import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
+  before: install
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go_lib/controlplane
+  to: /go_lib/controlplane
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
