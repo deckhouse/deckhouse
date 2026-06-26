@@ -532,6 +532,27 @@ spec:
   isSudoer: true
 ```
 
+## Пример описания `ContainerdIntegrityPolicy`
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ContainerdIntegrityPolicy
+metadata:
+  name: integrity-policy
+spec:
+  ca: |
+    -----BEGIN CERTIFICATE-----
+    MIIGOTCCBCGgAwIBAgIJAOE/vJd8EB24MA0GCSqGSIb3DQEBBQUAMIGyMQswCQYD
+    VQQGEwJGUjEPMA0GA1UECAwGQWxzYWNlMRMwEQYDVQQHDApTdHJhc2JvdXJnMRgw
+    ...
+    iPe3o/4tyQGq+jEMAEjLlDECu0dEa6RFntcbBPMBP3wZwE2bI9GYgvyaZd63DNdm
+    KvbxUcDaVvXB0EU0bg==
+    -----END CERTIFICATE-----
+  protectedNamespaces:
+    matchLabels:
+      integrity: enabled
+```
+
 ## Пример описания `NodeGroupConfiguration`
 
 ### Установка плагина cert-manager для kubectl на master-узлах
