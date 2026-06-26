@@ -24,7 +24,7 @@ git:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/openapi/
-  to: /candi/module-openapi/
+  to: /candi/module-openapi
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/crds/instance_class.yaml
   to: /crd/instance_class.yaml
 import:
