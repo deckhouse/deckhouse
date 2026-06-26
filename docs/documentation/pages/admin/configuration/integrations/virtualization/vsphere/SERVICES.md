@@ -36,9 +36,9 @@ VM parameters are set in the `instanceClass` section of `VsphereClusterConfigura
 | [`template`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-template) | Path to the VM template relative to the Datacenter |
 | [`datastore`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-datastore) | Path to the Datastore for the root disk |
 | [`rootDiskSize`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-rootdisksize) | Root disk size in GiB (default 20) |
-| [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) | Primary network (port group) with the default route |
+| [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) | Primary network (port group) with the default route. Path relative to the Datacenter — see [Network parameters](layout.html#network-parameters) |
 | [`additionalNetworks`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-additionalnetworks) | Additional network interfaces |
-| [`resourcePool`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-resourcepool) | Resource Pool relative to the zone (vSphere Cluster) |
+| [`resourcePool`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-resourcepool) | Resource Pool relative to the zone (vSphere Cluster). For CloudEphemeral, must exist beforehand — see [Network parameters](layout.html#resourcepool) |
 | [`mainNetworkIPAddresses`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-masterinstanceclass-mainnetworkipaddresses) | Static IP addresses instead of DHCP (only in `VsphereClusterConfiguration`) |
 | [`runtimeOptions`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-runtimeoptions) | Additional VM parameters: CPU/memory shares, limits, nested virtualization |
 

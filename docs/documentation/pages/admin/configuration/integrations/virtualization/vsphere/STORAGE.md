@@ -9,7 +9,7 @@ In a Deckhouse Kubernetes Platform (DKP) cluster on VMware vSphere, two independ
 
 | Purpose | Technology | Configuration |
 |---------|------------|---------------|
-| Root disks of virtual machines (cluster nodes) | VM files on a Datastore | [`datastore`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-masterinstanceclass-datastore) in `VsphereClusterConfiguration` / [`VsphereInstanceClass`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) |
+| Root disks of virtual machines (cluster nodes) | VM files on a Datastore | [`datastore`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-datastore) in `VsphereInstanceClass`; [`storagePolicyID`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) — only in `VsphereClusterConfiguration` (cloud cluster) |
 | PersistentVolumes for applications | CNS disks (Container Native Storage) via CSI | Automatically via Datastore tags; settings in the [`ModuleConfig`](/modules/cloud-provider-vsphere/configuration.html) of the `cloud-provider-vsphere` module |
 
 A node root disk and an application volume can be placed on the same Datastore or on different ones — they are configured independently.
@@ -20,6 +20,23 @@ Datastore preparation (tags, ESXi availability) is described in [Connection and 
 
 ## Virtual machine root disks
 
+### Where `storagePolicyID` is supported
+
+The [`storagePolicyID`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) parameter sets an SPBM (Storage Policy Based Management) policy for VM root disks. In the module code, it is defined **only** in the `VsphereClusterConfiguration` resource and applied by Terraform (`dhctl`) when provisioning [CloudPermanent](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) nodes.
+
+| Scenario | Configuration resource | `storagePolicyID` | How to select storage |
+|----------|------------------------|-------------------|------------------------|
+| Cloud cluster, CloudPermanent nodes | `VsphereClusterConfiguration` | **Supported** | `datastore` in `instanceClass` + optional cluster-level `storagePolicyID` |
+| Hybrid cluster, CloudEphemeral nodes | `VsphereInstanceClass` | **Not supported** | `datastore` in `VsphereInstanceClass` only |
+| Hybrid cluster, CloudStatic nodes | — (VM created manually) | **Not supported** | Datastore and policy set in vSphere when creating the VM |
+| Application PersistentVolumes | `StorageClass` (auto-created) | **Not via `storagePolicyID`** | Select a `StorageClass` with `StoragePolicyName` — see [CSI and PersistentVolumes](#csi-and-persistentvolumes) |
+
+{% alert level="warning" %}
+In hybrid integration, the `VsphereClusterConfiguration` resource is **not used**, so `storagePolicyID` is not available. Do not look for it in `ModuleConfig` or `VsphereInstanceClass` — these resource schemas do not include `storagePolicyID`.
+{% endalert %}
+
+### Configuring `datastore` for the root disk
+
 When creating nodes, DKP clones a VM template and places the root disk on the Datastore specified in the node group configuration:
 
 ```yaml
@@ -28,10 +45,57 @@ instanceClass:
   rootDiskSize: 50       # root disk size in GiB (optional)
 ```
 
-Additional parameters:
+The `datastore` parameter is supported in both `VsphereClusterConfiguration` (cloud cluster) and [`VsphereInstanceClass`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) (hybrid scenario).
 
-- [`storagePolicyID`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) — SPBM (Storage Policy Based Management) policy ID for root disks of all cluster nodes. When set, vSphere applies the policy to VM disks regardless of the provisioning type.
-- DKP creates disks with the `eagerZeroedThick` type, but the final type may be changed by the vSphere storage policy.
+DKP creates disks with the `eagerZeroedThick` type, but the final type may be changed by the vSphere storage policy.
+
+### Storage policy for root disks (`storagePolicyID`)
+
+Applies **only** to a cloud cluster. Set the parameter once in `VsphereClusterConfiguration`; it applies to root disks of all nodes provisioned by Terraform: masters and groups in `nodeGroups`.
+
+You can get the policy ID in vSphere Client (**Policies and Profiles** → VM Storage Policies) or via `govc`:
+
+```shell
+govc storage.policy.ls
+```
+
+Configuration example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+layout: Standard
+storagePolicyID: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+provider:
+  server: "<VCENTER_FQDN>"
+  username: "<USERNAME@DOMAIN.LOCAL>"
+  password: "<PASSWORD>"
+  insecure: true
+vmFolderPath: dev
+regionTagCategory: k8s-region
+zoneTagCategory: k8s-zone
+region: test-region
+zones:
+  - test-zone-1
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: dev/golden_image
+    datastore: dev/lun_1
+    mainNetwork: net3-k8s
+sshPublicKey: "<SSH_PUBLIC_KEY>"
+```
+
+### Hybrid scenario: selecting storage without `storagePolicyID`
+
+To achieve similar storage control in a hybrid cluster:
+
+- **CloudEphemeral node root disk** — set the target Datastore in `VsphereInstanceClass.spec.datastore`. SPBM policy for the root disk cannot be configured via DKP; vSphere applies the policy associated with the selected Datastore according to your infrastructure settings.
+- **Application volume (PVC)** — use an automatically created `StorageClass`. If VM Storage Policies are configured in vCenter, a separate StorageClass is created for each "Datastore + policy" combination (for example, `dev-lun-102-gold-policy`). Set it in `PersistentVolumeClaim.spec.storageClassName`.
+
+For hybrid integration details, see [Hybrid cluster with vSphere](../../hybrid/vsphere-hybrid.html#storage-in-the-hybrid-scenario).
 
 {% alert %}
 For VM template preparation and disk policies, see [Connection and authorization](authorization.html#virtual-machine-image-requirements).

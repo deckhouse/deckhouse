@@ -64,16 +64,88 @@ zones:
 
 Required parameters for the [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) resource:
 
-- `region`: Tag assigned to the Datacenter object.
-- `zoneTagCategory` and `regionTagCategory`: Tag categories used to identify regions and zones.
-- `internalNetworkCIDR`: Subnet for assigning internal IP addresses.
-- `vmFolderPath`: Path to the folder where cluster virtual machines will be placed.
-- `sshPublicKey`: Public SSH key used to access the nodes.
-- `zones`: List of zones available for node placement.
+- `layout` — layout scheme (`Standard`);
+- `provider` — vCenter connection parameters;
+- `masterNodeGroup` — master node definition (`instanceClass` requires `numCPUs`, `memory`, `template`, `mainNetwork`, `datastore`);
+- `region` — tag assigned to the Datacenter object;
+- `zoneTagCategory` and `regionTagCategory` — tag categories used to identify regions and zones;
+- `vmFolderPath` — path to the folder where cluster virtual machines will be placed;
+- `sshPublicKey` — public SSH key used to access the nodes;
+- `zones` — list of zones available for node placement.
 
 {% alert level="info" %}
 All nodes placed in different zones must have access to shared datastores with matching zone tags.
 {% endalert %}
+
+## Network parameters
+
+### mainNetwork
+
+**Required** in `instanceClass`:
+
+- for `masterNodeGroup` and `nodeGroups` in `VsphereClusterConfiguration` ([CloudPermanent](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) nodes);
+- for [`VsphereInstanceClass`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) when provisioning [CloudEphemeral](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) nodes — if omitted, the value from the master node configuration is used.
+
+Specifies the port group for the VM's primary NIC (default route).
+
+**Value format** — network path **relative to the Datacenter** (not the full inventory path from the vCenter root):
+
+| Value | Description |
+|-------|-------------|
+| `net3-k8s` | Port group name at the root of the datacenter Networks section |
+| `k8s-msk/test_187` | Port group `test_187` in folder `k8s-msk` |
+| `"PROD NET"` | Port group name with a space — quote it in YAML |
+
+```yaml
+instanceClass:
+  mainNetwork: "PROD NET"
+  # or with a folder:
+  # mainNetwork: "k8s-networks/PROD NET"
+```
+
+{% alert level="warning" %}
+CloudPermanent and CloudEphemeral nodes are provisioned by different components — Terraform (`dhctl`) and [machine-controller-manager](https://github.com/gardener/machine-controller-manager), respectively. Both accept a network path relative to the Datacenter, but the vSphere Inventory lookup mechanism differs. "Network not found" errors with a valid master node configuration may only appear when creating ephemeral nodes — verify `mainNetwork` in `VsphereInstanceClass` and [`Network.Assign`](authorization.html#verifying-network-permissions-with-govc) permissions on the target network. For CloudEphemeral details, see [Hybrid cluster with vSphere](../../hybrid/vsphere-hybrid.html).
+{% endalert %}
+
+### internalNetworkCIDR
+
+**Optional** `VsphereClusterConfiguration` parameter.
+
+**Required** when [`additionalNetworks`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-additionalnetworks) is set in `masterNodeGroup.instanceClass`. In this case, Terraform assigns IP addresses to master nodes from the specified subnet (starting at the tenth address: for `192.168.199.0/24`, from `192.168.199.10`).
+
+Not used for worker groups in `nodeGroups`.
+
+### internalNetworkNames and externalNetworkNames
+
+**Optional** parameters. Set in `VsphereClusterConfiguration` and/or in the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/configuration.html) module settings (`ModuleConfig`).
+
+Used by `vsphere-cloud-controller-manager` to populate `InternalIP` and `ExternalIP` in `Node.status.addresses`.
+
+{% alert level="info" %}
+Specify the **network name only** (port group) — without a path, as displayed in the VM network adapter properties in vSphere. This differs from the `mainNetwork` format.
+{% endalert %}
+
+Recommended when nodes have multiple network interfaces and you need to explicitly separate internal/external addresses for Kubernetes.
+
+Example:
+
+```yaml
+internalNetworkNames:
+  - K8S_INTERNAL
+externalNetworkNames:
+  - PUBLIC_NET
+```
+
+### resourcePool
+
+**Optional** `instanceClass` parameter.
+
+| Node type | Behavior |
+|-----------|----------|
+| **CloudPermanent** | With [`useNestedResourcePool`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-usenestedresourcepool): `true` (default), DKP automatically creates a nested resource pool in each zone. The `resourcePool` value in `instanceClass` overrides the default pool |
+| **CloudEphemeral** | If `resourcePool` is explicitly set in `VsphereInstanceClass`, the corresponding resource pool **must already exist** in vSphere — machine-controller-manager does not create it automatically. VM provisioning fails if the pool at the specified path is not found |
+
+By default, ephemeral nodes in a cloud cluster use `resourcePoolPath` from `VsphereCloudDiscoveryData`, created during cluster deployment.
 
 ## vSphere privileges
 

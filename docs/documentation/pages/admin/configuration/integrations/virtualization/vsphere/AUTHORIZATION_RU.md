@@ -439,6 +439,35 @@ govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<Datastor
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
 
+#### Проверка прав на сеть с использованием govc
+
+Привилегия [`Network.Assign`](#список-необходимых-привилегий) необходима для подключения port group к виртуальным машинам при их создании. При [гранулярной модели прав](#гранулярная-модель-прав) эта привилегия должна быть назначена на **каждый** port group, указанный в параметрах [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) и [`additionalNetworks`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-additionalnetworks), — либо наследоваться от родительского объекта с включённым наследованием.
+
+Проверьте, что сервисная учётная запись имеет необходимые права на целевую сеть:
+
+```shell
+export GOVC_URL="https://<VCENTER_FQDN>/sdk"
+export GOVC_USERNAME="<USERNAME@DOMAIN.LOCAL>"
+export GOVC_PASSWORD="<PASSWORD>"
+export GOVC_INSECURE=true
+
+govc permissions.ls -r "/<DatacenterName>/network/<NetworkName>"
+```
+
+Примеры путей:
+
+- port group в корне раздела Networks датацентра: `/<DatacenterName>/network/net3-k8s`;
+- port group в папке инвентаря: `/<DatacenterName>/network/k8s-networks/PROD NET`;
+- port group на Distributed Switch: `/<DatacenterName>/network/<DVSName>/<PortGroupName>`.
+
+Имена сетей с пробелами указывайте в пути как есть, без дополнительного экранирования. В YAML-конфигурации такие имена заключайте в кавычки (см. раздел [«Сетевые параметры»](layout.html#сетевые-параметры)).
+
+В выводе команды для учётной записи DKP должна присутствовать роль, включающая привилегию `Network.Assign`. Флаг `-r` (`--recursive`) показывает права, унаследованные от родительских объектов.
+
+{% alert level="warning" %}
+Отсутствие `Network.Assign` на port group часто проявляется как ошибка при создании виртуальных машин. Для узлов типа CloudEphemeral (создаются через machine-controller-manager) проверьте права именно на сети из [`VsphereInstanceClass`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а не только на сети master-узлов.
+{% endalert %}
+
 #### Создание и назначение роли с использованием govc
 
 {% alert %}
@@ -603,7 +632,11 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
       <td>Network</td>
       <td>Assign network</td>
       <td><code>Network.Assign</code></td>
-      <td>Подключение сетей и port group к виртуальным машинам кластера Deckhouse Kubernetes Platform.</td>
+      <td>
+        Подключение сетей (port group) к виртуальным машинам при клонировании шаблона.
+        Привилегия должна быть назначена на каждый port group из <code>mainNetwork</code> и <code>additionalNetworks</code>.
+        При гранулярной модели прав см. <a href="#проверка-прав-на-сеть-с-использованием-govc">проверку через govc</a>.
+      </td>
     </tr>
     <tr>
       <td>Resource</td>

@@ -36,9 +36,9 @@ Deckhouse Kubernetes Platform (DKP) интегрируется с инфраст
 | [`template`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-template) | Путь к шаблону ВМ относительно Datacenter |
 | [`datastore`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-datastore) | Путь к Datastore для root-диска |
 | [`rootDiskSize`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-rootdisksize) | Размер root-диска в ГиБ (по умолчанию 20) |
-| [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) | Основная сеть (port group) с маршрутом по умолчанию |
+| [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) | Основная сеть (port group) с маршрутом по умолчанию. Путь относительно Datacenter — см. [«Сетевые параметры»](layout.html#сетевые-параметры) |
 | [`additionalNetworks`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-additionalnetworks) | Дополнительные сетевые интерфейсы |
-| [`resourcePool`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-resourcepool) | Resource Pool относительно зоны (vSphere Cluster) |
+| [`resourcePool`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-resourcepool) | Resource Pool относительно зоны (vSphere Cluster). Для CloudEphemeral должен существовать заранее — см. [«Сетевые параметры»](layout.html#resourcepool) |
 | [`mainNetworkIPAddresses`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-masterinstanceclass-mainnetworkipaddresses) | Статические IP-адреса вместо DHCP (только в `VsphereClusterConfiguration`) |
 | [`runtimeOptions`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-runtimeoptions) | Дополнительные параметры ВМ: CPU/memory shares, limits, nested virtualization |
 

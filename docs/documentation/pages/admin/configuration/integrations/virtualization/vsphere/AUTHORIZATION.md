@@ -430,6 +430,35 @@ govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<Datastor
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
 
+#### Verifying network permissions with govc
+
+The [`Network.Assign`](#list-of-required-privileges) privilege is required to attach port groups to virtual machines during provisioning. With the [granular permission model](#granular-permission-model), this privilege must be assigned on **each** port group specified in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) and [`additionalNetworks`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-additionalnetworks), or inherited from a parent object with inheritance enabled.
+
+Verify that the service account has the required permissions on the target network:
+
+```shell
+export GOVC_URL="https://<VCENTER_FQDN>/sdk"
+export GOVC_USERNAME="<USERNAME@DOMAIN.LOCAL>"
+export GOVC_PASSWORD="<PASSWORD>"
+export GOVC_INSECURE=true
+
+govc permissions.ls -r "/<DatacenterName>/network/<NetworkName>"
+```
+
+Path examples:
+
+- Port group at the root of the datacenter Networks section: `/<DatacenterName>/network/net3-k8s`;
+- Port group in an inventory folder: `/<DatacenterName>/network/k8s-networks/PROD NET`;
+- Port group on a Distributed Switch: `/<DatacenterName>/network/<DVSName>/<PortGroupName>`.
+
+For network names containing spaces, use the name as-is in the path without extra escaping. In YAML configuration, quote such names (see [Network parameters](layout.html#network-parameters)).
+
+The command output must show a role for the DKP account that includes the `Network.Assign` privilege. The `-r` (`--recursive`) flag displays permissions inherited from parent objects.
+
+{% alert level="warning" %}
+Missing `Network.Assign` on a port group often manifests as a VM creation error. For CloudEphemeral nodes (provisioned by machine-controller-manager), verify permissions on networks from [`VsphereInstanceClass`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), not only on master node networks.
+{% endalert %}
+
 #### Creating and assigning a role with govc
 
 {% alert %}
@@ -594,7 +623,11 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
       <td>Network</td>
       <td>Assign network</td>
       <td><code>Network.Assign</code></td>
-      <td>Connecting networks and port groups to Deckhouse Kubernetes Platform cluster virtual machines.</td>
+      <td>
+        Attaching networks (port groups) to virtual machines during template cloning.
+        The privilege must be assigned on each port group from <code>mainNetwork</code> and <code>additionalNetworks</code>.
+        With the granular permission model, see <a href="#verifying-network-permissions-with-govc">govc verification</a>.
+      </td>
     </tr>
     <tr>
       <td>Resource</td>
