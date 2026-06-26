@@ -19,6 +19,7 @@
 package v1alpha1
 
 import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -2648,7 +2649,8 @@ func (in *PackageSchema) DeepCopyInto(out *PackageSchema) {
 	*out = *in
 	if in.OpenAPIV3Schema != nil {
 		in, out := &in.OpenAPIV3Schema, &out.OpenAPIV3Schema
-		*out = (*in).DeepCopy()
+		*out = new(openapi.OpenAPIV3Schema)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
