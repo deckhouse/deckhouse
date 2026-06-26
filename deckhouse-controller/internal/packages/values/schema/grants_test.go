@@ -108,51 +108,8 @@ properties:
 		storage, err := NewStorage(settings, nil)
 		require.NoError(t, err)
 
-		_, err = storage.GrantRefs()
+		_, 	err = storage.GrantRefs()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "non-empty")
-	})
-
-	t.Run("adds grantable fields to required", func(t *testing.T) {
-		settings := []byte(`
-type: object
-properties:
-  storageClass:
-    type: string
-    x-deckhouse-grantable-resource: storageclasses
-  postgres:
-    type: object
-    properties:
-      storageClass:
-        type: string
-        x-deckhouse-grantable-resource: postgresclasses
-      name:
-        type: string
-`)
-		storage, err := NewStorage(settings, nil)
-		require.NoError(t, err)
-
-		schema := storage.GetSchema(TypeSettings)
-		require.NotNil(t, schema)
-		assert.Contains(t, schema.Required, "storageClass")
-
-		postgres, ok := schema.Properties["postgres"]
-		require.True(t, ok)
-		assert.Contains(t, postgres.Required, "storageClass")
-	})
-
-	t.Run("does not add non-grantable fields to required", func(t *testing.T) {
-		settings := []byte(`
-type: object
-properties:
-  name:
-    type: string
-`)
-		storage, err := NewStorage(settings, nil)
-		require.NoError(t, err)
-
-		schema := storage.GetSchema(TypeSettings)
-		require.NotNil(t, schema)
-		assert.Empty(t, schema.Required)
 	})
 }

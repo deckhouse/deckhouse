@@ -114,7 +114,6 @@ func prepareSchemas(settings, values []byte) (map[Type]*spec.Schema, error) {
 		res[TypeSettings] = transformers.Transform(
 			schemaObj,
 			&transformers.AdditionalProperties{},
-			&transformers.RequiredForGrant{},
 		)
 	}
 
@@ -128,7 +127,6 @@ func prepareSchemas(settings, values []byte) (map[Type]*spec.Schema, error) {
 			schemaObj,
 			&transformers.Extend{Parent: res[TypeSettings]},
 			&transformers.AdditionalProperties{},
-			&transformers.RequiredForGrant{},
 		)
 
 		res[TypeHelm] = transformers.Transform(
@@ -137,7 +135,6 @@ func prepareSchemas(settings, values []byte) (map[Type]*spec.Schema, error) {
 			&transformers.Copy{},
 			// Transform x-required-for-helm
 			&transformers.RequiredForHelm{},
-			&transformers.RequiredForGrant{},
 		)
 	}
 

@@ -340,9 +340,46 @@ func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 
-// ApplySettings applies settings values to application.
+// ApplySettings applies settings values to application. Before persisting the
+// user config it resolves per-project grant defaults from
+// AvailableClusterResource and stores them for the grantDefaultsTransformer.
 func (a *Application) ApplySettings(settings addonutils.Values) error {
+	if err := a.resolveGrantDefaults(context.Background()); err != nil {
+		return err
+	}
+
 	return a.values.ApplySettings(settings)
+}
+
+// resolveGrantDefaults resolves the per-project default for every
+// x-deckhouse-grantable-resource settings field and stores the results on the
+// values storage. Resources without an available default (multitenancy disabled,
+// no catalog, or an empty default) are skipped.
+func (a *Application) resolveGrantDefaults(ctx context.Context) error {
+	refs, err := a.values.GrantRefs()
+	if err != nil {
+		return fmt.Errorf("collect grant refs: %w", err)
+	}
+	if len(refs) == 0 {
+		return nil
+	}
+
+	catalogs, err := a.resolveCatalogs(ctx, refs)
+	if err != nil {
+		return err
+	}
+
+	defaults := make([]values.GrantDefault, 0, len(refs))
+	for _, ref := range refs {
+		catalog := catalogs[ref.Resource]
+		if !catalog.Found || catalog.Default == "" {
+			continue
+		}
+		defaults = append(defaults, values.GrantDefault{Path: ref.Path, Value: catalog.Default})
+	}
+
+	a.values.SetGrantDefaults(defaults)
+	return nil
 }
 
 // validateGrants rejects settings whose x-deckhouse-grantable-resource field
