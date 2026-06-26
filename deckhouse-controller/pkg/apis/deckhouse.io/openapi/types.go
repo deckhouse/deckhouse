@@ -58,25 +58,25 @@ type OpenAPIV3Schema struct {
 	MinProperties *int64 `json:"minProperties,omitempty"`
 
 	// +listType=atomic
-	Required []string                 `json:"required,omitempty"`
-	Items    *OpenAPIV3SchemaOrArray  `json:"items,omitempty"`
+	Required []string                `json:"required,omitempty"`
+	Items    *OpenAPIV3SchemaOrArray `json:"items,omitempty"`
 
 	// +listType=atomic
 	AllOf []OpenAPIV3Schema `json:"allOf,omitempty"`
 	// +listType=atomic
 	OneOf []OpenAPIV3Schema `json:"oneOf,omitempty"`
 	// +listType=atomic
-	AnyOf                []OpenAPIV3Schema                    `json:"anyOf,omitempty"`
-	Not                  *OpenAPIV3Schema                     `json:"not,omitempty"`
-	Properties           map[string]OpenAPIV3Schema           `json:"properties,omitempty"`
-	AdditionalProperties *OpenAPIV3SchemaOrBool               `json:"additionalProperties,omitempty"`
-	PatternProperties    map[string]OpenAPIV3Schema           `json:"patternProperties,omitempty"`
-	Dependencies         SchemaDependencies                   `json:"dependencies,omitempty"`
-	AdditionalItems      *OpenAPIV3SchemaOrBool               `json:"additionalItems,omitempty"`
-	Definitions          SchemaDefinitions                    `json:"definitions,omitempty"`
-	ExternalDocs         *ExternalDocumentation               `json:"externalDocs,omitempty"`
-	Example              *apiextensionsv1.JSON                `json:"example,omitempty"`
-	Nullable             bool                                 `json:"nullable,omitempty"`
+	AnyOf                []OpenAPIV3Schema          `json:"anyOf,omitempty"`
+	Not                  *OpenAPIV3Schema           `json:"not,omitempty"`
+	Properties           map[string]OpenAPIV3Schema `json:"properties,omitempty"`
+	AdditionalProperties *OpenAPIV3SchemaOrBool     `json:"additionalProperties,omitempty"`
+	PatternProperties    map[string]OpenAPIV3Schema `json:"patternProperties,omitempty"`
+	Dependencies         SchemaDependencies         `json:"dependencies,omitempty"`
+	AdditionalItems      *OpenAPIV3SchemaOrBool     `json:"additionalItems,omitempty"`
+	Definitions          SchemaDefinitions          `json:"definitions,omitempty"`
+	ExternalDocs         *ExternalDocumentation     `json:"externalDocs,omitempty"`
+	Example              *apiextensionsv1.JSON      `json:"example,omitempty"`
+	Nullable             bool                       `json:"nullable,omitempty"`
 
 	// x-deckhouse-grantable-resource binds a string settings field to a grantable
 	// cluster resource (multitenancy-manager AvailableClusterResource).
@@ -100,8 +100,8 @@ type OpenAPIV3Schema struct {
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema
 // or an array of OpenAPIV3Schema.
 type OpenAPIV3SchemaOrArray struct {
-	Schema      *OpenAPIV3Schema   `json:"-"`
-	JSONSchemas []OpenAPIV3Schema  `json:"-"`
+	Schema      *OpenAPIV3Schema  `json:"-"`
+	JSONSchemas []OpenAPIV3Schema `json:"-"`
 }
 
 // OpenAPIV3SchemaOrBool represents an OpenAPIV3Schema or a boolean value.
