@@ -82,7 +82,7 @@ func applyCertDates(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlpla
 		component controlplanev1alpha1.OperationComponent
 		state     controlplanev1alpha1.ObservedComponentState
 	}
-	var snapshots []snapshot
+	snapshots := make([]snapshot, 0, len(ops))
 	for i := range ops {
 		op := &ops[i]
 		if !op.IsCompleted() || op.Status.ObservedState == nil || !op.HasStep(controlplanev1alpha1.StepCertObserve) {
