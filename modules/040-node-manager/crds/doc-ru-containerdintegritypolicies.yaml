@@ -6,6 +6,12 @@ spec:
           description: |
             Описывает политику целостности образов containerd для выбранных пространств имён.
           properties:
+            apiVersion:
+              description: Версия API объекта.
+            kind:
+              description: Тип объекта.
+            name:
+              description: Имя объекта.
             spec:
               description: Желаемое состояние объекта ContainerdIntegrityPolicy.
               properties:
@@ -14,14 +20,14 @@ spec:
                     CA-сертификат в формате PEM, используемый для проверки подписей образов.
                 protectedNamespaces:
                   description: |
-                    Селектор по лейблам, определяющий, какие пространства имён защищены этой политикой.
+                    Фильтр по лейблам, определяющий, какие пространства имён защищены этой политикой.
                   properties:
                     matchLabels:
                       description: |
-                        Карта пар {ключ, значение}. Одна пара {ключ, значение} в карте `matchLabels` эквивалентна элементу `matchExpressions`, у которого поле ключа — `key`, оператор — `In`, а массив значений содержит только «значение». Требования объединяются оператором `AND`.
+                        Карта пар `ключ: значение`. Одна пара `ключ: значение` в карте `matchLabels` эквивалентна элементу `matchExpressions`, у которого поле ключа — `key`, оператор — `In`, а массив значений содержит только «значение». Требования объединяются оператором `AND`.
             status:
               description: Наблюдаемое состояние объекта ContainerdIntegrityPolicy.
               properties:
-                protectedNamespace:
+                protectedNamespaces:
                   description: |
-                    Список имён пространств имён, соответствующих селектору `protectedNamespaces`.
+                    Список пространств имён, соответствующих фильтру `protectedNamespaces`.

@@ -527,6 +527,27 @@ spec:
   isSudoer: true
 ```
 
+## An example of the `ContainerdIntegrityPolicy` configuration
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ContainerdIntegrityPolicy
+metadata:
+  name: integrity-policy
+spec:
+  ca: |
+    -----BEGIN CERTIFICATE-----
+    MIIGOTCCBCGgAwIBAgIJAOE/vJd8EB24MA0GCSqGSIb3DQEBBQUAMIGyMQswCQYD
+    VQQGEwJGUjEPMA0GA1UECAwGQWxzYWNlMRMwEQYDVQQHDApTdHJhc2JvdXJnMRgw
+    ...
+    iPe3o/4tyQGq+jEMAEjLlDECu0dEa6RFntcbBPMBP3wZwE2bI9GYgvyaZd63DNdm
+    KvbxUcDaVvXB0EU0bg==
+    -----END CERTIFICATE-----
+  protectedNamespaces:
+    matchLabels:
+      integrity: enabled
+```
+
 ## An example of the `NodeGroupConfiguration` configuration
 
 ### Installing the cert-manager plugin for kubectl on master nodes
@@ -646,3 +667,5 @@ spec:
 ### Adding the ability to download images from insecure container registry to containerd
 
 The ability to download images from an insecure container registry is enabled using the `insecure_skip_verify` parameter in the containerd configuration file. For more information, see the [How to add configuration for an additional registry](faq.html#how-to-add-configuration-for-an-additional-registry).
+
+
