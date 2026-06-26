@@ -2,19 +2,20 @@ diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/sr
 index 1111111..2222222 100644
 --- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 +++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
-@@ -88,6 +88,11 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -88,6 +88,12 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
    };
  
    handleLogout = () => {
 +    if (authenticationConfig.strategy === AuthStrategy.header) {
-+      window.location.assign('/logout');
++      const redirectURL = encodeURIComponent(`${window.location.origin}/`);
++      window.location.assign(`/logout?rd=${redirectURL}`);
 +      return;
 +    }
 +
      if (authenticationConfig.logoutEndpoint) {
        API.logout()
          .then(_ => {
-@@ -123,8 +128,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -123,8 +129,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
    render() {
      const { isDropdownOpen } = this.state;
  

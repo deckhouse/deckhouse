@@ -14,7 +14,7 @@ Fix CVE
 
 ## 002-kiali-logout.patch
 
-Adds logout button in kiali
+Enable Logout in Kiali for header auth (DexAuthenticator) and redirect to `/logout?rd=<app-origin>/` so sign-out returns to the app and avoids stale Dex login CSRF.
 
 ## 003-istio-server_fmtText.patch
 
