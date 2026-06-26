@@ -44,4 +44,5 @@ namespaces_for_integrity:
     - d8-user-authn
     - d8-user-authz
     - d8-virtualization
+    - kube-prometheus-pushgateway
     - kube-system

@@ -1,6 +1,7 @@
 excludeNamespaces: []
 additionalNamespaces:
   - kube-system
+  - kube-prometheus-pushgateway
   - d8-alb
   - d8-commander
   - d8-commander-agent
