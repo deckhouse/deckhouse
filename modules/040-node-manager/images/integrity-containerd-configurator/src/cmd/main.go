@@ -21,9 +21,10 @@ import (
 	"flag"
 	"os"
 
-	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 	//nolint:goimports
 	//nolint:gci
+	"github.com/go-logr/logr"
+	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -31,9 +32,10 @@ import (
 	"k8s.io/component-base/logs"
 	logsv1 "k8s.io/component-base/logs/api/v1"
 	_ "k8s.io/component-base/logs/json/register"
-	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"integrity-containerd-configurator/internal/configwriter"
 	"integrity-containerd-configurator/internal/controller"
@@ -60,7 +62,7 @@ func main() {
 	logs.AddGoFlags(flag.CommandLine)
 
 	flag.Parse()
-	ctrl.SetLogger(klog.Background())
+	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))
 	setupLog := ctrl.Log.WithName("setup")
 
 	if err := logsv1.ValidateAndApply(logOptions, nil); err != nil {
