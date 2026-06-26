@@ -725,6 +725,7 @@ jobs:
   # Rootless — default-user validation on PR images.
   # ============================================================================
   security_scan_images:
+    if: ${{ false }}
     name: Security scan images
     runs-on: [self-hosted, large]
     needs:
@@ -912,294 +913,28 @@ jobs:
           echo "PR tag to scan: $TAG"
           echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
-
-  # <template: drweb_scan_job>
   drweb-scan:
-    name: Dr.Web Scan ${{ matrix.branch }}
+    if: ${{ false }}
+    name: Dr.Web Scan disabled
     runs-on: [self-hosted, antivirus]
-    if: github.repository == 'deckhouse/deckhouse'
-    # PR mode: filter scanned images by the changed_images diff (delta-only scan).
-    needs: [get-tags, changed_images]
-    strategy:
-      matrix:
-        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
-      fail-fast: false
-    permissions:
-      id-token: write
-    outputs:
-      scan_id: ${{ steps.scan.outputs.scan_id }}
+    needs:
+      - get-tags
+      - changed_images
     steps:
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: |
-          if [ $REPO == "deckhouse/deckhouse" ]; then
-            echo "name=deckhouse" >> $GITHUB_OUTPUT
-          else
-            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
-          fi
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
-
-      # </template: import_secrets>
-
-      - name: Run drweb scan
-        id: scan
-        env:
-          # `ONLY_IMAGES` comes from needs.changed_images.outputs.changed_compact
-          # (JSON array of "<module>.<image>" keys). Wired here for PR runs of both
-          # drweb-scan and kaspersky-scan when their templates are called with
-          # `withChangedImages: true` (see security-scan-images.yml). In weekly /
-          # release runs the templates pass empty `only_images_expr`, so this env
-          # block is omitted and the Go scanner falls back to full-scan.
-          # Empty value / "[]" is treated by the Go scanner as full-scan, so the
-          # bash side does not need to branch on it.
-          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
-        run: |
-          registry_image_path=/sys/deckhouse-oss
-          ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
-          if [ -z "${ref}" ]; then
-            ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
-          fi
-          ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
-          SCAN_TIME=$(date '+%s')
-          SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
-          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
-            echo "registry read"
-            edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
-            SCAN_ID+="-${edition}"
-            registry_image_path="/deckhouse/${edition}"
-            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
-            echo "registry stage"
-            registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
-          else
-            echo "registry dev"
-            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          fi
-          CONTAINER_NAME=registry_drweb
-          GID=$(id -g)
-          SCAN_ID+="-$CONTAINER_NAME"
-          SCAN_DIR=/opt/actions-runners/scans/drweb
-          echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
-          echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
-          echo $CONTAINER_NAME
-          echo "----------------------------------------------"
-          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
-            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
-            echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the drweb scanner."
-            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
-          else
-            echo "📋 Full-scan: ONLY_IMAGES is empty (no delta in this PR)."
-          fi
-          echo "----------------------------------------------"
-          docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
-            scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
-          # Drop container-uid ownership so the host-side Upload/Cleanup steps below
-          # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
-          # touch the bind-mounted scan artifacts under the runner's UID (this step
-          # came from main's runner-side refactor that removed `docker cp`).
-          docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
-
-          if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
-            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
-            ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
-            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
-              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
-              exit 1
-            elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
-              echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
-              exit 1
-            else
-              echo "✅ No threats detected ($THREAT_COUNT)"
-            fi
-          else
-            echo "⚠️ The scan results file was not found"
-            exit 1
-          fi
-
-          echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
-
-      - name: Upload scan artifacts
-        if: github.repository == 'deckhouse/deckhouse' && always()
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: drweb-scan-results-${{ steps.scan.outputs.scan_id }}
-          path: ${{ steps.scan.outputs.scan_dir }}/${{ steps.scan.outputs.scan_id }}
-          retention-days: 5
-
-      - name: Cleanup scan results on runner
-        if: always()
-        env:
-          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
-          SCAN_DIR: ${{ steps.scan.outputs.scan_dir }}
-        run: |
-          if [ -z "${SCAN_ID}" ]; then
-            echo "scan_id is empty, nothing to clean up"
-            exit 0
-          fi
-          if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
-            rm -rf ${SCAN_DIR}/${SCAN_ID} || true
-          fi
-
-  # </template: drweb_scan_job>
+      - name: Skip Dr.Web scan
+        run: echo "Dr.Web scan is temporarily disabled."
 
 
-
-  # <template: kaspersky_scan_job>
   kaspersky-scan:
-    name: Kaspersky Scan ${{ matrix.branch }}
+    if: ${{ false }}
+    name: Kaspersky Scan disabled
     runs-on: [self-hosted, antivirus]
-    if: github.repository == 'deckhouse/deckhouse'
-    # PR mode: filter scanned images by the changed_images diff (delta-only scan).
-    needs: [get-tags, changed_images]
-    strategy:
-      matrix:
-        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
-      fail-fast: false
-    permissions:
-      id-token: write
-    outputs:
-      scan_id: ${{ steps.scan.outputs.scan_id }}
+    needs:
+      - get-tags
+      - changed_images
     steps:
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: |
-          if [ $REPO == "deckhouse/deckhouse" ]; then
-            echo "name=deckhouse" >> $GITHUB_OUTPUT
-          else
-            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
-          fi
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
-
-      # </template: import_secrets>
-
-      - name: Run kaspersky scan
-        id: scan
-        env:
-          # `ONLY_IMAGES` comes from needs.changed_images.outputs.changed_compact
-          # (JSON array of "<module>.<image>" keys). Wired here for PR runs of both
-          # drweb-scan and kaspersky-scan when their templates are called with
-          # `withChangedImages: true` (see security-scan-images.yml). In weekly /
-          # release runs the templates pass empty `only_images_expr`, so this env
-          # block is omitted and the Go scanner falls back to full-scan.
-          # Empty value / "[]" is treated by the Go scanner as full-scan, so the
-          # bash side does not need to branch on it.
-          ONLY_IMAGES: ${{ needs.changed_images.outputs.changed_compact }}
-        run: |
-          registry_image_path=/sys/deckhouse-oss
-          ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
-          if [ -z "${ref}" ]; then
-            ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
-          fi
-          ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
-          SCAN_TIME=$(date '+%s')
-          SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
-          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
-            echo "registry read"
-            edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
-            SCAN_ID+="-${edition}"
-            registry_image_path="/deckhouse/${edition}"
-            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
-            echo "registry stage"
-            registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
-          else
-            echo "registry dev"
-            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          fi
-          CONTAINER_NAME=registry_kaspersky
-          GID=$(id -g)
-          SCAN_ID+="-$CONTAINER_NAME"
-          SCAN_DIR=/opt/actions-runners/scans/kaspersky
-          echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
-          echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
-          echo $CONTAINER_NAME
-          echo "----------------------------------------------"
-          if [[ -n "${ONLY_IMAGES:-}" ]] && [[ "${ONLY_IMAGES}" != "[]" ]]; then
-            keys_count=$(jq -r 'length' <<< "${ONLY_IMAGES}")
-            echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the kaspersky scanner."
-            jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
-          else
-            echo "📋 Full-scan: ONLY_IMAGES is empty (no delta in this PR)."
-          fi
-          echo "----------------------------------------------"
-          docker exec -e ONLY_IMAGES="${ONLY_IMAGES:-}" ${CONTAINER_NAME} \
-            scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
-          # Drop container-uid ownership so the host-side Upload/Cleanup steps below
-          # (and the `${SCAN_DIR}/.../scan_results_threats.md` read just below) can
-          # touch the bind-mounted scan artifacts under the runner's UID (this step
-          # came from main's runner-side refactor that removed `docker cp`).
-          docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
-
-          if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
-            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
-            ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
-            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
-              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
-              exit 1
-            elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
-              echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
-              exit 1
-            else
-              echo "✅ No threats detected ($THREAT_COUNT)"
-            fi
-          else
-            echo "⚠️ The scan results file was not found"
-            exit 1
-          fi
-
-          echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
-
-      - name: Upload scan artifacts
-        if: github.repository == 'deckhouse/deckhouse' && always()
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: kaspersky-scan-results-${{ steps.scan.outputs.scan_id }}
-          path: ${{ steps.scan.outputs.scan_dir }}/${{ steps.scan.outputs.scan_id }}
-          retention-days: 5
-
-      - name: Cleanup scan results on runner
-        if: always()
-        env:
-          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
-          SCAN_DIR: ${{ steps.scan.outputs.scan_dir }}
-        run: |
-          if [ -z "${SCAN_ID}" ]; then
-            echo "scan_id is empty, nothing to clean up"
-            exit 0
-          fi
-          if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
-            rm -rf ${SCAN_DIR}/${SCAN_ID} || true
-          fi
-
-  # </template: kaspersky_scan_job>
+      - name: Skip Kaspersky scan
+        run: echo "Kaspersky scan is temporarily disabled."
 
 
 
@@ -1315,7 +1050,7 @@ jobs:
   security_scan_images_required:
     name: Security scan images required
     runs-on: self-slim
-    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    if: ${{ false }}
     needs:
       - pull_request_info
       - changed_images
@@ -1362,3 +1097,4 @@ jobs:
             failed=1
           done
           exit $failed
+

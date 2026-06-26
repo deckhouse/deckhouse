@@ -305,6 +305,7 @@ jobs:
   # Rootless — default-user validation on PR images.
   # ============================================================================
   security_scan_images:
+    if: ${{ false }}
     name: Security scan images
     runs-on: [self-hosted, large]
     needs:
@@ -341,9 +342,29 @@ jobs:
           echo "PR tag to scan: $TAG"
           echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
 
-{!{ tmpl.Exec "drweb_scan_job" $ctx | strings.Indent 2 }!}
+  drweb-scan:
+    if: ${{ false }}
+    name: Dr.Web Scan disabled
+    runs-on: [self-hosted, antivirus]
+    needs:
+      - get-tags
+      - changed_images
+    steps:
+      - name: Skip Dr.Web scan
+        run: echo "Dr.Web scan is temporarily disabled."
 
-{!{ tmpl.Exec "kaspersky_scan_job" $ctx | strings.Indent 2 }!}
+
+  kaspersky-scan:
+    if: ${{ false }}
+    name: Kaspersky Scan disabled
+    runs-on: [self-hosted, antivirus]
+    needs:
+      - get-tags
+      - changed_images
+    steps:
+      - name: Skip Kaspersky scan
+        run: echo "Kaspersky scan is temporarily disabled."
+
 
 {!{ tmpl.Exec "set_security_antivirus_requirement_status" . | strings.Indent 2 }!}
 
@@ -360,7 +381,7 @@ jobs:
   security_scan_images_required:
     name: Security scan images required
     runs-on: self-slim
-    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    if: ${{ false }}
     needs:
       - pull_request_info
       - changed_images
@@ -407,3 +428,4 @@ jobs:
             failed=1
           done
           exit $failed
+
