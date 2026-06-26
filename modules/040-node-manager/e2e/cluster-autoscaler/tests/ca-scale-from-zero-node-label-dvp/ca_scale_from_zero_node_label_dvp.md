@@ -55,7 +55,7 @@ Before the fix, the `serializeLabels` function only included labels from `spec.n
 
 The test explicitly checks that the MachineDeployment annotation contains the system label:
 
-```
+```text
 capacity.cluster-autoscaler.kubernetes.io/labels: node.deckhouse.io/group=e2e-worker-infra
 ```
 
