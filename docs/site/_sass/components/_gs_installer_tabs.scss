@@ -149,7 +149,7 @@
     background: none;
     cursor: pointer;
 
-    @include breakpoints.max-w(l) {
+    @include breakpoints.max-w(xl) {
       font-size: 18px;
     }
 
