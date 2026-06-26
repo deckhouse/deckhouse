@@ -41,7 +41,7 @@
       "ee"
     ],
     "external": "true",
-    "path": "/modules/ai-models/stable/",
+    "path": "/modules/ai-models/",
     "tags": [
       "ml/ai"
     ]
