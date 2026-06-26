@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -133,14 +134,18 @@ func TestAggregatePolicies(t *testing.T) {
 func TestRenderNsToml(t *testing.T) {
 	t.Parallel()
 
-	got := RenderNsToml(
-		[]string{"my-ns", "production", "kube-.+"},
-		[]string{"base64_ca_first", "base64_ca_second"},
-	)
-	want := `namespaces = ["my-ns", "production", "kube-.+"]
-ca_cert = ["base64_ca_first","base64_ca_second"]
-`
-	require.Equal(t, want, got)
+	cfg := &DesiredConfig{
+		Namespaces: []string{"my-ns", "production", "kube-.+"},
+		CACerts:    []string{"base64_ca_first", "base64_ca_second"},
+	}
+
+	got, err := RenderNsToml(cfg)
+	require.NoError(t, err)
+
+	var parsed nsTOML
+	require.NoError(t, toml.Unmarshal(got, &parsed))
+	require.Equal(t, cfg.Namespaces, parsed.Namespaces)
+	require.Equal(t, cfg.CACerts, parsed.CACert)
 }
 
 func TestWriterApplyAndRemove(t *testing.T) {
@@ -159,7 +164,10 @@ func TestWriterApplyAndRemove(t *testing.T) {
 
 	nsTomlData, err := os.ReadFile(filepath.Join(dir, NsTomlFileName))
 	require.NoError(t, err)
-	require.Equal(t, RenderNsToml(config.Namespaces, config.CACerts), string(nsTomlData))
+
+	expected, err := RenderNsToml(config)
+	require.NoError(t, err)
+	require.Equal(t, expected, nsTomlData)
 
 	require.NoError(t, writer.Apply(nil))
 	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
