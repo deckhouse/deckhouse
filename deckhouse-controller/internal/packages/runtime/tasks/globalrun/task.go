@@ -58,8 +58,6 @@ type crdService interface {
 // set and the discovered CRD capabilities for the global values.
 type globalModule interface {
 	GetName() string
-	HooksInitialized() bool
-	InitializeHooks()
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 	SetEnabledModules(modules []string)
 	SetCapabilities(apiVersions []string)
@@ -126,9 +124,8 @@ func (t *task) Execute(ctx context.Context) error {
 
 	// Run the global BeforeAll hooks before ensuring CRDs so they prepare the
 	// shared global values every module renders against, behind the global barrier.
-	if !t.global.HooksInitialized() {
-		t.global.InitializeHooks()
-	}
+	// The Enable task ahead of this on the global queue has already initialized and
+	// synced the hooks.
 	if err := t.global.RunHooksByBinding(ctx, addontypes.BeforeAll); err != nil {
 		t.status.HandleError(t.global.GetName(), status.ConditionHooksProcessed, err)
 		return fmt.Errorf("run beforeAll hooks: %w", err)

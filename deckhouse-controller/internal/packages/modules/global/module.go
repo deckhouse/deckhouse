@@ -220,6 +220,18 @@ func (m *Module) HooksInitialized() bool {
 	return m.initialized.Load()
 }
 
+// GetHooksByBinding returns the global hooks for the binding type as the minimal
+// ControllableHook view, so the shared Enable task can drive global like any
+// package.
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
+	stored := m.hooks.GetHooksByBinding(binding)
+	res := make([]hooks.ControllableHook, 0, len(stored))
+	for _, hook := range stored {
+		res = append(res, hook)
+	}
+	return res
+}
+
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
 func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 	h := m.hooks.GetHookByName(hook)
