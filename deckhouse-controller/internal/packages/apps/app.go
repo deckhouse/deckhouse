@@ -540,8 +540,8 @@ func (a *Application) UnlockKubernetesMonitors(hook string, monitors ...string) 
 }
 
 // GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (a *Application) GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook {
-	return a.hooks.GetHooksByBinding(binding)
+func (a *Application) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
+	return hooks.ToControllable(a.hooks.GetHooksByBinding(binding))
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.

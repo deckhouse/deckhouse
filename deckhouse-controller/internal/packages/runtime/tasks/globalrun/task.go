@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package globalrun provides the global node's unit of work: ensure the CRDs of
-// every enabled module, then publish the enabled set and the discovered CRD
-// capabilities into global values, before any module converges behind the global
-// barrier.
+// Package globalrun provides the global node's unit of work: run the global
+// BeforeAll hooks, ensure the CRDs of every enabled module, then publish the
+// enabled set and the discovered CRD capabilities into global values, before any
+// module converges behind the global barrier.
 package globalrun
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 
+	addontypes "github.com/flant/addon-operator/pkg/hook/types"
+	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
 
 	taskensurecrd "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurecrd"
@@ -51,9 +54,11 @@ type crdService interface {
 	GetManagedGVKs(enabled []string) []string
 }
 
-// globalModule receives the enabled module set and the discovered CRD
-// capabilities for the global values.
+// globalModule runs the global BeforeAll hooks and receives the enabled module
+// set and the discovered CRD capabilities for the global values.
 type globalModule interface {
+	GetName() string
+	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 	SetEnabledModules(modules []string)
 	SetCapabilities(apiVersions []string)
 }
@@ -96,9 +101,13 @@ func (t *task) String() string {
 	return "Run"
 }
 
-// Execute fans out one EnsureCRDs subtask per enabled module under the task's
-// own context, waits for all of them to finish, then publishes the enabled set
-// and the applied GVKs (capabilities) into global values.
+// Execute first runs the global BeforeAll hooks, then fans out one EnsureCRDs
+// subtask per enabled module under the task's own context, waits for all of them
+// to finish, then publishes the enabled set and the applied GVKs (capabilities)
+// into global values.
+//
+// BeforeAll runs before the CRDs are ensured: the hooks prepare the shared global
+// values that every module renders against, all behind the global barrier.
 //
 // The subtasks share this task's context: cancelling it (queue shutdown, or a
 // fresh global schedule) drops the in-flight ensures and releases the wait. A
@@ -112,6 +121,15 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Run")
 	defer span.End()
+
+	// Run the global BeforeAll hooks before ensuring CRDs so they prepare the
+	// shared global values every module renders against, behind the global barrier.
+	// The Enable task ahead of this on the global queue has already initialized and
+	// synced the hooks.
+	if err := t.global.RunHooksByBinding(ctx, addontypes.BeforeAll); err != nil {
+		t.status.HandleError(t.global.GetName(), status.ConditionHooksProcessed, err)
+		return fmt.Errorf("run beforeAll hooks: %w", err)
+	}
 
 	t.logger.Debug("ensure crds for enabled modules", slog.Int("modules", len(t.modules)))
 
