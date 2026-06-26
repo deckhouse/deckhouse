@@ -1,34 +1,17 @@
-diff --git a/frontend/src/app/App.tsx b/frontend/src/app/App.tsx
-index 4ccc8ef..98f1b04 100644
---- a/frontend/src/app/App.tsx
-+++ b/frontend/src/app/App.tsx
-@@ -13,6 +13,8 @@ import { InitializingScreen } from './InitializingScreen';
- import { StartupInitializer } from './StartupInitializer';
- import { LoginPage } from '../pages/Login/LoginPage';
- import { LoginActions } from '../actions/LoginActions';
-+import { authenticationConfig } from '../config/AuthenticationConfig';
-+import { AuthStrategy } from '../types/Auth';
- 
- Visibility.change((_e, state) => {
-   // There are 3 states, visible, hidden and prerender, consider prerender as hidden.
-@@ -75,8 +77,11 @@ axios.interceptors.response.use(
-     // The response was rejected, turn off the spinning
-     decrementLoadingCounter();
- 
--    if (error.response.status === 401) {
-+    if (error.response && error.response.status === 401) {
-       store.dispatch(LoginActions.sessionExpired());
-+      if (authenticationConfig.strategy === AuthStrategy.header) {
-+        window.location.replace(`${window.location.origin}/`);
-+      }
-     }
- 
-     return Promise.reject(error);
 diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
-index 1b4fa6f..f32b21a 100644
+index 1b4fa6f..8212ee9 100644
 --- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 +++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
-@@ -34,6 +34,14 @@ const dropdownStyle = kialiStyle({
+@@ -9,6 +9,8 @@ import { AuthStrategy } from '../../../types/Auth';
+ import moment from 'moment';
+ import { KialiDispatch } from 'types/Redux';
+ import { LoginThunkActions } from '../../../actions/LoginThunkActions';
++import { LoginActions } from '../../../actions/LoginActions';
++import { store } from '../../../store/ConfigStore';
+ import { connect } from 'react-redux';
+ import * as API from '../../../services/Api';
+ import { kialiStyle } from 'styles/StyleUtils';
+@@ -34,6 +36,14 @@ const dropdownStyle = kialiStyle({
    paddingRight: 0
  });
  
@@ -43,7 +26,7 @@ index 1b4fa6f..f32b21a 100644
  class UserDropdownComponent extends React.Component<UserProps, UserState> {
    constructor(props: UserProps) {
      super(props);
-@@ -55,6 +63,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -55,6 +65,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
        this.setState({ timeCountDownSeconds: this.timeLeft() / MILLISECONDS });
      }, 1000);
  
@@ -52,7 +35,7 @@ index 1b4fa6f..f32b21a 100644
      this.setState({
        checkSessionTimerId: checkSessionTimerId,
        timeLeftTimerId: timeLeftTimerId
-@@ -69,6 +79,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -69,6 +81,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      if (this.state.timeLeftTimerId) {
        clearInterval(this.state.timeLeftTimerId);
      }
@@ -61,7 +44,7 @@ index 1b4fa6f..f32b21a 100644
    }
  
    timeLeft = (): number => {
-@@ -87,7 +99,21 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -87,6 +101,16 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      }
    };
  
@@ -70,7 +53,9 @@ index 1b4fa6f..f32b21a 100644
 +    if (event.key !== DEX_LOGOUT_STORAGE_KEY || !event.newValue) {
 +      return;
 +    }
-+    window.location.assign(headerAuthLogoutURL());
++    // Do not call /logout or reload here: only the tab that clicked Logout runs sign_out.
++    // Mark this tab as logged out locally to stop XHR polling without racing oauth2-proxy CSRF.
++    store.dispatch(LoginActions.sessionExpired());
 +  };
 +
    handleLogout = () => {
@@ -82,8 +67,7 @@ index 1b4fa6f..f32b21a 100644
 +
      if (authenticationConfig.logoutEndpoint) {
        API.logout()
-         .then(_ => {
-@@ -123,8 +149,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -123,8 +147,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
    render() {
      const { isDropdownOpen } = this.state;
  
