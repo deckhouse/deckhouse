@@ -59,7 +59,7 @@ If you specify a random UID (for example, `2000`), this user inside the containe
 
 The parameter can be set for the entire pod at once (the settings will be inherited by all containers), or individually for a specific container. The value set for a container has a higher priority.
 
-THe parameter can be set in one of the following fields:
+The parameter can be set in one of the following fields:
 
 * `spec.securityContext.runAsUser`: For the entire pod.
 * `spec.containers[].securityContext.runAsUser`: For a specific container.
