@@ -25,8 +25,10 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
+	//nolint: goimports
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
 const (
