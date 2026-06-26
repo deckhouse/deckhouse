@@ -711,7 +711,7 @@ The control-plane-manager module maintains several kubeconfig files on master no
 
 | File | Identity | Purpose |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for kubeadm internals (join, renewal). With the [user-authz](/modules/user-authz/) module enabled, RBAC uses `user-authz:cluster-admin` plus an additional ClusterRole; with `user-authz` disabled, the group is bound to the built-in `cluster-admin` role. |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for kubeadm internals (join, renewal). The group is bound to the built-in wildcard `cluster-admin` role. |
 | `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (`system:masters` group) | Break-glass emergency credential. Bypasses RBAC entirely. Restrict access to this file to trusted recovery scenarios. |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Used by kube-controller-manager. |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Used by kube-scheduler. |
@@ -720,9 +720,7 @@ The control-plane-manager module maintains several kubeconfig files on master no
 
 Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the RBAC binding objects for `kubeadm:cluster-admins`.
 
-When the [user-authz](/modules/user-authz/) module is **disabled**, Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
-
-When **user-authz** is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second RBAC binding adds the ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
+Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (the same effective model as a plain kubeadm cluster without extra RBAC), regardless of whether the [user-authz](/modules/user-authz/) module is enabled. For full unrestricted access that also bypasses RBAC, use `super-admin.conf`.
 
 ### Recommended admin access
 
