@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -66,7 +67,11 @@ type MetricsReconciler struct {
 	register.Base
 }
 
-func (r *MetricsReconciler) SetupWatches(_ register.Watcher) {}
+func (r *MetricsReconciler) SetupWatches(w register.Watcher) {
+	w.WithEventFilter(predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetLabels()["app"] == "caps-controller"
+	}))
+}
 
 func (r *MetricsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
