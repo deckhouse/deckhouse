@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -153,7 +154,7 @@ func PrepareBashibleBundle(
 //
 // controlPlaneEndpoint is the address that will be added to the apiserver
 // certificate SAN list and used in kubeconfigs as the API server URL.
-func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig) error {
+func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, cfg *controlplane.TemplateConfig) error {
 	if templateController == nil {
 		return fmt.Errorf("templateController is nil")
 	}
@@ -164,7 +165,7 @@ func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEn
 // generatePKIArtifacts writes PKI and kubeconfigs for the local
 // control-plane node into artifactsDir. The function is decoupled from the
 // template Controller for testability.
-func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig, artifactsDir string) error {
+func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *controlplane.TemplateConfig, artifactsDir string) error {
 	if nodeName == "" {
 		return fmt.Errorf("nodeName is empty")
 	}
@@ -228,7 +229,7 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	return nil
 }
 
-func PrepareControlPlaneManifests(templateController *Controller, cfg *config.ControlPlaneTemplateConfig, globalOptions *options.GlobalOptions) error {
+func PrepareControlPlaneManifests(templateController *Controller, cfg *controlplane.TemplateConfig, globalOptions *options.GlobalOptions) error {
 	saveInfo := saveFromTo{
 		from: filepath.Join(globalOptions.CandiDir, "control-plane"),
 		to:   filepath.Join(bashibleDir, "control-plane"),
