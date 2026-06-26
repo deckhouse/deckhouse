@@ -10,7 +10,7 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 - Multi-node Kubernetes cluster (minimum 3 nodes including master)
 - Descheduler pre-installed in the `d8-descheduler` namespace (with the Deckhouse patch applied)
-- Chainsaw CLI installed. See `../../E2E.md` for instructions.
+- Chainsaw CLI installed. See `../../README.md` for instructions.
 
 ## Why d8-descheduler Namespace
 
@@ -18,21 +18,21 @@ The test needs to verify that pods in `d8-*` namespaces are protected from evict
 
 ## Test Steps
 
-| Step | Name | Description |
-|------|------|-------------|
-| 1 | `assert-descheduler-ready` | Asserts descheduler deployment exists and has ready replicas |
-| 2 | `check-minimum-nodes` | Verifies cluster has at least 2 worker nodes |
-| 3 | `create-protected-workload` | Creates Deployment (5 replicas) in d8-descheduler namespace (cleanup deletes it) |
-| 4 | `wait-protected-deployment-ready` | Waits for protected Deployment Available condition and 5 ready replicas |
-| 5 | `create-regular-workload` | Selects a worker node and creates 5 regular pods in the test namespace |
-| 6 | `wait-regular-pods-ready` | Waits for all regular pods (by label selector) to be Ready |
-| 7 | `apply-descheduler-cr` | Applies Descheduler CR with LowNodeUtilization strategy (cleanup deletes CR) |
-| 8 | `assert-configmap-updated` | Asserts descheduler policy ConfigMap contains the new profile (native assert) |
-| 9 | `wait-descheduler-ready` | Waits for descheduler deployment Available condition (native wait) |
-| 10 | `wait-for-descheduler-cycle` | Polls descheduler logs for LowNodeUtilization execution |
-| 11 | `verify-protected-deployment-not-evicted` | Asserts protected Deployment still has 5 ready replicas |
-| 12 | `verify-no-evictions-in-protected-namespace` | Asserts zero eviction events for protected pods in d8-descheduler |
-| 13 | `verify-namespace-filtering-logs` | Checks descheduler logs for namespace filtering messages |
+| Step | Name                                         | Description                                                                      |
+| ---- | -------------------------------------------- | -------------------------------------------------------------------------------- |
+| 1    | `assert-descheduler-ready`                   | Asserts descheduler deployment exists and has ready replicas                     |
+| 2    | `check-minimum-nodes`                        | Verifies cluster has at least 2 worker nodes                                     |
+| 3    | `create-protected-workload`                  | Creates Deployment (5 replicas) in d8-descheduler namespace (cleanup deletes it) |
+| 4    | `wait-protected-deployment-ready`            | Waits for protected Deployment Available condition and 5 ready replicas          |
+| 5    | `create-regular-workload`                    | Selects a worker node and creates 5 regular pods in the test namespace           |
+| 6    | `wait-regular-pods-ready`                    | Waits for all regular pods (by label selector) to be Ready                       |
+| 7    | `apply-descheduler-cr`                       | Applies Descheduler CR with LowNodeUtilization strategy (cleanup deletes CR)     |
+| 8    | `assert-configmap-updated`                   | Asserts descheduler policy ConfigMap contains the new profile (native assert)    |
+| 9    | `wait-descheduler-ready`                     | Waits for descheduler deployment Available condition (native wait)               |
+| 10   | `wait-for-descheduler-cycle`                 | Polls descheduler logs for LowNodeUtilization execution                          |
+| 11   | `verify-protected-deployment-not-evicted`    | Asserts protected Deployment still has 5 ready replicas                          |
+| 12   | `verify-no-evictions-in-protected-namespace` | Asserts zero eviction events for protected pods in d8-descheduler                |
+| 13   | `verify-namespace-filtering-logs`            | Checks descheduler logs for namespace filtering messages                         |
 
 **Note:** The workloads are created BEFORE the descheduler CR to ensure pods are stable before eviction starts.
 
@@ -40,11 +40,11 @@ The test needs to verify that pods in `d8-*` namespaces are protected from evict
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `manifests/descheduler-cr.yaml` | Descheduler CR with LowNodeUtilization strategy and tuned thresholds |
-| `manifests/protected-deployment.yaml` | Deployment with 5 pause pod replicas in d8-descheduler namespace |
-| `manifests/regular-pods.yaml` | Template with 5 pause pods in the test namespace (uses `($targetNode)` binding) |
+| File                                  | Purpose                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------- |
+| `manifests/descheduler-cr.yaml`       | Descheduler CR with LowNodeUtilization strategy and tuned thresholds            |
+| `manifests/protected-deployment.yaml` | Deployment with 5 pause pod replicas in d8-descheduler namespace                |
+| `manifests/regular-pods.yaml`         | Template with 5 pause pods in the test namespace (uses `($targetNode)` binding) |
 
 ## Policy Config
 

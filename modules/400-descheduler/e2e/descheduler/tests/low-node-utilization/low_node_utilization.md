@@ -10,32 +10,32 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 - Multi-node Kubernetes cluster (minimum 3 nodes including master)
 - Descheduler pre-installed in the `d8-descheduler` namespace
-- Chainsaw CLI installed. See `../../E2E.md` for instructions.
+- Chainsaw CLI installed. See `../../README.md` for instructions.
 
 ## Test Steps
 
-| Step | Name | Description |
-|------|------|-------------|
-| 1 | `assert-descheduler-ready` | Asserts descheduler deployment exists and has ready replicas |
-| 2 | `check-minimum-nodes` | Verifies cluster has at least 2 worker nodes |
-| 3 | `create-imbalanced-workload` | Selects a worker node, cordons others, creates Deployment (cleanup uncordons) |
-| 4 | `wait-deployment-ready` | Waits for Deployment Available condition and 10 ready replicas |
-| 5 | `assert-pods-on-target-node` | Verifies all pods are concentrated on one node |
-| 6 | `uncordon-nodes` | Uncordons all worker nodes so redistribution is possible |
-| 7 | `apply-descheduler-cr` | Applies Descheduler CR with LowNodeUtilization strategy (cleanup deletes CR) |
-| 8 | `assert-configmap-updated` | Asserts descheduler policy ConfigMap contains the new profile (native assert) |
-| 9 | `wait-descheduler-ready` | Waits for descheduler deployment Available condition (native wait) |
-| 10 | `wait-for-descheduler-cycle` | Polls descheduler logs for LowNodeUtilization plugin execution |
-| 11 | `verify-pod-redistribution` | Verifies pods are redistributed across at least 2 nodes |
+| Step | Name                         | Description                                                                   |
+| ---- | ---------------------------- | ----------------------------------------------------------------------------- |
+| 1    | `assert-descheduler-ready`   | Asserts descheduler deployment exists and has ready replicas                  |
+| 2    | `check-minimum-nodes`        | Verifies cluster has at least 2 worker nodes                                  |
+| 3    | `create-imbalanced-workload` | Selects a worker node, cordons others, creates Deployment (cleanup uncordons) |
+| 4    | `wait-deployment-ready`      | Waits for Deployment Available condition and 10 ready replicas                |
+| 5    | `assert-pods-on-target-node` | Verifies all pods are concentrated on one node                                |
+| 6    | `uncordon-nodes`             | Uncordons all worker nodes so redistribution is possible                      |
+| 7    | `apply-descheduler-cr`       | Applies Descheduler CR with LowNodeUtilization strategy (cleanup deletes CR)  |
+| 8    | `assert-configmap-updated`   | Asserts descheduler policy ConfigMap contains the new profile (native assert) |
+| 9    | `wait-descheduler-ready`     | Waits for descheduler deployment Available condition (native wait)            |
+| 10   | `wait-for-descheduler-cycle` | Polls descheduler logs for LowNodeUtilization plugin execution                |
+| 11   | `verify-pod-redistribution`  | Verifies pods are redistributed across at least 2 nodes                       |
 
 **Cleanup:** Step 3 cleanup uncordons all nodes. Step 7 cleanup deletes the Descheduler CR. Test namespace (with the Deployment) is auto-deleted by Chainsaw.
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `manifests/descheduler-cr.yaml` | Descheduler CR with LowNodeUtilization strategy and tuned thresholds |
-| `manifests/pause-deployment.yaml` | Deployment with 10 pause pod replicas (100m CPU, 64Mi memory each) |
+| File                              | Purpose                                                              |
+| --------------------------------- | -------------------------------------------------------------------- |
+| `manifests/descheduler-cr.yaml`   | Descheduler CR with LowNodeUtilization strategy and tuned thresholds |
+| `manifests/pause-deployment.yaml` | Deployment with 10 pause pod replicas (100m CPU, 64Mi memory each)   |
 
 ## Node Requirements
 

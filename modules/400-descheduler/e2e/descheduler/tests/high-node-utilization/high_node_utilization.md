@@ -10,21 +10,21 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 - Multi-node Kubernetes cluster (minimum 3 nodes including master)
 - Descheduler pre-installed in the `d8-descheduler` namespace
-- Chainsaw CLI installed. See `../../E2E.md` for instructions.
+- Chainsaw CLI installed. See `../../README.md` for instructions.
 
 ## Test Steps
 
-| Step | Name | Description |
-|------|------|-------------|
-| 1 | `assert-descheduler-ready` | Asserts descheduler deployment exists and has ready replicas |
-| 2 | `check-minimum-nodes` | Verifies cluster has at least 2 worker nodes |
-| 3 | `create-spread-workload` | Creates Deployment with topology spread across worker nodes |
-| 4 | `wait-deployment-ready` | Waits for Deployment Available condition and 3 ready replicas |
-| 5 | `assert-pods-spread` | Verifies pods are distributed across at least 2 nodes |
-| 6 | `apply-descheduler-cr` | Applies Descheduler CR with HighNodeUtilization strategy (cleanup deletes CR) |
-| 7 | `assert-configmap-updated` | Asserts descheduler policy ConfigMap contains the new profile (native assert) |
-| 8 | `wait-descheduler-ready` | Waits for descheduler deployment Available condition (native wait) |
-| 9 | `wait-for-descheduler-cycle` | Polls descheduler logs for HighNodeUtilization plugin execution |
+| Step | Name                         | Description                                                                   |
+| ---- | ---------------------------- | ----------------------------------------------------------------------------- |
+| 1    | `assert-descheduler-ready`   | Asserts descheduler deployment exists and has ready replicas                  |
+| 2    | `check-minimum-nodes`        | Verifies cluster has at least 2 worker nodes                                  |
+| 3    | `create-spread-workload`     | Creates Deployment with topology spread across worker nodes                   |
+| 4    | `wait-deployment-ready`      | Waits for Deployment Available condition and 3 ready replicas                 |
+| 5    | `assert-pods-spread`         | Verifies pods are distributed across at least 2 nodes                         |
+| 6    | `apply-descheduler-cr`       | Applies Descheduler CR with HighNodeUtilization strategy (cleanup deletes CR) |
+| 7    | `assert-configmap-updated`   | Asserts descheduler policy ConfigMap contains the new profile (native assert) |
+| 8    | `wait-descheduler-ready`     | Waits for descheduler deployment Available condition (native wait)            |
+| 9    | `wait-for-descheduler-cycle` | Polls descheduler logs for HighNodeUtilization plugin execution               |
 
 **Note:** The workload is created BEFORE the descheduler CR to ensure pods are stable before eviction starts.
 
@@ -32,10 +32,10 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `manifests/descheduler-cr.yaml` | Descheduler CR with HighNodeUtilization strategy and tuned thresholds |
-| `manifests/spread-deployment.yaml` | Deployment with 3 pause pod replicas and topology spread constraints |
+| File                               | Purpose                                                               |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| `manifests/descheduler-cr.yaml`    | Descheduler CR with HighNodeUtilization strategy and tuned thresholds |
+| `manifests/spread-deployment.yaml` | Deployment with 3 pause pod replicas and topology spread constraints  |
 
 ## Policy Config
 
