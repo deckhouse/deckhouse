@@ -207,14 +207,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/340-monitoring-ping/hooks
-  to: /deckhouse/modules/340-monitoring-ping/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/400-descheduler/hooks
   to: /deckhouse/modules/400-descheduler/hooks
   excludePaths:

@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
@@ -83,6 +84,11 @@ func (p *BashiblePipelineParams) errIsNil(c string) error {
 	return p.err(fmt.Sprintf("%s is nil", c))
 }
 
+type ModulePreparator interface {
+	PrepareModule(ctx context.Context) error
+	Module() string
+}
+
 func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) error {
 	ctx, span := telemetry.StartSpan(ctx, "RunBashiblePipeline")
 	defer span.End()
@@ -97,6 +103,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	loggerProvider := params.LoggerProvider
 	devicePath := params.DevicePath
 	globalOpts := params.GlobalOpts
+	logger := params.LoggerProvider()
 
 	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
 	if err := depsChecker.Check(ctx); err != nil {
@@ -175,21 +182,27 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	nodeName, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-name")
+	nodeInfo, err := bashible.ReadNodeInfo(ctx)
 	if err != nil {
-		return fmt.Errorf("read discovered node name: %w", err)
+		return err
 	}
 
-	discoveredNodeIP, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-ip")
-	if err != nil {
-		return fmt.Errorf("read discovered node IP: %w", err)
-	}
+	modulesPreparators, controlPlanePreparator := getModulesPreparators(params)
 
-	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, globalOpts); err != nil {
+	if err := PrepareControlPlaneArtifacts(nodeInfo, controlPlanePreparator, templateController, globalOpts); err != nil {
 		return err
 	}
 
 	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseNodePreparation)
+
+	for _, p := range modulesPreparators {
+		logger.DebugF("Prepare module %s", p.Module())
+		if err := p.PrepareModule(ctx); err != nil {
+			return err
+		}
+	}
+
+	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseModulesPreparation)
 
 	if err := bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
@@ -201,6 +214,23 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseExecuteBashibleBundle)
 	return nil
+}
+
+func getModulesPreparators(params *BashiblePipelineParams) ([]ModulePreparator, *controlplane.BootstrapPreparator) {
+	controlPlaneSettings := controlplane.NewSettingsExtractor(
+		params.MetaConfig,
+		config.NewSchemaStore(params.GlobalOpts),
+		config.GetEdition(),
+		params.LoggerProvider,
+	)
+
+	cp := controlplane.NewBootstrapPreparator(
+		controlPlaneSettings,
+		params.Node,
+		params.LoggerProvider,
+	)
+
+	return []ModulePreparator{cp}, cp
 }
 
 func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
@@ -280,16 +310,20 @@ func PrepareBashibleBundle(
 	})
 }
 
+// PrepareControlPlaneArtifacts
+// TODO move to github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane
 func PrepareControlPlaneArtifacts(
-	nodeName, nodeIP string,
-	metaConfig *config.MetaConfig,
+	nodeInfo *dhbashible.NodeInfo,
+	preparator *controlplane.BootstrapPreparator,
 	controller *template.Controller,
 	globalOpts *options.GlobalOptions,
 ) error {
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
+		nodeName, nodeIP := nodeInfo.NodeName, nodeInfo.NodeIP
+
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
 
-		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneTemplateCfg, err := preparator.TemplateConfigForBootstrap(nodeIP)
 		if err != nil {
 			return fmt.Errorf("get control-plane template data: %w", err)
 		}
@@ -298,11 +332,11 @@ func PrepareControlPlaneArtifacts(
 		// control-plane endpoint that goes into the apiserver SAN list.
 		// Multi-master installations re-issue certificates later via
 		// control-plane-manager once additional master endpoints are known.
-		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneData); err != nil {
+		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneTemplateCfg); err != nil {
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, globalOpts); err != nil {
+		if err := template.PrepareControlPlaneManifests(controller, controlPlaneTemplateCfg, globalOpts); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 

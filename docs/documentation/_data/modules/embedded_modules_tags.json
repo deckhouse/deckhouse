@@ -113,10 +113,6 @@
     "web ui",
     "ssdlc"
   ],
-  "extended-monitoring": [
-    "observability",
-    "ssdlc"
-  ],
   "ingress-nginx": [
     "network",
     "balancing",

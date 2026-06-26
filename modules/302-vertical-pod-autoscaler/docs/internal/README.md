@@ -12,10 +12,10 @@ Limits for containers are not set.
 
 When writing a new module, the following rules must be observed:
 
-* For any deployment, statefulset or daemonset, there must be a corresponding VPA resource that describes the resources for all containers used in the controller.
-* The description of the VPA resource should be in a separate file `vpa.yaml`, which is located in the folder with the module's templates.
-* The `minAllowed` container resources are described using the helm function at the beginning of the `vpa.yaml` file.
-* For `maxAllowed` resources the helm function is optional.
+- For any deployment, statefulset or daemonset, there must be a corresponding VPA resource that describes the resources for all containers used in the controller.
+- The description of the VPA resource should be in a separate file `vpa.yaml`, which is located in the folder with the module's templates.
+- The `minAllowed` container resources are described using the helm function at the beginning of the `vpa.yaml` file.
+- For `maxAllowed` resources the helm function is optional.
 
 > **Note!** The name for helm-functions with `minAllowed`-resources must be unique within the module.
 
@@ -40,7 +40,7 @@ spec:
     kind: DaemonSet
     name: speaker
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: speaker
@@ -73,7 +73,7 @@ spec:
     metadata:
       labels:
         app: speaker
-    spec: 
+    spec:
     containers:
       - name: speaker
         resources:
@@ -97,8 +97,7 @@ If Pods should be present on every node, add label `workload-resource-policy.dec
 
 ## TODO
 
-* At the moment container resources is set with values from `minAllowed`. It leads to possible node overprovision. Perhaps it would be more correct to use `maxAllowed` values.
-* Values for `minAllowed` and `maxAllowed` set manually, perhaps that we need to determine one thing and calculate the other. For example, determine `minAllowed` and set `maxAllowed` as `minAllowed` X 2.
-* Perhaps we should think of another mechanism for setting values `minAllowed`, for example, a separate file in which the yaml-structure will be collected data on the resources of all containers of all modules.
-* [Issue #2084](https://github.com/deckhouse/deckhouse/issues/2084).
-
+- At the moment container resources is set with values from `minAllowed`. It leads to possible node overprovision. Perhaps it would be more correct to use `maxAllowed` values.
+- Values for `minAllowed` and `maxAllowed` set manually, perhaps that we need to determine one thing and calculate the other. For example, determine `minAllowed` and set `maxAllowed` as `minAllowed` X 2.
+- Perhaps we should think of another mechanism for setting values `minAllowed`, for example, a separate file in which the yaml-structure will be collected data on the resources of all containers of all modules.
+- [Issue #2084](https://github.com/deckhouse/deckhouse/issues/2084).

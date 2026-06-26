@@ -256,3 +256,47 @@ func TestDefaultClient_ListTags(t *testing.T) {
 	_, err = c.ListTags(context.Background(), testLogger{}, cfg, "unknown-image")
 	require.ErrorIs(t, err, ErrPackageNotFound)
 }
+
+func TestDefaultClient_GetRawManifest(t *testing.T) {
+	host := newTestRegistry(t)
+
+	c := &DefaultClient{}
+	cfg := &ClientConfig{Repository: host + "/deckhouse", Scheme: "http"}
+
+	// Single image: the raw manifest is returned verbatim, annotations and all, with
+	// no layers pulled.
+	img, err := random.Image(256, 1)
+	require.NoError(t, err)
+	img, ok := mutate.Annotations(img, map[string]string{"contract": "Zm9v"}).(v1.Image)
+	require.True(t, ok)
+	pushImage(t, host, img, "deckhouse/deckhouse-cli/plugins/single", "v1.0.0")
+
+	raw, mediaType, err := c.GetRawManifest(context.Background(), testLogger{}, cfg, "deckhouse-cli/plugins/single", "v1.0.0")
+	require.NoError(t, err)
+	assert.NotEmpty(t, mediaType)
+	assert.Contains(t, string(raw), "Zm9v")
+
+	// Multi-platform index: the contract is a top-level index annotation. The raw
+	// index manifest is returned as-is - the proxy never descends into a child.
+	amd64, err := random.Image(256, 1)
+	require.NoError(t, err)
+	arm64, err := random.Image(256, 1)
+	require.NoError(t, err)
+	idx := mutate.AppendManifests(empty.Index,
+		mutate.IndexAddendum{Add: amd64, Descriptor: v1.Descriptor{Platform: &v1.Platform{OS: "linux", Architecture: "amd64"}}},
+		mutate.IndexAddendum{Add: arm64, Descriptor: v1.Descriptor{Platform: &v1.Platform{OS: "linux", Architecture: "arm64"}}},
+	)
+	idx, ok = mutate.Annotations(idx, map[string]string{"contract": "YmFy"}).(v1.ImageIndex)
+	require.True(t, ok)
+	ref, err := name.NewTag(host+"/deckhouse/deckhouse-cli/plugins/multi:v2.0.0", name.WeakValidation)
+	require.NoError(t, err)
+	require.NoError(t, v1remote.WriteIndex(ref, idx))
+
+	raw, _, err = c.GetRawManifest(context.Background(), testLogger{}, cfg, "deckhouse-cli/plugins/multi", "v2.0.0")
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), "YmFy")
+
+	// Missing tag -> not found.
+	_, _, err = c.GetRawManifest(context.Background(), testLogger{}, cfg, "deckhouse-cli/plugins/single", "v9.9.9")
+	require.ErrorIs(t, err, ErrPackageNotFound)
+}
