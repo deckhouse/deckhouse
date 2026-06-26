@@ -567,9 +567,7 @@ d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tie
 
 If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to take the following steps:
 
-1. Identify the master nodes running etcd:
-
-   On **each master node** (from the list of the etcd cluster members obtained earlier), find the line with `--quota-backend-bytes` in the etcd pod manifest at `/etc/kubernetes/manifests/etcd.yaml` and double the value. If there is no such line, add one, for example: `- --quota-backend-bytes=8589934592`. This sets the limit to 8 GB.
+1. On **each master node** (from the list of the etcd cluster members obtained earlier), find the line with `--quota-backend-bytes` in the etcd pod manifest at `/etc/kubernetes/manifests/etcd.yaml` and double the value. If there is no such line, add one, for example: `- --quota-backend-bytes=8589934592`. This sets the limit to 8 GB.
 
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
