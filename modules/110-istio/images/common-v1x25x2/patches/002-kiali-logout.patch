@@ -1,21 +1,80 @@
+diff --git a/frontend/src/app/App.tsx b/frontend/src/app/App.tsx
+index 05b7026..4bb4713 100644
+--- a/frontend/src/app/App.tsx
++++ b/frontend/src/app/App.tsx
+@@ -11,6 +11,8 @@ import { InitializingScreen } from './InitializingScreen';
+ import { StartupInitializer } from './StartupInitializer';
+ import { LoginPage } from '../pages/Login/LoginPage';
+ import { LoginActions } from '../actions/LoginActions';
++import { authenticationConfig } from '../config/AuthenticationConfig';
++import { AuthStrategy } from '../types/Auth';
+ 
+ Visibility.change((_e, state) => {
+   // There are 3 states, visible, hidden and prerender, consider prerender as hidden.
+@@ -73,8 +75,11 @@ axios.interceptors.response.use(
+     // The response was rejected, turn off the spinning
+     decrementLoadingCounter();
+ 
+-    if (error.response.status === 401) {
++    if (error.response && error.response.status === 401) {
+       store.dispatch(LoginActions.sessionExpired());
++      if (authenticationConfig.strategy === AuthStrategy.header) {
++        window.location.replace();
++      }
+     }
+ 
+     return Promise.reject(error);
 diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
-index 1111111..2222222 100644
+index d244f26..dc4e215 100644
 --- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 +++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
-@@ -105,6 +105,12 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -51,6 +51,14 @@ const dropdownStyle = kialiStyle({
+   paddingRight: 0
+ });
+ 
++
++const DEX_LOGOUT_STORAGE_KEY = 'kiali-dex-logout';
++
++const headerAuthLogoutURL = (): string => {
++  const redirectURL = encodeURIComponent(`${window.location.origin}/`);
++  return `/logout?rd=${redirectURL}`;
++};
++
+ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+   constructor(props: UserProps) {
+     super(props);
+@@ -72,6 +80,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+       this.setState({ timeCountDownSeconds: this.timeLeft() / MILLISECONDS });
+     }, 1000);
+ 
++    window.addEventListener('storage', this.handleStorageLogout);
++
+     this.setState({
+       checkSessionTimerId: checkSessionTimerId,
+       timeLeftTimerId: timeLeftTimerId
+@@ -86,6 +96,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+     if (this.state.timeLeftTimerId) {
+       clearInterval(this.state.timeLeftTimerId);
+     }
++
++    window.removeEventListener('storage', this.handleStorageLogout);
+   }
+ 
+   timeLeft = (): number => {
+@@ -105,6 +117,12 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
    };
  
    handleLogout = (): void => {
 +    if (authenticationConfig.strategy === AuthStrategy.header) {
-+      const redirectURL = encodeURIComponent(`${window.location.origin}/`);
-+      window.location.assign(`/logout?rd=${redirectURL}`);
++      localStorage.setItem(DEX_LOGOUT_STORAGE_KEY, String(Date.now()));
++      window.location.assign(headerAuthLogoutURL());
 +      return;
 +    }
 +
      if (authenticationConfig.logoutEndpoint) {
        API.logout()
          .then(_ => {
-@@ -143,8 +149,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -143,8 +161,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      const clusterIsInSessionInfo = (cluster: string): boolean =>
        this.props.session?.clusterInfo?.[cluster] !== undefined;
  
