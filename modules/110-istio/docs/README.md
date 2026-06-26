@@ -273,9 +273,9 @@ To establish a federation, you must:
 
 - Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
   - After successful auto-negotiation between clusters, the status of `IstioFederation` resource will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
-- Add the `federation.istio.deckhouse.io/public-service: ""` label to each `Service` resource that is considered public within the federation.
-  - In the other federation clusters, corresponding `ServiceEntry` and `DestinationRule` resources will be created for each such `Service`, leading to the `ingressgateway` of the original cluster.
-  - The label value must be empty. You do not need to label other resources, such as `Deployment`, `Pod`, or `VirtualService`, to publish a service in the federation.
+- Add the `federation.istio.deckhouse.io/public-service: ""` label to each Service that is considered public within the federation.
+  - In the other federation clusters, corresponding `ServiceEntry` and `DestinationRule` resources will be created for each such Service, leading to the `ingressgateway` of the original cluster.
+  - The label value must be empty. You do not need to label other resources, such as Deployment, Pod, or VirtualService, to publish a service in the federation.
 
 {% alert level="warning" %}
 Federation publishing does not support `ExternalName` services, services without `.spec.ports`, or services with ports missing the `name` field.
@@ -319,7 +319,7 @@ d8 k get istiofederation <name> -o jsonpath='{.status.metadataCache.private.publ
 d8 k -n d8-istio get serviceentry,destinationrule
 ```
 
-In the `IstioFederation` `status.conditions`, the `PublicMetadataExchangeReady`, `PrivateMetadataExchangeReady`, and `DataplaneConnectionReady` conditions should become `True`. If metadata exchange does not work, check the `D8IstioFederationMetadataEndpointDoesntWork` alert and the availability of the remote cluster `spec.metadataEndpoint`.
+In the `IstioFederation` `status.conditions`, the `PublicMetadataExchangeReady`, `PrivateMetadataExchangeReady`, and `DataplaneConnectionReady` conditions should become `True`. If metadata exchange does not work, check the [`D8IstioFederationMetadataEndpointDoesntWork`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istiofederationmetadataendpointdoesntwork) alert and the availability of the remote cluster `spec.metadataEndpoint`.
 
 ### Multicluster
 

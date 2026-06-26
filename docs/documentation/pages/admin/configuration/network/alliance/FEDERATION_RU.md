@@ -54,13 +54,15 @@ lang: ru
 
 * В каждом кластере создать набор ресурсов [IstioFederation](/modules/istio/cr.html#istiofederation) для описания других кластеров.
   * После успешного автосогласования между кластерами в ресурсе IstioFederation будут записаны необходимые служебные данные в `status.metadataCache.public` и `status.metadataCache.private`.
-* Каждый ресурс (Service), который считается публичным в рамках федерации, пометить лейблом `federation.istio.deckhouse.io/public-service: ""`.
-  * В остальных кластерах из состава федерации для каждого такого ресурса Service создадутся соответствующие ServiceEntry и DestinationRule, указывающие на `ingressgateway` исходного кластера.
+* Каждый сервис, который считается публичным в рамках федерации, пометить лейблом `federation.istio.deckhouse.io/public-service: ""`.
+  * В остальных кластерах из состава федерации для каждого такого сервиса создадутся соответствующие `ServiceEntry` и `DestinationRule`, указывающие на `ingressgateway` исходного кластера.
   * Лейбл должен быть с пустым значением. Другие ресурсы, например Deployment, Pod или VirtualService, для публикации сервиса в федерации помечать не нужно.
 
-> **Важно**. Для публикации в федерации не поддерживаются сервисы типа ExternalName, сервисы без `.spec.ports` и сервисы с портами без поля `name`.
->
-> Имя каждого порта должно начинаться с поддерживаемого Istio префикса: `http`, `http2`, `https`, `tcp`, `tls`, `grpc` или `grpc-web`. По имени порта модуль определяет протокол в генерируемом ServiceEntry; если префикс не распознан, порт будет обработан как TCP.
+{% alert level="warning" %}
+Для публикации в федерации не поддерживаются сервисы типа `ExternalName`, сервисы без `.spec.ports` и сервисы с портами без поля `name`.
+
+Имя каждого порта должно начинаться с поддерживаемого Istio-префикса: `http`, `http2`, `https`, `tcp`, `tls`, `grpc` или `grpc-web`. По имени порта модуль определяет протокол в генерируемом `ServiceEntry`; если префикс не распознан, порт будет обработан как TCP.
+{% endalert %}
 
 Пример публичного сервиса:
 
@@ -87,7 +89,7 @@ spec:
 # Проверить, какие Service помечены как публичные в локальном кластере.
 d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
 
-# Проверить состояние обмена метаданными с удаленными кластерами.
+# Проверить состояние обмена метаданными с удалёнными кластерами.
 d8 k get istiofederation
 d8 k get istiofederation <name> -o jsonpath='{.status.conditions}'
 
@@ -98,7 +100,7 @@ d8 k get istiofederation <name> -o jsonpath='{.status.metadataCache.private.publ
 d8 k -n d8-istio get serviceentry,destinationrule
 ```
 
-В `status.conditions` ресурса IstioFederation должны перейти в `True` условия `PublicMetadataExchangeReady`, `PrivateMetadataExchangeReady` и `DataplaneConnectionReady`. Если обмен метаданными не работает, проверьте alert `D8IstioFederationMetadataEndpointDoesntWork` и доступность `spec.metadataEndpoint` удаленного кластера.
+В `status.conditions` ресурса IstioFederation должны перейти в `True` условия `PublicMetadataExchangeReady`, `PrivateMetadataExchangeReady` и `DataplaneConnectionReady`. Если обмен метаданными не работает, проверьте [алерт `D8IstioFederationMetadataEndpointDoesntWork`](../../../../reference/alerts.html#istio-d8istiofederationmetadataendpointdoesntwork) и доступность параметра `spec.metadataEndpoint` удалённого кластера.
 
 <!-- перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#%D1%83%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%D0%BE-%D1%84%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B8%D0%B7-%D0%B4%D0%B2%D1%83%D1%85-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%BE%D0%B2-%D1%81-%D0%BF%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%D1%8E-custom-resource-istiofederation -->
 
