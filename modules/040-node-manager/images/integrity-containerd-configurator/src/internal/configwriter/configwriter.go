@@ -17,6 +17,7 @@ limitations under the License.
 package configwriter
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -121,6 +122,13 @@ func (w *Writer) Apply(config *DesiredConfig) error {
 		return fmt.Errorf("render ns.toml: %w", err)
 	}
 	nsTomlPath := filepath.Join(w.ConfigDir, NsTomlFileName)
+	if existing, err := os.ReadFile(nsTomlPath); err == nil {
+		if bytes.Equal(existing, nsToml) {
+			return nil
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("read ns.toml: %w", err)
+	}
 	if err := pkiutil.WriteFileAtomically(nsTomlPath, nsToml, 0o644); err != nil {
 		return fmt.Errorf("write ns.toml: %w", err)
 	}
