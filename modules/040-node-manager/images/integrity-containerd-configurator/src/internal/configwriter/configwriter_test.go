@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -39,12 +40,14 @@ func TestAggregatePolicies(t *testing.T) {
 		name     string
 		policies []deckhousev1alpha1.ContainerdIntegrityPolicy
 		want     *DesiredConfig
-		wantErr  string
 	}{
 		{
 			name:     "no policies",
 			policies: nil,
-			want:     nil,
+			want: &DesiredConfig{
+				Namespaces: []string{},
+				CACerts:    []string{},
+			},
 		},
 		{
 			name: "single policy",
@@ -103,14 +106,42 @@ func TestAggregatePolicies(t *testing.T) {
 			},
 		},
 		{
-			name: "empty CA",
+			name: "skip policy with empty CA",
 			policies: []deckhousev1alpha1.ContainerdIntegrityPolicy{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "empty-ca"},
 					Spec:       deckhousev1alpha1.ContainerdIntegrityPolicySpec{CA: "   "},
+					Status: deckhousev1alpha1.ContainerdIntegrityPolicyStatus{
+						ProtectedNamespaces: []string{"skipped-ns"},
+					},
 				},
 			},
-			wantErr: "empty spec.ca",
+			want: &DesiredConfig{
+				Namespaces: []string{},
+				CACerts:    []string{},
+			},
+		},
+		{
+			name: "skip empty CA and apply valid policy",
+			policies: []deckhousev1alpha1.ContainerdIntegrityPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "empty-ca"},
+					Spec:       deckhousev1alpha1.ContainerdIntegrityPolicySpec{CA: "   "},
+					Status: deckhousev1alpha1.ContainerdIntegrityPolicyStatus{
+						ProtectedNamespaces: []string{"skipped-ns"},
+					},
+				},
+				{
+					Spec: deckhousev1alpha1.ContainerdIntegrityPolicySpec{CA: ca},
+					Status: deckhousev1alpha1.ContainerdIntegrityPolicyStatus{
+						ProtectedNamespaces: []string{"my-ns"},
+					},
+				},
+			},
+			want: &DesiredConfig{
+				Namespaces: []string{"my-ns"},
+				CACerts:    []string{base64.StdEncoding.EncodeToString([]byte(ca))},
+			},
 		},
 	}
 
@@ -118,14 +149,7 @@ func TestAggregatePolicies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := AggregatePolicies(tt.policies)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-				return
-			}
-
-			require.NoError(t, err)
+			got := AggregatePolicies(logr.Discard(), tt.policies)
 			require.Equal(t, tt.want, got)
 		})
 	}
@@ -182,6 +206,11 @@ func TestWriterApplyAndRemove(t *testing.T) {
 	require.Equal(t, expected, restored)
 
 	require.NoError(t, writer.Apply(nil))
+	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
+	require.True(t, os.IsNotExist(err))
+
+	require.NoError(t, writer.Apply(config))
+	require.NoError(t, writer.Apply(&DesiredConfig{}))
 	_, err = os.Stat(filepath.Join(dir, NsTomlFileName))
 	require.True(t, os.IsNotExist(err))
 }
