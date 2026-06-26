@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/go-logr/logr"
 	//nolint: goimports
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 
@@ -57,9 +58,12 @@ func NewWriter(configDir string) *Writer {
 }
 
 // AggregatePolicies builds desired configuration from all policies.
-func AggregatePolicies(policies []deckhousev1alpha1.ContainerdIntegrityPolicy) (*DesiredConfig, error) {
+func AggregatePolicies(logger logr.Logger, policies []deckhousev1alpha1.ContainerdIntegrityPolicy) *DesiredConfig {
 	if len(policies) == 0 {
-		return nil, nil
+		return &DesiredConfig{
+			Namespaces: []string{},
+			CACerts:    []string{},
+		}
 	}
 
 	namespacesSet := make(map[string]struct{})
@@ -67,13 +71,15 @@ func AggregatePolicies(policies []deckhousev1alpha1.ContainerdIntegrityPolicy) (
 
 	for i := range policies {
 		policy := &policies[i]
-		for _, ns := range policy.Status.ProtectedNamespaces {
-			namespacesSet[ns] = struct{}{}
-		}
 
 		policyCA := strings.TrimSpace(policy.Spec.CA)
 		if policyCA == "" {
-			return nil, fmt.Errorf("policy %q has empty spec.ca", policy.Name)
+			logger.Info("Skipping policy with empty spec.ca", "policy", policy.Name)
+			continue
+		}
+
+		for _, ns := range policy.Status.ProtectedNamespaces {
+			namespacesSet[ns] = struct{}{}
 		}
 
 		caCertsSet[base64.StdEncoding.EncodeToString([]byte(policyCA))] = struct{}{}
@@ -94,7 +100,7 @@ func AggregatePolicies(policies []deckhousev1alpha1.ContainerdIntegrityPolicy) (
 	return &DesiredConfig{
 		Namespaces: namespaces,
 		CACerts:    caCerts,
-	}, nil
+	}
 }
 
 type nsTOML struct {
@@ -109,7 +115,7 @@ func RenderNsToml(cfg *DesiredConfig) ([]byte, error) {
 
 // Apply writes or removes configuration files on disk.
 func (w *Writer) Apply(config *DesiredConfig) error {
-	if config == nil {
+	if config == nil || (len(config.Namespaces) == 0 && len(config.CACerts) == 0) {
 		return w.removeConfig()
 	}
 

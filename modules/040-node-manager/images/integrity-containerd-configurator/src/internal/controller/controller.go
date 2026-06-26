@@ -57,17 +57,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, fmt.Errorf("list ContainerdIntegrityPolicies: %w", err)
 	}
 
-	desired, err := configwriter.AggregatePolicies(policyList.Items)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("aggregate policies: %w", err)
-	}
+	desired := configwriter.AggregatePolicies(logger, policyList.Items)
 
 	if err := r.Writer.Apply(desired); err != nil {
 		return reconcile.Result{}, fmt.Errorf("apply containerd integrity config: %w", err)
 	}
 
-	if desired == nil {
-		logger.Info("Removed containerd integrity config, no policies found")
+	if len(desired.Namespaces) == 0 {
+		logger.Info("Removed containerd integrity config, found no namespaces matching the policies")
 	} else {
 		logger.Info("Updated containerd integrity config", "namespaces", desired.Namespaces, "caCerts", len(desired.CACerts))
 	}
