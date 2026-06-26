@@ -123,7 +123,7 @@ docs/documentation/pages/architecture/   @voitenkov
 helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5
-tools/docs/                               @z9r5
+tools/docs/                              @z9r5
 /pkg/                                    @ldmonster
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
