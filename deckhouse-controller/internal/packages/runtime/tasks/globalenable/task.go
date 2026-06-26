@@ -76,11 +76,24 @@ func (t *task) Execute(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Execute")
 	defer span.End()
 
-	// DEBUG: temporary demo logging — remove before merge.
-	t.logger.Info("DEBUG globalenable: start", slog.Bool("hooks_initialized", t.pkg.HooksInitialized()))
+	// OnStartup hooks run exactly once, on the first enable, before bindings are
+	// wired — mirroring addon-operator. The "first run" is captured before
+	// InitializeHooks flips the initialized flag. BeforeAll runs on every
+	// (re)schedule.
+	firstRun := !t.pkg.HooksInitialized()
 
-	if !t.pkg.HooksInitialized() {
+	// DEBUG: temporary demo logging — remove before merge.
+	t.logger.Info("DEBUG globalenable: start", slog.Bool("first_run", firstRun))
+
+	if firstRun {
 		t.pkg.InitializeHooks()
+
+		t.logger.Info("DEBUG globalenable: running onStartup hooks",
+			slog.Int("count", len(t.pkg.GetHooksByBinding(shtypes.OnStartup))))
+		if err := t.pkg.RunHooksByBinding(ctx, shtypes.OnStartup); err != nil {
+			t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
+			return fmt.Errorf("run onStartup hooks: %w", err)
+		}
 	}
 
 	scheduleHooks := t.pkg.GetHooksByBinding(shtypes.Schedule)
@@ -95,13 +108,6 @@ func (t *task) Execute(ctx context.Context) error {
 	}
 	t.logger.Info("DEBUG globalenable: kubernetes bindings synced",
 		slog.Int("count", len(t.pkg.GetHooksByBinding(shtypes.OnKubernetesEvent))))
-
-	t.logger.Info("DEBUG globalenable: running onStartup hooks",
-		slog.Int("count", len(t.pkg.GetHooksByBinding(shtypes.OnStartup))))
-	if err := t.pkg.RunHooksByBinding(ctx, shtypes.OnStartup); err != nil {
-		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
-		return fmt.Errorf("run onStartup hooks: %w", err)
-	}
 
 	t.logger.Info("DEBUG globalenable: running beforeAll hooks",
 		slog.Int("count", len(t.pkg.GetHooksByBinding(addontypes.BeforeAll))))
