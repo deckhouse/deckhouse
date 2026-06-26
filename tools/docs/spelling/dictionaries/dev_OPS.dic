@@ -1,4 +1,4 @@
-2706
+2710
 1GB
 2GB
 5XX
@@ -2705,3 +2705,9 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
+ControlPlaneNode
+ControlPlaneOperation
+авторизующий
+мультимастерными
+одномастерными
+перезапускающий

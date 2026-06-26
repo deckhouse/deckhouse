@@ -897,40 +897,6 @@
       }
     },
     {
-      "title": "The extended-monitoring module",
-      "description": "Metrics for extended monitoring of the Deckhouse Kubernetes Platform cluster.",
-      "module": "extended-monitoring",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "extended-monitoring/",
-      "ru": {
-        "title": "Модуль extended-monitoring",
-        "description": "Метрики для расширенного мониторинга кластера Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "extended-monitoring",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "requirements": {
-          "modules": {
-            "prometheus": ">= 0.0.0"
-          }
-        },
-        "descriptions": {
-          "en": "Extends cluster monitoring capabilities with additional metrics exporters, which allow you to identify potential problems before they affect the operation of services.",
-          "ru": "Расширяет возможности мониторинга кластера за счёт дополнительных экспортеров метрик, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов."
-        },
-        "oss": []
-      }
-    },
-    {
       "title": "The ingress-nginx module",
       "description": "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using Ingress NGINX Controller.",
       "module": "ingress-nginx",
@@ -1493,43 +1459,6 @@
             "license": "Apache License 2.0"
           }
         ]
-      }
-    },
-    {
-      "title": "Monitoring the control plane",
-      "description": "Monitoring control plane components in the Deckhouse Kubernetes Platform cluster.",
-      "module": "monitoring-kubernetes-control-plane",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "monitoring-kubernetes-control-plane/",
-      "ru": {
-        "title": "Мониторинг control plane",
-        "description": "Мониторинг компонентов control plane кластера Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "monitoring-kubernetes-control-plane",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "requirements": {
-          "kubernetes": ">= 1.22.0",
-          "deckhouse": ">= 1.22.0",
-          "modules": {
-            "prometheus": ">= 0.0.0",
-            "control-plane-manager": ">= 0.0.0"
-          }
-        },
-        "descriptions": {
-          "en": "Monitors the Kubernetes control plane components. Safely scrapes metrics and provides basic monitoring rules for kube-apiserver, kube-controller-manager, kube-scheduler, and etcd.",
-          "ru": "Мониторит компоненты control plane Kubernetes. Организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга для kube-apiserver, kube-controller-manager, kube-scheduler и etcd."
-        },
-        "oss": []
       }
     },
     {

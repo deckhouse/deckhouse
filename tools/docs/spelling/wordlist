@@ -2704,3 +2704,9 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
+ControlPlaneNode
+ControlPlaneOperation
+авторизующий
+мультимастерными
+одномастерными
+перезапускающий

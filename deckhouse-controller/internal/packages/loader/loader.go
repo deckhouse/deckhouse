@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ettle/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -44,6 +45,10 @@ const (
 
 	// digestsFile is the JSON file mapping image names to their content-addressable digests.
 	digestsFile = "images_digests.json"
+
+	// embeddedDir is the directory, relative to the process working directory,
+	// that holds embedded modules and their shared images_digests.json.
+	embeddedDir = "modules"
 
 	// globalPath is the relative directory containing global hook definitions and values.
 	// LoadGlobalConf expects this path to exist relative to the process working directory.
@@ -186,7 +191,7 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		return nil, fmt.Errorf("convert module definition: %w", err)
 	}
 
-	digests, err := loadDigests(moduleDir)
+	digests, err := loadEmbeddedDigests(def.Name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load digests: %w", err)
@@ -412,14 +417,6 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 		}
 	}
 
-	var disableOpts dto.DisableOptions
-	if def.DisableOptions != nil {
-		disableOpts = dto.DisableOptions{
-			Confirmation: def.DisableOptions.Confirmation,
-			Message:      def.DisableOptions.Message,
-		}
-	}
-
 	var descriptions dto.Descriptions
 	if def.Descriptions != nil {
 		descriptions = dto.Descriptions{
@@ -430,11 +427,10 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 
 	return &dto.ModuleDefinition{
 		Definition: dto.Definition{
-			Name:           def.Name,
-			Stage:          def.Stage,
-			Descriptions:   descriptions,
-			Requirements:   requirements,
-			DisableOptions: disableOpts,
+			Name:         def.Name,
+			Stage:        def.Stage,
+			Descriptions: descriptions,
+			Requirements: requirements,
 		},
 		Weight:   int(def.Weight),
 		Critical: def.Critical,
@@ -517,6 +513,34 @@ func loadDigests(packageDir string) (map[string]string, error) {
 	}
 
 	return digests, nil
+}
+
+// loadEmbeddedDigests reads the shared images_digests.json under embeddedDir and
+// returns the digest map for the given module. The embedded digests file nests
+// per-module maps keyed by the module's CamelCase name, so the lookup converts
+// packageName accordingly. Returns nil without error if the file is absent or
+// holds no entry for the module (digests are optional).
+func loadEmbeddedDigests(packageName string) (map[string]string, error) {
+	path := filepath.Join(embeddedDir, digestsFile)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("read file '%s': %w", path, err)
+	}
+
+	digests := make(map[string]map[string]string)
+	if err = json.Unmarshal(content, &digests); err != nil {
+		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
+	}
+
+	if packageDigests, ok := digests[strcase.ToCamel(packageName)]; ok {
+		return packageDigests, nil
+	}
+
+	return nil, nil
 }
 
 // getModuleVersion returns the version of the package at moduleDir.
