@@ -417,7 +417,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubelet1348":                     "imageHash-registrypackages-kubelet1348",
 		"kubelet1355":                     "imageHash-registrypackages-kubelet1355",
 		"kubelet1361":                     "imageHash-registrypackages-kubelet1361",
-		"kubernetesApiProxy":              "imageHash-registrypackages-kubernetesApiProxy", // gitleaks:allow
+		"kubernetesApiProxy":              "imageHash-registrypackages-kubernetesApiProxy",
 		"kubernetesCni162":                "imageHash-registrypackages-kubernetesCni162",
 		"lsblk2402":                       "imageHash-registrypackages-lsblk2402",
 		"netcat110501":                    "imageHash-registrypackages-netcat110501",
