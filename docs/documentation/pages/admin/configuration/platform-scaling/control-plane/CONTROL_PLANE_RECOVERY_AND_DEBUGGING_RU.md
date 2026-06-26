@@ -70,7 +70,9 @@ for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o
 done
 ```
 
+{% alert level="info" %}
 Последний параметр в таблице вывода показывает, что узел находится в состоянии [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии `leader`.
+{% endalert %}
 
 #### Способ 2
 

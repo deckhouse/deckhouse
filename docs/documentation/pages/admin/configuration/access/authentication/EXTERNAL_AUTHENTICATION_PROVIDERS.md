@@ -33,7 +33,7 @@ If the parameter is not specified, no group-based filtering will be applied.
    - Obtain the `clientID` and `clientSecret`.
 
    {% alert level="info" %}
-   : When specifying the redirect URI, substitute the actual value of `publicDomainTemplate` without `%s`.  
+   When specifying the redirect URI, substitute the actual value of `publicDomainTemplate` without `%s`.  
    For example, if `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'`, the actual URI would be:  
    `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
 
