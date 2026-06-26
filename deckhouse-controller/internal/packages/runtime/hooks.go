@@ -35,6 +35,7 @@ import (
 type hookProvider interface {
 	GetName() string
 	GetValuesChecksum() string
+	HooksInitialized() bool
 	RunHookByName(ctx context.Context, hook string, bctx []bctx.BindingContext) error
 	GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook
 }
@@ -65,6 +66,12 @@ func (r *Runtime) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 // routeKubeEvent appends a hookrun task to res for every Kubernetes hook of src
 // that matches the event.
 func (r *Runtime) routeKubeEvent(ctx context.Context, src hookProvider, kubeEvent shkubetypes.KubeEvent, res map[string][]queue.Task) {
+	// Until the hook controllers are built there is nothing to match events against;
+	// skip the source rather than dereference a nil controller.
+	if !src.HooksInitialized() {
+		return
+	}
+
 	for _, hook := range src.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 		hookCtrl := hook.GetHookController()
 
@@ -118,6 +125,12 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 // routeScheduleEvent appends a hookrun task to res for every schedule hook of src
 // whose crontab matches.
 func (r *Runtime) routeScheduleEvent(ctx context.Context, src hookProvider, crontab string, res map[string][]queue.Task) {
+	// Until the hook controllers are built there is nothing to match events against;
+	// skip the source rather than dereference a nil controller.
+	if !src.HooksInitialized() {
+		return
+	}
+
 	for _, hook := range src.GetHooksByBinding(shtypes.Schedule) {
 		hookCtrl := hook.GetHookController()
 
