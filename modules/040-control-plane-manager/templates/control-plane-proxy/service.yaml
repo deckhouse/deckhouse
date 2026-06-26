@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "prometheus") }}
 {{- $profiles := list "main" }}
 {{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
@@ -8,13 +9,12 @@
 {{- if ne $profile "main" }}
   {{- $appLabel = printf "%s-%s" $appLabel $profile }}
 {{- end }}
-{{- if ($.Values.global.enabledModules | has "prometheus") }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ $appLabel }}
-  namespace: d8-monitoring
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
 spec:
   selector:

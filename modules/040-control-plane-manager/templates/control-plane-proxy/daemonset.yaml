@@ -1,8 +1,10 @@
+
 {{- define "control_plane_proxy_resources" }}
 cpu: 10m
 memory: 15Mi
 {{- end }}
 
+{{- if (.Values.global.enabledModules | has "prometheus") }}
 {{- $profiles := list "main" }}
 {{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
@@ -13,14 +15,13 @@ memory: 15Mi
   {{- if ne $profile "main" }}
     {{- $appLabel = printf "%s-%s" $appLabel $profile }}
   {{- end }}
-{{- if ($.Values.global.enabledModules | has "prometheus") }}
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
-  namespace: d8-monitoring
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
 spec:
   targetRef:
@@ -43,7 +44,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: control-plane-proxy{{- if ne $profile "main" }}-{{ $profile }}{{- end }}
-  namespace: d8-monitoring
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list $ (dict "app" $appLabel)) | nindent 2 }}
 spec:
   selector:
