@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package operations is the ControlPlaneOperation domain: building an operation from explicit inputs,
-// telling whether an active operation already covers a needed step, and rotating terminal operations.
 package operations
 
 import (
