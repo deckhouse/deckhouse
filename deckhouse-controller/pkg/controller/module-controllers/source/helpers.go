@@ -185,8 +185,18 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	// check the active source
-	if module.Properties.Source != "" && module.Properties.Source != source.Name {
+	// An embedded module keeps Source == "Embedded" while its embedded copy is
+	// shipped, so the active-source check below would always skip it. Instead
+	// pre-stage the release from the external source so the module is already on
+	// the filesystem when the embedded copy is dropped on upgrade. Only do this
+	// when exactly one source offers the module; several sources are a conflict
+	// handled in processModules.
+	if module.IsEmbedded() {
+		if len(module.Properties.AvailableSources) != 1 {
+			return false
+		}
+	} else if module.Properties.Source != "" && module.Properties.Source != source.Name {
+		// check the active source
 		r.logger.Debug("source not active, skip module",
 			slog.String("source_name", source.Name),
 			slog.String("name", module.Name))

@@ -25,7 +25,9 @@ spec:
   version: v1.50.0
 status:
   approved: false
-  message: migrated module 'test-module-1' not found in any ModuleSource registry
+  message: 'migrated module ''test-module-1'' is not pre-downloaded yet: no Deployed
+    ModuleRelease found, wait for the module to be downloaded from a ModuleSource
+    before upgrading'
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---

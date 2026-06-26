@@ -27,6 +27,18 @@ func (i *Installer) Install(_ context.Context, _, _, _ string) error {
 	return nil
 }
 
+func (i *Installer) Stage(_ context.Context, _, _, _ string) error {
+	return nil
+}
+
+func (i *Installer) StageFromRegistry(_ context.Context, _ *v1alpha1.ModuleSource, _, _ string) error {
+	return nil
+}
+
+func (i *Installer) IsEmbeddedPresent(_ string) bool {
+	return false
+}
+
 func (i *Installer) Uninstall(_ context.Context, _ string) error {
 	return nil
 }

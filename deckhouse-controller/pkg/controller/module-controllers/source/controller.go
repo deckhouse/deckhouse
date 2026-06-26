@@ -452,6 +452,20 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
+		// An embedded module offered by more than one external source is a conflict:
+		// we cannot decide which source to pre-stage the release from. Fire the
+		// conflict alert and skip release creation. The embedded copy keeps serving
+		// the module, so its phase/conditions are intentionally left untouched.
+		if module.IsEmbedded() && len(module.Properties.AvailableSources) > 1 {
+			logger.Warn("embedded module is available in several sources, cannot pre-stage a release until the conflict is resolved")
+			r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{"module": moduleName})
+
+			availableModule.Checksum = meta.Checksum
+			availableModule.Version = meta.ModuleVersion
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
 		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
 			logger.Debug("ensure release")
 
@@ -473,7 +487,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 
 			err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-				module.Properties.Source = source.Name
+				// Keep an embedded module pinned to its embedded copy while it is
+				// still shipped: the release is only pre-staged on the filesystem,
+				// not activated. The active source is switched to the external one
+				// only after the embedded copy is dropped on Deckhouse upgrade.
+				if !module.IsEmbedded() {
+					module.Properties.Source = source.Name
+				}
 
 				return nil
 			})

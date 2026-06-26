@@ -267,7 +267,17 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 			return fmt.Errorf("get the module source '%s' for the module '%s': %w", source.Name, moduleName, err)
 		}
 
-		if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+		// While the embedded copy of the module is still shipped on the filesystem
+		// it wins the module search path, so a downloaded module of the same name
+		// must only be staged (no symlink/mount), not activated. Once the embedded
+		// copy is dropped on Deckhouse upgrade, this restore activates the staged
+		// module instead.
+		if l.installer.IsEmbeddedPresent(moduleName) {
+			l.logger.Info("module is still embedded, stage the release without activating it", slog.String("name", moduleName))
+			if err = l.installer.StageFromRegistry(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+				return fmt.Errorf("stage the module '%s': %w", moduleName, err)
+			}
+		} else if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
 			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
 

@@ -433,45 +433,41 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		return fmt.Errorf("failed to list Modules: %w", err)
 	}
 
-	moduleSources := &v1alpha1.ModuleSourceList{}
-	if err := c.k8sclient.List(ctx, moduleSources); err != nil {
-		return fmt.Errorf("failed to list ModuleSources: %w", err)
+	releaseList := &v1alpha1.ModuleReleaseList{}
+	if err := c.k8sclient.List(ctx, releaseList); err != nil {
+		return fmt.Errorf("failed to list ModuleReleases: %w", err)
 	}
 
 	for _, moduleName := range modules {
-		foundMS := false
-		ModuleEnabled := false
-		// Check if module exists in ModuleList and is disabled
+		moduleEnabled := false
+		// Check if module exists in ModuleList and is enabled
 		for _, module := range moduleList.Items {
 			if module.Name == moduleName {
 				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					c.logger.Debug("migrated module is enabled", slog.String("module", moduleName))
-					ModuleEnabled = true
+					moduleEnabled = true
 				} else {
 					c.logger.Debug("migrated module is disabled", slog.String("module", moduleName))
 				}
 				break
 			}
 		}
-		if !ModuleEnabled {
+		if !moduleEnabled {
 			continue
 		}
 
-		// If module is not in ModuleConfig or is enabled, check ModuleSource
-		for _, source := range moduleSources.Items {
-			if c.isModuleAvailableInSource(moduleName, &source) {
-				foundMS = true
-				c.logger.Debug("migrated module found in source", slog.String("module", moduleName), slog.String("sourceName", source.Name))
-				break
-			}
-		}
-
-		if !foundMS {
-			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
+		// An enabled migrated module must already be pre-staged on the filesystem
+		// before the upgrade drops its embedded copy. A Deployed ModuleRelease means
+		// the module is downloaded and present on disk, so the upgrade will not race
+		// a registry download that could leave the module unavailable.
+		if !c.hasDeployedRelease(moduleName, releaseList) {
+			c.logger.Warn("migrated module has no Deployed ModuleRelease, it is not pre-downloaded yet", slog.String("module", moduleName))
 			c.setMigratedModuleNotFoundAlert(moduleName)
 
-			return fmt.Errorf(`migrated module '%s' not found in any ModuleSource registry`, moduleName)
+			return fmt.Errorf(`migrated module '%s' is not pre-downloaded yet: no Deployed ModuleRelease found, wait for the module to be downloaded from a ModuleSource before upgrading`, moduleName)
 		}
+
+		c.logger.Debug("migrated module is pre-downloaded", slog.String("module", moduleName))
 	}
 
 	c.logger.Debug("all migrated modules validation passed")
@@ -479,13 +475,12 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	return nil
 }
 
-// isModuleAvailableInSource checks if a module is available in a specific ModuleSource
-func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, source *v1alpha1.ModuleSource) bool {
-	// Check if module is in the available modules list
-	for _, availableModule := range source.Status.AvailableModules {
-		if availableModule.Name == moduleName {
-			// If there's a pull error, the module is not actually available
-			return availableModule.Error == ""
+// hasDeployedRelease reports whether the module has a Deployed ModuleRelease,
+// i.e. the module is downloaded and present on the filesystem.
+func (c *migratedModulesCheck) hasDeployedRelease(moduleName string, releaseList *v1alpha1.ModuleReleaseList) bool {
+	for _, release := range releaseList.Items {
+		if release.GetModuleName() == moduleName && release.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
+			return true
 		}
 	}
 	return false

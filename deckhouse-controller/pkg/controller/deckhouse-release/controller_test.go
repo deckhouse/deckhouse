@@ -1008,7 +1008,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
+			require.Contains(suite.T(), newRelease.Status.Message, "is not pre-downloaded yet")
 		})
 
 		suite.Run("MC enabled in source", func() {
