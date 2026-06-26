@@ -1,5 +1,10 @@
 ---
-apiVersion: deckhouse.io/v1alpha1
+# Schema-based ProjectTemplate (ADR-3). The built-in templates declare their per-namespace objects as
+# structured fields rendered natively by the controller (no Helm resourcesTemplate). Every field that
+# used to be a per-project parameter is wired to that parameter via {fromParam: <name>}, so the
+# template keeps exactly the override surface it had as v1alpha1 while gaining a typed, declarative
+# shape. The parametersSchema below stays the per-project parameter contract (names, defaults, enums).
+apiVersion: deckhouse.io/v1alpha2
 kind: ProjectTemplate
 metadata:
   name: secure
@@ -7,85 +12,48 @@ metadata:
     heritage: deckhouse
 spec:
   description: Includes all the capabilities of the default template and additional features.
+  podSecurityStandard:
+    fromParam: podSecurityProfile
+  networkPolicy:
+    mode:
+      fromParam: networkPolicy
+  features:
+    monitoring:
+      fromParam: extendedMonitoringEnabled
+    vulnerabilityScanning:
+      fromParam: securityScanningEnabled
+  logShipping:
+    clusterDestinationRef:
+      fromParam: clusterLogDestinationName
+  namespaceMetadata:
+    labels:
+      fromParam: namespace.labels
+    annotations:
+      fromParam: namespace.annotations
+  allowedUIDs:
+    fromParam: allowedUIDs
+  allowedGIDs:
+    fromParam: allowedGIDs
+  runtimeAudit:
+    enabled:
+      fromParam: runtimeAuditEnabled
   parametersSchema:
     openAPIV3Schema:
       type: object
-      required:
-        - administrators
-        - resourceQuota
       properties:
-        resourceQuota:
+        namespace:
           type: object
+          default: {}
           description: |
-            Resource quota for the project.
-            Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
-          required:
-            - requests
+            Additional labels and annotations for the project namespace.
           properties:
-            requests:
+            labels:
               type: object
-              anyOf:
-                - {required: ["cpu"]}
-                - {required: ["memory"]}
-                - {required: ["storage"]}
-              properties:
-                cpu:
-                  oneOf:
-                    - type: number
-                      format: int
-                    - type: string
-                  pattern: "^[0-9]+m?$"
-                memory:
-                  oneOf:
-                    - type: number
-                      format: int
-                    - type: string
-                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                storage:
-                  type: string
-                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-            limits:
-              type: object
-              anyOf:
-                - {required: ["cpu"]}
-                - {required: ["memory"]}
-              properties:
-                cpu:
-                  oneOf:
-                    - type: number
-                      format: int
-                    - type: string
-                  pattern: "^[0-9]+m?$"
-                memory:
-                  oneOf:
-                    - type: number
-                      format: int
-                    - type: string
-                  pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-        administrators:
-          description: |
-            Users and groups that will have admin access to the project.
-            Administrators are eligible to manage roles and access to the project.
-          type: array
-          items:
-            type: object
-            required:
-              - subject
-              - name
-            properties:
-              subject:
-                description: |
-                  Kind of the target resource to apply access to the
-                  environment (`Group` or `User`).
-                enum:
-                  - User
-                  - Group
+              additionalProperties:
                 type: string
-              name:
-                description: |
-                  The name of the target resource to apply access
-                  to the environment.
-                minLength: 1
+            annotations:
+              type: object
+              additionalProperties:
                 type: string
         networkPolicy:
           description: |
@@ -160,214 +128,3 @@ spec:
             Works only if allowed UID/GID range is specified.
           type: boolean
           default: false
-  resourcesTemplate: |
-    ---
-    apiVersion: v1
-    kind: Namespace
-    metadata:
-      name: {{ .projectName }}
-      labels:
-        {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
-        {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
-        {{ if .parameters.securityScanningEnabled }}security-scanning.deckhouse.io/enabled: ""{{ end }}
-
-    {{- range $administrator := .parameters.administrators }}
-    ---
-    apiVersion: deckhouse.io/v1alpha1
-    kind: AuthorizationRule
-    metadata:
-      name: {{ $administrator.name | include "normalize" }}
-    spec:
-      accessLevel: Admin
-      subjects:
-      - kind: {{ $administrator.subject }}
-        name: {{ $administrator.name }}
-    {{- end }}
-
-    ---
-    # Max requests and limits for resource and storage consumption for all pods in a namespace.
-    # Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
-    apiVersion: v1
-    kind: ResourceQuota
-    metadata:
-      name: all-pods
-    spec:
-      hard:
-        {{ with .parameters.resourceQuota }}
-          {{ with .requests }}
-            {{ with .cpu }}requests.cpu: {{ . }}{{ end }}
-            {{ with .memory }}requests.memory: {{ . }}{{ end }}
-            {{ with .storage }}requests.storage: {{ . }}{{ end }}
-          {{ end }}
-          {{ with .limits }}
-            {{ with .cpu }}limits.cpu: {{ . }}{{ end }}
-            {{ with .memory }}limits.memory: {{ . }}{{ end }}
-          {{ end }}
-        {{ end }}
-
-    {{- if eq .parameters.networkPolicy "Isolated" }}
-    ---
-    # Deny all network traffic by default except namespaced traffic and dns.
-    # Refer to https://kubernetes.io/docs/concepts/services-networking/network-policies/
-    kind: NetworkPolicy
-    apiVersion: networking.k8s.io/v1
-    metadata:
-      name: isolated
-    spec:
-      podSelector:
-        matchLabels: {}
-      policyTypes:
-        - Ingress
-        - Egress
-      ingress:
-        - from:
-            # Traffic within the project is allowed.
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "{{ .projectName }}"
-            # Metrics scraping from Prometheus.
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "d8-monitoring"
-              podSelector:
-                matchLabels:
-                  app.kubernetes.io/name: prometheus
-            # Ingress nginx traffic.
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "d8-ingress-nginx"
-              podSelector:
-                matchLabels:
-                  app: controller
-            # ServiceWithHealthChecks agents traffic.
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "d8-service-with-healthchecks"
-              podSelector:
-                matchLabels:
-                  app: agent
-      egress:
-        # Traffic within the project is allowed.
-        - to:
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "{{ .projectName }}"
-        # Allow DNS traffic (both kube-dns and nodelocaldns).
-        - to:
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: kube-system
-          ports:
-            - protocol: UDP
-              port: 53
-            - protocol: TCP
-              port: 53
-            - protocol: UDP
-              port: 5353
-            - protocol: TCP
-              port: 5353
-    {{- end }}
-
-    {{- with .parameters.clusterLogDestinationName }}
-    ---
-    # Refer to https://deckhouse.io/modules/460-log-shipper/
-    apiVersion: deckhouse.io/v1alpha1
-    kind: PodLoggingConfig
-    metadata:
-      name: default
-    spec:
-      clusterDestinationRefs:
-        - {{ . }}
-    {{- end }}
-
-    ---
-    # Referer to https://deckhouse.io/modules/015-admission-policy-engine/
-    apiVersion: deckhouse.io/v1alpha1
-    kind: OperationPolicy
-    metadata:
-      name: required-requests-{{ .projectName | sha256sum | trunc 8 }}
-    spec:
-      policies:
-        requiredResources:
-          requests:
-            - cpu
-            - memory
-      match:
-        namespaceSelector:
-          labelSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: "{{ .projectName }}"
-
-    {{- if .parameters.runtimeAuditEnabled }}
-    {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
-    ---
-    # Enable audit rules (create a falco audit rule to record some malicious activities of the pods in a given namespace).
-    # As example send notifications when a shell is run in a container.
-    # Refer to https://deckhouse.io/modules/runtime-audit-engine/examples.html
-    apiVersion: deckhouse.io/v1alpha1
-    kind: FalcoAuditRules
-    metadata:
-      name: container-drift-{{ .projectName | sha256sum | trunc 8 }}
-    spec:
-      rules:
-      - macro:
-          name: spawned_process
-          condition: (evt.type in (execve, execveat) and evt.dir=<)
-      - macro:
-          name: container
-          condition: (container.id != host)
-      - rule:
-          name: Drop and execute new binary in container in {{ .projectName }} project
-          condition: >
-            spawned_process
-            and container
-            and proc.is_exe_upper_layer=true
-            {{ with .parameters.allowedUIDs }}
-            and user.uid > {{ .min }}
-            and user.uid < {{ .max }}
-            {{ end }}
-            {{ with .parameters.allowedGIDs }}
-            and group.gid >= {{ .min }}
-            and group.gid <= {{ .max }}
-            {{ end }}
-            and k8s.ns.name={{ .projectName }}
-          desc: Detect if an executable not belonging to the base image of a container is being executed. The drop and execute pattern can be observed very often after an attacker gained an initial foothold. is_exe_upper_layer filter field only applies for container runtimes that use overlayfs as union mount filesystem.
-          output: |
-            Executing binary not part of base image (project={{ .projectName }} user_loginuid=%user.loginuid user_uid=%user.uid comm=%proc.cmdline exe=%proc.exe container_id=%container.id k8s.ns=%k8s.ns.name image=%container.image.repository proc.name=%proc.name proc.sname=%proc.sname proc.pname=%proc.pname proc.aname[2]=%proc.aname[2] exe_flags=%evt.arg.flags proc.exe_ino=%proc.exe_ino proc.exe_ino.ctime=%proc.exe_ino.ctime proc.exe_ino.mtime=%proc.exe_ino.mtime proc.exe_ino.ctime_duration_proc_start=%proc.exe_ino.ctime_duration_proc_start proc.exepath=%proc.exepath proc.cwd=%proc.cwd proc.tty=%proc.tty container.start_ts=%container.start_ts proc.sid=%proc.sid proc.vpgid=%proc.vpgid evt.res=%evt.res)
-          priority: Critical
-          tags:
-            - container_drift
-    {{- end }}
-    {{- end }}
-
-    {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
-    ---
-    # Allowed uids/gids with the SecurityPolicy
-    # Refer to https://deckhouse.io/modules/admission-policy-engine/cr.html#securitypolicy
-    apiVersion: deckhouse.io/v1alpha1
-    kind: SecurityPolicy
-    metadata:
-      name: allowed-uid-gid-{{ .projectName | sha256sum | trunc 8 }}
-    spec:
-      enforcementAction: Deny
-      policies:
-        {{- with .parameters.allowedGIDs }}
-        runAsGroup:
-          ranges:
-          - max: {{ .max }}
-            min: {{ .min }}
-          rule: MustRunAs
-        {{- end }}
-        {{- with .parameters.allowedUIDs }}
-        runAsUser:
-          ranges:
-          - max: {{ .max }}
-            min: {{ .min }}
-          rule: MustRunAs
-        {{- end }}
-      match:
-        namespaceSelector:
-          labelSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .projectName }}
-    {{- end }}

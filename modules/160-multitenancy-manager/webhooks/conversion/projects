@@ -30,6 +30,16 @@ kubernetesCustomResourceConversion:
     conversions:
     - fromVersion: deckhouse.io/v1alpha2
       toVersion: deckhouse.io/v1alpha1
+  - name: v1alpha2_to_v1alpha3
+    crdName: projects.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha2
+      toVersion: deckhouse.io/v1alpha3
+  - name: v1alpha3_to_v1alpha2
+    crdName: projects.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha3
+      toVersion: deckhouse.io/v1alpha2
 EOF
 }
 
@@ -70,7 +80,75 @@ function __on_conversion::v1alpha2_to_v1alpha1() {
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"failedMessage":"Conversion of deckhouse.io.io failed"}
+{"failedMessage":"Conversion of deckhouse.io failed"}
+EOF
+  fi
+}
+
+# v1alpha2 -> v1alpha3 lifts administrators and resourceQuota out of spec.parameters into the
+# dedicated top-level spec.administrators and spec.quota fields.
+#   parameters.administrators[].subject -> administrators[].kind
+#   parameters.resourceQuota.{requests,limits}.* -> quota."requests.*"/"limits.*"
+function __on_conversion::v1alpha2_to_v1alpha3() {
+  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha2" then
+       .apiVersion = "deckhouse.io/v1alpha3" |
+       (if (.spec.administrators | not) and (.spec.parameters.administrators) then
+          .spec.administrators = (.spec.parameters.administrators | map({kind: .subject, name: .name}))
+        else . end) |
+       (if (.spec.quota | not) and (.spec.parameters.resourceQuota) then
+          .spec.parameters.resourceQuota as $rq |
+          .spec.quota = (
+            (($rq.requests // {}) | to_entries | map({key: ("requests." + .key), value: (.value | tostring)}))
+            + (($rq.limits // {}) | to_entries | map({key: ("limits." + .key), value: (.value | tostring)}))
+            | from_entries
+          )
+        else . end) |
+       (if .spec.parameters then del(.spec.parameters.administrators) | del(.spec.parameters.resourceQuota) else . end)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of deckhouse.io failed"}
+EOF
+  fi
+}
+
+# v1alpha3 -> v1alpha2 pushes administrators and quota back into spec.parameters so that older
+# clients reading v1alpha2 keep seeing the legacy layout.
+function __on_conversion::v1alpha3_to_v1alpha2() {
+  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha3" then
+       .apiVersion = "deckhouse.io/v1alpha2" |
+       (if .spec.administrators then
+          .spec.parameters = ((.spec.parameters // {}) + {administrators: (.spec.administrators | map({subject: .kind, name: .name}))})
+        else . end) |
+       (if .spec.quota then
+          .spec.parameters = ((.spec.parameters // {}) + {resourceQuota: (
+            reduce (.spec.quota | to_entries[]) as $e (
+              {};
+              ($e.key | split(".")) as $p |
+              if ($p | length) == 2 then
+                .[$p[0]] = ((.[$p[0]] // {}) + {($p[1]): $e.value})
+              else . end
+            )
+          )})
+        else . end) |
+       del(.spec.administrators) |
+       del(.spec.quota)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of deckhouse.io failed"}
 EOF
   fi
 }

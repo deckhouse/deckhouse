@@ -135,7 +135,7 @@ def validate_car_multitenancy_related_fields(obj: DotMap) -> tuple[list[str], li
         if field in obj.spec:
             errors.append(
                 f"You must enable userAuthz.enableMultiTenancy to use the {description} "
-                f"in ClusterAuthorizationRule '{resource_name}' (EE Only)"
+                f"in ClusterAuthorizationRule '{resource_name}'"
             )
 
     return errors, []

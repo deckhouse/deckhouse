@@ -125,9 +125,11 @@ func initInformers() (*initResult, error) {
 }
 
 // initAuthorizers creates the composite authorizer from RBAC and multi-tenancy engines.
-func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer, *multitenancy.Engine, error) {
+// It also returns the underlying RBAC authorizer, which is reused for reverse-RBAC
+// (WhoCan) queries.
+func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer, *multitenancy.Engine, *rbacadapter.RBACAuthorizer, error) {
 	if init.informerFactory == nil {
-		return nil, nil, fmt.Errorf("informer factory is not available, cannot initialize authorizers")
+		return nil, nil, nil, fmt.Errorf("informer factory is not available, cannot initialize authorizers")
 	}
 
 	// Create RBAC authorizer
@@ -156,9 +158,9 @@ func initAuthorizers(init *initResult, configPath string) (authorizer.Authorizer
 
 	// Combine authorizers
 	if mtEngine != nil {
-		return composite.NewCompositeAuthorizer(mtEngine, rbacAuth), mtEngine, nil
+		return composite.NewCompositeAuthorizer(mtEngine, rbacAuth), mtEngine, rbacAuth, nil
 	}
-	return rbacAuth, nil, nil
+	return rbacAuth, nil, rbacAuth, nil
 }
 
 // startInformers starts the informer factory and waits for cache sync.
@@ -175,7 +177,21 @@ func startInformers(ctx context.Context, informerFactory informers.SharedInforme
 }
 
 // registerAPIGroup registers the authorization API group with the server.
-func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver) error {
+//
+// SECURITY NOTE — WhoCan deliberately bypasses multi-tenancy filtering.
+// The whoCan resolver is the RAW RBAC authorizer (rbacAuth from initAuthorizers),
+// NOT the multi-tenancy compositeAuth used for forward checks. WhoCan is a
+// cluster-scoped resource whose target namespace travels inside
+// spec.resourceAttributes.namespace, so the request is authorized as a
+// cluster-scoped "create whocans" with no per-namespace authorization. As a
+// result a grantee can resolve the subjects of ANY namespace, including tenants
+// they cannot otherwise see. This is acceptable ONLY because the granting
+// ClusterRole (d8:user-authz:who-can-checker) is unbound by default and
+// documented as elevated. who-can-checker must NEVER be bound to tenant-scoped
+// (project) admins; per-namespace disclosure scoping cannot be expressed on a
+// cluster-scoped resource and would require a redesign. See the chart comment in
+// templates/permission-browser-apiserver/rbac-for-us.yaml.
+func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver, whoCan registry.WhoCanResolver) error {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(
 		authorization.GroupName,
 		Scheme,
@@ -183,9 +199,9 @@ func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer
 		Codecs,
 	)
 
-	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(auth)
+	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(auth, whoCan)
 	if nsResolver != nil {
-		apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorageWithResolver(auth, nsResolver)
+		apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorageWithResolver(auth, nsResolver, whoCan)
 	}
 
 	return server.InstallAPIGroup(&apiGroupInfo)
@@ -219,7 +235,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	}
 
 	// Initialize authorizers
-	compositeAuth, mtEngine, err := initAuthorizers(initRes, c.ExtraConfig.ConfigPath)
+	compositeAuth, mtEngine, rbacAuth, err := initAuthorizers(initRes, c.ExtraConfig.ConfigPath)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to initialize authorizers: %w", err)
@@ -268,7 +284,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	}
 
 	// Register API group
-	if err := registerAPIGroup(genericServer, compositeAuth, nsResolver); err != nil {
+	if err := registerAPIGroup(genericServer, compositeAuth, nsResolver, rbacAuth); err != nil {
 		cancel()
 		return nil, err
 	}

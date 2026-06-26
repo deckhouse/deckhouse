@@ -1,3 +1,4 @@
+
 ---
 apiVersion: v1
 kind: Namespace
@@ -7,18 +8,6 @@ metadata:
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: skip-heritage-test
   name: test
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  labels:
-    app: test
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: skip-heritage-test
-  name: with-heritage
-  namespace: test
 
 ---
 apiVersion: v1
@@ -56,4 +45,16 @@ metadata:
     projects.deckhouse.io/project: test
     projects.deckhouse.io/project-template: skip-heritage-test
   name: normal-resource
+  namespace: test
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: test
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: skip-heritage-test
+  name: with-heritage
   namespace: test

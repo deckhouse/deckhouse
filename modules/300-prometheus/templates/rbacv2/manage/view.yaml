@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: prometheus
     rbac.deckhouse.io/aggregate-to-observability-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.prometheus.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-monitoring
-  name: d8:manage:permission:module:prometheus:view
+  name: d8:system-capability:prometheus:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module prometheus: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль prometheus: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the prometheus module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля prometheus."
 rules:
 - apiGroups:
   - deckhouse.io

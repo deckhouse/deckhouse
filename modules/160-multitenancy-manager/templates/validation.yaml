@@ -33,6 +33,21 @@ spec:
           && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
           && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
           != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
+    # A namespace-managed project (card-16 / ADR-2) is owned by its namespace, not the other way
+    # round: the user must be able to edit that namespace's labels/annotations (they sync into
+    # spec.parameters.namespace) and delete the namespace (cascading project deletion). The
+    # controller stamps such namespaces with the project-managed-by-namespace marker label, so this
+    # condition skips the policy for UPDATE/DELETE on a marked Namespace object only. Regular
+    # project namespaces carry no marker and stay protected, and resources *inside* a
+    # namespace-managed namespace are unaffected (the condition matches the namespaces resource
+    # alone). request.resource is always present, and object/oldObject are null-guarded, so the
+    # condition can never error (failurePolicy is Fail).
+    - name: 'exclude-namespace-managed-projects'
+      expression: '!(request.resource.group == "" && request.resource.resource == "namespaces"
+          && ((object != null && has(object.metadata.labels)
+          && "multitenancy.deckhouse.io/project-managed-by-namespace" in object.metadata.labels)
+          || (oldObject != null && has(oldObject.metadata.labels)
+          && "multitenancy.deckhouse.io/project-managed-by-namespace" in oldObject.metadata.labels)))'
   validations:
     - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"'
       reason: Forbidden

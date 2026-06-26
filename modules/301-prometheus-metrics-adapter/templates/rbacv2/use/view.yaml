@@ -5,9 +5,16 @@ metadata:
   labels:
     heritage: deckhouse
     module: prometheus-metrics-adapter
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:prometheus-metrics-adapter:view
+    rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.prometheus-metrics-adapter.view"
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:prometheus-metrics-adapter:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module prometheus-metrics-adapter: view"
+    ru.meta.deckhouse.io/title: "Модуль prometheus-metrics-adapter: просмотр"
+    en.meta.deckhouse.io/description: "Read-only access to prometheus-metrics-adapter resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к ресурсам модуля prometheus-metrics-adapter в пространстве имён."
 rules:
 - apiGroups:
   - deckhouse.io

@@ -122,7 +122,6 @@ func snapshotsToInternalValuesCustomClusterRoles(snapshots []pkg.Snapshot) (inte
 			adminRoleNames.Add(customRole.Name)
 			fallthrough
 		case accessLevelClusterEditor:
-
 			clusterEditorRoleNames.Add(customRole.Name)
 			fallthrough
 		case accessLevelClusterAdmin:

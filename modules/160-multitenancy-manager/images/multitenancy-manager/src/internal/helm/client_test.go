@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-openapi/spec"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/validate"
 )
 
@@ -56,7 +57,7 @@ func parseManifest(raw string) (*unstructured.Unstructured, bool, error) {
 func Test(t *testing.T) {
 	templates, err := parseHelmTemplates("../../helmlib")
 	assert.Nil(t, err)
-	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case", "skip_heritage_and_unmanaged_case"} {
+	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "simple_case", "empty_case", "without_ns_case", "skip_heritage_and_unmanaged_case"} {
 		t.Run(c, func(t *testing.T) {
 			basePath := filepath.Join("./testdata", c)
 			assert.Nil(t, test(templates, basePath))
@@ -74,7 +75,7 @@ func test(templates map[string][]byte, basePath string) error {
 		return err
 	}
 
-	project, err := read[v1alpha2.Project](filepath.Join(basePath, "project.yaml"))
+	project, err := read[v1alpha3.Project](filepath.Join(basePath, "project.yaml"))
 	if err != nil {
 		return err
 	}
@@ -91,7 +92,9 @@ func test(templates map[string][]byte, basePath string) error {
 	rendered := releaseutil.SplitManifests(buf.String())
 
 	// uncomment for test and render rendered resources
-	//os.WriteFile(filepath.Join(basePath, "resources.yaml"), buf.Bytes(), 0644)
+	if os.Getenv("REGEN_GOLDEN") != "" {
+		os.WriteFile(filepath.Join(basePath, "resources.yaml"), buf.Bytes(), 0644)
+	}
 
 	rawExpected, err := os.ReadFile(filepath.Join(basePath, "resources.yaml"))
 	if err != nil {
@@ -154,7 +157,7 @@ func TestUnmanagedResourcesFirstInstall(t *testing.T) {
 	projectTemplate, err := read[v1alpha1.ProjectTemplate](filepath.Join(basePath, "template.yaml"))
 	assert.Nil(t, err)
 
-	project, err := read[v1alpha2.Project](filepath.Join(basePath, "project.yaml"))
+	project, err := read[v1alpha3.Project](filepath.Join(basePath, "project.yaml"))
 	assert.Nil(t, err)
 
 	// Test first install - unmanaged resources should be included
@@ -189,11 +192,11 @@ func TestUnmanagedResourcesFirstInstall(t *testing.T) {
 	}
 
 	labels := unmanagedObj.GetLabels()
-	if labels[v1alpha2.ResourceLabelHeritage] != "" {
-		t.Errorf("unmanaged resource should not have heritage label, but got: %s", labels[v1alpha2.ResourceLabelHeritage])
+	if labels[v1alpha3.ResourceLabelHeritage] != "" {
+		t.Errorf("unmanaged resource should not have heritage label, but got: %s", labels[v1alpha3.ResourceLabelHeritage])
 	}
-	if labels[v1alpha2.ResourceLabelProject] != project.Name {
-		t.Errorf("unmanaged resource should have project label, got: %s", labels[v1alpha2.ResourceLabelProject])
+	if labels[v1alpha3.ResourceLabelProject] != project.Name {
+		t.Errorf("unmanaged resource should have project label, got: %s", labels[v1alpha3.ResourceLabelProject])
 	}
 
 	// Compare with expected first install resources
@@ -236,7 +239,7 @@ func TestUnmanagedResourcesUpgrade(t *testing.T) {
 	projectTemplate, err := read[v1alpha1.ProjectTemplate](filepath.Join(basePath, "template.yaml"))
 	assert.Nil(t, err)
 
-	project, err := read[v1alpha2.Project](filepath.Join(basePath, "project.yaml"))
+	project, err := read[v1alpha3.Project](filepath.Join(basePath, "project.yaml"))
 	assert.Nil(t, err)
 
 	// Test upgrade - unmanaged resources should be excluded
@@ -294,6 +297,209 @@ func TestUnmanagedResourcesUpgrade(t *testing.T) {
 	}
 }
 
+func TestLegacyResourcesFiltered(t *testing.T) {
+	templates, err := parseHelmTemplates("../../helmlib")
+	assert.Nil(t, err)
+
+	basePath := filepath.Join("./testdata", "legacy_filtered_case")
+	projectTemplate, err := read[v1alpha1.ProjectTemplate](filepath.Join(basePath, "template.yaml"))
+	assert.Nil(t, err)
+
+	project, err := read[v1alpha3.Project](filepath.Join(basePath, "project.yaml"))
+	assert.Nil(t, err)
+
+	ch := buildChart(templates, project.Name)
+	valuesToRender, err := chartutil.ToRenderValues(ch, buildValues(project, projectTemplate), chartutil.ReleaseOptions{
+		Name:      project.Name,
+		Namespace: project.Name,
+	}, nil)
+	assert.Nil(t, err)
+
+	rendered, err := engine.Render(ch, valuesToRender)
+	assert.Nil(t, err)
+
+	buf := bytes.NewBuffer(nil)
+	for _, file := range rendered {
+		buf.WriteString(file)
+	}
+
+	post := newPostRenderer(project, nil, ctrl.Log.WithName("test"), true)
+	out, err := post.Run(buf)
+	assert.Nil(t, err)
+
+	// the post-renderer must report that controller-managed kinds were dropped
+	assert.True(t, post.filtered, "expected ResourceQuota/AuthorizationRule to be filtered out")
+
+	renderedMap := make(map[string]*unstructured.Unstructured)
+	for _, raw := range releaseutil.SplitManifests(out.String()) {
+		object, ok, parseErr := parseManifest(raw)
+		assert.Nil(t, parseErr)
+		if !ok {
+			continue
+		}
+		renderedMap[fmt.Sprintf("%s.%s", object.GetKind(), object.GetName())] = object
+	}
+
+	// filtered kinds must be gone
+	_, hasRQ := renderedMap["ResourceQuota.all-pods"]
+	assert.False(t, hasRQ, "ResourceQuota must be filtered out")
+	_, hasAR := renderedMap["AuthorizationRule.legacy-admin"]
+	assert.False(t, hasAR, "AuthorizationRule must be filtered out")
+
+	// non-filtered resources must remain
+	_, hasNS := renderedMap["Namespace.test"]
+	assert.True(t, hasNS, "project namespace must be present")
+	_, hasCM := renderedMap["ConfigMap.keep-me"]
+	assert.True(t, hasCM, "regular resources must be kept")
+}
+
+// TestListWrapperCannotBypassFilter guards H5: a filtered kind (ResourceQuota) smuggled inside a
+// kind: List must still be dropped, while a sibling ConfigMap inside the same List is kept.
+func TestListWrapperCannotBypassFilter(t *testing.T) {
+	manifest := `
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: sneaky
+    spec:
+      hard:
+        pods: "10"
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: keep-me
+    data:
+      a: b
+`
+	project := &v1alpha3.Project{}
+	project.Name = "test"
+
+	post := newPostRenderer(project, nil, ctrl.Log.WithName("test"), true)
+	out, err := post.Run(bytes.NewBufferString(manifest))
+	assert.Nil(t, err)
+	assert.True(t, post.filtered, "ResourceQuota inside a List must be filtered out")
+
+	renderedMap := make(map[string]*unstructured.Unstructured)
+	for _, raw := range releaseutil.SplitManifests(out.String()) {
+		object, ok, parseErr := parseManifest(raw)
+		assert.Nil(t, parseErr)
+		if !ok {
+			continue
+		}
+		renderedMap[fmt.Sprintf("%s.%s", object.GetKind(), object.GetName())] = object
+	}
+
+	_, hasRQ := renderedMap["ResourceQuota.sneaky"]
+	assert.False(t, hasRQ, "ResourceQuota smuggled in a List must be filtered out")
+	_, hasCM := renderedMap["ConfigMap.keep-me"]
+	assert.True(t, hasCM, "ConfigMap inside the List must be kept")
+}
+
+// TestCollectRoleRefs checks that the post-renderer extracts the roleRef of every binding kind
+// (ProjectRoleBinding/ClusterProjectRoleBinding via spec.roleRef, native RoleBinding/ClusterRoleBinding
+// via roleRef) and ignores non-binding objects.
+func TestCollectRoleRefs(t *testing.T) {
+	manifest := `
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: deckhouse.io/v1alpha3
+    kind: ProjectRoleBinding
+    metadata:
+      name: prb-disabled
+    spec:
+      roleRef:
+        kind: ClusterRole
+        name: d8:project:secret-reader
+  - apiVersion: deckhouse.io/v1alpha3
+    kind: ClusterProjectRoleBinding
+    metadata:
+      name: cprb-admin
+    spec:
+      roleRef:
+        kind: ClusterRole
+        name: d8:project:admin
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: rb-clusterrole
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: view
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: rb-role
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: some-role
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: not-a-binding
+    data:
+      a: b
+`
+	project := &v1alpha3.Project{}
+	project.Name = "test"
+
+	post := newPostRenderer(project, nil, ctrl.Log.WithName("test"), true)
+	_, err := post.Run(bytes.NewBufferString(manifest))
+	assert.Nil(t, err)
+
+	refs := make(map[string]BindingRoleRef)
+	for _, ref := range post.referencedRoles {
+		refs[ref.BindingName] = ref
+	}
+
+	assert.Len(t, refs, 4, "the ConfigMap must not be collected as a binding")
+	assert.Equal(t, BindingRoleRef{BindingKind: "ProjectRoleBinding", BindingName: "prb-disabled", RoleKind: "ClusterRole", RoleName: "d8:project:secret-reader"}, refs["prb-disabled"])
+	assert.Equal(t, BindingRoleRef{BindingKind: "ClusterProjectRoleBinding", BindingName: "cprb-admin", RoleKind: "ClusterRole", RoleName: "d8:project:admin"}, refs["cprb-admin"])
+	assert.Equal(t, BindingRoleRef{BindingKind: "RoleBinding", BindingName: "rb-clusterrole", RoleKind: "ClusterRole", RoleName: "view"}, refs["rb-clusterrole"])
+	assert.Equal(t, BindingRoleRef{BindingKind: "RoleBinding", BindingName: "rb-role", RoleKind: "Role", RoleName: "some-role"}, refs["rb-role"])
+}
+
+// TestMergeWithDefaults_AdditionalProperties pins the surprising-but-intentional behaviour of the
+// additionalProperties branch: a schema with additionalProperties models a free-form map, so the
+// user's keys are passed through verbatim and any named-property defaults are discarded.
+func TestMergeWithDefaults_AdditionalProperties(t *testing.T) {
+	schema := &spec.Schema{}
+	schema.Properties = map[string]spec.Schema{
+		"declared": {SchemaProps: spec.SchemaProps{Default: "from-schema"}},
+	}
+	schema.AdditionalProperties = &spec.SchemaOrBool{Allows: true}
+
+	out := mergeWithDefaults(schema, map[string]any{"free": "value", "declared": "kept"})
+
+	// only the non-property key survives; the declared property and its schema default are dropped.
+	assert.Equal(t, map[string]any{"free": "value"}, out)
+}
+
+// TestMergeWithDefaults_ObjectDefaultPreserved pins the behaviour the schema-based ProjectTemplate
+// render relies on: an object-typed property whose default is the whole object is kept verbatim (the
+// merge only recurses into sub-properties when there is no default). Structured templates carry their
+// fixed values (namespaceMetadata, dedicatedNodes, allowedUIDs) as such object defaults.
+func TestMergeWithDefaults_ObjectDefaultPreserved(t *testing.T) {
+	schema := &spec.Schema{}
+	schema.Properties = map[string]spec.Schema{
+		"namespace": {SchemaProps: spec.SchemaProps{
+			Type:    spec.StringOrArray{"object"},
+			Default: map[string]any{"labels": map[string]any{"team": "x"}},
+			Properties: map[string]spec.Schema{
+				"labels": {SchemaProps: spec.SchemaProps{Type: spec.StringOrArray{"object"}}},
+			},
+		}},
+	}
+
+	out := mergeWithDefaults(schema, map[string]any{})
+	assert.Equal(t, map[string]any{"labels": map[string]any{"team": "x"}}, out["namespace"])
+}
+
 func read[T any](path string) (*T, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -309,7 +515,7 @@ func read[T any](path string) (*T, error) {
 	return object, nil
 }
 
-func render(templates map[string][]byte, project *v1alpha2.Project, projectTemplate *v1alpha1.ProjectTemplate, isFirstInstall bool) (*bytes.Buffer, error) {
+func render(templates map[string][]byte, project *v1alpha3.Project, projectTemplate *v1alpha1.ProjectTemplate, isFirstInstall bool) (*bytes.Buffer, error) {
 	ch := buildChart(templates, project.Name)
 
 	valuesToRender, err := chartutil.ToRenderValues(ch, buildValues(project, projectTemplate), chartutil.ReleaseOptions{

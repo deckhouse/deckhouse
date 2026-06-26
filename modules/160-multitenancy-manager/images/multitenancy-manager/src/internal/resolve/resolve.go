@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -69,7 +68,7 @@ func GrantsForLabels(ctx context.Context, cl client.Reader, nsLabels map[string]
 		return nil, fmt.Errorf("list ClusterResourceGrantPolicys: %w", err)
 	}
 	set := labels.Set(nsLabels)
-	out := make([]*v1alpha1.ClusterResourceGrantPolicy, 0)
+	out := make([]*v1alpha1.ClusterResourceGrantPolicy, 0, len(grantList.Items))
 	for i := range grantList.Items {
 		g := &grantList.Items[i]
 		if g.Spec.ProjectSelector == nil {
@@ -89,7 +88,7 @@ func GrantsForLabels(ctx context.Context, cl client.Reader, nsLabels map[string]
 // EntriesFor collects the grant resource entries referencing the given registration name across all
 // the supplied grants.
 func EntriesFor(grants []*v1alpha1.ClusterResourceGrantPolicy, resourceName string) []v1alpha1.GrantResource {
-	out := make([]v1alpha1.GrantResource, 0)
+	out := make([]v1alpha1.GrantResource, 0, len(grants))
 	for _, g := range grants {
 		for i := range g.Spec.Resources {
 			if g.Spec.Resources[i].ResourceName == resourceName {
@@ -124,7 +123,7 @@ func ReferencesForRequest(ctx context.Context, cl client.Reader, group, version,
 	for i := range defList.Items {
 		defByName[defList.Items[i].Name] = &defList.Items[i]
 	}
-	out := make([]MatchedReference, 0)
+	out := make([]MatchedReference, 0, len(refList.Items))
 	for i := range refList.Items {
 		ref := &refList.Items[i]
 		if !engine.RuleMatches(ref.Spec.Rule, group, version, resource) {
@@ -149,6 +148,12 @@ type Resolved struct {
 	anyAll    bool
 	anyNone   bool
 	def       string
+
+	// availableSet/availableObjs memoize the available catalog, which is recomputed several times
+	// per webhook/reconcile request otherwise. They are filled lazily and never change after Resolve
+	// returns (the underlying allow/deny/exclude sets are immutable then).
+	availableSet  map[string]struct{}
+	availableObjs []v1alpha1.AvailableObject
 }
 
 // Decide reports whether the project may use the granted object of the given name, applying the
@@ -175,17 +180,19 @@ func (r *Resolved) Decide(name string) bool {
 // Default returns the effective per-project default name (may be empty).
 func (r *Resolved) Default() string { return r.def }
 
-// Available returns the catalog of available names for this project, sorted, with the default flagged.
-// For object-backed resources it is the live objects that Decide() allows, plus any explicitly allowed
-// name; for value-backed resources it is the allowed names.
-func (r *Resolved) Available() []v1alpha1.AvailableObject {
+// availableNames returns the set of names available to this project: the live objects that Decide()
+// allows, plus any explicitly allowed name (e.g. value-backed values). It is memoized and independent
+// of the chosen default, so it can be reused for membership tests during Resolve.
+func (r *Resolved) availableNames() map[string]struct{} {
+	if r.availableSet != nil {
+		return r.availableSet
+	}
 	names := map[string]struct{}{}
 	for _, n := range r.liveNames {
 		if r.Decide(n) {
 			names[n] = struct{}{}
 		}
 	}
-	// Explicitly allowed names that are not live objects (e.g. value-backed values).
 	for n := range r.allowed {
 		if _, excluded := r.excluded[n]; excluded {
 			continue
@@ -195,15 +202,28 @@ func (r *Resolved) Available() []v1alpha1.AvailableObject {
 		}
 		names[n] = struct{}{}
 	}
+	r.availableSet = names
+	return names
+}
+
+// Available returns the catalog of available names for this project, sorted, with the default flagged.
+// For object-backed resources it is the live objects that Decide() allows, plus any explicitly allowed
+// name; for value-backed resources it is the allowed names. The result is memoized.
+func (r *Resolved) Available() []v1alpha1.AvailableObject {
+	if r.availableObjs != nil {
+		return r.availableObjs
+	}
+	names := r.availableNames()
 	sorted := make([]string, 0, len(names))
 	for n := range names {
 		sorted = append(sorted, n)
 	}
-	sort.Strings(sorted)
+	slices.Sort(sorted)
 	out := make([]v1alpha1.AvailableObject, 0, len(sorted))
 	for _, n := range sorted {
 		out = append(out, v1alpha1.AvailableObject{Name: n, Default: n == r.def})
 	}
+	r.availableObjs = out
 	return out
 }
 
@@ -279,6 +299,15 @@ func Resolve(
 				excludedSels = append(excludedSels, sel)
 			}
 		}
+		// Compile each entry's allowed/denied selectors once instead of per live object, so the
+		// match loop below is O(objects × entries) comparisons rather than recompilations.
+		allowedSels := make([]labels.Selector, len(entries))
+		deniedSels := make([]labels.Selector, len(entries))
+		for j := range entries {
+			allowedSels[j] = compiledSelector(entries[j].AllowedSelector)
+			deniedSels[j] = compiledSelector(entries[j].DeniedSelector)
+		}
+		r.liveNames = slices.Grow(r.liveNames, len(list.Items))
 		for i := range list.Items {
 			name := list.Items[i].GetName()
 			objLabels := labels.Set(list.Items[i].GetLabels())
@@ -290,15 +319,15 @@ func Resolve(
 				}
 			}
 			for j := range entries {
-				if matchSel(entries[j].DeniedSelector, objLabels) {
+				if deniedSels[j] != nil && deniedSels[j].Matches(objLabels) {
 					r.denied[name] = struct{}{}
 				}
-				if matchSel(entries[j].AllowedSelector, objLabels) {
+				if allowedSels[j] != nil && allowedSels[j].Matches(objLabels) {
 					r.allowed[name] = struct{}{}
 				}
 			}
 		}
-		sort.Strings(r.liveNames)
+		slices.Sort(r.liveNames)
 	}
 
 	// Effective default falls back to the registration's defaultFrom annotation.
@@ -321,12 +350,8 @@ func Resolve(
 
 // isAvailable reports whether a name is in the project's available set.
 func (r *Resolved) isAvailable(name string) bool {
-	for _, a := range r.Available() {
-		if a.Name == name {
-			return true
-		}
-	}
-	return false
+	_, ok := r.availableNames()[name]
+	return ok
 }
 
 func filterSelector(f *v1alpha1.ResourceFilter) (labels.Selector, error) {
@@ -340,15 +365,17 @@ func filterSelector(f *v1alpha1.ResourceFilter) (labels.Selector, error) {
 	return sel, nil
 }
 
-func matchSel(ls *metav1.LabelSelector, objLabels labels.Set) bool {
+// compiledSelector compiles a label selector once for reuse. It returns nil for a nil or invalid
+// selector, which callers treat as "matches nothing" (mirroring the previous per-call matchSel).
+func compiledSelector(ls *metav1.LabelSelector) labels.Selector {
 	if ls == nil {
-		return false
+		return nil
 	}
 	sel, err := metav1.LabelSelectorAsSelector(ls)
 	if err != nil {
-		return false
+		return nil
 	}
-	return sel.Matches(objLabels)
+	return sel
 }
 
 // grantedGVK resolves the granted resource's group+kind to a served GVK via the REST mapper.
@@ -401,6 +428,6 @@ func ProjectNamespaces(ctx context.Context, cl client.Reader, project string) ([
 			out = append(out, project)
 		}
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out, nil
 }

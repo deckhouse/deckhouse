@@ -105,7 +105,13 @@ func ensureDictBindings(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to iterate over 'dictBindings' snapshot: %w", err)
 		}
 
-		if parsed.Subjects == nil {
+		if len(parsed.Subjects) == 0 {
+			continue
+		}
+
+		// Recreate bindings referring to the legacy dict role name (renamed d8:use:dict -> d8:dict).
+		if parsed.RoleName != "d8:dict" {
+			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", parsed.Name)
 			continue
 		}
 
@@ -145,24 +151,27 @@ func createDictBinding(subjectString string, subject rbacv1.Subject) *rbacv1.Rol
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "d8:use:dict",
+			Name:     "d8:dict",
 		},
 		Subjects: []rbacv1.Subject{subject},
 	}
 }
 
+// stringBySubject builds a stable, collision-free dedup key for a subject. The
+// key is also stored in the rbac.deckhouse.io/subject annotation of the dict
+// binding, so it must uniquely identify the subject: the full identity is used
+// (it is not used as an object name — dict bindings use GenerateName — so there
+// is no length limit to honor).
 func stringBySubject(subject rbacv1.Subject) string {
+	kind := subject.Kind
+	if kind == "ServiceAccount" {
+		kind = "sa"
+	}
 	var str string
-	if subject.Kind == "ServiceAccount" {
-		subject.Kind = "sa"
-	}
 	if subject.Namespace == "" {
-		str = fmt.Sprintf("%s:%s", subject.Kind, subject.Name)
+		str = fmt.Sprintf("%s:%s", kind, subject.Name)
 	} else {
-		str = fmt.Sprintf("%s:%s:%s", subject.Kind, subject.Namespace, subject.Name)
-	}
-	if len(str) > 55 {
-		str = str[:55]
+		str = fmt.Sprintf("%s:%s:%s", kind, subject.Namespace, subject.Name)
 	}
 	return strings.ToLower(str)
 }
@@ -173,7 +182,7 @@ func isD8DictBinding(bind *rbacv1.RoleBinding) bool {
 		return false
 	}
 
-	return strings.HasPrefix(bind.RoleRef.Name, "d8:use:role:")
+	return strings.HasPrefix(bind.RoleRef.Name, "d8:namespace:")
 }
 
 func isRBACv1ReservedRoleRef(bind *rbacv1.RoleBinding) bool {

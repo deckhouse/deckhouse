@@ -423,52 +423,21 @@ func (e *Engine) renewDirectories() {
 		}
 	}
 
-	applyAuthorizationRulesToDirectory(directory, config.ARs)
+	// NOTE: AuthorizationRules (config.ARs) are intentionally NOT applied here.
+	// The directory is built from ClusterAuthorizationRules (CARs) ONLY, mirroring
+	// the real kube-apiserver user-authz webhook authorizer (images/webhook), whose
+	// config struct parses "crds" and ignores "ars" entirely. AR-derived access is
+	// surfaced through the RBAC path instead: each AR creates a RoleBinding that the
+	// RBAC authorizer (BulkSubjectAccessReview) and the namespace resolver
+	// (AccessibleNamespaces) pick up. Feeding ARs into this deny-only engine would
+	// turn them into spurious namespace deny-filters, making the reported view
+	// inconsistent with real authorization.
 
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	e.directory = directory
 	klog.Info("Multi-tenancy configuration was reloaded successfully")
-}
-
-// applyAuthorizationRulesToDirectory grants each AR's subjects access to the
-// AR's own namespace, so AR-only users aren't rejected by deny-by-default.
-// QuoteMeta keeps the namespace a literal even if config.json is tampered with.
-func applyAuthorizationRulesToDirectory(directory map[string]map[string]DirectoryEntry, ars []authorizationRule) {
-	for _, ar := range ars {
-		if ar.Namespace == "" {
-			continue
-		}
-
-		nsRegex, err := regexp.Compile(wrapRegex(regexp.QuoteMeta(ar.Namespace)))
-		if err != nil {
-			// Unreachable in practice because QuoteMeta + wrapRegex always yields a
-			// valid pattern, but we prefer logging over panicking in a config loader.
-			klog.Warningf("Skipping AuthorizationRule %q: cannot compile namespace pattern %q: %v", ar.Name, ar.Namespace, err)
-			continue
-		}
-
-		arInSystemNS := isSystemNamespace(ar.Namespace)
-
-		for _, subject := range ar.Spec.Subjects {
-			kind, name := subjectDirectoryKey(subject.Kind, subject.Name, subject.Namespace, ar.Namespace)
-
-			if _, ok := directory[kind]; !ok {
-				continue
-			}
-
-			dirEntry := directory[kind][name]
-			dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, nsRegex)
-			if arInSystemNS {
-				if dirEntry.AllowedSystemNamespaces == nil {
-					dirEntry.AllowedSystemNamespaces = make(map[string]struct{})
-				}
-				dirEntry.AllowedSystemNamespaces[ar.Namespace] = struct{}{}
-			}
-			directory[kind][name] = dirEntry
-		}
-	}
 }
 
 // subjectDirectoryKey returns the directory map key for a subject.

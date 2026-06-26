@@ -100,6 +100,54 @@ func TestRuleMatches_Resource(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "wildcard subresource (resource/*)",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{""},
+				Resources: []string{"pods/*"},
+				Verbs:     []string{"get"},
+			},
+			attrs: &mockAttrs{
+				verb:        "get",
+				resource:    "pods",
+				subresource: "log",
+				apiGroup:    "",
+				isResource:  true,
+			},
+			expected: true,
+		},
+		{
+			name: "cross-resource subresource (*/subresource)",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{"apps"},
+				Resources: []string{"*/status"},
+				Verbs:     []string{"get"},
+			},
+			attrs: &mockAttrs{
+				verb:        "get",
+				resource:    "deployments",
+				subresource: "status",
+				apiGroup:    "apps",
+				isResource:  true,
+			},
+			expected: true,
+		},
+		{
+			name: "subresource mismatch",
+			rule: rbacv1.PolicyRule{
+				APIGroups: []string{""},
+				Resources: []string{"pods/log"},
+				Verbs:     []string{"get"},
+			},
+			attrs: &mockAttrs{
+				verb:        "get",
+				resource:    "pods",
+				subresource: "status",
+				apiGroup:    "",
+				isResource:  true,
+			},
+			expected: false,
+		},
 	}
 
 	for _, tt := range tests {

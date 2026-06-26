@@ -19,19 +19,25 @@ package project
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
+	"controller/internal/render"
+	rolebinding "controller/internal/rolebinding"
 	"controller/internal/validate"
 )
 
@@ -84,7 +90,7 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 }
 
 // Handle ensures project`s resources
-func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
+func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
 	// add finalizer and remove labels
 	if err := m.prepareProject(ctx, project); err != nil {
 		m.logger.Error(err, "failed to update the project", "project", project.Name)
@@ -94,76 +100,220 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 	project.ClearConditions()
 	project.SetObservedGeneration(project.Generation)
 
-	// get the project template for the project
+	if project.Spec.ProjectTemplateName == "" {
+		// Optional template: only ensure the project namespace, no helm release is created.
+		m.logger.Info("the project has no template, ensure namespace only", "project", project.Name)
+		if err := m.ensureNamespace(ctx, project); err != nil {
+			m.logger.Error(err, "failed to ensure the project namespace", "project", project.Name)
+			project.SetState(v1alpha3.ProjectStateError)
+			project.SetConditionFalse(v1alpha3.ProjectConditionProjectResourcesUpgraded, err.Error())
+			if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+				return ctrl.Result{}, updateErr
+			}
+			return ctrl.Result{}, err
+		}
+		project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
+		project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
+		project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
+	} else if done, err := m.handleTemplate(ctx, project); done {
+		return ctrl.Result{}, err
+	}
+
+	// reconcile standard fields (administrators, quota) regardless of the template
+	m.logger.Info("reconcile the project standard fields", "project", project.Name)
+	if err := m.reconcileStandardFields(ctx, project); err != nil {
+		m.logger.Error(err, "failed to reconcile the project standard fields", "project", project.Name)
+		project.SetState(v1alpha3.ProjectStateError)
+		project.SetConditionFalse(v1alpha3.ProjectConditionStandardFieldsApplied, err.Error())
+		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
+			return ctrl.Result{}, updateErr
+		}
+		return ctrl.Result{}, err
+	}
+	project.SetConditionTrue(v1alpha3.ProjectConditionStandardFieldsApplied)
+
+	// refresh namespaces and quota usage in the status
+	if nsStatus, err := m.collectNamespaceStatus(ctx, project); err != nil {
+		m.logger.Error(err, "failed to collect the project namespaces", "project", project.Name)
+	} else {
+		project.Status.Namespaces = nsStatus
+	}
+	if usage, err := m.collectUsage(ctx, project); err != nil {
+		m.logger.Error(err, "failed to collect the project quota usage", "project", project.Name)
+	} else {
+		project.Status.Usage = usage
+	}
+
+	if project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed) {
+		project.SetState(v1alpha3.ProjectStateError)
+	} else {
+		project.SetState(v1alpha3.ProjectStateDeployed)
+	}
+	if err := m.updateProjectStatus(ctx, project); err != nil {
+		m.logger.Error(err, "failed to update the project status", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
+	m.logger.Info("the project reconciled", "project", project.Name, "template", project.Spec.ProjectTemplateName)
+	return ctrl.Result{}, nil
+}
+
+// handleTemplate runs the template-based part of the reconciliation: resolving the template,
+// validating the project against it and upgrading the helm release. The bool return value reports
+// whether reconciliation must stop (an error already updated the status and the caller should return).
+func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project) (bool, error) {
 	m.logger.Info("get the project template for project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 	projectTemplate, err := m.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
 		m.logger.Error(err, "failed to get project template", "project", project.Name, "template", project.Spec.ProjectTemplateName)
-		project.SetState(v1alpha2.ProjectStateError)
-		project.SetConditionFalse(v1alpha2.ProjectConditionProjectTemplateFound, err.Error())
+		project.SetState(v1alpha3.ProjectStateError)
+		project.SetConditionFalse(v1alpha3.ProjectConditionProjectTemplateFound, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			m.logger.Error(updateErr, "failed to update project status", "project", project.Name, "template", project.Spec.ProjectTemplateName)
-			return ctrl.Result{}, updateErr
+			return true, updateErr
 		}
-		return ctrl.Result{}, err
+		return true, err
 	}
 
-	// check if the project template exists
 	if projectTemplate == nil {
 		m.logger.Info("the project template not found for the project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
-		project.SetState(v1alpha2.ProjectStateError)
-		project.SetConditionFalse(v1alpha2.ProjectConditionProjectTemplateFound, "The project template not found")
+		project.SetState(v1alpha3.ProjectStateError)
+		project.SetConditionFalse(v1alpha3.ProjectConditionProjectTemplateFound, "The project template not found")
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", project.Spec.ProjectTemplateName)
-			return ctrl.Result{}, updateErr
+			return true, updateErr
 		}
-		return ctrl.Result{}, nil
+		return true, nil
 	}
 
-	project.SetConditionTrue(v1alpha2.ProjectConditionProjectTemplateFound)
+	project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
 	project.SetTemplateGeneration(projectTemplate.Generation)
 
-	// validate the project against the project template
 	m.logger.Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
-	if err = validate.Project(project, projectTemplate); err != nil {
+	if err = validate.Project(project, legacyTemplate(projectTemplate)); err != nil {
 		m.logger.Error(err, "failed to validate the project spec", "project", project.Name, "template", projectTemplate.Name)
-		project.SetState(v1alpha2.ProjectStateError)
-		project.SetConditionFalse(v1alpha2.ProjectConditionProjectValidated, err.Error())
+		project.SetState(v1alpha3.ProjectStateError)
+		project.SetConditionFalse(v1alpha3.ProjectConditionProjectValidated, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
-			return ctrl.Result{}, updateErr
+			return true, updateErr
 		}
-		return ctrl.Result{}, nil
+		return true, nil
 	}
 
-	project.SetConditionTrue(v1alpha2.ProjectConditionProjectValidated)
+	project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
 
-	// upgrade project`s resources
 	m.logger.Info("upgrade resources for the project", "project", project.Name, "template", projectTemplate.Name)
-	if err = m.helmClient.Upgrade(ctx, project, projectTemplate); err != nil {
+	filtered, refs, err := m.upgradeResources(ctx, project, projectTemplate)
+	if err != nil {
 		m.logger.Error(err, "failed to upgrade the project resources", "project", project.Name, "template", projectTemplate.Name)
-		project.SetState(v1alpha2.ProjectStateError)
-		project.SetConditionFalse(v1alpha2.ProjectConditionProjectResourcesUpgraded, err.Error())
+		project.SetState(v1alpha3.ProjectStateError)
+		project.SetConditionFalse(v1alpha3.ProjectConditionProjectResourcesUpgraded, err.Error())
 		if updateErr := m.updateProjectStatus(ctx, project); updateErr != nil {
-			m.logger.Error(updateErr, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
-			return ctrl.Result{}, updateErr
+			return true, updateErr
 		}
-		return ctrl.Result{}, err
+		return true, err
 	}
 
-	project.SetState(v1alpha2.ProjectStateDeployed)
-	project.SetConditionTrue(v1alpha2.ProjectConditionProjectResourcesUpgraded)
-	if err = m.updateProjectStatus(ctx, project); err != nil {
-		m.logger.Error(err, "failed to update the project status", "project", project.Name, "template", projectTemplate.Name)
-		return ctrl.Result{}, err
+	project.SetConditionTrue(v1alpha3.ProjectConditionProjectResourcesUpgraded)
+	if filtered {
+		project.SetConditionFalse(v1alpha3.ProjectConditionTemplateResourcesFiltered,
+			"The template renders ResourceQuota or AuthorizationRule objects that are now managed via the Project spec.quota/spec.administrators fields; such objects were filtered out.")
+	} else {
+		project.SetConditionTrue(v1alpha3.ProjectConditionTemplateResourcesFiltered)
 	}
 
-	m.logger.Info("the project reconciled", "project", project.Name, "template", projectTemplate.Name)
-	return ctrl.Result{}, nil
+	m.applyTemplateRolesCondition(ctx, project, refs)
+	return false, nil
+}
+
+// upgradeResources installs/upgrades the project release and returns the binding roleRefs the template
+// renders (for the TemplateRolesAllowed check). A schema-based template is rendered natively from its
+// structured fields and applied via UpgradeManifests; a template that still carries a resourcesTemplate
+// string is rendered through the legacy helm engine. The bool reports whether controller-managed kinds
+// (ResourceQuota/AuthorizationRule) were filtered out.
+func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) (bool, []helm.BindingRoleRef, error) {
+	if isStructured(template) {
+		manifests, err := render.Manifests(template, project)
+		if err != nil {
+			return false, nil, fmt.Errorf("render the project template: %w", err)
+		}
+		filtered, err := m.helmClient.UpgradeManifests(ctx, project, manifests)
+		if err != nil {
+			return false, nil, err
+		}
+		refs, err := m.helmClient.RenderedManifestRoleRefs(project, manifests)
+		if err != nil {
+			// The release was already applied; a render hiccup here must not fail the reconcile.
+			m.logger.Error(err, "failed to collect the project template role refs", "project", project.Name, "template", template.Name)
+			return filtered, nil, nil
+		}
+		return filtered, refs, nil
+	}
+
+	legacy := legacyTemplate(template)
+	filtered, err := m.helmClient.Upgrade(ctx, project, legacy)
+	if err != nil {
+		return false, nil, err
+	}
+	refs, err := m.helmClient.RenderedRoleRefs(project, legacy)
+	if err != nil {
+		m.logger.Error(err, "failed to collect the project template role refs", "project", project.Name, "template", template.Name)
+		return filtered, nil, nil
+	}
+	return filtered, refs, nil
+}
+
+// applyTemplateRolesCondition evaluates the roleRefs rendered by a template and sets the
+// TemplateRolesAllowed condition: False (naming every offending binding/role) when a binding grants
+// a forbidden role, True otherwise.
+func (m *Manager) applyTemplateRolesCondition(ctx context.Context, project *v1alpha3.Project, refs []helm.BindingRoleRef) {
+	var offending []string
+	for _, ref := range refs {
+		// The disabled annotation and the allow-list only concern ClusterRole references.
+		if ref.RoleKind != "ClusterRole" {
+			continue
+		}
+		projectBinding := ref.BindingKind == v1alpha3.ProjectRoleBindingKind || ref.BindingKind == v1alpha3.ClusterProjectRoleBindingKind
+		if reason := m.roleViolation(ctx, ref.RoleName, projectBinding); reason != "" {
+			offending = append(offending, fmt.Sprintf("%s %q grants ClusterRole %q (%s)", ref.BindingKind, ref.BindingName, ref.RoleName, reason))
+		}
+	}
+
+	if len(offending) > 0 {
+		// The render order is non-deterministic; sort so the condition message is stable across reconciles.
+		slices.Sort(offending)
+		project.SetConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed,
+			fmt.Sprintf("The template renders bindings that grant roles forbidden in projects: %s.", strings.Join(offending, "; ")))
+		return
+	}
+	project.SetConditionTrue(v1alpha3.ProjectConditionTemplateRolesAllowed)
+}
+
+// roleViolation returns a non-empty reason when a ClusterRole must not be granted via a project
+// binding. enforceAllowList is set for ProjectRoleBinding/ClusterProjectRoleBinding references,
+// which are restricted to the PRB/CPRB allow-list; native RoleBinding/ClusterRoleBinding references
+// are only checked for the disabled annotation.
+func (m *Manager) roleViolation(ctx context.Context, name string, enforceAllowList bool) string {
+	if enforceAllowList && !rolebinding.IsRoleAllowed(name) {
+		return "not in the allowed project role list: d8:project:*, d8:namespace:*, their capabilities and d8:custom:*"
+	}
+
+	clusterRole := &rbacv1.ClusterRole{}
+	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, clusterRole); err != nil {
+		if apierrors.IsNotFound(err) {
+			// A missing role cannot be granted; existence is enforced by the binding webhook, not here.
+			return ""
+		}
+		m.logger.Error(err, "failed to get the cluster role for the template role check", "project-role", name)
+		return ""
+	}
+
+	if clusterRole.Annotations[rolebinding.AnnotationDisabledForProjects] == "true" {
+		return "disabled for direct use in projects"
+	}
+	return ""
 }
 
 // HandleVirtual handles virtual project
-func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
+func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
 	namespaces := new(corev1.NamespaceList)
 	if err := m.client.List(ctx, namespaces); err != nil {
 		m.logger.Error(err, "failed to list namespaces", "project", project.Name)
@@ -172,7 +322,7 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 
 	var involvedNamespaces []string
 	for _, namespace := range namespaces.Items {
-		if _, ok := namespace.GetLabels()[v1alpha2.ResourceLabelProject]; ok {
+		if _, ok := namespace.GetLabels()[v1alpha3.ResourceLabelProject]; ok {
 			continue
 		}
 
@@ -197,12 +347,26 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha2.Project) 
 }
 
 // Delete deletes project`s resources
-func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.Result, error) {
-	// delete resources
+func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
+	// delete the auto-managed cluster-scoped standard-field objects (administrators binding)
+	if err := m.deleteStandardFields(ctx, project); err != nil {
+		m.logger.Error(err, "failed to delete the project standard fields", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
+	// delete helm-managed resources
 	if err := m.helmClient.Delete(ctx, project.Name); err != nil {
 		// TODO: add error to the project`s status
 		m.logger.Error(err, "failed to delete the project", "project", project.Name)
 		return ctrl.Result{}, err
+	}
+
+	// template-less projects own their namespace directly (no helm release deletes it)
+	if project.Spec.ProjectTemplateName == "" {
+		if err := m.deleteNamespace(ctx, project.Name); err != nil {
+			m.logger.Error(err, "failed to delete the project namespace", "project", project.Name)
+			return ctrl.Result{}, err
+		}
 	}
 
 	// remove finalizer
@@ -213,4 +377,21 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha2.Project) (ctrl.R
 
 	m.logger.Info("the project deleted", "project", project.Name)
 	return ctrl.Result{}, nil
+}
+
+func (m *Manager) deleteNamespace(ctx context.Context, name string) error {
+	ns := &corev1.Namespace{}
+	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get the '%s' namespace: %w", name, err)
+	}
+	if _, managed := ns.Labels[v1alpha3.ResourceLabelProject]; !managed {
+		return nil
+	}
+	if err := m.client.Delete(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete the '%s' namespace: %w", name, err)
+	}
+	return nil
 }

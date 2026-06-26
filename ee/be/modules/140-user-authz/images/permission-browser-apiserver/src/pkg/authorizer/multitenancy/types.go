@@ -41,14 +41,18 @@ type NamespaceSelector struct {
 	MatchAny      bool                  `json:"matchAny"`
 }
 
-// UserAuthzConfig is a config composed from ClusterAuthorizationRules and
-// AuthorizationRules collected from a Kubernetes cluster.
+// UserAuthzConfig is a config composed from ClusterAuthorizationRules collected
+// from a Kubernetes cluster.
 //
 // CRDs holds cluster-scoped ClusterAuthorizationRules with full multi-tenancy
 // options (limitNamespaces, namespaceSelector, allowAccessToSystemNamespaces).
 //
-// ARs holds namespaced AuthorizationRules. An AR implicitly grants its subjects
-// access to the AR's own namespace; it has no multi-tenancy options.
+// NOTE: namespaced AuthorizationRules ("ars" in config.json) are deliberately
+// NOT modeled here. The engine mirrors the real kube-apiserver user-authz
+// webhook authorizer (images/webhook), which only honors CARs and ignores ARs.
+// AR-derived access is surfaced via the RBAC path (the RoleBinding each AR
+// creates), not via this deny-only multi-tenancy engine. Any "ars" key present
+// in config.json is silently ignored by json.Unmarshal.
 type UserAuthzConfig struct {
 	CRDs []struct {
 		Name string `json:"name"`
@@ -71,19 +75,4 @@ type UserAuthzConfig struct {
 			} `json:"subjects"`
 		} `json:"spec,omitempty"`
 	} `json:"crds"`
-
-	ARs []authorizationRule `json:"ars"`
-}
-
-// authorizationRule captures only the AR fields the engine needs.
-type authorizationRule struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Spec      struct {
-		Subjects []struct {
-			Kind      string `json:"kind"`
-			Name      string `json:"name"`
-			Namespace string `json:"namespace"`
-		} `json:"subjects"`
-	} `json:"spec,omitempty"`
 }

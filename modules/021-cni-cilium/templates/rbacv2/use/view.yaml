@@ -1,8 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/aggregate-to-kubernetes-as" "viewer" "rbac.deckhouse.io/aggregate-to-networking-as" "viewer" "rbac.deckhouse.io/kind" "use")) | nindent 2 }}
-  name: d8:use:capability:module:cni-cilium:view
+  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/capability" "namespace-capability.cni-cilium.view" "rbac.deckhouse.io/aggregate-to-namespace-as" "viewer" "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "namespace")) | nindent 2 }}
+  name: d8:namespace-capability:cni-cilium:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cni-cilium: view"
+    ru.meta.deckhouse.io/title: "Модуль cni-cilium: просмотр"
+    en.meta.deckhouse.io/description: "Read-only access to cni-cilium resources in a namespace."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к ресурсам модуля cni-cilium в пространстве имён."
 rules:
 - apiGroups:
   - cilium.io

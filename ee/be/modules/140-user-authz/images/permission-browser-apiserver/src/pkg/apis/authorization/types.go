@@ -152,3 +152,62 @@ type AccessibleNamespaceList struct {
 	// Items is the list of accessible namespaces
 	Items []AccessibleNamespace `json:"items"`
 }
+
+// +genclient
+// +genclient:nonNamespaced
+// +genclient:onlyVerbs=create
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// WhoCan answers the reverse-RBAC question: given an action (verb on a resource,
+// optionally scoped to a namespace/name/subresource), which subjects (Users,
+// Groups, ServiceAccounts) are allowed to perform it.
+// This resource is ephemeral - it is not stored, only created.
+type WhoCan struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	// Spec describes the action to resolve subjects for.
+	Spec WhoCanSpec
+
+	// Status is filled in by the server with the subjects allowed to perform the action.
+	Status WhoCanStatus
+}
+
+// WhoCanSpec is the specification for a who-can request.
+type WhoCanSpec struct {
+	// ResourceAttributes describes the resource action to resolve subjects for.
+	// +optional
+	ResourceAttributes *ResourceAttributes
+
+	// NonResourceAttributes describes the non-resource action to resolve subjects for.
+	// +optional
+	NonResourceAttributes *NonResourceAttributes
+}
+
+// WhoCanStatus contains the subjects allowed to perform the requested action.
+type WhoCanStatus struct {
+	// Users is the list of user names allowed to perform the action.
+	// +optional
+	Users []string
+
+	// Groups is the list of group names allowed to perform the action.
+	// +optional
+	Groups []string
+
+	// ServiceAccounts is the list of service accounts allowed to perform the action.
+	// +optional
+	ServiceAccounts []ServiceAccountReference
+
+	// EvaluationError contains any non-fatal error encountered while resolving subjects.
+	// +optional
+	EvaluationError string
+}
+
+// ServiceAccountReference identifies a ServiceAccount subject by namespace and name.
+type ServiceAccountReference struct {
+	// Namespace is the namespace of the ServiceAccount.
+	Namespace string
+
+	// Name is the name of the ServiceAccount.
+	Name string
+}

@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: upmeter
     rbac.deckhouse.io/aggregate-to-observability-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.upmeter.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-upmeter
-  name: d8:manage:permission:module:upmeter:view
+  name: d8:system-capability:upmeter:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module upmeter: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль upmeter: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the upmeter module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля upmeter."
 rules:
 - apiGroups:
   - deckhouse.io

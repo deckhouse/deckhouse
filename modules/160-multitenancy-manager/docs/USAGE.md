@@ -7,12 +7,14 @@ title: "The multitenancy-manager module: usage examples"
 
 The following project templates are included in the Deckhouse Kubernetes Platform:
 
+- `simple` — a minimal template that creates only the project namespace (with optional extra labels and annotations). Use it when you only need an isolated namespace managed as a project and configure access and limits through the [standard fields](#standard-project-fields) and [project role bindings](#granting-access-within-a-project).
+
+  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/simple.yaml).
+
 - `default` — a template that covers basic project use cases:
-  - resource limitation
   - network isolation
   - automatic alerts and log collection
   - choice of security profile
-  - project administrators setup
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
 
@@ -37,35 +39,44 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parameters
 
 ## Creating a project
 
-1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename) field.
-1. In the [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) field of the Project resource, specify the parameter values suitable for the ProjectTemplate [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
+1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha3-spec-projecttemplatename) field.
+1. Set the [standard fields](#standard-project-fields) — [.spec.administrators](cr.html#project-v1alpha3-spec-administrators) and [.spec.quota](cr.html#project-v1alpha3-spec-quota) — that are now managed directly by the Project resource regardless of the template.
+1. In the [.spec.parameters](cr.html#project-v1alpha3-spec-parameters) field of the Project resource, specify the parameter values suitable for the ProjectTemplate [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
 
    Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha2
+   apiVersion: deckhouse.io/v1alpha3
    kind: Project
    metadata:
      name: my-project
    spec:
      description: This is an example from the Deckhouse documentation.
      projectTemplateName: default
+     # Standard fields, managed by the Project resource itself.
+     administrators:
+       - kind: Group
+         name: k8s-admins
+     quota:
+       requests.cpu: "5"
+       requests.memory: 5Gi
+       requests.storage: 1Gi
+       limits.cpu: "5"
+       limits.memory: 5Gi
+     # Template-specific parameters.
      parameters:
-       resourceQuota:
-         requests:
-           cpu: 5
-           memory: 5Gi
-           storage: 1Gi
-         limits:
-           cpu: 5
-           memory: 5Gi
        networkPolicy: Isolated
        podSecurityProfile: Restricted
        extendedMonitoringEnabled: true
-       administrators:
-       - subject: Group
-         name: k8s-admins
    ```
+
+   {% endraw %}
+
+   {% alert level="info" %}
+   The Project API is served as `deckhouse.io/v1alpha3`. Older `v1alpha1`/`v1alpha2` manifests keep working: a conversion webhook lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields automatically.
+   {% endalert %}
+
+   {% raw %}
 
 1. To check the status of the project, execute the command:
 
@@ -115,6 +126,71 @@ Note that changing the template may cause a resource conflict. If the template c
 {% endalert %}
 
 {% raw %}
+
+## Standard project fields
+
+Project administrators and resource quotas are no longer part of the project template parameters — they are first-class fields of the [Project](cr.html#project) resource and work with any template (including `simple` and template-less projects):
+
+- `.spec.administrators` — a list of subjects (`kind: User` or `kind: Group` and `name`) that receive administrative access to the project. The controller manages this access as an auto-generated [ProjectRoleBinding](cr.html#projectrolebinding) in the project namespace.
+- `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project namespace and reports current usage in `.status.usage`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: my-project
+spec:
+  projectTemplateName: simple
+  administrators:
+    - kind: Group
+      name: k8s-admins
+  quota:
+    requests.cpu: "5"
+    requests.memory: 5Gi
+    limits.cpu: "10"
+    limits.memory: 10Gi
+```
+
+{% alert level="warning" %}
+`ResourceQuota` and `AuthorizationRule` objects defined inside project templates are no longer rendered: such resources are now managed exclusively through `.spec.quota` and `.spec.administrators`. Existing templates that still declare them keep working, but those objects are filtered out during rendering.
+{% endalert %}
+
+## Granting access within a project
+
+To grant access to project namespaces beyond the project administrators, use role bindings that reference cluster-wide roles and fan out into the appropriate project namespaces automatically:
+
+- [ProjectRoleBinding](cr.html#projectrolebinding) (namespaced, short name `prb`) — grants a role within a **single** project. It must be created in the project's main namespace (the namespace whose name equals the project name). The controller creates a `RoleBinding` in every namespace of that project.
+- [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (cluster-scoped, short name `cprb`) — grants a role across **all** non-virtual projects. The controller creates a `RoleBinding` in every namespace of every project and reports the number of bound projects in `.status.boundProjects`.
+
+`roleRef` must reference a `ClusterRole` whose name starts with one of the allowed prefixes (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). A privilege-escalation check (via `SubjectAccessReview`) ensures the requesting user is allowed to bind the role.
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: viewers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: User
+      name: viewer@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
+metadata:
+  name: platform-viewers
+spec:
+  subjects:
+    - kind: Group
+      name: platform
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+```
 
 ## Creating your own project template
 

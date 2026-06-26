@@ -8,6 +8,7 @@ package rbacadapter
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -195,11 +196,13 @@ func (r *RBACAuthorizer) resourceRuleMatches(rule rbacv1.PolicyRule, attrs autho
 		return false
 	}
 
-	// Check resource names (if specified)
-	if len(rule.ResourceNames) > 0 && attrs.GetName() != "" {
-		if !r.containsOrWildcard(rule.ResourceNames, attrs.GetName()) {
-			return false
-		}
+	// Check resource names. A rule scoped by resourceNames only grants the
+	// individually named objects, so a request without a name (list/create, or
+	// an unscoped get) must NOT match it. resourceNames have no wildcard
+	// semantics in RBAC ("*" is a literal name), hence the exact membership
+	// check. This mirrors upstream k8s.io/apiserver rbac.ResourceNameMatches.
+	if len(rule.ResourceNames) > 0 && !slices.Contains(rule.ResourceNames, attrs.GetName()) {
+		return false
 	}
 
 	return true
