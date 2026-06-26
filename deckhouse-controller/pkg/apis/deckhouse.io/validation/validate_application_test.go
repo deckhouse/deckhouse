@@ -43,7 +43,7 @@ type fakePackageManager struct {
 	gotConstraints schedule.Constraints
 }
 
-func (f *fakePackageManager) ValidateSettings(_ context.Context, _ string, _ addonutils.Values) (settingscheck.Result, error) {
+func (f *fakePackageManager) ValidateAppSettings(_ context.Context, _ string, _ addonutils.Values) (settingscheck.Result, error) {
 	return f.validateResult, f.validateErr
 }
 

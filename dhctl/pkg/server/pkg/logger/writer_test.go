@@ -86,7 +86,6 @@ func TestLogWriter(t *testing.T) {
 	}
 
 	for name, tt := range tests {
-		tt := tt
 
 		t.Run(name, func(t *testing.T) {
 			sendCh := make(chan []string)
@@ -105,16 +104,14 @@ func TestLogWriter(t *testing.T) {
 			w := logger.NewLogWriter(log, sendCh, tt.f)
 
 			wg := sync.WaitGroup{}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				var writes int
 				for writes < len(tt.lines) {
 					lines := <-sendCh
 					assert.Equal(t, tt.lines[writes], lines)
 					writes++
 				}
-			}()
+			})
 
 			for _, input := range tt.input {
 				n, err := w.Write(input)

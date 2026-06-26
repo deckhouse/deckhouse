@@ -329,41 +329,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/303-prometheus-pushgateway
-  to: /deckhouse/modules/303-prometheus-pushgateway
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-extended-monitoring
-  to: /deckhouse/modules/340-extended-monitoring
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/340-monitoring-custom
   to: /deckhouse/modules/340-monitoring-custom
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-deckhouse
-  to: /deckhouse/modules/340-monitoring-deckhouse
   excludePaths:
     - docs
     - README.md
@@ -384,41 +351,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/340-monitoring-kubernetes-control-plane
-  to: /deckhouse/modules/340-monitoring-kubernetes-control-plane
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-monitoring-ping
-  to: /deckhouse/modules/340-monitoring-ping
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/402-ingress-nginx
-  to: /deckhouse/modules/402-ingress-nginx
   excludePaths:
     - docs
     - README.md
@@ -1009,6 +943,11 @@
         - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/ambient.tpl
   stageDependencies:
     install:
         - '**/*'

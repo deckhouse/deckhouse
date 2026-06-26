@@ -121,8 +121,8 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 							Name: "global",
 						},
 						Spec: config.ModuleConfigSpec{
-							Settings: map[string]interface{}{
-								"modules": map[string]interface{}{
+							Settings: map[string]any{
+								"modules": map[string]any{
 									"publicDomainTemplate": "example.com",
 								},
 							},
@@ -143,8 +143,8 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 							Name: "global",
 						},
 						Spec: config.ModuleConfigSpec{
-							Settings: map[string]interface{}{
-								"modules": map[string]interface{}{
+							Settings: map[string]any{
+								"modules": map[string]any{
 									"publicDomainTemplate": "cluster.local",
 								},
 							},
@@ -166,8 +166,8 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 							Name: "global",
 						},
 						Spec: config.ModuleConfigSpec{
-							Settings: map[string]interface{}{
-								"modules": map[string]interface{}{
+							Settings: map[string]any{
+								"modules": map[string]any{
 									"publicDomainTemplate": "test.cluster.local",
 								},
 							},

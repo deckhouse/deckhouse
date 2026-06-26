@@ -86,6 +86,23 @@ spec:
                         ru:
                           description: |
                             Русское описание пакета.
+                    disableOptions:
+                      description: |
+                        Параметры защиты от отключения пакета.
+                      properties:
+                        confirmation:
+                          description: |
+                            Требуется ли подтверждение для отключения пакета.
+                        messages:
+                          description: |
+                            Локализованные сообщения подтверждения отключения.
+                          properties:
+                            en:
+                              description: |
+                                Сообщение подтверждения отключения на английском.
+                            ru:
+                              description: |
+                                Сообщение подтверждения отключения на русском.
                     licensing:
                       description: |
                         Информация о лицензировании для разных редакций.

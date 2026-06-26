@@ -1,4 +1,4 @@
-2698
+2710
 1GB
 2GB
 5XX
@@ -360,6 +360,7 @@ dashboard
 datacenter
 Datacenter
 DatacenterName
+datacenters
 datapath
 datasource
 dataSource
@@ -1705,6 +1706,7 @@ Zvirt
 ZvirtClusterConfiguration
 ZvirtInstanceClass
 автомасштабирование
+автомасштабированием
 автомасштабировании
 автомасштабирования
 Автообновление
@@ -1889,6 +1891,7 @@ ZvirtInstanceClass
 гуглить
 д
 дeплой
+датацентрах
 даунсемплинга
 дашборд
 дашборда
@@ -2215,6 +2218,7 @@ ZvirtInstanceClass
 ООМ
 опциональные
 Опциональные
+опциональный
 Опциональный
 опциональных
 оркестратор
@@ -2368,6 +2372,7 @@ ZvirtInstanceClass
 примонтированных
 примонтируем
 приоритетность
+приоритизации
 приоритизация
 проброс
 проброса
@@ -2403,6 +2408,7 @@ ZvirtInstanceClass
 распарсил
 распарсить
 рассинхронизации
+рассинхронизироваться
 ребут
 реверт
 Ревью
@@ -2697,3 +2703,9 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
+ControlPlaneNode
+ControlPlaneOperation
+авторизующий
+мультимастерными
+одномастерными
+перезапускающий

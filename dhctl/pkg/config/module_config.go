@@ -40,13 +40,13 @@ var ModuleConfigGVR = schema.GroupVersionResource{
 // ModuleConfig is a configuration for module or for global config values.
 type ModuleConfig struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	Spec ModuleConfigSpec `json:"spec"`
 }
 
 // SettingsValues empty interface in needed to handle DeepCopy generation. DeepCopy does not work with unnamed empty interfaces
-type SettingsValues map[string]interface{}
+type SettingsValues map[string]any
 
 type ModuleConfigSpec struct {
 	Version  int            `json:"version,omitempty"`

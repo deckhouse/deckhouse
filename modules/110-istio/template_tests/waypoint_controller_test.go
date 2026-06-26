@@ -30,7 +30,7 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
@@ -104,7 +104,7 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.21.6")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
@@ -126,7 +126,7 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", false)
 			f.HelmRender()
@@ -150,7 +150,7 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 			// Remove vertical-pod-autoscaler from enabledModules
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus","cert-manager","cni-cilium"]`)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
@@ -175,7 +175,7 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.ValuesSetFromYaml("istio.ambient.waypointController.resourcesManagement", `
@@ -219,7 +219,7 @@ limits:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.ValuesSetFromYaml("istio.ambient.waypointController.resourcesManagement", `
@@ -268,7 +268,7 @@ resourcePolicy:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.ValuesSet("global.highAvailability", false)
@@ -297,7 +297,7 @@ resourcePolicy:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
@@ -352,7 +352,7 @@ resourcePolicy:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
@@ -377,7 +377,7 @@ resourcePolicy:
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()

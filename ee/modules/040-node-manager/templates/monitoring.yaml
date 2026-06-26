@@ -7,6 +7,7 @@
   "monitoring/prometheus-rules/node-unmanaged.tpl"
   "monitoring/prometheus-rules/node-update.yaml"
   "monitoring/prometheus-rules/standby-deployment-unavailable.yaml"
+  "monitoring/prometheus-rules/node-controller.yaml"
 }}
 
 {{- if include "cluster_autoscaler_enabled" . }}
@@ -23,9 +24,6 @@
 
 {{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager" $prometheusRules) }}
 
-{{- if not (.Values.global.enabledModules | has "gpu") }}
-{{- if include "nvidia_gpu_enabled" . }}
-  {{- include "helm_lib_grafana_dashboard_definitions" . }}
-{{- end }}
+{{- include "helm_lib_grafana_dashboard_definitions" . }}
 
-{{- end }}
+
