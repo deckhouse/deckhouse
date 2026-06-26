@@ -324,7 +324,8 @@ type ModuleReleaseStatus struct {
 	// +kubebuilder:validation:Enum=Pending;Deployed;Superseded;Suspended;Skipped;Terminating
 	Phase string `json:"phase,omitempty"`
 	// Status indicating that the release is ready for deployment. For the Manual update mode only (`update.mode: Manual`).
-	Approved bool `json:"approved,omitempty"`
+	// +optional
+	Approved bool `json:"approved"`
 	// Time of release status change.
 	TransitionTime metav1.Time `json:"transitionTime,omitempty"`
 	// Detailed status or error message.

@@ -51,6 +51,7 @@ spec:
   version: 1.70.0
   weight: 950
 status:
+  approved: false
   phase: Superseded
   pullDuration: 0s
   transitionTime: "2019-10-17T15:33:00Z"
@@ -86,6 +87,7 @@ spec:
   version: 1.71.0
   weight: 950
 status:
+  approved: false
   phase: Superseded
   pullDuration: 0s
   transitionTime: "2019-10-17T15:33:00Z"
@@ -121,6 +123,7 @@ spec:
   version: 1.72.0
   weight: 950
 status:
+  approved: false
   phase: Deployed
   pullDuration: 0s
   transitionTime: "2024-05-03T20:55:49Z"

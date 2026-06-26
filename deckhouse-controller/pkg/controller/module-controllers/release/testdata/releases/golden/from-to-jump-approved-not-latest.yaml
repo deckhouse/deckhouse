@@ -60,6 +60,7 @@ spec:
   version: 1.75.1
   weight: 900
 status:
+  approved: false
   message: minor version is greater than deployed 1.67.5 by one
   phase: Pending
   pullDuration: 0s
@@ -116,6 +117,7 @@ spec:
   version: 1.75.3
   weight: 900
 status:
+  approved: false
   message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
   pullDuration: 0s

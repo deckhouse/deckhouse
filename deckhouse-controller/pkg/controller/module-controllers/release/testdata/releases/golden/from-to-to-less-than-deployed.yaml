@@ -90,6 +90,7 @@ spec:
   version: 1.68.3
   weight: 900
 status:
+  approved: false
   message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
   pullDuration: 0s
@@ -115,6 +116,7 @@ spec:
   version: 1.75.2
   weight: 900
 status:
+  approved: false
   message: awaiting for v1.68.3 release to be deployed
   phase: Pending
   pullDuration: 0s

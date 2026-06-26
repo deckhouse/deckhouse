@@ -61,6 +61,7 @@ spec:
   version: 0.5.0
   weight: 900
 status:
+  approved: false
   phase: Superseded
   pullDuration: 0s
   transitionTime: "2019-10-17T15:33:00Z"
@@ -86,6 +87,7 @@ spec:
   version: 0.7.0
   weight: 900
 status:
+  approved: false
   phase: Deployed
   pullDuration: 0s
   transitionTime: null

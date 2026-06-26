@@ -60,6 +60,7 @@ spec:
   version: 1.68.0
   weight: 900
 status:
+  approved: false
   phase: Skipped
   pullDuration: 0s
   transitionTime: "2019-10-17T15:33:00Z"
@@ -85,6 +86,7 @@ spec:
   version: 1.69.3
   weight: 900
 status:
+  approved: false
   phase: Skipped
   pullDuration: 0s
   transitionTime: "2019-10-17T15:33:00Z"

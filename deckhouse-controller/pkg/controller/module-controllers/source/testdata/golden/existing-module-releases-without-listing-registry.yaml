@@ -41,6 +41,7 @@ spec:
   version: 1.4.1
   weight: 900
 status:
+  approved: false
   phase: Deployed
   pullDuration: 0s
   transitionTime: "2024-05-03T20:55:49Z"
@@ -63,6 +64,7 @@ spec:
   version: 1.4.2
   weight: 900
 status:
+  approved: false
   phase: Pending
   pullDuration: 0s
   transitionTime: "2024-05-03T20:55:49Z"
@@ -85,6 +87,7 @@ spec:
   version: 1.4.3
   weight: 900
 status:
+  approved: false
   phase: Pending
   pullDuration: 0s
   transitionTime: "2024-05-03T20:55:49Z"
@@ -114,5 +117,6 @@ spec:
   version: 1.4.4
   weight: 900
 status:
+  approved: false
   pullDuration: 0s
   transitionTime: null

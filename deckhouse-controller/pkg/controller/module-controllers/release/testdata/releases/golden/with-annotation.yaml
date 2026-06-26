@@ -44,6 +44,7 @@ spec:
   version: 1.3.10
   weight: 900
 status:
+  approved: false
   phase: Pending
   pullDuration: 307.070601ms
   size: 3087774

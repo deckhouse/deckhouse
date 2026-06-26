@@ -50,6 +50,7 @@ spec:
   version: 1.4.3
   weight: 900
 status:
+  approved: false
   message: 'check module release requirements: validate release: requirements are
     not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or
     equal to v1.63.0'

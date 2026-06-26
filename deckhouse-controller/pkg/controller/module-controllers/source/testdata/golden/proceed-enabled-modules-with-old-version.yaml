@@ -59,6 +59,7 @@ spec:
   version: 1.2.3
   weight: 900
 status:
+  approved: false
   pullDuration: 0s
   transitionTime: null
 ---
@@ -88,5 +89,6 @@ spec:
   version: 1.2.3
   weight: 900
 status:
+  approved: false
   pullDuration: 0s
   transitionTime: null
