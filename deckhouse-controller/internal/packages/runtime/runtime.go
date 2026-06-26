@@ -54,6 +54,7 @@ import (
 	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
+	taskglobalrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/globalrun"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -98,7 +99,7 @@ type Runtime struct {
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
 	debugServer *debug.Server       // Unix socket debug API
 
-	crdInstaller      *crd.Installer                      // Installs CRDs from package paths
+	crdService        *crd.Service                        // Installs CRDs from package paths
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
@@ -170,6 +171,11 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
+	}
+
+	// Build CRD service with its own client
+	if err := r.buildCRDService(); err != nil {
+		return nil, fmt.Errorf("build crd service: %w", err)
 	}
 
 	// Build Health service with its own client
@@ -399,9 +405,6 @@ func (r *Runtime) buildNelmService() error {
 		return fmt.Errorf("initialize nelm service client: %w", err)
 	}
 
-	// Create CRD installer with nelm client
-	r.crdInstaller = crd.NewInstaller(client, r.logger)
-
 	// Create controller-runtime cache for efficient resource queries during monitoring
 	cache, err := runtimecache.New(client.RestConfig(), runtimecache.Options{})
 	if err != nil {
@@ -422,6 +425,24 @@ func (r *Runtime) buildNelmService() error {
 	}
 
 	r.nelmService = nelm.NewService(cache, r.scheduler.Reschedule, r.status, r.logger)
+
+	return nil
+}
+
+// buildCRDService creates a Kubernetes client used to apply CRDs that packages
+// bundle under their crds/ directory. The service runs before hooks and Helm so
+// that custom resources referenced by later pipeline stages already exist.
+func (r *Runtime) buildCRDService() error {
+	client := klient.New(klient.WithLogger(r.logger.Named("crd-installer-client")))
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithMetricPrefix("packages_crd_installer_")
+
+	if err := client.Init(); err != nil {
+		return fmt.Errorf("initialize crd installer client: %w", err)
+	}
+
+	r.crdService = crd.NewService(client, r.logger)
 
 	return nil
 }
@@ -550,25 +571,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		return version
 	}
 
-	onScheduleHook := func(enabled []string) {
-		r.logger.Info("enabled packages", "packages", enabled)
-
-		for _, name := range enabled {
-			module, ok := r.modules[name]
-			if !ok {
-				continue
-			}
-
-			if err := r.crdInstaller.Install(context.Background(), module); err != nil {
-				r.logger.Error(fmt.Sprintf("failed to install crds for module %s: %v", name, err.Error()))
-			}
-		}
-
-		r.global.SetEnabledModules(enabled)
-	}
-
 	r.scheduler = schedule.NewScheduler(
-		schedule.WithOnScheduleHook(onScheduleHook),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
@@ -586,6 +589,13 @@ func (r *Runtime) Run() {
 		for event := range r.scheduler.Ch() {
 			switch event.Kind {
 			case schedule.EventSchedule:
+				if event.Name == "global" {
+					// global is the scheduler's order-0 barrier: it ensures the enabled
+					// modules' CRDs and publishes global values, then completes to release
+					// the modules waiting behind it.
+					r.scheduleGlobal(event.Enabled)
+					continue
+				}
 				r.schedulePackage(event.Name)
 			case schedule.EventDisable:
 				r.disablePackage(event.Name, event.Reason, event.Message)
@@ -593,6 +603,42 @@ func (r *Runtime) Run() {
 			}
 		}
 	}()
+}
+
+// scheduleGlobal runs the global node's work whenever the scheduler schedules it
+// via the globalrun task: ensure the CRDs of every enabled module, then publish
+// the enabled set and the resulting GVK capabilities into global values. The
+// scheduler holds every module behind global (canSchedule barrier), so this runs
+// before any module and modules render against a complete capability set.
+//
+// The globalrun task (and its per-module EnsureCRDs subtasks) runs under global's
+// EventSchedule context, mirroring how schedulePackage scopes a package's tasks:
+// rescheduling global renews that context and cancels the in-flight run. onDone
+// completes the global node, unblocking the modules waiting behind it.
+func (r *Runtime) scheduleGlobal(enabled []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, r.global.GetName())
+	if ctx == nil {
+		return
+	}
+
+	onDone := queue.WithOnDone(func() {
+		r.scheduler.Complete("global")
+	})
+
+	// Resolve the loaded module packages now, under r.mu, so the task body never
+	// reaches back into runtime internals.
+	enabledModules := make([]taskglobalrun.Module, 0, len(enabled))
+	for _, name := range enabled {
+		if pkg := r.modules[name]; pkg != nil {
+			enabledModules = append(enabledModules, pkg)
+		}
+	}
+
+	task := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.queueService, r.status, r.logger)
+	r.queueService.Enqueue(ctx, "global", task, onDone)
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
