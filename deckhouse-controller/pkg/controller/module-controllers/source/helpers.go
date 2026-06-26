@@ -175,7 +175,8 @@ func (r *reconciler) needToEnsureRelease(
 	module *v1alpha1.Module,
 	sourceModule v1alpha1.AvailableModule,
 	meta *downloader.ModuleDownloadResult,
-	releaseExists bool) bool {
+	releaseExists bool,
+	embeddedTargetSource string) bool {
 	// skip experimental modules when deckhouse does not allow them
 	if module.IsExperimental() && !r.deckhouseSettings.ExperimentalModuleAllowed(module.Name) {
 		r.logger.Debug("experimental module not allowed, skip release ensure",
@@ -187,12 +188,13 @@ func (r *reconciler) needToEnsureRelease(
 
 	// An embedded module keeps Source == "Embedded" while its embedded copy is
 	// shipped, so the active-source check below would always skip it. Instead
-	// pre-stage the release from the external source so the module is already on
-	// the filesystem when the embedded copy is dropped on upgrade. Only do this
-	// when exactly one source offers the module; several sources are a conflict
-	// handled in processModules.
+	// pre-stage the release from the source resolved for migration so the module is
+	// already on the filesystem when the embedded copy is dropped on upgrade.
+	// embeddedTargetSource is the resolved source (operator's ModuleConfig
+	// .spec.source, or the only available source); it is empty when the source is
+	// undecided (several sources, none chosen) - a conflict handled in processModules.
 	if module.IsEmbedded() {
-		if len(module.Properties.AvailableSources) != 1 {
+		if embeddedTargetSource == "" || embeddedTargetSource != source.Name {
 			return false
 		}
 	} else if module.Properties.Source != "" && module.Properties.Source != source.Name {
@@ -224,6 +226,30 @@ func (r *reconciler) needToEnsureRelease(
 	}
 
 	return sourceModule.Checksum != meta.Checksum || !releaseExists
+}
+
+// getConfiguredModuleSource returns the source explicitly selected by the operator
+// in the module's ModuleConfig (.spec.source), or an empty string if there is no
+// config or no source is set. It is used to resolve which source to pre-stage an
+// embedded module from while its embedded copy is still shipped (the module-config
+// controller skips embedded modules, so .spec.source is not reflected in
+// Module.Properties.Source).
+func (r *reconciler) getConfiguredModuleSource(ctx context.Context, moduleName string) (string, error) {
+	moduleConfig := new(v1alpha1.ModuleConfig)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, moduleConfig); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("get the '%s' module config: %w", moduleName, err)
+	}
+
+	// "Embedded" is the sentinel for the built-in copy, not a real ModuleSource, so
+	// it can never be a valid externally selected source - treat it as not chosen.
+	if moduleConfig.Spec.Source == v1alpha1.ModuleSourceEmbedded {
+		return "", nil
+	}
+
+	return moduleConfig.Spec.Source, nil
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {

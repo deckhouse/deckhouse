@@ -452,21 +452,43 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// An embedded module offered by more than one external source is a conflict:
-		// we cannot decide which source to pre-stage the release from. Fire the
-		// conflict alert and skip release creation. The embedded copy keeps serving
-		// the module, so its phase/conditions are intentionally left untouched.
-		if module.IsEmbedded() && len(module.Properties.AvailableSources) > 1 {
-			logger.Warn("embedded module is available in several sources, cannot pre-stage a release until the conflict is resolved")
-			r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{"module": moduleName})
+		// Resolve which source an embedded module should be pre-staged from while
+		// its embedded copy is still shipped. The module keeps Source == "Embedded",
+		// so the choice is driven by the operator's ModuleConfig .spec.source, or by
+		// the only available source. When several sources offer the module and none
+		// is chosen, it is a conflict: fire the alert and skip release creation (the
+		// embedded copy keeps serving the module, so its phase/conditions are left
+		// untouched).
+		var embeddedTargetSource string
+		if module.IsEmbedded() {
+			chosenSource, err := r.getConfiguredModuleSource(ctx, moduleName)
+			if err != nil {
+				logger.Error("failed to get module config, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
 
-			availableModule.Checksum = meta.Checksum
-			availableModule.Version = meta.ModuleVersion
-			availableModules = append(availableModules, availableModule)
-			continue
+			switch {
+			case chosenSource != "":
+				embeddedTargetSource = chosenSource
+			case len(module.Properties.AvailableSources) == 1:
+				embeddedTargetSource = module.Properties.AvailableSources[0]
+			default:
+				// several sources and none chosen as primary
+				logger.Warn("embedded module is available in several sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved")
+				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{"module": moduleName})
+
+				availableModule.Checksum = meta.Checksum
+				availableModule.Version = meta.ModuleVersion
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
 		}
 
-		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
+		if r.needToEnsureRelease(source, module, availableModule, meta, exists, embeddedTargetSource) {
 			logger.Debug("ensure release")
 
 			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
