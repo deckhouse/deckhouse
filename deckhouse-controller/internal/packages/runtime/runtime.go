@@ -33,6 +33,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/workqueue"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -780,9 +781,14 @@ func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
 }
 
-// Status returns package status service for external access
-func (r *Runtime) Status() *status.Service {
-	return r.status
+// GetStatus returns package status.
+func (r *Runtime) GetStatus(name string) status.Status {
+	return r.status.GetStatus(name)
+}
+
+// GetStatusQueue returns the status queue for external access
+func (r *Runtime) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.Queue()
 }
 
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.

@@ -51,10 +51,10 @@ type App struct {
 	Settings   addonutils.Values
 }
 
-// ValidateSettings checks settings against the package's OpenAPI schema.
+// ValidateAppSettings checks settings against the package's OpenAPI schema.
 // Returns valid if the package is not loaded yet (settings validated on load).
-func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
-	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidateSettings")
+func (r *Runtime) ValidateAppSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "ValidateAppSettings")
 	defer span.End()
 
 	r.mu.Lock()
