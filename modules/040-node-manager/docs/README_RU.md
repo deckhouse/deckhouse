@@ -375,7 +375,12 @@ rm /var/lib/bashible/configuration_checksum
 
 Полезные особенности некоторых скриптов:
 
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) - производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также **перезапуск** сервиса. Следует учитывать что директория `/etc/containerd/conf.d/` не создается автоматически, а также что создание файлов в этой директории следует производить в скриптах с приоритетом менее `32`
+* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — объединяет конфигурационные файлы containerd и **перезапускает** сервис. Размещение конфигурационных файлов зависит от CRI на узлах кластера:
+
+  * `/etc/containerd/conf.d/*.toml` — для containerd v1,
+  * `/etc/containerd/conf2.d/*.toml` — для containerd v2.
+  
+  Следует учитывать, что директории с конфигурационными файлами не создаются автоматически. Файлы в них нужно добавлять в скриптах с приоритетом менее `32`.
 
 ## Chaos Monkey
 

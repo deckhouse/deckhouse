@@ -495,7 +495,7 @@ There are two ways to solve this problem:
 2. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
 {% alert level="info" %}
-Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
+Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.
 
 To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
@@ -652,7 +652,7 @@ The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at l
 - cgroup v2 is disabled
 - EROFS file system is unavailable.
 
-The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
+The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `/etc/containerd/conf.d/` (if CRI containerd v1 is used on the cluster nodes) or `/etc/containerd/conf2.d/` (if CRI containerd v2 is used on the cluster nodes) directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
 
 If the [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/) is used, an additional reason why the CRI may fail to switch can be the `containerd-dvcr-config.sh` NGC. If the virtualization platform is already installed and running, this NGC can be removed.
 
@@ -769,11 +769,18 @@ The example of `NodeGroupConfiguration` uses functions of the script [032_config
 Adding custom settings causes a restart of the containerd service.
 {% endalert %}
 
-Bashible on nodes merges main Deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
+Bashible on nodes merges main Deckhouse containerd config with configs from:
+
+- `/etc/containerd/conf.d/*.toml` — if containerd v1 is used as the CRI on the cluster nodes.
+- `/etc/containerd/conf2.d/*.toml` — if containerd v2 is used as the CRI on the cluster nodes.
 
 {% alert level="warning" %}
 You can override the values of the parameters that are specified in the file `/etc/containerd/deckhouse.toml`, but you will have to ensure their functionality on your own. Also, it is better not to change the configuration for the master nodes (nodeGroup `master`).
 {% endalert %}
+
+{% tabs containerd_version %}
+{% tab "For containerd v1" %}
+{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -809,6 +816,52 @@ spec:
     - "worker"
   weight: 31
 ```
+
+{% endraw %}
+{% endtab %}
+{% tab "For containerd v2" %}
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-option-config.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    mkdir -p /etc/containerd/conf2.d
+    bb-sync-file /etc/containerd/conf2.d/runtimeclass.toml - << "EOF"
+    [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm]
+      runtime_type = "io.containerd.runc.v2"
+      [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.gpu-large-shm.options]
+        BinaryName = ""
+        SystemdCgroup = true
+        ShmSize = 17179869184
+    EOF
+  nodeGroups:
+    - "worker"
+  weight: 31
+```
+
+{% endraw %}
+{% endtab %}
+{% endtabs %}
 
 ### How to add configuration for an additional registry?
 

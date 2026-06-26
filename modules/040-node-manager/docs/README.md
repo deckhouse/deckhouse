@@ -378,7 +378,12 @@ When writing your own scripts, it is important to consider the following feature
 
 Useful features of some scripts:
 
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) - merges all configuration files of the `containerd` service located at `/etc/containerd/conf.d/*.toml`, and also **restarts** the service. It is important to note that the `/etc/containerd/conf.d/` directory is not created automatically, and that files in this directory should be created in scripts with a priority lower than `32`
+* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl): Merges the containerd configuration files and **restarts** the service. The location of the configuration files depends on the CRI used on the cluster nodes:
+
+  * `/etc/containerd/conf.d/*.toml` — for containerd v1,
+  * `/etc/containerd/conf2.d/*.toml` — for containerd v2.
+  
+  Note that directories containing configuration files are not created automatically. Files must be added to these directories in scripts with a priority of less than `32`.
 
 ## Chaos Monkey
 
