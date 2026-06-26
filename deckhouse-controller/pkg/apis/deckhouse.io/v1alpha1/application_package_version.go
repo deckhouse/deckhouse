@@ -19,10 +19,11 @@ package v1alpha1
 import (
 	"slices"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 )
 
 const (
@@ -127,14 +128,15 @@ type ApplicationPackageVersionStatus struct {
 	UsedByCount int `json:"usedByCount,omitempty"`
 }
 
-// PackageSchema is an OpenAPI v3 schema stored as raw JSON to preserve all
-// custom x-* extensions that apiextensionsv1.JSONSchemaProps would silently
-// drop. The serialised JSON shape is {"openAPIV3Schema": <schema-object>},
-// identical to apiextensionsv1.CustomResourceValidation but with all
-// extensions retained.
+// PackageSchema is an OpenAPI v3 schema wrapper that preserves all custom x-*
+// extensions (e.g. x-deckhouse-grantable-resource) as typed fields on the
+// embedded OpenAPIV3Schema. The serialised JSON shape is
+// {"openAPIV3Schema": <schema-object>}, identical to
+// apiextensionsv1.CustomResourceValidation but with all Deckhouse extensions
+// retained.
 type PackageSchema struct {
 	// +optional
-	OpenAPIV3Schema *apiextensionsv1.JSON `json:"openAPIV3Schema,omitempty"`
+	OpenAPIV3Schema *openapi.OpenAPIV3Schema `json:"openAPIV3Schema,omitempty"`
 }
 
 type ApplicationPackageVersionStatusSchemas struct {

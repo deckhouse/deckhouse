@@ -16,13 +16,11 @@ package applicationpackageversion
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"path/filepath"
 	"time"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +33,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -344,9 +343,9 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 
 // setPackageSchema parses a raw YAML/JSON OpenAPI v3 schema and stores it on the
 // ApplicationPackageVersion status under either SettingsSchema or ValuesSchema,
-// selected by schemaType. The schema is stored as raw JSON to preserve all custom
-// x-* extensions (e.g. x-deckhouse-grantable-resource) that would be dropped by
-// apiextensionsv1.JSONSchemaProps. The x-config-version envelope marker is stripped.
+// selected by schemaType. The schema is stored as a typed openapi.OpenAPIV3Schema
+// that preserves all Deckhouse x-* extensions as explicit fields.
+// The x-config-version envelope marker is stripped.
 // An empty rawSchema is treated as "no schema supplied" and returns nil
 // without touching the status. Unknown schemaType values are silently ignored.
 func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, rawSchema []byte) error {
@@ -354,16 +353,13 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 		return nil
 	}
 
-	var schemaObj map[string]interface{}
-	if err := yaml.Unmarshal(rawSchema, &schemaObj); err != nil {
-		return fmt.Errorf("invalid JSON schema: %w", err)
+	var wrapper struct {
+		Version string `json:"x-config-version"`
+		openapi.OpenAPIV3Schema
 	}
 
-	delete(schemaObj, "x-config-version")
-
-	jsonBytes, err := json.Marshal(schemaObj)
-	if err != nil {
-		return fmt.Errorf("marshal schema: %w", err)
+	if err := yaml.Unmarshal(rawSchema, &wrapper); err != nil {
+		return fmt.Errorf("invalid JSON schema: %w", err)
 	}
 
 	if apv.Status.PackageSchemas == nil {
@@ -371,7 +367,7 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 	}
 
 	schema := &v1alpha1.PackageSchema{
-		OpenAPIV3Schema: &apiextensionsv1.JSON{Raw: jsonBytes},
+		OpenAPIV3Schema: &wrapper.OpenAPIV3Schema,
 	}
 
 	switch schemaType {

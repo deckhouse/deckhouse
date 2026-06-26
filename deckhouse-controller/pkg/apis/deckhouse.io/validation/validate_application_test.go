@@ -18,18 +18,17 @@ package validation
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 )
@@ -140,28 +139,13 @@ func TestParsePackageConstraint(t *testing.T) {
 }
 
 func TestValidateAppSettings(t *testing.T) {
-	objectSchema := func(props map[string]apiextensionsv1.JSONSchemaProps, required []string) *v1alpha1.PackageSchema {
-		rawProps := make(map[string]interface{}, len(props))
-		for k, v := range props {
-			m := map[string]interface{}{}
-			if v.Type != "" {
-				m["type"] = v.Type
-			}
-			if v.Default != nil {
-				m["default"] = v.Default
-			}
-			rawProps[k] = m
-		}
-		schemaObj := map[string]interface{}{
-			"type":       "object",
-			"properties": rawProps,
-		}
-		if len(required) > 0 {
-			schemaObj["required"] = required
-		}
-		raw, _ := json.Marshal(schemaObj)
+	objectSchema := func(props map[string]openapi.OpenAPIV3Schema, required []string) *v1alpha1.PackageSchema {
 		return &v1alpha1.PackageSchema{
-			OpenAPIV3Schema: &apiextensionsv1.JSON{Raw: raw},
+			OpenAPIV3Schema: &openapi.OpenAPIV3Schema{
+				Type:       "object",
+				Properties: props,
+				Required:   required,
+			},
 		}
 	}
 
@@ -181,7 +165,7 @@ func TestValidateAppSettings(t *testing.T) {
 	t.Run("settings satisfying the schema pass", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
 		apv.Status.PackageSchemas = &v1alpha1.ApplicationPackageVersionStatusSchemas{
-			SettingsSchema: objectSchema(map[string]apiextensionsv1.JSONSchemaProps{
+			SettingsSchema: objectSchema(map[string]openapi.OpenAPIV3Schema{
 				"foo": {Type: "string"},
 			}, []string{"foo"}),
 		}
@@ -194,7 +178,7 @@ func TestValidateAppSettings(t *testing.T) {
 	t.Run("settings violating the schema are rejected", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
 		apv.Status.PackageSchemas = &v1alpha1.ApplicationPackageVersionStatusSchemas{
-			SettingsSchema: objectSchema(map[string]apiextensionsv1.JSONSchemaProps{
+			SettingsSchema: objectSchema(map[string]openapi.OpenAPIV3Schema{
 				"foo": {Type: "string"},
 			}, []string{"foo"}),
 		}
