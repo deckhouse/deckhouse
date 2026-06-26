@@ -369,6 +369,10 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("run package runtime: %w", err)
 		}
 
+		// feed user-provided global settings (global ModuleConfig) into the
+		// package runtime's global module, on initial load and on every change
+		configHandler.SetGlobalObserver(pkgRuntime.SetGlobalSettings)
+
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register package repository controller: %w", err)
