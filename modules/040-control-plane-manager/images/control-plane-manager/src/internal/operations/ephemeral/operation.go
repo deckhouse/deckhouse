@@ -24,17 +24,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type EphemeralExecutor struct {
+type OperationExecutor struct {
 	client client.Client
 }
 
-func NewEphemeralExecutor(client client.Client) *EphemeralExecutor {
-	return &EphemeralExecutor{
+func NewOperationExecutor(client client.Client) *OperationExecutor {
+	return &OperationExecutor{
 		client: client,
 	}
 }
 
-func (e *EphemeralExecutor) NeedsExecution(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (bool, string) {
+func (e *OperationExecutor) NeedsExecution(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (bool, string) {
 	if obsolete, reason := e.isObsolete(ctx, operation); obsolete {
 		return false, reason
 	}
@@ -42,7 +42,7 @@ func (e *EphemeralExecutor) NeedsExecution(ctx context.Context, operation *contr
 	return true, ""
 }
 
-func (e *EphemeralExecutor) Execute(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) operations.OperationResult {
+func (e *OperationExecutor) Execute(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) operations.OperationResult {
 	stepExecutor := StepExecutor{
 		client:         e.client,
 		operation:      operation,
@@ -62,6 +62,6 @@ func (e *EphemeralExecutor) Execute(ctx context.Context, operation *controlplane
 	return operations.NewOperationResult(steps)
 }
 
-func (e *EphemeralExecutor) isObsolete(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (bool, string) {
+func (e *OperationExecutor) isObsolete(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (bool, string) {
 	return false, ""
 }
