@@ -1,4 +1,5 @@
 .github/                                                         @Nikolay1224 @himax1991
+.gitleaks.toml                                                   @Nikolay1224 @himax1991
 000-common/                                                      @RomanenkoDenys
 **/000-common/images/alt-p11                                     @borg-z @090809
 **/000-common/images/cni-**                                      @apolovov

@@ -897,40 +897,6 @@
       }
     },
     {
-      "title": "The extended-monitoring module",
-      "description": "Metrics for extended monitoring of the Deckhouse Kubernetes Platform cluster.",
-      "module": "extended-monitoring",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "extended-monitoring/",
-      "ru": {
-        "title": "Модуль extended-monitoring",
-        "description": "Метрики для расширенного мониторинга кластера Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "extended-monitoring",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-monitoring",
-        "requirements": {
-          "modules": {
-            "prometheus": ">= 0.0.0"
-          }
-        },
-        "descriptions": {
-          "en": "Extends cluster monitoring capabilities with additional metrics exporters, which allow you to identify potential problems before they affect the operation of services.",
-          "ru": "Расширяет возможности мониторинга кластера за счёт дополнительных экспортеров метрик, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов."
-        },
-        "oss": []
-      }
-    },
-    {
       "title": "The ingress-nginx module",
       "description": "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using Ingress NGINX Controller.",
       "module": "ingress-nginx",

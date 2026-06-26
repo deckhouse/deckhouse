@@ -204,6 +204,46 @@ func childDigestForPlatform(idx v1.ImageIndex, platform *v1.Platform) (string, e
 	return "", ErrPackageNotFound
 }
 
+// GetRawManifest returns the raw manifest bytes and media type for path:ref without
+// pulling layers. ref is a tag or a digest. remote.Get fetches only the manifest, so
+// this is cheap; the caller (the CLI) parses whatever it needs from the bytes.
+func (c *DefaultClient) GetRawManifest(ctx context.Context, log log.Logger, config *ClientConfig, path string, ref string) ([]byte, string, error) {
+	repo := config.Repository
+	if path != "" {
+		repo = fmt.Sprintf("%s/%s", repo, path)
+	}
+
+	nameOpts := newNameOptions(config.Scheme)
+	repository, err := name.NewRepository(repo, nameOpts...)
+	if err != nil {
+		return nil, "", err
+	}
+
+	remoteOpts, err := newRemoteOptions(ctx, config)
+	if err != nil {
+		return nil, "", err
+	}
+
+	var reference name.Reference = repository.Tag(ref)
+	if strings.Contains(ref, "@") || strings.HasPrefix(ref, "sha256:") {
+		reference = repository.Digest(ref)
+	}
+
+	desc, err := remote.Get(reference, remoteOpts...)
+	if err != nil {
+		e := &transport.Error{}
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return nil, "", ErrPackageNotFound
+			}
+		}
+		return nil, "", err
+	}
+
+	return desc.Manifest, string(desc.MediaType), nil
+}
+
 func (c *DefaultClient) ListTags(ctx context.Context, log log.Logger, config *ClientConfig, path string) ([]string, error) {
 	repo := config.Repository
 	if path != "" {

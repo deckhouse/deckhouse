@@ -821,6 +821,48 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 
 				})
 			})
+
+			Context("cluster auto-scaler split mode with MCM only", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscalerMCM", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerMCMNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-02320933"]`)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscaler", "false")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerNodes", `[]`)
+					setBashibleAPIServerTLSValues(f)
+					f.HelmRender()
+				})
+
+				It("renders MCM autoscaler target alerts against the MCM job", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
+					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{job=~"cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
+					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
+				})
+			})
+
+			Context("cluster auto-scaler split mode with MCM and CAPI", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscaler", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-02320933"]`)
+					f.ValuesSetFromYaml("nodeManager.internal.deployAutoscalerMCM", "true")
+					f.ValuesSetFromYaml("nodeManager.internal.autoscalerMCMNodes", `["--nodes=0:2:d8-cloud-instance-manager.myprefix-worker-6bdb5b0d"]`)
+					setBashibleAPIServerTLSValues(f)
+					f.HelmRender()
+				})
+
+				It("renders target alerts for both autoscaler jobs", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
+					Expect(rule.Field("spec.groups.0.rules.2.expr").String()).To(Equal(`max by (job) (up{job=~"cluster-autoscaler|cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 0)`))
+					Expect(rule.Field("spec.groups.0.rules.3.expr").String()).To(Equal(`absent(up{job="cluster-autoscaler", namespace="d8-cloud-instance-manager"} == 1) or absent(up{job="cluster-autoscaler-mcm", namespace="d8-cloud-instance-manager"} == 1)`))
+				})
+			})
 		})
 
 		Context("For machine controller manager", func() {
