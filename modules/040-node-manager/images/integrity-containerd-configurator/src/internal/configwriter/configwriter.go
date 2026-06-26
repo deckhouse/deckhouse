@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	deckhousev1alpha1 "integrity-controller/api/deckhouse.io/v1alpha1"
 )
@@ -93,34 +94,14 @@ func AggregatePolicies(policies []deckhousev1alpha1.ContainerdIntegrityPolicy) (
 	}, nil
 }
 
-// RenderNsToml renders the ns.toml content for containerd.
-func RenderNsToml(namespaces, caCerts []string) string {
-	var b strings.Builder
-	b.WriteString("namespaces = ")
-	b.WriteString(renderStringArray(namespaces, true))
-	b.WriteString("\nca_cert = ")
-	b.WriteString(renderStringArray(caCerts, false))
-	b.WriteByte('\n')
-	return b.String()
+type nsTOML struct {
+	Namespaces []string `toml:"namespaces"`
+	CACert     []string `toml:"ca_cert"`
 }
 
-func renderStringArray(values []string, spaced bool) string {
-	var b strings.Builder
-	b.WriteByte('[')
-	for i, value := range values {
-		if i > 0 {
-			if spaced {
-				b.WriteString(", ")
-			} else {
-				b.WriteByte(',')
-			}
-		}
-		b.WriteByte('"')
-		b.WriteString(value)
-		b.WriteByte('"')
-	}
-	b.WriteByte(']')
-	return b.String()
+// RenderNsToml renders the ns.toml content for containerd.
+func RenderNsToml(cfg *DesiredConfig) ([]byte, error) {
+	return toml.Marshal(nsTOML{Namespaces: cfg.Namespaces, CACert: cfg.CACerts})
 }
 
 // Apply writes or removes configuration files on disk.
@@ -133,9 +114,12 @@ func (w *Writer) Apply(config *DesiredConfig) error {
 		return fmt.Errorf("create config dir %q: %w", w.ConfigDir, err)
 	}
 
-	nsToml := RenderNsToml(config.Namespaces, config.CACerts)
+	nsToml, err := RenderNsToml(config)
+	if err != nil {
+		return fmt.Errorf("render ns.toml: %w", err)
+	}
 	nsTomlPath := filepath.Join(w.ConfigDir, NsTomlFileName)
-	if err := pkiutil.WriteFileAtomically(nsTomlPath, []byte(nsToml), 0o644); err != nil {
+	if err := pkiutil.WriteFileAtomically(nsTomlPath, nsToml, 0o644); err != nil {
 		return fmt.Errorf("write ns.toml: %w", err)
 	}
 

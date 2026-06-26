@@ -8,6 +8,7 @@ replace (
 )
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/go-logr/logr v1.4.3
