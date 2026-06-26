@@ -30,6 +30,7 @@ import (
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,6 +79,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	pkiSecret, res, err := r.reconcilePKISecret(ctx, vcp, apiserverService)
 	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.reconcileKubeconfigSecret(ctx, vcp, apiserverService, pkiSecret); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -144,6 +149,88 @@ func applyNamespaceTarget(current, target *corev1.Namespace) {
 	}
 
 	maps.Copy(current.Labels, target.Labels)
+}
+
+func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Service, reconcile.Result, error) {
+	target := buildTargetAPIServerService(vcp)
+
+	current, err := r.getService(ctx, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		if err := r.createService(ctx, target); err != nil {
+			return nil, reconcile.Result{}, err
+		}
+
+		return nil, reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
+	}
+	if err != nil {
+		return nil, reconcile.Result{}, fmt.Errorf("get apiserver Service: %w", err)
+	}
+
+	if current.Spec.ClusterIP == "" || current.Spec.ClusterIP == corev1.ClusterIPNone {
+		return nil, reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
+	}
+
+	if isAPIServerServiceInSync(current, target) {
+		return current, reconcile.Result{}, nil
+	}
+
+	base := current.DeepCopy()
+	applyAPIServerServiceTarget(current, target)
+
+	return current, reconcile.Result{}, r.patchService(ctx, base, current)
+}
+
+func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
+	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kube-apiserver",
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeClusterIP,
+			Selector: map[string]string{
+				"app": "kube-apiserver",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "https",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       6443,
+					TargetPort: intstr.FromInt(6443),
+				},
+			},
+		},
+	}
+}
+
+func isAPIServerServiceInSync(current, target *corev1.Service) bool {
+	for key, value := range target.Labels {
+		if current.Labels[key] != value {
+			return false
+		}
+	}
+
+	return current.Spec.Type == target.Spec.Type &&
+		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
+		equality.Semantic.DeepEqual(current.Spec.Ports, target.Spec.Ports)
+}
+
+func applyAPIServerServiceTarget(current, target *corev1.Service) {
+	if current.Labels == nil {
+		current.Labels = map[string]string{}
+	}
+
+	for key, value := range target.Labels {
+		current.Labels[key] = value
+	}
+
+	current.Spec.Type = target.Spec.Type
+	current.Spec.Selector = target.Spec.Selector
+	current.Spec.Ports = target.Spec.Ports
 }
 
 func (r *reconciler) reconcilePKISecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane, apiserverService *corev1.Service) (*corev1.Secret, reconcile.Result, error) {
@@ -249,86 +336,108 @@ func readPKIBundleSecretData(pkiDir string) (map[string][]byte, error) {
 	return data, nil
 }
 
-func (r *reconciler) reconcileAPIServerService(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Service, reconcile.Result, error) {
-	target := buildTargetAPIServerService(vcp)
+func (r *reconciler) reconcileKubeconfigSecret(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiserverService *corev1.Service,
+	pkiSecret *corev1.Secret,
+) (reconcile.Result, error) {
+	target := buildTargetKubeconfigSecret(vcp)
 
-	current, err := r.getService(ctx, target.Namespace, target.Name)
+	_, err := r.getSecret(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
-		if err := r.createService(ctx, target); err != nil {
-			return nil, reconcile.Result{}, err
+		data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret data: %w", err)
 		}
+		target.Data = data
 
-		return nil, reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
+		return reconcile.Result{}, r.createSecret(ctx, target)
 	}
 	if err != nil {
-		return nil, reconcile.Result{}, fmt.Errorf("get apiserver Service: %w", err)
+		return reconcile.Result{}, fmt.Errorf("get kubeconfig Secret: %w", err)
 	}
 
-	if current.Spec.ClusterIP == "" || current.Spec.ClusterIP == corev1.ClusterIPNone {
-		return nil, reconcile.Result{RequeueAfter: requeueIntervalOnReadingClusterIP}, nil
-	}
-
-	if isAPIServerServiceInSync(current, target) {
-		return current, reconcile.Result{}, nil
-	}
-
-	base := current.DeepCopy()
-	applyAPIServerServiceTarget(current, target)
-
-	return current, reconcile.Result{}, r.patchService(ctx, base, current)
+	return reconcile.Result{}, nil
 }
 
-func buildTargetAPIServerService(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Service {
+func buildTargetKubeconfigSecret(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.Secret {
+	name := constants.VirtualControlPlaneNamespacePrefix + vcp.Name + "-kubeconfig"
 	namespace := constants.VirtualControlPlaneNamespacePrefix + vcp.Name
-	return &corev1.Service{
+
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kube-apiserver",
+			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
 				constants.HeritageLabelKey: constants.HeritageLabelValue,
 			},
 		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
-			Selector: map[string]string{
-				"app": "kube-apiserver",
-			},
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "https",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       6443,
-					TargetPort: intstr.FromInt(6443),
-				},
-			},
-		},
+		Type: corev1.SecretTypeOpaque,
 	}
 }
 
-func isAPIServerServiceInSync(current, target *corev1.Service) bool {
-	for key, value := range target.Labels {
-		if current.Labels[key] != value {
-			return false
+var kubeconfigFiles = []kubeconfig.File{kubeconfig.ControllerManager, kubeconfig.Scheduler}
+
+func buildTargetKubeconfigSecretData(apiserverService *corev1.Service, pkiSecret *corev1.Secret) (map[string][]byte, error) {
+	clusterIP := apiserverService.Spec.ClusterIP
+	if clusterIP == "" || clusterIP == corev1.ClusterIPNone {
+		return nil, fmt.Errorf("apiserver Service has no ClusterIP")
+	}
+
+	caDir, err := os.MkdirTemp("", "vcp-kubeconfig-ca-*")
+	if err != nil {
+		return nil, fmt.Errorf("create temp CA dir: %w", err)
+	}
+	defer os.RemoveAll(caDir)
+
+	if err := writeKubeconfigCA(caDir, pkiSecret.Data); err != nil {
+		return nil, err
+	}
+
+	outDir, err := os.MkdirTemp("", "vcp-kubeconfig-out-*")
+	if err != nil {
+		return nil, fmt.Errorf("create temp out dir: %w", err)
+	}
+	defer os.RemoveAll(outDir)
+
+	if _, err := kubeconfig.CreateKubeconfigFiles(kubeconfigFiles,
+		kubeconfig.WithCertificatesDir(caDir),
+		kubeconfig.WithOutDir(outDir),
+		kubeconfig.WithLocalAPIEndpoint(clusterIP),
+	); err != nil {
+		return nil, fmt.Errorf("create kubeconfig files: %w", err)
+	}
+
+	return readKubeconfigSecretData(outDir)
+}
+
+func writeKubeconfigCA(dir string, pkiData map[string][]byte) error {
+	for _, name := range []string{"ca.crt", "ca.key"} {
+		content, ok := pkiData[name]
+		if !ok {
+			return fmt.Errorf("pki secret missing %q", name)
+		}
+
+		if err := os.WriteFile(filepath.Join(dir, name), content, 0o600); err != nil {
+			return fmt.Errorf("write %s: %w", name, err)
 		}
 	}
 
-	return current.Spec.Type == target.Spec.Type &&
-		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
-		equality.Semantic.DeepEqual(current.Spec.Ports, target.Spec.Ports)
+	return nil
 }
 
-func applyAPIServerServiceTarget(current, target *corev1.Service) {
-	if current.Labels == nil {
-		current.Labels = map[string]string{}
+func readKubeconfigSecretData(outDir string) (map[string][]byte, error) {
+	data := make(map[string][]byte, len(kubeconfigFiles))
+	for _, file := range kubeconfigFiles {
+		content, err := os.ReadFile(filepath.Join(outDir, string(file)))
+		if err != nil {
+			return nil, fmt.Errorf("read kubeconfig %s: %w", file, err)
+		}
+		data[string(file)] = content
 	}
 
-	for key, value := range target.Labels {
-		current.Labels[key] = value
-	}
-
-	current.Spec.Type = target.Spec.Type
-	current.Spec.Selector = target.Spec.Selector
-	current.Spec.Ports = target.Spec.Ports
+	return data, nil
 }
 
 func (r *reconciler) reconcileConfigSecret(ctx context.Context) (*corev1.Secret, reconcile.Result, error) {

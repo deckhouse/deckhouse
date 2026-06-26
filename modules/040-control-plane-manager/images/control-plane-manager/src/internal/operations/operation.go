@@ -19,7 +19,9 @@ limitations under the License.
 package operations
 
 import (
+	"context"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -83,4 +85,50 @@ func generateName(op *controlplanev1alpha1.ControlPlaneOperation) string {
 		}
 	}
 	return name + "-"
+}
+
+type OperationExecutor interface {
+	NeedsExecution(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) (bool, string)
+	Execute(ctx context.Context, operation *controlplanev1alpha1.ControlPlaneOperation) OperationResult
+}
+
+type OperationOutcome int
+
+const (
+	OperationInProgress OperationOutcome = iota
+	OperationCompleted
+	OperationFailed
+)
+
+type OperationResult struct {
+	Outcome      OperationOutcome
+	Message      string
+	RequeueAfter time.Duration
+	Error        error
+	StepResults  []StepResult
+}
+
+func NewOperationResult(steps []StepResult) OperationResult {
+	result := OperationResult{
+		Outcome:     OperationCompleted,
+		StepResults: steps,
+	}
+	if len(steps) == 0 {
+		return result
+	}
+
+	switch last := steps[len(steps)-1]; last.Status {
+	case StepFailed:
+		result.Outcome = OperationFailed
+		result.Message = last.Message
+		result.Error = last.Error
+	case StepProgressing:
+		result.Outcome = OperationInProgress
+		result.Message = last.Message
+		result.RequeueAfter = last.RequeueAfter
+	default:
+		result.Message = last.Message
+	}
+
+	return result
 }

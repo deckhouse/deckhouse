@@ -19,6 +19,7 @@ package manager
 import (
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -44,6 +45,8 @@ func (c *virtualConfigurator) configureOptions(opts *controllerruntime.Options) 
 				&corev1.Namespace{},
 				&corev1.Secret{},
 				&corev1.Service{},
+				&corev1.Pod{},
+				&appsv1.StatefulSet{},
 			},
 		},
 	}
