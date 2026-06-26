@@ -1,5 +1,6 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
+approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -14,6 +15,7 @@ status:
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
+approved: false
 kind: DeckhouseRelease
 metadata:
   name: v2.10.0

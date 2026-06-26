@@ -19,6 +19,7 @@ status:
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
+approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.16.0

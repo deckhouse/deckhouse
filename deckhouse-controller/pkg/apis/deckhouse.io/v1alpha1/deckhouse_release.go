@@ -85,8 +85,9 @@ type DeckhouseRelease struct {
 	// Used only if the [`deckhouse` module](/modules/deckhouse/) is configured for manual update mode ([update.mode](/modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`). Ignored if the update mode is set to `Auto` or `AutoPatch`.
 	//
 	// For more information on confirming manual updates, refer to the [documentation](../../admin/configuration/update/configuration.html#manual-update-approval).
+	// +optional
 	// +kubebuilder:default=false
-	Approved bool `json:"approved,omitempty"`
+	Approved bool `json:"approved"`
 
 	Spec DeckhouseReleaseSpec `json:"spec"`
 

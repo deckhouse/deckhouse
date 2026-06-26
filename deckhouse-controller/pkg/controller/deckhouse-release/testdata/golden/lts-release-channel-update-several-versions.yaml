@@ -1,5 +1,6 @@
 ---
 apiVersion: deckhouse.io/v1alpha1
+approved: false
 kind: DeckhouseRelease
 metadata:
   name: v1.60.1
@@ -11,6 +12,7 @@ status:
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
+approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
@@ -26,6 +28,7 @@ status:
   transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
+approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
