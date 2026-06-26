@@ -105,7 +105,7 @@
 600-namespace-configurator/                                      @nabokihms @AlwxSin
 610-service-with-healthchecks                                    @AndreyPavlovFlant @apolovov
 800-deckhouse-tools/                                             @RomanenkoDenys @borg-z @090809
-810-documentation/                                               @zhbert
+810-documentation/                                               @z9r5
 
 /candi/                                  @borg-z @090809
 /candi/control-plane/                    @sprait
@@ -118,11 +118,12 @@ cloud-controller-manager/                @aleksey-su @pabateman
 csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @borg-z @090809
-docs/                                    @zhbert
+docs/                                    @z9r5
 docs/documentation/pages/architecture/   @voitenkov
 helm_lib/                                @ldmonster
-crds/                                    @zhbert
-openapi/                                 @zhbert
+crds/                                    @z9r5
+openapi/                                 @z9r5
+tools/docs/                              @z9r5
 /pkg/                                    @ldmonster
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
