@@ -18,11 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"sort"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -40,6 +40,7 @@ import (
 	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -54,6 +55,10 @@ type Module struct {
 	// running tracks whether OnStartup hooks have completed successfully.
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
+
+	// initialized tracks whether hook controllers have been built, so the
+	// globalenable task does not re-initialize them on every reschedule.
+	initialized atomic.Bool
 
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -139,9 +144,28 @@ func (m *Module) GetName() string {
 	return m.name
 }
 
-// GetVersion return the package version
-func (m *Module) GetVersion() string {
-	return "v0.0.0"
+// GetVersion returns the package version. Global is unversioned, so it reports a
+// zero version — enough to satisfy the scheduler node contract.
+func (m *Module) GetVersion() *semver.Version {
+	return semver.MustParse("0.0.0")
+}
+
+// GetConstraints reports the scheduler constraints. Global has no version or
+// dependency requirements and the lowest order, so it is always enabled and
+// scheduled before every package.
+func (m *Module) GetConstraints() schedule.Constraints {
+	return schedule.Constraints{Order: 0}
+}
+
+// GetHooksByBinding returns the global hooks registered for the given binding
+// type, sorted by order.
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.GlobalHook {
+	return m.hooks.GetHooksByBinding(binding)
+}
+
+// HooksInitialized reports whether the hook controllers have been built.
+func (m *Module) HooksInitialized() bool {
+	return m.initialized.Load()
 }
 
 // GetPath returns path to the package dir
@@ -208,80 +232,8 @@ func (m *Module) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
-}
 
-// GetHooksByBinding returns the global hooks registered for the given binding
-// type, sorted by order.
-func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.GlobalHook {
-	return m.hooks.GetHooksByBinding(binding)
-}
-
-// Start initializes the global hooks, runs the initial Kubernetes
-// synchronization, and executes the OnStartup and BeforeAll bindings.
-//
-// It must complete before any package is scheduled so global values are
-// populated by the time packages render. Calling Start again is a no-op.
-func (m *Module) Start(ctx context.Context) error {
-	if m.running.Load() {
-		return nil
-	}
-
-	m.InitializeHooks()
-
-	for _, hook := range m.hooks.GetHooksByBinding(shtypes.Schedule) {
-		hook.GetHookController().EnableScheduleBindings()
-	}
-
-	if err := m.syncKubernetesBindings(ctx); err != nil {
-		return fmt.Errorf("sync kubernetes bindings: %w", err)
-	}
-
-	if err := m.RunHooksByBinding(ctx, shtypes.OnStartup); err != nil {
-		return fmt.Errorf("run onStartup hooks: %w", err)
-	}
-
-	if err := m.RunHooksByBinding(ctx, addontypes.BeforeAll); err != nil {
-		return fmt.Errorf("run beforeAll hooks: %w", err)
-	}
-
-	return nil
-}
-
-// syncKubernetesBindings enables every Kubernetes hook binding, runs the
-// initial synchronization for the bindings that request it, and unlocks the
-// monitors so subsequent cluster events reach the hooks.
-func (m *Module) syncKubernetesBindings(ctx context.Context) error {
-	type syncUnit struct {
-		hook string
-		info hookcontroller.BindingExecutionInfo
-	}
-
-	var units []syncUnit
-	for _, hook := range m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent) {
-		name := hook.GetName()
-		err := hook.GetHookController().HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
-			units = append(units, syncUnit{hook: name, info: info})
-		})
-		if err != nil {
-			return fmt.Errorf("enable kubernetes bindings for hook %q: %w", name, err)
-		}
-	}
-
-	for _, unit := range units {
-		if unit.info.KubernetesBinding.ExecuteHookOnSynchronization {
-			if err := m.RunHookByName(ctx, unit.hook, unit.info.BindingContext); err != nil {
-				if !unit.info.AllowFailure {
-					return fmt.Errorf("run sync hook %q: %w", unit.hook, err)
-				}
-
-				m.logger.Warn("global sync hook failed", slog.String("hook", unit.hook), log.Err(err))
-			}
-		}
-
-		m.UnlockKubernetesMonitors(unit.hook, unit.info.KubernetesBinding.Monitor.Metadata.MonitorId)
-	}
-
-	return nil
+	m.initialized.Store(true)
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events

@@ -43,11 +43,6 @@ type Handler struct {
 
 	l             sync.Mutex
 	configEventCh chan<- config.Event
-
-	// globalObserver, when set, receives the converted global ModuleConfig
-	// settings on the initial load and on every change. Set once before
-	// informers start via SetGlobalObserver.
-	globalObserver func(utils.Values)
 }
 
 func New(client client.Client, conversionsStore *conversion.ConversionsStore, deckhouseConfigCh chan<- utils.Values) *Handler {
@@ -55,19 +50,6 @@ func New(client client.Client, conversionsStore *conversion.ConversionsStore, de
 		client:            client,
 		conversionsStore:  conversionsStore,
 		deckhouseConfigCh: deckhouseConfigCh,
-	}
-}
-
-// SetGlobalObserver registers a callback that receives the converted global
-// settings whenever the global ModuleConfig is loaded or changes. It must be
-// called before informers start.
-func (h *Handler) SetGlobalObserver(observer func(utils.Values)) {
-	h.globalObserver = observer
-}
-
-func (h *Handler) notifyGlobalObserver(values utils.Values) {
-	if h.globalObserver != nil {
-		h.globalObserver(values)
 	}
 }
 
@@ -92,8 +74,6 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 			Values:   values,
 			Checksum: values.Checksum(),
 		}
-
-		h.notifyGlobalObserver(values)
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
@@ -145,9 +125,6 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 				Values:   values,
 				Checksum: values.Checksum(),
 			}
-
-			h.notifyGlobalObserver(values)
-
 			continue
 		}
 

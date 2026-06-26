@@ -25,7 +25,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
@@ -54,6 +53,7 @@ import (
 	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
+	taskglobalenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/globalenable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -212,6 +212,15 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	}
 
 	r.status.NewStatus(r.global.GetName())
+
+	// Register global as a scheduler node so it is scheduled (via the globalenable
+	// task) before any package, and in the lifecycle store so schedulePackage can
+	// resolve its context. Global has the lowest order and no constraints, so it
+	// is always enabled and runs first.
+	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), nil)
+	if err = r.scheduler.AddNode(r.global); err != nil {
+		return nil, fmt.Errorf("add global node: %w", err)
+	}
 
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
@@ -552,7 +561,16 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 
 	onScheduleHook := func(enabled []string) {
 		r.logger.Info("enabled packages", "packages", enabled)
-		r.global.SetEnabledModules(enabled)
+
+		// global is a scheduler node too; exclude it from the module list it carries.
+		enabledModules := make([]string, 0, len(enabled))
+		for _, name := range enabled {
+			if name != r.global.GetName() {
+				enabledModules = append(enabledModules, name)
+			}
+		}
+
+		r.global.SetEnabledModules(enabledModules)
 	}
 
 	r.scheduler = schedule.NewScheduler(
@@ -563,16 +581,10 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
 }
 
-// Run starts global and then the scheduler event loop in a background
-// goroutine. Global hooks run synchronously first, before the event handler can
-// route events to them, so global values are ready before any package is
-// scheduled. The loop then dispatches schedule and disable events, driving the
-// enable/disable lifecycle for all packages.
-func (r *Runtime) Run(ctx context.Context) error {
-	if err := r.global.Start(ctx); err != nil {
-		return fmt.Errorf("start global: %w", err)
-	}
-
+// Run starts the scheduler event loop in a background goroutine. It listens for
+// schedule and disable events from the scheduler and dispatches them to the
+// appropriate handler, driving the enable/disable lifecycle for all packages.
+func (r *Runtime) Run() {
 	r.hookEventHandler.Start()
 	r.healthService.Start()
 
@@ -587,8 +599,6 @@ func (r *Runtime) Run(ctx context.Context) error {
 			}
 		}
 	}()
-
-	return nil
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
@@ -617,6 +627,11 @@ func (r *Runtime) schedulePackage(name string) {
 	}
 
 	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
+
+	if name == r.global.GetName() {
+		r.queueService.Enqueue(ctx, name, taskglobalenable.NewTask(r.global, r.status, r.logger), onDone)
+		return
+	}
 
 	settings := r.packages.GetPendingSettings(name)
 
@@ -656,44 +671,6 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.logger))
 	}
-}
-
-// reconvergeGlobal re-runs every known package so it re-renders with the
-// changed global values. It is the on-values-changed callback for global hooks
-// (see BuildKubeTasks / BuildScheduleTasks): when a global hook changes the
-// global values, all packages must reconcile, mirroring addon-operator's
-// reload-all on a global values change.
-//
-// Rescheduling a package that is not eligible is a no-op, so iterating all
-// known packages is equivalent to rescheduling the enabled set. The hook name
-// argument is ignored — the trigger is global, the effect is cluster-wide.
-func (r *Runtime) reconvergeGlobal(_ string) {
-	r.mu.RLock()
-	names := make([]string, 0, len(r.apps)+len(r.modules))
-	for name := range r.apps {
-		names = append(names, name)
-	}
-	for name := range r.modules {
-		names = append(names, name)
-	}
-	r.mu.RUnlock()
-
-	for _, name := range names {
-		r.scheduler.Reschedule(name)
-	}
-}
-
-// SetGlobalSettings applies user-provided settings from the global ModuleConfig
-// to the global module and reconverges all packages so they re-render with the
-// new configuration. It is registered as the config handler's global observer,
-// so it fires on the initial config load and on every subsequent change.
-func (r *Runtime) SetGlobalSettings(settings addonutils.Values) {
-	if err := r.global.ApplySettings(settings); err != nil {
-		r.logger.Error("apply global settings", log.Err(err))
-		return
-	}
-
-	r.reconvergeGlobal("")
 }
 
 // Stop performs graceful shutdown of all operator subsystems.
