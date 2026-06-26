@@ -28,6 +28,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	"control-plane-manager/internal/operations"
 )
 
 // ComputeStatusReport returns the target status computed from the current status and the operations.
@@ -55,7 +56,7 @@ func applyDerivedState(cpn *controlplanev1alpha1.ControlPlaneNode, ops []control
 
 func applyCompletedChecksums(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) {
 	for _, s := range computeComponentStates(cpn) {
-		applied := latestCompletedOperation(ops, s.component)
+		applied := latestAppliedOperation(ops, s.component)
 		if applied == nil {
 			continue
 		}
@@ -134,7 +135,7 @@ func applyConditions(cpn *controlplanev1alpha1.ControlPlaneNode, states []compon
 
 func computeComponentCondition(s componentState, ops []controlplanev1alpha1.ControlPlaneOperation, gen int64) metav1.Condition {
 	ct := conditionType(s.component)
-	op := latestOperationForComponent(ops, s.component)
+	op := operationForComponent(ops, s)
 	switch {
 	case op == nil:
 		if s.inSync() {
@@ -145,8 +146,10 @@ func computeComponentCondition(s componentState, ops []controlplanev1alpha1.Cont
 		return condition(ct, metav1.ConditionTrue, controlplanev1alpha1.CPNReasonReady, gen, "")
 	case op.IsFailed():
 		return condition(ct, metav1.ConditionFalse, controlplanev1alpha1.CPNReasonNotReady, gen, op.FailureMessage())
-	default:
+	case op.Spec.Approved:
 		return condition(ct, metav1.ConditionFalse, controlplanev1alpha1.CPNReasonNotReady, gen, fmt.Sprintf("operation %s in progress", op.Name))
+	default:
+		return condition(ct, metav1.ConditionFalse, controlplanev1alpha1.CPNReasonNotReady, gen, fmt.Sprintf("operation %s waiting", op.Name))
 	}
 }
 
@@ -207,33 +210,60 @@ func condition(t string, status metav1.ConditionStatus, reason string, gen int64
 	return metav1.Condition{Type: t, Status: status, Reason: reason, ObservedGeneration: gen, Message: msg}
 }
 
-func latestOperationForComponent(ops []controlplanev1alpha1.ControlPlaneOperation, c controlplanev1alpha1.OperationComponent) *controlplanev1alpha1.ControlPlaneOperation {
+func operationForComponent(ops []controlplanev1alpha1.ControlPlaneOperation, s componentState) *controlplanev1alpha1.ControlPlaneOperation {
+	matches := operations.MatchesChecksums(s.intended)
+	var running, pending, completed, terminal *controlplanev1alpha1.ControlPlaneOperation
+	for i := range ops {
+		op := &ops[i]
+		if op.Spec.Component != s.component || !matches(op) {
+			continue
+		}
+		if !op.IsTerminal() {
+			if op.Spec.Approved {
+				running = later(running, op)
+			} else {
+				pending = later(pending, op)
+			}
+			continue
+		}
+		terminal = later(terminal, op)
+		if op.IsCompleted() {
+			completed = later(completed, op)
+		}
+	}
+	switch {
+	case running != nil:
+		return running
+	case pending != nil:
+		return pending
+	case completed != nil:
+		return completed
+	default:
+		return terminal
+	}
+}
+
+func latestAppliedOperation(ops []controlplanev1alpha1.ControlPlaneOperation, c controlplanev1alpha1.OperationComponent) *controlplanev1alpha1.ControlPlaneOperation {
 	var latest *controlplanev1alpha1.ControlPlaneOperation
 	for i := range ops {
 		op := &ops[i]
-		if op.Spec.Component != c {
+		if op.Spec.Component != c || op.IsObserveOnlyOperation() {
 			continue
 		}
-		if latest == nil || op.CreationTimestamp.After(latest.CreationTimestamp.Time) {
-			latest = op
+		if !op.IsTerminal() || (!op.IsCompleted() && !operations.HasCommitPoint(op)) {
+			continue
 		}
+		latest = later(latest, op)
 	}
 	return latest
 }
 
-// latestCompletedOperation ignores observe-only operations: they are read-only and must not drive applied checksums.
-func latestCompletedOperation(ops []controlplanev1alpha1.ControlPlaneOperation, c controlplanev1alpha1.OperationComponent) *controlplanev1alpha1.ControlPlaneOperation {
-	var latest *controlplanev1alpha1.ControlPlaneOperation
-	for i := range ops {
-		op := &ops[i]
-		if op.Spec.Component != c || !op.IsCompleted() || op.IsObserveOnlyOperation() {
-			continue
-		}
-		if latest == nil || op.CreationTimestamp.After(latest.CreationTimestamp.Time) {
-			latest = op
-		}
+// later returns the latest operation by creation timestamp; current may be nil (first seen wins).
+func later(current, op *controlplanev1alpha1.ControlPlaneOperation) *controlplanev1alpha1.ControlPlaneOperation {
+	if current == nil || op.CreationTimestamp.After(current.CreationTimestamp.Time) {
+		return op
 	}
-	return latest
+	return current
 }
 
 func operationObservedAt(op *controlplanev1alpha1.ControlPlaneOperation) metav1.Time {

@@ -43,6 +43,11 @@ func HasSignatureStep(op *controlplanev1alpha1.ControlPlaneOperation) bool {
 	return op.HasStep(controlplanev1alpha1.StepRenewSignature)
 }
 
+func HasCommitPoint(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+	return op.IsStepCompleted(controlplanev1alpha1.StepSyncManifests) ||
+		op.IsStepCompleted(controlplanev1alpha1.StepJoinEtcdCluster)
+}
+
 func MatchesChecksums(target controlplanev1alpha1.Checksums) func(*controlplanev1alpha1.ControlPlaneOperation) bool {
 	return func(op *controlplanev1alpha1.ControlPlaneOperation) bool {
 		return op.Spec.DesiredConfigChecksum == target.Config &&
