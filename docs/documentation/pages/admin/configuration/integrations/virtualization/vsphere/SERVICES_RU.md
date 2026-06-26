@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/virtualization/vsphere/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform интегрируется с инфраструктурой VMware vSphere и использует [ресурсы VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) для описания характеристик виртуальных машин, создаваемых в составе кластера Kubernetes.
+Deckhouse Kubernetes Platform (DKP) интегрируется с инфраструктурой VMware vSphere и использует [ресурсы VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) для описания характеристик виртуальных машин, создаваемых в составе кластера Kubernetes.
 
 Основные возможности:
 
@@ -18,144 +18,355 @@ Deckhouse Kubernetes Platform интегрируется с инфраструк
   - через MetalLB (в режиме BGP).
 
 {% alert level="info" %}
-DKP поддерживает гибридную интеграцию с VMware vSphere. Подробнее о настройке можно узнать в разделе [«Гибридный кластер с vSphere»](../../hybrid/vsphere-hybrid.html).
+Для подключения vSphere к статическому кластеру см. раздел [«Гибридный кластер с vSphere»](../../hybrid/vsphere-hybrid.html).
 {% endalert %}
+
+## Типы узлов
+
+В облачном кластере на vSphere узлы имеют тип [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) и управляются через секции [`masterNodeGroup`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-masternodegroup) и [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups) ресурса `VsphereClusterConfiguration`.
+
+## Параметры виртуальных машин
+
+Параметры ВМ задаются в секции `instanceClass` ресурса `VsphereClusterConfiguration`:
+
+| Параметр | Описание |
+|----------|----------|
+| [`numCPUs`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-numcpus) | Количество vCPU |
+| [`memory`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-memory) | Объём RAM в МиБ |
+| [`template`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-template) | Путь к шаблону ВМ относительно Datacenter |
+| [`datastore`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-datastore) | Путь к Datastore для root-диска |
+| [`rootDiskSize`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-rootdisksize) | Размер root-диска в ГиБ (по умолчанию 20) |
+| [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) | Основная сеть (port group) с маршрутом по умолчанию |
+| [`additionalNetworks`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-additionalnetworks) | Дополнительные сетевые интерфейсы |
+| [`resourcePool`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-resourcepool) | Resource Pool относительно зоны (vSphere Cluster) |
+| [`mainNetworkIPAddresses`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-masterinstanceclass-mainnetworkipaddresses) | Статические IP-адреса вместо DHCP (только в `VsphereClusterConfiguration`) |
+| [`runtimeOptions`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-runtimeoptions) | Дополнительные параметры ВМ: CPU/memory shares, limits, nested virtualization |
+
+Пример `instanceClass` для worker-группы:
+
+```yaml
+instanceClass:
+  numCPUs: 4
+  memory: 8192
+  template: Templates/ubuntu-24.04
+  datastore: lun10
+  mainNetwork: net3-k8s
+  rootDiskSize: 50
+  additionalNetworks:
+    - K8S_INTERNAL
+  runtimeOptions:
+    nestedHardwareVirtualization: false
+```
+
+{% alert %}
+При использовании статических IP-адресов (`mainNetworkIPAddresses`) в образе ОС должен быть настроен интерфейс `ens192` — см. [«Подключение и авторизация»](authorization.html#требования-к-образу-виртуальной-машины).
+{% endalert %}
+
+### Размещение узлов по зонам
+
+Список зон в секции `zones` группы узлов ограничивает, в каких vSphere Cluster могут создаваться ВМ. Узлы распределяются по зонам **в алфавитном порядке**: первый узел — в зоне с наименьшим именем, второй — в следующей и т.д. Если узлов больше, чем зон, распределение начинается сначала.
+
+```yaml
+nodeGroups:
+- name: worker
+  replicas: 4
+  zones:
+    - zone-a
+    - zone-b
+  instanceClass:
+    # ...
+```
+
+В этом примере узлы будут размещены: `zone-a`, `zone-b`, `zone-a`, `zone-b`.
 
 ## Управление ресурсами vSphere
 
-### Удаление CloudPermanent-узлов в vSphere
+### Общий принцип
 
-Узлы типа [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) создаются на основании конфигурации групп узлов, заданной в секции [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups) ресурса VsphereClusterConfiguration.
+Изменения конфигурации узлов в облачном кластере на vSphere выполняются в два шага:
 
-Параметр [`replicas`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups-replicas) определяет необходимое количество виртуальных машин в группе. После изменения конфигурации необходимо выполнить команду `dhctl converge` для запуска Terraform и актуализации состояния виртуальных машин в VMware vSphere в соответствии с указанным количеством реплик.
-
-Чтобы уменьшить количество узлов в группе, уменьшите значение `replicas` и выполните `dhctl converge`.
-
-{% alert level="warning" %}
-Не удаляйте описание группы из секции [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups), пока значение параметра [`replicas`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups-replicas) больше нуля.
-
-Если удалить описание группы до уменьшения количества реплик до нуля, состояние Terraform может рассинхронизироваться с состоянием виртуальных машин и дисков в VMware vSphere. В результате последующее выполнение `dhctl converge` может завершиться ошибкой и потребовать ручного восстановления состояния.
-{% endalert %}
-
-#### Уменьшение количества узлов
-
-Чтобы уменьшить количество узлов в группе `CloudPermanent`:
-
-1. Откройте конфигурацию vSphere для редактирования:
+1. Отредактировать [`VsphereClusterConfiguration`](/modules/cloud-provider-vsphere/cluster_configuration.html):
 
    ```shell
    d8 system edit provider-cluster-configuration
    ```
 
-1. В секции [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups) найдите необходимую группу и уменьшите значение параметра [`replicas`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups-replicas) до требуемого количества узлов.
+1. Применить изменения через `dhctl converge` [в установочном контейнере DKP](/products/kubernetes-platform/documentation/v1/installing/#установка) той же редакции и версии, что и кластер:
 
-   Например, чтобы уменьшить количество узлов в группе `worker` с трёх до двух, установите `replicas: 2`:
+   ```shell
+   dhctl converge \
+     --ssh-host <IP-АДРЕС_MASTER-УЗЛА> \
+     --ssh-user <ИМЯ_ПОЛЬЗОВАТЕЛЯ> \
+     --ssh-agent-private-keys /tmp/.ssh/<ИМЯ_ПРИВАТНОГО_SSH-КЛЮЧА>
+   ```
+
+Команда `dhctl converge` запускает Terraform, который создаёт, изменяет или удаляет виртуальные машины в vSphere, выполняет bootstrap новых узлов и регистрирует их в кластере Kubernetes.
+
+Проверить состояние Terraform перед применением:
+
+```shell
+dhctl terraform check \
+  --ssh-host <IP-АДРЕС_MASTER-УЗЛА> \
+  --ssh-user <ИМЯ_ПОЛЬЗОВАТЕЛЯ> \
+  --ssh-agent-private-keys /tmp/.ssh/<ИМЯ_ПРИВАТНОГО_SSH-КЛЮЧА>
+```
+
+### Увеличение количества узлов
+
+Чтобы добавить узлы в группу `CloudPermanent`:
+
+1. Откройте конфигурацию vSphere:
+
+   ```shell
+   d8 system edit provider-cluster-configuration
+   ```
+
+1. Увеличьте значение [`replicas`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups-replicas) в нужной группе `nodeGroups`. Например, с 2 до 4:
 
    ```yaml
    nodeGroups:
    - name: worker
+     replicas: 4
+     zones:
+     - zone-a
+     - zone-b
+     instanceClass:
+       numCPUs: 4
+       memory: 8192
+       template: Templates/ubuntu-24.04
+       datastore: datastore-1
+       mainNetwork: network-1
+   ```
+
+1. Примените конфигурацию через `dhctl converge` (см. [выше](#общий-принцип)).
+
+1. Дождитесь завершения и проверьте узлы:
+
+   ```shell
+   d8 k get nodes -l node.deckhouse.io/group=worker
+   ```
+
+   Новые виртуальные машины появятся в vSphere Client в папке, указанной в [`vmFolderPath`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath).
+
+### Добавление новой группы узлов
+
+Чтобы создать новую группу worker-узлов (например, `frontend`):
+
+1. Добавьте описание группы в секцию `nodeGroups`:
+
+   ```yaml
+   nodeGroups:
+   - name: frontend
      replicas: 2
      zones:
      - zone-a
      instanceClass:
-       numCPUs: 4
-       memory: 8192
+       numCPUs: 2
+       memory: 4096
        template: Templates/ubuntu-24.04
        datastore: datastore-1
        mainNetwork: network-1
+     nodeTemplate:
+       labels:
+         node-role.deckhouse.io/frontend: ""
+       taints:
+       - effect: NoExecute
+         key: dedicated.deckhouse.io
+         value: frontend
    ```
 
-   Сохраните изменения.
+   Секция [`nodeTemplate`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups-nodetemplate) задаёт labels и taints для узлов Kubernetes.
 
-1. [В установочном контейнере DKP](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
+1. Примените конфигурацию через `dhctl converge`.
+
+1. Убедитесь, что создан объект NodeGroup и узлы в состоянии `Ready`:
 
    ```shell
-   dhctl converge \
-     --ssh-host <IP-АДРЕС_MASTER-УЗЛА> \
-     --ssh-user <ИМЯ_ПОЛЬЗОВАТЕЛЯ> \
-     --ssh-agent-private-keys /tmp/.ssh/<ИМЯ_ПРИВАТНОГО_SSH-КЛЮЧА>
+   d8 k get nodegroup frontend
+   d8 k get nodes -l node.deckhouse.io/group=frontend
    ```
 
-   {% alert level="info" %}
-   Используйте установочный контейнер той же редакции и версии, что и в кластере.
-   {% endalert %}
+### Изменение параметров виртуальных машин
 
-1. Дождитесь завершения `dhctl converge` и проверьте количество узлов в группе:
+Параметры `instanceClass` (CPU, RAM, шаблон, datastore, сети) можно изменить в конфигурации и применить через `dhctl converge`.
+
+{% alert level="warning" %}
+Изменение аппаратных параметров (CPU, RAM, шаблон) или datastore для **существующих** узлов может потребовать пересоздания виртуальных машин. Рекомендуется:
+
+1. Увеличить `replicas` на 1, применить `dhctl converge` — создастся узел с новыми параметрами.
+1. Перенести нагрузку со старого узла (drain).
+1. Уменьшить `replicas`, применить `dhctl converge` — лишний узел будет удалён.
+
+Для изменения только `rootDiskSize` Terraform увеличит диск без пересоздания ВМ, если новый размер больше текущего.
+{% endalert %}
+
+### Управление master-узлами
+
+Master-узлы настраиваются в секции [`masterNodeGroup`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-masternodegroup):
+
+```yaml
+masterNodeGroup:
+  replicas: 3
+  zones:
+    - zone-a
+    - zone-b
+    - zone-c
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    template: Templates/ubuntu-24.04
+    datastore: lun10
+    mainNetwork: net3-k8s
+```
+
+{% alert level="warning" %}
+Количество master-узлов (`replicas`) должно быть **нечётным** для обеспечения кворума etcd. После изменения `masterNodeGroup` обязательно выполните `dhctl converge`.
+{% endalert %}
+
+### Уменьшение количества узлов
+
+Параметр [`replicas`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups-replicas) определяет целевое количество виртуальных машин в группе.
+
+{% alert level="warning" %}
+Не удаляйте описание группы из секции [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups), пока значение `replicas` больше нуля. Преждевременное удаление описания группы может рассинхронизировать состояние Terraform с виртуальными машинами в vSphere.
+{% endalert %}
+
+Чтобы уменьшить количество узлов:
+
+1. Откройте конфигурацию: `d8 system edit provider-cluster-configuration`.
+1. Уменьшите `replicas` до требуемого значения.
+1. Примените `dhctl converge`.
+1. Проверьте результат:
 
    ```shell
    d8 k get nodes -l node.deckhouse.io/group=<ИМЯ_ГРУППЫ>
    ```
 
-#### Полное удаление группы узлов
+{% alert level="info" %}
+Перед уменьшением количества узлов рекомендуется убедиться, что на удаляемых узлах нет критичных подов. При необходимости выполните [drain](#drain-cordon-и-обслуживание-узлов) вручную до применения `dhctl converge`.
+{% endalert %}
 
-Полное удаление группы `CloudPermanent` выполняется в два этапа. Сначала необходимо уменьшить количество реплик до нуля и дождаться удаления узлов и виртуальных машин. После этого можно удалить описание группы из конфигурации vSphere.
+### Полное удаление группы узлов
 
-Чтобы полностью удалить группу `CloudPermanent`:
+Удаление группы `CloudPermanent` выполняется в два этапа:
 
-1. Откройте конфигурацию vSphere для редактирования:
+1. Установите `replicas: 0` и примените `dhctl converge`. Дождитесь удаления всех узлов и виртуальных машин.
+1. Удалите описание группы из `nodeGroups` и повторно примените `dhctl converge`.
 
-   ```shell
-   d8 system edit provider-cluster-configuration
-   ```
+Пошаговая инструкция:
 
-1. В секции [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups) найдите удаляемую группу и установите для неё значение `replicas: 0`. Не удаляйте описание группы на этом этапе. Например:
-
-   ```yaml
-   nodeGroups:
-   - name: worker
-     replicas: 0
-     zones:
-     - zone-a
-     instanceClass:
-       numCPUs: 4
-       memory: 8192
-       template: Templates/ubuntu-24.04
-       datastore: datastore-1
-       mainNetwork: network-1
-   ```
-
-   Сохраните изменения.
-
-1. [В установочном контейнере DKP](/products/kubernetes-platform/documentation/v1/installing/#установка) примените изменённую конфигурацию:
-
-   ```shell
-   dhctl converge \
-     --ssh-host <IP-АДРЕС_MASTER-УЗЛА> \
-     --ssh-user <ИМЯ_ПОЛЬЗОВАТЕЛЯ> \
-     --ssh-agent-private-keys /tmp/.ssh/<ИМЯ_ПРИВАТНОГО_SSH-КЛЮЧА>
-   ```
-
-1. Дождитесь успешного завершения `dhctl converge` и убедитесь, что в группе не осталось узлов:
+1. Откройте конфигурацию и установите `replicas: 0` для удаляемой группы. **Не удаляйте** описание группы на этом этапе.
+1. Примените `dhctl converge`.
+1. Убедитесь, что узлов не осталось:
 
    ```shell
    d8 k get nodes -l node.deckhouse.io/group=<ИМЯ_ГРУППЫ>
    ```
 
-   Команда не должна возвращать узлы удаляемой группы.
-
-   Также убедитесь с помощью vSphere Client, что связанные с группой виртуальные машины удалены.
-
-1. Повторно откройте конфигурацию vSphere:
-
-   ```shell
-   d8 system edit provider-cluster-configuration
-   ```
-
-1. Удалите описание группы из секции `nodeGroups` и сохраните изменения.
-
-1. Повторно примените конфигурацию:
-
-   ```shell
-   dhctl converge \
-     --ssh-host <IP-АДРЕС_MASTER-УЗЛА> \
-     --ssh-user <ИМЯ_ПОЛЬЗОВАТЕЛЯ> \
-     --ssh-agent-private-keys /tmp/.ssh/<ИМЯ_ПРИВАТНОГО_SSH-КЛЮЧА>
-   ```
-
-1. Убедитесь, что объект NodeGroup удалён:
+   Проверьте в vSphere Client, что виртуальные машины удалены.
+1. Удалите описание группы из `nodeGroups` и снова выполните `dhctl converge`.
+1. Убедитесь, что NodeGroup удалён:
 
    ```shell
    d8 k get nodegroup <ИМЯ_ГРУППЫ>
    ```
 
-   Команда должна завершиться сообщением о том, что запрашиваемый ресурс не найден.
+## Drain, cordon и обслуживание узлов
+
+### Ручной вывод узла из эксплуатации
+
+Для планового обслуживания виртуальной машины в vSphere (миграция, обновление гипервизора, замена оборудования) выведите узел из планирования и эвакуируйте поды:
+
+```shell
+d8 k cordon <имя_узла>
+d8 k drain <имя_узла> --ignore-daemonsets --delete-emptydir-data
+```
+
+После завершения работ верните узел в работу:
+
+```shell
+d8 k uncordon <имя_узла>
+```
+
+### Автоматический drain при обновлениях
+
+При disruptive-обновлениях (обновление `containerd`, kubelet, перезагрузка) DKP может автоматически выполнять drain узла. Режим задаётся в [`disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) ресурса `NodeGroup`:
+
+| Режим | Поведение |
+|-------|-----------|
+| `Automatic` | Drain выполняется автоматически перед обновлением (по умолчанию) |
+| `Manual` | Требуется ручное подтверждение аннотацией `update.node.deckhouse.io/disruption-approved=` |
+
+Для ручного подтверждения обновления:
+
+```shell
+d8 k annotate node <имя_узла> update.node.deckhouse.io/disruption-approved=
+```
+
+Таймаут drain настраивается параметром [`nodeDrainTimeoutSecond`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodedraintimeoutsecond) в NodeGroup (по умолчанию — 10 минут).
+
+В процессе drain на узле появляются аннотации:
+
+| Аннотация | Значение |
+|-----------|----------|
+| `update.node.deckhouse.io/draining` | Drain запрошен (значение — источник, например `bashible`) |
+| `update.node.deckhouse.io/drained` | Drain завершён |
+
+Подробнее — в разделе [«Основы управления узлами»](../../platform-scaling/node/node-management.html#обновления-требующие-прерывания-работы-узла).
+
+## Мониторинг состояния узлов и групп
+
+### Проверка узлов Kubernetes
+
+```shell
+# Все узлы кластера
+d8 k get nodes -o wide
+
+# Узлы конкретной группы
+d8 k get nodes -l node.deckhouse.io/group=<ИМЯ_ГРУППЫ>
+
+# Детальная информация об узле (адреса, taints, conditions)
+d8 k describe node <имя_узла>
+```
+
+Cloud Controller Manager проставляет адреса узлов на основе сетей, указанных в [`externalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-externalnetworknames) и [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames).
+
+### Состояние NodeGroup
+
+```shell
+d8 k get nodegroup <ИМЯ_ГРУППЫ> -o yaml
+```
+
+Основные conditions ресурса NodeGroup:
+
+| Condition | Значение `True` означает |
+|-----------|--------------------------|
+| `Ready` | В группе достаточно узлов в состоянии `Ready` |
+| `Updating` | Идёт обновление хотя бы одного узла |
+| `WaitingForDisruptiveApproval` | Ожидается ручное подтверждение disruptive-обновления |
+| `Scaling` | Идёт масштабирование |
+| `Error` | Ошибка при создании узла (подробности в `status.error`) |
+
+### Проверка в vSphere
+
+В vSphere Client виртуальные машины кластера размещаются в папке [`vmFolderPath`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath). Имена ВМ формируются по шаблону `<префикс>-<имя_группы>-<индекс>`.
+
+При проблемах с узлами проверьте:
+
+- состояние ВМ в vSphere Client (powered on, VMware Tools running);
+- доступность vCenter из кластера;
+- логи компонентов:
+
+  ```shell
+  d8 k -n d8-cloud-provider-vsphere logs -l app=cloud-controller-manager --tail=50
+  d8 k -n d8-cloud-instance-manager logs -l app=machine-controller-manager --tail=50
+  ```
+
+## Диагностика типичных проблем
+
+| Симптом | Возможная причина | Что проверить |
+|---------|-------------------|---------------|
+| `dhctl converge` завершается ошибкой | Недостаточно прав в vSphere, нехватка ресурсов | [Привилегии](authorization.html#список-необходимых-привилегий), свободное место на Datastore, Resource Pool |
+| Узел в `NotReady` | Проблемы с сетью или bootstrap | `cloud-init` логи на ВМ, доступность Kubernetes API |
+| Неверные IP-адреса на узле | Неверно указаны сети | `externalNetworkNames`, `internalNetworkNames`, соответствие port group |
+| ВМ создаётся, но не присоединяется к кластеру | Проблемы SSH/bootstrap | SSH-ключ в [`sshPublicKey`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-sshpublickey), сетевая связность |
