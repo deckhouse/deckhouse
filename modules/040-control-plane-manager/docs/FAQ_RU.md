@@ -717,7 +717,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
 | Файл | Идентификация | Назначение |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). При включённом модуле [user-authz](/modules/user-authz/) RBAC использует `user-authz:cluster-admin` и дополнительную ClusterRole; при выключенном `user-authz` группа привязана к встроенной роли `cluster-admin`. |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). Группа привязана к встроенной wildcard-роли `cluster-admin`. |
 | `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (группа `system:masters`) | Аварийный доступ (break-glass). Обходит RBAC полностью. Ограничьте доступ к файлу сценариями восстановления. |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Используется kube-controller-manager. |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Используется kube-scheduler. |
@@ -726,9 +726,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
 Начиная с Kubernetes 1.29, kubeadm генерирует `admin.conf` с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления объектов привязки RBAC для `kubeadm:cluster-admins` (или нескольких таких записей).
 
-Если модуль [user-authz](/modules/user-authz/) **выключен**, Deckhouse привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
-
-Если модуль **user-authz** **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая привязка RBAC добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
+Deckhouse привязывает группу `kubeadm:cluster-admins` к встроенной wildcard-роли `cluster-admin` (как в обычном кластере kubeadm без дополнительной настройки RBAC) независимо от того, включён ли модуль [user-authz](/modules/user-authz/). Для полного неограниченного доступа в обход RBAC используйте `super-admin.conf`.
 
 ### Рекомендуемый административный доступ
 
