@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -251,15 +252,13 @@ func (suite *ControllerTestSuite) getApplication(name string, namespace string) 
 	return &app
 }
 
-type moduleManagerStub struct {
-}
+type moduleManagerStub struct{}
 
 func (m *moduleManagerStub) AreModulesInited() bool {
 	return true
 }
 
-type operatorStub struct {
-}
+type operatorStub struct{}
 
 func (o *operatorStub) UpdateApp(_ registry.Remote, _ packageoperator.App) {
 }
@@ -267,8 +266,12 @@ func (o *operatorStub) UpdateApp(_ registry.Remote, _ packageoperator.App) {
 func (o *operatorStub) RemoveApp(_, _ string) {
 }
 
-func (o *operatorStub) Status() *packagestatus.Service {
-	return packagestatus.NewService()
+func (o *operatorStub) GetStatus(name string) packagestatus.Status {
+	return packagestatus.NewService().GetStatus(name)
+}
+
+func (o *operatorStub) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return packagestatus.NewService().Queue()
 }
 
 func (o *operatorStub) Cleanup(_ context.Context, _ []packageoperator.PreservePackage) {}

@@ -22,7 +22,6 @@ import (
 	"sort"
 	"sync/atomic"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -40,7 +39,6 @@ import (
 	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -56,8 +54,8 @@ type Module struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
-	// initialized tracks whether hook controllers have been built, so the
-	// globalenable task does not re-initialize them on every reschedule.
+	// initialized tracks whether hook controllers have been built, so the global
+	// run task does not re-initialize them on every reschedule.
 	initialized atomic.Bool
 
 	patcher           *objectpatch.ObjectPatcher
@@ -144,28 +142,9 @@ func (m *Module) GetName() string {
 	return m.name
 }
 
-// GetVersion returns the package version. Global is unversioned, so it reports a
-// zero version — enough to satisfy the scheduler node contract.
-func (m *Module) GetVersion() *semver.Version {
-	return semver.MustParse("0.0.0")
-}
-
-// GetConstraints reports the scheduler constraints. Global has no version or
-// dependency requirements and the lowest order, so it is always enabled and
-// scheduled before every package.
-func (m *Module) GetConstraints() schedule.Constraints {
-	return schedule.Constraints{Order: 0}
-}
-
-// GetHooksByBinding returns the global hooks registered for the given binding
-// type, sorted by order.
-func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.GlobalHook {
-	return m.hooks.GetHooksByBinding(binding)
-}
-
-// HooksInitialized reports whether the hook controllers have been built.
-func (m *Module) HooksInitialized() bool {
-	return m.initialized.Load()
+// GetVersion return the package version
+func (m *Module) GetVersion() string {
+	return "v0.0.0"
 }
 
 // GetPath returns path to the package dir
@@ -234,6 +213,11 @@ func (m *Module) InitializeHooks() {
 	}
 
 	m.initialized.Store(true)
+}
+
+// HooksInitialized reports whether InitializeHooks has built the hook controllers.
+func (m *Module) HooksInitialized() bool {
+	return m.initialized.Load()
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
@@ -355,6 +339,31 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 		{
 			Op:    "add",
 			Path:  "/enabledModules",
+			Value: data,
+		},
+	}}
+
+	if err := m.values.ApplyValuesPatch(patch); err != nil {
+		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
+	}
+}
+
+// SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks, into .global.discovery.apiVersions values
+func (m *Module) SetCapabilities(apiVersions []string) {
+	if len(apiVersions) == 0 {
+		return
+	}
+
+	// keep apiVersions sorted to prevent helm rollout on each restart
+	sort.Strings(apiVersions)
+	data, _ := json.Marshal(apiVersions)
+
+	// backward compatibility: set apiVersions to .global.discovery.apiVersions
+	// TODO(ipaqsa): get rid of it further and add Capabilities field
+	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
+		{
+			Op:    "add",
+			Path:  "/discovery/apiVersions",
 			Value: data,
 		},
 	}}

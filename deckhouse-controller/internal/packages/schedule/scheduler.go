@@ -60,8 +60,6 @@ type Scheduler struct {
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
 
-	onScheduleHook func(enabled []string)
-
 	pause atomic.Bool // When true, no state changes are processed
 }
 
@@ -93,13 +91,6 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 func WithDependencyGetter(getter dependency.Getter) Option {
 	return func(s *Scheduler) {
 		s.dependencyGetter = getter
-	}
-}
-
-// WithOnScheduleHook sets the hook to be called after scheduling is computed.
-func WithOnScheduleHook(hook func(enabled []string)) Option {
-	return func(s *Scheduler) {
-		s.onScheduleHook = hook
 	}
 }
 
@@ -341,14 +332,15 @@ func (s *Scheduler) schedule() {
 		return
 	}
 
-	for _, n := range s.compute() {
+	enabled, sorted := s.compute()
+	for _, n := range sorted {
 		if n.state != nodeStateIdle {
 			continue
 		}
 
 		if s.canSchedule(n) {
 			n.state = nodeStateScheduled
-			s.send(Event{Name: n.name, Kind: EventSchedule})
+			s.send(Event{Name: n.name, Kind: EventSchedule, Enabled: enabled})
 		}
 	}
 }
@@ -360,7 +352,7 @@ func (s *Scheduler) schedule() {
 // [EventDisable]. No global reconverge happens — canSchedule no longer gates
 // on per-dep state, so one node's status change cannot invalidate another
 // node's schedulability beyond the live order-tier check.
-func (s *Scheduler) compute() []*node {
+func (s *Scheduler) compute() ([]string, []*node) {
 	// AddNode is the authoritative cycle gate, so topoSort should never
 	// return an error here. The disabled-mark-active loop below walks `sorted`
 	// and relies on that invariant; a cycle slipping through (gate bug) would
@@ -390,6 +382,8 @@ func (s *Scheduler) compute() []*node {
 		}
 	}
 
+	var enabled []string
+
 	// Disabled nodes have nothing to wait for — mark them active so they do
 	// not block higher-order nodes via canSchedule's order-tier gate. This
 	// sweep is unconditional (not gated on a status flip), so nodes that are
@@ -400,19 +394,15 @@ func (s *Scheduler) compute() []*node {
 		if n.state == nodeStateIdle && !n.status.Enabled {
 			n.state = nodeStateActive
 		}
-	}
 
-	if s.onScheduleHook != nil {
-		var enabled []string
-		for _, n := range sorted {
-			if n.status.Enabled {
-				enabled = append(enabled, n.name)
-			}
+		// global is the barrier node, not a module — never advertise it in the
+		// enabled set the runtime publishes to global values.
+		if n.status.Enabled && n.name != "global" {
+			enabled = append(enabled, n.name)
 		}
-		s.onScheduleHook(enabled)
 	}
 
-	return sorted
+	return enabled, sorted
 }
 
 // canSchedule returns true if a node is eligible to transition from idle to
