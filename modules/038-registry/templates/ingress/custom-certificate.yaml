@@ -11,6 +11,7 @@
 {{- if .Values.global.enabledModules | has "cert-manager" -}}
 
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-ingress-tls") -}}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-httproute-tls") -}}
 
 {{- end }}
 {{- end }}
