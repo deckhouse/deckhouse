@@ -242,6 +242,24 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Deckhouse Kubernetes Platform is not affected in admissionPolicyEngine trivyProvider context, because trivyProvider is a Go binary and does not run or expose Docker daemon code paths required to trigger this vulnerability.",
       "timestamp": "2026-06-22T14:35:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-41568",
+        "description": "Race condition in docker cp mount setup allows creation of arbitrary empty files on the host via symlink swap",
+        "name": "CVE-2026-41568",
+        "aliases": [ "GHSA-vp62-88p7-qqf5" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Moby is an open source container framework. In Docker Engine prior to version 29.5.1, a race condition during docker cp mount setup allows a malicious container to create empty files or directories at arbitrary absolute paths on the host filesystem when an operator initiates docker cp or calls PUT/HEAD /containers/{id}/archive API endpoints. Deckhouse Kubernetes Platform is not affected because admissionPolicyEngine trivyProvider is a Go binary and does not run, embed, or expose Docker daemon archive/copy code paths required to trigger this vulnerability.",
+      "timestamp": "2026-06-24T12:00:00Z"
     }
 
   ],
