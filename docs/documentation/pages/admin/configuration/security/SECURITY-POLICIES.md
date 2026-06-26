@@ -17,7 +17,7 @@ In the DKP policies are divided into three categories:
 These policies complement each other. If multiple policies are applied to a single namespace, objects are validated against each of them. If even one policy is violated, the object will not be created.
 {% endalert %}
 
-In addition to policies that prohibit using parameters different from the set requirements, the module supports the [SecurityPolicyException](#security-policy-exceptions) resource, which allows creating fine-grained exceptions from security policy checks. With this resource, you can allow using specific parameters for individual pods or containers without changing security policies applied to the entire namespace.
+In addition to policies that prohibit using parameters different from the set requirements, DKP supports the [SecurityPolicyException](#security-policy-exceptions) resource, which allows creating fine-grained exceptions from security policy checks. With this resource, you can allow using specific parameters for individual pods or containers without changing security policies applied to the entire namespace.
 
 ## How validation failure messages are displayed
 
