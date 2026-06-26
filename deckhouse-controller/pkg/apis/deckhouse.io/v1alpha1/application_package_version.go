@@ -127,6 +127,16 @@ type ApplicationPackageVersionStatus struct {
 	UsedByCount int `json:"usedByCount,omitempty"`
 }
 
+// PackageSchema is an OpenAPI v3 schema stored as raw JSON to preserve all
+// custom x-* extensions that apiextensionsv1.JSONSchemaProps would silently
+// drop. The serialised JSON shape is {"openAPIV3Schema": <schema-object>},
+// identical to apiextensionsv1.CustomResourceValidation but with all
+// extensions retained.
+type PackageSchema struct {
+	// +optional
+	OpenAPIV3Schema *apiextensionsv1.JSON `json:"openAPIV3Schema,omitempty"`
+}
+
 type ApplicationPackageVersionStatusSchemas struct {
 	// SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
 	// settings of the package. Stored as an opaque object because its contents
@@ -137,7 +147,7 @@ type ApplicationPackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Schemaless
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
-	SettingsSchema *apiextensionsv1.CustomResourceValidation `json:"settingsSchema,omitempty"`
+	SettingsSchema *PackageSchema `json:"settingsSchema,omitempty"`
 
 	// ValuesSchema is the OpenAPI v3 schema used to validate the effective
 	// values (defaults merged with settings) passed to the package's hooks and
@@ -148,7 +158,7 @@ type ApplicationPackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Schemaless
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
-	ValuesSchema *apiextensionsv1.CustomResourceValidation `json:"valuesSchema,omitempty"`
+	ValuesSchema *PackageSchema `json:"valuesSchema,omitempty"`
 }
 
 type ApplicationPackageVersionStatusInstance struct {

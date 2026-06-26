@@ -18,6 +18,7 @@ package validation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -139,13 +140,28 @@ func TestParsePackageConstraint(t *testing.T) {
 }
 
 func TestValidateAppSettings(t *testing.T) {
-	objectSchema := func(props map[string]apiextensionsv1.JSONSchemaProps, required []string) *apiextensionsv1.CustomResourceValidation {
-		return &apiextensionsv1.CustomResourceValidation{
-			OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
-				Type:       "object",
-				Properties: props,
-				Required:   required,
-			},
+	objectSchema := func(props map[string]apiextensionsv1.JSONSchemaProps, required []string) *v1alpha1.PackageSchema {
+		rawProps := make(map[string]interface{}, len(props))
+		for k, v := range props {
+			m := map[string]interface{}{}
+			if v.Type != "" {
+				m["type"] = v.Type
+			}
+			if v.Default != nil {
+				m["default"] = v.Default
+			}
+			rawProps[k] = m
+		}
+		schemaObj := map[string]interface{}{
+			"type":       "object",
+			"properties": rawProps,
+		}
+		if len(required) > 0 {
+			schemaObj["required"] = required
+		}
+		raw, _ := json.Marshal(schemaObj)
+		return &v1alpha1.PackageSchema{
+			OpenAPIV3Schema: &apiextensionsv1.JSON{Raw: raw},
 		}
 	}
 

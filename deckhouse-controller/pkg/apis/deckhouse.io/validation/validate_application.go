@@ -18,7 +18,6 @@ package validation
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -299,11 +298,11 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 
 // validateAppSettings validates Application.spec.settings against the OpenAPI settings
 // schema published by the ApplicationPackageVersion at status.packageSchemas.settingsSchema.
-// The schema is re-serialized to JSON, loaded into an addon-operator SchemaStorage, and the
-// user-supplied settings are wrapped under the package name (as addon-operator expects) and
-// validated. Returns nil when the APV publishes no settings schema — the webhook treats an
-// absent schema as "nothing to validate" rather than a rejection, so packages that ship
-// without a schema remain installable.
+// The schema is stored as raw JSON bytes (PackageSchema) and passed directly to
+// addon-operator's SchemaStorage, which validates the user-supplied settings wrapped
+// under the package name. Returns nil when the APV publishes no settings schema — the
+// webhook treats an absent schema as "nothing to validate" rather than a rejection,
+// so packages that ship without a schema remain installable.
 func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app *v1alpha1.Application) error {
 	if apv.Status.PackageSchemas == nil {
 		return nil
@@ -314,10 +313,7 @@ func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app *v1alpha1.
 		return nil
 	}
 
-	schema, err := json.Marshal(schemas.SettingsSchema.OpenAPIV3Schema)
-	if err != nil {
-		return fmt.Errorf("get settings schema: %w", err)
-	}
+	schema := schemas.SettingsSchema.OpenAPIV3Schema.Raw
 
 	storage, err := validation.NewSchemaStorage(schema, nil)
 	if err != nil {

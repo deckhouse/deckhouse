@@ -16,6 +16,7 @@ package applicationpackageversion
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -343,40 +344,41 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 
 // setPackageSchema parses a raw YAML/JSON OpenAPI v3 schema and stores it on the
 // ApplicationPackageVersion status under either SettingsSchema or ValuesSchema,
-// selected by schemaType. The schema is wrapped in a lightweight envelope that
-// recognises the x-config-version marker used by packages to version their schema
-// format. An empty rawSchema is treated as "no schema supplied" and returns nil
+// selected by schemaType. The schema is stored as raw JSON to preserve all custom
+// x-* extensions (e.g. x-deckhouse-grantable-resource) that would be dropped by
+// apiextensionsv1.JSONSchemaProps. The x-config-version envelope marker is stripped.
+// An empty rawSchema is treated as "no schema supplied" and returns nil
 // without touching the status. Unknown schemaType values are silently ignored.
 func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, rawSchema []byte) error {
 	if len(rawSchema) == 0 {
 		return nil
 	}
 
-	type schemaVersion struct {
-		Version string `json:"x-config-version"`
-		apiextensionsv1.JSONSchemaProps
+	var schemaObj map[string]interface{}
+	if err := yaml.Unmarshal(rawSchema, &schemaObj); err != nil {
+		return fmt.Errorf("invalid JSON schema: %w", err)
 	}
 
-	jsonSchema := &schemaVersion{
-		Version: "1",
-	}
-	if err := yaml.Unmarshal(rawSchema, jsonSchema); err != nil {
-		return fmt.Errorf("invalid JSON schema: %w", err)
+	delete(schemaObj, "x-config-version")
+
+	jsonBytes, err := json.Marshal(schemaObj)
+	if err != nil {
+		return fmt.Errorf("marshal schema: %w", err)
 	}
 
 	if apv.Status.PackageSchemas == nil {
 		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
 	}
 
+	schema := &v1alpha1.PackageSchema{
+		OpenAPIV3Schema: &apiextensionsv1.JSON{Raw: jsonBytes},
+	}
+
 	switch schemaType {
 	case schemaTypeSettings:
-		apv.Status.PackageSchemas.SettingsSchema = &apiextensionsv1.CustomResourceValidation{
-			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
-		}
+		apv.Status.PackageSchemas.SettingsSchema = schema
 	case schemaTypeValues:
-		apv.Status.PackageSchemas.ValuesSchema = &apiextensionsv1.CustomResourceValidation{
-			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
-		}
+		apv.Status.PackageSchemas.ValuesSchema = schema
 	default:
 	}
 
