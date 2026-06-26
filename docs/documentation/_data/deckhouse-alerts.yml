@@ -507,19 +507,19 @@ alerts:
         1. Check availability and status of cluster-autoscaler Pods:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get pods -l 'app in (cluster-autoscaler,cluster-autoscaler-mcm)'
            ```
 
         2. Verify that the cluster-autoscaler Deployment exists:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get deploy -l 'app in (cluster-autoscaler,cluster-autoscaler-mcm)'
            ```
 
         3. Check the Deployment's status:
 
            ```bash
-           d8 k -n d8-cloud-instance-manager describe deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager describe deploy <deployment-name>
            ```
       summary: |
         Cluster-autoscaler target is missing in Prometheus.
@@ -5367,16 +5367,6 @@ alerts:
         NodeGroup {{ $labels.node_group }} has unavailable instances.
       severity: "8"
       markupFormat: markdown
-    - name: NodePingPacketLoss
-      sourceFile: modules/340-monitoring-ping/monitoring/prometheus-rules/node-ping.yaml
-      moduleUrl: 340-monitoring-ping
-      module: monitoring-ping
-      edition: ce
-      description: ICMP packet loss to node `{{$labels.destination_node}}` has exceeded 5%.
-      summary: |
-        Ping loss exceeds 5%.
-      severity: "4"
-      markupFormat: default
     - name: NodeRequiresDisruptionApprovalForUpdate
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
@@ -6238,7 +6228,6 @@ modules-having-alerts:
     - monitoring-applications
     - monitoring-custom
     - monitoring-kubernetes
-    - monitoring-ping
     - multitenancy-manager
     - node-local-dns
     - node-manager
