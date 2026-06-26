@@ -1,5 +1,5 @@
 diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
-index 1b4fa6f..8212ee9 100644
+index 1b4fa6f..8e8efb7 100644
 --- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 +++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 @@ -9,6 +9,8 @@ import { AuthStrategy } from '../../../types/Auth';
@@ -44,12 +44,12 @@ index 1b4fa6f..8212ee9 100644
    }
  
    timeLeft = (): number => {
-@@ -87,6 +101,16 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -87,7 +101,23 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      }
    };
  
 +
-+  handleStorageLogout = (event: StorageEvent): void => {
++  handleStorageLogout = (event: StorageEvent) => {
 +    if (event.key !== DEX_LOGOUT_STORAGE_KEY || !event.newValue) {
 +      return;
 +    }
@@ -67,7 +67,8 @@ index 1b4fa6f..8212ee9 100644
 +
      if (authenticationConfig.logoutEndpoint) {
        API.logout()
-@@ -123,8 +147,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+         .then(_ => {
+@@ -123,8 +153,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
    render() {
      const { isDropdownOpen } = this.state;
  

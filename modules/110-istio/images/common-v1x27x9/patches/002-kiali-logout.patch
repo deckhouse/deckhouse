@@ -1,5 +1,5 @@
 diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
-index d244f26..c230ca1 100644
+index d244f26..e8f304d 100644
 --- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 +++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
 @@ -10,6 +10,8 @@ import { AuthStrategy } from '../../../types/Auth';
@@ -44,7 +44,7 @@ index d244f26..c230ca1 100644
    }
  
    timeLeft = (): number => {
-@@ -104,6 +118,16 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+@@ -104,7 +118,23 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      }
    };
  
@@ -67,7 +67,8 @@ index d244f26..c230ca1 100644
 +
      if (authenticationConfig.logoutEndpoint) {
        API.logout()
-@@ -143,8 +167,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+         .then(_ => {
+@@ -143,8 +173,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
      const clusterIsInSessionInfo = (cluster: string): boolean =>
        this.props.session?.clusterInfo?.[cluster] !== undefined;
  
