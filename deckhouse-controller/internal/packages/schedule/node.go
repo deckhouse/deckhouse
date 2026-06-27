@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
 )
 
@@ -52,10 +53,12 @@ type Constraints struct {
 	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Gate-only: never contributes edges to the topological graph, so fallback chains across packages do not produce cycles.
 	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Gate-only: "must not be installed" is an admission predicate, not an ordering relation.
 
+	Subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.
+
 	// Floor is the package's lowest-precedence rule: its default decision when no
-	// higher-precedence intent rule (bundle, user, script) has an opinion. Apps
+	// higher-precedence intent rule (bundle, user, script) has an opinion. Apps and Global
 	// set rule.Static(rule.Enable) (on whenever loaded); modules set their
-	// bundle decision. It is the only behavior-carrying field here — admission
+	// rule.Disabled. It is the only behavior-carrying field here — admission
 	// (CheckConstraints) ignores it, since the floor is intent, not a
 	// requirement. A nil Floor means no floor: with gates-only the package
 	// resolves to Undefined and stays off, so every package must set one.
@@ -105,6 +108,11 @@ type node struct {
 
 	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and rule inputs.
 
+	subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.
+	subscribers   map[string]struct{} // Set of nodes that are subscribed to this node's state changes.
+
+	rescheduleOnEnable bool // If true, the node will reschedule global node when it enables.
+
 	rules []rule.Rule // Ordered rule chain evaluated on each scheduling pass.
 }
 
@@ -122,11 +130,18 @@ func (s *Scheduler) addNode(pkg Package) {
 	constraints := pkg.GetConstraints()
 
 	n := &node{
-		name:         pkg.GetName(),
-		version:      pkg.GetVersion(),
-		state:        nodeStateIdle,
-		order:        constraints.Order,
-		dependencies: maps.Clone(constraints.Dependencies),
+		name:          pkg.GetName(),
+		version:       pkg.GetVersion(),
+		state:         nodeStateIdle,
+		order:         constraints.Order,
+		dependencies:  maps.Clone(constraints.Dependencies),
+		subscriptions: maps.Clone(constraints.Subscriptions),
+		subscribers:   make(map[string]struct{}),
+	}
+
+	// modules should reschedule global node when they enable
+	if constraints.Floor != nil && constraints.Floor == rule.Static(rule.Disable) {
+		n.rescheduleOnEnable = true
 	}
 
 	// The package's floor sits first (lowest precedence): gates appended after
@@ -169,7 +184,37 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
 	}
 
+	// Intent rule, appended after the gates: a dynamic Enable is a soft vote that
+	// overrides the floor's bundle decision (e.g. a module enabled at runtime by
+	// an enabled script), while gates still veto via Forbid from any position.
+	if s.dynamicGetter != nil {
+		n.rules = append(n.rules, dynamic.NewRule(s.dynamicGetter, pkg.GetName()))
+	}
+
 	s.nodes[pkg.GetName()] = n
+
+	// Adding (or replacing) a node changes the subscription graph, so recompute
+	// the reverse index. Cheap relative to node churn and always correct on update.
+	s.rebuildSubscribers()
+}
+
+// rebuildSubscribers recomputes every node's subscribers set from the
+// subscriptions declared across the graph. A node lists the nodes it subscribes
+// to (subscriptions); the reverse index — who is subscribed to a given node
+// (subscribers) — is what Reschedule fans out to. Rebuilding wholesale keeps the
+// index correct after any add, update, or remove without per-edge bookkeeping.
+func (s *Scheduler) rebuildSubscribers() {
+	for _, n := range s.nodes {
+		n.subscribers = make(map[string]struct{})
+	}
+
+	for name, n := range s.nodes {
+		for target := range n.subscriptions {
+			if t, ok := s.nodes[target]; ok {
+				t.subscribers[name] = struct{}{}
+			}
+		}
+	}
 }
 
 // toAnyOfGroups translates schedule.AnyOfGroup values into the dependency

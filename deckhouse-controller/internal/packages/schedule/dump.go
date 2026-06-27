@@ -16,6 +16,7 @@ package schedule
 
 import (
 	"maps"
+	"slices"
 
 	"sigs.k8s.io/yaml"
 
@@ -29,11 +30,18 @@ type dump struct {
 
 // nodeDump combines status info for a single node.
 type nodeDump struct {
-	Version      string                `json:"version" yaml:"version"`
-	Order        Order                 `json:"order" yaml:"order"`
-	State        nodeState             `json:"state" yaml:"state"`
-	Decision     rule.Decision         `json:"decision" yaml:"decision"`
-	Dependencies map[string]Dependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Version       string                `json:"version" yaml:"version"`
+	Order         Order                 `json:"order" yaml:"order"`
+	State         nodeState             `json:"state" yaml:"state"`
+	Decision      rule.Decision         `json:"decision" yaml:"decision"`
+	Dependencies  map[string]Dependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Subscriptions []string              `json:"subscriptions,omitempty" yaml:"subscriptions,omitempty"`
+	Subscribers   []string              `json:"subscribers,omitempty" yaml:"subscribers,omitempty"`
+}
+
+// sortedKeys returns the keys of a set as a sorted slice for stable dump output.
+func sortedKeys(set map[string]struct{}) []string {
+	return slices.Sorted(maps.Keys(set))
 }
 
 // Dump returns a YAML snapshot of all nodes and their current state.
@@ -47,11 +55,13 @@ func (s *Scheduler) Dump() []byte {
 
 	for _, n := range s.nodes {
 		d.Nodes[n.name] = nodeDump{
-			Version:      n.version.String(),
-			Order:        n.order,
-			State:        n.state,
-			Decision:     n.decision,
-			Dependencies: maps.Clone(n.dependencies),
+			Version:       n.version.String(),
+			Order:         n.order,
+			State:         n.state,
+			Decision:      n.decision,
+			Dependencies:  maps.Clone(n.dependencies),
+			Subscriptions: sortedKeys(n.subscriptions),
+			Subscribers:   sortedKeys(n.subscribers),
 		}
 	}
 
@@ -74,11 +84,13 @@ func (s *Scheduler) DumpByName(name string) []byte {
 	}
 
 	d := nodeDump{
-		Version:      n.version.String(),
-		Order:        n.order,
-		State:        n.state,
-		Decision:     n.decision,
-		Dependencies: maps.Clone(n.dependencies),
+		Version:       n.version.String(),
+		Order:         n.order,
+		State:         n.state,
+		Decision:      n.decision,
+		Dependencies:  maps.Clone(n.dependencies),
+		Subscriptions: sortedKeys(n.subscriptions),
+		Subscribers:   sortedKeys(n.subscribers),
 	}
 
 	// Marshal to YAML; errors are intentionally ignored because nodeDump

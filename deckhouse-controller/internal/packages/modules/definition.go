@@ -129,6 +129,9 @@ func (d Definition) Constraints() schedule.Constraints {
 		Dependencies: deps,
 		AnyOf:        anyOf,
 		NoneOf:       noneOf,
+		Subscriptions: map[string]struct{}{
+			"global": {},
+		},
 		// Modules are disabled by default; a higher-precedence intent rule
 		// (bundle membership, user config) turns them on.
 		Floor: rule.Static(rule.Disable),

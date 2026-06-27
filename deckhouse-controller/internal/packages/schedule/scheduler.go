@@ -22,10 +22,13 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
 )
 
 const (
+	globalNode = "global"
+
 	// FunctionalOrder is the Order value assigned to functional (non-critical) packages.
 	// It is higher than any critical package order, ensuring functional packages are
 	// scheduled only after all critical packages have been processed.
@@ -54,6 +57,7 @@ type Scheduler struct {
 	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
+	dynamicGetter          dynamic.Getter      // Reports a module's dynamic enabled state
 
 	pause atomic.Bool // When true, no state changes are processed
 }
@@ -86,6 +90,13 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 func WithDependencyGetter(getter dependency.Getter) Option {
 	return func(s *Scheduler) {
 		s.dependencyGetter = getter
+	}
+}
+
+// WithDynamicGetter sets the provider for a module's dynamic enabled state.
+func WithDynamicGetter(getter dynamic.Getter) Option {
+	return func(s *Scheduler) {
+		s.dynamicGetter = getter
 	}
 }
 
@@ -245,6 +256,7 @@ func (s *Scheduler) RemoveNode(name string) {
 	}
 
 	delete(s.nodes, name)
+	s.rebuildSubscribers()
 
 	s.schedule()
 }
@@ -262,15 +274,28 @@ func (s *Scheduler) Complete(completed string) {
 	s.schedule()
 }
 
-// Reschedule reverts the named package to idle and runs a full scheduling
-// pass, causing it (and potentially its dependents) to be rescheduled.
+// Reschedule reverts the named package to idle and runs a full scheduling pass,
+// causing it (and potentially its dependents) to be rescheduled. Its direct
+// subscribers are reverted to idle in the same pass so they are rescheduled too;
+// the cascade is one level deep — a subscriber's own subscribers are not touched.
 // It is a no-op if the package does not exist.
 func (s *Scheduler) Reschedule(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if n, ok := s.nodes[name]; ok {
-		n.state = nodeStateIdle
+	n, ok := s.nodes[name]
+	if !ok {
+		return
+	}
+
+	n.state = nodeStateIdle
+
+	// Direct subscribers only: revert their state inline rather than recursing
+	// through Reschedule, so the cascade stays one level deep.
+	for sub := range n.subscribers {
+		if sn, ok := s.nodes[sub]; ok {
+			sn.state = nodeStateIdle
+		}
 	}
 
 	s.schedule()
@@ -319,12 +344,17 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	// and relies on that invariant; a cycle slipping through (gate bug) would
 	// leave its members frozen at nodeStateIdle, surfaced quickly by stalled
 	// higher-tier nodes via canSchedule's order-tier gate.
+	reschedule := false
 	sorted, _ := topoSort(s.nodes)
 	for _, n := range sorted {
 		current := n.enabled()
 		n.decision = rule.Resolve(n.rules...)
 		if current == n.enabled() {
 			continue
+		}
+
+		if n.enabled() && n.rescheduleOnEnable {
+			reschedule = true
 		}
 
 		// Decision flipped — reset this node so the next schedule pass can
@@ -334,6 +364,17 @@ func (s *Scheduler) compute() ([]string, []*node) {
 
 		if !n.enabled() {
 			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.decision.Reason, Message: n.decision.Message})
+		}
+	}
+
+	// A dynamically-enabled module turning on may install CRDs that other packages
+	// render against. Those template-level dependencies are not tracked, so any
+	// such enable transition reschedules the entire graph: revert every node to
+	// idle and let the pass below re-park not-enabled nodes active and re-emit
+	// EventSchedule for the enabled ones (in order).
+	if reschedule {
+		for _, n := range sorted {
+			n.state = nodeStateIdle
 		}
 	}
 
@@ -352,7 +393,7 @@ func (s *Scheduler) compute() ([]string, []*node) {
 
 		// global is the barrier node, not a module — never advertise it in the
 		// enabled set the runtime publishes to global values.
-		if n.enabled() && n.name != "global" {
+		if n.enabled() && n.name != globalNode {
 			enabled = append(enabled, n.name)
 		}
 	}
