@@ -58,6 +58,9 @@ func (r *Runtime) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 	for _, app := range r.apps {
 		r.routeKubeEvent(ctx, app, kubeEvent, res)
 	}
+	for _, module := range r.modules {
+		r.routeKubeEvent(ctx, module, kubeEvent, res)
+	}
 	r.routeKubeEvent(ctx, r.global, kubeEvent, res)
 
 	return res
@@ -116,6 +119,9 @@ func (r *Runtime) BuildScheduleTasks(ctx context.Context, crontab string) map[st
 
 	for _, app := range r.apps {
 		r.routeScheduleEvent(ctx, app, crontab, res)
+	}
+	for _, module := range r.modules {
+		r.routeScheduleEvent(ctx, module, crontab, res)
 	}
 	r.routeScheduleEvent(ctx, r.global, crontab, res)
 

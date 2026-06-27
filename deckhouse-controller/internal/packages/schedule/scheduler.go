@@ -19,10 +19,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/version"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
 )
 
 const (
@@ -38,11 +38,6 @@ const (
 	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
 	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
 	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
-
-	// reasonDisabled is the status reason recorded when a node is explicitly
-	// disabled by an operator via [Scheduler.Disable], as opposed to losing
-	// eligibility through a failed checker.
-	reasonDisabled = "PackageDisabled"
 )
 
 // Scheduler manages a dependency graph of packages and their lifecycle.
@@ -144,18 +139,21 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var checkers []checker.Checker
+	// Admission validates requirements only, so build the gate rules (which emit
+	// Undefined or Forbid) and reject on a Forbid. Intent rules (bundle, user,
+	// script) and the enable floor are not admission concerns.
+	var rules []rule.Rule
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
+		rules = append(rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
+		rules = append(rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
+		rules = append(rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
@@ -167,19 +165,19 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 			}
 		}
 
-		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, deps))
+		rules = append(rules, dependency.NewRule(s.dependencyGetter, deps))
 	}
 
 	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
-		checkers = append(checkers, dependency.NewAnyOfChecker(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+		rules = append(rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
 	}
 
 	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
-		checkers = append(checkers, dependency.NewNoneOfChecker(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+		rules = append(rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
 	}
 
-	if res := checker.Check(checkers...); !res.Enabled {
-		return errors.New(res.Message)
+	if d := rule.Resolve(rules...); d.Kind == rule.Forbid {
+		return errors.New(d.Message)
 	}
 
 	return s.simulateCycle(name, constraints)
@@ -264,43 +262,6 @@ func (s *Scheduler) Complete(completed string) {
 	s.schedule()
 }
 
-// Disable explicitly turns the named package off, forcing it disabled on every
-// subsequent scheduling pass regardless of its checker chain. A scheduling pass
-// runs immediately, cascade-disabling the node (and emitting an [EventDisable]
-// if it was previously enabled). It is a no-op if the package does not exist or
-// is already disabled.
-func (s *Scheduler) Disable(name string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	n, ok := s.nodes[name]
-	if !ok || n.disabled {
-		return
-	}
-
-	n.disabled = true
-
-	s.schedule()
-}
-
-// Enable clears an explicit disable set by [Scheduler.Disable], allowing the
-// node's checker chain to govern eligibility again. A scheduling pass runs
-// immediately, re-scheduling the node if its checkers now pass. It is a no-op
-// if the package does not exist or is not explicitly disabled.
-func (s *Scheduler) Enable(name string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	n, ok := s.nodes[name]
-	if !ok || !n.disabled {
-		return
-	}
-
-	n.disabled = false
-
-	s.schedule()
-}
-
 // Reschedule reverts the named package to idle and runs a full scheduling
 // pass, causing it (and potentially its dependents) to be rescheduled.
 // It is a no-op if the package does not exist.
@@ -345,59 +306,53 @@ func (s *Scheduler) schedule() {
 	}
 }
 
-// compute recomputes the enabled status for all nodes in topological order,
-// guaranteeing that dependencies are resolved before dependents. Nodes whose
-// Enabled status flipped are individually reset to idle so they re-enter the
-// scheduling path on the next pass; nodes that lose eligibility emit an
-// [EventDisable]. No global reconverge happens — canSchedule no longer gates
-// on per-dep state, so one node's status change cannot invalidate another
-// node's schedulability beyond the live order-tier check.
+// compute recomputes every node's decision in topological order, guaranteeing
+// that dependencies are resolved before dependents. Nodes whose enabled status
+// flipped are individually reset to idle so they re-enter the scheduling path
+// on the next pass; nodes that lose eligibility emit an [EventDisable]. No
+// global reconverge happens — canSchedule no longer gates on per-dep state, so
+// one node's decision change cannot invalidate another node's schedulability
+// beyond the live order-tier check.
 func (s *Scheduler) compute() ([]string, []*node) {
 	// AddNode is the authoritative cycle gate, so topoSort should never
-	// return an error here. The disabled-mark-active loop below walks `sorted`
+	// return an error here. The not-enabled sweep below walks `sorted`
 	// and relies on that invariant; a cycle slipping through (gate bug) would
 	// leave its members frozen at nodeStateIdle, surfaced quickly by stalled
 	// higher-tier nodes via canSchedule's order-tier gate.
 	sorted, _ := topoSort(s.nodes)
 	for _, n := range sorted {
-		current := n.status.Enabled
-		n.status = checker.Check(n.checkers...)
-		// An explicit operator disable is the final gate: it forces the node
-		// off even when every checker passes, but defers to the checker chain's
-		// more specific reason when that already disabled the node.
-		if n.disabled && n.status.Enabled {
-			n.status = checker.Result{Reason: reasonDisabled, Message: "package is explicitly disabled"}
-		}
-		if current == n.status.Enabled {
+		current := n.enabled()
+		n.decision = rule.Resolve(n.rules...)
+		if current == n.enabled() {
 			continue
 		}
 
-		// Status flipped — reset this node so the next schedule pass can
-		// either re-schedule it (now enabled) or mark it active via the
-		// disabled-mark-active loop below (now disabled).
+		// Decision flipped — reset this node so the next schedule pass can
+		// either re-schedule it (now enabled) or park it active via the
+		// not-enabled sweep below (now off).
 		n.state = nodeStateIdle
 
-		if !n.status.Enabled {
-			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
+		if !n.enabled() {
+			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.decision.Reason, Message: n.decision.Message})
 		}
 	}
 
 	var enabled []string
 
-	// Disabled nodes have nothing to wait for — mark them active so they do
-	// not block higher-order nodes via canSchedule's order-tier gate. This
-	// sweep is unconditional (not gated on a status flip), so nodes that are
-	// born disabled — never enabled to begin with — are parked active too.
-	// Nodes that later flip back to enabled are reset to idle by the loop
-	// above and go through normal scheduling from there.
+	// Nodes that are not enabled have nothing to wait for — mark them active so
+	// they do not block higher-order nodes via canSchedule's order-tier gate.
+	// This sweep is unconditional (not gated on a flip), so nodes that are born
+	// not-enabled — never enabled to begin with — are parked active too. Nodes
+	// that later flip back to enabled are reset to idle by the loop above and go
+	// through normal scheduling from there.
 	for _, n := range sorted {
-		if n.state == nodeStateIdle && !n.status.Enabled {
+		if n.state == nodeStateIdle && !n.enabled() {
 			n.state = nodeStateActive
 		}
 
 		// global is the barrier node, not a module — never advertise it in the
 		// enabled set the runtime publishes to global values.
-		if n.status.Enabled && n.name != "global" {
+		if n.enabled() && n.name != "global" {
 			enabled = append(enabled, n.name)
 		}
 	}
@@ -407,14 +362,14 @@ func (s *Scheduler) compute() ([]string, []*node) {
 
 // canSchedule returns true if a node is eligible to transition from idle to
 // scheduled. Two conditions must hold:
-//  1. The node must be enabled (all checkers passed).
+//  1. The node must be enabled (its rule chain resolved to Enable).
 //  2. All nodes with a strictly lower Order must be active.
 //
-// Dependency-level ordering between same-tier nodes is encoded in the checker
+// Dependency-level ordering between same-tier nodes is encoded in the rule
 // chain (the dependency.Getter contract returns versions only for nodes that
 // have reached nodeStateActive).
 func (s *Scheduler) canSchedule(n *node) bool {
-	if !n.status.Enabled {
+	if !n.enabled() {
 		return false
 	}
 

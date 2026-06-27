@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
 // globalName is the literal sentinel used by Scheduler internally; it lives
@@ -42,8 +43,17 @@ func (p *testPackage) GetName() string { return p.name }
 // GetVersion returns the parsed package version.
 func (p *testPackage) GetVersion() *semver.Version { return p.version }
 
-// GetConstraints returns the package's scheduler constraints.
-func (p *testPackage) GetConstraints() schedule.Constraints { return p.constraints }
+// GetConstraints returns the package's scheduler constraints, defaulting the
+// Floor to an always-Enable rule so cases that don't care about enablement keep
+// the legacy "enabled once loaded" behavior. Cases exercising disablement set
+// their own Floor.
+func (p *testPackage) GetConstraints() schedule.Constraints {
+	if p.constraints.Floor == nil {
+		p.constraints.Floor = rule.Static(rule.Enable)
+	}
+
+	return p.constraints
+}
 
 // mustVersion parses s into a *semver.Version or panics; tests use known-good values.
 func mustVersion(s string) *semver.Version {
@@ -155,6 +165,25 @@ func (s *SchedulerSuite) TestAddNodeAndSchedule() {
 	}))
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha")
+}
+
+// TestFloorDisableKeepsNodeOff confirms the package-supplied floor governs
+// enablement: a node whose Floor resolves to Disable is never scheduled, even
+// though no gate vetoes it.
+func (s *SchedulerSuite) TestFloorDisableKeepsNodeOff() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha",
+		"a node with a Disable floor must not be scheduled")
 }
 
 // TestOrderTierGate confirms that canSchedule's order-tier check holds a
@@ -898,96 +927,4 @@ func (s *SchedulerSuite) TestNoneOfMemberInstallTriggersDisable() {
 	s.sched.Schedule()
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
-}
-
-// TestDisableFlipsEnabledNode confirms an explicit Disable forces an otherwise
-// eligible node off, emitting an EventDisable with the PackageDisabled reason.
-func (s *SchedulerSuite) TestDisableFlipsEnabledNode() {
-	s.activateGlobal()
-
-	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:        "alpha",
-		version:     mustVersion("1.0.0"),
-		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
-	}))
-
-	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha")
-
-	s.sched.Disable("alpha")
-
-	disabled := s.collectEvents()
-	s.Contains(eventNames(disabled, schedule.EventDisable), "alpha")
-	for _, e := range disabled {
-		if e.Kind == schedule.EventDisable && e.Name == "alpha" {
-			s.Equal("PackageDisabled", e.Reason)
-		}
-	}
-}
-
-// TestEnableReschedulesDisabledNode confirms that clearing an explicit disable
-// lets a node with passing checkers be scheduled again.
-func (s *SchedulerSuite) TestEnableReschedulesDisabledNode() {
-	s.activateGlobal()
-
-	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:        "alpha",
-		version:     mustVersion("1.0.0"),
-		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
-	}))
-	s.drainEvents()
-
-	s.sched.Disable("alpha")
-	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "alpha")
-
-	s.sched.Enable("alpha")
-	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha")
-}
-
-// TestDisableIsIdempotent confirms a repeated Disable on an already-disabled
-// node performs no enabled→disabled flip and therefore emits no further event.
-func (s *SchedulerSuite) TestDisableIsIdempotent() {
-	s.activateGlobal()
-
-	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:        "alpha",
-		version:     mustVersion("1.0.0"),
-		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
-	}))
-	s.drainEvents()
-
-	s.sched.Disable("alpha")
-	s.drainEvents()
-
-	s.sched.Disable("alpha")
-	s.Empty(s.collectEvents(), "redundant Disable must be a no-op")
-}
-
-// TestDisablePreservesCheckerReason confirms that when a node is both explicitly
-// disabled and failing a checker, the checker's specific reason wins over the
-// generic PackageDisabled reason.
-func (s *SchedulerSuite) TestDisablePreservesCheckerReason() {
-	s.activateGlobal()
-
-	s.Require().NoError(s.sched.AddNode(&testPackage{
-		name:    "consumer",
-		version: mustVersion("1.0.0"),
-		constraints: schedule.Constraints{
-			Order: schedule.FunctionalOrder,
-			Dependencies: map[string]schedule.Dependency{
-				"parent": {},
-			},
-		},
-	}))
-	s.drainEvents()
-
-	// consumer is already checker-disabled (parent absent). Explicitly disabling
-	// it must not be scheduled once parent appears.
-	s.sched.Disable("consumer")
-	s.drainEvents()
-
-	s.versions["parent"] = mustVersion("1.0.0")
-	s.sched.Schedule()
-
-	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer",
-		"explicitly disabled node must stay off even when its checkers pass")
 }

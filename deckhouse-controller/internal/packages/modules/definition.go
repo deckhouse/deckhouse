@@ -18,6 +18,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
 // Definition represents module metadata.
@@ -72,7 +73,7 @@ type ModuleGroup struct {
 // DisableOptions configures module disablement behavior.
 type DisableOptions struct {
 	Confirmation bool            `json:"confirmation" yaml:"confirmation"`
-	Messages     DisableMessages `json:"messages,omitempty" yaml:"messages,omitempty"`
+	Messages     DisableMessages `json:"messages" yaml:"messages"`
 }
 
 // DisableMessages holds localized disable confirmation messages for the module.
@@ -128,5 +129,8 @@ func (d Definition) Constraints() schedule.Constraints {
 		Dependencies: deps,
 		AnyOf:        anyOf,
 		NoneOf:       noneOf,
+		// Modules are disabled by default; a higher-precedence intent rule
+		// (bundle membership, user config) turns them on.
+		Floor: rule.Static(rule.Disable),
 	}
 }

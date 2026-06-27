@@ -18,6 +18,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 )
 
 // Definition represents application metadata.
@@ -70,7 +71,7 @@ type ModuleGroup struct {
 // DisableOptions configures application disablement behavior.
 type DisableOptions struct {
 	Confirmation bool            `json:"confirmation" yaml:"confirmation"`
-	Messages     DisableMessages `json:"messages,omitempty" yaml:"messages,omitempty"`
+	Messages     DisableMessages `json:"messages" yaml:"messages"`
 }
 
 // DisableMessages holds localized disable confirmation messages for the application.
@@ -121,5 +122,7 @@ func (d Definition) Constraints() schedule.Constraints {
 		Dependencies: deps,
 		AnyOf:        anyOf,
 		NoneOf:       noneOf,
+		// Apps are enabled whenever they are loaded; gates may still veto.
+		Floor: rule.Static(rule.Enable),
 	}
 }
