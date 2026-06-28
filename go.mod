@@ -55,6 +55,7 @@ require (
 	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
+	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
@@ -368,6 +369,8 @@ replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 replace github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol => ./go_lib/dhctl-provider-protocol
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
+
+replace github.com/deckhouse/deckhouse/go_lib/cloud-provider => ./go_lib/cloud-provider
 
 replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
 
