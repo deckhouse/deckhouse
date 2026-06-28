@@ -1,6 +1,6 @@
 ---
 title: "Managed PostgreSQL"
-permalink: ru/user/managed-services/postgres.html
+permalink: ru/user/managed-services/postgres/
 description: "Использование managed-сервиса PostgreSQL в Deckhouse Kubernetes Platform"
 lang: ru
 ---

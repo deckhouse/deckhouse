@@ -1,15 +1,18 @@
 ---
 title: "Managed PostgreSQL"
-permalink: ru/admin/configuration/managed-services/postgres.html
+permalink: ru/admin/configuration/managed-services/postgres/
 description: "Администрирование managed-сервиса PostgreSQL в Deckhouse Kubernetes Platform"
 lang: ru
 ---
 
-Managed PostgreSQL в Deckhouse Kubernetes Platform добавляет в кластер API для создания и сопровождения экземпляров PostgreSQL. Эта страница описывает административную настройку сервиса: включение модуля [`managed-postgres`](/modules/managed-postgres/) и подготовку классов PostgresClass для пользователей.
+Managed-сервис PostgreSQL позволяет запускать управляемые кластеры PostgreSQL в Deckhouse Kubernetes Platform. DKP берёт на себя управление жизненным циклом экземпляров PostgreSQL: развёртывание, масштабирование, резервное копирование и обновление. Пользователи managed-сервиса описывают желаемый экземпляр PostgreSQL в неймспейсе, а DKP создаёт и поддерживает его в нужном состоянии.
 
-Перед включением `managed-postgres` проверьте [требования для установки](/modules/managed-postgres/configuration.html#требования). Пользовательские операции с сервисом PostgreSQL описаны в разделе [«Использование Managed PostgreSQL»](../../../user/managed-services/postgres.html).
+На этой странице описана настройка и управление сервиса администратором DKP. Пользовательские операции с сервисом описаны в разделе [Использование → Managed-сервисы → Managed PostgreSQL](../../../user/managed-services/postgres.html).   
 
-## Включение модуля managed-postgres
+## Включение
+
+Для того чтобы включить managed-сервис PostgreSQL в кластере, включите модуль `managed-postgres`. 
+
 
 Чтобы включить модуль `managed-postgres`, создайте файл `module-config.yaml` с манифестом ModuleConfig `managed-postgres`. Если такой ресурс уже существует, проверьте, что в нём параметр `spec.enabled` установлен в `true`:
 

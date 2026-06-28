@@ -908,7 +908,7 @@ entries:
                 - title:
                     en: Managed PostgreSQL
                     ru: Managed PostgreSQL
-                  url: /admin/configuration/managed-services/postgres.html                  
+                  url: /admin/configuration/managed-services/postgres/
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
@@ -1166,7 +1166,7 @@ entries:
             - title:
                 en: Managed PostgreSQL
                 ru: Managed PostgreSQL
-              url: /user/managed-services/postgres.html
+              url: /user/managed-services/postgres/
         - title:
             en: Monitoring
             ru: Мониторинг
