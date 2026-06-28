@@ -1,8 +1,8 @@
 {{- $ciliumProxyRev := "a7f42a3390781539911b5b9107881b35ecc4e752" }}
 {{- $bazelVersions := "7.7.1" }}
 {{- $envoySHA := "ee7784f95f506e2a606ae668f0d9f70f9d26af83" }}
-{{- $ciliumProxyCacheRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc11-v1" }}
-{{- $ciliumProxyDepsRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc11-lfs-v1" }}
+{{- $ciliumProxyCacheRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-v1" }}
+{{- $ciliumProxyDepsRev := "v1.36.8-1781157951-a7f42a3390781539911b5b9107881b35ecc4e752-alt-p11-llvm18-gcc13-lfs-v1" }}
 #  to force manual creation of fresh build cache
 {{- $buildWithPreparedCacheAndDeps := false }}
 #
@@ -109,7 +109,7 @@ shell:
 {{- end }}
   - chown -R 1337:1337 /tmp/bazel-cache /tmp/bazel-deps /home/cilium/.cache
   #
-  - export ALTWRAP_LLVM_VERSION=18.1 GCC_VERSION=11
+  - export ALTWRAP_LLVM_VERSION=18.1 GCC_VERSION=13
   - export TARGETARCH=amd64 ARCH="x86_64"
   #
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
@@ -149,7 +149,7 @@ shell:
   # (two cc_toolchain blocks: aarch64 + x86_64). The aarch64 block also gets these entries, but it is
   # never built (target platform is //bazel:linux_x86_64), so the extra strings are harmless.
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-18.1/lib64/clang/18/include",' bazel/toolchains/BUILD
-  - sudo -u cilium sed -i '\#-Wno-deprecated-builtins#a \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/11",' bazel/toolchains/BUILD
+  - sudo -u cilium sed -i '\#-Wno-deprecated-builtins#a \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/13",' bazel/toolchains/BUILD
   #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external
