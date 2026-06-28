@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal/v1"
 )
 
@@ -351,7 +352,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 
 	// hybrid clusters have no masterNodeGroup
 	if pcc != nil && pcc.MasterNodeGroup != nil {
-		if !nodeGroupSet["master"] || !icSet["master-dvp"] {
+		if !nodeGroupSet["master"] || !icSet[cpapi.BuildInstanceClassName("master")] {
 			return false
 		}
 	}
@@ -366,7 +367,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 			if !ok || name == "" {
 				return false
 			}
-			if !nodeGroupSet[name] || !icSet[fmt.Sprintf("%s-dvp", name)] {
+			if !nodeGroupSet[name] || !icSet[cpapi.BuildInstanceClassName(name)] {
 				return false
 			}
 		}

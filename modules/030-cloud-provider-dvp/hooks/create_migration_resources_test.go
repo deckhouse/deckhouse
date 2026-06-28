@@ -150,6 +150,51 @@ data:
 			_, hasStorageDisabled := storage["disabled"]
 			Expect(hasStorageDisabled).To(BeFalse(), "storage.disabled must not be explicitly set in generated ModuleConfig")
 		})
+
+		It("should generate NodeGroup and DVPInstanceClass with hashed instance class name", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeTrue())
+
+			resourcesYAML := migrationSecret.Field("data.resources\\.yaml").String()
+			Expect(resourcesYAML).NotTo(BeEmpty())
+
+			rawBytes, err := base64.StdEncoding.DecodeString(resourcesYAML)
+			Expect(err).NotTo(HaveOccurred())
+
+			var nodeGroupDoc map[string]any
+			var instanceClassDoc map[string]any
+			for _, doc := range splitYAMLDocuments(string(rawBytes)) {
+				var obj map[string]any
+				if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
+					continue
+				}
+
+				switch obj["kind"] {
+				case "NodeGroup":
+					nodeGroupDoc = obj
+				case "DVPInstanceClass":
+					instanceClassDoc = obj
+				}
+			}
+
+			const expectedInstanceClassName = "master-fc613b4dfd67"
+			Expect(nodeGroupDoc).NotTo(BeNil(), "NodeGroup document must be present in resources.yaml")
+			Expect(instanceClassDoc).NotTo(BeNil(), "DVPInstanceClass document must be present in resources.yaml")
+
+			instanceClassMetadata, ok := instanceClassDoc["metadata"].(map[string]any)
+			Expect(ok).To(BeTrue(), "DVPInstanceClass metadata must be a map")
+			Expect(instanceClassMetadata["name"]).To(Equal(expectedInstanceClassName))
+
+			nodeGroupSpec, ok := nodeGroupDoc["spec"].(map[string]any)
+			Expect(ok).To(BeTrue(), "NodeGroup spec must be a map")
+			cloudInstances, ok := nodeGroupSpec["cloudInstances"].(map[string]any)
+			Expect(ok).To(BeTrue(), "NodeGroup spec.cloudInstances must be a map")
+			classReference, ok := cloudInstances["classReference"].(map[string]any)
+			Expect(ok).To(BeTrue(), "NodeGroup spec.cloudInstances.classReference must be a map")
+			Expect(classReference["name"]).To(Equal(expectedInstanceClassName))
+		})
 	})
 
 	// ---- State A: no PCC — OnAfterHelm does nothing ----

@@ -324,7 +324,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DVPInstanceClass
 metadata:
-  name: master-dvp
+  name: master-fc613b4dfd67
 spec: {}
 ---
 apiVersion: v1
@@ -418,7 +418,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DVPInstanceClass
 metadata:
-  name: master-dvp
+  name: master-fc613b4dfd67
 spec: {}
 ---
 apiVersion: v1
@@ -455,7 +455,7 @@ metadata:
 
 	// ---- Partial migration: some resources applied, migration NOT complete ----
 	// Validates that the hook stays in State B when only part of the target resources exist.
-	// Specifically: NodeGroup "master" exists but DVPInstanceClass "master-dvp" is missing.
+	// Specifically: NodeGroup "master" exists but generated DVPInstanceClass is missing.
 	// The hook must NOT delete migration artifacts in this case.
 	Context("State B partial: NodeGroup applied but DVPInstanceClass missing (migration incomplete)", func() {
 		bPartial := HookExecutionConfigInit(emptyValues, `{}`)
@@ -464,7 +464,7 @@ metadata:
 		bPartial.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 
 		BeforeEach(func() {
-			// NodeGroup master exists but master-dvp DVPInstanceClass is absent.
+			// NodeGroup master exists but generated DVPInstanceClass is absent.
 			// ModuleConfig v2 and d8-credentials also absent (migration resources not fully applied).
 			bPartialResources := fmt.Sprintf(`
 %s
@@ -550,7 +550,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: DVPInstanceClass
 metadata:
-  name: master-dvp
+  name: master-fc613b4dfd67
 spec: {}
 ---
 apiVersion: v1

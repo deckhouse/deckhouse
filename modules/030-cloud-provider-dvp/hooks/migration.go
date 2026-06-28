@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal/v1"
 )
 
@@ -266,7 +267,7 @@ func createNodeGroupResources(name string, nodeGroup map[string]any, master bool
 		}
 	}
 
-	instanceClassName := fmt.Sprintf("%s-dvp", name)
+	instanceClassName := cpapi.BuildInstanceClassName(name)
 	instanceClass := map[string]any{
 		"apiVersion": dvpInstanceClassAPI,
 		"kind":       dvpInstanceClassKind,
