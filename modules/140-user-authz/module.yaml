@@ -6,3 +6,10 @@ subsystems:
 descriptions:
   en: Implements role-based access control. Creates cluster roles for managing user and group access to cluster resources.
   ru: Реализует ролевую модель доступа. Создает кластерные роли для управления доступом пользователей и групп к ресурсам кластера.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

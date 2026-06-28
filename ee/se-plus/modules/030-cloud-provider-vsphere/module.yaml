@@ -8,3 +8,8 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-vsphere
 stage: General Availability
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles: []

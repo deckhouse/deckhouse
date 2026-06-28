@@ -9,3 +9,8 @@ descriptions:
   en: Provides networking in a Kubernetes cluster using the Cilium CNI with eBPF-based networking and security.
   ru: Обеспечивает работу сети в кластере Kubernetes с помощью CNI Cilium на базе eBPF.
 exclusiveGroup: cni
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles: []

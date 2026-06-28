@@ -9,3 +9,10 @@ requirements:
 descriptions:
   en: Simplifies monitoring setup for custom applications by requiring only a specific label on Service or Pod. Enables collection of application metrics without manual Prometheus configuration.
   ru: Упрощает настройку мониторинга пользовательских приложений, требуя только указания определённого лейбла на Service или Pod. Позволяет собирать метрики приложений без ручной настройки Prometheus.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

@@ -6,3 +6,8 @@ namespace: d8-okmeter
 descriptions:
   en: Installs the Okmeter agent in the cluster.
   ru: Устанавливает агент Okmeter в кластере.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles: []

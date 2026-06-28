@@ -9,3 +9,10 @@ descriptions:
 requirements:
   modules:
     prometheus: ">= 0.0.0"
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

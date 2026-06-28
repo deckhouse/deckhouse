@@ -6,3 +6,38 @@ descriptions:
   en: Analyzes the cluster state every 15 minutes and performs pod eviction according to conditions described in active strategies. Evicted pods are rescheduled considering the current cluster state.
   ru: Анализирует состояние кластера каждые 15 минут и выполняет вытеснение подов согласно условиям, описанным в активных стратегиях. Позволяет перераспределить рабочие нагрузки в соответствии с выбранной стратегией.
 stage: General Availability
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles: []
+    be:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    ce:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    fe:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    se:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    se-plus:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

@@ -9,3 +9,10 @@ requirements:
 descriptions:
   en: Enables HPA and VPA autoscalers to use monitoring metrics for scaling decisions. Implements Kubernetes resource metrics API, custom metrics API, and external metrics API.
   ru: Позволяет HPA и VPA автоскейлерам использовать метрики мониторинга для принятия решений о масштабировании. Реализует API метрик ресурсов Kubernetes, API пользовательских метрик и API внешних метрик.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

@@ -9,3 +9,8 @@ descriptions:
   en: Provides a network between multiple nodes in a cluster using the flannel module.
   ru: Обеспечивает работу сети в кластере с помощью модуля flannel.
 exclusiveGroup: cni
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles: []

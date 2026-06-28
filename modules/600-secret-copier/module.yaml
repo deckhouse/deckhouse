@@ -6,3 +6,38 @@ subsystems:
 descriptions:
   en: Automatically copies Secrets to all namespaces in the cluster. Simplifies distribution of shared secrets.
   ru: Автоматически копирует секреты во все пространства имён кластера. Упрощает распространение общих секретов.
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles: []
+    be:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    ce:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    fe:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    se:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    se-plus:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
