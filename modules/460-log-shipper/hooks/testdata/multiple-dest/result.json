@@ -118,14 +118,14 @@
       "type": "filter"
     },
     "transform/KubernetesPods/source/test-source/04_label_filter": {
-      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else if .test == null {\n    false;\n} else {\n    includes([111], .test);\n}",
+      "condition": "if is_array(.test) {\n    arr = array!(.test)\n    in_list_hit = false\n    for_each([111]) -\u003e |_index, v| {\n        if !in_list_hit \u0026\u0026 includes(arr, v) {\n            in_list_hit = true\n        }\n    }\n    in_list_hit\n} else if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        false;\n    } else {\n        includes([111], data);\n    };\n} else if .test == null {\n    false;\n} else {\n    includes([111], .test);\n}",
       "inputs": [
         "transform/KubernetesPods/source/test-source/03_label_filter"
       ],
       "type": "filter"
     },
     "transform/KubernetesPods/source/test-source/05_label_filter": {
-      "condition": "if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else if .test == null {\n    false;\n} else {\n    !includes([\"test-test\"], .test);\n}",
+      "condition": "if is_array(.test) {\n    arr = array!(.test)\n    excluded_value_present = false\n    for_each([\"test-test\"]) -\u003e |_index, v| {\n        if !excluded_value_present \u0026\u0026 includes(arr, v) {\n            excluded_value_present = true\n        }\n    }\n    !excluded_value_present\n} else if is_boolean(.test) || is_float(.test) {\n    data, err = to_string(.test);\n    if err != null {\n        true;\n    } else {\n        !includes([\"test-test\"], data);\n    };\n} else if .test == null {\n    false;\n} else {\n    !includes([\"test-test\"], .test);\n}",
       "inputs": [
         "transform/KubernetesPods/source/test-source/04_label_filter"
       ],
@@ -168,14 +168,14 @@
       "type": "filter"
     },
     "transform/KubernetesPods/source/test-source/11_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_array(.parsed_data.foo) {\n    arr = array!(.parsed_data.foo)\n    in_list_hit = false\n    for_each([\"wvrr\"]) -\u003e |_index, v| {\n        if !in_list_hit \u0026\u0026 includes(arr, v) {\n            in_list_hit = true\n        }\n    }\n    in_list_hit\n} else if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        false;\n    } else {\n        includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "transform/KubernetesPods/source/test-source/10_log_filter"
       ],
       "type": "filter"
     },
     "transform/KubernetesPods/source/test-source/12_log_filter": {
-      "condition": "if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
+      "condition": "if is_array(.parsed_data.foo) {\n    arr = array!(.parsed_data.foo)\n    excluded_value_present = false\n    for_each([\"wvrr\"]) -\u003e |_index, v| {\n        if !excluded_value_present \u0026\u0026 includes(arr, v) {\n            excluded_value_present = true\n        }\n    }\n    !excluded_value_present\n} else if is_boolean(.parsed_data.foo) || is_float(.parsed_data.foo) {\n    data, err = to_string(.parsed_data.foo);\n    if err != null {\n        true;\n    } else {\n        !includes([\"wvrr\"], data);\n    };\n} else if .parsed_data.foo == null {\n    false;\n} else {\n    !includes([\"wvrr\"], .parsed_data.foo);\n}",
       "inputs": [
         "transform/KubernetesPods/source/test-source/11_log_filter"
       ],
