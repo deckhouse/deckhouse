@@ -11,120 +11,73 @@ Managed-сервис PostgreSQL позволяет запускать управ
 
 ## Включение
 
-Для того чтобы включить managed-сервис PostgreSQL в кластере, включите модуль `managed-postgres`. 
+Для того чтобы включить managed-сервис PostgreSQL в кластере, выполните следующие шаги:
+1. [Включите модуль `managed-postgres`](/modules/managed-postgres/configuration.html#enable).
 
+1. Проверьте, что в кластере появились ресурсы и служебные компоненты Managed PostgreSQL.
 
-Чтобы включить модуль `managed-postgres`, создайте файл `module-config.yaml` с манифестом ModuleConfig `managed-postgres`. Если такой ресурс уже существует, проверьте, что в нём параметр `spec.enabled` установлен в `true`:
+   Модуль автоматически создаёт PostgresClass `default`. Проверить его наличие можно с помощью команды:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: managed-postgres
-spec:
-  enabled: true
-```
+   ```shell
+   d8 k get postgresclass default
+   ```
 
-Примените манифест:
+   Пример вывода:
+   
+   ```console
+   $ d8 k get postgresclass default
+   NAME      AGE
+   default   20s         
+   ```
 
-```shell
-d8 k apply -f module-config.yaml
-```
+   Также в системном пространстве имён `d8-managed-postgres` разворачивается оператор. Проверить его наличие можно с помощью команды:
 
-Проверьте, что модуль перешёл в состояние `Ready`:
+   ```shell
+   d8 k -n d8-managed-postgres get pods
+   ```
 
-```shell
-d8 k get module managed-postgres
-```
+   Пример вывода:
 
-Пример вывода:
+   ```console
+   d8 k -n d8-managed-postgres get pods
+   NAME                                         READY   STATUS    RESTARTS   AGE
+   d8-cnpg-operator-79b448c5bf-zv8d9            1/1     Running   0          4m
+   managed-postgres-operator-5dbcbf96b5-8mqqt   1/1     Running   0          4m        
+   ```
 
-```console
-$ d8 k get module managed-postgres
-NAME               STAGE   SOURCE   PHASE   ENABLED   READY
-managed-postgres                    Ready   True      True
-```
+## Настройка
 
-## Действия после включения модуля
+Для создания экземпляра PostgreSQL, пользователь использует кастомный ресурс [Postgres](/modules/managed-postgres/cr.html#postgres), в котором указывает имя PostgresClass в параметре [postgresClassName](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-postgresclassname).
 
-После перехода модуля `managed-postgres` в состояние `Ready` проверьте, что в кластере появились ресурсы и служебные компоненты Managed PostgreSQL.
+PostgresClass позволяет определить:
+- допустимую топологию PostgreSQL;
+- ограничения по CPU и памяти;
+- правила валидации;
+- значения конфигурации по умолчанию, и параметры, которые пользователь может переопределять.
 
-Модуль автоматически создаёт PostgresClass с именем `default`:
+По умолчанию, модуль создаёт PostgresClass `default`, который можно изменить, но администратор может создать отдельные PostgresClass с различными конфигурациями.
 
-```shell
-d8 k get postgresclass default
-```
-
-Пример вывода:
-
-```console
-$ d8 k get postgresclass default
-NAME      AGE
-default   20s         
-```
-
-Также в системном пространстве имён `d8-managed-postgres` разворачивается контроллер, который согласовывает состояние ресурсов Postgres в пользовательских пространствах имён:
-
-```shell
-d8 k -n d8-managed-postgres get pods
-```
-
-Пример вывода:
-
-```console
-d8 k -n d8-managed-postgres get pods
-NAME                                         READY   STATUS    RESTARTS   AGE
-d8-cnpg-operator-79b448c5bf-zv8d9            1/1     Running   0          4m
-managed-postgres-operator-5dbcbf96b5-8mqqt   1/1     Running   0          4m        
-```
-
-Далее подготовьте PostgresClass, который пользователи будут указывать в параметре `spec.postgresClassName` ресурсов Postgres:
-
-1. Проверьте ограничения и значения по умолчанию в автоматически созданном PostgresClass `default`.
-1. Если PostgresClass `default` подходит для пользовательских ресурсов Postgres, передайте пользователям имя `default`.
-1. Если требуется отдельная конфигурация PostgreSQL, создайте свой PostgresClass и передайте пользователям его имя.
-
-## Подготовка PostgresClass
-
-PostgresClass — это ресурс уровня кластера, который описывает класс managed-сервиса PostgreSQL для пользовательских ресурсов Postgres. Настройте его, чтобы:
-
-- задать допустимую топологию PostgreSQL;
-- ограничить CPU и память;
-- настроить значения конфигурации по умолчанию;
-- определить параметры, которые пользователь может переопределить;
-- добавить правила валидации.
-
-Каждый ресурс Postgres должен ссылаться на существующий PostgresClass через параметр `spec.postgresClassName`.
-
-Чтобы посмотреть автоматически созданный PostgresClass `default`, выполните команду:
+Чтобы посмотреть параметры автоматически созданного PostgresClass `default`, выполните команду:
 
 ```shell
 d8 k get PostgresClass default -o yaml
 ```
 
-При проверке PostgresClass `default` обратите внимание на топологию, политики размера, значения PostgreSQL-параметров по умолчанию, параметры, доступные для переопределения, правила валидации и параметры размещения подов.
-
-Если настройки не соответствуют вашим требованиям, отредактируйте PostgresClass `default` с учётом примеров ниже:
-
-```shell
-d8 k edit PostgresClass default
-```
-
-Примеры показывают отдельные фрагменты `spec`; полный манифест приведён в [примере полного манифеста PostgresClass](#пример-полного-манифеста-postgresclass).
-
 ### Настройка топологии
 
-В PostgresClass можно ограничить доступные топологии, задать топологию по умолчанию и определить зоны для размещения экземпляров PostgreSQL.
+Администратор может управлять размещением экземпляров PostgreSQL по зонам и узлам кластера (топологией) — ограничивать доступные топологии, задавать топологию по умолчанию и определять зоны для размещения экземпляров PostgreSQL.
 
-Топологии, доступные пользователям, перечисляются в параметре [`spec.topology.allowedTopologies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedtopologies) ресурса PostgresClass. Если в ресурсе Postgres не указан параметр [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology), контроллер применяет значение из [`spec.topology.defaultTopology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-defaulttopology). Для топологий `Zonal` и `TransZonal` список доступных зон задаётся в параметре [`spec.topology.allowedZones`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedzones).
+Доступные топологии:
 
-| Топология | Особенности | Где определяется |
-| --- | --- | --- |
-| `Ignored` | Размещение экземпляров PostgreSQL не привязывается к зонам. Используйте для кластеров без зонального деления или если зональная топология не важна. | Разрешается в `spec.topology.allowedTopologies`; может быть значением `spec.topology.defaultTopology`. |
-| `Zonal` | Экземпляры PostgreSQL размещаются в одной зоне из списка `spec.topology.allowedZones`. | Разрешается в `spec.topology.allowedTopologies`; пользователь выбирает её в `spec.cluster.topology`. |
-| `TransZonal` | Экземпляры PostgreSQL распределяются по нескольким зонам из списка `spec.topology.allowedZones`. | Разрешается в `spec.topology.allowedTopologies`; пользователь выбирает её в `spec.cluster.topology`. |
+| Топология | Особенности | Где определяется                                                                                 |
+| --- | --- |--------------------------------------------------------------------------------------------------|
+| `Ignored` | Размещение экземпляров PostgreSQL не привязывается к зонам. Используйте для кластеров без зонального деления или если зональная топология не важна. | В `spec.topology.allowedTopologies`; также может быть значением `spec.topology.defaultTopology`. |
+| `Zonal` | Экземпляры PostgreSQL размещаются в одной зоне из списка `spec.topology.allowedZones`. | В `spec.topology.allowedTopologies`; пользователь выбирает её в `spec.cluster.topology`.         |
+| `TransZonal` | Экземпляры PostgreSQL распределяются по нескольким зонам из списка `spec.topology.allowedZones`. | В `spec.topology.allowedTopologies`; пользователь выбирает её в `spec.cluster.topology`.         |
 
-Пример:
+Топологии, доступные пользователям, перечисляются в параметре [`spec.topology.allowedTopologies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedtopologies) PostgresClass. Если в объекте Postgres пользователя не указан параметр [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology), ипользуется значение из [`spec.topology.defaultTopology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-defaulttopology) PostgresClass. Для топологий `Zonal` и `TransZonal` список доступных зон задаётся в параметре [`spec.topology.allowedZones`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedzones).
+
+Пример настройки доступных для использования пользователем топологий в PostgresClass:
 
 ```yaml
 spec:
@@ -140,22 +93,24 @@ spec:
       - zone-3
 ```
 
-### Настройка политик размера
+В примере выше пользователи могут выбрать любую из трёх доступных топологий. Если пользователь не укажет топологию в ресурсе Postgres, будет использована топология `TransZonal`. Для топологий `Zonal` и `TransZonal` пользователи смогут выбрать только зоны `zone-1`, `zone-2` и `zone-3`.
 
-Используйте политики размера, чтобы ограничить вычислительные ресурсы, доступные пользователям. Политики определяют правила выделения CPU и памяти экземплярам Postgres.
+### Настройка ограничений по CPU и памяти
 
-Политики размера задаются в обязательном параметре [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) ресурса PostgresClass.
+Чтобы ограничить выделение CPU и памяти, доступные экземплярам PostgreSQL пользователя, используйте секцию параметров [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) PostgresClass. Эти параметры позволяют создавать набор политик определения размера связанных экземпляров PostgreSQL, позволяя избегать неравномерного распределения ресурсов на узлах кластера.
 
-Диапазоны `cores.min`–`cores.max` для разных политик не должны пересекаться.
+Пользователь указывает ресурсы по CPU и памяти в параметрах [`spec.instance.cpu`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-cpu) и [`spec.instance.memory`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-memory) объекта Postgres. Значения этих параметров должны попадать в диапазоны, заданные в соответствующем PostgresClass.
 
-В каждой политике задайте:
+В `spec.sizingPolicies` PostgresClass определяется одна или несколько политик ограничений по CPU и памяти, в каждой из которой задаются следующие параметры:
 
-- `cores.min` и `cores.max` — минимальное и максимальное количество CPU;
-- `memory.min` и `memory.max` — минимальный и максимальный объём памяти;
-- `memory.step` — шаг допустимого значения памяти: выбранный объём должен делиться на него без остатка;
-- `coreFractions` — множители для расчёта `requests` на основе заданных `limits` в CPU.
+- [spec.sizingPolicies.cores.min](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-cores-min) и [spec.sizingPolicies.cores.max](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-cores-max) — минимальное и максимальное количество CPU. На основании этих значений выбирается политика ограничения, после чего уже проверяется соответствие ей остальных значений [`spec.instance.cpu`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-cpu) и [`spec.instance.memory`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-memory), указанных пользователем в объекте Postgres.
 
-Пример:
+  {% alert level="warning" %}Диапазоны `cores.min`–`cores.max` для разных политик не должны пересекаться.{% endalert %}
+
+- [spec.sizingPolicies.coreFractions](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-corefractions) — список допустимых для указания пользователем в объекте Postgres множителей, используемых для расчёта `requests` на основе заданных `limits` в CPU.
+- [spec.sizingPolicies.memory.min](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-memory-min), [spec.sizingPolicies.memory.max](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-memory-max) и [spec.sizingPolicies.memory.step](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-memory-step) — минимальный и максимальный объём памяти которое пользователь может указать в объекте Postgres, а также шаг допустимого значения (указанное пользователем значение должно делиться на него без остатка);
+
+Пример настройки ограничений по CPU и памяти в PostgresClass:
 
 ```yaml
 spec:
@@ -166,7 +121,7 @@ spec:
       memory:
         min: 100Mi
         max: 1Gi
-        step: 1Mi
+        step: 50Mi
       coreFractions:
         - 10
         - 30
@@ -177,11 +132,14 @@ spec:
       memory:
         min: 500Mi
         max: 2Gi
+        step: 100Mi
       coreFractions:
         - 50
         - 70
         - 100
 ```
+
+В примере выше пользователи, создающие экземпляры PostgreSQL на основе этого класса, могут указывать от 1 до 10 CPU в [`spec.instance.cpu`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-cpu) Postgres. Но, например, для 4 и менее CPU можно указать от 100Mi до 1Gi памяти (с шагом 50Mi), а для от 5 до 10 CPU — от 500Mi до 2Gi памяти (с шагом 100Mi).
 
 ### Настройка правил валидации
 
