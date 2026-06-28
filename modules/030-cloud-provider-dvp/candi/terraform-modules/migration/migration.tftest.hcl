@@ -76,11 +76,11 @@ run "no_pcc_with_resources" {
             storageClass = "replicated"
           }
           virtualMachine = {
-            bootloader             = "EFI"
-            cpu                    = { coreFraction = "20%", cores = 4 }
-            liveMigrationPolicy    = "PreferForced"
-            memory                 = { size = "8Gi" }
-            runPolicy              = "AlwaysOnUnlessStoppedManually"
+            bootloader              = "EFI"
+            cpu                     = { coreFraction = "20%", cores = 4 }
+            liveMigrationPolicy     = "PreferForced"
+            memory                  = { size = "8Gi" }
+            runPolicy               = "AlwaysOnUnlessStoppedManually"
             virtualMachineClassName = "amd-epyc-gen-3"
           }
         }
@@ -95,11 +95,11 @@ run "no_pcc_with_resources" {
             size  = "40Gi"
           }
           virtualMachine = {
-            bootloader             = "EFI"
-            cpu                    = { coreFraction = "20%", cores = 4 }
-            liveMigrationPolicy    = "PreferForced"
-            memory                 = { size = "4Gi" }
-            runPolicy              = "AlwaysOnUnlessStoppedManually"
+            bootloader              = "EFI"
+            cpu                     = { coreFraction = "20%", cores = 4 }
+            liveMigrationPolicy     = "PreferForced"
+            memory                  = { size = "4Gi" }
+            runPolicy               = "AlwaysOnUnlessStoppedManually"
             virtualMachineClassName = "amd-epyc-gen-3"
           }
         }
@@ -115,9 +115,9 @@ run "no_pcc_with_resources" {
             storageClass = "replicated"
           }
           virtualMachine = {
-            bootloader             = "EFI"
-            cpu                    = { coreFraction = "50%", cores = 4 }
-            memory                 = { size = "4Gi" }
+            bootloader              = "EFI"
+            cpu                     = { coreFraction = "50%", cores = 4 }
+            memory                  = { size = "4Gi" }
             virtualMachineClassName = "amd-epyc-gen-3"
           }
         }
@@ -193,12 +193,12 @@ run "with_pcc_migration_in_progress" {
             storageClass = "replicated"
           }
           virtualMachine = {
-            bootloader             = "EFI"
-            cpu                    = { coreFraction = "20%", cores = 4 }
-            ipAddresses            = ["Auto"]
-            liveMigrationPolicy    = "PreferForced"
-            memory                 = { size = "8Gi" }
-            runPolicy              = "AlwaysOnUnlessStoppedManually"
+            bootloader              = "EFI"
+            cpu                     = { coreFraction = "20%", cores = 4 }
+            ipAddresses             = ["Auto"]
+            liveMigrationPolicy     = "PreferForced"
+            memory                  = { size = "8Gi" }
+            runPolicy               = "AlwaysOnUnlessStoppedManually"
             virtualMachineClassName = "amd-epyc-gen-3"
           }
         }
@@ -212,11 +212,11 @@ run "with_pcc_migration_in_progress" {
               size  = "40Gi"
             }
             virtualMachine = {
-              bootloader             = "EFI"
-              cpu                    = { coreFraction = "20%", cores = 4 }
-              liveMigrationPolicy    = "PreferForced"
-              memory                 = { size = "4Gi" }
-              runPolicy              = "AlwaysOnUnlessStoppedManually"
+              bootloader              = "EFI"
+              cpu                     = { coreFraction = "20%", cores = 4 }
+              liveMigrationPolicy     = "PreferForced"
+              memory                  = { size = "4Gi" }
+              runPolicy               = "AlwaysOnUnlessStoppedManually"
               virtualMachineClassName = "amd-epyc-gen-3"
             }
           }
@@ -249,13 +249,33 @@ run "with_pcc_migration_in_progress" {
   }
 
   assert {
-    condition     = lookup(output.instanceClasses, "master-dvp", null) != null
-    error_message = "expected instanceClasses[master-dvp] synthesised from PCC masterNodeGroup"
+    condition     = lookup(output.instanceClasses, "master-fc613b4dfd67", null) != null
+    error_message = "expected instanceClasses[master-fc613b4dfd67] synthesised from PCC masterNodeGroup"
   }
 
   assert {
-    condition     = lookup(output.instanceClasses, "worker-dvp", null) != null
-    error_message = "expected instanceClasses[worker-dvp] synthesised from PCC nodeGroups[0]"
+    condition     = lookup(output.instanceClasses, "worker-87eba76e7f31", null) != null
+    error_message = "expected instanceClasses[worker-87eba76e7f31] synthesised from PCC nodeGroups[0]"
+  }
+
+  assert {
+    condition     = output.nodeGroups.master.spec.cloudInstances.classReference.name == "master-fc613b4dfd67"
+    error_message = "expected synthesised master NodeGroup to reference hashed DVPInstanceClass name"
+  }
+
+  assert {
+    condition     = output.nodeGroups.worker.spec.cloudInstances.classReference.name == "worker-87eba76e7f31"
+    error_message = "expected synthesised worker NodeGroup to reference hashed DVPInstanceClass name"
+  }
+
+  assert {
+    condition     = output.instanceClasses["master-fc613b4dfd67"].metadata.name == "master-fc613b4dfd67"
+    error_message = "expected synthesised master DVPInstanceClass metadata.name to match hashed map key"
+  }
+
+  assert {
+    condition     = output.instanceClasses["worker-87eba76e7f31"].metadata.name == "worker-87eba76e7f31"
+    error_message = "expected synthesised worker DVPInstanceClass metadata.name to match hashed map key"
   }
 
   assert {
@@ -288,8 +308,8 @@ run "destroy_empty_maps" {
   }
 
   assert {
-    condition     = lookup(output.instanceClasses, "master-dvp", null) == null
-    error_message = "expected no instanceClasses[master-dvp] when input maps are empty"
+    condition     = lookup(output.instanceClasses, "master-fc613b4dfd67", null) == null
+    error_message = "expected no instanceClasses[master-fc613b4dfd67] when input maps are empty"
   }
 
   assert {
