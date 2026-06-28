@@ -9,15 +9,10 @@ $( document ).ready(function() {
     if (!target) return;
     var details = $(target).closest('.details');
     if (!details.length) return;
+    var stickyHeader = document.querySelector('.header-container');
+    target.style.scrollMarginTop = (stickyHeader ? stickyHeader.getBoundingClientRect().height : 0) + 'px';
     details.addClass('active');
-    setTimeout(function() {
-      var stickyHeader = document.querySelector('.header-container');
-      var offset = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
-      var top = details[0].getBoundingClientRect().top;
-      if (top < offset) {
-        window.scrollBy({ top: top - offset });
-      }
-    }, 50);
+    target.scrollIntoView();
   }
 
   expandDetailsForHash(window.location.hash);
