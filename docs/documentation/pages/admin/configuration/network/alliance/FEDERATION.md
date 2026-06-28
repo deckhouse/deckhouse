@@ -32,8 +32,9 @@ Available only in DKP Enterprise Edition (EE).
 * Federation requires mutual trust between clusters.
   It requires a mutual root certificate exchange: cluster A must trust cluster B, and vice versa.
 * Configuring inter-cluster access to services requires exchanging information about public services.
-  To expose the bar service from cluster B to cluster A, you must create a ServiceEntry resource in cluster A,
-  defining the Ingress gateway public address of cluster B.
+  This is done using `ServiceEntry` resources.
+  A `ServiceEntry` describes the public `ingressgateway` address of cluster B
+  so that services in cluster A can reach the `bar` service in cluster B.
 
 <div data-presentation="../../../../presentations/istio/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
@@ -63,11 +64,53 @@ To establish a federation, you must:
     the IstioFederation resource will be filled with necessary service data in `status.metadataCache.public` and `status.metadataCache.private`.
 * Add the `federation.istio.deckhouse.io/public-service: ""` label to each Service resource
   that is considered public within the federation.
-  * In the other federation clusters, a corresponding ServiceEntry will be created for each Service,
+  * In the other federation clusters, corresponding `ServiceEntry` and `DestinationRule` resources will be created for each such Service,
     leading to the `ingressgateway` of the original cluster.
+  * The label value must be empty. You do not need to label other resources, such as Deployment, Pod, or VirtualService, to publish a service in the federation.
 
-> **Important**. Ensure that the `name` field in the `.spec.ports` section of the Services resource is filled in for each port.
-> Otherwise, there may be issues in the federation's work.
+{% alert level="warning" %}
+Federation publishing does not support `ExternalName` services, services without `.spec.ports`, or services with ports missing the `name` field.
+
+Each port name must start with a supported Istio prefix: `http`, `http2`, `https`, `tcp`, `tls`, `grpc`, or `grpc-web`. The module uses the port name to determine the protocol in the generated `ServiceEntry`; if the prefix is not recognized, the port will be handled as TCP.
+{% endalert %}
+
+Example of a public service:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews
+  namespace: bookinfo
+  labels:
+    federation.istio.deckhouse.io/public-service: ""
+spec:
+  selector:
+    app: reviews
+  ports:
+  - name: http
+    port: 9080
+    targetPort: 9080
+```
+
+To troubleshoot service publishing in the federation, follow these checks:
+
+```shell
+# Check which Services are marked as public in the local cluster.
+d8 k get svc -A -l federation.istio.deckhouse.io/public-service=
+
+# Check metadata exchange status with remote clusters.
+d8 k get istiofederation
+d8 k get istiofederation <name> -o jsonpath='{.status.conditions}'
+
+# Check that the remote cluster provided its public services list.
+d8 k get istiofederation <name> -o jsonpath='{.status.metadataCache.private.publicServices}'
+
+# Check that local routing resources were created from the received metadata.
+d8 k -n d8-istio get serviceentry,destinationrule
+```
+
+In the IstioFederation `status.conditions`, the `PublicMetadataExchangeReady`, `PrivateMetadataExchangeReady`, and `DataplaneConnectionReady` conditions should become `True`. If metadata exchange does not work, check the [`D8IstioFederationMetadataEndpointDoesntWork`](../../../../reference/alerts.html#istio-d8istiofederationmetadataendpointdoesntwork) alert and the availability of the remote cluster `spec.metadataEndpoint`.
 
 ### Example of configuring a federation of two clusters
 
