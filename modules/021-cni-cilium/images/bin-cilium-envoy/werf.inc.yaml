@@ -125,10 +125,13 @@ shell:
   - mv proxylib/libcilium.so /tmp/install/usr/lib/libcilium.so
   #
   - export BAZEL_VERSION="{{ $bazelVersions }}" USE_BAZEL_VERSION="{{ $bazelVersions }}"
+  # Forward ALTWRAP_LLVM_VERSION into bazel actions: /usr/bin/clang is an ALT altwrap wrapper that
+  # selects the LLVM version from this env var (otherwise it falls back to the newest installed, e.g. 19.1).
+  # bazel runs compile actions in a sandbox that does not inherit the shell env, so it must be passed explicitly.
 {{- if $buildWithPreparedCacheAndDeps }}
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --nofetch --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- else }}
-  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache"
+  - export BAZEL_BUILD_OPTS="--disk_cache=/tmp/bazel-cache --action_env=ALTWRAP_LLVM_VERSION=18.1 --host_action_env=ALTWRAP_LLVM_VERSION=18.1"
 {{- end }}
   - export PKG_BUILD=1 V=$V DEBUG=$DEBUG DESTDIR=/tmp/install
   #
