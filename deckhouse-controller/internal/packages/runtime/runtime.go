@@ -212,11 +212,6 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	// Initialize scheduler with enabling/disabling callbacks
 	r.buildScheduler(cli)
 
-	// Register global node to scheduler
-	if err := r.scheduler.AddNode(r.global); err != nil {
-		return nil, fmt.Errorf("add global node: %w", err)
-	}
-
 	if err := r.loadEmbedded(context.Background()); err != nil {
 		return nil, fmt.Errorf("load embedded: %w", err)
 	}
@@ -704,8 +699,8 @@ func (r *Runtime) schedulePackage(name string) {
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
-		// r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
-		// r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
+		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}
 }
 
