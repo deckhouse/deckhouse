@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/config"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
@@ -60,6 +61,7 @@ type Scheduler struct {
 	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
 	bootstrapCondition     condition.Condition // Bootstrap readiness check
 	dynamicGetter          dynamic.Getter      // Reports a module's dynamic enabled state
+	configGetter           config.Getter       // Reports a module's ModuleConfig enabled intent
 
 	pause atomic.Bool // When true, no state changes are processed
 }
@@ -106,6 +108,13 @@ func WithDynamicGetter(getter dynamic.Getter) Option {
 func WithBundleChecker(getter bundle.BundleChecker) Option {
 	return func(s *Scheduler) {
 		s.bundleChecker = getter
+	}
+}
+
+// WithConfigGetter sets the provider for a module's ModuleConfig enabled intent.
+func WithConfigGetter(getter config.Getter) Option {
+	return func(s *Scheduler) {
+		s.configGetter = getter
 	}
 }
 

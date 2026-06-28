@@ -47,6 +47,33 @@ type Module struct {
 	Settings   addonutils.Values
 }
 
+// UpdateModulesSettings applies a settings-and-enabled change to an
+// already-tracked package without redeploying or reloading it. It is meant to be
+// wired into the packages-config-controller, which owns package settings and the
+// ModuleConfig enabled intent independently of the package version handled by
+// UpdateModule. enabled is the tri-state user intent (*true/*false set by a
+// ModuleConfig, nil when unset) consumed by the scheduler's config rule.
+//
+// Unlike UpdateModule, this never enqueues Deploy/Load tasks and never cancels
+// the package's context tree: it only stashes the new pending settings and
+// enabled intent and, if either actually changed, triggers Reschedule so the
+// scheduler re-resolves the rule chain (re-evaluating the config rule) and, when
+// the package stays enabled, re-runs the Configure → Startup → Run pipeline (see
+// schedulePackage) with the new values. Any in-flight deploy or load for the
+// package keeps running untouched.
+//
+// If the package is not tracked yet, the change is dropped: there is nothing to
+// reschedule, and the eventual UpdateModule will register the package, which
+// then picks up settings and enabled on the next config event.
+func (r *Runtime) UpdateModulesSettings(name string, settings addonutils.Values, enabled *bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.packages.UpdateSettings(name, settings, enabled) {
+		r.scheduler.Reschedule(name)
+	}
+}
+
 // UpdateModule handles module creation and version changes from the module controller.
 //
 // Flow mirrors UpdateApp: version changes enqueue the full pipeline

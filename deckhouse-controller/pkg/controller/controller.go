@@ -97,7 +97,8 @@ type DeckhouseController struct {
 	runtimeManager     manager.Manager
 	preflightCountDown *sync.WaitGroup
 
-	moduleLoader *moduleloader.Loader
+	moduleLoader   *moduleloader.Loader
+	packageRuntime *packageruntime.Runtime
 
 	deckhouseConfigCh <-chan utils.Values
 
@@ -424,6 +425,7 @@ func NewDeckhouseController(
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
 		moduleLoader:       loader,
+		packageRuntime:     pkgRuntime,
 		preflightCountDown: preflightCountDown,
 
 		deckhouseConfigCh: deckhouseConfigCh,
@@ -451,6 +453,11 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
+	// load initial configuration from cluster state
+	if err := c.loadInitialConfiguration(ctx); err != nil {
+		return fmt.Errorf("load initial configuration: %w", err)
+	}
+
 	// sync fs with cluster state, restore or delete modules
 	if err := c.moduleLoader.Sync(ctx); err != nil {
 		return fmt.Errorf("init module loader: %w", err)
@@ -463,6 +470,24 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
 	go c.syncDeckhouseSettings()
+
+	return nil
+}
+
+// loadInitialConfiguration loads the initial configuration from the cluster state
+func (c *DeckhouseController) loadInitialConfiguration(ctx context.Context) error {
+	configs := new(v1alpha1.ModuleConfigList)
+	if err := c.runtimeManager.GetClient().List(ctx, configs); err != nil {
+		return fmt.Errorf("list module configs: %w", err)
+	}
+
+	for _, conf := range configs.Items {
+		if conf.DeletionTimestamp != nil {
+			continue
+		}
+
+		c.packageRuntime.UpdateModulesSettings(conf.Name, conf.Spec.Settings.GetMap(), conf.Spec.Enabled)
+	}
 
 	return nil
 }

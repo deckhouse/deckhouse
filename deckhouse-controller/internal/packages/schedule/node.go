@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/config"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/dynamic"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/version"
@@ -208,6 +209,15 @@ func (s *Scheduler) addNode(pkg Package) {
 		if s.bundleChecker != nil {
 			n.rules = append(n.rules, bundle.NewRule(s.bundleChecker, constraints.Licensing))
 		}
+	}
+
+	// Highest-precedence intent rule, appended last: explicit user intent from a
+	// ModuleConfig overrides every other soft vote (floor, bundle, dynamic), so a
+	// user can both enable a module the bundle ignores and disable one it turns
+	// on. Gates still veto via Forbid, so an Enable cannot override an unmet
+	// requirement.
+	if s.configGetter != nil {
+		n.rules = append(n.rules, config.NewRule(s.configGetter, pkg.GetName()))
 	}
 
 	s.nodes[pkg.GetName()] = n

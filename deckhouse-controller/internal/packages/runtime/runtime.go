@@ -576,6 +576,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	r.scheduler = schedule.NewScheduler(
 		schedule.WithDynamicGetter(r.global.IsDynamicEnabled),
 		schedule.WithBundleChecker(r.edition.IsEnabled),
+		schedule.WithConfigGetter(r.packages.GetConfigEnabled),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
@@ -698,8 +699,8 @@ func (r *Runtime) schedulePackage(name string) {
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
+		// r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		// r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}
 }
 
@@ -828,29 +829,6 @@ func (r *Runtime) ResumeScheduler() {
 // used by the cycle simulation step to identify the proposed graph vertex.
 func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints) error {
 	return r.scheduler.CheckConstraints(name, constraints)
-}
-
-// UpdatePackageSettings applies a settings-only change to an already-tracked
-// package without redeploying or reloading it. It is meant to be wired into the
-// packages-config-controller, which owns package settings independently of the
-// package version handled by UpdateModule.
-//
-// Unlike UpdateModule, this never enqueues Deploy/Load tasks and never cancels
-// the package's context tree: it only stashes the new pending settings and, if
-// they actually changed, triggers Reschedule so the scheduler re-runs the
-// Configure → Startup → Run pipeline (see schedulePackage) with the new values.
-// Any in-flight deploy or load for the package keeps running untouched.
-//
-// If the package is not tracked yet, the settings are
-// dropped: there is nothing to reschedule, and the eventual UpdateModule will
-// register the package and pick up its own settings.
-func (r *Runtime) UpdatePackageSettings(name string, settings addonutils.Values) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if r.packages.UpdateSettings(name, settings) {
-		r.scheduler.Reschedule(name)
-	}
 }
 
 // settingsValidatorI validates settings for a loaded runtime package.
