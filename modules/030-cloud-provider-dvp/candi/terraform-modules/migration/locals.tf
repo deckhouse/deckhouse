@@ -87,6 +87,16 @@ locals {
     ]
   )
 
+  _pcc_instance_class_names = {
+    for ng in local._pcc_all_ngs_list : ng.name => format(
+      "%s-%s",
+      # Kubernetes DNS-1123 labels are limited to 63 characters: 50 for the readable NodeGroup prefix,
+      # 1 for the separator, and 12 for a 48-bit SHA-256 suffix.
+      replace(substr(ng.name, 0, 50), "/-+$/", ""),
+      substr(sha256(ng.name), 0, 12),
+    )
+  }
+
   _pcc_node_groups = {
     for ng in local._pcc_all_ngs_list : ng.name => {
       apiVersion = "deckhouse.io/v1"
@@ -96,7 +106,7 @@ locals {
         cloudInstances = {
           classReference = {
             kind = "DVPInstanceClass"
-            name = "${ng.name}-dvp"
+            name = local._pcc_instance_class_names[ng.name]
           }
           minPerZone = ng.replicas
           maxPerZone = ng.replicas
@@ -111,10 +121,10 @@ locals {
 
   # Strip ipAddresses from virtualMachine — it is not part of DVPInstanceClass.spec.
   _pcc_instance_classes = {
-    for ng in local._pcc_all_ngs_list : "${ng.name}-dvp" => {
+    for ng in local._pcc_all_ngs_list : local._pcc_instance_class_names[ng.name] => {
       apiVersion = "deckhouse.io/v1alpha1"
       kind       = "DVPInstanceClass"
-      metadata   = { name = "${ng.name}-dvp" }
+      metadata   = { name = local._pcc_instance_class_names[ng.name] }
       spec = merge(
         ng.instanceClass,
         {

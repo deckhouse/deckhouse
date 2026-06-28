@@ -1,0 +1,78 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-cloud-provider-dvp-validation-webhook
+  {{- include "helm_lib_module_labels" (list . (dict "app" "validation-webhook")) | nindent 2 }}
+webhooks:
+  - name: secrets.cloud-provider-dvp.deckhouse.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    timeoutSeconds: 30
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: d8-cloud-provider-dvp
+    matchConditions:
+      - name: credential-secret-type
+        expression: >-
+          (object != null && object.type == 'cloud-provider.deckhouse.io/credentials') ||
+          (oldObject != null && oldObject.type == 'cloud-provider.deckhouse.io/credentials')
+    clientConfig:
+      service:
+        name: validation-webhook
+        namespace: d8-cloud-provider-dvp
+        path: /validate--v1-secret
+        port: 443
+      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc | quote }}
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["secrets"]
+        scope: "Namespaced"
+  - name: nodegroups.cloud-provider-dvp.deckhouse.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    timeoutSeconds: 30
+    matchConditions:
+      - name: dvp-node-group-involved
+        expression: >-
+          (object != null && object.spec.nodeType == 'CloudPermanent') ||
+          (oldObject != null && oldObject.spec.nodeType == 'CloudPermanent') ||
+          (object != null && has(object.spec.cloudInstances) && has(object.spec.cloudInstances.classReference) && object.spec.cloudInstances.classReference.kind == 'DVPInstanceClass') ||
+          (oldObject != null && has(oldObject.spec.cloudInstances) && has(oldObject.spec.cloudInstances.classReference) && oldObject.spec.cloudInstances.classReference.kind == 'DVPInstanceClass')
+    clientConfig:
+      service:
+        name: validation-webhook
+        namespace: d8-cloud-provider-dvp
+        path: /validate-deckhouse-io-v1-nodegroup
+        port: 443
+      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc | quote }}
+    rules:
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["nodegroups"]
+        scope: "Cluster"
+  - name: dvpinstanceclasses.cloud-provider-dvp.deckhouse.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    timeoutSeconds: 30
+    clientConfig:
+      service:
+        name: validation-webhook
+        namespace: d8-cloud-provider-dvp
+        path: /validate-deckhouse-io-v1alpha1-dvpinstanceclass
+        port: 443
+      caBundle: {{ .Values.cloudProviderDvp.internal.validationWebhookCert.ca | b64enc | quote }}
+    rules:
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["dvpinstanceclasses"]
+        scope: "Cluster"
