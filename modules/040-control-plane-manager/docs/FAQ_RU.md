@@ -561,16 +561,18 @@ done
 
 Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится "read-only". Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
 
-   ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
-   ```
+```shell
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+  etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ \
+  endpoint status -w table --cluster
+```
 
 Если в поле `ERRORS` вы видите подобное сообщение `alarm:NOSPACE`, значит вам нужно предпринять следующие шаги:
 
-1. Найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd, расположенного по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
+1. На **каждом master-узле** (из полученного списка членов кластера etcd) найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
 
 1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
@@ -603,6 +605,7 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 
 Пример вывода (размер БД etcd на узле указывается в колонке `DB SIZE`):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -614,6 +617,8 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 <div id='как-выполнить-дефрагментацию-etcd-узла-в-кластере-с-одним-master-узлом'></div>
 
@@ -656,12 +661,15 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
    etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
    etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
    etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Определите master-узел — лидер. Для этого обратитесь к любому поду etcd и получите список узлов — участников кластера etcd с помощью команды (где `NODE_NAME` — имя master-узла):
 
@@ -675,6 +683,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
    Пример вывода (у лидера в колонке `IS LEADER` будет значение `true`):
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
@@ -686,6 +695,8 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Поочередно выполните сжатие базы данных etcd на узлах — участниках кластера etcd. Используйте команду (здесь `NODE_NAME` — имя master-узла):
 
@@ -894,7 +905,7 @@ d8 k -n kube-system delete secret audit-policy
 
 ## Как ускорить перезапуск подов при потере связи с узлом?
 
-По умолчанию, если узел в течении 40 секунд не сообщает свое состояние, он помечается как недоступный. И еще через 5 минут поды узла начнут перезапускаться на других узлах.  В итоге общее время недоступности приложений составляет около 6 минут.
+По умолчанию, если узел в течении 40 секунд не сообщает свое состояние, он помечается как недоступный. И еще через 5 минут поды узла начнут перезапускаться на других узлах. В итоге общее время недоступности приложений составляет около 6 минут.
 
 В специфических случаях, когда приложение не может быть запущено в нескольких экземплярах, есть способ сократить период их недоступности:
 
@@ -1052,10 +1063,13 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
    4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Перезапустите master-узел.
 
@@ -1116,7 +1130,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
   make release
   build/auger -h
   ```
-  
+
 * Получившийся исполняемый файл `build/auger`, а также `snapshot` из резервной копии etcd нужно загрузить на master-узел, с которого будет выполняться дальнейшие действия.
 
 Данные действия выполняются на master-узле в кластере, на который предварительно был загружен файл `snapshot` и утилита `auger`:
@@ -1131,7 +1145,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    ```shell
    SNAPSHOT=/root/etcd-restore/etcd-backup.snapshot
-   AUGER_BIN=/root/auger 
+   AUGER_BIN=/root/auger
    chmod +x $AUGER_BIN
    ```
 
@@ -1140,7 +1154,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    * Создайте манифест пода. Он будет запускаться именно на текущем master-узле, выбрав его по переменной `$HOSTNAME`, и смонтирует `snapshot` по пути `$SNAPSHOT` для загрузки во временный экземпляр etcd:
 
      ```shell
-     cat <<EOF >etcd.pod.yaml 
+     cat <<EOF >etcd.pod.yaml
      apiVersion: v1
      kind: Pod
      metadata:
@@ -1280,7 +1294,7 @@ spec:
   schedulerName: high-node-utilization
   containers:
   - name: example-pod
-    image: registry.k8s.io/pause:2.0  
+    image: registry.k8s.io/pause:2.0
 ```
 
 #### Этапы планирования подов
