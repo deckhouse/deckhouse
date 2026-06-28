@@ -12,7 +12,7 @@ final: false
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
-  to: /src
+  to: /src/validator/src
   excludePaths:
   - "**/*.md"
   - "**/*.yaml"
@@ -21,8 +21,37 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
-- add: /go_lib/dhctl-provider-protocol
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/pkg
+  to: /src/validator/pkg
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: {{ .gitPrefix }}/go_lib/cloud-provider
+  to: /src/go_lib/cloud-provider
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: {{ .gitPrefix }}/go_lib/dhctl-provider-protocol
   to: /src/go_lib/dhctl-provider-protocol
+  excludePaths:
+  - "**/*.md"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: {{ .gitPrefix }}/pkg/log
+  to: /src/pkg/log
   excludePaths:
   - "**/*.md"
   stageDependencies:
@@ -32,25 +61,34 @@ git:
     - "**/*.go"
 shell:
   install:
-  - sed -i -e 's# /deckhouse/go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' /src/go.mod
+  - cd /src/validator/pkg
+  - sed -i -e 's# /deckhouse/go_lib/cloud-provider# /src/go_lib/cloud-provider#g' go.mod
+  - sed -i -e 's# /deckhouse/go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
+  - cd /src/validator/src
+  - sed -i -e 's# /deckhouse/modules/030-cloud-provider-dvp/pkg# /src/validator/pkg#g' go.mod
+  - sed -i -e 's# /deckhouse/go_lib/cloud-provider# /src/go_lib/cloud-provider#g' go.mod
+  - sed -i -e 's# /deckhouse/go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
+  - cd /src/go_lib/cloud-provider
+  - sed -i -e 's# /deckhouse/go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
+mount:
+{{ include "mount points for golang builds" . }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
   install:
   - export GOPROXY={{ $.GOPROXY }}
-  - cd /src
+  - cd /src/validator/src
   - go mod download
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /dhctl-provider-dvp .
+  - chown 64535:64535 /dhctl-provider-dvp
   - chmod 0755 /dhctl-provider-dvp

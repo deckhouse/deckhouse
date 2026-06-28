@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,101 +16,38 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"strings"
 
-	authv1 "k8s.io/api/authentication/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
+	dhctlproto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
+	dvppreflight "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/preflight"
 )
 
-func validate(ctx context.Context, input proto.PrepareInput) error {
-	return validateKubeconfig(ctx, input)
+func validate(_ context.Context, input dhctlproto.PrepareInput) error {
+	if input.Operation == dhctlproto.OperationDestroy {
+		return nil
+	}
+
+	stateBuilder := cpvalprotocol.NewStateBuilder(
+		cpvalprotocol.StateBuilderConfig{
+			ModuleName:        dvpmeta.ModuleName,
+			NamespaceName:     dvpmeta.Namespace,
+			InstanceClassKind: dvpmeta.InstanceClassKind,
+		},
+	)
+
+	state, err := stateBuilder.Build(input)
+	if err != nil {
+		return fmt.Errorf("internal error: build validation state: %w", err)
+	}
+
+	return dvppreflight.ValidatePreflight(state).ErrorOrNil()
 }
 
-func prepare(_ context.Context, input proto.PrepareInput) (*proto.PrepareResult, error) {
-	cv := input.Vars
-	if cv == nil {
-		cv = &proto.CloudProviderVars{}
-	}
-	return &proto.PrepareResult{
-		Vars:                  cv,
+func prepare(_ context.Context, input dhctlproto.PrepareInput) (*dhctlproto.PrepareResult, error) {
+	return &dhctlproto.PrepareResult{
+		Vars:                  input.Vars,
 		ProviderClusterConfig: input.ProviderClusterConfig,
 	}, nil
-}
-
-func validateKubeconfig(ctx context.Context, input proto.PrepareInput) error {
-	if input.Operation != proto.OperationBootstrap {
-		return nil
-	}
-	if len(input.ProviderClusterConfig) == 0 {
-		return nil
-	}
-
-	providerRaw, ok := input.ProviderClusterConfig["provider"]
-	if !ok {
-		return fmt.Errorf("provider.kubeconfigDataBase64 must be set")
-	}
-
-	var spec struct {
-		KubeconfigDataBase64 string `json:"kubeconfigDataBase64"`
-	}
-
-	providerMap, ok := providerRaw.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("provider cluster configuration: provider field has unexpected type")
-	}
-	kubeconfigB64, _ := providerMap["kubeconfigDataBase64"].(string)
-	spec.KubeconfigDataBase64 = kubeconfigB64
-
-	if spec.KubeconfigDataBase64 == "" {
-		return fmt.Errorf("provider.kubeconfigDataBase64 must be set")
-	}
-
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(spec.KubeconfigDataBase64)
-	if err != nil {
-		return fmt.Errorf("decode provider.kubeconfigDataBase64: %w", err)
-	}
-
-	cfg, err := clientcmd.Load(kubeconfigBytes)
-	if err != nil {
-		return fmt.Errorf("parse provider.kubeconfigDataBase64 as kubeconfig: %w", err)
-	}
-
-	restCfg, err := clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
-	if err != nil {
-		return fmt.Errorf("build rest config from provider.kubeconfigDataBase64: %w", err)
-	}
-
-	clientset, err := kubernetes.NewForConfig(restCfg)
-	if err != nil {
-		return fmt.Errorf("create kubernetes client from provider.kubeconfigDataBase64: %w", err)
-	}
-
-	review := &authv1.SelfSubjectReview{}
-	response, err := clientset.AuthenticationV1().SelfSubjectReviews().Create(ctx, review, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf(
-			"connect to cluster using provider.kubeconfigDataBase64: %w\n"+
-				"Check that the kubeconfig is attached to a service account and does not use 'command' to connect.",
-			err,
-		)
-	}
-
-	if response.Status.UserInfo.Username == "" {
-		return fmt.Errorf("self subject review returned empty username")
-	}
-
-	if !strings.HasPrefix(response.Status.UserInfo.Username, "system:serviceaccount:") {
-		return fmt.Errorf(
-			"kubeconfig from provider.kubeconfigDataBase64 must be attached to system:serviceaccounts, but got: %s",
-			response.Status.UserInfo.Username,
-		)
-	}
-
-	return nil
 }
