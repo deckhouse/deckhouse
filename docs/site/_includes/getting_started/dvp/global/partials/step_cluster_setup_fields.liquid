@@ -1,0 +1,102 @@
+<div class="form__row">
+  <span class="info invalid-message invalid-message-overlap" id="gs-overlap-banner">{% if page.lang == 'ru' %}Подсети не должны пересекаться.{% else %}Subnets must not overlap.{% endif %}</span>
+</div>
+
+<h3>{% if page.lang == 'ru' %}Настройка подсетей{% else %}Subnet configuration{% endif %}</h3>
+
+<div class="form__row">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="internalnetworkcidrs" title="internalNetworkCIDRs">
+        {% if page.lang == 'ru' %}Подсеть узлов{% else %}Node subnet{% endif %} (<code>internalNetworkCIDRs</code>) <span style="color: red;">*</span>
+      </label>
+      <input class="textfield" type="text" id="internalnetworkcidrs" name="internalnetworkcidrs" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}Подсеть, в которой находятся узлы вашего будущего кластера. Например, <code>10.10.0.0/16</code>.{% else %}Subnet where your future cluster nodes will be located. For example, <code>10.10.0.0/16</code>.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR (например, <code>10.10.0.0/16</code>).{% else %}Enter a subnet in CIDR notation (e.g. <code>10.10.0.0/16</code>).{% endif %}</span>
+      <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
+    </div>
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="virtualmachinecidrs" title="virtualMachineCIDRs">
+        {% if page.lang == 'ru' %}Подсеть ВМ{% else %}VM subnet{% endif %} (<code>virtualMachineCIDRs</code>)
+      </label>
+      <input class="textfield" type="text" id="virtualmachinecidrs" name="virtualmachinecidrs" placeholder="10.20.0.0/16" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}Подсеть, в которой будут находиться адреса ВМ DVP. Значение по умолчанию подходит для тестовых окружений.{% else %}Subnet for DVP virtual machine addresses. The default is fine for test environments.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR.{% else %}Enter a CIDR subnet.{% endif %}</span>
+      <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
+    </div>
+  </div>
+</div>
+
+<div class="form__row">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="podsubnetcidr" title="podSubnetCIDR">{% if page.lang == 'ru' %}Подсеть подов{% else %}Pod subnet{% endif %} (<code>podSubnetCIDR</code>)</label>
+      <input class="textfield" type="text" id="podsubnetcidr" name="podsubnetcidr" placeholder="10.115.0.0/16" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}Подсеть для подов Kubernetes. Значение по умолчанию подходит для тестовых окружений.{% else %}Subnet for Kubernetes pods. The default is fine for test environments.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR.{% else %}Enter a CIDR subnet.{% endif %}</span>
+      <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
+    </div>
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="servicesubnetcidr" title="serviceSubnetCIDR">{% if page.lang == 'ru' %}Подсеть сервисов{% else %}Service subnet{% endif %} (<code>serviceSubnetCIDR</code>)</label>
+      <input class="textfield" type="text" id="servicesubnetcidr" name="servicesubnetcidr" placeholder="10.225.0.0/16" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}Подсеть для сервисов Kubernetes. Значение по умолчанию подходит для тестовых окружений.{% else %}Subnet for Kubernetes services. The default is fine for test environments.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите подсеть в формате CIDR.{% else %}Enter a CIDR subnet.{% endif %}</span>
+      <span class="info invalid-message invalid-message-overlap">{% if page.lang == 'ru' %}Эта подсеть пересекается с другой.{% else %}This subnet overlaps another configured subnet.{% endif %}</span>
+    </div>
+  </div>
+</div>
+
+<h3>{% if page.lang == 'ru' %}Настройки узлов{% else %}Node settings{% endif %}</h3>
+
+<div class="form__row">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="masternodeip">{% if page.lang == 'ru' %}IP-адрес master-узла{% else %}Master node IP address{% endif %} <span style="color: red;">*</span></label>
+      <input class="textfield" type="text" id="masternodeip" name="masternodeip" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}IP-адрес узла, на котором будут развёрнуты системные компоненты DVP.{% else %}IP address of the node where DVP system components will be installed.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Укажите корректный IPv4-адрес.{% else %}Enter a valid IPv4 address.{% endif %}</span>
+      <span class="info invalid-message invalid-message-duplicate">{% if page.lang == 'ru' %}Адреса master и worker не должны совпадать.{% else %}Master and worker addresses must differ.{% endif %}</span>
+    </div>
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="workernodeip" title="address">{% if page.lang == 'ru' %}IP-адрес worker-узла{% else %}Worker node IP address{% endif %} <span style="color: red;">*</span></label>
+      <input class="textfield" type="text" id="workernodeip" name="workernodeip" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}IP-адрес worker-узла в подсети узлов: здесь запускаются пользовательская нагрузка и гостевые ВМ.{% else %}Worker node IP in the node subnet: cluster workloads and guest VMs run here.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Укажите IPv4 worker-узла внутри подсети узлов кластера.{% else %}Enter the worker IPv4 address inside the cluster nodes subnet.{% endif %}</span>
+      <span class="info invalid-message invalid-message-duplicate">{% if page.lang == 'ru' %}Адреса master и worker не должны совпадать.{% else %}Master and worker addresses must differ.{% endif %}</span>
+    </div>
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="nfshost" title="host">
+        {% if page.lang == 'ru' %}IP-адрес NFS-сервера{% else %}NFS server IP address{% endif %} <span style="color: red;">*</span>
+      </label>
+      <input class="textfield" type="text" id="nfshost" name="nfshost" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}IP-адрес NFS-сервера в подсети узлов: на нём хранятся диски ВМ. Адрес не должен совпадать с IP master- и worker-узлов.{% else %}NFS server IP in the node subnet: VM disks are stored here. Must differ from the master and worker IPs.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Укажите IPv4-адрес NFS-сервера в подсети узлов кластера.{% else %}Enter the NFS server IPv4 address in the cluster nodes subnet.{% endif %}</span>
+      <span class="info invalid-message invalid-message-nfs-subnet">{% if page.lang == 'ru' %}IP NFS-сервера должен находиться в подсети узлов кластера (internalNetworkCIDRs).{% else %}The NFS server IP must be within the cluster nodes subnet (internalNetworkCIDRs).{% endif %}</span>
+      <span class="info invalid-message invalid-message-nfs-node">{% if page.lang == 'ru' %}IP NFS-сервера не должен совпадать с IP master- или worker-узла.{% else %}The NFS server IP must differ from the master and worker node IPs.{% endif %}</span>
+    </div>
+  </div>
+</div>
+
+<h3>{% if page.lang == 'ru' %}Дополнительные параметры{% else %}Additional parameters{% endif %}</h3>
+
+<div class="form__row">
+  <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="clusterdomain" title="publicDomainTemplate">
+        {% if page.lang == 'ru' %}Шаблон DNS{% else %}DNS template{% endif %}
+      </label>
+      <input class="textfield" type="text" id="clusterdomain" name="domain" placeholder="%s.domain.my" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}Шаблон доменных имён системных приложений в кластере: для <code>%s.domain.my</code> Grafana — <code>grafana.domain.my</code>, веб-интерфейс DVP — <code>console.domain.my</code>. Домен не должен совпадать с <code>clusterDomain</code> (по умолчанию <code>internal.cluster.local</code>). Укажите домен, который резолвится в вашей сети.{% else %}Template for system application hostnames in the cluster: for <code>%s.domain.my</code>, Grafana is at <code>grafana.domain.my</code>, the DVP web interface — at <code>console.domain.my</code>. The domain must not match <code>clusterDomain</code> (default <code>internal.cluster.local</code>). Use a domain that resolves in your network.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Введите шаблон с <code>%s</code>, например <code>%s.domain.my</code>.{% else %}Enter a template with <code>%s</code>, e.g. <code>%s.domain.my</code>.{% endif %}</span>
+      <span class="info invalid-message invalid-message-example-com">{% if page.lang == 'ru' %}Не используйте домен <code>example.com</code>.{% else %}Do not use the <code>example.com</code> domain name.{% endif %}</span>
+    </div>
+    <div class="form__field" style="flex: 1; min-width: 250px;">
+      <label class="label" for="nfsshare" title="share">
+        {% if page.lang == 'ru' %}Каталог NFS{% else %}NFS directory{% endif %}
+      </label>
+      <input class="textfield" type="text" id="nfsshare" name="nfsshare" placeholder="/srv/nfs/dvp" autocomplete="off" />
+      <span class="info">{% if page.lang == 'ru' %}Каталог на NFS-сервере, который экспортируется в кластер для дисков и образов ВМ. Абсолютный путь, например <code>/srv/nfs/dvp</code>.{% else %}Directory on the NFS server exported to the cluster for VM disks and images. Absolute path, e.g. <code>/srv/nfs/dvp</code>.{% endif %}</span>
+      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Укажите абсолютный путь, начинающийся с <code>/</code>.{% else %}Enter an absolute path starting with <code>/</code>.{% endif %}</span>
+    </div>
+  </div>
+</div>
