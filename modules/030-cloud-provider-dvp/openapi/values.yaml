@@ -6,6 +6,23 @@ properties:
     type: object
     default: {}
     properties:
+      validationWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
       cniSecretData:
         type: string
         x-examples:
@@ -546,3 +563,17 @@ properties:
         type: string
         description: |
           The name of the default storage class discovered from the parent DVP cluster.
+      credentialSecrets:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            authScheme:
+              type: string
+            identity:
+              type: string
+            secret:
+              type: string
+          required: [authScheme, secret]

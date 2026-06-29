@@ -17,6 +17,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/name212/govalue"
@@ -26,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -63,6 +65,14 @@ type Context struct {
 
 	logger log.Logger
 	opts   *options.GlobalOptions
+
+	// metaConfig is memoised per converge run: repeat pipeline steps must not
+	// re-fetch cluster resources and re-run the external provider validator.
+	// Only a successful load is cached; AutoConverge calls ReloadMetaConfig at
+	// the start of each tick so operator changes are picked up between runs.
+	metaConfigMu     sync.Mutex
+	metaConfig       *config.MetaConfig
+	metaConfigLoaded bool
 }
 
 type Params struct {
@@ -197,12 +207,41 @@ func (c *Context) CompleteExecutionPhase(ctx context.Context, data any) error {
 }
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
+	c.metaConfigMu.Lock()
+	defer c.metaConfigMu.Unlock()
+
+	if c.metaConfigLoaded {
+		return c.metaConfig, nil
+	}
+
+	metaConfig, err := c.loadMetaConfig()
+	if err != nil {
+		// Do not cache failures: a transient error (e.g. kube tunnel not ready)
+		// must not be frozen for the lifetime of a reused Context.
+		return nil, err
+	}
+	c.metaConfig = metaConfig
+	c.metaConfigLoaded = true
+	return c.metaConfig, nil
+}
+
+// ReloadMetaConfig drops the memoised MetaConfig so the next MetaConfig call
+// re-reads the live cluster configuration. AutoConverge calls it each tick so
+// operator changes (replicas, instance classes, provider settings) take effect
+// without a process restart.
+func (c *Context) ReloadMetaConfig() {
+	c.metaConfigMu.Lock()
+	defer c.metaConfigMu.Unlock()
+	c.metaConfig = nil
+	c.metaConfigLoaded = false
+}
+
+func (c *Context) loadMetaConfig() (*config.MetaConfig, error) {
 	if c.CommanderMode() {
-		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger)
+		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger, infrastructureprovider.DhctlOperationConverge)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
-
 		return metaConfig, nil
 	}
 
@@ -211,11 +250,10 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.opts)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.opts, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return nil, err
 	}
-
 	return metaConfig, nil
 }
 

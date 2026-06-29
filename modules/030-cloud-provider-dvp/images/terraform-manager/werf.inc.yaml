@@ -4,9 +4,10 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
-  to: /candi
+  to: /
   excludePaths:
   - '**/terraform_versions.yml'
+  - '**/plan_rules.yml'
   stageDependencies:
     install:
     - '**/*'
@@ -15,14 +16,26 @@ git:
   stageDependencies:
     install:
     - '**/*'
+# plan_rules.yml must sit next to terraform_versions.yml so dhctl's
+# copyTFVersionFile delivers it into candi (loadPlanRules reads it adjacent).
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/plan_rules.yml
+  to: /terraform-manager/plan_rules.yml
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/openapi/
+  to: /candi/module-openapi
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/crds/instance_class.yaml
+  to: /crd/instance_class.yaml
 import:
 - image: terraform-provider-kubernetes
   add: /terraform-provider-kubernetes
   to: /terraform-manager/terraform-provider-kubernetes
   before: setup
-shell:
-  install:
-  - set -e
+- image: {{ $.ModuleName }}/validator
+  add: /dhctl-provider-dvp
+  to: /validator
+  before: setup
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

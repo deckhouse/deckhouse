@@ -196,5 +196,34 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 		res[cloudName] = set
 	}
 
+	planRule, err := loadPlanRules(filename)
+	if err != nil {
+		return nil, err
+	}
+	if planRule != nil && len(res) != 1 {
+		return nil, fmt.Errorf("plan_rules.yml next to %s requires a single-provider bundle, got %d providers", filename, len(res))
+	}
+
+	// DVP ships as a single-provider bundle: its plan_rules.yml travels next to
+	// terraform_versions.yml (delivered into candi by copyTFVersionFile), so the
+	// rule is loaded here. The main multi-provider candi does not list DVP.
+	if len(res) == 1 {
+		for cloudName, set := range res {
+			simple, ok := set.(*settings.Simple)
+			if !ok {
+				return nil, fmt.Errorf("provider %s settings have unexpected type %T", cloudName, set)
+			}
+			if planRule != nil {
+				simple.VMResourceVal = planRule
+				if err := simple.Validate(false); err != nil {
+					return nil, fmt.Errorf("validate provider %s after plan_rules merge: %w", simple.CloudName(), err)
+				}
+			}
+			if cloudName == "dvp" && simple.VMResourceVal == nil {
+				return nil, fmt.Errorf("provider DVP requires plan_rules.yml with vmResource next to %s", filename)
+			}
+		}
+	}
+
 	return res, nil
 }

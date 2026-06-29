@@ -9,6 +9,10 @@ linters-settings:
         - "properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction"
         - "properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction"
         - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+  no-cyrillic:
+    exclude-rules:
+      directories:
+        - pkg/api
   container:
     exclude-rules:
       read-only-root-filesystem:

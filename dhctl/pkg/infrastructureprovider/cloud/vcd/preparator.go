@@ -20,46 +20,44 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/name212/govalue"
+
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-type clientProvider func(m *config.MetaConfig, l log.Logger) (cloudClient, error)
-
-type MetaConfigPreparatorParams struct {
-	PrepareMetaConfig     bool
-	ValidateClusterPrefix bool
-}
+type clientProvider func(pcc map[string]json.RawMessage, l log.Logger) (cloudClient, error)
 
 type MetaConfigPreparator struct {
-	params         MetaConfigPreparatorParams
 	logger         log.Logger
 	clientProvider clientProvider
 }
 
-func NewMetaConfigPreparatorWithoutLogger(params MetaConfigPreparatorParams) *MetaConfigPreparator {
-	return NewMetaConfigPreparator(params, log.GetSilentLogger())
-}
-
-func NewMetaConfigPreparator(params MetaConfigPreparatorParams, logger log.Logger) *MetaConfigPreparator {
+func NewMetaConfigPreparator(logger log.Logger) *MetaConfigPreparator {
+	if govalue.IsNil(logger) {
+		logger = log.GetSilentLogger()
+	}
 	return &MetaConfigPreparator{
-		params:         params,
 		logger:         logger,
 		clientProvider: newVcdCloudClient,
 	}
 }
 
-func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
-	if p.params.ValidateClusterPrefix {
-		err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
-		if err != nil {
-			return fmt.Errorf("%v for provider %s", err, ProviderName)
-		}
+func (p MetaConfigPreparator) Validate(_ context.Context, input config.ProviderInput) error {
+	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
+		return fmt.Errorf("%v for provider %s", err, ProviderName)
+	}
+
+	raw, ok := input.ProviderClusterConfig["provider"]
+	if !ok {
+		return fmt.Errorf("unable to unmarshal vcd provider configuration: provider key missing")
 	}
 
 	var providerConfiguration providerConfig
-	if err := json.Unmarshal(metaConfig.ProviderClusterConfig["provider"], &providerConfiguration); err != nil {
+	if err := json.Unmarshal(raw, &providerConfiguration); err != nil {
 		return fmt.Errorf("unable to unmarshal vcd provider configuration: %v", err)
 	}
 
@@ -75,37 +73,30 @@ func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.Met
 	return nil
 }
 
-func (p MetaConfigPreparator) Prepare(ctx context.Context, metaConfig *config.MetaConfig) error {
-	if !p.params.PrepareMetaConfig {
-		return nil
-	}
-
-	client, err := p.clientProvider(metaConfig, p.logger)
+func (p MetaConfigPreparator) Prepare(ctx context.Context, input config.ProviderInput) (proto.PrepareResult, error) {
+	client, err := p.clientProvider(input.ProviderClusterConfig, p.logger)
 	if err != nil {
-		return fmt.Errorf("Cannot get cloud client: %w", err)
+		return proto.PrepareResult{}, fmt.Errorf("Cannot get cloud client: %w", err)
 	}
 
 	apiVersion, err := client.GetVersion(ctx)
 	if err != nil {
-		return err
+		return proto.PrepareResult{}, err
 	}
 
-	return versionConstraintAction(apiVersion, p.logger, func(legacy bool) error {
+	var result proto.PrepareResult
+	if err := versionConstraintAction(apiVersion, p.logger, func(legacy bool) error {
 		if !legacy {
 			return nil
 		}
-
-		if _, ok := metaConfig.ProviderClusterConfig["legacyMode"]; ok {
+		if _, ok := input.ProviderClusterConfig["legacyMode"]; ok {
 			return nil
 		}
-
-		legacyMode, err := json.Marshal(true)
-		if err != nil {
-			return fmt.Errorf("failed to marshal legacyMode: %v", err)
-		}
-
-		metaConfig.ProviderClusterConfig["legacyMode"] = legacyMode
-
+		result.ProviderClusterConfig = map[string]interface{}{"legacyMode": true}
 		return nil
-	})
+	}); err != nil {
+		return proto.PrepareResult{}, err
+	}
+
+	return result, nil
 }

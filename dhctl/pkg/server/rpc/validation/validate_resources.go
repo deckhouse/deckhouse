@@ -28,6 +28,14 @@ func (s *Service) ValidateResources(
 	ctx context.Context,
 	request *pb.ValidateResourcesRequest,
 ) (*pb.ValidateResourcesResponse, error) {
+	if err := s.ensureProviderBundle(ctx, "", request.RegistryConfig); err != nil {
+		errResponse, convErr := errorToResponse(err)
+		if convErr != nil {
+			return nil, status.Errorf(codes.Internal, "%s", convErr)
+		}
+		return &pb.ValidateResourcesResponse{Err: errResponse}, nil
+	}
+
 	errs := &config.ValidationError{}
 	for _, v := range config.ResourcesPipeline {
 		errs.Merge(v(ctx, request.Config, s.schemaStore, optionsFromRequest(request.Opts)...))

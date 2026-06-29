@@ -64,6 +64,26 @@ func TestCloudSystemRequirementsCheck(t *testing.T) {
 				return assert.ErrorContains(t, err, "malformed provider cluster configuration")
 			},
 		},
+		{
+			// mc-flow guard: with no PCC supplied (master sizing lives in
+			// NodeGroup/InstanceClass resources resolved by the external
+			// preparator) the legacy PCC-based check must short-circuit
+			// instead of erroring out with "unknown provider cluster
+			// configuration kind". Regression coverage for the guard
+			// added in cloud_system_requirements.go:59.
+			name: "mc-flow: nil ProviderClusterConfig is accepted",
+			installConfig: &config.DeckhouseInstaller{
+				ProviderClusterConfig: nil,
+			},
+			assertionCheck: assert.NoError,
+		},
+		{
+			name: "mc-flow: empty ProviderClusterConfig is accepted",
+			installConfig: &config.DeckhouseInstaller{
+				ProviderClusterConfig: []byte{},
+			},
+			assertionCheck: assert.NoError,
+		},
 	}
 
 	for _, tt := range tests {

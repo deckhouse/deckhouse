@@ -45,12 +45,12 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	defer registryStop()
 
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
-	preparatorParams.WithPhaseBootstrap()
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		&b.Options.Global,
+		config.ValidateOptionOperation(infrastructureprovider.DhctlOperationBootstrap),
 	)
 	if err != nil {
 		return err

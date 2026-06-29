@@ -193,9 +193,10 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
-		metaConfig, err = config.ParseConfigFromData(
+		metaConfig, err = config.ParseConfigFromDataEnsureProvider(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
+			p.request.RegistryConfig,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
 			),
@@ -281,6 +282,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
+			[]byte(p.request.RegistryConfig),
 		),
 		TmpDir:         s.params.TmpDir,
 		LoggerProvider: log.SimpleLoggerProvider(loggerFor),

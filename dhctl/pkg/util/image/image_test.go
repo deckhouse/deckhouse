@@ -629,16 +629,13 @@ CRl8TSg922cXTLVt8Q==
 				// docker.io/library/nginx:stable-alpine
 				image: "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
 				prepareFunc: func() error {
-					if err = os.Remove(filepath.Join(testDir, "images_hashs.json")); err != nil {
+					cacheDir := filepath.Join(testDir, "cache")
+					if err = os.MkdirAll(cacheDir, 0o755); err != nil {
 						return err
 					}
-					f, err := os.Create(filepath.Join(testDir, "images_hashs.json"))
-					if err != nil {
-						return err
-					}
-					_, err = f.WriteString("Wrong JSON")
-					return err
-
+					hashPath := filepath.Join(cacheDir, "images_hashs.json")
+					_ = os.Remove(hashPath)
+					return os.WriteFile(hashPath, []byte("Wrong JSON"), 0o644)
 				},
 				wantErr: true,
 				err:     "saving checksum to file: unmarshalling json: invalid character",
@@ -678,7 +675,11 @@ func TestRestoreImageFromTarGz(t *testing.T) {
 
 	err = DownloadAndUnpackImage(context.Background(), "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"}, false)
 	require.NoError(t, err)
-	cachePath := filepath.Join(testDir, "sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb")
+	// pullImage now stores tarballs under the image's tag/identifier (so
+	// tryToRestoreLocalImage can find them again on the next run). The
+	// previous expectation of a sha256 digest filename was an artifact of
+	// the image-cache key mismatch fixed in image.go:pullImage.
+	cachePath := filepath.Join(testDir, "v1.75.4")
 	require.FileExists(t, cachePath)
 
 	t.Run("restoreImageFromTarGz tests", func(t *testing.T) {
@@ -769,16 +770,13 @@ func TestPullImage(t *testing.T) {
 					if err = os.RemoveAll(filepath.Join(testDir, "v1.75.4")); err != nil {
 						return err
 					}
-					if err = os.RemoveAll(filepath.Join(testDir, "images_hashs.json")); err != nil {
+					cacheDir := filepath.Join(testDir, "cache")
+					if err = os.MkdirAll(cacheDir, 0o755); err != nil {
 						return err
 					}
-					f, err := os.Create(filepath.Join(testDir, "images_hashs.json"))
-					if err != nil {
-						return err
-					}
-					_, err = f.WriteString("Wrong JSON")
-					return err
-
+					hashPath := filepath.Join(cacheDir, "images_hashs.json")
+					_ = os.Remove(hashPath)
+					return os.WriteFile(hashPath, []byte("Wrong JSON"), 0o644)
 				},
 				wantErr: true,
 				err:     "saving checksum to file: unmarshalling json: invalid character",

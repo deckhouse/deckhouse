@@ -485,6 +485,44 @@ func CreateDeckhouseManifests(
 		})
 	}
 
+	if cfg.HasProviderModuleConfig() {
+		providerNamespace := config.CloudProviderNamespace(cfg.ProviderName)
+		tasks = append(tasks,
+			actions.ManifestTask{
+				Name: fmt.Sprintf(`Namespace %q`, providerNamespace),
+				Manifest: func() interface{} {
+					return manifests.DeckhouseNamespace(providerNamespace)
+				},
+				CreateFunc: func(ctx context.Context, manifest interface{}) error {
+					_, err := kubeCl.CoreV1().Namespaces().
+						Create(ctx, manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+					return err
+				},
+				// The namespace is later adopted and labelled by the
+				// cloud-provider-<name> module's helm chart, and may already
+				// exist as a stub created by prependMissingNamespaces for the
+				// credential Secret. Do not overwrite it.
+				UpdateFunc: func(_ context.Context, _ interface{}) error { return nil },
+			},
+			actions.ManifestTask{
+				Name: fmt.Sprintf(`Secret %q`, providerNamespace+"/d8-candi-cloud-provider-discovery-data"),
+				Manifest: func() interface{} {
+					return manifests.SecretWithCandiCloudProviderDiscoveryData(providerNamespace, cfg.CloudDiscovery)
+				},
+				CreateFunc: func(ctx context.Context, manifest interface{}) error {
+					_, err := kubeCl.CoreV1().Secrets(providerNamespace).
+						Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					return err
+				},
+				UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+					_, err := kubeCl.CoreV1().Secrets(providerNamespace).
+						Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+					return err
+				},
+			},
+		)
+	}
+
 	if len(cfg.ProviderClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name: `Secret "d8-provider-cluster-configuration"`,

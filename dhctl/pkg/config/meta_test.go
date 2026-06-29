@@ -29,8 +29,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -423,4 +425,104 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	mingetBytes, err := base64.StdEncoding.DecodeString(mingetB64)
 	require.NoError(t, err)
 	require.Equal(t, expectedMingetBytes, mingetBytes)
+}
+
+func TestMetaConfig_DeepCopy_PreservesPrepareInputs(t *testing.T) {
+	src := &MetaConfig{
+		DownloadRootDir:  "/tmp/dl",
+		DownloadCacheDir: "/tmp/cache",
+		VersionFilePath:  "/tmp/v.yaml",
+		ResourcesYAML:    "kind: X\n",
+		ModuleConfigs:    []*ModuleConfig{{Spec: ModuleConfigSpec{Settings: SettingsValues{"k": "v"}}}},
+		Images:           imagesDigests{"a": map[string]interface{}{"b": "c"}},
+		VersionMap:       map[string]interface{}{"k": "v"},
+		InstallerVersion: "1.2.3",
+		ShowProgress:     true,
+	}
+	src.ModuleConfigs[0].SetName("x")
+
+	cp := src.DeepCopy()
+
+	require.Equal(t, src.DownloadRootDir, cp.DownloadRootDir)
+	require.Equal(t, src.DownloadCacheDir, cp.DownloadCacheDir)
+	require.Equal(t, src.VersionFilePath, cp.VersionFilePath)
+	require.Equal(t, src.ResourcesYAML, cp.ResourcesYAML)
+	require.Equal(t, src.InstallerVersion, cp.InstallerVersion)
+	require.True(t, cp.ShowProgress)
+	require.Len(t, cp.ModuleConfigs, 1)
+	require.Equal(t, "x", cp.ModuleConfigs[0].GetName())
+	require.Equal(t, "v", cp.VersionMap["k"])
+	require.Equal(t, "c", cp.Images["a"]["b"])
+}
+
+func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
+	src := &MetaConfig{
+		CloudProviderVars: &CloudProviderVars{
+			Settings:   map[string]interface{}{"k": "v"},
+			NodeGroups: map[string]map[string]interface{}{"ng": {"replicas": 1}},
+		},
+	}
+	cp := src.DeepCopy()
+
+	cp.CloudProviderVars.Settings["k"] = "mutated"
+	cp.CloudProviderVars.NodeGroups["ng"]["replicas"] = 99
+
+	require.Equal(t, "v", src.CloudProviderVars.Settings["k"])
+	require.Equal(t, 1, src.CloudProviderVars.NodeGroups["ng"]["replicas"])
+}
+
+type stubPreparator struct {
+	result proto.PrepareResult
+}
+
+func (s stubPreparator) Validate(_ context.Context, _ ProviderInput) error {
+	return nil
+}
+
+func (s stubPreparator) Prepare(_ context.Context, _ ProviderInput) (proto.PrepareResult, error) {
+	return s.result, nil
+}
+
+func stubPreparatorProvider(s stubPreparator) MetaConfigPreparatorProvider {
+	return func(_, _ string) MetaConfigPreparator { return s }
+}
+
+func TestValidateAndPrepareMetaConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {
+	m := &MetaConfig{
+		ClusterType:           CloudClusterType,
+		ProviderName:          "dvp",
+		ProviderClusterConfig: nil,
+	}
+	prep := stubPreparator{result: proto.PrepareResult{
+		ProviderClusterConfig: map[string]interface{}{"layout": "Standard"},
+	}}
+
+	out, err := validateAndPrepareMetaConfig(context.Background(), stubPreparatorProvider(prep), m)
+	require.NoError(t, err)
+	require.NotNil(t, out.ProviderClusterConfig)
+	require.Contains(t, out.ProviderClusterConfig, "layout")
+	require.Equal(t, "standard", out.Layout)
+}
+
+func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
+	settings := SettingsValues{"masterPool": map[string]interface{}{"replicas": 3}}
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings}}
+	mc.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:  "dvp",
+		ModuleConfigs: []*ModuleConfig{mc},
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.NotNil(t, m.CloudProviderVars)
+	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
+	require.Equal(t, float64(2), spec["version"])
+	specSettings, ok := spec["settings"].(map[string]interface{})
+	require.True(t, ok)
+	masterPool, ok := specSettings["masterPool"].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, float64(3), masterPool["replicas"])
 }

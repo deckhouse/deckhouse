@@ -119,8 +119,8 @@ func TestConfigForControlPlaneTemplatesAPIServerSign(t *testing.T) {
 	})
 
 	cfg := getTestTemplateConfigWithEdition(
-		t, 
-		m, 
+		t,
+		m,
 		"cse",
 		cseSpec,
 		"",

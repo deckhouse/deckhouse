@@ -27,6 +27,8 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
+	otattribute "go.opentelemetry.io/otel/attribute"
+	ottrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -35,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -87,6 +90,7 @@ type Runner struct {
 	statePath     string
 	planPath      string
 	variablesPath string
+	variablesData []byte
 
 	changeSettings ChangeActionSettings
 
@@ -237,6 +241,9 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 	}
 
 	r.variablesPath = tmpFile.Name()
+
+	log.DebugF("tfvars path: %s\n", r.variablesPath)
+	r.variablesData = variablesData
 	return r
 }
 
@@ -296,10 +303,23 @@ func (r *Runner) checkInfrastructureUtilityIsRunning() bool {
 	return (atomic.LoadInt32(&r.infrastructureUtilityRunningCounter) % 2) > 0
 }
 
+// traceStateAndVars is intentionally a no-op: tfvars and the state file contain
+// plaintext secrets (cloud credentials, SSH keys, passwords, tokens) and must
+// never be exported as span attributes/events to a telemetry collector.
+func (r *Runner) traceStateAndVars(_ ottrace.Span) {}
+
 func (r *Runner) Init(ctx context.Context) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
+
+	ctx, span := telemetry.StartSpan(ctx, "runner.Init")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("runner.name", r.name),
+		otattribute.String("runner.step", string(r.infraExecutor.Step())),
+	)
+	r.traceStateAndVars(span)
 
 	if r.statePath == "" {
 		// Save state directly in the cache to prevent state loss
@@ -433,6 +453,14 @@ func (r *Runner) Apply(ctx context.Context) error {
 		return ErrRunnerStopped
 	}
 
+	ctx, span := telemetry.StartSpan(ctx, "runner.Apply")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("runner.name", r.name),
+		otattribute.String("runner.step", string(r.infraExecutor.Step())),
+	)
+	r.traceStateAndVars(span)
+
 	return r.logger.LogProcessCtx(ctx, "default", "infrastructure apply ...", func(ctx context.Context) error {
 		skip, err := r.isSkipChanges(ctx)
 		if err != nil {
@@ -515,6 +543,15 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
+
+	ctx, span := telemetry.StartSpan(ctx, "runner.Plan")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("runner.name", r.name),
+		otattribute.String("runner.step", string(r.infraExecutor.Step())),
+		otattribute.Bool("runner.destroy", destroy),
+	)
+	r.traceStateAndVars(span)
 
 	return r.logger.LogProcessCtx(ctx, "default", "infrastructure plan ...", func(ctx context.Context) error {
 		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhousePlanSuffix)

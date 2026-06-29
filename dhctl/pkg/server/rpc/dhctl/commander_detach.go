@@ -167,9 +167,10 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 
 	var metaConfig *config.MetaConfig
 	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
-		metaConfig, err = config.ParseConfigFromData(
+		metaConfig, err = config.ParseConfigFromDataEnsureProvider(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			p.request.RegistryConfig,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
@@ -265,6 +266,7 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
+			[]byte(p.request.RegistryConfig),
 		),
 		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor).
 			WithUseTfCache(opts.Cache.UseTfCache).

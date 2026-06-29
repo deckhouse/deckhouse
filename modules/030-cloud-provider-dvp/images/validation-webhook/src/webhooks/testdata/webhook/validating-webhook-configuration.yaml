@@ -1,0 +1,47 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-cloud-provider-dvp-validation-webhook-test
+webhooks:
+- name: credentials.cloud-provider-dvp.deckhouse.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  failurePolicy: Fail
+  clientConfig:
+    service:
+      namespace: default
+      name: webhook-service
+      path: /validate--v1-secret
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
+    resources: ["secrets"]
+- name: nodegroups.cloud-provider-dvp.deckhouse.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  failurePolicy: Fail
+  clientConfig:
+    service:
+      namespace: default
+      name: webhook-service
+      path: /validate-deckhouse-io-v1-nodegroup
+  rules:
+  - apiGroups: ["deckhouse.io"]
+    apiVersions: ["v1"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
+    resources: ["nodegroups"]
+- name: dvpinstanceclasses.cloud-provider-dvp.deckhouse.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  failurePolicy: Fail
+  clientConfig:
+    service:
+      namespace: default
+      name: webhook-service
+      path: /validate-deckhouse-io-v1alpha1-dvpinstanceclass
+  rules:
+  - apiGroups: ["deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations: ["CREATE", "UPDATE", "DELETE"]
+    resources: ["dvpinstanceclasses"]

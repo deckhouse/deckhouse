@@ -24,7 +24,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger) (*config.MetaConfig, error) {
+// ParseMetaConfig parses commander-mode config. operation
+// (infrastructureprovider.DhctlOperation*) reaches the provider preparator,
+// which skips bootstrap-only checks on other operations.
+func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger, operation infrastructureprovider.DhctlOperation) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 	if err != nil {
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
@@ -34,17 +37,19 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: uuid is empty")
 	}
 
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
+
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
-	metaConfig, err := config.ParseConfigFromData(
+	metaConfig, err := config.ParseConfigFromDataEnsureProvider(
 		ctx,
 		configData,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(logger),
-		),
+		string(params.RegistryConfigurationData),
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		nil,
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),
 		config.ValidateOptionValidateExtensions(true),
+		config.ValidateOptionOperation(operation),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse config: %w", err)

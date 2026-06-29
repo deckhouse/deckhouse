@@ -278,6 +278,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-dvp:capdvp-controller-manager
   - system:serviceaccount:d8-cloud-provider-dvp:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-dvp:cloud-data-discoverer
+  - system:serviceaccount:d8-cloud-provider-dvp:validation-webhook
   - system:serviceaccount:d8-cloud-provider-dynamix:capd-controller-manager
   - system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer
@@ -769,6 +770,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-dvp:capdvp-controller-manager
       - system:serviceaccount:d8-cloud-provider-dvp:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-dvp:cloud-data-discoverer
+      - system:serviceaccount:d8-cloud-provider-dvp:validation-webhook
       - system:serviceaccount:d8-cloud-provider-dynamix:capd-controller-manager
       - system:serviceaccount:d8-cloud-provider-dynamix:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-dynamix:cloud-data-discoverer
