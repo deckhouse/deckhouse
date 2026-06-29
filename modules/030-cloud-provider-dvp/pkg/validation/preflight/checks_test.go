@@ -124,15 +124,15 @@ func TestValidatePreflightRequiresMasterNodeGroup(t *testing.T) {
 	}
 }
 
-func TestValidatePreflightRejectsNilCloudInstancesOnMaster(t *testing.T) {
+func TestValidatePreflightAllowsNilCloudInstancesOnMaster(t *testing.T) {
 	t.Parallel()
 
 	state := validState(t)
 	state.NodeGroups[0].Spec.CloudInstances = nil
 
 	result := ValidatePreflight(state)
-	if !hasViolationCode(result, "node_group_cloud_instances_required") {
-		t.Fatalf("ValidatePreflight() = %q, want node_group_cloud_instances_required", result.Error())
+	if result.HasErrors() {
+		t.Fatalf("ValidatePreflight() unexpected errors for master without CloudInstances: %s", result.Error())
 	}
 }
 
