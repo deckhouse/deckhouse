@@ -32,7 +32,7 @@ jobs:
   get-tags:
     name: Get tags for scanning
     runs-on: [self-hosted, regular]
-    if: github.repository == 'deckhouse/deckhouse'
+    if: ${{ false }}
     outputs:
       tags: ${{ steps.set-manual-tag.outputs.tags || steps.get-tags.outputs.tags || steps.set-default.outputs.tags }}
     steps:
