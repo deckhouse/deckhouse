@@ -140,12 +140,40 @@ func (i *Installer) StageFromRegistry(ctx context.Context, source *v1alpha1.Modu
 // the filesystem. While it is present, the module search path resolves the module
 // to its embedded copy, so a downloaded module of the same name must not be
 // activated (only staged).
+//
+// Embedded modules are shipped with an optional weight prefix in their directory
+// name (e.g. 040-node-manager), while module holds the bare name (node-manager),
+// so the lookup must strip the prefix instead of stat'ing the bare name directly.
 func (i *Installer) IsEmbeddedPresent(module string) bool {
 	if i.embedded == "" {
 		return false
 	}
-	_, err := os.Stat(filepath.Join(i.embedded, module))
-	return err == nil
+
+	entries, err := os.ReadDir(i.embedded)
+	if err != nil {
+		// no embedded modules dir (or it is unreadable) - nothing is embedded
+		return false
+	}
+
+	// Match an optional weight prefix: 040-node-manager -> node-manager.
+	weightPattern := regexp.MustCompile(`^(?:[0-9]+-)?(.+)$`)
+	for _, entry := range entries {
+		// embedded modules are plain directories, but tolerate symlinks too
+		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+			continue
+		}
+
+		name := entry.Name()
+		if matches := weightPattern.FindStringSubmatch(name); len(matches) > 1 {
+			name = matches[1]
+		}
+
+		if name == module {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (i *Installer) Uninstall(ctx context.Context, module string) error {

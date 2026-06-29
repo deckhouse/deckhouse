@@ -244,11 +244,13 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 		}
 
 		// update module version
+		moduleExists := true
 		module := new(v1alpha1.Module)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("get the module '%s': %w", moduleName, err)
 			}
+			moduleExists = false
 			l.logger.Warn("module is missing, skip setting version", slog.String("name", release.Spec.ModuleName))
 		} else {
 			l.logger.Debug("set module version", slog.String("name", moduleName), slog.String("version", release.GetModuleVersion()))
@@ -277,8 +279,30 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 			if err = l.installer.StageFromRegistry(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
 				return fmt.Errorf("stage the module '%s': %w", moduleName, err)
 			}
-		} else if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
-			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
+		} else {
+			if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+				return fmt.Errorf("restore the module '%s': %w", moduleName, err)
+			}
+
+			// The embedded copy is gone (otherwise it would have been staged above),
+			// so the module is now served from the downloaded source. Flip its active
+			// source off the "Embedded" sentinel: this keeps the controller-side view
+			// (module.IsEmbedded()) consistent with the on-disk reality reported by
+			// IsEmbeddedPresent, and hands the module over to the regular source-owned
+			// flow (release ensuring, source switching). This is the single point where
+			// a migrated module transitions from embedded to external.
+			if moduleExists && module.IsEmbedded() {
+				l.logger.Info("embedded copy is gone, switch the module active source", slog.String("name", moduleName), slog.String("source", source.Name))
+				err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
+					if module.Properties.Source == v1alpha1.ModuleSourceEmbedded {
+						module.Properties.Source = source.Name
+					}
+					return nil
+				})
+				if err != nil {
+					return fmt.Errorf("switch the active source for the module '%s': %w", moduleName, err)
+				}
+			}
 		}
 
 		l.registries[moduleName] = utils.BuildRegistryValue(source)

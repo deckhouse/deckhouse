@@ -1446,6 +1446,21 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		return fmt.Errorf("install the module '%s': %w", moduleName, err)
 	}
 
+	// The module was activated (Install, not Stage), so its embedded copy is no
+	// longer shipped. Flip the active source off the "Embedded" sentinel so the
+	// controller-side view (module.IsEmbedded()) stays consistent with the on-disk
+	// reality and the module is handed over to the regular source-owned flow. This
+	// mirrors the transition done by the moduleloader restore.
+	module := &v1alpha1.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
+	if err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+		if module.Properties.Source == v1alpha1.ModuleSourceEmbedded {
+			module.Properties.Source = source.Name
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("switch the active source for the module '%s': %w", moduleName, err)
+	}
+
 	// disable target module hooks so as not to invoke them before restart
 	if r.moduleManager.GetModule(release.GetModuleName()) != nil {
 		r.moduleManager.DisableModuleHooks(release.GetModuleName())
