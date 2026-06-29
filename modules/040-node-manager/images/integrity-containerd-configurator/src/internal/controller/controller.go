@@ -64,9 +64,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	if len(desired.Namespaces) == 0 {
-		logger.Info("Removed containerd integrity config, found no namespaces matching the policies")
+		logger.Info("Found no namespaces matching the policies' selectors, removing containerd integrity config")
 	} else {
-		logger.Info("Updated containerd integrity config", "namespaces", desired.Namespaces, "caCerts", len(desired.CACerts))
+		logger.Info("Updated containerd integrity config", "namespaces", desired.Namespaces, "caCertsCount", len(desired.CACerts))
 	}
 
 	return reconcile.Result{}, nil
