@@ -1089,11 +1089,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "process_virtual_memory_bytes{app=\"istiod\"}",
+          "expr": "sum by (version) (process_virtual_memory_bytes{app=\"istiod\"})",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 2,
-          "legendFormat": "Virtual Memory",
+          "legendFormat": "{{version}} - Virtual Memory",
           "refId": "I",
           "step": 2
         },
@@ -1102,10 +1102,10 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "process_resident_memory_bytes{app=\"istiod\"}",
+          "expr": "sum by (version) (process_resident_memory_bytes{app=\"istiod\"})",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "Resident Memory",
+          "legendFormat": "{{version}} - Resident Memory",
           "refId": "H",
           "step": 2
         },
@@ -1138,10 +1138,10 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_memstats_alloc_bytes{app=\"istiod\"}",
+          "expr": "sum by (version) (go_memstats_alloc_bytes{app=\"istiod\"})",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "Alloc",
+          "legendFormat": "{{version}} - Alloc",
           "refId": "F",
           "step": 2
         },
@@ -1150,11 +1150,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_memstats_heap_inuse_bytes{app=\"istiod\"}",
+          "expr": "sum by (version) (go_memstats_heap_inuse_bytes{app=\"istiod\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "Heap in-use",
+          "legendFormat": "{{version}} - Heap in-use",
           "refId": "E",
           "step": 2
         },
@@ -1163,10 +1163,10 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_memstats_stack_inuse_bytes{app=\"istiod\"}",
+          "expr": "sum by (version) (go_memstats_stack_inuse_bytes{app=\"istiod\"})",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "Stack in-use",
+          "legendFormat": "{{version}} - Stack in-use",
           "refId": "G",
           "step": 2
         },
@@ -1175,11 +1175,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"})",
+          "expr": "sum by (label_istio_io_rev) (container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"} * on (namespace, pod) group_left (label_istio_io_rev) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "Total (k8s)",
+          "legendFormat": "{{label_istio_io_rev}} - Total (k8s)",
           "refId": "C",
           "step": 2
         },
@@ -1188,11 +1188,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
+          "expr": "sum by (label_istio_io_rev, container) (container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"} * on (namespace, pod) group_left (label_istio_io_rev) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{ container }} (k8s)",
+          "legendFormat": "{{label_istio_io_rev}} - {{container}} (k8s)",
           "refId": "B",
           "step": 2
         }
@@ -1286,11 +1286,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__rate_interval]))",
+          "expr": "sum by (label_istio_io_rev) (rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"}[$__rate_interval]) * on (namespace, pod) group_left (label_istio_io_rev) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "Total (k8s)",
+          "legendFormat": "{{label_istio_io_rev}} - Total (k8s)",
           "refId": "A",
           "step": 2
         },
@@ -1299,11 +1299,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__rate_interval])) by (container)",
+          "expr": "sum by (label_istio_io_rev, container) (rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\", namespace=\"d8-istio\"}[$__rate_interval]) * on (namespace, pod) group_left (label_istio_io_rev) kube_pod_labels{namespace=\"d8-istio\", pod=~\"istiod-.*\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{ container }} (k8s)",
+          "legendFormat": "{{label_istio_io_rev}} - {{container}} (k8s)",
           "refId": "B",
           "step": 2
         },
@@ -1312,11 +1312,11 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "irate(process_cpu_seconds_total{app=\"istiod\"}[$__rate_interval])",
+          "expr": "sum by (version) (irate(process_cpu_seconds_total{app=\"istiod\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "pilot (self-reported)",
+          "legendFormat": "{{version}} - pilot (self-reported)",
           "refId": "C",
           "step": 2
         }
@@ -1507,7 +1507,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1521,10 +1521,10 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "go_goroutines{app=\"istiod\"}",
+          "expr": "sum by (version) (go_goroutines{app=\"istiod\"})",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "Number of Goroutines",
+          "legendFormat": "{{version}}",
           "refId": "A",
           "step": 2
         }

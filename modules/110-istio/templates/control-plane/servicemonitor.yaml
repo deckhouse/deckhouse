@@ -31,6 +31,21 @@ spec:
       sourceLabels:
       - __meta_kubernetes_pod_label_app
       targetLabel: app
+    - sourceLabels:
+      - __meta_kubernetes_pod_label_istio_io_rev
+      targetLabel: istio_io_rev
+      action: replace
+    - sourceLabels:
+      - __meta_kubernetes_pod_label_app_kubernetes_io_version
+      targetLabel: version
+      action: replace
+    - sourceLabels:
+      - version
+      - __meta_kubernetes_pod_label_istio_io_rev
+      regex: ^;(.+)$
+      targetLabel: version
+      replacement: $1
+      action: replace
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
