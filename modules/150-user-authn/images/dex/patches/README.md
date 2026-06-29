@@ -86,3 +86,7 @@ Adds refresh token support to the SAML connector. The SAML connector now impleme
 ### 014-build-id-cache-invalidation.patch
 
 Added cache get parameter to main CSS file URL that gets opaque dex build identifier assigned to it. This prevents stale caches from breaking the login page.
+
+ ### 015-fix-error-template-buildid.patch
+
+  Fix error template
