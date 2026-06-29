@@ -23,11 +23,8 @@ import (
 	ctmarkers "sigs.k8s.io/controller-tools/pkg/markers"
 )
 
-// DeckhouseDescriptionRuMarker is the marker key for Russian description overlays.
-const DeckhouseDescriptionRuMarker = "deckhouse:ru:description"
-
 const (
-	deckhouseDescriptionRuMarker                              = DeckhouseDescriptionRuMarker
+	deckhouseDescriptionRuMarker                              = "deckhouse:ru:description"
 	deckhouseExampleMarker                                    = "deckhouse:example"
 	deckhouseDisableAdditionalPropertiesMarker                = "deckhouse:DisableAdditionalProperties"
 	deckhouseXDocSearchMarker                                 = "deckhouse:XDocSearch"
