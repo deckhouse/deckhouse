@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	aoapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	"go.opentelemetry.io/otel"
@@ -58,6 +57,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -1108,7 +1108,7 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 }
 
 func (r *deckhouseReleaseReconciler) isDeckhousePodReady(ctx context.Context) bool {
-	deckhousePodIP := aoapp.ListenAddress
+	deckhousePodIP := app.ListenAddress()
 
 	url := fmt.Sprintf("http://%s:4222/readyz", deckhousePodIP)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -50,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -211,7 +211,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	valuesModuleName := addonutils.ModuleNameToValuesKey(def.Name)
 
 	// 1. from static values.yaml inside the module
-	moduleStaticValues, err := addonutils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
+	moduleStaticValues, err := addonutils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled())
 	if err != nil {
 		return nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
 	}
