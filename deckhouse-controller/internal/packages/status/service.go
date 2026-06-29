@@ -43,6 +43,8 @@ const (
 	ConditionConfigured ConditionType = "Configured"
 	// ConditionPending indicates that the package wait converge
 	ConditionPending ConditionType = "Pending"
+	// ConditionCustomResourcesApplied indicates that CRDs are ensured
+	ConditionCustomResourcesApplied ConditionType = "CustomResourcesApplied"
 
 	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
 	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
@@ -168,6 +170,25 @@ func (s *Service) DeleteStatus(name string) {
 
 	delete(s.statuses, name)
 	delete(s.pendingHealth, name)
+}
+
+// IsConditionStatusTrue returns true if the condition is marked as true, false otherwise
+func (s *Service) IsConditionStatusTrue(name string, condition ConditionType) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	status, ok := s.statuses[name]
+	if !ok {
+		return false
+	}
+
+	for _, cond := range status.Conditions {
+		if cond.Type == condition {
+			return cond.Status == metav1.ConditionTrue
+		}
+	}
+
+	return false
 }
 
 // SetConditionTrue marks a condition as successful and notifies listeners if changed
@@ -423,6 +444,7 @@ func (s *Service) NewStatus(name string) {
 			{Type: ConditionScaled, Status: metav1.ConditionUnknown},
 			{Type: ConditionConfigured, Status: metav1.ConditionUnknown},
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
+			{Type: ConditionCustomResourcesApplied, Status: metav1.ConditionUnknown},
 		},
 	}
 

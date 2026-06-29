@@ -113,10 +113,6 @@
     "web ui",
     "ssdlc"
   ],
-  "extended-monitoring": [
-    "observability",
-    "ssdlc"
-  ],
   "ingress-nginx": [
     "network",
     "balancing",
@@ -144,11 +140,6 @@
   ],
   "local-path-provisioner": [
     "storage",
-    "ssdlc"
-  ],
-  "log-shipper": [
-    "observability",
-    "logging",
     "ssdlc"
   ],
   "loki": [
@@ -229,10 +220,6 @@
     "ssdlc"
   ],
   "prometheus": [
-    "observability",
-    "ssdlc"
-  ],
-  "prometheus-metrics-adapter": [
     "observability",
     "ssdlc"
   ],

@@ -156,6 +156,13 @@ rules:
 		Expect(crb.Field(`metadata.annotations.meta\.helm\.sh/release-namespace`).String()).To(Equal("d8-system"))
 	}
 
+	// expectKeepPolicy guards the hook-only migration: any object the hook writes must carry
+	// helm.sh/resource-policy: keep so Helm never prunes it once the CRB leaves the template.
+	expectKeepPolicy := func(f *HookExecutionConfig) {
+		crb := f.KubernetesGlobalResource("ClusterRoleBinding", "kubeadm:cluster-admins")
+		Expect(crb.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+	}
+
 	// ── user-authz disabled: binding must always stay on cluster-admin (kubeadm-default) ──
 	Context("user-authz disabled and not bootstrapped, no CRB", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOffNotBootstrapped, "")
@@ -166,6 +173,7 @@ rules:
 		It("creates the binding pointing to cluster-admin and publishes target=cluster-admin, supplement=false", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
+			expectKeepPolicy(f)
 			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})
@@ -237,43 +245,47 @@ rules:
 		})
 	})
 
-	// ── user-authz enabled, bootstrapped, granular role in API: switch happens ──
-	Context("user-authz enabled, bootstrapped, granular role in API, no CRB", func() {
+	// ── user-authz enabled+bootstrapped, granular role in API, BUT granular rollout paused:
+	//    forceWildcardClusterAdmin pins the binding to the wildcard cluster-admin regardless. ──
+	Context("user-authz enabled, bootstrapped, granular role in API, no CRB (granular rollout paused)", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("creates the binding pointing to user-authz:cluster-admin and publishes target=user-authz:cluster-admin, supplement=true", func() {
+		It("creates the binding on the wildcard cluster-admin and publishes target=cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			expectDesiredCRB(f, "user-authz:cluster-admin")
-			expectInternalDecision(f, "user-authz:cluster-admin", true)
+			expectDesiredCRB(f, "cluster-admin")
+			expectKeepPolicy(f)
+			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 
-	Context("user-authz enabled, bootstrapped, granular role in API, CRB on cluster-admin", func() {
+	Context("user-authz enabled, bootstrapped, granular role in API, CRB on cluster-admin (granular rollout paused)", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin + userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("rebinds to user-authz:cluster-admin (immutable roleRef → Delete+Create) and publishes target=user-authz:cluster-admin, supplement=true", func() {
+		It("keeps the wildcard cluster-admin binding (no flip) and publishes target=cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			expectDesiredCRB(f, "user-authz:cluster-admin")
-			expectInternalDecision(f, "user-authz:cluster-admin", true)
+			expectDesiredCRB(f, "cluster-admin")
+			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 
-	Context("user-authz enabled, bootstrapped, granular role in API, CRB already on user-authz:cluster-admin", func() {
+	// Rollback path: a cluster that already moved to granular must be flipped back to wildcard.
+	Context("user-authz enabled, bootstrapped, granular role in API, CRB already on user-authz:cluster-admin (rollback to wildcard)", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin + userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("is a no-op and keeps target=user-authz:cluster-admin, supplement=true", func() {
+		It("rolls the binding back to the wildcard cluster-admin (immutable roleRef → Delete+Create) and publishes target=cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			expectDesiredCRB(f, "user-authz:cluster-admin")
-			expectInternalDecision(f, "user-authz:cluster-admin", true)
+			expectDesiredCRB(f, "cluster-admin")
+			expectKeepPolicy(f)
+			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 
@@ -288,21 +300,23 @@ rules:
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
 			expectHelmOwnership(f)
+			expectKeepPolicy(f)
 			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})
 
-	Context("user-authz enabled+bootstrapped, CRB on user-authz:cluster-admin WITHOUT Helm labels (pre-v1.76 state)", func() {
+	Context("user-authz enabled+bootstrapped, CRB on user-authz:cluster-admin WITH Helm labels (rollback to wildcard)", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(crbUserAuthzClusterAdminWithHelmLabels + userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("is a true no-op: roleRef correct, Helm labels already present — no patch emitted", func() {
+		It("rolls the binding back to the wildcard cluster-admin (Delete+Create) and re-stamps Helm ownership + keep", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			expectDesiredCRB(f, "user-authz:cluster-admin")
+			expectDesiredCRB(f, "cluster-admin")
 			expectHelmOwnership(f)
-			expectInternalDecision(f, "user-authz:cluster-admin", true)
+			expectKeepPolicy(f)
+			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 
@@ -321,17 +335,17 @@ rules:
 		})
 	})
 
-	Context("OnBeforeHelm tick (Helm-driven reconcile) with all three gates satisfied", func() {
+	Context("OnBeforeHelm tick (Helm-driven reconcile) with all three gates satisfied but rollout paused", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
 		BeforeEach(func() {
 			f.KubeStateSet(crbCurrentClusterAdmin + userAuthzClusterAdminCR)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("rebinds the snapshot CRB to user-authz:cluster-admin on OnBeforeHelm too and publishes target=user-authz:cluster-admin, supplement=true", func() {
+		It("keeps the wildcard cluster-admin binding on OnBeforeHelm too and publishes target=cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			expectDesiredCRB(f, "user-authz:cluster-admin")
-			expectInternalDecision(f, "user-authz:cluster-admin", true)
+			expectDesiredCRB(f, "cluster-admin")
+			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 })

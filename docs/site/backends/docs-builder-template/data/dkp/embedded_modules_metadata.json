@@ -483,24 +483,6 @@
       "namespace": "d8-system",
       "oss": []
     },
-    "extended-monitoring": {
-      "name": "extended-monitoring",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-monitoring",
-      "requirements": {
-        "modules": {
-          "prometheus": ">= 0.0.0"
-        }
-      },
-      "descriptions": {
-        "en": "Extends cluster monitoring capabilities with additional metrics exporters, which allow you to identify potential problems before they affect the operation of services.",
-        "ru": "Расширяет возможности мониторинга кластера за счёт дополнительных экспортеров метрик, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов."
-      },
-      "oss": []
-    },
     "ingress-nginx": {
       "name": "ingress-nginx",
       "stage": "General Availability",
@@ -710,27 +692,6 @@
           "description": "Local Path Provisioner provides a way for the Kubernetes users to utilize the local storage in each node by creating hostPath based persistent volume on the node automatically.",
           "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0"
-        }
-      ]
-    },
-    "log-shipper": {
-      "name": "log-shipper",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-log-shipper",
-      "descriptions": {
-        "en": "Simplifies the configuration of log collection in Kubernetes. Allows organization of log collection from applications running in the cluster and from nodes themselves.",
-        "ru": "Упрощает настройку сбора логов в Kubernetes. Позволяет организовать сбор логов с приложений, запущенных в кластере, и с узлов, а затем отправлять их в систему хранения (Loki, Elasticsearch, S3 и другие)."
-      },
-      "oss": [
-        {
-          "name": "Vector",
-          "link": "https://github.com/timberio/vector",
-          "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
-          "logo": "/images/logos/vector.svg",
-          "license": "Mozilla Public License, version 2.0"
         }
       ]
     },
@@ -1135,32 +1096,6 @@
           "logo": "/images/logos/memcached-icon.svg",
           "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
           "license": "BSD-3-Clause license"
-        }
-      ]
-    },
-    "prometheus-metrics-adapter": {
-      "name": "prometheus-metrics-adapter",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-monitoring",
-      "requirements": {
-        "modules": {
-          "prometheus": ">= 0.0.0"
-        }
-      },
-      "descriptions": {
-        "en": "Enables HPA and VPA autoscalers to use monitoring metrics for scaling decisions. Implements Kubernetes resource metrics API, custom metrics API, and external metrics API.",
-        "ru": "Позволяет HPA и VPA автоскейлерам использовать метрики мониторинга для принятия решений о масштабировании. Реализует API метрик ресурсов Kubernetes, API пользовательских метрик и API внешних метрик."
-      },
-      "oss": [
-        {
-          "name": "Kubernetes Metrics Server",
-          "link": "https://github.com/kubernetes-sigs/metrics-server",
-          "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
-          "logo": "/images/logos/kubernetes.svg",
-          "license": "Apache License 2.0"
         }
       ]
     },
@@ -1641,16 +1576,6 @@
         "vertical-pod-autoscaler"
       ]
     },
-    "Kubernetes Metrics Server": {
-      "link": "https://github.com/kubernetes-sigs/metrics-server",
-      "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
-      "logo": "/images/logos/kubernetes.svg",
-      "license": "Apache License 2.0",
-      "versions": [],
-      "modules": [
-        "prometheus-metrics-adapter"
-      ]
-    },
     "Libcap-ng": {
       "link": "https://github.com/stevegrubb/libcap-ng",
       "description": "Libcap-ng is a library for Linux that makes using posix capabilities easy..",
@@ -1879,16 +1804,6 @@
       "versions": [],
       "modules": [
         "prometheus"
-      ]
-    },
-    "Vector": {
-      "link": "https://github.com/timberio/vector",
-      "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
-      "logo": "/images/logos/vector.svg",
-      "license": "Mozilla Public License, version 2.0",
-      "versions": [],
-      "modules": [
-        "log-shipper"
       ]
     }
   }

@@ -54,6 +54,10 @@ type Module struct {
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
 
+	// initialized tracks whether hook controllers have been built, so the Enable
+	// task skips re-initialization on every reschedule.
+	initialized atomic.Bool
+
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
@@ -207,6 +211,19 @@ func (m *Module) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+
+	m.initialized.Store(true)
+}
+
+// HooksInitialized reports whether InitializeHooks has built the hook controllers.
+func (m *Module) HooksInitialized() bool {
+	return m.initialized.Load()
+}
+
+// GetHooksByBinding returns the global hooks for the binding as the ControllableHook
+// view, so the shared Enable task can drive global like any package.
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
+	return hooks.ToControllable(m.hooks.GetHooksByBinding(binding))
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
@@ -328,6 +345,31 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 		{
 			Op:    "add",
 			Path:  "/enabledModules",
+			Value: data,
+		},
+	}}
+
+	if err := m.values.ApplyValuesPatch(patch); err != nil {
+		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
+	}
+}
+
+// SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks, into .global.discovery.apiVersions values
+func (m *Module) SetCapabilities(apiVersions []string) {
+	if len(apiVersions) == 0 {
+		return
+	}
+
+	// keep apiVersions sorted to prevent helm rollout on each restart
+	sort.Strings(apiVersions)
+	data, _ := json.Marshal(apiVersions)
+
+	// backward compatibility: set apiVersions to .global.discovery.apiVersions
+	// TODO(ipaqsa): get rid of it further and add Capabilities field
+	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
+		{
+			Op:    "add",
+			Path:  "/discovery/apiVersions",
 			Value: data,
 		},
 	}}

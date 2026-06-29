@@ -262,12 +262,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"docsBuilder": "imageHash-documentation-docsBuilder",
 		"web":         "imageHash-documentation-web",
 	},
-	"extendedMonitoring": map[string]interface{}{
-		"eventsExporter":             "imageHash-extendedMonitoring-eventsExporter",
-		"extendedMonitoringExporter": "imageHash-extendedMonitoring-extendedMonitoringExporter",
-		"imageAvailabilityExporter":  "imageHash-extendedMonitoring-imageAvailabilityExporter",
-		"x509CertificateExporter":    "imageHash-extendedMonitoring-x509CertificateExporter",
-	},
 	"istio": map[string]interface{}{
 		"allianceHealthcheck": "imageHash-istio-allianceHealthcheck",
 		"apiProxy":            "imageHash-istio-apiProxy",
@@ -311,9 +305,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"helper":               "imageHash-localPathProvisioner-helper",
 		"localPathProvisioner": "imageHash-localPathProvisioner-localPathProvisioner",
 	},
-	"logShipper": map[string]interface{}{
-		"vector": "imageHash-logShipper-vector",
-	},
 	"loki": map[string]interface{}{
 		"loki": "imageHash-loki-loki",
 	},
@@ -328,9 +319,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeletEvictionThresholdsExporter": "imageHash-monitoringKubernetes-kubeletEvictionThresholdsExporter",
 		"nodeExporter":                      "imageHash-monitoringKubernetes-nodeExporter",
 		"oomKillsExporter":                  "imageHash-monitoringKubernetes-oomKillsExporter",
-	},
-	"monitoringPing": map[string]interface{}{
-		"monitoringPing": "imageHash-monitoringPing-monitoringPing",
 	},
 	"multitenancyManager": map[string]interface{}{
 		"multitenancyManager": "imageHash-multitenancyManager-multitenancyManager",
@@ -399,13 +387,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"promxy":                      "imageHash-prometheus-promxy",
 		"trickster":                   "imageHash-prometheus-trickster",
-	},
-	"prometheusMetricsAdapter": map[string]interface{}{
-		"k8sPrometheusAdapter":   "imageHash-prometheusMetricsAdapter-k8sPrometheusAdapter",
-		"prometheusReverseProxy": "imageHash-prometheusMetricsAdapter-prometheusReverseProxy",
-	},
-	"prometheusPushgateway": map[string]interface{}{
-		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
 	},
 	"registry": map[string]interface{}{
 		"dockerAuth":          "imageHash-registry-dockerAuth",

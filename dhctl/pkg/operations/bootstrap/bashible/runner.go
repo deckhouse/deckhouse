@@ -145,7 +145,18 @@ func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
 					return err
 				}
 
-				*resPointer = strings.TrimSpace(string(content))
+				contentStr := strings.TrimSpace(string(content))
+
+				// TODO handle in lib-connection
+				// Sudo-wrapped commands prefix their stdout with the SUDO-SUCCESS marker;
+				// strip everything up to and including the last occurrence so we keep only
+				// the actual file payload. For non-sudo paths the marker is absent and
+				// output stays untouched.
+				if idx := strings.LastIndex(contentStr, "SUDO-SUCCESS"); idx >= 0 {
+					contentStr = contentStr[idx+len("SUDO-SUCCESS"):]
+				}
+
+				*resPointer = contentStr
 				return nil
 			})
 
@@ -153,6 +164,8 @@ func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
 			return nil, err
 		}
 	}
+
+	logger.DebugF("Got node info %+v", res)
 
 	return &res, nil
 }

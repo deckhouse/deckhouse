@@ -307,41 +307,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/301-prometheus-metrics-adapter
-  to: /deckhouse/modules/301-prometheus-metrics-adapter
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/302-vertical-pod-autoscaler
   to: /deckhouse/modules/302-vertical-pod-autoscaler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/303-prometheus-pushgateway
-  to: /deckhouse/modules/303-prometheus-pushgateway
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/340-extended-monitoring
-  to: /deckhouse/modules/340-extended-monitoring
   excludePaths:
     - docs
     - README.md
@@ -373,30 +340,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/340-monitoring-ping
-  to: /deckhouse/modules/340-monitoring-ping
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/400-descheduler
   to: /deckhouse/modules/400-descheduler
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /modules/460-log-shipper
-  to: /deckhouse/modules/460-log-shipper
   excludePaths:
     - docs
     - README.md

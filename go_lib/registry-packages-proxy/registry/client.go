@@ -40,4 +40,7 @@ type Client interface {
 	ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string, platform *v1.Platform) (string, error)
 	// ListTags returns all tags available for an image identified by repository path.
 	ListTags(ctx context.Context, log log.Logger, config *ClientConfig, path string) ([]string, error)
+	// GetRawManifest returns the raw manifest bytes (and its media type) of an image
+	// identified by repository path and ref (tag or digest), without pulling its layers.
+	GetRawManifest(ctx context.Context, log log.Logger, config *ClientConfig, path string, ref string) ([]byte, string, error)
 }
