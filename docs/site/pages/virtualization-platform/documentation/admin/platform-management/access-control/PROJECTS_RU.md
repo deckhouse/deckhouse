@@ -19,6 +19,7 @@ lang: ru
 ## Шаблоны для проектов доступные по умолчанию
 
 В DVP есть набор шаблонов для создания проектов:
+
 - `default` — шаблон для базовых сценариев использования проектов:
   - ограничение ресурсов;
   - сетевая изоляция;
@@ -129,6 +130,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 Шаблоны проектов по умолчанию включают базовые сценарии использования и служат примером возможностей шаблонов.
 
 Для создания своего шаблона:
+
 1. Возьмите за основу один из шаблонов по умолчанию, например, `default`.
 1. Скопируйте его в отдельный файл, например, `my-project-template.yaml` при помощи команды:
 
@@ -153,3 +155,236 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
    ```shell
    d8 k get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
    ```
+
+## Использование лейблов для управления ресурсами
+
+При создании ресурсов в ProjectTemplate можно использовать специальные лейблы для управления поведением `multitenancy-manager` при обработке этих ресурсов:
+
+### Пропуск создания лейбла `heritage: multitenancy-manager`
+
+По умолчанию все ресурсы, созданные из ProjectTemplate, получают лейбл `heritage: multitenancy-manager`.  
+Он запрещают изменение ресурсов пользователями или любым контроллером, кроме `multitenancy-manager`.  
+Если необходимо разрешить изменение ресурса (например, для совместимости с другими системами, или в случае реализации собственного контроля изменения создаваемых объектов), добавьте к ресурсу лейбл `projects.deckhouse.io/skip-heritage-label`.
+
+Пример:
+
+{% raw %}
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+  namespace: {{ .projectName }}
+  labels:
+    projects.deckhouse.io/skip-heritage-label: "true"
+    app: my-app
+data:
+  key: value
+```
+
+{% endraw %}
+
+В этом случае ресурс получит лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но не получит лейбл `heritage: multitenancy-manager`.
+
+### Исключение ресурсов из управления multitenancy-manager
+
+Если необходимо исключить ресурс из управления `multitenancy-manager` (например, если он должен управляться вручную или другим контроллером), добавьте к ресурсу лейбл `projects.deckhouse.io/unmanaged`.
+
+Пример:
+
+{% raw %}
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: external-secret
+  namespace: {{ .projectName }}
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+type: Opaque
+data:
+  token: <base64-encoded-value>
+```
+
+{% endraw %}
+
+Ресурсы с лейблом `projects.deckhouse.io/unmanaged`:
+
+- Будут созданы **только один раз** при создании проекта.
+- **Не будут обновляться** при последующих изменениях шаблона или обновлениях.
+- Не будут отслеживаться в статусе проекта.
+- Получат лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** лейбл `heritage: multitenancy-manager`.
+
+{% alert level="warning" %}
+После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении ProjectTemplate.
+После создания ресурс становится полностью независимым и должен управляться вручную.
+{% endalert %}
+
+## Реализация валидации изменений объектов с помощью пользовательского лейбла
+
+Модуль `multitenancy-manager` использует ValidatingAdmissionPolicy для защиты ресурсов с лейблом `heritage: multitenancy-manager` от ручных изменений.  
+Вы можете реализовать аналогичную валидацию для ресурсов с любым лейблом.
+
+### Принцип работы валидации в multitenancy-manager
+
+`multitenancy-manager` валидирует объекты с лейблом `heritage: multitenancy-manager`.  
+Для этого используются следующие ресурсы:
+
+1. ValidatingAdmissionPolicy — определяет правила валидации:
+   - Операции: `UPDATE` и `DELETE`;
+   - Проверка: разрешены только операции от имени service account контроллера;
+   - Применяется ко всем ресурсам и API группам.
+
+1. ValidatingAdmissionPolicyBinding — определяет на какие объекты распространяется валидация:
+   - Использует `namespaceSelector` и `objectSelector` для выбора ресурсов по лейблу `heritage: multitenancy-manager`.
+
+### Создание собственной валидации
+
+Для реализации валидации для ресурсов с другим лейблом (например, `heritage: my-custom-label`):
+
+1. Создайте файл с манифестами ресурсов ValidatingAdmissionPolicy и ValidatingAdmissionPolicyBinding:
+
+   ```yaml
+   apiVersion: admissionregistration.k8s.io/v1
+   kind: ValidatingAdmissionPolicy
+   metadata:
+     name: my-custom-label-validation
+   spec:
+     failurePolicy: Fail
+     matchConstraints:
+       resourceRules:
+         - apiGroups:   ["*"]
+           apiVersions: ["*"]
+           operations:  ["UPDATE", "DELETE"]
+           resources:   ["*"]
+           scope: "*"
+     validations:
+       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"' # Замените на ваш сервисный аккаунт.
+         reason: Forbidden
+         messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed by '' + object.metadata.name + '' system. Manual modification is forbidden.''
+           : ''This resource is managed by '' + object.metadata.namespace + '' system. Manual modification is forbidden.'''
+   ---
+   apiVersion: admissionregistration.k8s.io/v1
+   kind: ValidatingAdmissionPolicyBinding
+   metadata:
+     name: my-custom-label-validation
+   spec:
+     policyName: my-custom-label-validation
+     validationActions: [Deny, Audit]
+     matchResources:
+       namespaceSelector:
+         matchLabels:
+           heritage: my-custom-label
+       objectSelector:
+         matchLabels:
+           heritage: my-custom-label
+   ```
+
+1. Настройте параметры валидации:
+
+   - `policyName` — уникальное имя политики (должно совпадать с `Policy` и `Binding`);
+   - `request.userInfo.username` — имя сервисного аккаунта, которому разрешено изменять ресурсы (замените на ваш сервисный аккаунт);
+   - `heritage: my-custom-label` — значение лейбла `heritage` для ваших ресурсов (замените на ваше значение). Запрещено использование значение `multitenancy-manager`, `deckhouse`;
+   - `failurePolicy: Fail` — политика при ошибке валидации:
+     - `Fail` — отклонять запрос при ошибке проверки,
+     - `Ignore` — игнорировать ошибки валидации.
+   - `validationActions` — действия валидации:
+     - `Deny` — отклонять неразрешенные операции,
+     - `Audit` — записывать операции в аудит лог.
+
+1. Примените политику:
+
+   ```shell
+   d8 k apply -f my-validation-policy.yaml
+   ```
+
+1. Убедитесь, что ваши ресурсы имеют соответствующий лейбл `heritage`:
+
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: my-resource
+     labels:
+       heritage: my-custom-label
+   ```
+
+## Выдача кластерных ресурсов проектам
+
+`multitenancy-manager` позволяет администраторам кластера управлять тем, какие кластерные ресурсы (например, StorageClass) можно использовать из неймспейсов проектов.
+
+Для этого используются кастомные ресурсы:
+
+- GrantableClusterResourceDefinition (cluster-scoped) — регистрирует кластерный ресурс, который
+  можно выдавать проектам: какой это ресурс (`grantedResource`), где проверяются ссылки на него
+  (`usageReferences`), базовая доступность (`defaultAvailability`) и как определяется дефолт проекта
+  (`defaultFrom`). Каждая ссылка отдельно включает подстановку дефолта через `default: true` —
+  ставьте его только для поля, значение которого ресурсу всегда нужно (например, `storageClassName`
+  у `PersistentVolumeClaim`). Для ссылки, отсутствие которой осмысленно (например, аннотация-
+  переключатель функции), не ставьте: такая ссылка по-прежнему проверяется и учитывается в квоте,
+  но никогда не заполняется.
+- ClusterResourceGrantPolicy (cluster-scoped) — выбирает проекты (по меткам неймспейса через
+  `projectSelector`) и для каждого ресурса (`resourceName`) задаёт разрешённые имена (`allowed`,
+  `allowedSelector`) и `default`. Allow-лист ограничивает ресурс этим списком.
+- AvailableClusterResource (namespaced, read-only, короткое имя `available`) — формируемый контроллером каталог доступных для проекта кластерных ресурсов. Пользователи проекта читают его, чтобы узнать
+  доступные имена.
+- ClusterResourceGrant (namespaced) — пул объектной квоты проекта (лимиты на количество объектов и
+  на измеряемые величины, например запрошенный объём хранилища). В статусе объекта отображается текущее потребление.
+
+{% raw %}
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: storageclasses
+spec:
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+  enforcement: Managed
+  defaultAvailability: All
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
+  usageReferences:
+    - rule:
+        apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - persistentvolumeclaims
+      fieldPath: $.spec.storageClassName
+      default: true
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: production-storage
+spec:
+  projectSelector:
+    matchLabels:
+      environment: production
+  resources:
+    - resourceName: storageclasses
+      default: fast-ssd          # Перекрывает дефолт по аннотации.
+      allowed:
+        - fast-ssd
+        - standard
+      allowedSelector:           # Плюс любой StorageClass с меткой shared=true.
+        matchLabels:
+          shared: "true"
+```
+
+{% endraw %}
+
+Особенности применения:
+
+- Проверяющий (validating) вебхук запрещает создание/обновление объектов в подходящих проектах, если
+  используемое значение не разрешено. Уже присутствующие в объекте значения при обновлении не блокируются — существующие объекты продолжают работать.
+- Мутирующий (mutating) вебхук подставляет значение по умолчанию только при создании и только в
+  ссылки, помеченные `default: true`. Ссылки без неё (например, аннотации-переключатели) никогда
+  не заполняются.
+- Grant без совпавших проектов (или проект без совпавших grant’ов) ничего не ограничивает.

@@ -137,3 +137,235 @@ To create your own template:
    ```shell
    d8 k get projecttemplates <NEW_TEMPLATE_NAME>
    ```
+
+## Using labels to manage resources
+
+When creating resources in ProjectTemplate, you can use special labels to control how the `multitenancy-manager` processes these resources.
+
+### Skipping creation of the `heritage: multitenancy-manager` label
+
+By default, all resources created from ProjectTemplate receive the label `heritage: multitenancy-manager`.  
+This label prohibits changes to resources by users or any other controller except `multitenancy-manager`.  
+If you need to allow resource modification (for example, for compatibility with other systems, or if implementing your own control over the created objects), add the label `projects.deckhouse.io/skip-heritage-label` to the resource.
+
+Example:
+
+{% raw %}
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+  namespace: {{ .projectName }}
+  labels:
+    projects.deckhouse.io/skip-heritage-label: "true"
+    app: my-app
+data:
+  key: value
+```
+
+{% endraw %}
+
+In this case, the resource will receive the labels `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template`, but will not receive the label `heritage: multitenancy-manager`.
+
+### Excluding resources from management by multitenancy-manager
+
+If you need to exclude a resource from management by `multitenancy-manager` (for example, if the resource should be managed manually or by another controller), add the label `projects.deckhouse.io/unmanaged` to the resource.
+
+Example:
+
+{% raw %}
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: external-secret
+  namespace: {{ .projectName }}
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+type: Opaque
+data:
+  token: <base64-encoded-value>
+```
+
+{% endraw %}
+
+Resources with the label `projects.deckhouse.io/unmanaged`:
+
+- Will be created **only once** when the project is created;
+- **Will not be updated** with subsequent template changes or updates;
+- Will not be monitored in the project's status;
+- Will receive the labels `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` but **will not receive** the label `heritage: multitenancy-manager`.
+
+{% alert level="warning" %}
+Once a resource is marked as `unmanaged`, it will be created on initial installation but not updated when the ProjectTemplate is changed.  
+After creation, the resource becomes fully independent and must be managed manually.
+{% endalert %}
+
+## Implementing validation of object changes with a custom label
+
+The `multitenancy-manager` module uses ValidatingAdmissionPolicy to protect resources labeled `heritage: multitenancy-manager` from manual changes.  
+You can implement similar validation for resources with any label.
+
+### How validation works in multitenancy-manager
+
+Validation occurs for objects labeled `heritage: multitenancy-manager`.  
+The following components are used for this:
+
+1. ValidatingAdmissionPolicy: Defines validation rules:
+   - Operations: `UPDATE` and `DELETE`.
+   - Check: only operations on behalf of the controller's service account are allowed.
+   - Applies to all resources and API groups.
+1. ValidatingAdmissionPolicyBinding: Defines which objects the validation applies to:
+   - Uses `namespaceSelector` and `objectSelector` to select resources by the label `heritage: multitenancy-manager`.
+
+### Creating your own validation
+
+To implement validation for resources with a different label (for example, `heritage: my-custom-label`):
+
+1. Create a file with the ValidatingAdmissionPolicy and ValidatingAdmissionPolicyBinding resource manifests:
+
+   ```yaml
+   apiVersion: admissionregistration.k8s.io/v1
+   kind: ValidatingAdmissionPolicy
+   metadata:
+     name: my-custom-label-validation
+   spec:
+     failurePolicy: Fail
+     matchConstraints:
+       resourceRules:
+         - apiGroups:   ["*"]
+           apiVersions: ["*"]
+           operations:  ["UPDATE", "DELETE"]
+           resources:   ["*"]
+           scope: "*"
+     validations:
+       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"' # Replace with your service account
+         reason: Forbidden
+         messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed by '' + object.metadata.name + '' system. Manual modification is forbidden.''
+           : ''This resource is managed by '' + object.metadata.namespace + '' system. Manual modification is forbidden.'''
+   ---
+   apiVersion: admissionregistration.k8s.io/v1
+   kind: ValidatingAdmissionPolicyBinding
+   metadata:
+     name: my-custom-label-validation
+   spec:
+     policyName: my-custom-label-validation
+     validationActions: [Deny, Audit]
+     matchResources:
+       namespaceSelector:
+         matchLabels:
+           heritage: my-custom-label
+       objectSelector:
+         matchLabels:
+           heritage: my-custom-label
+   ```
+
+1. Configure the validation parameters:
+
+   - `policyName`: Unique policy name (must match in Policy and Binding).
+   - `request.userInfo.username`: The name of the service account allowed to change resources (replace with your service account).
+   - `heritage: my-custom-label`: The value of the `heritage` label for your resources (replace with your value). The use of the values `multitenancy-manager`, `deckhouse` is prohibited.
+   - `failurePolicy: Fail`: Policy on validation failure.
+     - `Fail`: Reject the request on validation failure.
+     - `Ignore`: Ignore validation errors.
+   - `validationActions`: Validation actions:
+     - `Deny`: Deny unauthorized operations.
+     - `Audit`: Record operations in the audit log.
+1. Apply the policy:
+
+   ```shell
+   d8 k apply -f my-validation-policy.yaml
+   ```
+
+1. Ensure your resources have the corresponding `heritage` label:
+
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: my-resource
+     labels:
+       heritage: my-custom-label
+   ```
+
+## Granting cluster-scoped resources to projects
+
+The `multitenancy-manager` lets cluster administrators control which cluster-scoped resources (for example StorageClass) may be referenced from within project namespaces.
+
+To do this, custom resources are used:
+
+- GrantableClusterResourceDefinition (cluster-scoped) — registers a cluster resource that can be
+  granted to projects: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
+  the baseline availability (`defaultAvailability`), and how the per-project default is discovered
+  (`defaultFrom`). Each reference opts into defaulting individually with `default: true` — set it only
+  for a field whose value the resource always needs (such as a `PersistentVolumeClaim`'s
+  `storageClassName`). Leave it off for a reference whose absence is meaningful, such as an annotation
+  that merely toggles a feature; that reference is still validated and counted, just never filled in.
+- ClusterResourceGrantPolicy (cluster-scoped) — selects projects (by namespace labels via
+  `projectSelector`) and, per resource (`resourceName`), the granted names (`allowed`,
+  `allowedSelector`) and the per-project `default`. An allow-list restricts the resource to it.
+- AvailableClusterResource (namespaced, read-only, short name `available`) — the controller-rendered
+  catalog of what a project may use; tenants read it to discover the available names.
+- ClusterResourceGrant (namespaced) — the per-project object-quota pool (limits on object count and
+  on measured quantities such as requested storage); its status reports current usage.
+
+{% raw %}
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: storageclasses
+spec:
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+  enforcement: Managed
+  defaultAvailability: All
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
+  usageReferences:
+    - rule:
+        apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        resources:
+          - persistentvolumeclaims
+      fieldPath: $.spec.storageClassName
+      default: true
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: production-storage
+spec:
+  projectSelector:
+    matchLabels:
+      environment: production
+  resources:
+    - resourceName: storageclasses
+      default: fast-ssd          # Overrides the annotation-based default.
+      allowed:
+        - fast-ssd
+        - standard
+      allowedSelector:           # Plus any StorageClass with label shared=true.
+        matchLabels:
+          shared: "true"
+```
+
+{% endraw %}
+
+Enforcement notes:
+
+- The validating webhook denies creating/updating objects in matched projects whose
+  referenced value is not granted. On update, values already present in the object are
+  grandfathered in, so pre-existing objects are not broken.
+- The defaulting webhook fills in the granted default on creation only, and only into references
+  marked `default: true`. References left without it (such as feature-toggling annotations) are never
+  filled in.
+- A grant that matches no project, or a project with no matching grant, imposes no
+  restriction.
