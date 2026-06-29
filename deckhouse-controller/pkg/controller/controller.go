@@ -88,9 +88,6 @@ const (
 
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	defaultModuleVersion    = "v2.0.0"
-
-	envEnablePackageSystem  = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
-	envEnableModulePackages = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
 )
 
 type DeckhouseController struct {
@@ -205,7 +202,7 @@ func NewDeckhouseController(
 	}
 
 	// Package system controllers (feature flag)
-	if os.Getenv(envEnablePackageSystem) == "true" {
+	if app.PackageSystemEnabled() {
 		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
@@ -214,7 +211,7 @@ func NewDeckhouseController(
 	}
 
 	// Module package controllers (feature flag)
-	if os.Getenv(envEnableModulePackages) == "true" {
+	if app.ModulePackagesEnabled() {
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
@@ -240,7 +237,7 @@ func NewDeckhouseController(
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
 	// set chrooted environment for modules
-	if len(os.Getenv("ADDON_OPERATOR_SHELL_CHROOT_DIR")) > 0 {
+	if len(os.Getenv(app.EnvShellChrootDir)) > 0 {
 		setModulesEnvironment(operator)
 	}
 
@@ -363,7 +360,7 @@ func NewDeckhouseController(
 	})
 
 	// Package system controllers (feature flag)
-	if os.Getenv(envEnablePackageSystem) == "true" {
+	if app.PackageSystemEnabled() {
 		logger.Info("Package system controllers are enabled")
 
 		pkgRuntime.Run()
@@ -390,7 +387,7 @@ func NewDeckhouseController(
 	}
 
 	// Module package controllers (feature flag)
-	if os.Getenv(envEnableModulePackages) == "true" {
+	if app.ModulePackagesEnabled() {
 		logger.Info("Module package controllers are enabled")
 
 		err = modulepackage.RegisterController(runtimeManager, dc, logger.Named("module-package-controller"))
