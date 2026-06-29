@@ -167,7 +167,7 @@ func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl node.
 			log.InfoF("Using host %s\n", sshCl.Session().Host())
 
 			k.KubeProxy = sshCl.KubeProxy()
-			port, err = k.KubeProxy.Start(-1)
+			port, err = k.KubeProxy.Start(ctx, -1)
 
 			if err != nil {
 				sshCl.Session().ChoiceNewHost()

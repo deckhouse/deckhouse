@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	ssh "github.com/deckhouse/lib-gossh"
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -89,7 +90,12 @@ func (t *ReverseTunnel) upNewTunnel(oldId int) (int, error) {
 	localAddress := net.JoinHostPort(localBind, localPort)
 
 	// reverse listen on remote server port
-	listener, err := t.sshClient.GetClient().Listen("tcp", remoteAddress)
+	var listener net.Listener
+	err := t.sshClient.withSSHClient(func(sshClient *ssh.Client) error {
+		var listenErr error
+		listener, listenErr = sshClient.Listen("tcp", remoteAddress)
+		return listenErr
+	})
 	if err != nil {
 		return -1, errors.Wrap(err, fmt.Sprintf("failed to listen remote on %s", remoteAddress))
 	}
