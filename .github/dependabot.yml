@@ -115,6 +115,24 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/cse/modules/040-node-manager/images/integrity-containerd-configurator/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/cse/modules/040-node-manager/images/integrity-controller/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
@@ -674,24 +692,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/fencing-agent/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/integrity-containerd-configurator/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/integrity-controller/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
