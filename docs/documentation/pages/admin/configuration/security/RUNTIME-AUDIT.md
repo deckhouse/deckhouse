@@ -1,7 +1,7 @@
 ---
-title: Security event audit
+title: Runtime security audit
 permalink: en/admin/configuration/security/events/runtime-audit.html
-description: "Configure security event auditing in Deckhouse Kubernetes Platform. Runtime security monitoring, threat detection, and audit logging for cluster security analysis."
+description: "Configure runtime security audit in Deckhouse Kubernetes Platform. Runtime security monitoring, threat detection based on Linux kernel events and Kubernetes API audit."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides built-in tools for detecting security threats
@@ -23,7 +23,7 @@ DKP uses two main sources of events:
 - Linux kernel events — via the eBPF driver for the [Falco](https://falco.org/) threat detection system.
 - [Kubernetes API audit](./kubernetes-api-audit.html) events — via integration with [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) and a webhook interface.
 
-For details about the auditing architecture, refer to [Architecture](../../../../architecture/security/runtime-audit.html).
+For details about the runtime security audit architecture, refer to [Architecture](../../../../architecture/security/runtime-audit.html).
 
 ## Minimum requirements
 

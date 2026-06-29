@@ -1,7 +1,7 @@
 ---
-title: Аудит событий безопасности
+title: Аудит безопасности рантайма
 permalink: ru/admin/configuration/security/events/runtime-audit.html
-description: "Настройка аудита событий безопасности в Deckhouse Kubernetes Platform. Мониторинг runtime безопасности, обнаружение угроз и аудит логирование для анализа безопасности кластера."
+description: "Настройка аудита безопасности рантайма в Deckhouse Kubernetes Platform. Мониторинг runtime безопасности, обнаружение угроз на основе событий ядра Linux и аудита Kubernetes API."
 lang: ru
 ---
 
@@ -24,7 +24,7 @@ DKP использует два основных источника событи
 - события ядра Linux — с помощью eBPF-драйвера для [системы обнаружения угроз Falco](https://falco.org/);
 - события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) и вебхук-интерфейс.
 
-Подробности об архитектуре реализации аудита можно найти [в разделе Архитектура](../../../../architecture/security/runtime-audit.html).
+Подробности об архитектуре аудита безопасности рантайма можно найти [в разделе Архитектура](../../../../architecture/security/runtime-audit.html).
 
 ## Минимальные требования
 
