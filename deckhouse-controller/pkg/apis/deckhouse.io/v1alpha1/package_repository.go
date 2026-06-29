@@ -61,7 +61,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
-// PackageRepository is a source of packages for Deckhouse.
+// PackageRepository is a source of packages for Deckhouse Kubernetes Platform.
 type PackageRepository struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -69,45 +69,54 @@ type PackageRepository struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of a PackageRepository.
+	// Defines the package repository configuration.
 	Spec PackageRepositorySpec `json:"spec"`
 
-	// Status of a PackageRepository.
+	// Package repository status.
 	Status PackageRepositoryStatus `json:"status,omitempty"`
 }
 
 type PackageRepositorySpec struct {
-	// Interval for registry scan.
+	// Interval for container registry scan.
+	//
 	// Defines the frequency of checking the container registry for new packages.
 	// +optional
 	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
+	// +crd-enricher:deckhouse:documentation:default=6h
+	// +crd-enricher:deckhouse:documentation:examples=5m
+	// +crd-enricher:deckhouse:documentation:examples=1h
+	// +crd-enricher:deckhouse:documentation:examples=6h30m
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
-	// Configuration for the package registry.
+	// Configuration for accessing the container registry with packages.
 	Registry PackageRepositorySpecRegistry `json:"registry"`
 }
 
 type PackageRepositorySpecRegistry struct {
-	// Scheme to use for accessing the registry (e.g., https).
+	// Protocol for accessing the repository (for example, `https`).
 	// +optional
 	Scheme string `json:"scheme,omitempty"`
 
-	// Repository path in the registry.
+	// Address of the package repository in the container registry.
 	Repo string `json:"repo"`
 
-	// Docker configuration for authentication.
+	// Container registry access token in Base64 (`~/.docker/config.json` format).
+	// Leave this field empty if anonymous access to the container registry is used.
 	// +optional
 	DockerCFG string `json:"dockerCfg,omitempty"`
 
-	// Certificate authority data for TLS verification.
+	// Root CA certificate (PEM format) used to verify the container registry certificate over HTTPS
+	// (if the container registry uses self-signed SSL certificates).
 	// +optional
 	CA string `json:"ca,omitempty"`
 
-	// Login from the repository
+	// Username for authenticating to the container registry.
 	// +optional
+	// +crd-enricher:deckhouse:sensitive-data
 	Login string `json:"login,omitempty"`
 
-	// Password from the repository
+	// Password for authenticating to the container registry.
 	// +optional
+	// +crd-enricher:deckhouse:sensitive-data
 	Password string `json:"password,omitempty"`
 }
 
@@ -123,7 +132,8 @@ type PackageRepositoryStatus struct {
 
 	// Number of new versions found by the most recent scan.
 	// Set to zero when the last scan found nothing new.
-	LastNewVersions int `json:"lastNewVersions"`
+	// +optional
+	LastNewVersions int `json:"lastNewVersions,omitempty"`
 
 	// List of packages available in this repository.
 	// +optional
@@ -141,15 +151,15 @@ type PackageRepositoryStatus struct {
 	// +optional
 	Message string `json:"message,omitempty"`
 
-	// Conditions represent the latest available observations of the repository's state.
+	// Conditions reflecting the latest observations of the repository state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
-	// PartialScanAvailable indicates whether the registry supports pagination for tag listing.
+	// Indicates whether the container registry supports pagination when listing tags.
 	// +optional
-	PartialScanAvailable bool `json:"partialScanAvailable"`
+	PartialScanAvailable bool `json:"partialScanAvailable,omitempty"`
 }
 
 type PackageRepositoryStatusPackage struct {

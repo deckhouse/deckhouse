@@ -57,9 +57,23 @@ var _ runtime.Object = (*ModuleSource)(nil)
 // +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=ms
+// +kubebuilder:printcolumn:name="count",type="integer",JSONPath=".status.modulesCount",description="The number of modules available."
+// +kubebuilder:printcolumn:name="status",type="string",JSONPath=".status.phase",description="The current phase."
+// +kubebuilder:printcolumn:name="sync",type="date",format="date-time",JSONPath=".status.syncTime",description="When the repository was synchronized."
+// +kubebuilder:printcolumn:name="msg",type="string",JSONPath=".status.message",description="The error message if exists."
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +kubebuilder:metadata:labels="backup.deckhouse.io/cluster-config=true"
+// +crd-enricher:crd:preserveUnknownFields=false
+// +crd-enricher:crd:minimal=true
+// +crd-enricher:crd:stripFormat=true
+// +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: ModuleSource, metadata: {name: example}, spec: {registry: {repo: registry.example.io/modules-source, dockerCfg: "<base64 encoded credentials>"}}}
 
-// ModuleSource source
+// Defines the configuration of a source of Deckhouse modules.
+//
+// For more information about installing the module from the source, see the section ["Running the module in the DKP cluster"](../../architecture/module-development/run/#running-the-module-in-the-dkp-cluster).
 type ModuleSource struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -67,42 +81,75 @@ type ModuleSource struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of an ModuleSource.
 	Spec ModuleSourceSpec `json:"spec"`
 
-	// Status of an ModuleSource.
 	Status ModuleSourceStatus `json:"status,omitempty"`
 }
 
 type ModuleSourceSpec struct {
-	ScanInterval *metav1.Duration         `json:"scanInterval,omitempty"`
-	Registry     ModuleSourceSpecRegistry `json:"registry"`
+	// Desirable default release channel for modules in the current source.
+	// +crd-enricher:deckhouse:documentation:deprecated=true
+	ReleaseChannel string `json:"releaseChannel,omitempty"`
+
+	// Interval for registry scan.
+	//
+	// Defines the frequency of checking the container registry for new modules and their versions.
+	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
+	// +crd-enricher:deckhouse:documentation:default=3m
+	// +crd-enricher:deckhouse:documentation:examples=5m
+	// +crd-enricher:deckhouse:documentation:examples=1h
+	// +crd-enricher:deckhouse:documentation:examples=6h30m
+	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
+
+	Registry ModuleSourceSpecRegistry `json:"registry"`
 }
 
 type ModuleSourceSpecRegistry struct {
-	Scheme    string `json:"scheme,omitempty"`
-	Repo      string `json:"repo"`
-	DockerCFG string `json:"dockerCfg"`
-	CA        string `json:"ca"`
+	// Protocol to access the registry.
+	// +kubebuilder:default=HTTPS
+	// +kubebuilder:validation:Enum=HTTP;HTTPS
+	Scheme string `json:"scheme,omitempty"`
+
+	// URL of the container registry.
+	// +crd-enricher:deckhouse:documentation:examples=registry.example.io/deckhouse/modules
+	Repo string `json:"repo"`
+
+	// Container registry access token in Base64. If using anonymous access to the container registry, do not fill in this field.
+	DockerCFG string `json:"dockerCfg,omitempty"`
+
+	// Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used).
+	// > Creating a ModuleSource resource with the CA certificate spec will cause the container to restart on all nodes.
+	CA string `json:"ca,omitempty"`
 }
 
 type ModuleSourceStatus struct {
-	SyncTime         metav1.Time       `json:"syncTime"`
-	ModulesCount     int               `json:"modulesCount"`
-	AvailableModules []AvailableModule `json:"modules"`
-	Phase            string            `json:"phase"`
-	Message          string            `json:"message"`
+	// When the repository was synchronized.
+	SyncTime metav1.Time `json:"syncTime,omitempty"`
+	// The number of modules available.
+	ModulesCount int `json:"modulesCount,omitempty"`
+	// The list of modules available from the source and their update policies.
+	AvailableModules []AvailableModule `json:"modules,omitempty"`
+	// The current phase.
+	// +kubebuilder:validation:Enum=Active;Terminating
+	Phase   string `json:"phase,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 type AvailableModule struct {
-	Name     string `json:"name"`
-	Version  string `json:"version,omitempty"`
-	Policy   string `json:"policy,omitempty"`
+	// The module name.
+	Name string `json:"name,omitempty"`
+	// The module version.
+	Version string `json:"version,omitempty"`
+	// The module policy name.
+	Policy string `json:"policy,omitempty"`
+	// The module checksum.
 	Checksum string `json:"checksum,omitempty"`
-	Error    string `json:"error,omitempty"`
+	// The module processing error.
+	Error string `json:"error,omitempty"`
 	// Deprecated: use Error instead
-	PullError  string `json:"pullError,omitempty"`
-	Overridden bool   `json:"overridden,omitempty"`
+	PullError string `json:"pullError,omitempty"` // Deprecated: use Error instead
+	// If ModulePullOverride for this module exists.
+	Overridden bool `json:"overridden,omitempty"`
 }
 
 // +kubebuilder:object:root=true

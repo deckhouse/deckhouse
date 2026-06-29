@@ -117,5 +117,4 @@ status:
   - name: test-package
     type: Module
   packagesCount: 1
-  partialScanAvailable: false
   phase: Active
