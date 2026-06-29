@@ -347,7 +347,7 @@ Main NodeGroup conditions:
 | `Scaling` | Scaling is in progress |
 | `Error` | Node creation error (details in `status.error`) |
 
-### Checking in vSphere
+### Checking in vSphere {#checking-in-vsphere}
 
 In vSphere Client, cluster virtual machines are placed in the folder specified by [`vmFolderPath`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath). VM names follow the pattern `<prefix>-<group_name>-<index>`.
 
@@ -362,11 +362,15 @@ When troubleshooting nodes, check:
   d8 k -n d8-cloud-instance-manager logs -l app=machine-controller-manager --tail=50
   ```
 
-## Troubleshooting common issues
+For node provisioning failures, see [Troubleshooting node provisioning](layout.html#troubleshooting-node-provisioning).
+
+## Troubleshooting common issues {#troubleshooting-common-issues}
 
 | Symptom | Possible cause | What to check |
 |---------|----------------|---------------|
 | `dhctl converge` fails | Insufficient vSphere privileges, resource shortage | [Privileges](authorization.html#list-of-required-privileges), Datastore free space, Resource Pool |
+| Node provisioning fails (CloudEphemeral) | Network permissions, incorrect `mainNetwork`, missing `resourcePool` | [machine-controller-manager logs](#checking-in-vsphere), [`govc permissions.ls`](layout.html#network-permissions-in-vsphere), [`mainNetwork`](layout.html#mainnetwork), [`resourcePool`](layout.html#resourcepool) |
+| Node provisioning fails (CloudPermanent only) | Terraform network lookup differs from MCM | [`mainNetwork`](layout.html#mainnetwork), [permanent vs ephemeral nodes](layout.html#cloudpermanent-and-cloudephemeral-nodes) |
 | Node in `NotReady` | Network or bootstrap issues | `cloud-init` logs on the VM, Kubernetes API availability |
 | Incorrect node IP addresses | Misconfigured networks | `externalNetworkNames`, `internalNetworkNames`, port group mapping |
 | VM created but not joining the cluster | SSH/bootstrap issues | SSH key in [`sshPublicKey`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-sshpublickey), network connectivity |

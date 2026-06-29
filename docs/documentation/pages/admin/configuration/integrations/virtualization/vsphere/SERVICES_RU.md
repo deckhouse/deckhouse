@@ -347,7 +347,7 @@ d8 k get nodegroup <ИМЯ_ГРУППЫ> -o yaml
 | `Scaling` | Идёт масштабирование |
 | `Error` | Ошибка при создании узла (подробности в `status.error`) |
 
-### Проверка в vSphere
+### Проверка в vSphere {#checking-in-vsphere}
 
 В vSphere Client виртуальные машины кластера размещаются в папке [`vmFolderPath`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath). Имена ВМ формируются по шаблону `<префикс>-<имя_группы>-<индекс>`.
 
@@ -362,11 +362,15 @@ d8 k get nodegroup <ИМЯ_ГРУППЫ> -o yaml
   d8 k -n d8-cloud-instance-manager logs -l app=machine-controller-manager --tail=50
   ```
 
-## Диагностика типичных проблем
+При сбоях заказа узлов см. [«Диагностика проблем при заказе узлов»](layout.html#troubleshooting-node-provisioning).
+
+## Диагностика типичных проблем {#диагностика-типичных-проблем}
 
 | Симптом | Возможная причина | Что проверить |
 |---------|-------------------|---------------|
 | `dhctl converge` завершается ошибкой | Недостаточно прав в vSphere, нехватка ресурсов | [Привилегии](authorization.html#список-необходимых-привилегий), свободное место на Datastore, Resource Pool |
+| Сбой заказа узла (CloudEphemeral) | Права на сеть, неверный `mainNetwork`, отсутствует `resourcePool` | [логи machine-controller-manager](#проверка-в-vsphere), [`govc permissions.ls`](layout.html#network-permissions-in-vsphere), [`mainNetwork`](layout.html#mainnetwork), [`resourcePool`](layout.html#resourcepool) |
+| Сбой заказа узла (только CloudPermanent) | Поиск сети в Terraform отличается от MCM | [`mainNetwork`](layout.html#mainnetwork), [узлы CloudPermanent и CloudEphemeral](layout.html#cloudpermanent-and-cloudephemeral-nodes) |
 | Узел в `NotReady` | Проблемы с сетью или bootstrap | `cloud-init` логи на ВМ, доступность Kubernetes API |
 | Неверные IP-адреса на узле | Неверно указаны сети | `externalNetworkNames`, `internalNetworkNames`, соответствие port group |
 | ВМ создаётся, но не присоединяется к кластеру | Проблемы SSH/bootstrap | SSH-ключ в [`sshPublicKey`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-sshpublickey), сетевая связность |
