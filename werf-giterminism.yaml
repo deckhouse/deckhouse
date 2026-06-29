@@ -31,6 +31,7 @@ config:
       - WERF_VAULT_AUTH_ROLE
       - WERF_VAULT_AUTH_JWT
       - WERF_SIGN_KEY
+      - VAULT_ID_TOKEN
     allowValueIds:
       - SOURCE_REPO
       - GOPROXY
