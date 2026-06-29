@@ -179,6 +179,93 @@ func (g *CRDGenerator) GenerateYAML(meta CRDMeta, versions []VersionSpec) ([]byt
 	return append([]byte(defaultHeader), out...), nil
 }
 
+// generateCRDDescriptionRuYAML builds a ru-overlay CRD YAML using only the ru-markers
+// schema — no kubebuilder validation pipeline. CRD identity metadata (group, kind,
+// names, scope, served, storage) is still derived from kubebuilder markers on root types,
+// but the openAPIV3Schema is replaced entirely with a minimal ru-only spec schema.
+func (g *CRDGenerator) generateCRDDescriptionRuYAML(versions []VersionSpec) ([]byte, error) {
+	if err := validateVersionSpecs(versions); err != nil {
+		return nil, err
+	}
+
+	reg := g.cfg.DeckhouseRegistry
+	var err error
+	if reg == nil {
+		reg, err = markers.BuildDeckhouseDescriptionRuOpenAPIMarkerRegistry()
+		if err != nil {
+			return nil, fmt.Errorf("build ru marker registry: %w", err)
+		}
+	}
+
+	// Use kubebuilder pipeline only for CRD identity (group/kind/names/scope/versions).
+	roots := versionSpecRoots(versions)
+	crdObj, err := kube.GetCRDFromRoots(roots, nil)
+	if err != nil {
+		return nil, fmt.Errorf("kubebuilder CRD skeleton: %w", err)
+	}
+
+	crdRaw, err := anyToRawMap(crdObj)
+	if err != nil {
+		return nil, fmt.Errorf("serialize CRD skeleton: %w", err)
+	}
+
+	rootByPkg, err := buildRootByPkgMap(versions)
+	if err != nil {
+		return nil, fmt.Errorf("build root by package basename: %w", err)
+	}
+
+	versionsRaw := crdRawVersions(crdRaw)
+	for i, versionRaw := range versionsRaw {
+		vMap, ok := versionRaw.(map[string]any)
+		if !ok {
+			continue
+		}
+		versionName, _ := vMap["name"].(string)
+
+		root, ok := rootByPkg[versionName]
+		if !ok {
+			return nil, fmt.Errorf("version not found: version %q not found in roots", versionName)
+		}
+
+		specVal, specFieldName, err := extractSpecField(root)
+		if err != nil {
+			return nil, fmt.Errorf("extract spec field for version %s: %w", versionName, err)
+		}
+
+		// Build spec schema from ru-markers only — no kubebuilder validation constraints.
+		ruSpecSchema, err := deckhouse.BuildSchema(specVal, reg)
+		if err != nil {
+			return nil, fmt.Errorf("ru schema for version %s: %w", versionName, err)
+		}
+
+		ruSpecRaw, err := anyToRawMap(ruSpecSchema)
+		if err != nil {
+			return nil, fmt.Errorf("serialize ru spec schema for version %s: %w", versionName, err)
+		}
+
+		// Delete nodes that have neither a ru description nor surviving children.
+		stripNonRuPropertiesFromRawMap(ruSpecRaw)
+
+		// Replace openAPIV3Schema entirely: only spec with ru descriptions, no metav1 fields.
+		rootSchemaMap := map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				specFieldName: ruSpecRaw,
+			},
+		}
+		schemaMap := ensureMap(vMap, "schema")
+		schemaMap["openAPIV3Schema"] = rootSchemaMap
+
+		versionsRaw[i] = vMap
+	}
+
+	out, err := yaml.Marshal(crdRaw)
+	if err != nil {
+		return nil, fmt.Errorf("marshal CRD: %w", err)
+	}
+	return append([]byte(defaultHeader), out...), nil
+}
+
 // reflectPkgPath returns the package path of the given value's type.
 func reflectPkgPath(v any) string {
 	t := reflect.TypeOf(v)
@@ -323,6 +410,36 @@ func ensureMap(m map[string]any, key string) map[string]any {
 	return v
 }
 
+// stripNonRuPropertiesFromRawMap deletes properties with no Russian content from m.
+// Recurse first, then delete: a property survives if it has a ru description OR has
+// surviving nested properties after recursion (container type with no self-description).
+// All descriptions in the ru-only schema are Russian by construction — no clearing needed.
+func stripNonRuPropertiesFromRawMap(m map[string]any) {
+	if props, ok := m["properties"].(map[string]any); ok {
+		for key, val := range props {
+			propMap, ok := val.(map[string]any)
+			if !ok {
+				continue
+			}
+			// Recurse first so nested state is settled before the delete check.
+			stripNonRuPropertiesFromRawMap(propMap)
+			_, hasDesc := propMap["description"]
+			nestedProps, _ := propMap["properties"].(map[string]any)
+			if !hasDesc && len(nestedProps) == 0 {
+				delete(props, key)
+			}
+		}
+	}
+
+	if items, ok := m["items"].(map[string]any); ok {
+		stripNonRuPropertiesFromRawMap(items)
+	}
+
+	if ap, ok := m["additionalProperties"].(map[string]any); ok {
+		stripNonRuPropertiesFromRawMap(ap)
+	}
+}
+
 // GenerateCRD generates a full Kubernetes CRD YAML with enriched openAPIV3Schema
 // (kubebuilder + deckhouse markers) for each version.
 // All CRD identity (group, kind, scope, served, storage) is read from kubebuilder markers
@@ -343,8 +460,9 @@ func GenerateCRD(versions []VersionSpec) ([]byte, error) {
 	return gen.GenerateYAML(CRDMeta{}, versions)
 }
 
-// GenerateCRDDescriptionRu generates a full Kubernetes CRD YAML (identical structure to GenerateCRD),
-// but with description fields populated from deckhouse ru:description markers instead of English.
+// GenerateCRDDescriptionRu generates a full Kubernetes CRD YAML with only Russian descriptions.
+// Uses the ru-markers schema directly — no kubebuilder validation pipeline.
+// Fields without +deckhouse:ru:description markers are absent from the output.
 func GenerateCRDDescriptionRu(versions []VersionSpec) ([]byte, error) {
 	reg, err := markers.BuildDeckhouseDescriptionRuOpenAPIMarkerRegistry()
 	if err != nil {
@@ -358,5 +476,5 @@ func GenerateCRDDescriptionRu(versions []VersionSpec) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gen.GenerateYAML(CRDMeta{}, versions)
+	return gen.generateCRDDescriptionRuYAML(versions)
 }

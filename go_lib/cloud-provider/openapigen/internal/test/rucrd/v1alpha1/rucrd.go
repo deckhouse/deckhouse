@@ -51,4 +51,7 @@ type RUCRDResourceSpec struct {
 	//
 	// +deckhouse:ru:description:value="Протокол соединения."
 	Protocol string `json:"protocol,omitempty"`
+
+	// Weight is an optional numeric weight with no Russian description marker.
+	Weight int32 `json:"weight,omitempty"`
 }
