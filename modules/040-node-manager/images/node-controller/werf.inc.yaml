@@ -9,6 +9,10 @@ import:
   add: /node-controller
   to: /node-controller
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-crds-artifact
+  add: /crds
+  to: /crds
+  before: setup
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -65,3 +69,15 @@ shell:
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /node-controller cmd/main.go
   - chown 64535:64535 /node-controller
   - chmod 0700 /node-controller
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-crds-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ .ModuleName }}/images/{{ .ImageName }}/crds
+  to: /crds
+  includePaths:
+  - "*.yaml"
+  stageDependencies:
+    install:
+    - "*.yaml"
